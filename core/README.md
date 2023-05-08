@@ -1,12 +1,18 @@
 # Introduction
 
-This template includes a minimal setup for writing a backend in [Koa](https://koajs.com/).
+Template for a backend in [Koa](https://koajs.com/).
 
-`src/example-api` includes a few routed endpoints with various usages of standard HTTP input and output.
+`src/api` includes a few routed endpoints with various usages of standard HTTP input and output.
+
+`src/services/search-service` is a self-contained service with its own route and adapter, prepared to be
+extracted into a separate micro service if/when appropriate.
 
 ## Installation
 
-`npm run install`
+1. Install nvm
+2. `nvm install`
+3. `nvm use`
+4. `npm run install`
 
 ## Development
 
