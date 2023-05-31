@@ -1,0 +1,33 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "eslint-plugin-node"],
+  "extends": [
+    "eslint:recommended", 
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+    "plugin:import/typescript",
+    "plugin:node/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "project": "tsconfig.json"
+  },
+  "env": {
+    "node": true
+  },
+  "settings": {
+    "node": {
+      "tryExtensions": [".js", ".ts"]
+    }
+  },
+  "rules": {
+    "node/no-unsupported-features/es-syntax": ["error", { "ignores": ["modules"] }],
+  },
+  "overrides": [{
+    "files": "src/**/*.test.ts",
+    "rules": {
+        "node/no-unpublished-import": 0
+    }
+  }]
+}
