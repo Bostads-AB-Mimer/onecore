@@ -67,7 +67,6 @@ jobs:
     - name: 🔧 Build and push Docker Image
       uses: docker/build-push-action@v4
       with:
-        context: ./packages/${{ matrix.context }}
         push: true
         tags: |
           ghcr.io/bostads-ab-mimer/yggdrasil-tenants-leases:${{ steps.package-version.outputs.current-version}}
