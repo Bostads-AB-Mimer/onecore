@@ -2,7 +2,7 @@ import configPackage from '@iteam/config'
 
 export interface Config {
   port: number
-  tenantsContractsService: {
+  tenantsLeasesService: {
     url: string
   }
 }
@@ -11,7 +11,7 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5010,
-    tenantsContractsService: {
+    tenantsLeasesService: {
       url: 'http://localhost:5020',
     },
   },
@@ -19,5 +19,5 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
-  tenantsContractsService: config.get('tenantsContractsService'),
+  tenantsLeasesService: config.get('tenantsLeasesService'),
 } as Config
