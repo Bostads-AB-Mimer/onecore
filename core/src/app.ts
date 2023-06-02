@@ -15,11 +15,6 @@ app.on('error', (err) => {
 
 app.use(errorHandler())
 
-app.use(async (ctx, next) => {
-  console.log('Hello')
-  await next()
-})
-
 app.use(bodyParser())
 app.use(api.routes())
 
