@@ -3,7 +3,7 @@ FROM node:18-slim as BUILDER
 WORKDIR /home/app
 
 # Help Docker cache npm install if neither of these files have changed
-ADD ./package.json ./package-lock.json ./knexfile.js ./
+ADD ./package.json ./package-lock.json ./
 RUN npm ci
 
 ADD ./ ./
@@ -19,6 +19,7 @@ WORKDIR /home/app
 COPY --from=BUILDER /home/app/node_modules ./node_modules
 COPY --from=BUILDER /home/app/package* ./
 COPY --from=BUILDER /home/app/build ./
+COPY ./knexfile.js .
 
 ENV PORT 80
 EXPOSE 80
