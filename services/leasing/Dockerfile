@@ -20,6 +20,7 @@ COPY --from=BUILDER /home/app/node_modules ./node_modules
 COPY --from=BUILDER /home/app/package* ./
 COPY --from=BUILDER /home/app/build ./
 COPY ./knexfile.js .
+COPY ./migrations ./
 
 ENV PORT 80
 EXPOSE 80
