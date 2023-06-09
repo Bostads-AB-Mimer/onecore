@@ -15,11 +15,14 @@ app.use(router.routes())
 describe('lease-service', () => {
   describe('GET /leases', () => {
     it('responds with an array of leases', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getLease').mockResolvedValue(leaseMock)
+      const getLeasesSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get('/leases')
       expect(res.status).toBe(200)
       expect(res.body.data).toBeInstanceOf(Array)
+      expect(getLeasesSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.data[0])).toEqual(
         JSON.stringify(leaseMock)
       )
@@ -27,14 +30,15 @@ describe('lease-service', () => {
   })
 
   describe('GET /leases/:id', () => {
-    it('responds with a leases', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getLease').mockResolvedValue(leaseMock)
+    it('responds with a lease', async () => {
+      const getLeaseSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue(leaseMock)
 
       const res = await request(app.callback()).get('/leases/1337')
       expect(res.status).toBe(200)
-      expect(JSON.stringify(res.body.data.lease)).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(getLeaseSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(leaseMock))
     })
   })
 })
