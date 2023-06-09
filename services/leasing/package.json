@@ -9,8 +9,8 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "start": "ts-node ./src/index.ts",
-    "dev": "nodemon -e ts,js --exec npm run start",
+    "start": "npm run migrate:up && ts-node ./src/index.ts",
+    "dev": "npm run migrate:up && nodemon -e ts,js --exec npm run start",
     "lint": "eslint -c .eslintrc src/",
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
