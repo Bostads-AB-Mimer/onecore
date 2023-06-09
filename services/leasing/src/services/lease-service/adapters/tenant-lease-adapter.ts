@@ -1,66 +1,100 @@
-import axios from 'axios'
 import { Lease, LeaseStatus, Person } from '../../../common/types'
-import RandExp from 'randexp'
+import knex from 'knex'
+import Config from '../../../common/config'
 
-const birthDateGenerator = new RandExp(
-  /(19|20)[0-9]{2}0[0-9]{1}[0-2]{1}[0-9]{1}/
-)
-const lastDigits = new RandExp(/[0-9]{4}/)
-const phoneGenerator = new RandExp(/\+46[0-9]{10}/)
-const zipGenerator = new RandExp(/72[2-5]{1}[0-9]{2}/)
+const db = knex({
+  client: 'mssql',
+  connection: Config.database,
+})
 
-const getPerson = async (personId: string): Promise<Person> => {
-  const names = await axios('https://api.namnapi.se/v2/names.json?limit=1')
-  const birthDate = birthDateGenerator.gen()
-
-  return {
-    personId: personId,
-    firstName: names.data.names[0].firstname,
-    lastName: names.data.names[0].surname,
-    nationalRegistrationNumber: `${birthDate}-${lastDigits.gen()}`,
-    birthDate: birthDate,
-    addressId: '1337',
-    address: undefined,
-    mobilePhone: phoneGenerator.gen(),
-    phoneNumber: phoneGenerator.gen(),
-    emailAddress: 'test@test.se',
+const transformPerson = (row: any) => {
+  const person = {
+    personId: row.PersonId,
+    firstName: row.FirstName,
+    lastName: row.LastName,
+    nationalRegistrationNumber: row.NationalRegistrationNumber,
+    birthDate: row.BirthDate,
+    addressId: '',
+    address: {
+      addressId: '',
+      street: row.Street,
+      number: row.StreetNumber,
+      postalCode: row.PostalCode,
+      city: row.City,
+    },
+    mobilePhone: row.MobilePhone,
+    phoneNumber: row.PhoneNumber,
+    emailAddress: row.EmailAddress,
   }
+
+  return person
 }
 
-const getAddress = async () => {
-  return {
-    addressId: Math.round(Math.random() * 100000).toString(),
-    street: 'Gatvägen',
-    number: Math.round(Math.random() * 100).toString(),
-    postalCode: zipGenerator.gen(),
-    city: 'Västerås',
-  }
-}
-
-const getLease = async (leaseId: string): Promise<Lease> => {
-  const person1 = await getPerson(Math.round(Math.random() * 10000).toString())
-  const person2 = await getPerson(Math.round(Math.random() * 10000).toString())
-
-  const address = await getAddress()
-
-  person1.addressId = address.addressId
-  person1.address = address
-  person2.addressId = address.addressId
-  person2.address = address
-
+const transformLease = (
+  row: any,
+  tenantPersonIds: string[],
+  tenants: Person[]
+) => {
   const lease = {
-    leaseId: leaseId,
-    leaseNumber: Math.round(Math.random() * 10000).toString(),
-    leaseStartDate: new Date(),
-    leaseEndDate: new Date(),
-    status: LeaseStatus.Active,
-    tenantPersonIds: [person1.personId, person2.personId],
-    tenants: [person1, person2],
-    apartmentId: Math.round(Math.random() * 1000).toString(),
+    leaseId: row.LeaseId,
+    leaseNumber: row.LeaseNumber,
+    leaseStartDate: row.LeaseStartDate,
+    leaseEndDate: row.LeaseEndDate,
+    status: row.Status,
+    tenantPersonIds,
+    tenants,
+    apartmentId: row.apartmentId,
     apartment: undefined,
   }
 
   return lease
 }
 
-export { getLease }
+const getLease = async (leaseId: string): Promise<Lease> => {
+  const rows = await db('Lease')
+    .innerJoin('Tenant', 'Lease.LeaseId', 'Tenant.TenantLeaseId')
+    .innerJoin('Person', 'Tenant.TenantPersonId', 'Person.PersonId')
+    .where({ 'Lease.LeaseId': leaseId })
+
+  const tenantPersonIds: string[] = []
+  const tenants: Person[] = []
+
+  const lease = transformLease(rows[0], tenantPersonIds, tenants)
+
+  rows.forEach((row) => {
+    lease.tenantPersonIds.push(row.TenantPersonId)
+    lease.tenants.push(transformPerson(row))
+  })
+
+  return lease
+}
+
+const getLeases = async (): Promise<Lease[]> => {
+  const leases: Lease[] = []
+
+  const rows = await db('Lease')
+    .innerJoin('Tenant', 'Lease.LeaseId', 'Tenant.TenantLeaseId')
+    .innerJoin('Person', 'Tenant.TenantPersonId', 'Person.PersonId')
+
+  let lastLeaseId: string | null = null
+  let tenantPersonIds: string[] = []
+  let tenants: Person[] = []
+  let lease: Lease | null = null
+
+  for (let i = 0; i < rows.length; i++) {
+    if (!lastLeaseId || lastLeaseId != rows[i].LeaseId) {
+      tenantPersonIds = []
+      tenants = []
+      lease = transformLease(rows[i], tenantPersonIds, tenants)
+      leases.push(lease)
+    }
+    lease?.tenantPersonIds.push(rows[i].TenantPersonId)
+    lease?.tenants?.push(transformPerson(rows[i]))
+
+    lastLeaseId = rows[i].LeaseId
+  }
+
+  return leases
+}
+
+export { getLease, getLeases }

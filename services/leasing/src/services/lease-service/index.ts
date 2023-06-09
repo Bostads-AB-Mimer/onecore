@@ -6,16 +6,8 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { getLease as getLeaseFromAdapter } from './adapters/tenant-lease-adapter'
+import { getLease, getLeases } from './adapters/tenant-lease-adapter'
 import { Lease } from '../../common/types'
-
-const getLease = async (rentalId: string) => {
-  const lease = await getLeaseFromAdapter(rentalId)
-
-  return {
-    lease,
-  }
-}
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -33,13 +25,7 @@ export const routes = (router: KoaRouter) => {
    * Returns all leases with populated sub objects
    */
   router.get('(.*)/leases', async (ctx) => {
-    const numberOfLeases = Math.round((Math.random() + 0.1) * 10)
-    const leases: Lease[] = []
-    for (var i = 0; i < numberOfLeases; i++) {
-      leases.push(
-        (await getLease(Math.round(Math.random() * 100000).toString())).lease
-      )
-    }
+    const leases = await getLeases()
 
     ctx.body = {
       data: leases,

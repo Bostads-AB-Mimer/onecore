@@ -11,7 +11,10 @@
     "build": "tsc",
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon -e ts,js --exec npm run start",
-    "lint": "eslint -c .eslintrc src/"
+    "lint": "eslint -c .eslintrc src/",
+    "migrate:make": "knex migrate:make",
+    "migrate:up": "knex migrate:latest --env dev",
+    "migrate:down": "knex migrate:down --env dev"
   },
   "author": "",
   "license": "MIT",
@@ -40,9 +43,13 @@
     "@koa/cors": "^4.0.0",
     "@koa/router": "^12.0.0",
     "axios": "^1.4.0",
+    "dotenv": "^16.1.4",
+    "knex": "^2.4.2",
     "koa": "^2.14.1",
     "koa-bodyparser": "^4.3.0",
     "koa-pino-logger": "^4.0.0",
-    "randexp": "^0.5.3"
+    "mssql": "^9.1.1",
+    "randexp": "^0.5.3",
+    "tedious": "^16.1.0"
   }
 }
