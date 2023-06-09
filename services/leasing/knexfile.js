@@ -9,28 +9,41 @@ module.exports = {
   dev: {
     client: 'mssql',
     connection: {
-      host: '127.0.0.1',
-      database: 'tenants-leases',
-      user: 'sa',
-      password: process.env.DATABASE_PASSWORD,
+      host: process.env.DATABASE__HOST,
+      database: process.env.DATABASE__DATABASE,
+      user: process.env.DATABASE__USER,
+      password: process.env.DATABASE__PASSWORD,
+      port: parseInt(process.env.DATABASE__PORT),
     },
     migrations: {
       tableName: 'knex_migrations',
     },
     seeds: {
       directory: './seeds/dev',
-    }
+    },
   },
   ci: {
     client: 'mssql',
-    connection: process.env.DATABASE_URL,
+    connection: {
+      host: process.env.DATABASE__HOST,
+      database: process.env.DATABASE__DATABASE,
+      user: process.env.DATABASE__USER,
+      password: process.env.DATABASE__PASSWORD,
+      port: parseInt(process.env.DATABASE__PORT),
+    },
     migrations: {
       tableName: 'knex_migrations',
     },
   },
   production: {
     client: 'mssql',
-    connection: process.env.DATABASE_URL,
+    connection: {
+      host: process.env.DATABASE__HOST,
+      database: process.env.DATABASE__DATABASE,
+      user: process.env.DATABASE__USER,
+      password: process.env.DATABASE__PASSWORD,
+      port: parseInt(process.env.DATABASE__PORT),
+    },
     migrations: {
       tableName: 'knex_migrations',
     },

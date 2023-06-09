@@ -1,15 +1,10 @@
-import axios from 'axios'
 import { Lease, LeaseStatus, Person } from '../../../common/types'
 import knex from 'knex'
+import Config from '../../../common/config'
 
 const db = knex({
   client: 'mssql',
-  connection: {
-    host: '127.0.0.1',
-    user: 'sa',
-    password: '5CjoJ7MXTCfY7v',
-    database: 'tenants-leases',
-  },
+  connection: Config.database,
 })
 
 const transformPerson = (row: any) => {
