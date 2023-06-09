@@ -10,7 +10,7 @@ const getLease = async (leaseId: string): Promise<Lease> => {
     tenantsLeasesServiceUrl + '/leases/' + leaseId
   )
 
-  return leaseResponse.data.data.lease
+  return leaseResponse.data.data
 }
 
 export { getLease }

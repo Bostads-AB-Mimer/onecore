@@ -16,9 +16,7 @@ const getLeaseWithRelatedEntities = async (rentalId: string) => {
   lease.apartment.addressId = lease.tenants?.[0].address?.addressId ?? '123'
   lease.apartment.address = lease.tenants?.[0].address
 
-  return {
-    lease,
-  }
+  return lease
 }
 
 export const routes = (router: KoaRouter) => {
@@ -41,11 +39,9 @@ export const routes = (router: KoaRouter) => {
     const leases: Lease[] = []
     for (var i = 0; i < numberOfLeases; i++) {
       leases.push(
-        (
-          await getLeaseWithRelatedEntities(
-            Math.round(Math.random() * 100000).toString()
-          )
-        ).lease
+        await getLeaseWithRelatedEntities(
+          Math.round(Math.random() * 100000).toString()
+        )
       )
     }
 

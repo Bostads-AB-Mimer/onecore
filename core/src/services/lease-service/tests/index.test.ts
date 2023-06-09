@@ -46,9 +46,7 @@ describe('lease-service', () => {
       const res = await request(app.callback()).get('/leases/1337')
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data.lease)).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(leaseMock))
       expect(getApartmentSpy).toHaveBeenCalled()
     })
   })
