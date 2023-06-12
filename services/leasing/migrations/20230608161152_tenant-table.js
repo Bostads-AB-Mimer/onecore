@@ -6,7 +6,7 @@ exports.up = function (knex) {
   return knex.schema.createTable('tenant', (table) => {
     table.string('TenantLeaseId').references('Lease.LeaseId')
     table.string('TenantPersonId').references('Person.PersonId')
-    table.primary(['LeaseId', 'PersonId'])
+    table.primary(['TenantLeaseId', 'TenantPersonId'])
   })
 }
 
