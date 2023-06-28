@@ -35,6 +35,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/:id', async (ctx) => {
     const responseData = await getLease(ctx.params.id)
 
+    console.log('is id')
+
     ctx.body = {
       data: responseData,
     }
