@@ -10,7 +10,7 @@
     "test": "jest",
     "build": "tsc",
     "start": "npm run migrate:up && node index",
-    "dev": "npm run migrate:up && nodemon -e ts,js --exec npm run start",
+    "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "lint": "eslint -c .eslintrc src/",
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",

@@ -23,9 +23,9 @@ interface Lease {
   status: LeaseStatus
   tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
+  type: string
   rentalPropertyId: string
   rentalProperty: RentalProperty | undefined
-  type: string
   lastUpdated: Date | undefined
 }
 
