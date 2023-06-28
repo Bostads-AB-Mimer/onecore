@@ -9,6 +9,7 @@ import KoaRouter from '@koa/router'
 import {
   getLease,
   getLeases,
+  getLeasesFor,
   updateLease,
   updateLeases,
   updateContact,
@@ -17,6 +18,17 @@ import {
 import { Contact, Lease } from '../../common/types'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * Returns leases for a national registration number with populated sub objects
+   */
+  router.get('(.*)/leases/for/:pnr', async (ctx) => {
+    const responseData = await getLeasesFor(ctx.params.pnr)
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
   /**
    * Returns a lease with populated sub objects
    */

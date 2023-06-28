@@ -13,8 +13,8 @@ const transformFromDbContact = (row: any): Contact => {
     firstName: row.FirstName,
     lastName: row.LastName,
     fullName: row.FullName,
-    type: row.Type,
-    leaseId: row.LeaseId,
+    type: row.ContactType,
+    leaseId: row.ContactLeaseId,
     lease: undefined,
     nationalRegistrationNumber: row.NationalRegistrationNumber,
     birthDate: row.BirthDate,
@@ -39,7 +39,7 @@ const transformFromDbLease = (
   tenants: Contact[] | undefined
 ): Lease => {
   const lease = {
-    leaseId: row.LeaseId,
+    leaseId: row.LeaseLeaseId,
     leaseNumber: row.LeaseNumber,
     leaseStartDate: row.LeaseStartDate,
     leaseEndDate: row.LeaseEndDate,
@@ -47,7 +47,7 @@ const transformFromDbLease = (
     tenantContactIds,
     tenants,
     rentalPropertyId: row.RentalPropertyId,
-    type: row.Type,
+    type: row.LeaseType,
     rentalProperty: undefined,
     lastUpdated: undefined,
   }
@@ -95,8 +95,17 @@ const transformToDbContact = (contact: Contact) => {
 
 const getLease = async (leaseId: string): Promise<Lease> => {
   const rows = await db('Lease')
+    .select(
+      '*',
+      'Contact.LeaseId as ContactLeaseId',
+      'Lease.LeaseId as LeaseLeaseId',
+      'Contact.Type as ContactType',
+      'Lease.Type as LeaseType'
+    )
     .innerJoin('Contact', 'Lease.LeaseId', 'Contact.LeaseId')
     .where({ 'Lease.LeaseId': leaseId })
+
+  console.log(rows[0])
 
   const tenantPersonIds: string[] = []
   const tenants: Contact[] = []
@@ -104,7 +113,7 @@ const getLease = async (leaseId: string): Promise<Lease> => {
   const lease = transformFromDbLease(rows[0], tenantPersonIds, tenants)
 
   rows.forEach((row) => {
-    lease.tenantContactIds?.push(row.TenantPersonId)
+    lease.tenantContactIds?.push(row.ContactId)
     lease.tenants?.push(transformFromDbContact(row))
   })
 
@@ -114,11 +123,20 @@ const getLease = async (leaseId: string): Promise<Lease> => {
 const getLeases = async (): Promise<Lease[]> => {
   const leases: Lease[] = []
 
-  const rows = await db('Lease').innerJoin(
-    'Contact',
-    'Lease.LeaseId',
-    'Contact.LeaseId'
-  )
+  const rows = await db('Lease')
+    .select(
+      '*',
+      'Contact.LeaseId as ContactLeaseId',
+      'Lease.LeaseId as LeaseLeaseId',
+      'Contact.Type as ContactType',
+      'Lease.Type as LeaseType'
+    )
+    .innerJoin('Contact', 'Lease.LeaseId', 'Contact.LeaseId')
+    .where({
+      'Lease.Type': 'Bostadskontrakt',
+    })
+    .andWhereILike('ContactId', 'P%')
+    .limit(100)
 
   let lastLeaseId: string | null = null
   let tenantContactIds: string[] = []
@@ -132,13 +150,23 @@ const getLeases = async (): Promise<Lease[]> => {
       lease = transformFromDbLease(rows[i], tenantContactIds, tenants)
       leases.push(lease)
     }
-    lease?.tenantContactIds?.push(rows[i].TenantPersonId)
+    lease?.tenantContactIds?.push(rows[i].ContactId)
     lease?.tenants?.push(transformFromDbContact(rows[i]))
 
     lastLeaseId = rows[i].LeaseId
   }
 
   return leases
+}
+
+const getLeasesFor = async (nationalRegistrationNumber: string) => {
+  const rows = await db('Lease')
+    .innerJoin('Contact', 'Lease.LeaseId', 'Contact.LeaseId')
+    .where({
+      nationalRegistrationNumber,
+    })
+
+  return null
 }
 
 const updateLease = async (lease: Lease) => {
@@ -242,6 +270,7 @@ const updateContacts = async (contacts: Contact[]) => {
 export {
   getLease,
   getLeases,
+  getLeasesFor,
   updateLease,
   updateLeases,
   updateContact,
