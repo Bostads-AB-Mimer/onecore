@@ -6,10 +6,29 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { getLease, getLeases } from './adapters/tenant-lease-adapter'
-import { Lease } from '../../common/types'
+import {
+  getLease,
+  getLeases,
+  getLeasesFor,
+  updateLease,
+  updateLeases,
+  updateContact,
+  updateContacts,
+} from './adapters/tenant-lease-adapter'
+import { Contact, Lease } from '../../common/types'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * Returns leases for a national registration number with populated sub objects
+   */
+  router.get('(.*)/leases/for/:pnr', async (ctx) => {
+    const responseData = await getLeasesFor(ctx.params.pnr)
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
   /**
    * Returns a lease with populated sub objects
    */
@@ -29,6 +48,36 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = {
       data: leases,
+    }
+  })
+
+  /**
+   * Creates or updates a person.
+   */
+  router.post('(.*)/contacts', async (ctx) => {
+    if (Array.isArray(ctx.request.body)) {
+      await updateContacts(ctx.request.body as Contact[])
+    } else {
+      await updateContact(ctx.request.body as Contact)
+    }
+
+    ctx.body = {
+      meta: 'tbd',
+    }
+  })
+
+  /**
+   * Creates or updates a lease.
+   */
+  router.post('(.*)/leases', async (ctx) => {
+    if (Array.isArray(ctx.request.body)) {
+      await updateLeases(ctx.request.body as Lease[])
+    } else {
+      await updateLease(ctx.request.body as Lease)
+    }
+
+    ctx.body = {
+      meta: 'tbd',
     }
   })
 }
