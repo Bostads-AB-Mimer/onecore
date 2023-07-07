@@ -1,5 +1,6 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
+  "exclude": ["xpand-sync"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./build",
