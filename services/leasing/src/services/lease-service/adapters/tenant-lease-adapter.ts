@@ -50,6 +50,7 @@ const transformFromDbLease = (
     type: row.LeaseType,
     rentalProperty: undefined,
     lastUpdated: row.LeaseLastUpdated,
+    rentInfo: undefined,
   }
 
   return lease
@@ -178,8 +179,6 @@ const getLeasesFor = async (nationalRegistrationNumber: string) => {
 
     const uniqueLeaseIds = Array.from(new Set(leaseIds))
     const leases: Lease[] = []
-
-    console.log('unique lease ids', uniqueLeaseIds)
 
     for (const leaseId of uniqueLeaseIds) {
       const lease = await getLease(leaseId)

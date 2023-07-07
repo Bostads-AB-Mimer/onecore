@@ -23,16 +23,15 @@ interface Lease {
   status: LeaseStatus
   tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
-  type: string
   rentalPropertyId: string
   rentalProperty: RentalProperty | undefined
+  type: string
+  rentInfo: RentInfo | undefined
   lastUpdated: Date | undefined
 }
 
 interface RentalProperty {
   rentalPropertyId: string
-  leaseId: string | undefined
-  lease: Lease | undefined
   apartmentNumber: number
   size: number
   type: string
@@ -40,7 +39,7 @@ interface RentalProperty {
   rentalPropertyType: string
   additionsIncludedInRent: string
   otherInfo: string | undefined
-  lastUpdate: Date | undefined
+  lastUpdated: Date | undefined
 }
 
 interface Address {
@@ -50,8 +49,22 @@ interface Address {
   city: string
 }
 
+interface RentInfo {
+  currentRent: Rent
+  futureRents: Array<Rent> | undefined
+}
+
+interface Rent {
+  rentId: string
+  leaseId: string
+  currentRent: number
+  additionalChargeDescription: string | undefined
+  additionalChargeAmount: number | undefined
+  rentStartDate: Date
+  rentEndDate: Date | undefined
+}
 enum LeaseStatus {
   Active,
 }
 
-export { Contact, Lease, RentalProperty, LeaseStatus, Address }
+export { Contact, Lease, RentalProperty, LeaseStatus, Address, Rent, RentInfo }

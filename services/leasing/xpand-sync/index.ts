@@ -136,6 +136,7 @@ const syncContractsToTenantsLeases = async (contracts: any) => {
       rentalPropertyId: contract.rentalPropertyId,
       rentalProperty: undefined,
       lastUpdated: undefined,
+      rentInfo: undefined,
     }
 
     return transformedContract
@@ -159,6 +160,7 @@ const syncContractToTenantsLeases = async (contract: any) => {
     rentalPropertyId: contract.rentalPropertyId,
     rentalProperty: undefined,
     lastUpdated: undefined,
+    rentInfo: undefined,
   }
 
   const result = await axios.post(
