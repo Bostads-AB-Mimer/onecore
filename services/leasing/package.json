@@ -14,7 +14,8 @@
     "lint": "eslint -c .eslintrc src/",
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
-    "migrate:down": "knex migrate:down --env dev"
+    "migrate:down": "knex migrate:down --env dev",
+    "seed": "knex seed:run --env dev"
   },
   "author": "",
   "license": "MIT",

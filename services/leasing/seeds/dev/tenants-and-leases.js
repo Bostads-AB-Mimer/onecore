@@ -3,130 +3,54 @@
  * @returns { Promise<void> }
  */
 exports.seed = async function (knex) {
-  await knex('Tenant').del()
-
-  await knex('Lease').del()
   await knex('Lease').insert([
     {
-      LeaseId: 'L81178',
-      LeaseNumber: '1264',
-      LeaseStartDate: '2019-06-08',
-      LeaseEndDate: '2035-06-08',
-      Status: 'Active',
-      ApartmentId: 'A9911156',
-    },
-    {
-      LeaseId: 'L55139',
-      LeaseNumber: '5144',
-      LeaseStartDate: '2017-01-01',
-      LeaseEndDate: '2024-12-31',
-      Status: 'Active',
-      ApartmentId: 'A1981131',
-    },
-    {
-      LeaseId: 'L24975',
-      LeaseNumber: '5118',
-      LeaseStartDate: '1995-04-01',
-      LeaseEndDate: '2036-08-31',
-      Status: 'Active',
-      ApartmentId: 'A3361124',
+      LeaseId: '102-008-03-0202/07',
+      RentalPropertyId: '102-008-03-0202',
+      LeaseNumber: '',
+      LeaseStartDate: '2010-12-01',
+      LeaseEndDate: null,
+      Status: 0,
+      Type: 'Bostadskontrakt',
     },
   ])
 
-  await knex('Person').del()
-  await knex('Person').insert([
+  await knex('Contact').insert([
     {
-      PersonId: 'P738',
+      ContactId: 'P965338',
+      LeaseID: '102-008-03-0202/07',
       FirstName: 'Maj-Britt',
       LastName: 'Lundberg',
-      NationalRegistrationNumber: '19480807-5577',
+      FullName: 'Maj-Britt Lundberg',
+      Type: 'Kontraktsinnehavare',
+      NationalRegistrationNumber: '194808075577',
       BirthDate: '19480807',
       Street: 'Gatvägen',
       StreetNumber: '56',
       PostalCode: '72266',
       City: 'Västerås',
+      Country: 'Sweden',
       MobilePhone: '+460759429414',
       PhoneNumber: '+465292643751',
       EmailAddress: 'majbritt-123@mimer.nu',
     },
     {
-      PersonId: 'P5738',
-      FirstName: 'Sofie',
-      LastName: 'Lindström',
-      NationalRegistrationNumber: '20130425-5048',
-      BirthDate: '20130425',
+      ContactId: 'P965339',
+      LeaseID: '102-008-03-0202/07',
+      FirstName: 'Erik',
+      LastName: 'Lundberg',
+      FullName: 'Erik Lundberg',
+      Type: 'Kontraktsinnehavare',
+      NationalRegistrationNumber: '194512121122',
+      BirthDate: '19451212',
       Street: 'Gatvägen',
       StreetNumber: '56',
       PostalCode: '72266',
       City: 'Västerås',
-      MobilePhone: '+460221068332',
-      PhoneNumber: '+468064133965',
-      EmailAddress: 'sofie-test@mimer.nu',
-    },
-    {
-      PersonId: 'P6274',
-      FirstName: 'Tobias',
-      LastName: 'Åström',
-      NationalRegistrationNumber: '19080305-4382',
-      BirthDate: '19080305',
-      Street: 'Hemstigen',
-      StreetNumber: '56',
-      PostalCode: '72446',
-      City: 'Västerås',
-      MobilePhone: '+464673838178',
-      PhoneNumber: '+466225423325',
-      EmailAddress: 'tobias-test@mimer.nu',
-    },
-    {
-      PersonId: 'P8944',
-      FirstName: 'Klara',
-      LastName: 'Lundström',
-      NationalRegistrationNumber: '19940303-4864',
-      BirthDate: '19940303',
-      Street: 'Skogsvägen',
-      StreetNumber: '20',
-      PostalCode: '72303',
-      City: 'Västerås',
-      MobilePhone: '+460080979405',
-      PhoneNumber: '+463613132670',
-      EmailAddress: 'klara-test@mimer.nu',
-    },
-    {
-      PersonId: 'P3011',
-      FirstName: 'Jonathan',
-      LastName: 'Martinsson',
-      NationalRegistrationNumber: '19860911-4940',
-      BirthDate: '198660911',
-      Street: 'Skogsvägen',
-      StreetNumber: '20',
-      PostalCode: '72303',
-      City: 'Västerås',
-      MobilePhone: '+468945856929',
-      PhoneNumber: '+467774692686',
-      EmailAddress: 'jonathan-test@mimer.nu',
-    },
-  ])
-
-  await knex('Tenant').insert([
-    {
-      TenantLeaseId: 'L81178',
-      TenantPersonId: 'P738',
-    },
-    {
-      TenantLeaseId: 'L81178',
-      TenantPersonId: 'P5738',
-    },
-    {
-      TenantLeaseId: 'L55139',
-      TenantPersonId: 'P6274',
-    },
-    {
-      TenantLeaseId: 'L24975',
-      TenantPersonId: 'P8944',
-    },
-    {
-      TenantLeaseId: 'L24975',
-      TenantPersonId: 'P3011',
+      Country: 'Sweden',
+      MobilePhone: '+460759429414',
+      PhoneNumber: '+465292643751',
+      EmailAddress: 'erik.lundberg@mimer.nu',
     },
   ])
 }
