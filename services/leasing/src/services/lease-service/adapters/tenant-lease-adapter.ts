@@ -241,6 +241,18 @@ const updateLeases = async (leases: Lease[]) => {
   }
 }
 
+const getContact = async (nationalRegistrationNumber: string) => {
+  const rows = await db('contact').where({
+    NationalRegistrationNumber: nationalRegistrationNumber,
+  })
+
+  if (rows && rows.length > 0) {
+    return transformFromDbContact(rows[0])
+  }
+
+  return null
+}
+
 const updateContact = async (contact: Contact) => {
   const rows = await db('contact').where({
     ContactId: contact.contactId,
@@ -297,6 +309,7 @@ export {
   getLeasesFor,
   updateLease,
   updateLeases,
+  getContact,
   updateContact,
   updateContacts,
 }
