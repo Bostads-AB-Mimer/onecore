@@ -12,6 +12,7 @@ import {
   getLeasesFor,
   updateLease,
   updateLeases,
+  getContact,
   updateContact,
   updateContacts,
 } from './adapters/tenant-lease-adapter'
@@ -51,6 +52,17 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * Gets a person.
+   */
+
+  router.get('(.*)/contact/:pnr', async (ctx: any) => {
+    const responseData = await getContact(ctx.params.pnr)
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
   /**
    * Creates or updates a person.
    */
