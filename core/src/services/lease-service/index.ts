@@ -6,7 +6,11 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { getLease, getLeasesForPnr } from './adapters/tenant-lease-adapter'
+import {
+  getContactForPnr,
+  getLease,
+  getLeasesForPnr,
+} from './adapters/tenant-lease-adapter'
 import { Lease } from '../../common/types'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -28,6 +32,17 @@ export const routes = (router: KoaRouter) => {
     const responseData = await getLeasesWithRelatedEntitiesForPnr(
       ctx.params.pnr
     )
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
+   * Returns a contact
+   */
+  router.get('(.*)/contact/:pnr', async (ctx: any) => {
+    const responseData = await getContactForPnr(ctx.params.pnr)
 
     ctx.body = {
       data: responseData,

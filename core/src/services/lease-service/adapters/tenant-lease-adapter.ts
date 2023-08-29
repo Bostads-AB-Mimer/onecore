@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Lease } from '../../../common/types'
+import { Contact, Lease } from '../../../common/types'
 import Config from '../../../common/config'
 
 const tenantsLeasesServiceUrl = Config.tenantsLeasesService.url
@@ -22,4 +22,14 @@ const getLeasesForPnr = async (
   return leasesResponse.data.data
 }
 
-export { getLease, getLeasesForPnr }
+const getContactForPnr = async (
+  nationalRegistrationNumber: string
+): Promise<Contact> => {
+  const contactResponse = await axios(
+    tenantsLeasesServiceUrl + '/contact/' + nationalRegistrationNumber
+  )
+
+  return contactResponse.data.data
+}
+
+export { getLease, getLeasesForPnr, getContactForPnr }
