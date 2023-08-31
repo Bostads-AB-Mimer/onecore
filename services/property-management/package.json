@@ -11,7 +11,8 @@
     "build": "tsc",
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon -e ts,js --exec npm run start",
-    "lint": "eslint -c .eslintrc src/"
+    "lint": "eslint -c .eslintrc src/",
+    "get-apartment-info": "node debug/cli.ts"
   },
   "author": "",
   "license": "MIT",
