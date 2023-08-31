@@ -28,7 +28,7 @@ const getRoomTypes = async (aparmentId: string): Promise<Array<RoomType>> => {
   /*Get real data*/
   return [
     { roomTypeId: '1', name: 'Kök & Hall' },
-    { roomTypeId: '2', name: 'Badrum' },
+    { roomTypeId: 'BADRUM', name: 'Badrum' },
     { roomTypeId: '3', name: 'Vardagsrum' },
     { roomTypeId: '4', name: 'Sovrum 1' },
   ]

@@ -9,9 +9,13 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "start": "ts-node ./src/index.ts",
-    "dev": "nodemon -e ts,js --exec npm run start",
-    "lint": "eslint -c .eslintrc src/"
+    "start": "npm run migrate:up && node index",
+    "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
+    "lint": "eslint -c .eslintrc src/",
+    "migrate:make": "knex migrate:make",
+    "migrate:up": "knex migrate:latest --env dev",
+    "migrate:down": "knex migrate:down --env dev",
+    "seed": "knex seed:run --env dev"
   },
   "author": "",
   "license": "MIT",
@@ -36,11 +40,15 @@
     "typescript": "5.1.6"
   },
   "dependencies": {
+    "@iteam/config": "^12.1.2",
     "@koa/cors": "^4.0.0",
     "@koa/router": "^12.0.0",
     "axios": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "knex": "^2.5.1",
     "koa": "^2.14.1",
     "koa-bodyparser": "^4.3.0",
-    "koa-pino-logger": "^4.0.0"
+    "koa-pino-logger": "^4.0.0",
+    "tedious": "^16.4.0"
   }
 }

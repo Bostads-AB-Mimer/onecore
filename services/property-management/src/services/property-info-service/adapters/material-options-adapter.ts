@@ -6,6 +6,14 @@ import {
   RoomType,
 } from '../../../common/types'
 
+import knex from 'knex'
+import config from '../../../common/config'
+
+const db = knex({
+  client: 'mssql',
+  connection: config.database,
+})
+
 const getSingleMaterialOption = async (
   apartmentId: string,
   roomType: RoomType,
@@ -34,7 +42,57 @@ const getSingleMaterialOption = async (
 const getMaterialOptionGroupsByRoomType = async (
   roomTypeId: string
 ): Promise<Array<MaterialOptionGroup>> => {
+  const rows = await db('MaterialOptionGroup')
+    .innerJoin(
+      'MaterialOption',
+      'MaterialOption.MaterialOptionGroupId',
+      'MaterialOptionGroup.MaterialOptionGroupId'
+    )
+    .where({
+      RoomType: roomTypeId,
+    })
+
   const materialOptionGroups = new Array<MaterialOptionGroup>()
+
+  if (rows && rows.length > 0) {
+    let currentMaterialOptionGroup: MaterialOptionGroup | undefined = undefined
+
+    rows.forEach((row) => {
+      const materialOptionGroupId = row.MaterialOptionGroupId[0]
+
+      if (
+        !currentMaterialOptionGroup ||
+        currentMaterialOptionGroup.materialOptionGroupId !=
+          materialOptionGroupId
+      ) {
+        currentMaterialOptionGroup = {
+          materialOptionGroupId: materialOptionGroupId,
+          roomTypeId: row.RoomType,
+          name: row.Name,
+          actionName: row.ActionName,
+          materialOptions: new Array<MaterialOption>(),
+          type: row.Type,
+        }
+
+        materialOptionGroups.push(currentMaterialOptionGroup)
+      }
+
+      const materialOption = {
+        materialOptionId: row.MaterialOptionId,
+        caption: row.Caption,
+        shortDescription: row.ShortDescription,
+        description: row.Description,
+        coverImage: row.CoverImage,
+        materialOptionGroupName: currentMaterialOptionGroup.name,
+      }
+
+      currentMaterialOptionGroup.materialOptions?.push(materialOption)
+    })
+  }
+
+  return materialOptionGroups
+}
+/*const materialOptionGroups = new Array<MaterialOptionGroup>()
 
   materialOptionGroups.push({
     materialOptionGroupId: '1',
@@ -211,7 +269,7 @@ const getMaterialOptionGroupsByRoomType = async (
     (materialOptionGroup: MaterialOptionGroup) =>
       materialOptionGroup.roomTypeId == roomTypeId
   )
-}
+}*/
 
 const getRoomTypeWithMaterialOptions = async (
   apartmentId: string,
