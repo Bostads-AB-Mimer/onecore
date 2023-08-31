@@ -14,6 +14,9 @@ export interface Config {
   documentsService: {
     url: string
   }
+  contechOs: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -44,5 +47,6 @@ export default {
   port: config.get('port'),
   tenantsLeasesService: config.get('tenantsLeasesService'),
   documentsService: config.get('documentsService'),
+  contechOs: config.get('contechOs'),
   auth: config.get('auth'),
 } as Config

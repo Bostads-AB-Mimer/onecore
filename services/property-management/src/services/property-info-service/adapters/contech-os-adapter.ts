@@ -1,5 +1,23 @@
 import axios from 'axios'
 import { RentalProperty, RoomType } from '../../../common/types'
+import Config from '../../../common/config'
+
+const getApartmentInfo = async () => {
+  const url = `${Config.contechOs.url}`
+
+  const response = await axios({
+    method: 'post',
+    url: url,
+    headers: {
+      'Ocp-Apim-Subscription-Key': 'ac9c3fa0c9d04aca866e65b780002804',
+    },
+    data: {
+      "targetTitle":"406-091-08-0101"
+    }
+  })
+
+  return response
+}
 
 const getRentalProperty = async (
   rentalPropertyId: string
@@ -46,4 +64,4 @@ const getRoomType = async (
   )
 }
 
-export { getRoomTypes, getRoomType, getRentalProperty }
+export { getRoomTypes, getRoomType, getRentalProperty, getApartmentInfo }
