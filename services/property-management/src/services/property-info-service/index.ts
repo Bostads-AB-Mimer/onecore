@@ -42,6 +42,8 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/rentalproperties/:id/material-options/details',
     async (ctx) => {
+      console.log('(.*)/rentalproperties/:id/material-options/details')
+
       if (
         ctx.request.query.roomTypeId &&
         ctx.request.query.materialOptionGroupId &&
@@ -69,7 +71,7 @@ export const routes = (router: KoaRouter) => {
           ctx.request.query.materialOptionGroupId[0],
           ctx.request.query.materialOptionId[0]
         )
-
+        console.log('option', option)
         ctx.body = {
           materialOption: option,
         }

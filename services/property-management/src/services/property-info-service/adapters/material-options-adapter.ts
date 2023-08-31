@@ -48,6 +48,11 @@ const getMaterialOptionGroupsByRoomType = async (
       'MaterialOption.MaterialOptionGroupId',
       'MaterialOptionGroup.MaterialOptionGroupId'
     )
+    .leftJoin(
+      'MaterialOptionImage',
+      'MaterialOptionImage.MaterialOptionId',
+      'MaterialOption.MaterialOptionId'
+    )
     .where({
       RoomType: roomTypeId,
     })
@@ -56,9 +61,11 @@ const getMaterialOptionGroupsByRoomType = async (
 
   if (rows && rows.length > 0) {
     let currentMaterialOptionGroup: MaterialOptionGroup | undefined = undefined
+    let currentMaterialOption: MaterialOption | undefined = undefined
 
     rows.forEach((row) => {
       const materialOptionGroupId = row.MaterialOptionGroupId[0]
+      const materialOptionId = row.MaterialOptionId[0]
 
       if (
         !currentMaterialOptionGroup ||
@@ -77,16 +84,26 @@ const getMaterialOptionGroupsByRoomType = async (
         materialOptionGroups.push(currentMaterialOptionGroup)
       }
 
-      const materialOption = {
-        materialOptionId: row.MaterialOptionId,
-        caption: row.Caption,
-        shortDescription: row.ShortDescription,
-        description: row.Description,
-        coverImage: row.CoverImage,
-        materialOptionGroupName: currentMaterialOptionGroup.name,
+      if (
+        !currentMaterialOption ||
+        currentMaterialOption.materialOptionId != materialOptionId
+      ) {
+        currentMaterialOption = {
+          materialOptionId: materialOptionId,
+          caption: row.Caption,
+          shortDescription: row.ShortDescription,
+          description: row.Description,
+          coverImage: row.CoverImage,
+          materialOptionGroupName: currentMaterialOptionGroup.name,
+          images: new Array<string>(),
+        }
+
+        currentMaterialOptionGroup.materialOptions?.push(currentMaterialOption)
       }
 
-      currentMaterialOptionGroup.materialOptions?.push(materialOption)
+      if (row.Image) {
+        currentMaterialOption.images?.push(row.Image)
+      }
     })
   }
 
@@ -322,183 +339,184 @@ const getMaterialOption = async (
 const getMaterialOptionGroups = async (
   roomTypeId: string
 ): Promise<Array<MaterialOptionGroup>> => {
-  const materialOptionGroups = new Array<MaterialOptionGroup>()
+  return getMaterialOptionGroupsByRoomType(roomTypeId)
+  // const materialOptionGroups = new Array<MaterialOptionGroup>()
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '1',
-    roomTypeId: '1',
-    type: 'Concept',
-    actionName: 'Välj koncept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Koncept 1',
-        coverImage: 'kok_koncept1.png',
-        description:
-          'I det första alternativet får du ett vitt och ljust kök med en betonggrå bänkskiva och ett matchande linoleumgolv. Ovanför diskbänken sitter ett vitt blankt kakel i formatet 15x15 centimeter.',
-        images: ['kok_koncept1_2.png', 'kok_koncept1_3.png'],
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Koncept 2',
-        coverImage: 'kok_koncept2.png',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '1',
+  //   roomTypeId: '1',
+  //   type: 'Concept',
+  //   actionName: 'Välj koncept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Koncept 1',
+  //       coverImage: 'kok_koncept1.png',
+  //       description:
+  //         'I det första alternativet får du ett vitt och ljust kök med en betonggrå bänkskiva och ett matchande linoleumgolv. Ovanför diskbänken sitter ett vitt blankt kakel i formatet 15x15 centimeter.',
+  //       images: ['kok_koncept1_2.png', 'kok_koncept1_3.png'],
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Koncept 2',
+  //       coverImage: 'kok_koncept2.png',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '2',
-    roomTypeId: '1',
-    type: 'AddOn',
-    actionName: 'Tillval',
-    materialOptions: [
-      {
-        materialOptionId: '3',
-        caption: 'Diskmaskin',
-        shortDescription: '+215 kr/mån',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '2',
+  //   roomTypeId: '1',
+  //   type: 'AddOn',
+  //   actionName: 'Tillval',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '3',
+  //       caption: 'Diskmaskin',
+  //       shortDescription: '+215 kr/mån',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '3',
-    roomTypeId: '2',
-    type: 'Concept',
-    actionName: 'Välj koncept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Koncept 1',
-        coverImage: 'bad_koncept1.png',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Koncept 2',
-        coverImage: 'bad_koncept1.png',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '3',
+  //   roomTypeId: '2',
+  //   type: 'Concept',
+  //   actionName: 'Välj koncept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Koncept 1',
+  //       coverImage: 'bad_koncept1.png',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Koncept 2',
+  //       coverImage: 'bad_koncept1.png',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '4',
-    roomTypeId: '2',
-    actionName: 'Välj mellan följande',
-    type: 'SingleChoice',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Dusch',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Badkar',
-        shortDescription:
-          'Vid val av badkar är det ej möjligt att välja till tvätt-/kombi-maskin.',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '4',
+  //   roomTypeId: '2',
+  //   actionName: 'Välj mellan följande',
+  //   type: 'SingleChoice',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Dusch',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Badkar',
+  //       shortDescription:
+  //         'Vid val av badkar är det ej möjligt att välja till tvätt-/kombi-maskin.',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '5',
-    roomTypeId: '2',
-    actionName: 'Tillval',
-    type: 'AddOn',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Tvättmaskin',
-        shortDescription: '+265kr/mån',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Kombimaskin',
-        shortDescription: '+273kr/mån',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '5',
+  //   roomTypeId: '2',
+  //   actionName: 'Tillval',
+  //   type: 'AddOn',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Tvättmaskin',
+  //       shortDescription: '+265kr/mån',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Kombimaskin',
+  //       shortDescription: '+273kr/mån',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '6',
-    roomTypeId: '3',
-    name: 'Golv',
-    type: 'Concept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Ekparkett ingår',
-        coverImage: 'golv_ekparkett.jpg',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '6',
+  //   roomTypeId: '3',
+  //   name: 'Golv',
+  //   type: 'Concept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Ekparkett ingår',
+  //       coverImage: 'golv_ekparkett.jpg',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '7',
-    roomTypeId: '3',
-    name: 'Väggar',
-    actionName: 'Välj väggfärg',
-    type: 'Concept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Ljusgrå',
-        shortDescription: '10002Y',
-        coverImage: 'vagg_ljusgra.png',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Varmvit',
-        shortDescription: '20002Y',
-        coverImage: 'vagg_varmvit.png',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '7',
+  //   roomTypeId: '3',
+  //   name: 'Väggar',
+  //   actionName: 'Välj väggfärg',
+  //   type: 'Concept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Ljusgrå',
+  //       shortDescription: '10002Y',
+  //       coverImage: 'vagg_ljusgra.png',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Varmvit',
+  //       shortDescription: '20002Y',
+  //       coverImage: 'vagg_varmvit.png',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '8',
-    roomTypeId: '4',
-    name: 'Golv',
-    actionName: 'Välj golv',
-    type: 'Concept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Ljusgrå linoleum',
-        coverImage: 'golv_ljusgra.png',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Beige linoleum',
-        coverImage: 'golv_beige.png',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '8',
+  //   roomTypeId: '4',
+  //   name: 'Golv',
+  //   actionName: 'Välj golv',
+  //   type: 'Concept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Ljusgrå linoleum',
+  //       coverImage: 'golv_ljusgra.png',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Beige linoleum',
+  //       coverImage: 'golv_beige.png',
+  //     },
+  //   ],
+  // })
 
-  materialOptionGroups.push({
-    materialOptionGroupId: '8',
-    roomTypeId: '34',
-    name: 'Väggar',
-    actionName: 'Välj väggar',
-    type: 'Concept',
-    materialOptions: [
-      {
-        materialOptionId: '1',
-        caption: 'Ljusgrå',
-        shortDescription: '10002Y',
-        coverImage: 'vagg_ljusgra.png',
-      },
-      {
-        materialOptionId: '2',
-        caption: 'Varmvit',
-        shortDescription: '20002Y',
-        coverImage: 'vagg_varmvit.png',
-      },
-    ],
-  })
+  // materialOptionGroups.push({
+  //   materialOptionGroupId: '8',
+  //   roomTypeId: '34',
+  //   name: 'Väggar',
+  //   actionName: 'Välj väggar',
+  //   type: 'Concept',
+  //   materialOptions: [
+  //     {
+  //       materialOptionId: '1',
+  //       caption: 'Ljusgrå',
+  //       shortDescription: '10002Y',
+  //       coverImage: 'vagg_ljusgra.png',
+  //     },
+  //     {
+  //       materialOptionId: '2',
+  //       caption: 'Varmvit',
+  //       shortDescription: '20002Y',
+  //       coverImage: 'vagg_varmvit.png',
+  //     },
+  //   ],
+  // })
 
-  return materialOptionGroups.filter(
-    (materialOptionGroup: MaterialOptionGroup) =>
-      materialOptionGroup.roomTypeId == roomTypeId
-  )
+  // return materialOptionGroups.filter(
+  //   (materialOptionGroup: MaterialOptionGroup) =>
+  //     materialOptionGroup.roomTypeId == roomTypeId
+  // )
 }
 
 const getMaterialChoices = async (
