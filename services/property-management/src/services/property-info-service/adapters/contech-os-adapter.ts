@@ -27,10 +27,10 @@ const getRentalProperty = async (
 const getRoomTypes = async (aparmentId: string): Promise<Array<RoomType>> => {
   /*Get real data*/
   return [
-    { roomTypeId: '1', name: 'Kök & Hall' },
+    { roomTypeId: 'KOKHALL', name: 'Kök & Hall' },
     { roomTypeId: 'BADRUM', name: 'Badrum' },
-    { roomTypeId: '3', name: 'Vardagsrum' },
-    { roomTypeId: '4', name: 'Sovrum 1' },
+    { roomTypeId: 'VARDAGSRUM', name: 'Vardagsrum' },
+    { roomTypeId: 'SOVRUM1', name: 'Sovrum 1' },
   ]
 }
 

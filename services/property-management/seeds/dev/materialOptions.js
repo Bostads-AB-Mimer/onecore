@@ -19,6 +19,54 @@ exports.seed = async function (knex) {
   await knex('MaterialOptionGroup')
     .insert([
       {
+        RoomType: 'KOKHALL',
+        Name: 'Kök & Hall',
+        ActionName: 'Välj koncept',
+        Type: 'Concept',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      const materialOptionGroupId = result[0].MaterialOptionGroupID
+      return knex('MaterialOption')
+        .insert([
+          {
+            MaterialOptionGroupID: materialOptionGroupId,
+            Caption: 'Koncept 1',
+            ShortDescription: 'Kort beskrivning av koncept 1',
+            Description: 'Lång beskrivning av koncept 1',
+            CoverImage: 'kok_koncept1.png',
+          },
+          {
+            MaterialOptionGroupID: materialOptionGroupId,
+            Caption: 'Koncept 2',
+            ShortDescription: 'Kort beskrivning av koncept 2',
+            Description: 'Lång beskrivning av koncept 2',
+            CoverImage: 'kok_koncept2.png',
+          },
+        ])
+        .returning('MaterialOptionID')
+        .then((result) => {
+          return knex('MaterialOptionImage').insert([
+            {
+              MaterialOptionId: result[0].MaterialOptionID,
+              Image: 'kok_koncept1_2.png',
+            },
+            {
+              MaterialOptionId: result[0].MaterialOptionID,
+              Image: 'kok_koncept1_3.png',
+            },
+            {
+              MaterialOptionId: result[1].MaterialOptionID,
+              Image: 'kok_koncept1_3.png',
+            },
+          ])
+        })
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
         RoomType: 'BADRUM',
         Name: 'Badrum',
         ActionName: 'Välj koncept',
@@ -59,6 +107,157 @@ exports.seed = async function (knex) {
             },
           ])
         })
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'BADRUM',
+        Name: 'Badrum',
+        ActionName: 'Välj mellan följande',
+        Type: 'SingleChoice',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      const materialOptionGroupId = result[0].MaterialOptionGroupID
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: materialOptionGroupId,
+          Caption: 'Dusch',
+        },
+        {
+          MaterialOptionGroupID: materialOptionGroupId,
+          Caption: 'Badkar',
+          ShortDescription:
+            'Vid val av badkar är det ej möjligt att lägga till tvätt-/kombimaskin',
+        },
+      ])
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'BADRUM',
+        Name: 'Badrum',
+        ActionName: 'Tillval',
+        Type: 'AddOn',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      const materialOptionGroupId = result[0].MaterialOptionGroupID
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: materialOptionGroupId,
+          Caption: 'Tvättmaskin',
+          ShortDescription: '+265 kr/mån',
+        },
+        {
+          MaterialOptionGroupID: materialOptionGroupId,
+          Caption: 'Kombimaskin',
+          ShortDescription: '+273 kr/mån',
+        },
+      ])
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'VARDAGSRUM',
+        Name: 'Golv',
+        // ActionName: 'Välj koncept',
+        Type: 'Concept',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Ekparkett ingår',
+          CoverImage: 'golv_ekparkett.jpg',
+        },
+      ])
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'VARDAGSRUM',
+        Name: 'Väggar',
+        ActionName: 'Välj väggfärg',
+        Type: 'Concept',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Ljusgrå',
+          ShortDescription: '10002Y',
+          CoverImage: 'vagg_ljusgra.png',
+        },
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Varmvit',
+          ShortDescription: '20002Y',
+          CoverImage: 'vagg_varmvit.png',
+        },
+      ])
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'SOVRUM1',
+        Name: 'Golv',
+        ActionName: 'Välj golv',
+        Type: 'Concept',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Ljusgrå linoleum',
+          CoverImage: 'golv_ljusgra.png',
+        },
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Beige linoleum',
+          CoverImage: 'golv_beige.png',
+        },
+      ])
+    })
+
+  await knex('MaterialOptionGroup')
+    .insert([
+      {
+        RoomType: 'SOVRUM1',
+        Name: 'Väggar',
+        ActionName: 'Välj väggar',
+        Type: 'Concept',
+      },
+    ])
+    .returning('MaterialOptionGroupID')
+    .then((result) => {
+      return knex('MaterialOption').insert([
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Ljusgrå',
+          ShortDescription: '10002Y',
+          CoverImage: 'vagg_ljusgra.png',
+        },
+        {
+          MaterialOptionGroupID: result[0].MaterialOptionGroupID,
+          Caption: 'Varmvit',
+          ShortDescription: '20002Y',
+          CoverImage: 'vagg_varmvit.png',
+        },
+      ])
     })
 
   // await knex('Lease').insert([
