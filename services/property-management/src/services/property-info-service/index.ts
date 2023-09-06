@@ -11,6 +11,7 @@ import {
   getRentalProperty,
   getRoomTypes,
   getRoomType,
+  getApartmentInfo,
 } from './adapters/contech-os-adapter'
 
 import {
@@ -89,6 +90,12 @@ export const routes = (router: KoaRouter) => {
     const roomTypes = await getRoomTypes(ctx.params.id)
 
     ctx.body = roomTypes
+  })
+
+  router.get('(.*)/apartmentinfo/:id', async (ctx) => {
+    const responseData = await getApartmentInfo()
+
+    ctx.body = responseData
   })
 
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
