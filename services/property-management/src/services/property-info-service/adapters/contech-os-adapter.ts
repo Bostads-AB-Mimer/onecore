@@ -1,5 +1,43 @@
 import axios from 'axios'
 import { RentalProperty, RoomType } from '../../../common/types'
+//import Config from '../../../common/config'
+
+const getApartmentInfo = async () => {
+  //const url = `${Config.contechOs.url}`
+  const url =
+    'https://mim-shared-apim-apim01-t.azure-api.net/contech-os-test/instanceData/sourcesToTargetTitle'
+  console.log('Contech URL: ' + url)
+
+  const response = await axios({
+    method: 'post',
+    url: url,
+    headers: {
+      'Ocp-Apim-Subscription-Key': 'a372e65dd6204183990487d891cb6b37',
+    },
+    data: {
+      targetTitle: '406-091-08-0101',
+    },
+  })
+
+  const json = response.data
+
+  // Extract the target object
+  const targetData = json[0].target
+
+  // Access the data
+  const propertyId = targetData.title
+  const parentId = targetData.parentId
+  const id = targetData.id
+  const parentTitle = targetData.parentTitle
+
+  // Print, populate, whatever
+  console.log('Parent Title:', parentTitle)
+  console.log('propertyId:', propertyId)
+  console.log('Parent ID:', parentId)
+  console.log('ID:', id)
+
+  return json
+}
 
 const getRentalProperty = async (
   rentalPropertyId: string
@@ -46,4 +84,4 @@ const getRoomType = async (
   )
 }
 
-export { getRoomTypes, getRoomType, getRentalProperty }
+export { getRoomTypes, getRoomType, getRentalProperty, getApartmentInfo }
