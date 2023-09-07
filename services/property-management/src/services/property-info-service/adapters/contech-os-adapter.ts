@@ -2,7 +2,11 @@ import axios from 'axios'
 import { RentalProperty, RoomType } from '../../../common/types'
 //import Config from '../../../common/config'
 
-const getApartmentInfo = async () => {
+
+const getApartmentInfo = async (
+  rentalPropertyId: string
+): Promise<RentalProperty> => {
+//const getApartmentInfo = async () => {
   //const url = `${Config.contechOs.url}`
   const url =
     'https://mim-shared-apim-apim01-t.azure-api.net/contech-os-test/instanceData/sourcesToTargetTitle'
@@ -20,24 +24,74 @@ const getApartmentInfo = async () => {
   })
 
   const json = response.data
-
-  // Extract the target object
   const targetData = json[0].target
 
-  // Access the data
   const propertyId = targetData.title
   const parentId = targetData.parentId
   const id = targetData.id
   const parentTitle = targetData.parentTitle
 
-  // Print, populate, whatever
-  console.log('Parent Title:', parentTitle)
-  console.log('propertyId:', propertyId)
-  console.log('Parent ID:', parentId)
-  console.log('ID:', id)
+  let apartmentNumber: number = Math.round(Math.random() * 1000);
+  let size: number = Math.round(Math.random() * 200);
+  let address: {
+    street: string;
+    number: string;
+    postalCode: string;
+    city: string;
+  } = {
+    street: 'Björnvägen',
+    number: Math.round(Math.random() * 100).toString(),
+    postalCode: '74212',
+    city: 'Västerås',
+  };
+  let rentalPropertyType: string = Math.round((Math.random() + 0.1) * 6) + ' rum och kök';
+  let type: string = Math.round((Math.random() + 0.1) * 6) + ' rum och kök';
+  let otherInfo: undefined = undefined;
+  let lastUpdated: undefined = undefined;
 
-  return json
+  json[0].links.forEach((link: { sources: any; linkTitle: any }) => {
+    const sources = link.sources;
+    
+    if (sources.length > 0) {
+      if (sources.length === 1) {
+        const source = sources[0];
+        const value = source.title;
+        const id = source.id;
+        
+        if (id === "id_3666a129-e0ab-4f7a-94e8-f8745ed2d263") {
+          size = value;
+        }
+        if (id === "id_0cd3c433-972c-4adb-a6a8-a43a3e568067") {
+          rentalPropertyType = value;
+        }
+        if (id === "id_cf8b7d5f-f349-4149-b643-f77ca6435b9d") {
+          apartmentNumber = value;
+        }
+        if (id === "id_dcfcd750-d6af-440a-981b-2605b16ed0fa") {
+          address.street = value;
+        }
+      } else {
+        console.log(`Link with multiple sources: ${link.linkTitle}`);
+      }
+    }
+  });
+  
+  return {
+    rentalPropertyId: propertyId,
+    apartmentNumber: apartmentNumber,
+    size: size,
+    address: address,
+    rentalPropertyType: rentalPropertyType,
+    type: type,
+    additionsIncludedInRent: '',
+    otherInfo: otherInfo,
+    lastUpdated: lastUpdated,
+  }
 }
+
+//const convertToRentalProperty = async (json: string): Promise<RentalProperty> => {
+//  return new RentalProperty;
+//}
 
 const getRentalProperty = async (
   rentalPropertyId: string

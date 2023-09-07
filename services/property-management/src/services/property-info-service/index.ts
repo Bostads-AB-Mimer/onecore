@@ -93,7 +93,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/apartmentinfo/:id', async (ctx) => {
-    const responseData = await getApartmentInfo()
+    const responseData = await getApartmentInfo(ctx.params.id)
 
     ctx.body = responseData
   })
