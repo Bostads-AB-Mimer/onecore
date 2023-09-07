@@ -20,7 +20,9 @@ import {
   // getMaterialOptionGroups,
   getMaterialOption,
   getMaterialChoices,
+  saveMaterialChoices,
 } from './adapters/material-options-adapter'
+import { MaterialChoice } from '../../common/types'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -75,6 +77,15 @@ export const routes = (router: KoaRouter) => {
     const materialChoices = await getMaterialChoices(apartmentId, roomTypes)
 
     ctx.body = materialChoices
+  })
+
+  router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+    const result = await saveMaterialChoices(
+      ctx.params.id,
+      ctx.request.body as Array<MaterialChoice>
+    )
+    console.log('result', result)
+    ctx.body = result
   })
 
   // router.get('(.*)/rentalproperties/:id/room-types', async (ctx) => {

@@ -8,11 +8,79 @@ import {
 
 import knex from 'knex'
 import config from '../../../common/config'
+import { getRentalProperty } from './contech-os-adapter'
 
 const db = knex({
   client: 'mssql',
   connection: config.database,
 })
+
+const cancelPreviousChoice = async (
+  newChoices: Array<string>,
+  aparmentId: string
+) => {
+  await db('MaterialChoice')
+    .where({
+      'MaterialChoice.ApartmentId': aparmentId,
+    })
+    .whereNull('MaterialChoice.DateOfCancellation')
+    .then((allChoices) => {
+      const selectionToUpdate = allChoices.filter(
+        (row) => !newChoices.find((choice) => choice == row.MaterialChoiceId)
+      )
+
+      selectionToUpdate.forEach((row) => {
+        db('MaterialChoice')
+          .where({
+            'MaterialChoice.MaterialChoiceId': row.MaterialChoiceId,
+          })
+          .update({ DateOfCancellation: new Date() })
+          .catch((error) => console.log(error))
+        // .then((result) => {
+        //   console.log('row.MaterialChoiced', row.MaterialChoiceId)
+        //   console.log('result', result)
+        // })
+      })
+
+      // console.log('selection result', selectionToUpdate)
+      // console.log('selection result count', selectionToUpdate.length)
+    })
+  // .whereNotIn('MaterialChoice.MaterialChoiceId', newChoices) //doesn't work
+}
+
+/* TODO: execute in transaction */
+const saveMaterialChoices = async (
+  rentalPropertyId: string,
+  materialChoices: Array<MaterialChoice>
+) => {
+  let responseData
+  await db('MaterialChoice')
+    .insert(
+      materialChoices.map((materialChoice: MaterialChoice) => {
+        return {
+          MaterialOptionId: materialChoice.materialOptionId,
+          RoomType: materialChoice.roomTypeId,
+          ApartmentId: materialChoice.apartmentId,
+          Status: 'Submitted',
+          DateOfSubmission: new Date(),
+        }
+      }),
+      'MaterialChoiceId'
+    )
+    .then((result) => {
+      responseData = result
+
+      cancelPreviousChoice(
+        result.map((row) => row.MaterialChoiceId),
+        rentalPropertyId
+      )
+    })
+    .catch((error) => {
+      console.error(error)
+    })
+
+  return responseData
+}
 
 const getMaterialOption = async (
   rentalPropertyId: string,
@@ -37,7 +105,7 @@ const getMaterialOption = async (
       'MaterialOption.MaterialOptionId'
     )
 
-  console.log('rows', rows)
+  // console.log('rows', rows)
 
   let currentMaterialOption: MaterialOption | undefined = undefined
 
@@ -733,4 +801,5 @@ export {
   // getMaterialOptionGroups,
   getMaterialOption,
   getMaterialChoices,
+  saveMaterialChoices,
 }
