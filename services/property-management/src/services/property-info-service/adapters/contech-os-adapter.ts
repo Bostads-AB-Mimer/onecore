@@ -1,17 +1,17 @@
 import axios from 'axios'
 import { RentalProperty, RoomType } from '../../../common/types'
-//import Config from '../../../common/config'
+import Config from '../../../common/config'
 
+// Define constant variables for foreign keys
+const FK_SIZE = "Lägenhetsyta";
+const FK_RENTAL_PROPERTY_TYPE = "Lägenhetstyp";
+const FK_APARTMENT_NUMBER = "Lägenhetsnummer";
+const FK_ADDRESS = "Lägenhetsadress";
 
-const getApartmentInfo = async (
+const getRentalProperty = async (
   rentalPropertyId: string
 ): Promise<RentalProperty> => {
-//const getApartmentInfo = async () => {
-  //const url = `${Config.contechOs.url}`
-  const url =
-    'https://mim-shared-apim-apim01-t.azure-api.net/contech-os-test/instanceData/sourcesToTargetTitle'
-  console.log('Contech URL: ' + url)
-
+  const url = `${Config.contechOs.url}`
   const response = await axios({
     method: 'post',
     url: url,
@@ -19,18 +19,14 @@ const getApartmentInfo = async (
       'Ocp-Apim-Subscription-Key': 'a372e65dd6204183990487d891cb6b37',
     },
     data: {
-      targetTitle: '406-091-08-0101',
+      targetTitle: rentalPropertyId,
     },
   })
 
   const json = response.data
-  const targetData = json[0].target
+  const propertyId = json[0].target.title
 
-  const propertyId = targetData.title
-  const parentId = targetData.parentId
-  const id = targetData.id
-  const parentTitle = targetData.parentTitle
-
+  // Mock default values and overwrite with as much as possible with real data
   let apartmentNumber: number = Math.round(Math.random() * 1000);
   let size: number = Math.round(Math.random() * 200);
   let address: {
@@ -56,19 +52,21 @@ const getApartmentInfo = async (
       if (sources.length === 1) {
         const source = sources[0];
         const value = source.title;
-        const id = source.id;
+        const forgeinKey = source.parentTitle;
         
-        if (id === "id_3666a129-e0ab-4f7a-94e8-f8745ed2d263") {
+        if (forgeinKey === FK_SIZE) {
           size = value;
         }
-        if (id === "id_0cd3c433-972c-4adb-a6a8-a43a3e568067") {
+        if (forgeinKey === FK_RENTAL_PROPERTY_TYPE) {
           rentalPropertyType = value;
         }
-        if (id === "id_cf8b7d5f-f349-4149-b643-f77ca6435b9d") {
+        if (forgeinKey === FK_APARTMENT_NUMBER) {
           apartmentNumber = value;
         }
-        if (id === "id_dcfcd750-d6af-440a-981b-2605b16ed0fa") {
-          address.street = value;
+        if (forgeinKey === FK_ADDRESS) {
+          const parts = value.match(/^([\s\S]+?)\s(\d+)$/); // Split into string and number
+          address.street = parts[1];
+          address.number = parts[2];
         }
       } else {
         console.log(`Link with multiple sources: ${link.linkTitle}`);
@@ -86,33 +84,6 @@ const getApartmentInfo = async (
     additionsIncludedInRent: '',
     otherInfo: otherInfo,
     lastUpdated: lastUpdated,
-  }
-}
-
-//const convertToRentalProperty = async (json: string): Promise<RentalProperty> => {
-//  return new RentalProperty;
-//}
-
-const getRentalProperty = async (
-  rentalPropertyId: string
-): Promise<RentalProperty> => {
-  const applianceNames = ['Tvättmaskin', 'Skotork']
-
-  return {
-    rentalPropertyId,
-    apartmentNumber: Math.round(Math.random() * 1000),
-    size: Math.round(Math.random() * 200),
-    address: {
-      street: 'Björnvägen',
-      number: Math.round(Math.random() * 100).toString(),
-      postalCode: '74212',
-      city: 'Västerås',
-    },
-    rentalPropertyType: Math.round((Math.random() + 0.1) * 6) + ' rum och kök',
-    type: Math.round((Math.random() + 0.1) * 6) + ' rum och kök',
-    additionsIncludedInRent: applianceNames.join(', '),
-    otherInfo: undefined,
-    lastUpdated: undefined,
   }
 }
 
@@ -138,4 +109,4 @@ const getRoomType = async (
   )
 }
 
-export { getRoomTypes, getRoomType, getRentalProperty, getApartmentInfo }
+export { getRoomTypes, getRoomType, getRentalProperty }
