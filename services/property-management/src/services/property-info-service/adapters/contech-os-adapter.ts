@@ -2,11 +2,11 @@ import axios from 'axios'
 import { RentalProperty, RoomType } from '../../../common/types'
 import Config from '../../../common/config'
 
-// Define constant variables for foreign keys
 const FK_SIZE = "Lägenhetsyta";
 const FK_RENTAL_PROPERTY_TYPE = "Lägenhetstyp";
 const FK_APARTMENT_NUMBER = "Lägenhetsnummer";
 const FK_ADDRESS = "Lägenhetsadress";
+const FK_ROOM_TYPE = "Rum i Lägenhet"
 
 const getRentalProperty = async (
   rentalPropertyId: string
@@ -88,13 +88,30 @@ const getRentalProperty = async (
 }
 
 const getRoomTypes = async (aparmentId: string): Promise<Array<RoomType>> => {
-  /*Get real data*/
-  return [
-    { roomTypeId: '1', name: 'Kök & Hall' },
-    { roomTypeId: 'BADRUM', name: 'Badrum' },
-    { roomTypeId: '3', name: 'Vardagsrum' },
-    { roomTypeId: '4', name: 'Sovrum 1' },
-  ]
+  const roomTypes: Array<RoomType> = [];
+  const url = `${Config.contechOs.url}`
+  const response = await axios({
+    method: 'post',
+    url: url,
+    headers: {
+      'Ocp-Apim-Subscription-Key': 'a372e65dd6204183990487d891cb6b37',
+    },
+    data: {
+      targetTitle: aparmentId,
+    },
+  })
+  response.data[0].links.forEach((link: { sources: any; linkTitle: any }) => {
+    link.sources.forEach((source: { parentTitle: any; id: any; title: any; }) => {
+      const foreignKey = source.parentTitle;
+      if (foreignKey === FK_ROOM_TYPE) {
+        roomTypes.push({
+          roomTypeId: source.title,
+          name: source.title
+        })
+      }
+    });
+  });
+  return roomTypes;
 }
 
 const getRoomType = async (
