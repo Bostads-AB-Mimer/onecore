@@ -6,7 +6,13 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { getRentalProperty } from './adapters/rental-property-adapter'
+import {
+  getRentalProperty,
+  getRoomTypeWithMaterialOptions,
+  getMaterialOption,
+  getMaterialChoices,
+  saveMaterialChoice,
+} from './adapters/rental-property-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -16,6 +22,40 @@ export const routes = (router: KoaRouter) => {
     ctx.body = response.data
   })
 
+  router.get('(.*)/rentalproperties/:id/material-options', async (ctx) => {
+    const roomTypes = await getRoomTypeWithMaterialOptions(ctx.params.id)
+
+    ctx.body = roomTypes
+  })
+
+  router.get(
+    '(.*)/rentalproperties/:id/material-option/:materialOptionId',
+    async (ctx) => {
+      const option = await getMaterialOption(
+        ctx.params.id,
+        ctx.params.materialOptionId
+      )
+
+      ctx.body = option
+    }
+  )
+
+  router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+    const materialChoices = await getMaterialChoices(ctx.params.id)
+
+    ctx.body = materialChoices
+  })
+
+  router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+    await getMaterialChoices(ctx.params.id)
+
+    if (ctx.request.body) {
+      const result = await saveMaterialChoice(ctx.params.id, ctx.request.body)
+
+      ctx.body = result
+    }
+  })
+
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
     const responseData = await getRentalProperty(ctx.params.id)
 
@@ -23,12 +63,4 @@ export const routes = (router: KoaRouter) => {
       data: responseData,
     }
   })
-
-  /*router.get('(.*)/rentalproperties/:id', async (ctx) => {
-    const responseData = await getRentalProperties()
-
-    ctx.body = {
-      data: responseData,
-    }
-  })*/
 }

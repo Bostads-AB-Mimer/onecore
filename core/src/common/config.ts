@@ -11,6 +11,9 @@ export interface Config {
   tenantsLeasesService: {
     url: string
   }
+  propertyInfoService: {
+    url: string
+  }
   documentsService: {
     url: string
   }
@@ -29,6 +32,9 @@ const config = configPackage({
     tenantsLeasesService: {
       url: 'http://localhost:5020',
     },
+    propertyInfoService: {
+      url: 'http://localhost:5030',
+    },
     documentsService: {
       url: 'https://mim-shared-apim-apim01-t.azure-api.net/document',
     },
@@ -43,6 +49,7 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   tenantsLeasesService: config.get('tenantsLeasesService'),
+  propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
   auth: config.get('auth'),
 } as Config

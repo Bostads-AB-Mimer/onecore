@@ -1,26 +1,69 @@
-import { RentalProperty } from '../../../common/types'
+import axios from 'axios'
+import {
+  MaterialChoice,
+  MaterialOption,
+  RentalProperty,
+} from '../../../common/types'
+import config from '../../../common/config'
+
+const propertyInfoServiceUrl = config.propertyInfoService.url
 
 const getRentalProperty = async (
   rentalPropertyId: string
 ): Promise<RentalProperty> => {
-  const applianceNames = ['Tvättmaskin', 'Skotork']
+  const propertyResponse = await axios(
+    propertyInfoServiceUrl + '/rentalproperties/' + rentalPropertyId
+  )
 
-  return {
-    rentalPropertyId,
-    apartmentNumber: Math.round(Math.random() * 1000),
-    size: Math.round(Math.random() * 200),
-    address: {
-      street: 'Björnvägen',
-      number: Math.round(Math.random() * 100).toString(),
-      postalCode: '74212',
-      city: 'Västerås',
-    },
-    rentalPropertyType: Math.round((Math.random() + 0.1) * 6) + ' rum och kök',
-    type: Math.round((Math.random() + 0.1) * 6) + ' rum och kök',
-    additionsIncludedInRent: applianceNames.join(', '),
-    otherInfo: undefined,
-    lastUpdated: undefined,
-  }
+  return propertyResponse.data
 }
 
-export { getRentalProperty }
+const getRoomTypeWithMaterialOptions = async (apartmentId: string) => {
+  const materialOptionGroupsResponse = await axios(
+    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-options`
+  )
+
+  return materialOptionGroupsResponse.data
+}
+const getMaterialOption = async (
+  apartmentId: string,
+  materialOptionId: string
+): Promise<MaterialOption | undefined> => {
+  const materialOptionGroupsResponse = await axios(
+    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-options/${materialOptionId}`
+  )
+
+  return materialOptionGroupsResponse.data
+}
+
+const getMaterialChoices = async (apartmentId: string) => {
+  const materialOptionGroupsResponse = await axios(
+    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-choices`
+  )
+
+  return materialOptionGroupsResponse.data
+}
+
+const saveMaterialChoice = async (
+  rentalPropertyId: string,
+  materialChoices: Array<MaterialChoice>
+) => {
+  await axios(
+    `${propertyInfoServiceUrl}/rentalproperties/${rentalPropertyId}/material-choices`,
+    {
+      method: 'post',
+      data: materialChoices,
+    }
+  ).then((result) => {
+    // console.log('result', result)
+    return result
+  })
+}
+
+export {
+  getRentalProperty,
+  getRoomTypeWithMaterialOptions,
+  getMaterialOption,
+  getMaterialChoices,
+  saveMaterialChoice,
+}

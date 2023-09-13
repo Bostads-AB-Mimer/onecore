@@ -67,4 +67,55 @@ enum LeaseStatus {
   Active,
 }
 
-export { Contact, Lease, RentalProperty, LeaseStatus, Address, Rent, RentInfo }
+interface MaterialChoice {
+  materialChoiceId: string
+  materialOptionId: string
+  materialOptionGroupId: string
+  apartmentId: string
+  roomTypeId: string
+  status: string //TODO enum of Draft/Submitted/Cancelled
+  dateOfSubmission?: Date
+  dateOfCancellation?: Date
+}
+
+interface MaterialOptionGroup {
+  materialOptionGroupId: string
+  roomTypeId: string
+  roomTypeName?: string
+  name?: string
+  actionName?: string
+  materialOptions?: Array<MaterialOption>
+  materialChoices?: Array<MaterialChoice>
+  type: string //TODO enum of Concept/AddOn/SingleChoice
+}
+
+interface MaterialOption {
+  materialOptionId: string
+  caption: string
+  shortDescription?: string
+  description?: string
+  coverImage?: string
+  images?: Array<string>
+  roomTypeName?: string
+  materialOptionGroupName?: string
+}
+
+interface RoomType {
+  roomTypeId: string
+  name: string
+  materialOptionGroups?: Array<MaterialOptionGroup>
+}
+
+export {
+  Contact,
+  Lease,
+  RentalProperty,
+  LeaseStatus,
+  Address,
+  Rent,
+  RentInfo,
+  MaterialOption,
+  MaterialOptionGroup,
+  RoomType,
+  MaterialChoice,
+}
