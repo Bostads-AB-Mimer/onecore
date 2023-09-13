@@ -20,7 +20,7 @@ exports.seed = async function (knex) {
     .insert([
       {
         RoomType: 'KOKHALL',
-        Name: 'Kök & Hall',
+        // Name: 'Kök & Hall',
         ActionName: 'Välj koncept',
         Type: 'Concept',
       },
@@ -68,7 +68,7 @@ exports.seed = async function (knex) {
     .insert([
       {
         RoomType: 'BADRUM',
-        Name: 'Badrum',
+        // Name: 'Badrum',
         ActionName: 'Välj koncept',
         Type: 'Concept',
       },
