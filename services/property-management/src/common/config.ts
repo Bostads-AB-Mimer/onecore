@@ -11,6 +11,9 @@ export interface Config {
     port: number
     database: string
   }
+  contechOs: {
+    url: string
+  }
 }
 
 const config = configPackage({
@@ -30,4 +33,5 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   database: config.get('database'),
+  contechOs: config.get('contechOs'),
 } as Config
