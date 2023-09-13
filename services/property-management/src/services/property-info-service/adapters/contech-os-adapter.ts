@@ -26,22 +26,21 @@ const getRentalProperty = async (
   const json = response.data
   const propertyId = json[0].target.title
 
-  // Mock default values and overwrite with as much as possible with real data
-  let apartmentNumber: number = Math.round(Math.random() * 1000);
-  let size: number = Math.round(Math.random() * 200);
+  let apartmentNumber: number = 0;
+  let size: number = 0;
   let address: {
     street: string;
     number: string;
     postalCode: string;
     city: string;
   } = {
-    street: 'Björnvägen',
-    number: Math.round(Math.random() * 100).toString(),
-    postalCode: '74212',
-    city: 'Västerås',
+    street: '',
+    number: '',
+    postalCode: '',
+    city: '',
   };
-  let rentalPropertyType: string = Math.round((Math.random() + 0.1) * 6) + ' rum och kök';
-  let type: string = Math.round((Math.random() + 0.1) * 6) + ' rum och kök';
+  let rentalPropertyType: string = '';
+  let type: string = '';
   let otherInfo: undefined = undefined;
   let lastUpdated: undefined = undefined;
 
@@ -52,24 +51,22 @@ const getRentalProperty = async (
       if (sources.length === 1) {
         const source = sources[0];
         const value = source.title;
-        const forgeinKey = source.parentTitle;
+        const foreignKey = source.parentTitle;
         
-        if (forgeinKey === FK_SIZE) {
+        if (foreignKey === FK_SIZE) {
           size = value;
         }
-        if (forgeinKey === FK_RENTAL_PROPERTY_TYPE) {
+        if (foreignKey === FK_RENTAL_PROPERTY_TYPE) {
           rentalPropertyType = value;
         }
-        if (forgeinKey === FK_APARTMENT_NUMBER) {
+        if (foreignKey === FK_APARTMENT_NUMBER) {
           apartmentNumber = value;
         }
-        if (forgeinKey === FK_ADDRESS) {
+        if (foreignKey === FK_ADDRESS) {
           const parts = value.match(/^([\s\S]+?)\s(\d+)$/); // Split into string and number
           address.street = parts[1];
           address.number = parts[2];
         }
-      } else {
-        console.log(`Link with multiple sources: ${link.linkTitle}`);
       }
     }
   });
@@ -118,9 +115,7 @@ const getRoomType = async (
   aparmentId: string,
   roomTypeId: string
 ): Promise<RoomType | undefined> => {
-  /*Get real data*/
   const roomTypes = await getRoomTypes(aparmentId)
-
   return roomTypes.find(
     (roomType: RoomType) => roomType.roomTypeId == roomTypeId
   )
