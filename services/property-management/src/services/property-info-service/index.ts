@@ -7,20 +7,15 @@
  */
 import KoaRouter from '@koa/router'
 
-import {
-  getRentalProperty,
-  getRoomTypes,
-  getRoomType,
-} from './adapters/contech-os-adapter'
+import { getRentalProperty, getRoomTypes } from './adapters/contech-os-adapter'
 
 import {
   getRoomTypeWithMaterialOptions,
-  getSingleMaterialOption,
-  getMaterialOptionGroup,
-  getMaterialOptionGroups,
   getMaterialOption,
   getMaterialChoices,
+  saveMaterialChoices,
 } from './adapters/material-options-adapter'
+import { MaterialChoice } from '../../common/types'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -29,10 +24,7 @@ import {
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/material-options', async (ctx) => {
     const roomTypes = await getRoomTypes(ctx.params.id)
-    const materialOptions = await getRoomTypeWithMaterialOptions(
-      ctx.params.id,
-      roomTypes
-    )
+    const materialOptions = await getRoomTypeWithMaterialOptions(roomTypes)
 
     ctx.body = {
       roomTypes: materialOptions,
@@ -40,40 +32,10 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get(
-    '(.*)/rentalproperties/:id/material-options/details',
+    '(.*)/rentalproperties/:id/material-options/:materialOptionId',
     async (ctx) => {
-      if (
-        ctx.request.query.roomTypeId &&
-        ctx.request.query.materialOptionGroupId &&
-        ctx.request.query.materialOptionId
-      ) {
-        const apartmentId = ctx.params.id
-        const roomTypeId = ctx.request.query.roomTypeId[0]
-        const roomType = await getRoomType(apartmentId, roomTypeId)
-
-        if (roomType == undefined) {
-          ctx.status = 400
-          ctx.body = {
-            message:
-              'Room type ' +
-              roomTypeId +
-              ' does not exist in apartment ' +
-              apartmentId,
-          }
-          return
-        }
-
-        const option = await getSingleMaterialOption(
-          apartmentId,
-          roomType,
-          ctx.request.query.materialOptionGroupId[0],
-          ctx.request.query.materialOptionId[0]
-        )
-
-        ctx.body = {
-          materialOption: option,
-        }
-      }
+      const option = await getMaterialOption(ctx.params.materialOptionId)
+      ctx.body = option
     }
   )
 
@@ -82,13 +44,15 @@ export const routes = (router: KoaRouter) => {
     const roomTypes = await getRoomTypes(apartmentId)
     const materialChoices = await getMaterialChoices(apartmentId, roomTypes)
 
-    ctx.body = materialChoices
+    ctx.body = { roomTypes: materialChoices }
   })
 
-  router.get('(.*)/rentalproperties/:id/room-types', async (ctx) => {
-    const roomTypes = await getRoomTypes(ctx.params.id)
-
-    ctx.body = roomTypes
+  router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+    const result = await saveMaterialChoices(
+      ctx.params.id,
+      ctx.request.body as Array<MaterialChoice>
+    )
+    ctx.body = result
   })
 
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
@@ -96,38 +60,4 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = responseData
   })
-
-  router.get(
-    '(.*)/room-types/:roomTypeId/material-option-groups/:optionGroupId',
-    async (ctx) => {
-      const group = await getMaterialOptionGroup(
-        ctx.params.roomTypeId,
-        ctx.params.optionGroupId
-      )
-
-      ctx.body = group
-    }
-  )
-
-  router.get(
-    '(.*)/room-types/:roomTypeId/material-option-groups',
-    async (ctx) => {
-      const groups = await getMaterialOptionGroups(ctx.params.roomTypeId)
-
-      ctx.body = groups
-    }
-  )
-
-  router.get(
-    '(.*)/room-types/:roomTypeId/material-option-groups/:optionGroupId/options/:optionId',
-    async (ctx) => {
-      const option = await getMaterialOption(
-        ctx.params.roomTypeId,
-        ctx.params.optionGroupId,
-        ctx.params.optionId
-      )
-
-      ctx.body = option
-    }
-  )
 }

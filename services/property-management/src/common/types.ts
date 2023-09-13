@@ -73,9 +73,6 @@ interface MaterialChoice {
   materialOptionGroupId: string
   apartmentId: string
   roomTypeId: string
-  materialOption?: MaterialOption | undefined
-  // materialOptionGroup?: MaterialOptionGroup | undefined
-  // roomType?: RoomType | undefined
   status: string //TODO enum of Draft/Submitted/Cancelled
   dateOfSubmission?: Date
   dateOfCancellation?: Date
