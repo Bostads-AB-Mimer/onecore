@@ -23,12 +23,21 @@ export interface Config {
     cookieDomain: string
     testAccount: Account
   }
+  msal: {
+    clientId: string
+    cloudInstance: string
+    tenantId: string
+    clientSecret: string
+    redirectUri: string
+    graphApiEndpoint: string
+    postLogoutRedirectUri: string
+  }
 }
 
 const config = configPackage({
   file: `${__dirname}/../../config.json`,
   defaults: {
-    port: 5001,
+    port: 7001,
     core: {
       url: 'http://localhost:5010',
     },
@@ -38,6 +47,13 @@ const config = configPackage({
       maxFailedLoginAttempts: 3,
       cookieDomain: 'localhost',
     },
+    msal: {
+      clientId: '',
+      cloudInstance: 'https://login.microsoftonline.com/',
+      tenantId: '',
+      clientSecret: '',
+      graphApiEndpoint: 'https://graph.microsoft.com/',
+    },
   },
 })
 
@@ -45,4 +61,5 @@ export default {
   port: config.get('port'),
   core: config.get('core'),
   auth: config.get('auth'),
+  msal: config.get('msal'),
 } as Config
