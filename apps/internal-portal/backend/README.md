@@ -1,6 +1,7 @@
 # Introduction
 
 Backend for the coworker portal for Mimer.
+The frontend is packages/frontend in this repo.
 
 ## Installation
 
@@ -9,7 +10,7 @@ Backend for the coworker portal for Mimer.
 3. Install nvm
 5. Install required version of node: `nvm install`
 6. Use required version of node `nvm use`
-7. Install packages: `npm run install`
+7. Install packages: `npm install`
 
 ## Development
 
@@ -23,7 +24,10 @@ Note: You need to have yggdrasil-core running for this application to work.
 * CORE__USERNAME - User name for service account in yggdrasil-core (configured in that application)
 * CORE__PASSWORD - Password for service account in yggdrasil-core (configured in that application)
 * AUTH__COOKIE_DOMAIN - Set to "localhost" for local dev environment
-* AUTH__TEST_ACCOUNT__ID - National registration number of a contact present in the database for yggdrasil-tenants-leases
-* AUTH__TEST_ACCOUNT__USERNAME - Login username for the (currently only) user in the portal
-* AUTH__TEST_ACCOUNT__SALT - Salt for portal user (create with /auth/generate-hash)
-* AUTH__TEST_ACCOUNT__HASH - Password hash for user (create with /auth/generate-hash)
+* MSAL__ CLOUD_INSTANCE="https://login.microsoftonline.com/" # cloud instance string should end with a trailing slash
+* MSAL__TENANT_ID - your Azure tenant id.
+* MSAL__CLIENT_ID - client id for your Azure App Registration / Enterprise Application
+* MSAL__CLIENT_SECRET - client secret generated for your Azure App Registration / Enterprise Application
+* MSAL__REDIRECT_URI="http://localhost:7000/api/auth/redirect" - absolute uri for the redirect post route, i.e. hostname + '/api/auth/redirect'
+* MSAL__POST_LOGOUT_REDIRECT_URI="http://localhost:7000" - absolute uri for where the user is redirected after logout
+* MSAL__GRAPH_API_ENDPOINT="https://graph.microsoft.com/" # graph api endpoint string should end with a trailing slash
