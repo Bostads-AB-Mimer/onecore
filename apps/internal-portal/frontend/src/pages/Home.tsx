@@ -1,14 +1,13 @@
-import { Card, CardActions, CardContent, Typography } from '@mui/material'
-import { Link } from 'react-router-dom'
+import { Card, CardActions, CardContent, Typography, Link } from '@mui/material'
 import HomeWorkOutlinedIcon from '@mui/icons-material/HomeWorkOutlined'
 
 import materialChoiceCover from '../../assets/images/Materialval.png'
 import Carousel from '../components/Carousel'
-import { useLease } from '../pages/Lease/hooks/useLease'
+import { useProfile, Account } from '../common/hooks/useProfile'
 
 const HomePage = () => {
-  const { data } = useLease()
-  const lease = data?.data
+  const { data } = useProfile()
+  const account = data?.account as Account
 
   return (
     <div>
@@ -26,19 +25,14 @@ const HomePage = () => {
       <Card variant="outlined">
         <Typography variant="h2">
           <HomeWorkOutlinedIcon sx={{ marginRight: 0.5, marginLeft: 1.5 }} />{' '}
-          Mitt boende
+          {account?.name}
         </Typography>
         <CardContent>
-          <Typography variant="body2">
-            {lease?.leaseId}
-            <br />
-            {lease?.rentalProperty?.address?.street +
-              ' ' +
-              lease?.rentalProperty?.address?.number}
-          </Typography>
+          {account?.username}
+          <br />
         </CardContent>
         <CardActions>
-          <Link to="/mitt-boende">Läs mer...</Link>
+          <Link href="/api/auth/logout">Logga ut</Link>
         </CardActions>
       </Card>
     </div>

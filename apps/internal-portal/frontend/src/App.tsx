@@ -237,7 +237,7 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if ((error as AxiosError).response?.status === 401) {
-        location.replace('/login')
+        location.replace('/api/auth/login')
       } else {
         console.log('An error occurred fetching data', error)
       }
