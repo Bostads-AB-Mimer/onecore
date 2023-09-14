@@ -19,7 +19,7 @@ exports.seed = async function (knex) {
   await knex('MaterialOptionGroup')
     .insert([
       {
-        RoomType: 'KOKHALL',
+        RoomType: 'KÖK',
         // Name: 'Kök & Hall',
         ActionName: 'Välj koncept',
         Type: 'Concept',
@@ -211,7 +211,7 @@ exports.seed = async function (knex) {
   await knex('MaterialOptionGroup')
     .insert([
       {
-        RoomType: 'SOVRUM1',
+        RoomType: 'RUM 1',
         Name: 'Golv',
         ActionName: 'Välj golv',
         Type: 'Concept',
@@ -236,7 +236,7 @@ exports.seed = async function (knex) {
   await knex('MaterialOptionGroup')
     .insert([
       {
-        RoomType: 'SOVRUM1',
+        RoomType: 'RUM 1',
         Name: 'Väggar',
         ActionName: 'Välj väggar',
         Type: 'Concept',
