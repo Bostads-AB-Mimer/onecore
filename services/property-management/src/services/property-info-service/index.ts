@@ -12,8 +12,11 @@ import { getRentalProperty, getRoomTypes } from './adapters/contech-os-adapter'
 import {
   getRoomTypeWithMaterialOptions,
   getMaterialOption,
-  getMaterialChoices,
+  getMaterialChoicesByRoomTypes,
+  getMaterialChoicesByApartmentId,
+  getAllMaterialChoices,
   saveMaterialChoices,
+  getAllUnsubmittedApartmentIds,
 } from './adapters/material-options-adapter'
 import { MaterialChoice } from '../../common/types'
 
@@ -42,9 +45,31 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const apartmentId = ctx.params.id
     const roomTypes = await getRoomTypes(apartmentId)
-    const materialChoices = await getMaterialChoices(apartmentId, roomTypes)
+    const materialChoices = await getMaterialChoicesByRoomTypes(apartmentId, roomTypes)
 
     ctx.body = { roomTypes: materialChoices }
+  })
+
+  router.get('(.*)/rentalproperties/:id/material-choices-alt', async (ctx) => {
+    const apartmentId = ctx.params.id
+    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId)
+
+    ctx.body = { roomTypes: materialChoices }
+  })
+
+  // ?submitted=true|false
+  router.get('(.*)/rentalproperties/material-choices', async (ctx) => {
+    const { submitted } = ctx.request.query;
+
+    if (submitted === 'true') {
+      // Return submitted choices
+      const materialChoices = await getAllMaterialChoices();
+      ctx.body = { materialChoices: materialChoices };
+    } else {
+      // Return unsubmitted aparmentIds
+      const apartmentIds = await getAllUnsubmittedApartmentIds();
+      ctx.body = { unsubmittedApartmentIds: apartmentIds };
+    }
   })
 
   router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {

@@ -210,11 +210,11 @@ const getRoomTypeWithMaterialOptions = async (roomTypes: RoomType[]) => {
 
   return roomTypes
 }
-const getMaterialChoices = async (
+const getMaterialChoicesByRoomTypes = async (
   apartmentId: string,
   roomTypes: RoomType[]
 ) => {
-  console.log('get choices')
+  console.log('get choices by room types')
   for (const roomType of roomTypes) {
     const materialGroups = await getMaterialChoicesByRoomType({
       apartmentId: apartmentId,
@@ -233,7 +233,7 @@ const getMaterialChoicesByRoomType = async ({
   apartmentId: string
   roomTypeId: string
 }): Promise<Array<MaterialOptionGroup>> => {
-  console.log('get choice')
+  console.log('get choices by room type')
   const rows = await db('MaterialOptionGroup')
     .innerJoin(
       'MaterialOption',
@@ -338,9 +338,156 @@ const getMaterialChoicesByRoomType = async ({
   return materialOptionGroups
 }
 
+const getMaterialChoicesByApartmentId = async (
+  apartmentId: string
+) => {
+  console.log('get choices by apartmentId')
+  const rows = await db('MaterialOptionGroup')
+    .innerJoin(
+      'MaterialOption',
+      'MaterialOption.MaterialOptionGroupId',
+      'MaterialOptionGroup.MaterialOptionGroupId'
+    )
+    .innerJoin(
+      'MaterialChoice',
+      'MaterialChoice.MaterialOptionId',
+      'MaterialOption.MaterialOptionId'
+    )
+    .leftJoin(
+      'MaterialOptionImage',
+      'MaterialOptionImage.MaterialOptionId',
+      'MaterialOption.MaterialOptionId'
+    )
+    .where({
+      'MaterialChoice.Status': 'Submitted',
+      'MaterialChoice.ApartmentId': apartmentId, // Filter by apartmentId
+    })
+    .orderBy(
+      'MaterialOption.MaterialOptionGroupId',
+      'MaterialChoice.MaterialChoiceId',
+      'MaterialOption.MaterialOptionId'
+    );
+
+  const materialOptionGroups = new Array<MaterialOptionGroup>();
+
+  if (rows && rows.length > 0) {
+    let currentMaterialOptionGroup: MaterialOptionGroup | undefined = undefined
+    let currentMaterialOption: MaterialOption | undefined = undefined
+    let currentMaterialChoice: MaterialChoice | undefined = undefined
+
+    rows.forEach((row) => {
+      const materialOptionGroupId = row.MaterialOptionGroupId[0]
+      const materialOptionId = row.MaterialOptionId[0]
+      const materialChoiceId = row.MaterialChoiceId
+
+      if (
+        !currentMaterialOptionGroup ||
+        currentMaterialOptionGroup.materialOptionGroupId !=
+          materialOptionGroupId
+      ) {
+        currentMaterialOptionGroup = {
+          materialOptionGroupId: materialOptionGroupId,
+          roomTypeId: row.RoomType,
+          name: row.Name,
+          actionName: row.ActionName,
+          materialOptions: new Array<MaterialOption>(),
+          materialChoices: new Array<MaterialChoice>(),
+          type: row.Type,
+        }
+
+        materialOptionGroups.push(currentMaterialOptionGroup)
+      }
+
+      if (
+        !currentMaterialOption ||
+        currentMaterialOption.materialOptionId != materialOptionId
+      ) {
+        currentMaterialOption = {
+          materialOptionId: materialOptionId,
+          caption: row.Caption,
+          shortDescription: row.ShortDescription,
+          description: row.Description,
+          coverImage: row.CoverImage,
+          materialOptionGroupName: currentMaterialOptionGroup.name,
+          images: new Array<string>(),
+        }
+
+        currentMaterialOptionGroup.materialOptions?.push(currentMaterialOption)
+      }
+
+      if (row.Image) {
+        currentMaterialOption.images?.push(row.Image)
+      }
+
+      if (
+        !currentMaterialChoice ||
+        currentMaterialChoice.materialChoiceId != materialChoiceId
+      ) {
+        currentMaterialChoice = {
+          materialChoiceId: materialChoiceId,
+          materialOptionId: materialOptionId,
+          materialOptionGroupId: materialOptionGroupId,
+          apartmentId: apartmentId,
+          roomTypeId: row.RoomType,
+          status: row.Status,
+        }
+
+        currentMaterialOptionGroup.materialChoices?.push(currentMaterialChoice)
+      }
+    })
+  }
+
+  materialOptionGroups.forEach((materialOptionGroup: MaterialOptionGroup) => {
+    materialOptionGroup.materialOptions?.sort((a, b) => {
+      return a.caption > b.caption ? 1 : -1
+    })
+  })
+
+  return materialOptionGroups
+};
+
+const getAllUnsubmittedApartmentIds = async (): Promise<Array<string>> => {
+  console.log('get all unsubmitted apartment ids');
+
+  const unsubmittedApartmentIds = await db('ProjectApartment')
+    .select('ApartmentId')
+    .whereNotExists(function() {
+      this.select('*')
+        .from('MaterialChoice')
+        .whereRaw('MaterialChoice.ApartmentId = ProjectApartment.ApartmentId')
+        .andWhere('Status', '=', 'Submitted');
+    });
+
+  return unsubmittedApartmentIds.map(row => row.ApartmentId);
+}
+
+const getAllSubmittedMaterialChoices = async (): Promise<{ [apartmentId: string]: Array<MaterialOptionGroup> }> => {
+  console.log('get all saved choices');
+  const rows = await db('MaterialChoice')
+    .select('ApartmentId')
+    .distinct()
+    .where({
+      'Status': 'Submitted',
+    });
+
+  const materialChoicesByApartment: { [apartmentId: string]: Array<MaterialOptionGroup> } = {};
+
+  for (const row of rows) {
+    const apartmentId = row.ApartmentId;
+    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId);
+    materialChoicesByApartment[apartmentId] = materialChoices;
+  }
+
+  return materialChoicesByApartment;
+};
+
+
 export {
   getRoomTypeWithMaterialOptions,
   getMaterialOption,
-  getMaterialChoices,
+  getMaterialChoicesByRoomTypes,
+  getMaterialChoicesByApartmentId,
+  getAllSubmittedMaterialChoices as getAllMaterialChoices,
+  getAllUnsubmittedApartmentIds,
   saveMaterialChoices,
 }
