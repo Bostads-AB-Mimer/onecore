@@ -338,9 +338,7 @@ const getMaterialChoicesByRoomType = async ({
   return materialOptionGroups
 }
 
-const getMaterialChoicesByApartmentId = async (
-  apartmentId: string
-) => {
+const getMaterialChoicesByApartmentId = async (apartmentId: string) => {
   console.log('get choices by apartmentId')
   const rows = await db('MaterialOptionGroup')
     .innerJoin(
@@ -366,9 +364,9 @@ const getMaterialChoicesByApartmentId = async (
       'MaterialOption.MaterialOptionGroupId',
       'MaterialChoice.MaterialChoiceId',
       'MaterialOption.MaterialOptionId'
-    );
+    )
 
-  const materialOptionGroups = new Array<MaterialOptionGroup>();
+  const materialOptionGroups = new Array<MaterialOptionGroup>()
 
   if (rows && rows.length > 0) {
     let currentMaterialOptionGroup: MaterialOptionGroup | undefined = undefined
@@ -444,50 +442,59 @@ const getMaterialChoicesByApartmentId = async (
   })
 
   return materialOptionGroups
-};
-
-const getAllUnsubmittedApartmentIds = async (): Promise<Array<string>> => {
-  console.log('get all unsubmitted apartment ids');
-
-  const unsubmittedApartmentIds = await db('ProjectApartment')
-    .select('ApartmentId')
-    .whereNotExists(function() {
-      this.select('*')
-        .from('MaterialChoice')
-        .whereRaw('MaterialChoice.ApartmentId = ProjectApartment.ApartmentId')
-        .andWhere('Status', '=', 'Submitted');
-    });
-
-  return unsubmittedApartmentIds.map(row => row.ApartmentId);
 }
 
-const getAllSubmittedMaterialChoices = async (): Promise<{ [apartmentId: string]: Array<MaterialOptionGroup> }> => {
-  console.log('get all saved choices');
+const getApartmentMaterialChoiceStatuses = async (projectCode: string) => {
+  const choiceStatuses = await db
+    .from('MaterialChoice')
+    .rightJoin(
+      'ProjectApartment',
+      'MaterialChoice.ApartmentId',
+      '=',
+      'ProjectApartment.ApartmentId'
+    )
+    /*.where({
+      ProjectCode: projectCode,
+    })*/
+    .select('ProjectApartment.ApartmentId as apartmentId')
+    .count('MaterialChoiceId as numChoices')
+    .groupBy('ProjectApartment.ApartmentId')
+    .orderBy('numChoices', 'desc')
+    .orderBy('ProjectApartment.ApartmentId', 'asc')
+
+  return choiceStatuses
+}
+
+const getAllSubmittedMaterialChoices = async (): Promise<{
+  [apartmentId: string]: Array<MaterialOptionGroup>
+}> => {
+  console.log('get all saved choices')
   const rows = await db('MaterialChoice')
     .select('ApartmentId')
     .distinct()
     .where({
-      'Status': 'Submitted',
-    });
+      Status: 'Submitted',
+    })
 
-  const materialChoicesByApartment: { [apartmentId: string]: Array<MaterialOptionGroup> } = {};
+  const materialChoicesByApartment: {
+    [apartmentId: string]: Array<MaterialOptionGroup>
+  } = {}
 
   for (const row of rows) {
-    const apartmentId = row.ApartmentId;
-    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId);
-    materialChoicesByApartment[apartmentId] = materialChoices;
+    const apartmentId = row.ApartmentId
+    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId)
+    materialChoicesByApartment[apartmentId] = materialChoices
   }
 
-  return materialChoicesByApartment;
-};
-
+  return materialChoicesByApartment
+}
 
 export {
   getRoomTypeWithMaterialOptions,
   getMaterialOption,
   getMaterialChoicesByRoomTypes,
   getMaterialChoicesByApartmentId,
-  getAllSubmittedMaterialChoices as getAllMaterialChoices,
-  getAllUnsubmittedApartmentIds,
+  getApartmentMaterialChoiceStatuses,
+  getAllSubmittedMaterialChoices,
   saveMaterialChoices,
 }

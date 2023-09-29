@@ -14,9 +14,8 @@ import {
   getMaterialOption,
   getMaterialChoicesByRoomTypes,
   getMaterialChoicesByApartmentId,
-  getAllMaterialChoices,
   saveMaterialChoices,
-  getAllUnsubmittedApartmentIds,
+  getApartmentMaterialChoiceStatuses,
 } from './adapters/material-options-adapter'
 import { MaterialChoice } from '../../common/types'
 
@@ -45,7 +44,10 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const apartmentId = ctx.params.id
     const roomTypes = await getRoomTypes(apartmentId)
-    const materialChoices = await getMaterialChoicesByRoomTypes(apartmentId, roomTypes)
+    const materialChoices = await getMaterialChoicesByRoomTypes(
+      apartmentId,
+      roomTypes
+    )
 
     ctx.body = { roomTypes: materialChoices }
   })
@@ -58,18 +60,12 @@ export const routes = (router: KoaRouter) => {
   })
 
   // ?submitted=true|false
-  router.get('(.*)/rentalproperties/material-choices', async (ctx) => {
-    const { submitted } = ctx.request.query;
+  router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
+    const apartmentChoiceStatuses = await getApartmentMaterialChoiceStatuses(
+      ctx.params.projectCode
+    )
 
-    if (submitted === 'true') {
-      // Return submitted choices
-      const materialChoices = await getAllMaterialChoices();
-      ctx.body = { materialChoices: materialChoices };
-    } else {
-      // Return unsubmitted aparmentIds
-      const apartmentIds = await getAllUnsubmittedApartmentIds();
-      ctx.body = { unsubmittedApartmentIds: apartmentIds };
-    }
+    ctx.body = apartmentChoiceStatuses
   })
 
   router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
