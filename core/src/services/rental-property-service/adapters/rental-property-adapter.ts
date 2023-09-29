@@ -44,6 +44,14 @@ const getMaterialChoices = async (apartmentId: string) => {
   return materialOptionGroupsResponse.data
 }
 
+const getMaterialChoiceStatuses = async (projectCode: string) => {
+  const materialOptionGroupsResponse = await axios(
+    `${propertyInfoServiceUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}`
+  )
+
+  return materialOptionGroupsResponse.data
+}
+
 const saveMaterialChoice = async (
   rentalPropertyId: string,
   materialChoices: Array<MaterialChoice>
@@ -55,7 +63,6 @@ const saveMaterialChoice = async (
       data: materialChoices,
     }
   ).then((result) => {
-    // console.log('result', result)
     return result
   })
 }
@@ -65,5 +72,6 @@ export {
   getRoomTypeWithMaterialOptions,
   getMaterialOption,
   getMaterialChoices,
+  getMaterialChoiceStatuses,
   saveMaterialChoice,
 }

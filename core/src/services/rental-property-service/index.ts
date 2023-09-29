@@ -12,6 +12,7 @@ import {
   getMaterialOption,
   getMaterialChoices,
   saveMaterialChoice,
+  getMaterialChoiceStatuses,
 } from './adapters/rental-property-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 
@@ -44,6 +45,22 @@ export const routes = (router: KoaRouter) => {
     const materialChoices = await getMaterialChoices(ctx.params.id)
 
     ctx.body = materialChoices
+  })
+
+  router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
+    let materialChoiceStatuses = await getMaterialChoiceStatuses(
+      ctx.params.projectCode
+    )
+
+    if (ctx.query.includeRentalProperties === 'true') {
+      for (const materialChoiceStatus of materialChoiceStatuses) {
+        materialChoiceStatus.rentalProperty = await getRentalProperty(
+          materialChoiceStatus.apartmentId
+        )
+      }
+    }
+
+    ctx.body = materialChoiceStatuses
   })
 
   router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
