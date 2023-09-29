@@ -4,7 +4,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from 'react-query'
 import { AxiosError } from 'axios'
 import { alpha } from '@mui/material/styles'
 
-import Home from './pages/Home'
+import Home from './pages/Home/Home'
 import Lease from './pages/Lease/Lease'
 import Progress from './pages/Progress'
 import MaterialOptions from './pages/MaterialOptions/MaterialOptions'
@@ -250,26 +250,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={mdTheme}>
         <CssBaseline />
-        <Grid
-          container
-          sx={{ marginBottom: 2, marginTop: 0, maxWidth: '450px' }}
-        >
+        <Grid container sx={{ marginBottom: 2, marginTop: 0 }}>
           <Grid item xs={0.5} />
           <Grid item xs={11}>
             <SiteHeader />
             <Routes>
               <Route path="/" element={<Home></Home>} />
-              <Route path="/login" element={<Login></Login>} />
-              <Route path="/mitt-boende" element={<Lease></Lease>} />
-              <Route path="/mina-uppgifter" element={<Details></Details>} />
-              <Route path="/att-gora" element={<Progress></Progress>} />
+              <Route path="/logout" element={<Login></Login>} />
               <Route
                 path="/materialval"
                 element={<MaterialOptions></MaterialOptions>}
-              />
-              <Route
-                path="/materialval/detaljer/:roomTypeId/:materialOptionGroupId/:materialOptionId"
-                element={<MaterialOptionDetails></MaterialOptionDetails>}
               />
               <Route
                 path="/materialval/val"
