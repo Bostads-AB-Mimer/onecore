@@ -5,6 +5,8 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  Button,
+  Link,
 } from '@mui/material'
 import { useProfile, Account } from '../../common/hooks/useProfile'
 import { useApartmentMaterialChoices } from './hooks/useApartmentMaterialChoices'
@@ -28,6 +30,7 @@ const HomePage = () => {
             <TableRow>
               <TableCell>Lägenhetsid</TableCell>
               <TableCell>Status materialval</TableCell>
+              <TableCell>Utskrift</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -38,6 +41,16 @@ const HomePage = () => {
                   {materialChoiceStatus.numChoices === 0
                     ? 'Väntar på val'
                     : 'Val genomfört'}
+                </TableCell>
+                <TableCell>
+                  {materialChoiceStatus.numChoices !== 0 && (
+                    <Link
+                      href={`/materialval/utskrift?rentalPropertyId=${materialChoiceStatus.apartmentId}`}
+                      target="_blank"
+                    >
+                      <Button>Skriv ut</Button>
+                    </Link>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

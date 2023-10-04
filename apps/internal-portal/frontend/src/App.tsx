@@ -5,18 +5,13 @@ import { AxiosError } from 'axios'
 import { alpha } from '@mui/material/styles'
 
 import Home from './pages/Home/Home'
-import Lease from './pages/Lease/Lease'
-import Progress from './pages/Progress'
-import MaterialOptions from './pages/MaterialOptions/MaterialOptions'
 import SiteHeader from './components/SiteHeader'
 import Bison from '../assets/Bison-Regular.woff2'
 import BisonBold from '../assets/Bison-Bold.woff2'
 import GraphikRegular from '../assets/Graphik-Regular.woff2'
 import GraphikBold from '../assets/Graphik-Bold.woff2'
-import MaterialOptionDetails from './pages/MaterialOptions/MaterialOptionDetails'
-import MaterialChoices from './pages/MaterialOptions/MaterialChoices'
 import Login from './pages/Login/Login'
-import Details from './pages/Details/Details'
+import MaterialChoiceDetails from './pages/MaterialChoiceDetails/MaterialChoiceDetails'
 
 declare module '@mui/material/styles' {
   interface TypographyVariants {
@@ -258,12 +253,8 @@ function App() {
               <Route path="/" element={<Home></Home>} />
               <Route path="/logout" element={<Login></Login>} />
               <Route
-                path="/materialval"
-                element={<MaterialOptions></MaterialOptions>}
-              />
-              <Route
-                path="/materialval/val"
-                element={<MaterialChoices></MaterialChoices>}
+                path="/materialval/utskrift"
+                element={<MaterialChoiceDetails />}
               />
             </Routes>
           </Grid>
