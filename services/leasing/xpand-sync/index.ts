@@ -219,7 +219,7 @@ const syncContracts = async () => {
 }
 
 const runSync = async () => {
-  //await syncContacts()
+  await syncContacts()
   await syncContracts()
 }
 
