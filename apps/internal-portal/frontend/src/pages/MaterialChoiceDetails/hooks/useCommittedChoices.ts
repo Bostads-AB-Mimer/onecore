@@ -3,6 +3,10 @@ import { useQuery } from 'react-query'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
+export interface ChoicesResponse {
+  roomTypes: RoomType[] | undefined;
+}
+
 export interface RoomType {
   roomTypeId: string;
   name: string;
@@ -39,10 +43,10 @@ export interface MaterialChoice {
 }
 
 export const useCommittedChoices = (apartmentId: string) => {
-  return useQuery<RoomType[], AxiosError>({
+  return useQuery<ChoicesResponse, AxiosError>({
     queryKey: ['apartmentCommittedChoices', apartmentId],
     queryFn: async () => {
-      const { data } = await axios.get<RoomType[]>(
+      const { data } = await axios.get<ChoicesResponse>(
         `${backendUrl}/rentalproperties/${apartmentId}/material-choices`,
         {
           headers: {
