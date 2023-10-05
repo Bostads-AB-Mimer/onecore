@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { getMaterialChoiceStatuses } from './adapters/core-adapter'
+import { getMaterialChoiceStatuses, getCommittedChoices } from './adapters/core-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
@@ -7,4 +7,12 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = materialChoiceStatuses
   })
+
+  router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+    const materialChoices = await getCommittedChoices(ctx.params.id)
+
+    ctx.body = materialChoices
+  })
 }
+
+
