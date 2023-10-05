@@ -1,4 +1,6 @@
-import { Typography, Divider, Grid, Box } from '@mui/material'
+import { Box, Typography, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { useCommittedChoices, RoomType, MaterialOptionGroup, MaterialChoice, MaterialOption } from './hooks/useCommittedChoices';
+import { useLocation } from 'react-router-dom'; 
 
 const MaterialChoiceDetails = () => {
 
