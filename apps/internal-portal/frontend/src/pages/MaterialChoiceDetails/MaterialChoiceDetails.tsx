@@ -1,8 +1,16 @@
 import { Box, Typography, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { useCommittedChoices, RoomType } from './hooks/useCommittedChoices';
+import { useLocation, useParams } from 'react-router-dom';
+
 
 const MaterialChoiceDetails = () => {
-  const { data } = useCommittedChoices('406-091-08-0101');
+
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const apartmentId = searchParams.get('rentalPropertyId') ?? '';
+
+  //const apartmentId = '406-091-08-0101';
+  const { data } = useCommittedChoices(apartmentId);
   const roomTypes = data?.roomTypes as RoomType[];
 
   console.log('roomTypes', roomTypes);
@@ -12,7 +20,7 @@ const MaterialChoiceDetails = () => {
       <Box style={{ padding: '4mm', margin: '4mm', /* A4: width: '21cm', height: '29.7cm' */ }}>
         <Typography variant="h1">Materialval</Typography>
         <Divider />
-        <Typography variant="h2">Lägenhetsid: '406-091-08-0101'</Typography>
+        <Typography variant="h2">Lägenhetsid: {apartmentId}</Typography>
 
         {roomTypes && Array.isArray(roomTypes) ? (
           roomTypes.map((roomType: RoomType) => (
