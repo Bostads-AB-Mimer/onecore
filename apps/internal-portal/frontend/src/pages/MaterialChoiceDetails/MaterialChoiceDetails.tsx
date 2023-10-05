@@ -9,7 +9,7 @@ const MaterialChoiceDetails = () => {
 
   return (
     <>
-      <Box style={{ padding: '1cm', margin: '1cm', width: '21cm', height: '29.7cm' }}>
+      <Box style={{ padding: '4mm', margin: '4mm', /* A4: width: '21cm', height: '29.7cm' */ }}>
         <Typography variant="h1">Materialval</Typography>
         <Divider />
         <Typography variant="h2">Lägenhetsid: '406-091-08-0101'</Typography>
@@ -17,10 +17,6 @@ const MaterialChoiceDetails = () => {
         {roomTypes && Array.isArray(roomTypes) ? (
           roomTypes.map((roomType: RoomType) => (
             <div key={roomType.roomTypeId}>
-              {typeof roomType === 'object' && roomType.name && (
-                <Typography variant="h3">{roomType.name}</Typography>
-              )}
-
               {roomType.materialOptionGroups.map((group) => (
                 <div key={group.materialOptionGroupId}>
                   {typeof group === 'object' && group.name && (
@@ -31,11 +27,9 @@ const MaterialChoiceDetails = () => {
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Room Type</TableCell>
-                          <TableCell>Choice ID</TableCell>
-                          <TableCell>Material Option ID</TableCell>
-                          <TableCell>Caption</TableCell>
-                          <TableCell>Short Description</TableCell>
+                          <TableCell style={{ width: '25%' }}>RUM</TableCell>
+                          <TableCell style={{ width: '25%' }}>VAL</TableCell>
+                          <TableCell style={{ width: '50%' }}>BESKRIVNING</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -43,8 +37,6 @@ const MaterialChoiceDetails = () => {
                           group.materialChoices.map((choice) => (
                             <TableRow key={choice.materialChoiceId}>
                               <TableCell>{roomType.name}</TableCell>
-                              <TableCell>{choice.materialChoiceId}</TableCell>
-                              <TableCell>{choice.materialOptionId}</TableCell>
                               <TableCell>
                                 {group.materialOptions.find(
                                   (option) => option.materialOptionId === choice.materialOptionId
