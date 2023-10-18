@@ -8,11 +8,11 @@ export interface ChoicesResponse {
 }
 
 export interface MaterialChoice {
-  materialChoiceId: string;
-  roomType: string;
-  caption: string;
-  shortDescription: string;
-  apartmentId: string;
+  MaterialChoiceId: string;
+  RoomType: string;
+  Caption: string;
+  ShortDescription: string;
+  ApartmentId: string;
 }
 
 export const useCommittedChoices = (apartmentId: string) => {

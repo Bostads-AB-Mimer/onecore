@@ -40,10 +40,11 @@ const MaterialChoiceDetails = () => {
             </TableHead>
             <TableBody>
               {materialChoices.map((choice: MaterialChoice) => (
-                <TableRow key={choice.materialChoiceId}>
-                  <TableCell>{choice.roomType}</TableCell>
-                  <TableCell>{choice.caption || 'null'}</TableCell>
-                  <TableCell>{choice.shortDescription || 'null'}</TableCell>
+                console.log("choice", choice.MaterialChoiceId),
+                <TableRow key={`choice_${choice.MaterialChoiceId}`}>
+                  <TableCell>{choice.RoomType}</TableCell>
+                  <TableCell>{choice.Caption || 'null'}</TableCell>
+                  <TableCell>{choice.ShortDescription || 'null'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
