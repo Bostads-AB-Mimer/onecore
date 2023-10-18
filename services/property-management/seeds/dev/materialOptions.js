@@ -3,6 +3,10 @@
  * @returns { Promise<void> }
  */
 exports.seed = async function (knex) {
+  await knex('MaterialOptionImage').del();
+  await knex('MaterialOption').del();
+  await knex('MaterialOptionGroup').del()
+  await knex('ProjectApartment').del()
   await knex('ProjectApartment').insert([
     {
       ApartmentId: '102-008-03-0202/07',
@@ -63,7 +67,7 @@ exports.seed = async function (knex) {
           ])
         })
     })
-
+    
   await knex('MaterialOptionGroup')
     .insert([
       {
