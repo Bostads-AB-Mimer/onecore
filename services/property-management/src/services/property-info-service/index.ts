@@ -52,11 +52,11 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { roomTypes: materialChoices }
   })
 
-  router.get('(.*)/rentalproperties/:id/material-choices-alt', async (ctx) => {
-    const apartmentId = ctx.params.id
+  router.get('(.*)/rentalproperties/:apartmentId/:contractId/material-choices', async (ctx) => {
+    const apartmentId = ctx.params.apartmentId + '/' + ctx.params.contractId
     const materialChoices = await getMaterialChoicesByApartmentId(apartmentId)
 
-    ctx.body = { roomTypes: materialChoices }
+    ctx.body = { materialChoices: materialChoices }
   })
 
   // ?submitted=true|false
