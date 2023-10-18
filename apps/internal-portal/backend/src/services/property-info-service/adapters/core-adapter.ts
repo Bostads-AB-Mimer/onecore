@@ -64,13 +64,21 @@ const getMaterialChoiceStatuses = async (projectCode: string) => {
   return materialChoiceStatusResponse.data
 }
 
-const getCommittedChoices = async (apartmentId: string) => {
+const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
+  let url;
+
+  if (contractId) {
+    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
+  } else {
+    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/material-choices`
+  }
+  
   const committedChoicesResponse = await getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/rentalproperties/${apartmentId}/material-choices`,
+    url: url,
   })
 
   return committedChoicesResponse.data
 }
 
-export { getMaterialChoiceStatuses, getCommittedChoices }
+export { getMaterialChoiceStatuses, getMaterialChoices }
