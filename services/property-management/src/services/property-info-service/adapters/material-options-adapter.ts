@@ -44,7 +44,6 @@ const saveMaterialChoices = async (
   rentalPropertyId: string,
   materialChoices: Array<MaterialChoice>
 ) => {
-  console.log('save choice')
   let responseData
   await db('MaterialChoice')
     .insert(
@@ -74,7 +73,6 @@ const saveMaterialChoices = async (
 }
 
 const getMaterialOption = async (materialOptionId: string) => {
-  console.log('get options')
   const rows = await db('MaterialOptionGroup')
     .innerJoin(
       'MaterialOption',
@@ -141,7 +139,7 @@ const getMaterialOptionGroupsByRoomType = async (
       RoomType: roomTypeId,
     })
     .orderBy(
-      'MaterialOption.MaterialOptionGroupId',
+      'MaterialOptionGroup.MaterialOptionGroupId',
       'MaterialOption.MaterialOptionId'
     )
 
@@ -208,7 +206,7 @@ const getRoomTypeWithMaterialOptions = async (roomTypes: RoomType[]) => {
     )
   }
 
-  return roomTypes
+  return roomTypes.filter(filterRoomTypes).sort(sortRoomTypes)
 }
 const getMaterialChoicesByRoomTypes = async (
   apartmentId: string,
@@ -223,7 +221,17 @@ const getMaterialChoicesByRoomTypes = async (
     roomType.materialOptionGroups = materialGroups
   }
 
-  return roomTypes
+  return roomTypes.filter(filterRoomTypes).sort(sortRoomTypes)
+}
+
+const filterRoomTypes = (roomType: RoomType) => {
+  return (
+    roomType.materialOptionGroups != undefined &&
+    roomType.materialOptionGroups.length > 0
+  )
+}
+const sortRoomTypes = (a: RoomType, b: RoomType) => {
+  return a.name > b.name ? 1 : -1
 }
 
 const getMaterialChoicesByRoomType = async ({
