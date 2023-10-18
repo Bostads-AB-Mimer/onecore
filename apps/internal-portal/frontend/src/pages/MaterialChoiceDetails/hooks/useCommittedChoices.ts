@@ -4,13 +4,7 @@ import { useQuery } from 'react-query'
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export interface ChoicesResponse {
-  roomTypes: RoomType[] | undefined;
-}
-
-export interface RoomType {
-  roomTypeId: string;
-  name: string;
-  materialOptionGroups: MaterialOptionGroup[];
+  materialChoices: MaterialOptionGroup[] | undefined;
 }
 
 export interface MaterialOptionGroup {
