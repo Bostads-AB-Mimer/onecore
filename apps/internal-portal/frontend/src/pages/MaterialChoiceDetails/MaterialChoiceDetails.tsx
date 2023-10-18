@@ -1,5 +1,15 @@
-import React from 'react';
-import { Box, Typography, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import { useCommittedChoices, MaterialChoice } from './hooks/useCommittedChoices';
 
@@ -9,7 +19,8 @@ const MaterialChoiceDetails = () => {
   const apartmentId = searchParams.get('rentalPropertyId') ?? '';
 
   const { data } = useCommittedChoices(apartmentId);
-  const materialChoices = data?.materialChoices;
+  const materialChoices = data?.materialChoices ;
+  console.log("choices", materialChoices);
 
   return (
     <Box style={{ padding: '4mm', margin: '4mm' }}>
@@ -28,19 +39,13 @@ const MaterialChoiceDetails = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {materialChoices.flatMap((choiceGroup: MaterialOptionGroup) =>
-                choiceGroup.materialChoices.map((choice: MaterialChoice) => (
-                  <TableRow key={choice.materialChoiceId}>
-                    <TableCell>{choice.roomTypeId[0]}</TableCell>
-                    <TableCell>
-                      {getMaterialOption(choice.materialOptionId)?.caption || 'null'}
-                    </TableCell>
-                    <TableCell>
-                      {getMaterialOption(choice.materialOptionId)?.shortDescription || 'null'}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              {materialChoices.map((choice: MaterialChoice) => (
+                <TableRow key={choice.materialChoiceId}>
+                  <TableCell>{choice.roomType}</TableCell>
+                  <TableCell>{choice.caption || 'null'}</TableCell>
+                  <TableCell>{choice.shortDescription || 'null'}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -49,13 +54,6 @@ const MaterialChoiceDetails = () => {
       )}
     </Box>
   );
-
-  function getMaterialOption(materialOptionId: string): MaterialOption | undefined {
-    return materialChoices
-      .map((choiceGroup) => choiceGroup.materialOptions)
-      .flat()
-      .find((option) => option.materialOptionId === materialOptionId);
-  }
 };
 
 export default MaterialChoiceDetails;

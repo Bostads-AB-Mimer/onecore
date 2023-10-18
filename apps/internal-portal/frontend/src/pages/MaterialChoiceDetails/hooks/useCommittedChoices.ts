@@ -4,36 +4,15 @@ import { useQuery } from 'react-query'
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export interface ChoicesResponse {
-  materialChoices: MaterialOptionGroup[] | undefined;
-}
-
-export interface MaterialOptionGroup {
-  materialOptionGroupId: string;
-  roomTypeId: string[];
-  name: string | null;
-  actionName: string;
-  materialOptions: MaterialOption[];
-  materialChoices: MaterialChoice[];
-  type: string;
-}
-
-export interface MaterialOption {
-  materialOptionId: string;
-  caption: string;
-  shortDescription: string;
-  description: string;
-  coverImage: string;
-  materialOptionGroupName: string | null;
-  images: string[];
+  materialChoices: MaterialChoice[] | undefined;
 }
 
 export interface MaterialChoice {
   materialChoiceId: string;
-  materialOptionId: string;
-  materialOptionGroupId: string;
+  roomType: string;
+  caption: string;
+  shortDescription: string;
   apartmentId: string;
-  roomTypeId: string[];
-  status: string;
 }
 
 export const useCommittedChoices = (apartmentId: string) => {
