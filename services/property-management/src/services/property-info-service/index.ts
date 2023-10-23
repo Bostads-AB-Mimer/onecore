@@ -43,13 +43,9 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const apartmentId = ctx.params.id
-    const roomTypes = await getRoomTypes(apartmentId)
-    const materialChoices = await getMaterialChoicesByRoomTypes(
-      apartmentId,
-      roomTypes
-    )
+    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId)
 
-    ctx.body = { roomTypes: materialChoices }
+    ctx.body = { materialChoices: materialChoices }
   })
 
   router.get('(.*)/rentalproperties/:apartmentId/:contractId/material-choices', async (ctx) => {
