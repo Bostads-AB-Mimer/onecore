@@ -13,6 +13,7 @@ import {
   getMaterialChoices,
   saveMaterialChoice,
   getMaterialChoiceStatuses,
+  getRoomsWithMaterialChoices,
 } from './adapters/rental-property-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 
@@ -41,11 +42,26 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  router.get('(.*)/rentalproperties/:apartmentId/:contractId/material-choices', async (ctx) => {
-    const materialChoices = await getMaterialChoices(ctx.params.apartmentId, ctx.params.contractId)
+  router.get(
+    '(.*)/rentalproperties/:apartmentId/:contractId/material-choices',
+    async (ctx) => {
+      const materialChoices = await getMaterialChoices(
+        ctx.params.apartmentId,
+        ctx.params.contractId
+      )
 
-    ctx.body = materialChoices
-  })
+      ctx.body = materialChoices
+    }
+  )
+
+  router.get(
+    '(.*)/rentalproperties/:id/rooms-with-material-choices',
+    async (ctx) => {
+      const materialChoices = await getRoomsWithMaterialChoices(ctx.params.id)
+
+      ctx.body = materialChoices
+    }
+  )
 
   router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const materialChoices = await getMaterialChoices(ctx.params.id)
@@ -54,7 +70,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
-    let materialChoiceStatuses = await getMaterialChoiceStatuses(
+    const materialChoiceStatuses = await getMaterialChoiceStatuses(
       ctx.params.projectCode
     )
 
