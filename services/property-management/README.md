@@ -9,7 +9,7 @@ Microservice for property information in Yggdrasil.
 3. Install nvm
 4. Install required version of node: `nvm install`
 5. Use required version of node `nvm use`
-6. Install packages: `npm run install`
+6. Install packages: `npm install`
 7. Start database engine (SQL Server): `docker compose up -d &`
 8. Create a database called `property-info`
 9. Create database structure: `npm run migrate:up`
@@ -26,3 +26,4 @@ Start the development server: `npm run dev`
 - DATABASE\_\_USER - database username, default "sa"
 - DATABASE\_\_DATABASE=properties
 - DATABASE\_\_PORT=1433
+- CONTECH_OS__URL - remote url to contech-os
