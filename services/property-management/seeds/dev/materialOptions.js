@@ -3,8 +3,9 @@
  * @returns { Promise<void> }
  */
 exports.seed = async function (knex) {
-  await knex('MaterialOptionImage').del();
-  await knex('MaterialOption').del();
+  await knex('MaterialChoice').del()
+  await knex('MaterialOptionImage').del()
+  await knex('MaterialOption').del()
   await knex('MaterialOptionGroup').del()
   await knex('ProjectApartment').del()
   await knex('ProjectApartment').insert([
@@ -51,23 +52,40 @@ exports.seed = async function (knex) {
         ])
         .returning('MaterialOptionID')
         .then((result) => {
-          return knex('MaterialOptionImage').insert([
-            {
-              MaterialOptionId: result[0].MaterialOptionID,
-              Image: 'kok_koncept1_2.png',
-            },
-            {
-              MaterialOptionId: result[0].MaterialOptionID,
-              Image: 'kok_koncept1_3.png',
-            },
-            {
-              MaterialOptionId: result[1].MaterialOptionID,
-              Image: 'kok_koncept1_3.png',
-            },
-          ])
+          const materialOptionId1 = result[0].MaterialOptionID
+          const materialOptionId2 = result[1].MaterialOptionID
+
+          knex('MaterialChoice')
+            .insert([
+              {
+                MaterialChoiceId: '1',
+                MaterialOptionId: materialOptionId1,
+                ApartmentId: '102-008-03-0202/07',
+                RoomType: 'KÖK',
+                Status: 'Submitted',
+                DateOfSubmission: new Date(),
+                DateOfCancellation: null,
+              },
+            ])
+            .then(() => {
+              return knex('MaterialOptionImage').insert([
+                {
+                  MaterialOptionId: materialOptionId1,
+                  Image: 'kok_koncept1_2.png',
+                },
+                {
+                  MaterialOptionId: materialOptionId1,
+                  Image: 'kok_koncept1_3.png',
+                },
+                {
+                  MaterialOptionId: materialOptionId2,
+                  Image: 'kok_koncept1_3.png',
+                },
+              ])
+            })
         })
     })
-    
+
   await knex('MaterialOptionGroup')
     .insert([
       {
