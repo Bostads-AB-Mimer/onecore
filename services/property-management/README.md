@@ -26,4 +26,3 @@ Start the development server: `npm run dev`
 - DATABASE\_\_USER - database username, default "sa"
 - DATABASE\_\_DATABASE=properties
 - DATABASE\_\_PORT=1433
-- CONTECH_OS__URL - remote url to contech-os
