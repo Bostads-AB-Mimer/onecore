@@ -5,15 +5,14 @@ const getRentalProperty = async (
 ): Promise<RentalProperty> => {
   return {
     rentalPropertyId: '102-008-03-0202', //property-info.contact.RentalPropertyId
-    apartmentNumber: 1207, //ContecOS data?
-    size: 85, //contecOS data?
+    apartmentNumber: 1207,
+    size: 85,
     address: {
       street: 'Gatvägen', //property-info.contact.Street
       number: '56', //property-info.contact.StreetNumber
       postalCode: '72266', //property-info.contact.PostalCode
       city: 'Västerås', //property-info.contact.City
   },
-    //below fields needs to be investigated more, might be taken from ContecOS?
     rentalPropertyType: 'Bostadskontrakt', //property-info.lease.Type
     type: 'Kontraktsinnehavare', //property-info.contact.Type
     additionsIncludedInRent: '',
