@@ -38,8 +38,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/rentalproperties/:id/material-options/:materialOptionId',
     async (ctx) => {
-      const option = await getMaterialOption(ctx.params.materialOptionId)
-      ctx.body = option
+      ctx.body =  await getMaterialOption(ctx.params.materialOptionId)
     }
   )
 
@@ -83,24 +82,19 @@ export const routes = (router: KoaRouter) => {
 
   // ?submitted=true|false
   router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
-    const apartmentChoiceStatuses = await getApartmentMaterialChoiceStatuses(
+    ctx.body = await getApartmentMaterialChoiceStatuses(
       ctx.params.projectCode
     )
-
-    ctx.body = apartmentChoiceStatuses
   })
 
   router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
-    const result = await saveMaterialChoices(
+    ctx.body = await saveMaterialChoices(
       ctx.params.id,
       ctx.request.body as Array<MaterialChoice>
     )
-    ctx.body = result
   })
 
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
-    const responseData = await getRentalProperty(ctx.params.id)
-
-    ctx.body = responseData
+    ctx.body = await getRentalProperty(ctx.params.id)
   })
 }

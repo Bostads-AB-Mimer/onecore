@@ -391,8 +391,7 @@ const getAllSubmittedMaterialChoices = async (): Promise<{
 
   for (const row of rows) {
     const apartmentId = row.ApartmentId
-    const materialChoices = await getMaterialChoicesByApartmentId(apartmentId)
-    materialChoicesByApartment[apartmentId] = materialChoices
+    return await getMaterialChoicesByApartmentId(apartmentId)
   }
 
   return materialChoicesByApartment
