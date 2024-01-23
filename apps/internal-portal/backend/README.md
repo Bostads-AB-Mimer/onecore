@@ -8,9 +8,9 @@ The frontend is packages/frontend in this repo.
 1. Make a copy of .env.template, call it .env
 2. Fill out values in .env. (see below)
 3. Install nvm
-5. Install required version of node: `nvm install`
-6. Use required version of node `nvm use`
-7. Install packages: `npm install`
+4. Install required version of node: `nvm install`
+5. Use required version of node `nvm use`
+6. Install packages: `npm install`
 
 ## Development
 
@@ -21,7 +21,7 @@ Note: You need to have yggdrasil-core running for this application to work.
 ## Env
 
 * CORE__URL - Url to yggdrasil-core
-* CORE__USERNAME - User name for service account in yggdrasil-core (configured in that application)
+* CORE__USERNAME - Username for service account in yggdrasil-core (configured in that application)
 * CORE__PASSWORD - Password for service account in yggdrasil-core (configured in that application)
 * AUTH__COOKIE_DOMAIN - Set to "localhost" for local dev environment
 * MSAL__ CLOUD_INSTANCE="https://login.microsoftonline.com/" # cloud instance string should end with a trailing slash

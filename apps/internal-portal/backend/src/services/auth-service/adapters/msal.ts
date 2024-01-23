@@ -6,7 +6,6 @@ import { DefaultContext, DefaultState, ParameterizedContext } from 'koa'
 
 const redirectUri = config.msal.redirectUri
 const postLogoutRedirectUri = config.msal.postLogoutRedirectUri
-const graphMeEndpoint = config.msal.graphApiEndpoint + 'v1.0/me'
 const cryptoProvider = new msal.CryptoProvider()
 
 interface AuthOptions {

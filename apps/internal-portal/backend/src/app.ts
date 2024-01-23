@@ -2,7 +2,6 @@ import Koa, { DefaultContext, DefaultState } from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import cors from '@koa/cors'
-import config from './common/config'
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
 import session from 'koa-session'
@@ -13,7 +12,7 @@ app.keys = ['some secret hurr']
 
 const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
   key: 'koa.sess' /** (string) cookie key (default is koa.sess) */,
-  /** (number || 'session') maxAge in ms (default is 1 days) */
+  /** (number || 'session') maxAge in ms (default is 1 day) */
   /** 'session' will result in a cookie that expires when session/browser is closed */
   /** Warning: If a session cookie is stolen, this cookie will never expire */
   maxAge: 86400000,
