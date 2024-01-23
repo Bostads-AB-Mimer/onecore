@@ -11,7 +11,7 @@ services:
     networks:
       - property-info
     ports:
-      - 1433:1433
+      - "1433:1433"
     volumes:
       - sql:/var/opt/mssql
 
