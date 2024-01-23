@@ -1,13 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
-import App from './App';
-import { render, screen } from './test/test.utils';
+import { render, screen } from './test/test.utils'
+import App from './App'
 
 describe('Simple working test', () => {
-  it('the title is visible', () => {
-    render(<App />);
-    expect(
-      screen.getByText(/Hello Iteam \+ React \+ Typescript!/i)
-    ).toBeInTheDocument();
-  });
-});
+  it('can find the logo', () => {
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
+    )
+    expect(screen.getByAltText('Mimer logotyp'))
+  })
+})
