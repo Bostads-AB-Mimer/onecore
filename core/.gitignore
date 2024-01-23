@@ -5,3 +5,6 @@ node_modules
 .env
 config.json
 .DS_Store
+
+# Jetbrains IDE
+.idea/

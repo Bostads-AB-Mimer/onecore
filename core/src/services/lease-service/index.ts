@@ -1,5 +1,5 @@
 /**
- * Self-contained service, ready to be extracted into a micro service if appropriate.
+ * Self-contained service, ready to be extracted into a microservice if appropriate.
  *
  * All adapters such as database clients etc. should go into subfolders of the service,
  * not in a general top-level adapter folder to avoid service interdependencies (but of
@@ -11,7 +11,6 @@ import {
   getLease,
   getLeasesForPnr,
 } from './adapters/tenant-lease-adapter'
-import { Lease } from '../../common/types'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await getLease(rentalId)

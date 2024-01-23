@@ -5,10 +5,10 @@ Core orchestration for Yggdrasil.
 ## Installation
 
 1. Create the file src/config.json (see below)
-3. Install nvm
-5. Install required version of node: `nvm install`
-6. Use required version of node `nvm use`
-7. Install packages: `npm run install`
+2. Install nvm
+3. Install required version of node: `nvm install`
+4. Use required version of node `nvm use`
+5. Install packages: `npm run install`
 
 ## Development
 
