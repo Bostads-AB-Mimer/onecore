@@ -2,3 +2,9 @@ build
 node_modules
 .env
 config.json
+
+# OSX
+.DS_Store
+
+# Jetbrains IDE
+.idea/

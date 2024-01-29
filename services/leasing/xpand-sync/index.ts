@@ -163,7 +163,7 @@ const syncContractToTenantsLeases = async (contract: any) => {
     rentInfo: undefined,
   }
 
-  const result = await axios.post(
+  const result = axios.post(
     `${tenantLeasesUrl}/leases`,
     transformedContract,
     {
