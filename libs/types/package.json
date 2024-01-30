@@ -1,0 +1,19 @@
+{
+  "name": "onecore-types",
+  "version": "1.0.0",
+  "description": "OneCore common types",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bostads-AB-Mimer/onecore-types.git"
+  },
+  "author": "Johannes Karlsson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bostads-AB-Mimer/onecore-types/issues"
+  },
+  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-types#readme"
+}
