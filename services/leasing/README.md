@@ -1,6 +1,6 @@
 # Introduction
 
-Microservice for tenants and leases in Yggdrasil.
+Microservice for tenants and leases in ONECore.
 
 ## Installation
 
@@ -9,7 +9,7 @@ Microservice for tenants and leases in Yggdrasil.
 3. Install nvm
 4. Install required version of node: `nvm install`
 5. Use required version of node `nvm use`
-6. Install packages: `npm run install` 
+6. Install packages: `npm run install`
 7. Start database engine (SQL Server): `docker compose up -d &`
 8. Create a database called `tenants-leases`
 9. Create database structure: `npm run migrate:up`
@@ -21,8 +21,8 @@ Start the development server: `npm run dev`
 
 ## Env
 
-* DATABASE__PASSWORD - password for database
-* DATABASE__HOST - "localhost" for local dev environment
-* DATABASE__USER - database username, default "sa"
-* DATABASE__DATABASE=tenants-leases
-* DATABASE__PORT=1433
+- DATABASE\_\_PASSWORD - password for database
+- DATABASE\_\_HOST - "localhost" for local dev environment
+- DATABASE\_\_USER - database username, default "sa"
+- DATABASE\_\_DATABASE=tenants-leases
+- DATABASE\_\_PORT=1433

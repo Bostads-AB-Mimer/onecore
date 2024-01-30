@@ -24,4 +24,4 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/bostads-ab-mimer/yggdrasil-tenants-leases:release-${{ github.event.release.tag_name }}
+            ghcr.io/bostads-ab-mimer/onecore-leasing:release-${{ github.event.release.tag_name }}
