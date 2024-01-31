@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/Bostads-AB-Mimer/onecore-types/issues"
   },
-  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-types#readme"
+  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-types#readme",
+  "dependencies": {
+    "release-please": "^16.8.0"
+  }
 }
