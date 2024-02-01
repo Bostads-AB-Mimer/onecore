@@ -111,7 +111,7 @@ interface MaterialOption {
   materialOptionGroupName?: string;
 }
 
-export type {
+export {
   Contact,
   Lease,
   RentalProperty,

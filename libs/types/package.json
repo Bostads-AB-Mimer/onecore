@@ -1,7 +1,7 @@
 {
   "name": "onecore-types",
   "version": "1.0.0",
-  "description": "OneCore common types",
+  "description": "ONECore common types",
   "main": "index.ts",
   "scripts": {
     "build": "tsc"
