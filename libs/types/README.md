@@ -24,7 +24,7 @@ The most important prefixes you should have in mind are:
 - feat: which represents a new feature, and correlates to a SemVer minor.
 - feat!:, or fix!:, refactor!:, etc., which represent a breaking change (indicated by the !) and will result in a SemVer major.
 
-Read more [here](https://www.npmjs.com/package/release-please]).
+Read more [here](https://www.npmjs.com/package/release-please).
 
 ### Relasing a new version
 
