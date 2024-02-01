@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.2...v1.0.3) (2024-02-01)
+
+
+### Bug Fixes
+
+* Updates .gitignore ([3f2881f](https://github.com/Bostads-AB-Mimer/onecore-types/commit/3f2881ff2b493720ade8f1db68058a4b600c8124))
+
 ## [1.0.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.1...v1.0.2) (2024-02-01)
 
 
