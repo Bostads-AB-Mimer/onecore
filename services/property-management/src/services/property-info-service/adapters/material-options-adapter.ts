@@ -3,7 +3,7 @@ import {
   MaterialOption,
   MaterialOptionGroup,
   RoomType,
-} from '../../../common/types'
+} from 'onecore-types'
 
 import knex from 'knex'
 import config from '../../../common/config'

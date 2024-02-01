@@ -1,4 +1,4 @@
-import { RentalProperty, RoomType } from '../../../common/types'
+import { RentalProperty, RoomType } from 'onecore-types'
 
 const getRentalProperty = async (
   rentalPropertyId: string
@@ -12,24 +12,30 @@ const getRentalProperty = async (
       number: '56', //property-info.contact.StreetNumber
       postalCode: '72266', //property-info.contact.PostalCode
       city: 'Västerås', //property-info.contact.City
-  },
+    },
     rentalPropertyType: 'Bostadskontrakt', //property-info.lease.Type
     type: 'Kontraktsinnehavare', //property-info.contact.Type
     additionsIncludedInRent: '',
     otherInfo: '',
+    roomTypes: [
+      { roomTypeId: 'BADRUM', name: 'BADRUM' },
+      { roomTypeId: 'VARDAGSRUM', name: 'VARDAGSRUM' },
+      { roomTypeId: 'RUM 1', name: 'RUM 1' },
+      { roomTypeId: 'KÖK', name: 'KÖK' },
+    ],
     lastUpdated: new Date('2024-01-17'),
   }
 }
 
 const getRoomTypes = async (aparmentId: string): Promise<Array<RoomType>> => {
   const roomTypes: Array<RoomType> = [
-    { roomTypeId: 'BADRUM', name: 'BADRUM'},
-    { roomTypeId: 'VARDAGSRUM', name: 'VARDAGSRUM'},
-    { roomTypeId: 'RUM 1', name: 'RUM 1'},
-    { roomTypeId: 'KÖK', name: 'KÖK'},
-  ];
+    { roomTypeId: 'BADRUM', name: 'BADRUM' },
+    { roomTypeId: 'VARDAGSRUM', name: 'VARDAGSRUM' },
+    { roomTypeId: 'RUM 1', name: 'RUM 1' },
+    { roomTypeId: 'KÖK', name: 'KÖK' },
+  ]
 
-  return roomTypes;
+  return roomTypes
 }
 
 export { getRoomTypes, getRentalProperty }
