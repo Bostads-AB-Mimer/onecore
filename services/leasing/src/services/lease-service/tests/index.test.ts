@@ -4,7 +4,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/tenant-lease-adapter'
-import { Lease, LeaseStatus } from '../../../common/types'
+import { Lease, LeaseStatus } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
