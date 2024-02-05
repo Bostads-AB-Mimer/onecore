@@ -1,11 +1,11 @@
-# Yggdrasil Coworker Portal
+# ONECore Coworker Portal
 
 ## Setup
 
 ```
 1. Install nvm
 2. nvm install
-3. nvm use 
+3. nvm use
 4. npm install
 5. npm run dev
 ```
