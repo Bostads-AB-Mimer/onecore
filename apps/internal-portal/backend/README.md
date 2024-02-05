@@ -1,6 +1,6 @@
 # Introduction
 
-Backend for the coworker portal for Mimer.
+Backend for the coworker portal for Mimer ONECore.
 The frontend is packages/frontend in this repo.
 
 ## Installation
@@ -16,18 +16,18 @@ The frontend is packages/frontend in this repo.
 
 Start the development server: `npm run dev`
 
-Note: You need to have yggdrasil-core running for this application to work.
+Note: You need to have onecore-core, onecore-leasing & onecore-property-management running for this application to work.
 
 ## Env
 
-* CORE__URL - Url to yggdrasil-core
-* CORE__USERNAME - Username for service account in yggdrasil-core (configured in that application)
-* CORE__PASSWORD - Password for service account in yggdrasil-core (configured in that application)
-* AUTH__COOKIE_DOMAIN - Set to "localhost" for local dev environment
-* MSAL__ CLOUD_INSTANCE="https://login.microsoftonline.com/" # cloud instance string should end with a trailing slash
-* MSAL__TENANT_ID - your Azure tenant id.
-* MSAL__CLIENT_ID - client id for your Azure App Registration / Enterprise Application
-* MSAL__CLIENT_SECRET - client secret generated for your Azure App Registration / Enterprise Application
-* MSAL__REDIRECT_URI="http://localhost:7000/api/auth/redirect" - absolute uri for the redirect post route, i.e. hostname + '/api/auth/redirect'
-* MSAL__POST_LOGOUT_REDIRECT_URI="http://localhost:7000" - absolute uri for where the user is redirected after logout
-* MSAL__GRAPH_API_ENDPOINT="https://graph.microsoft.com/" # graph api endpoint string should end with a trailing slash
+- CORE\_\_URL - Url to onecore-core
+- CORE\_\_USERNAME - Username for service account in onecore-core (configured in that application)
+- CORE\_\_PASSWORD - Password for service account in onecore-core (configured in that application)
+- AUTH\_\_COOKIE_DOMAIN - Set to "localhost" for local dev environment
+- MSAL\_\_ CLOUD_INSTANCE="https://login.microsoftonline.com/" # cloud instance string should end with a trailing slash
+- MSAL\_\_TENANT_ID - your Azure tenant id.
+- MSAL\_\_CLIENT_ID - client id for your Azure App Registration / Enterprise Application
+- MSAL\_\_CLIENT_SECRET - client secret generated for your Azure App Registration / Enterprise Application
+- MSAL\_\_REDIRECT_URI="http://localhost:7000/api/auth/redirect" - absolute uri for the redirect post route, i.e. hostname + '/api/auth/redirect'
+- MSAL\_\_POST_LOGOUT_REDIRECT_URI="http://localhost:7000" - absolute uri for where the user is redirected after logout
+- MSAL\_\_GRAPH_API_ENDPOINT="https://graph.microsoft.com/" # graph api endpoint string should end with a trailing slash
