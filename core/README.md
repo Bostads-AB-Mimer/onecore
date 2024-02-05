@@ -1,6 +1,6 @@
 # Introduction
 
-Core orchestration for Yggdrasil.
+Core orchestration for ONECore.
 
 ## Installation
 
@@ -14,7 +14,7 @@ Core orchestration for Yggdrasil.
 
 Start the development server: `npm run dev`
 
-Note: The microservice yggdrasil-tenants-leases must be running for this application to work.
+Note: The microservices leasing and property-management must be running for this application to work.
 
 ## Env
 
