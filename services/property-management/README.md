@@ -1,6 +1,6 @@
 # Introduction
 
-Microservice for property information in Yggdrasil.
+Microservice for property management in ONECore.
 
 ## Installation
 

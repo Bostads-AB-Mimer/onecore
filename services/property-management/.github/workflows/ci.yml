@@ -68,4 +68,4 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/bostads-ab-mimer/yggdrasil-property-info:${{ steps.package-version.outputs.current-version}}
+            ghcr.io/bostads-ab-mimer/onecore-property-management:${{ steps.package-version.outputs.current-version}}
