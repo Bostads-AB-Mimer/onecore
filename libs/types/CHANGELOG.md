@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.3...v1.0.4) (2024-02-06)
+
+
+### Bug Fixes
+
+* Uncomment code restoration in types ([e942872](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e94287283576a373eb6003bbfabb46fbc1760a90))
+
 ## [1.0.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.2...v1.0.3) (2024-02-01)
 
 
