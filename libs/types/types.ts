@@ -77,10 +77,10 @@ enum LeaseStatus {
 
 interface MaterialChoice {
   materialChoiceId: string;
-  // materialOptionId: string
-  // materialOptionGroupId: string
+  materialOptionId: string;
+  materialOptionGroupId: string;
   apartmentId: string;
-  // roomTypeId: string
+  roomTypeId: string;
   materialOption?: MaterialOption | undefined;
   materialOptionGroup?: MaterialOptionGroup | undefined;
   roomType?: RoomType | undefined;

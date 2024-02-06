@@ -2,6 +2,7 @@
   "name": "onecore-types",
   "version": "1.0.3",
   "description": "ONECore common types",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
     "build": "tsc"
