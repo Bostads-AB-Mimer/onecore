@@ -1,0 +1,11 @@
+index.ts
+types.ts
+
+# Configuration files
+tsconfig.json
+.nvmrc
+.github/
+.gitignore
+
+# Node modules
+node_modules/

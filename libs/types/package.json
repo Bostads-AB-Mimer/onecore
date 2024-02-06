@@ -3,7 +3,7 @@
   "version": "1.0.4",
   "description": "ONECore common types",
   "type": "module",
-  "main": "index.ts",
+  "types": "build/types/index.d.ts",
   "scripts": {
     "build": "tsc"
   },
@@ -19,5 +19,8 @@
   "homepage": "https://github.com/Bostads-AB-Mimer/onecore-types#readme",
   "dependencies": {
     "release-please": "^16.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
   }
 }
