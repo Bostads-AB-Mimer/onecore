@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.9](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.8...v1.0.9) (2024-02-07)
+
+
+### Bug Fixes
+
+* Revert package version ([381e976](https://github.com/Bostads-AB-Mimer/onecore-types/commit/381e9767a790a266e9933857155075373ae93337))
+
 ## [1.0.5](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.4...v1.0.5) (2024-02-07)
 
 
