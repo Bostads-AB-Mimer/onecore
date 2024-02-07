@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.4...v1.0.5) (2024-02-07)
+
+
+### Bug Fixes
+
+* Updates release workflow, tsconfig & package.json ([0e49418](https://github.com/Bostads-AB-Mimer/onecore-types/commit/0e4941816a87824e492bdf599ae9b5f2669ec3b7))
+
 ## [1.0.5](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.5...v1.0.5) (2024-02-07)
 
 
