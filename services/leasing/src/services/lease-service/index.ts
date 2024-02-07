@@ -16,6 +16,7 @@ import {
   updateContact,
   updateContacts,
 } from './adapters/tenant-lease-adapter'
+import { createLease } from './adapters/xpand-soap-adapter'
 import { Contact, Lease } from '../../common/types'
 
 export const routes = (router: KoaRouter) => {
@@ -49,6 +50,19 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = {
       data: leases,
+    }
+  })
+
+  /*
+   * Creates a new lease
+   */
+  router.post('(.*)/leases', async (ctx) => {
+    console.log('post /leases', ctx)
+
+    await createLease(new Date(2024, 10, 1), '504-714-00-0008', 'P079586')
+
+    ctx.body = {
+      meta: 'tbd',
     }
   })
 
