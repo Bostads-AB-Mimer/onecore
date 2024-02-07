@@ -3,7 +3,7 @@
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint", "eslint-plugin-node"],
   "extends": [
-    "eslint:recommended", 
+    "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "prettier",
     "plugin:import/typescript",
@@ -22,12 +22,17 @@
     }
   },
   "rules": {
-    "node/no-unsupported-features/es-syntax": ["error", { "ignores": ["modules"] }]
+    "node/no-unsupported-features/es-syntax": [
+      "error",
+      { "ignores": ["modules"] }
+    ]
   },
-  "overrides": [{
-    "files": "src/**/*.test.ts",
-    "rules": {
+  "overrides": [
+    {
+      "files": "src/**/*.test.ts",
+      "rules": {
         "node/no-unpublished-import": 0
+      }
     }
-  }]
+  ]
 }
