@@ -9,18 +9,22 @@ import {
   TableHead,
   TableRow,
   Paper,
-} from '@mui/material';
-import { useLocation } from 'react-router-dom';
-import { useCommittedChoices, MaterialChoice } from './hooks/useCommittedChoices';
+} from '@mui/material'
+import { useLocation } from 'react-router-dom'
+
+import {
+  useCommittedChoices,
+  MaterialChoice,
+} from './hooks/useCommittedChoices'
 
 const MaterialChoiceDetails = () => {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const apartmentId = searchParams.get('rentalPropertyId') ?? '';
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const apartmentId = searchParams.get('rentalPropertyId') ?? ''
 
-  const { data } = useCommittedChoices(apartmentId);
-  const materialChoices = data?.materialChoices ;
-  console.log("choices", materialChoices);
+  const { data } = useCommittedChoices(apartmentId)
+  const materialChoices = data?.materialChoices
+  console.log('choices', materialChoices)
 
   return (
     <Box style={{ padding: '4mm', margin: '4mm' }}>
@@ -39,14 +43,18 @@ const MaterialChoiceDetails = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {materialChoices.map((choice: MaterialChoice) => (
-                console.log("choice", choice.MaterialChoiceId),
-                <TableRow key={`choice_${choice.MaterialChoiceId}`}>
-                  <TableCell>{choice.RoomType}</TableCell>
-                  <TableCell>{choice.Caption || 'null'}</TableCell>
-                  <TableCell>{choice.ShortDescription || 'null'}</TableCell>
-                </TableRow>
-              ))}
+              {materialChoices.map(
+                (choice: MaterialChoice) => (
+                  console.log('choice', choice.MaterialChoiceId),
+                  (
+                    <TableRow key={`choice_${choice.MaterialChoiceId}`}>
+                      <TableCell>{choice.RoomType}</TableCell>
+                      <TableCell>{choice.Caption || 'null'}</TableCell>
+                      <TableCell>{choice.ShortDescription || 'null'}</TableCell>
+                    </TableRow>
+                  )
+                )
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -54,7 +62,7 @@ const MaterialChoiceDetails = () => {
         <Typography>No data available</Typography>
       )}
     </Box>
-  );
-};
+  )
+}
 
-export default MaterialChoiceDetails;
+export default MaterialChoiceDetails

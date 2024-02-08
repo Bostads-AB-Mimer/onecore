@@ -16,6 +16,7 @@
     "@mui/material": "^5.15.6",
     "axios": "^1.6.5",
     "material-ui-popup-state": "^5.0.10",
+    "onecore-types": "^1.0.9",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-query": "^3.39.3",

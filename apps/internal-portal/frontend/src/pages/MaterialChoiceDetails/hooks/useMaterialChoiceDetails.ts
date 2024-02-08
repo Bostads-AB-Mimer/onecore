@@ -1,7 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from 'react-query'
-
-import { Contact } from '../../../common/types'
+import { Contact } from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
