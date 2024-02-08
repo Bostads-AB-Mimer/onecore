@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Contact, Lease } from '../../../common/types'
+import { Contact, Lease } from 'onecore-types'
 import config from '../../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url

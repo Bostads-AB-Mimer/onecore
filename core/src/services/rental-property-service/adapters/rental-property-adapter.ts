@@ -1,9 +1,5 @@
 import axios from 'axios'
-import {
-  MaterialChoice,
-  MaterialOption,
-  RentalProperty,
-} from '../../../common/types'
+import { MaterialChoice, MaterialOption, RentalProperty } from 'onecore-types'
 import config from '../../../common/config'
 
 const propertyInfoServiceUrl = config.propertyInfoService.url
