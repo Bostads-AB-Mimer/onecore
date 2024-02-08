@@ -16,7 +16,7 @@ import {
   updateContact,
   updateContacts,
 } from './adapters/tenant-lease-adapter'
-import { Contact, Lease } from '../../common/types'
+import { Contact, Lease } from 'onecore-types'
 
 export const routes = (router: KoaRouter) => {
   /**
