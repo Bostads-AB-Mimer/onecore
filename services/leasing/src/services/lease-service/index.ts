@@ -10,14 +10,18 @@ import {
   getLease,
   getLeases,
   getLeasesFor,
-  updateLease,
-  updateLeases,
   getContact,
   updateContact,
   updateContacts,
 } from './adapters/tenant-lease-adapter'
 import { createLease } from './adapters/xpand-soap-adapter'
 import { Contact, Lease } from '../../common/types'
+
+interface CreateLeaseRequest {
+  parkingSpaceId: string
+  contactCode: string
+  fromDate: string
+}
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -53,19 +57,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /*
-   * Creates a new lease
-   */
-  router.post('(.*)/leases', async (ctx) => {
-    console.log('post /leases', ctx)
-
-    await createLease(new Date(2024, 10, 1), '504-714-00-0008', 'P079586')
-
-    ctx.body = {
-      meta: 'tbd',
-    }
-  })
-
   /**
    * Gets a person.
    */
@@ -96,14 +87,34 @@ export const routes = (router: KoaRouter) => {
    * Creates or updates a lease.
    */
   router.post('(.*)/leases', async (ctx) => {
-    if (Array.isArray(ctx.request.body)) {
-      await updateLeases(ctx.request.body as Lease[])
-    } else {
-      await updateLease(ctx.request.body as Lease)
-    }
+    try {
+      const request = <CreateLeaseRequest>ctx.request.body
 
-    ctx.body = {
-      meta: 'tbd',
+      const newLeaseId = await createLease(
+        new Date(request.fromDate),
+        request.parkingSpaceId,
+        request.contactCode
+      )
+      ctx.body = {
+        LeaseId: newLeaseId,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+        }
+      }
     }
+    // if (Array.isArray(ctx.request.body)) {
+    //   await updateLeases(ctx.request.body as Lease[])
+    // } else {
+    //   await updateLease(ctx.request.body as Lease)
+    // }
+
+    // ctx.body = {
+    //   meta: 'tbd',
+    // }
   })
 }

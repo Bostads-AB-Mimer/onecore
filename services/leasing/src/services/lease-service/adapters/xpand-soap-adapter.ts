@@ -1,6 +1,7 @@
 import soapRequest from 'easy-soap-request'
+import { XMLParser } from 'fast-xml-parser'
+import createHttpError from 'http-errors'
 
-import { Lease, Contact } from '../../../common/types'
 import Config from '../../../common/config'
 
 const messageCulture = '1053' //behöver denna sparas i env?
@@ -66,14 +67,23 @@ const createLease = async (
       url: Config.xpandSoap.url,
       headers: sampleHeaders,
       xml: xml,
-      timeout: 1000,
     })
-    const { headers, body, statusCode } = response
-    console.log('headers', headers)
-    console.log('body.data', body.data)
-    console.log('statusCode', statusCode)
-  } catch (error) {
-    console.log('error', error)
+    const { body } = response
+
+    const parser = new XMLParser()
+    const parsedResponse =
+      parser.parse(body)['s:Envelope']['s:Body'].CreateNewEntityResult
+
+    if (parsedResponse.Success === true) {
+      return parsedResponse.ObjectDescription
+    } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
+      throw createHttpError(404, 'Parking space not found')
+    }
+    throw createHttpError(500, parsedResponse.Message)
+    //TODO: handle more errors...
+  } catch (error: unknown) {
+    console.error(error)
+    throw error
   }
 }
 
