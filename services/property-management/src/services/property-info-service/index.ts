@@ -19,7 +19,7 @@ import {
   filterRoomTypes,
   sortRoomTypes,
 } from './adapters/material-options-adapter'
-import { MaterialChoice, MaterialOptionGroup } from '../../common/types'
+import { MaterialChoice, MaterialOptionGroup } from 'onecore-types'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
