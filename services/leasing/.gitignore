@@ -8,3 +8,5 @@ config.json
 
 # Jetbrains IDE
 .idea/
+
+.vscode/

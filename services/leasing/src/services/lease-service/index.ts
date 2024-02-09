@@ -6,6 +6,8 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { Contact } from 'onecore-types'
+
 import {
   getLease,
   getLeases,
@@ -15,7 +17,6 @@ import {
   updateContacts,
 } from './adapters/tenant-lease-adapter'
 import { createLease } from './adapters/xpand-soap-adapter'
-import { Contact, Lease } from '../../common/types'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string

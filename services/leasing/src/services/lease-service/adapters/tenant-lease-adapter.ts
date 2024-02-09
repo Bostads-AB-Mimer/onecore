@@ -1,4 +1,4 @@
-import { Lease, Contact } from '../../../common/types'
+import { Lease, Contact } from 'onecore-types'
 import knex from 'knex'
 import Config from '../../../common/config'
 
