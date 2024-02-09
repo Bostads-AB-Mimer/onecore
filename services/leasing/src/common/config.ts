@@ -15,6 +15,7 @@ export interface Config {
     username: string
     password: string
     url: string
+    messageCulture: string
   }
 }
 
@@ -28,6 +29,12 @@ const config = configPackage({
       password: '',
       port: 1433,
       database: 'tenants-leases',
+    },
+    xpandSoap: {
+      username: '',
+      password: '',
+      url: '',
+      messageCulture: '1053',
     },
   },
 })

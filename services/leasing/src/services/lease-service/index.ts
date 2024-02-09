@@ -21,6 +21,7 @@ interface CreateLeaseRequest {
   parkingSpaceId: string
   contactCode: string
   fromDate: string
+  companyCode: string
 }
 
 export const routes = (router: KoaRouter) => {
@@ -93,7 +94,8 @@ export const routes = (router: KoaRouter) => {
       const newLeaseId = await createLease(
         new Date(request.fromDate),
         request.parkingSpaceId,
-        request.contactCode
+        request.contactCode,
+        request.companyCode
       )
       ctx.body = {
         LeaseId: newLeaseId,

@@ -4,6 +4,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/tenant-lease-adapter'
+import * as xpandSoapAdapter from '../adapters/xpand-soap-adapter'
 import { Lease, LeaseStatus } from '../../../common/types'
 
 const app = new Koa()
@@ -153,6 +154,33 @@ describe('lease-service', () => {
       expect(getLeaseSpy).toHaveBeenCalled()
 
       expect(res.body.data.leaseId).toEqual('406-097-11-0201/06')
+    })
+  })
+
+  describe('POST /leases', () => {
+    it('calls xpand adapter and returns id of new lease', async () => {
+      const xpandAdapterSpy = jest
+        .spyOn(xpandSoapAdapter, 'createLease')
+        .mockResolvedValue('123-123-123/1')
+
+      const result = await request(app.callback()).post('/leases')
+
+      expect(xpandAdapterSpy).toHaveBeenCalled()
+      expect(result.body).toEqual({ LeaseId: '123-123-123/1' })
+    })
+
+    it('handles errors', async () => {
+      const xpandAdapterSpy = jest
+        .spyOn(xpandSoapAdapter, 'createLease')
+        .mockImplementation(() => {
+          throw new Error('Oh no')
+        })
+
+      const result = await request(app.callback()).post('/leases')
+
+      expect(xpandAdapterSpy).toHaveBeenCalled
+
+      expect(result.body).toEqual({ error: 'Oh no' })
     })
   })
 })

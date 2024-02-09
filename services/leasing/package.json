@@ -48,6 +48,7 @@
     "dotenv": "^16.3.2",
     "easy-soap-request": "^5.6.1",
     "fast-xml-parser": "^4.3.4",
+    "http-errors": "^2.0.0",
     "knex": "^2.5.1",
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.1",

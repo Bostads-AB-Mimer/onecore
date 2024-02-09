@@ -4,13 +4,11 @@ import createHttpError from 'http-errors'
 
 import Config from '../../../common/config'
 
-const messageCulture = '1053' //behöver denna sparas i env?
-const companyCode = '001' //behöver denna sparas i env?
-
 const createLease = async (
   fromDate: Date,
   rentalPropertyId: string,
-  tenantCode: string
+  tenantCode: string,
+  companyCode: string
 ) => {
   const base64credentials = Buffer.from(
     Config.xpandSoap.username + ':' + Config.xpandSoap.password
@@ -36,7 +34,9 @@ const createLease = async (
         })}</inc:ContractFromDate>
         <!--Optional:<inc:ContractToDate></inc:ContractToDate> Måste ta bort den helt-->
         <!--Optional:-->
-        <inc:MessageCulture>${messageCulture}</inc:MessageCulture>
+        <inc:MessageCulture>${
+          Config.xpandSoap.messageCulture
+        }</inc:MessageCulture>
         <!--Optional:-->
         <inc:MovingFromId/>
         <!--Optional:-->
@@ -61,7 +61,6 @@ const createLease = async (
   </soap:Body>
 </soap:Envelope>`
 
-  console.log('xml', xml)
   try {
     const { response } = await soapRequest({
       url: Config.xpandSoap.url,
