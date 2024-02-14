@@ -1,3 +1,5 @@
+import { LeaseStatus } from './enums';
+
 interface Contact {
   contactId: string;
   leaseId: string | undefined;
@@ -71,10 +73,6 @@ interface RoomType {
   materialOptionGroups?: Array<MaterialOptionGroup>;
 }
 
-enum LeaseStatus {
-  Active,
-}
-
 interface MaterialChoice {
   materialChoiceId: string;
   materialOptionId: string;
@@ -111,11 +109,28 @@ interface MaterialOption {
   materialOptionGroupName?: string;
 }
 
+interface ConsumerReport {
+  pnr: string;
+  template: string;
+  status: string;
+  status_text: string;
+  errorList: Array<ConsumerReportError> | [];
+  name: string;
+  address: string;
+  zip: string;
+  city: string;
+}
+
+interface ConsumerReportError {
+  Cause_of_Reject: string;
+  Reject_text: string;
+  Reject_comment: string;
+}
+
 export {
   Contact,
   Lease,
   RentalProperty,
-  LeaseStatus,
   Address,
   Rent,
   RentInfo,
@@ -123,4 +138,6 @@ export {
   MaterialOption,
   MaterialOptionGroup,
   MaterialChoice,
+  ConsumerReport,
+  ConsumerReportError,
 };
