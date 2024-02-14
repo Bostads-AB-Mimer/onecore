@@ -24,7 +24,7 @@
     "@types/koa": "2.13.6",
     "@types/koa__cors": "^5.0.0",
     "@types/koa__router": "12.0.0",
-    "@types/koa-bodyparser": "4.3.10",
+    "@types/koa-bodyparser": "^4.3.10",
     "@types/koa-pino-logger": "3.0.1",
     "@types/supertest": "2.0.12",
     "@typescript-eslint/eslint-plugin": "5.59.2",
@@ -43,8 +43,12 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@types/easy-soap-request": "^4.1.4",
     "axios": "^1.6.5",
     "dotenv": "^16.3.2",
+    "easy-soap-request": "^5.6.1",
+    "fast-xml-parser": "^4.3.4",
+    "http-errors": "^2.0.0",
     "knex": "^2.5.1",
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.1",
@@ -52,6 +56,7 @@
     "mssql": "^9.3.2",
     "onecore-types": "^1.0.9",
     "randexp": "^0.5.3",
+    "strong-soap": "^4.0.0",
     "tedious": "^16.6.1"
   }
 }
