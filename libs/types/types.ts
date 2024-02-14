@@ -1,33 +1,47 @@
 interface Contact {
-  contactId: string;
-  leaseId: string | undefined;
-  lease: Lease | undefined;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  type: string;
-  nationalRegistrationNumber: string;
-  birthDate: Date;
-  address: Address | undefined;
-  mobilePhone: string;
-  phoneNumber: string;
-  emailAddress: string;
-  lastUpdated: Date | undefined;
+    contactId: string //cmctc.cmctckod
+    contactKey: string //cmtct.keycmctc
+    leaseIds: string | undefined
+    firstName: string
+    lastName: string
+    fullName: string
+    nationalRegistrationNumber: string
+    birthDate: Date
+    address: Address | undefined
+    phoneNumbers: PhoneNumber[] | undefined
+    emailAddress: string,
+    isTenant: boolean,
+    lastUpdated: Date | undefined
+}
+
+interface PhoneNumber {
+    phoneNumber: string
+    type: string
+    isMainNumber: boolean
 }
 
 interface Lease {
-  leaseId: string;
-  leaseNumber: string;
-  leaseStartDate: Date;
-  leaseEndDate: Date | undefined;
-  status: LeaseStatus;
-  tenantContactIds: string[] | undefined;
-  tenants: Contact[] | undefined;
-  rentalPropertyId: string;
-  rentalProperty: RentalProperty | undefined;
-  type: string;
-  rentInfo: RentInfo | undefined;
-  lastUpdated: Date | undefined;
+    leaseId: string
+    leaseNumber: string
+    leaseStartDate: Date
+    leaseEndDate: Date | undefined
+    status: LeaseStatus
+    tenantContactIds: string[] | undefined
+    tenants: Contact[] | undefined
+    rentalPropertyId: string
+    rentalProperty: RentalProperty | undefined
+    type: string
+    rentInfo: RentInfo | undefined
+    lastUpdated: Date | undefined
+    address: Address | undefined
+    noticeGivenBy: string | undefined,
+    noticeDate: Date | undefined,
+    noticeTimeTenant: string | undefined,
+    preferredMoveOutDate: Date | undefined,
+    terminationDate: Date | undefined,
+    contractDate: Date | undefined,
+    lastDebitDate: Date | undefined,
+    approvalDate: Date | undefined,
 }
 
 interface RentalProperty {
