@@ -38,7 +38,7 @@ describe('lease-service', () => {
             firstName: 'Kalle',
             lastName: 'Testsson',
             fullName: 'Testsson Kalle',
-            leaseIds: '406-097-11-0201/06',
+            leaseIds: ['406-097-11-0201/06'],
             nationalRegistrationNumber: '200009092388',
             birthDate: new Date('2000-09-09T00:00:00.000Z'),
             address: {
@@ -91,7 +91,7 @@ describe('lease-service', () => {
             firstName: 'Maj-Britt',
             lastName: 'Lundberg',
             fullName: 'Maj-Britt Lundberg',
-            leaseIds: '102-008-03-0202/07',
+            leaseIds: ['102-008-03-0202/07'],
             nationalRegistrationNumber: '194808075577',
             birthDate: new Date('1948-08-07T00:00:00.000Z'),
             address: {
@@ -144,7 +144,7 @@ describe('lease-service', () => {
             firstName: 'Erik',
             lastName: 'Lundberg',
             fullName: 'Erik Lundberg',
-            leaseIds: '102-008-03-0202/07',
+            leaseIds: ['102-008-03-0202/07'],
             nationalRegistrationNumber: '194808075577',
             birthDate: new Date('1945-12-12T00:00:00.000Z'),
             address: {
