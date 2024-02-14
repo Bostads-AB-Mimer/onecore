@@ -1,4 +1,5 @@
 import { Lease, Contact } from 'onecore-types'
+
 import knex from 'knex'
 import Config from '../../../common/config'
 
@@ -7,27 +8,25 @@ const db = knex({
   connection: Config.database,
 })
 
-const transformFromDbContact = (row: any): Contact => {
+const transformFromDbContact = (row: any, phoneNumbers: any, leases: any): Contact => {
   const contact = {
-    contactId: row.ContactId,
-    firstName: row.FirstName,
-    lastName: row.LastName,
-    fullName: row.FullName,
-    type: row.ContactType,
-    leaseId: row.ContactLeaseId,
-    lease: undefined,
-    nationalRegistrationNumber: row.NationalRegistrationNumber,
-    birthDate: row.BirthDate,
+    contactCode: row.contactCode,
+    contactKey: row.contactKey,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    fullName: row.fullName,
+    leaseIds: leases,
+    nationalRegistrationNumber: row.nationalRegistrationNumber,
+    birthDate: row.birthDate,
     address: {
-      street: row.Street,
-      number: row.StreetNumber,
-      postalCode: row.PostalCode,
-      city: row.City,
+      street: row.street,
+      number: '',
+      postalCode: row.postalCode,
+      city: row.city,
     },
-    mobilePhone: row.MobilePhone,
-    phoneNumber: row.PhoneNumber,
-    emailAddress: row.EmailAddress,
-    lastUpdated: row.ContactLastUpdated,
+    phoneNumbers: phoneNumbers,
+    emailAddress: row.emailAddress,
+    isTenant: leases.length > 0,
   }
 
   return contact
@@ -36,280 +35,232 @@ const transformFromDbContact = (row: any): Contact => {
 const transformFromDbLease = (
   row: any,
   tenantContactIds: string[] | undefined,
-  tenants: Contact[] | undefined
+  tenants: Contact[] | undefined,
 ): Lease => {
+  const parsedLeaseId = row.leaseId.split('/')
+  const rentalPropertyId = parsedLeaseId[0]
+  const leaseNumber = parsedLeaseId[1]
+
   const lease = {
-    leaseId: row.LeaseLeaseId,
-    leaseNumber: row.LeaseNumber,
-    leaseStartDate: row.LeaseStartDate,
-    leaseEndDate: row.LeaseEndDate,
-    status: row.Status,
+    leaseId: row.leaseId,
+    leaseNumber: leaseNumber,
+    rentalPropertyId: rentalPropertyId,
+    type: row.leaseType,
+    leaseStartDate: row.fromDate,
+    leaseEndDate: row.toDate,
+    status: row.Status, //todo: support status
     tenantContactIds,
     tenants,
-    rentalPropertyId: row.RentalPropertyId,
-    type: row.LeaseType,
     rentalProperty: undefined,
-    lastUpdated: row.LeaseLastUpdated,
     rentInfo: undefined,
+    address: undefined,
+    noticeGivenBy: row.noticeGivenBy,
+    noticeDate: row.noticeDate,
+    noticeTimeTenant: row.noticeTimeTenant,
+    preferredMoveOutDate: row.preferredMoveOutDate,
+    terminationDate: row.terminationDate,
+    contractDate: row.contractDate,
+    lastDebitDate: row.lastDebitDate,
+    approvalDate: row.approvalDate,
   }
 
   return lease
 }
 
-const transformToDbLease = (lease: Lease) => {
-  const dbLease = {
-    LeaseId: lease.leaseId,
-    LeaseNumber: lease.leaseNumber,
-    LeaseStartDate: lease.leaseStartDate,
-    LeaseEndDate: lease.leaseEndDate,
-    RentalPropertyId: lease.rentalPropertyId,
-    Status: lease.status,
-    Type: lease.type,
-    LastUpdated: lease.lastUpdated,
-  }
-
-  return dbLease
-}
-
-const transformToDbContact = (contact: Contact) => {
-  const dbContact = {
-    ContactId: contact.contactId,
-    FirstName: contact.firstName,
-    LastName: contact.lastName,
-    FullName: contact.fullName,
-    Type: contact.type,
-    LeaseId: contact.leaseId,
-    NationalRegistrationNumber: contact.nationalRegistrationNumber,
-    BirthDate: contact.birthDate,
-    Street: contact.address?.street,
-    StreetNumber: contact.address?.number,
-    PostalCode: contact.address?.postalCode,
-    City: contact.address?.city,
-    MobilePhone: contact.mobilePhone,
-    PhoneNumber: contact.phoneNumber,
-    EmailAddress: contact.emailAddress,
-    LastUpdated: contact.lastUpdated,
-  }
-
-  return dbContact
-}
-
+//todo: include contact/tentant info
 const getLease = async (leaseId: string): Promise<Lease | undefined> => {
-  const rows = await db('Lease')
-    .select(
-      '*',
-      'Contact.LeaseId as ContactLeaseId',
-      'Lease.LeaseId as LeaseLeaseId',
-      'Contact.Type as ContactType',
-      'Lease.Type as LeaseType',
-      'Lease.LastUpdated as LeaseLastUpdated',
-      'Contact.LastUpdated as ContactLastUpdated'
-    )
-    .innerJoin('Contact', 'Lease.LeaseId', 'Contact.LeaseId')
-    .where({ 'Lease.LeaseId': leaseId })
-
-  if (rows && rows.length > 0) {
-    const tenantPersonIds: string[] = []
-    const tenants: Contact[] = []
-
-    const lease = transformFromDbLease(rows[0], tenantPersonIds, tenants)
-
-    rows.forEach((row) => {
-      lease.tenantContactIds?.push(row.ContactId)
-      lease.tenants?.push(transformFromDbContact(row))
-    })
-
-    return lease
+  let rows = await getLeaseById(leaseId)
+  if(rows.length > 0) {
+    return transformFromDbLease(rows[0], [], [])
   }
-
   return undefined
 }
 
-const getLeases = async (leaseIds?: string[] | undefined): Promise<Lease[]> => {
+const getLeases = async (leaseIds: string[] | undefined): Promise<Lease[]> => {
   const leases: Lease[] = []
 
   const rows = await db('Lease')
     .select(
-      '*',
-      'Contact.LeaseId as ContactLeaseId',
-      'Lease.LeaseId as LeaseLeaseId',
-      'Contact.Type as ContactType',
-      'Lease.Type as LeaseType',
-      'Lease.LastUpdated as LeaseLastUpdated',
-      'Contact.LastUpdated as ContactLastUpdated'
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate',
     )
-    .innerJoin('Contact', 'Lease.LeaseId', 'Contact.LeaseId')
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
     .modify((queryBuilder) => {
       if (leaseIds) {
-        queryBuilder.whereIn('Lease.LeaseId', leaseIds)
+        queryBuilder.whereIn('hyobjben', leaseIds)
       }
     })
     .limit(100)
 
-  let lastLeaseId: string | null = null
-  let tenantContactIds: string[] = []
-  let tenants: Contact[] = []
-  let lease: Lease | null = null
-
-  for (let i = 0; i < rows.length; i++) {
-    if (!lastLeaseId || lastLeaseId != rows[i].LeaseId) {
-      tenantContactIds = []
-      tenants = []
-      lease = transformFromDbLease(rows[i], tenantContactIds, tenants)
-      leases.push(lease)
-    }
-    lease?.tenantContactIds?.push(rows[i].ContactId)
-    lease?.tenants?.push(transformFromDbContact(rows[i]))
-
-    lastLeaseId = rows[i].LeaseId
+  for (const row of rows) {
+    const lease = await transformFromDbLease(row, [], [])
+    leases.push(lease)
   }
 
   return leases
 }
 
-const getLeasesFor = async (nationalRegistrationNumber: string) => {
-  const rows = await db('Contact').where({
-    NationalRegistrationNumber: nationalRegistrationNumber,
-  })
+//todo: include contact/tentant info
+const getLeasesForNationRegistrationNumber = async (nationalRegistrationNumber: string) => {
+  const contact = await db('cmctc').select(
+    'cmctc.keycmctc as contactKey',
+  ).limit(1)
+    .where({
+      persorgnr: nationalRegistrationNumber })
+    .limit(1)
 
+  if (contact != undefined) {
+    return await getLeasesByContactKey(contact[0].contactKey)
+  }
+
+  return undefined
+}
+
+const getLeasesForContactCode = async (contactCode: string) => {
+  const contact = await db('cmctc').select(
+    'cmctc.keycmctc as contactKey',
+  ).limit(1)
+    .where({
+      cmctckod: contactCode })
+    .limit(1)
+
+  if (contact != undefined) {
+    return await getLeasesByContactKey(contact[0].contactKey)
+  }
+}
+
+const getContactByNationalRegistrationNumber = async (nationalRegistrationNumber: string) => {
+  const rows = await
+    getContactQuery().where({ persorgnr: nationalRegistrationNumber })
+    .limit(1)
   if (rows && rows.length > 0) {
-    const leaseIds = rows.map((row) => {
-      return row.LeaseId
-    })
-
-    const uniqueLeaseIds = Array.from(new Set(leaseIds))
-    const leases: Lease[] = []
-
-    for (const leaseId of uniqueLeaseIds) {
-      const lease = await getLease(leaseId)
-      if (lease) {
-        leases.push(lease)
-      }
-    }
-
-    return leases
+    var phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
+    var leases = await getLeaseIds(rows[0].contactKey)
+    return transformFromDbContact(rows[0], phoneNumbers, leases)
   }
 
   return null
 }
 
-const updateLease = async (lease: Lease) => {
-  const rows = await db('lease').where({
-    LeaseId: lease.leaseId,
-  })
-
-  let inserted = 0
-  let updated = 0
-  let dbLease = transformToDbLease(lease)
-
+const getContactByContactCode = async (contactKey: string) => {
+  const rows = await
+    getContactQuery()
+      .where({ cmctckod: contactKey })
+      .limit(1)
   if (rows && rows.length > 0) {
-    process.stdout.write('.')
-    const existingDbLease = rows[0]
-    if (
-      !lease.lastUpdated ||
-      !existingDbLease.LastUpdated ||
-      lease.lastUpdated.getDate() > existingDbLease.LastUpdated.getDate()
-    ) {
-      dbLease.LastUpdated = new Date()
-      const updatedLease = await db('lease')
-        .update(dbLease)
-        .returning('*')
-        .where({ LeaseId: dbLease.LeaseId })
-      dbLease = updatedLease[0]
-      updated++
-    }
-  } else {
-    process.stdout.write('*')
-    dbLease.LastUpdated = new Date()
-    const insertedPerson = await db('lease').insert(dbLease).returning('*')
-    dbLease = insertedPerson[0]
-    inserted++
-  }
-
-  return {
-    lease: transformFromDbLease(dbLease, undefined, undefined),
-    meta: {
-      updated,
-      inserted,
-    },
-  }
-}
-
-const updateLeases = async (leases: Lease[]) => {
-  for (const lease of leases) {
-    await updateLease(lease)
-  }
-}
-
-const getContact = async (nationalRegistrationNumber: string) => {
-  const rows = await db('contact').where({
-    NationalRegistrationNumber: nationalRegistrationNumber,
-  })
-
-  if (rows && rows.length > 0) {
-    return transformFromDbContact(rows[0])
+    var phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
+    var leases = await getLeaseIds(rows[0].contactKey)
+    return transformFromDbContact(rows[0], phoneNumbers, leases)
   }
 
   return null
 }
 
-const updateContact = async (contact: Contact) => {
-  const rows = await db('contact').where({
-    ContactId: contact.contactId,
-    LeaseId: contact.leaseId,
-  })
-
-  let inserted = 0
-  let updated = 0
-  let dbContact = transformToDbContact(contact)
-
-  if (rows && rows.length > 0) {
-    const existingDbContact = rows[0]
-    process.stdout.write('.')
-
-    if (
-      !contact.lastUpdated ||
-      !existingDbContact.LastUpdated ||
-      contact.lastUpdated.getDate() > existingDbContact.LastUpdated.getDate()
-    ) {
-      dbContact.LastUpdated = new Date()
-      const updatedPerson = await db('contact')
-        .update(dbContact)
-        .returning('*')
-        .where({ ContactId: dbContact.ContactId, LeaseId: dbContact.LeaseId })
-      dbContact = updatedPerson[0]
-      updated++
-    }
-  } else {
-    process.stdout.write('*')
-    dbContact.LastUpdated = new Date()
-    const insertedPerson = await db('contact').insert(dbContact).returning('*')
-    dbContact = insertedPerson[0]
-    inserted++
-  }
-
-  return {
-    person: transformFromDbContact(dbContact),
-    meta: {
-      updated,
-      inserted,
-    },
-  }
+const getContactQuery = () => {
+  return db('cmctc').select(
+    'cmctc.cmctckod as contactCode',
+    'cmctc.fnamn as firstName',
+    'cmctc.enamn as lastName',
+    'cmctc.cmctcben as fullName',
+    'cmctc.persorgnr as nationalRegistrationNumber',
+    'cmctc.birthdate as birthDate',
+    'cmadr.adress1 as street',
+    'cmadr.adress3 as postalCode',
+    'cmadr.adress4 as city',
+    'cmeml.cmemlben as emailAddress',
+    'cmobj.keycmobj as keycmobj',
+    'cmctc.keycmctc as contactKey',
+  ).innerJoin('cmobj', 'cmobj.keycmobj', 'cmctc.keycmobj')
+    .innerJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
+    .innerJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
 }
 
-const updateContacts = async (contacts: Contact[]) => {
-  for (const contact of contacts) {
-    await updateContact(contact)
+const getPhoneNumbersForContact = async (keycmobj: string) => {
+  var rows = await db('cmtel').select(
+    'cmtelben as phoneNumber',
+    'keycmtet as type',
+    'main as isMainNumber',
+  ).where({ keycmobj: keycmobj })
+  return rows
+}
+
+//todo: extend with type of lease? the type is found in hyhav.hyhavben
+//todo: be able to filter on active contracts
+const getLeaseIds = async (keycmctc: string) => {
+  var rows = await db('hyavk').select(
+    'hyobj.hyobjben as leaseId',
+  ).innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .where({ keycmctc: keycmctc })
+  return rows.map(x => x.leaseId)
+}
+
+const getLeasesByContactKey = async (keycmctc: string) => {
+  var rows = await db('hyavk')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate',
+    )
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .where({ keycmctc: keycmctc })
+
+  var leases: any[] = []
+  for (const row of rows) {
+    const lease = await transformFromDbLease(row, [], [])
+    leases.push(lease)
   }
+
+  return leases
+}
+
+const getLeaseById = async (hyobjben: string) => {
+  var rows = await db('hyavk')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate',
+    )
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .where({ hyobjben: hyobjben })
+  return rows
 }
 
 export {
   getLease,
   getLeases,
-  getLeasesFor,
-  updateLease,
-  updateLeases,
-  getContact,
-  updateContact,
-  updateContacts,
+  getLeasesForContactCode,
+  getLeasesForNationRegistrationNumber,
+  getContactByNationalRegistrationNumber,
+  getContactByContactCode,
 }
