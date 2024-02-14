@@ -110,14 +110,5 @@ export const routes = (router: KoaRouter) => {
         }
       }
     }
-    // if (Array.isArray(ctx.request.body)) {
-    //   await updateLeases(ctx.request.body as Lease[])
-    // } else {
-    //   await updateLease(ctx.request.body as Lease)
-    // }
-
-    // ctx.body = {
-    //   meta: 'tbd',
-    // }
   })
 }
