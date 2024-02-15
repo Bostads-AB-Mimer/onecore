@@ -20,6 +20,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/easy-soap-request": "^4.1.4",
     "@types/jest": "29.5.1",
     "@types/koa": "2.13.6",
     "@types/koa__cors": "^5.0.0",
@@ -45,6 +46,7 @@
     "@koa/router": "^12.0.1",
     "@types/easy-soap-request": "^4.1.4",
     "axios": "^1.6.5",
+    "dedent": "^1.5.1",
     "dotenv": "^16.3.2",
     "easy-soap-request": "^5.6.1",
     "fast-xml-parser": "^4.3.4",
@@ -55,6 +57,7 @@
     "koa-pino-logger": "^4.0.0",
     "mssql": "^9.3.2",
     "onecore-types": "^1.2.0",
+    "personnummer": "^3.2.1",
     "randexp": "^0.5.3",
     "strong-soap": "^4.0.0",
     "tedious": "^16.6.1"

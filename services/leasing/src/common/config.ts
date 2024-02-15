@@ -16,6 +16,11 @@ export interface Config {
     password: string
     url: string
     messageCulture: string
+  creditsafe: {
+    username: string
+    password: string
+    template: string
+    url: string
   }
 }
 
@@ -35,6 +40,11 @@ const config = configPackage({
       password: '',
       url: '',
       messageCulture: '1053',
+    creditsafe: {
+      username: '',
+      password: '',
+      template: 'PERSON_CAS_P1',
+      url: 'https://testwebservice.creditsafe.se/CAS/cas_service.asmx',
     },
   },
 })
@@ -43,4 +53,5 @@ export default {
   port: config.get('port'),
   database: config.get('database'),
   xpandSoap: config.get('xpandSoap'),
+  creditsafe: config.get('creditsafe'),
 } as Config
