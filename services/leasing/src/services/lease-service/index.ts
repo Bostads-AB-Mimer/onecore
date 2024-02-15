@@ -6,14 +6,13 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { Contact } from 'onecore-types'
 
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
   getLease,
   getLeasesForContactCode,
-  getLeasesForNationRegistrationNumber,
+  getLeasesForNationalRegistrationNumber,
 } from './adapters/tenant-lease-adapter'
 import { createLease } from './adapters/xpand-soap-adapter'
 
@@ -29,7 +28,10 @@ export const routes = (router: KoaRouter) => {
    * Returns leases for a national registration number with populated sub objects
    */
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
-    const responseData = await getLeasesForNationRegistrationNumber(ctx.params.pnr)
+    const responseData = await getLeasesForNationalRegistrationNumber(
+      ctx.params.pnr,
+      ctx.query.includeTerminatedLeases
+    )
 
     ctx.body = {
       data: responseData,
@@ -40,7 +42,10 @@ export const routes = (router: KoaRouter) => {
    * Returns leases for a contact code with populated sub objects
    */
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
-    const responseData = await getLeasesForContactCode(ctx.params.pnr)
+    const responseData = await getLeasesForContactCode(
+      ctx.params.pnr,
+      ctx.query.includeTerminatedLeases
+    )
 
     ctx.body = {
       data: responseData,
@@ -76,19 +81,28 @@ export const routes = (router: KoaRouter) => {
   /**
    * Gets a person by national registration number.
    */
-  router.get('(.*)/contact/nationalRegistrationNumber/:pnr', async (ctx: any) => {
-    const responseData = await getContactByNationalRegistrationNumber(ctx.params.pnr)
+  router.get(
+    '(.*)/contact/nationalRegistrationNumber/:pnr',
+    async (ctx: any) => {
+      const responseData = await getContactByNationalRegistrationNumber(
+        ctx.params.pnr,
+        ctx.query.includeTerminatedLeases
+      )
 
-    ctx.body = {
-      data: responseData,
+      ctx.body = {
+        data: responseData,
+      }
     }
-  })
+  )
 
   /**
    * Gets a person by contact code.
    */
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx: any) => {
-    const responseData = await getContactByContactCode(ctx.params.contactCode)
+    const responseData = await getContactByContactCode(
+      ctx.params.contactCode,
+      ctx.query.includeTerminatedLeases
+    )
 
     ctx.body = {
       data: responseData,

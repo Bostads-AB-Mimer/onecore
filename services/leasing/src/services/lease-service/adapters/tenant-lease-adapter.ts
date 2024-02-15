@@ -8,7 +8,17 @@ const db = knex({
   connection: Config.database,
 })
 
-const transformFromDbContact = (row: any, phoneNumbers: any, leases: any): Contact => {
+type PartialLease = {
+  leaseId: Lease['leaseId']
+  leaseStartDate: Lease['leaseStartDate']
+  lastDebitDate: Lease['lastDebitDate']
+}
+
+const transformFromDbContact = (
+  row: any,
+  phoneNumbers: any,
+  leases: any
+): Contact => {
   const contact = {
     contactCode: row.contactCode,
     contactKey: row.contactKey,
@@ -35,7 +45,7 @@ const transformFromDbContact = (row: any, phoneNumbers: any, leases: any): Conta
 const transformFromDbLease = (
   row: any,
   tenantContactIds: string[] | undefined,
-  tenants: Contact[] | undefined,
+  tenants: Contact[] | undefined
 ): Lease => {
   const parsedLeaseId = row.leaseId.split('/')
   const rentalPropertyId = parsedLeaseId[0]
@@ -69,8 +79,8 @@ const transformFromDbLease = (
 
 //todo: include contact/tentant info
 const getLease = async (leaseId: string): Promise<Lease | undefined> => {
-  let rows = await getLeaseById(leaseId)
-  if(rows.length > 0) {
+  const rows = await getLeaseById(leaseId)
+  if (rows.length > 0) {
     return transformFromDbLease(rows[0], [], [])
   }
   return undefined
@@ -92,7 +102,7 @@ const getLeases = async (leaseIds: string[] | undefined): Promise<Lease[]> => {
       'hyobj.tdate as toDate',
       'hyobj.uppstidg as noticeTimeTenant',
       'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate',
+      'hyobj.makuldatum AS terminationDate'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
@@ -112,55 +122,84 @@ const getLeases = async (leaseIds: string[] | undefined): Promise<Lease[]> => {
 }
 
 //todo: include contact/tentant info
-const getLeasesForNationRegistrationNumber = async (nationalRegistrationNumber: string) => {
-  const contact = await db('cmctc').select(
-    'cmctc.keycmctc as contactKey',
-  ).limit(1)
+const getLeasesForNationalRegistrationNumber = async (
+  nationalRegistrationNumber: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const contact = await db('cmctc')
+    .select('cmctc.keycmctc as contactKey')
+    .limit(1)
     .where({
-      persorgnr: nationalRegistrationNumber })
+      persorgnr: nationalRegistrationNumber,
+    })
     .limit(1)
 
   if (contact != undefined) {
-    return await getLeasesByContactKey(contact[0].contactKey)
+    const leases = await getLeasesByContactKey(contact[0].contactKey)
+
+    if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+      return leases.filter(isLeaseActive)
+    }
+
+    return leases
   }
 
   return undefined
 }
 
-const getLeasesForContactCode = async (contactCode: string) => {
-  const contact = await db('cmctc').select(
-    'cmctc.keycmctc as contactKey',
-  ).limit(1)
+const getLeasesForContactCode = async (
+  contactCode: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const contact = await db('cmctc')
+    .select('cmctc.keycmctc as contactKey')
+    .limit(1)
     .where({
-      cmctckod: contactCode })
+      cmctckod: contactCode,
+    })
     .limit(1)
 
   if (contact != undefined) {
-    return await getLeasesByContactKey(contact[0].contactKey)
+    const leases = await getLeasesByContactKey(contact[0].contactKey)
+
+    if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+      return leases.filter(isLeaseActive)
+    }
+
+    return leases
   }
 }
 
-const getContactByNationalRegistrationNumber = async (nationalRegistrationNumber: string) => {
-  const rows = await
-    getContactQuery().where({ persorgnr: nationalRegistrationNumber })
+const getContactByNationalRegistrationNumber = async (
+  nationalRegistrationNumber: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const rows = await getContactQuery()
+    .where({ persorgnr: nationalRegistrationNumber })
     .limit(1)
   if (rows && rows.length > 0) {
-    var phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    var leases = await getLeaseIds(rows[0].contactKey)
+    const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
+    const leases = await getLeaseIds(
+      rows[0].contactKey,
+      includeTerminatedLeases
+    )
     return transformFromDbContact(rows[0], phoneNumbers, leases)
   }
 
   return null
 }
 
-const getContactByContactCode = async (contactKey: string) => {
-  const rows = await
-    getContactQuery()
-      .where({ cmctckod: contactKey })
-      .limit(1)
+const getContactByContactCode = async (
+  contactKey: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const rows = await getContactQuery().where({ cmctckod: contactKey }).limit(1)
   if (rows && rows.length > 0) {
-    var phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    var leases = await getLeaseIds(rows[0].contactKey)
+    const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
+    const leases = await getLeaseIds(
+      rows[0].contactKey,
+      includeTerminatedLeases
+    )
     return transformFromDbContact(rows[0], phoneNumbers, leases)
   }
 
@@ -168,45 +207,63 @@ const getContactByContactCode = async (contactKey: string) => {
 }
 
 const getContactQuery = () => {
-  return db('cmctc').select(
-    'cmctc.cmctckod as contactCode',
-    'cmctc.fnamn as firstName',
-    'cmctc.enamn as lastName',
-    'cmctc.cmctcben as fullName',
-    'cmctc.persorgnr as nationalRegistrationNumber',
-    'cmctc.birthdate as birthDate',
-    'cmadr.adress1 as street',
-    'cmadr.adress3 as postalCode',
-    'cmadr.adress4 as city',
-    'cmeml.cmemlben as emailAddress',
-    'cmobj.keycmobj as keycmobj',
-    'cmctc.keycmctc as contactKey',
-  ).innerJoin('cmobj', 'cmobj.keycmobj', 'cmctc.keycmobj')
+  return db('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.fnamn as firstName',
+      'cmctc.enamn as lastName',
+      'cmctc.cmctcben as fullName',
+      'cmctc.persorgnr as nationalRegistrationNumber',
+      'cmctc.birthdate as birthDate',
+      'cmadr.adress1 as street',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city',
+      'cmeml.cmemlben as emailAddress',
+      'cmobj.keycmobj as keycmobj',
+      'cmctc.keycmctc as contactKey'
+    )
+    .innerJoin('cmobj', 'cmobj.keycmobj', 'cmctc.keycmobj')
     .innerJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
     .innerJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
-  var rows = await db('cmtel').select(
-    'cmtelben as phoneNumber',
-    'keycmtet as type',
-    'main as isMainNumber',
-  ).where({ keycmobj: keycmobj })
+  const rows = await db('cmtel')
+    .select(
+      'cmtelben as phoneNumber',
+      'keycmtet as type',
+      'main as isMainNumber'
+    )
+    .where({ keycmobj: keycmobj })
   return rows
 }
 
 //todo: extend with type of lease? the type is found in hyhav.hyhavben
 //todo: be able to filter on active contracts
-const getLeaseIds = async (keycmctc: string) => {
-  var rows = await db('hyavk').select(
-    'hyobj.hyobjben as leaseId',
-  ).innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+const getLeaseIds = async (
+  keycmctc: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  includeTerminatedLeases = Array.isArray(includeTerminatedLeases)
+    ? includeTerminatedLeases[0]
+    : includeTerminatedLeases
+  const rows = await db('hyavk')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyobj.fdate as leaseStartDate',
+      'hyobj.sistadeb as lastDebitDate'
+    )
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ keycmctc: keycmctc })
-  return rows.map(x => x.leaseId)
+
+  if (!includeTerminatedLeases || includeTerminatedLeases === 'false') {
+    return rows.filter(isLeaseActive).map((x) => x.leaseId)
+  }
+  return rows.map((x) => x.leaseId)
 }
 
 const getLeasesByContactKey = async (keycmctc: string) => {
-  var rows = await db('hyavk')
+  const rows = await db('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -219,13 +276,13 @@ const getLeasesByContactKey = async (keycmctc: string) => {
       'hyobj.tdate as toDate',
       'hyobj.uppstidg as noticeTimeTenant',
       'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate',
+      'hyobj.makuldatum AS terminationDate'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
     .where({ keycmctc: keycmctc })
 
-  var leases: any[] = []
+  const leases: any[] = []
   for (const row of rows) {
     const lease = await transformFromDbLease(row, [], [])
     leases.push(lease)
@@ -235,7 +292,7 @@ const getLeasesByContactKey = async (keycmctc: string) => {
 }
 
 const getLeaseById = async (hyobjben: string) => {
-  var rows = await db('hyavk')
+  const rows = await db('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -248,7 +305,7 @@ const getLeaseById = async (hyobjben: string) => {
       'hyobj.tdate as toDate',
       'hyobj.uppstidg as noticeTimeTenant',
       'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate',
+      'hyobj.makuldatum AS terminationDate'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
@@ -256,11 +313,35 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
+const shouldIncludeTerminatedLeases = (
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const queryParamResult = Array.isArray(includeTerminatedLeases)
+    ? includeTerminatedLeases[0]
+    : includeTerminatedLeases
+
+  return !(!queryParamResult || queryParamResult === 'false')
+}
+
+const isLeaseActive = (lease: Lease | PartialLease): boolean => {
+  const currentDate = new Date()
+  const leaseStartDate = new Date(lease.leaseStartDate)
+  const lastDebitDate = lease.lastDebitDate
+    ? new Date(lease.lastDebitDate)
+    : null
+
+  return (
+    leaseStartDate < currentDate &&
+    (!lastDebitDate || currentDate < lastDebitDate)
+  )
+}
+
 export {
   getLease,
   getLeases,
   getLeasesForContactCode,
-  getLeasesForNationRegistrationNumber,
+  getLeasesForNationalRegistrationNumber,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
+  isLeaseActive,
 }
