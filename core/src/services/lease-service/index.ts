@@ -10,6 +10,7 @@ import {
   getContactForPnr,
   getLease,
   getLeasesForPnr,
+  getCreditInformation,
 } from './adapters/tenant-lease-adapter'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -31,6 +32,17 @@ export const routes = (router: KoaRouter) => {
     const responseData = await getLeasesWithRelatedEntitiesForPnr(
       ctx.params.pnr
     )
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
+   * Returns credit information
+   */
+  router.get('(.*)/cas/getConsumerReport/:pnr', async (ctx: any) => {
+    const responseData = await getCreditInformation(ctx.params.pnr)
 
     ctx.body = {
       data: responseData,

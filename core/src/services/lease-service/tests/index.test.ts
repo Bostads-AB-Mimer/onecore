@@ -4,7 +4,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/tenant-lease-adapter'
-import { Contact, Lease, RentalProperty } from 'onecore-types'
+import { Contact, Lease, ConsumerReport } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -13,7 +13,7 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('lease-service', () => {
-  let leaseMock: Lease, contactMock: Contact
+  let leaseMock: Lease, contactMock: Contact, consumerReportMock: ConsumerReport
 
   beforeEach(() => {
     leaseMock = {
@@ -95,6 +95,24 @@ describe('lease-service', () => {
       lastUpdated: undefined,
       type: 'type',
     }
+
+    consumerReportMock = {
+      pnr: '4512121122',
+      template: 'TEST_TEMPLATE',
+      status: '2',
+      status_text: 'Ej Godkänd',
+      errorList: [
+        {
+          Cause_of_Reject: 'P24',
+          Reject_comment: '',
+          Reject_text: 'Scoring',
+        },
+      ],
+      name: 'Erik Lundberg',
+      address: 'Gatvägen 56',
+      zip: '72266',
+      city: 'Västerås',
+    }
   })
 
   describe('GET /leases/for/:pnr', () => {
@@ -137,6 +155,24 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contactMock))
+    })
+  })
+
+  describe('GET /cas/getConsumerReport/:pnr', () => {
+    it('responds with a credit information', async () => {
+      const getCreditInformationSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getCreditInformation')
+        .mockResolvedValue({ consumerReportMock })
+
+      const res = await request(app.callback()).get(
+        '/cas/getConsumerReport/194512121122'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getCreditInformationSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.data)).toEqual(
+        JSON.stringify({ consumerReportMock })
+      )
     })
   })
 })
