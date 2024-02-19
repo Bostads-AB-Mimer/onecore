@@ -1,5 +1,6 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
+
 dotenv.config()
 
 export interface Config {
@@ -16,6 +17,7 @@ export interface Config {
     password: string
     url: string
     messageCulture: string
+  }
   creditsafe: {
     username: string
     password: string
@@ -40,6 +42,7 @@ const config = configPackage({
       password: '',
       url: '',
       messageCulture: '1053',
+    },
     creditsafe: {
       username: '',
       password: '',
