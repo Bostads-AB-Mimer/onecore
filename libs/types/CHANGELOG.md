@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.1.0...v1.2.0) (2024-02-14)
+
+
+### Features
+
+* 1161 updates types when reading contract from xpand db ([#17](https://github.com/Bostads-AB-Mimer/onecore-types/issues/17)) ([bae50e2](https://github.com/Bostads-AB-Mimer/onecore-types/commit/bae50e264210b2fcd153da24c9ce481216165b99))
+
+## [1.1.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.9...v1.1.0) (2024-02-14)
+
+
+### Features
+
+* Adds enums.ts and ConsumerReport types ([26aa827](https://github.com/Bostads-AB-Mimer/onecore-types/commit/26aa827a604f61636b42ed0db092bd3c9ee6938e))
+
 ## [1.0.9](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.0.8...v1.0.9) (2024-02-07)
 
 
