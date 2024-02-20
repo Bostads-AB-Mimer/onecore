@@ -4,12 +4,9 @@ dotenv.config()
 
 export interface Config {
   port: number
-  email: {
-    host: string
-    username: string
-    password: string
-    port: number
-    senderAddress: string
+  infobip: {
+    baseUrl: string
+    apiKey: string
   }
 }
 
@@ -17,17 +14,14 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5020,
-    email: {
-      host: 'smtp.sendgrid.net',
-      username: 'apikey',
-      password: '[insert value]',
-      port: 587, // SMTP
-      senderAddress: 'noreply@mimer.nu',
+    infobip: {
+      baseUrl: '',
+      apiKey: '',
     },
   },
 })
 
 export default {
   port: config.get('port'),
-  email: config.get('email'),
+  infobip: config.get('infobip'),
 } as Config

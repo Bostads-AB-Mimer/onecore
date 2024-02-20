@@ -1,8 +1,8 @@
 import KoaRouter from '@koa/router'
-import { routes as emailRoutes } from './services/email-service'
+import { routes as infobipRoutes } from './services/infobip-service'
 
 const router = new KoaRouter()
 
-emailRoutes(router)
+infobipRoutes(router)
 
 export default router
