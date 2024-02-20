@@ -1,48 +1,48 @@
 import { LeaseStatus } from './enums';
 
 interface Contact {
-    contactCode: string //cmctc.cmctckod
-    contactKey: string //cmtct.keycmctc
-    leaseIds?: string[]
-    leases?: Lease[]
-    firstName: string
-    lastName: string
-    fullName: string
-    nationalRegistrationNumber: string
-    birthDate: Date
-    address: Address | undefined
-    phoneNumbers: PhoneNumber[] | undefined
-    emailAddress: string,
-    isTenant: boolean,
+  contactCode: string; //cmctc.cmctckod
+  contactKey: string; //cmtct.keycmctc
+  leaseIds?: string[];
+  leases?: Lease[];
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  nationalRegistrationNumber: string;
+  birthDate: Date;
+  address: Address | undefined;
+  phoneNumbers: PhoneNumber[] | undefined;
+  emailAddress: string;
+  isTenant: boolean;
 }
 
 interface PhoneNumber {
-    phoneNumber: string
-    type: string
-    isMainNumber: boolean
+  phoneNumber: string;
+  type: string;
+  isMainNumber: boolean;
 }
 
 interface Lease {
-    leaseId: string
-    leaseNumber: string
-    leaseStartDate: Date
-    leaseEndDate: Date | undefined
-    status: LeaseStatus
-    tenantContactIds: string[] | undefined
-    tenants: Contact[] | undefined
-    rentalPropertyId: string
-    rentalProperty: RentalProperty | undefined
-    type: string
-    rentInfo: RentInfo | undefined
-    address: Address | undefined
-    noticeGivenBy: string | undefined,
-    noticeDate: Date | undefined,
-    noticeTimeTenant: string | undefined,
-    preferredMoveOutDate: Date | undefined,
-    terminationDate: Date | undefined,
-    contractDate: Date | undefined,
-    lastDebitDate: Date | undefined,
-    approvalDate: Date | undefined,
+  leaseId: string;
+  leaseNumber: string;
+  leaseStartDate: Date;
+  leaseEndDate: Date | undefined;
+  status: LeaseStatus;
+  tenantContactIds: string[] | undefined;
+  tenants: Contact[] | undefined;
+  rentalPropertyId: string;
+  rentalProperty: RentalProperty | undefined;
+  type: string;
+  rentInfo: RentInfo | undefined;
+  address: Address | undefined;
+  noticeGivenBy: string | undefined;
+  noticeDate: Date | undefined;
+  noticeTimeTenant: string | undefined;
+  preferredMoveOutDate: Date | undefined;
+  terminationDate: Date | undefined;
+  contractDate: Date | undefined;
+  lastDebitDate: Date | undefined;
+  approvalDate: Date | undefined;
 }
 
 interface RentalProperty {
@@ -140,6 +140,12 @@ interface ConsumerReportError {
   Reject_comment: string;
 }
 
+interface Email {
+  to: string;
+  subject: string;
+  text: string;
+}
+
 export {
   Contact,
   Lease,
@@ -153,4 +159,5 @@ export {
   MaterialChoice,
   ConsumerReport,
   ConsumerReportError,
+  Email,
 };
