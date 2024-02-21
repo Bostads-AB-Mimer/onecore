@@ -8,9 +8,17 @@ export const routes = (router: KoaRouter) => {
     const message = ctx.request.body
     if (!isMessageEmail(message)) {
       ctx.throw(400, 'Message is not an email object')
-    } else {
-      const responseData = await sendEmail(message)
-      ctx.body = 'Emails sent: ' + responseData.messages.length
+      return
+    }
+    try {
+      const result = await sendEmail(message)
+      ctx.status = 200
+      ctx.body = result.data
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
     }
   })
 }

@@ -9,10 +9,12 @@ const infobip = new Infobip({
 })
 
 export const sendEmail = async (message: Email) => {
+  console.log('Sending email', config.infobip)
+
   try {
     const response = await infobip.channels.email.send({
       to: message.to,
-      from: 'noreply@mimer.nu',
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
       subject: message.subject,
       text: message.text,
     })
