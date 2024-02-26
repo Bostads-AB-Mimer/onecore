@@ -20,6 +20,7 @@ import {
   sortRoomTypes,
 } from './adapters/material-options-adapter'
 import { MaterialChoice, MaterialOptionGroup } from 'onecore-types'
+import { getParkingSpace } from './adapters/xpand-adapter'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -100,6 +101,12 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
     const responseData = await getRentalProperty(ctx.params.id)
+
+    ctx.body = responseData
+  })
+
+  router.get('(.*)/parkingspaces/:id', async (ctx) => {
+    const responseData = await getParkingSpace(ctx.params.id)
 
     ctx.body = responseData
   })

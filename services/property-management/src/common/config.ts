@@ -14,6 +14,9 @@ export interface Config {
   contechOs: {
     url: string
   }
+  xpandService: {
+    url: string
+  }
 }
 
 const config = configPackage({
@@ -27,6 +30,9 @@ const config = configPackage({
       port: 1433,
       database: 'property-info',
     },
+    xpandService: {
+      url: 'https://mypages-wapp-t.azurewebsites.net/api',
+    },
   },
 })
 
@@ -34,4 +40,5 @@ export default {
   port: config.get('port'),
   database: config.get('database'),
   contechOs: config.get('contechOs'),
+  xpandService: config.get('xpandService'),
 } as Config
