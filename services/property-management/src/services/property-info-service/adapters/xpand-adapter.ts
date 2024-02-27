@@ -40,7 +40,9 @@ const getStreetNumber = (streetAndNumber: string) => {
   return matches.length > 1 ? matches[2] : ''
 }
 
-const getParkingSpace = async (parkingSpaceId: string) => {
+const getParkingSpace = async (
+  parkingSpaceId: string
+): Promise<ParkingSpace | undefined> => {
   try {
     const url = `${Config.xpandService.url}/publishedrentalobjects/parkings/${parkingSpaceId}`
 
@@ -80,7 +82,7 @@ const getParkingSpace = async (parkingSpaceId: string) => {
     return parkingSpace
   } catch (error) {
     console.error('Error getting parking space', error)
-    return null
+    return undefined
   }
 }
 
