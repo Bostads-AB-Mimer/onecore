@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.2.0...v1.3.0) (2024-02-27)
+
+
+### Features
+
+* 1202 create types for invoices ([#21](https://github.com/Bostads-AB-Mimer/onecore-types/issues/21)) ([d938d1d](https://github.com/Bostads-AB-Mimer/onecore-types/commit/d938d1d2cf458dab077505d09585ab5076974920))
+
 ## [1.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.1.0...v1.2.0) (2024-02-14)
 
 
