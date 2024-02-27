@@ -156,6 +156,38 @@ interface Email {
   text: string;
 }
 
+export interface Invoices {
+  unpaidInvoices?: Invoice[];
+  paidInvoices?: Invoice[];
+}
+
+export interface Invoice {
+  invoiceId: string;
+  leaseId: string;
+  amount: number;
+  fromDate: Date;
+  toDate: Date;
+  invoiceDate: Date;
+  expirationDate: Date;
+  debitStatus: number;
+  paymentStatus: number;
+  transactionTypeName: string;
+}
+
+export interface UnpaidInvoices {
+  unpaidInvoices: UnpaidInvoice[];
+  numberOfUnpaidInvoices: number;
+  accumulatedLastDebitDaysSinceToday: number;
+}
+
+export interface UnpaidInvoice {
+  invoiceId: string;
+  amount: number;
+  fromDate: Date;
+  toDate: Date;
+  daysSinceLastDebitDate: number;
+}
+
 export {
   Contact,
   Lease,
