@@ -14,6 +14,7 @@ type PartialLease = {
   lastDebitDate: Lease['lastDebitDate']
 }
 
+//todo: move all transformation code to separate file
 const transformFromDbContact = (
   row: any,
   phoneNumbers: any,
@@ -226,6 +227,8 @@ const getContactQuery = () => {
     .innerJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
     .innerJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
 }
+
+
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
   const rows = await db('cmtel')
