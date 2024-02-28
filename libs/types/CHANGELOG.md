@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.4.0...v1.5.0) (2024-02-28)
+
+
+### Features
+
+* 1141 external parking spaces ([ed8b868](https://github.com/Bostads-AB-Mimer/onecore-types/commit/ed8b8689ea08f3db9d9847701d5f65f3c7eb415c))
+* 1141 external parking spaces ([3c010d8](https://github.com/Bostads-AB-Mimer/onecore-types/commit/3c010d820c6bc13e17c49ef900b793d937ec3120))
+
 ## [1.4.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.3.1...v1.4.0) (2024-02-28)
 
 
