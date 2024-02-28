@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.3.0...v1.3.1) (2024-02-28)
+
+
+### Features
+
+* new types for parking spaces process ([435873e](https://github.com/Bostads-AB-Mimer/onecore-types/commit/435873ec671effb53d5f769c2d9e0f7a5e89bd87))
+
 ## [1.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.2.0...v1.3.0) (2024-02-27)
 
 
