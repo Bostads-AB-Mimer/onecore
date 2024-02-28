@@ -1,48 +1,48 @@
-import { LeaseStatus } from './enums';
+import { LeaseStatus, ParkingSpaceApplicationCategory, ParkingSpaceType } from "./enums";
 
 interface Contact {
-    contactCode: string //cmctc.cmctckod
-    contactKey: string //cmtct.keycmctc
-    leaseIds?: string[]
-    leases?: Lease[]
-    firstName: string
-    lastName: string
-    fullName: string
-    nationalRegistrationNumber: string
-    birthDate: Date
-    address: Address | undefined
-    phoneNumbers: PhoneNumber[] | undefined
-    emailAddress: string,
-    isTenant: boolean,
+  contactCode: string; //cmctc.cmctckod
+  contactKey: string; //cmtct.keycmctc
+  leaseIds?: string[];
+  leases?: Lease[];
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  nationalRegistrationNumber: string;
+  birthDate: Date;
+  address: Address | undefined;
+  phoneNumbers: PhoneNumber[] | undefined;
+  emailAddress: string;
+  isTenant: boolean;
 }
 
 interface PhoneNumber {
-    phoneNumber: string
-    type: string
-    isMainNumber: boolean
+  phoneNumber: string;
+  type: string;
+  isMainNumber: boolean;
 }
 
 interface Lease {
-    leaseId: string
-    leaseNumber: string
-    leaseStartDate: Date
-    leaseEndDate: Date | undefined
-    status: LeaseStatus
-    tenantContactIds: string[] | undefined
-    tenants: Contact[] | undefined
-    rentalPropertyId: string
-    rentalProperty: RentalProperty | undefined
-    type: string
-    rentInfo: RentInfo | undefined
-    address: Address | undefined
-    noticeGivenBy: string | undefined,
-    noticeDate: Date | undefined,
-    noticeTimeTenant: string | undefined,
-    preferredMoveOutDate: Date | undefined,
-    terminationDate: Date | undefined,
-    contractDate: Date | undefined,
-    lastDebitDate: Date | undefined,
-    approvalDate: Date | undefined,
+  leaseId: string;
+  leaseNumber: string;
+  leaseStartDate: Date;
+  leaseEndDate: Date | undefined;
+  status: LeaseStatus;
+  tenantContactIds: string[] | undefined;
+  tenants: Contact[] | undefined;
+  rentalPropertyId: string;
+  rentalProperty: RentalProperty | undefined;
+  type: string;
+  rentInfo: RentInfo | undefined;
+  address: Address | undefined;
+  noticeGivenBy: string | undefined;
+  noticeDate: Date | undefined;
+  noticeTimeTenant: string | undefined;
+  preferredMoveOutDate: Date | undefined;
+  terminationDate: Date | undefined;
+  contractDate: Date | undefined;
+  lastDebitDate: Date | undefined;
+  approvalDate: Date | undefined;
 }
 
 interface RentalProperty {
@@ -71,12 +71,13 @@ interface RentInfo {
 }
 
 interface Rent {
-  rentId: string;
-  leaseId: string;
+  rentId?: string;
+  leaseId?: string;
   currentRent: number;
+  vat: number;
   additionalChargeDescription: string | undefined;
   additionalChargeAmount: number | undefined;
-  rentStartDate: Date;
+  rentStartDate: Date | undefined;
   rentEndDate: Date | undefined;
 }
 
@@ -140,36 +141,51 @@ interface ConsumerReportError {
   Reject_comment: string;
 }
 
+interface ParkingSpace {
+  parkingSpaceId: string;
+  address: Address;
+  rent: RentInfo;
+  vacantFrom: Date;
+  type: ParkingSpaceType;
+  applicationCategory: ParkingSpaceApplicationCategory;
+}
+
+interface Email {
+  to: string;
+  subject: string;
+  text: string;
+}
+
 export interface Invoices {
-    unpaidInvoices?: Invoice[]
-    paidInvoices?: Invoice[]
+  unpaidInvoices?: Invoice[];
+  paidInvoices?: Invoice[];
 }
 
 export interface Invoice {
-    invoiceId: string
-    leaseId: string
-    amount: number
-    fromDate: Date
-    toDate: Date
-    invoiceDate: Date
-    expirationDate: Date
-    debitStatus: number
-    paymentStatus: number
-    transactionTypeName: string
+  invoiceId: string;
+  leaseId: string;
+  amount: number;
+  fromDate: Date;
+  toDate: Date;
+  invoiceDate: Date;
+  expirationDate: Date;
+  debitStatus: number;
+  paymentStatus: number;
+  transactionTypeName: string;
 }
 
 export interface UnpaidInvoices {
-    unpaidInvoices: UnpaidInvoice[]
-    numberOfUnpaidInvoices: number
-    accumulatedLastDebitDaysSinceToday: number
+  unpaidInvoices: UnpaidInvoice[];
+  numberOfUnpaidInvoices: number;
+  accumulatedLastDebitDaysSinceToday: number;
 }
 
 export interface UnpaidInvoice {
-    invoiceId: string
-    amount: number
-    fromDate: Date
-    toDate: Date
-    daysSinceLastDebitDate: number
+  invoiceId: string;
+  amount: number;
+  fromDate: Date;
+  toDate: Date;
+  daysSinceLastDebitDate: number;
 }
 
 export {
@@ -185,4 +201,6 @@ export {
   MaterialChoice,
   ConsumerReport,
   ConsumerReportError,
+  ParkingSpace,
+  Email,
 };
