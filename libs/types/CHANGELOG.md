@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.0...v1.5.1) (2024-02-29)
+
+
+### Bug Fixes
+
+* Updates npmignore and refactors types ([c081c40](https://github.com/Bostads-AB-Mimer/onecore-types/commit/c081c401948eaaee01f81c0b134023d8fb2b3ca6))
+
 ## [1.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.4.0...v1.5.0) (2024-02-28)
 
 
