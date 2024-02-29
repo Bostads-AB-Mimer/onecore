@@ -1,5 +1,7 @@
 index.ts
 types.ts
+enums.ts
+translations.ts
 
 # Configuration files
 tsconfig.json

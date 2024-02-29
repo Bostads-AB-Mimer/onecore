@@ -1,4 +1,8 @@
-import { LeaseStatus, ParkingSpaceApplicationCategory, ParkingSpaceType } from "./enums";
+import {
+  LeaseStatus,
+  ParkingSpaceApplicationCategory,
+  ParkingSpaceType,
+} from './enums';
 
 interface Contact {
   contactCode: string; //cmctc.cmctckod
@@ -156,12 +160,12 @@ interface Email {
   text: string;
 }
 
-export interface Invoices {
+interface Invoices {
   unpaidInvoices?: Invoice[];
   paidInvoices?: Invoice[];
 }
 
-export interface Invoice {
+interface Invoice {
   invoiceId: string;
   leaseId: string;
   amount: number;
@@ -174,13 +178,13 @@ export interface Invoice {
   transactionTypeName: string;
 }
 
-export interface UnpaidInvoices {
+interface UnpaidInvoices {
   unpaidInvoices: UnpaidInvoice[];
   numberOfUnpaidInvoices: number;
   accumulatedLastDebitDaysSinceToday: number;
 }
 
-export interface UnpaidInvoice {
+interface UnpaidInvoice {
   invoiceId: string;
   amount: number;
   fromDate: Date;
@@ -201,6 +205,10 @@ export {
   MaterialChoice,
   ConsumerReport,
   ConsumerReportError,
+  Invoices,
+  Invoice,
+  UnpaidInvoices,
+  UnpaidInvoice,
   ParkingSpace,
   Email,
 };
