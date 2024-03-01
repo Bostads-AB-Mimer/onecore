@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.2...v1.5.3) (2024-03-01)
+
+
+### Bug Fixes
+
+* convert to esm ([9ff7778](https://github.com/Bostads-AB-Mimer/onecore-types/commit/9ff77782f7472810a1e31aa01ed7124382ca1238))
+
 ## [1.5.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.1...v1.5.2) (2024-03-01)
 
 
