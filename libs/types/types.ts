@@ -2,7 +2,7 @@ import {
   LeaseStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
-} from './enums';
+} from './enums.js';
 
 interface Contact {
   contactCode: string; //cmctc.cmctckod
@@ -192,7 +192,7 @@ interface UnpaidInvoice {
   daysSinceLastDebitDate: number;
 }
 
-export {
+export type {
   Contact,
   Lease,
   RentalProperty,

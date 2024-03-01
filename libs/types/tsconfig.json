@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "node16",
+    "target": "es2020",
     "outDir": "./build/types",
+    "strict": true,
+    "verbatimModuleSyntax": true,
     "declaration": true,
     "emitDeclarationOnly": true
   }
