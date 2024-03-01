@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.1...v1.5.2) (2024-03-01)
+
+
+### Bug Fixes
+
+* Changes tsconfig moduleResolution ([b6c8b37](https://github.com/Bostads-AB-Mimer/onecore-types/commit/b6c8b3705b563c085760fe762742e110e500d1cf))
+
 ## [1.5.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.0...v1.5.1) (2024-02-29)
 
 

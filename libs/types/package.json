@@ -1,6 +1,6 @@
 {
   "name": "onecore-types",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "ONECore common types",
   "types": "build/types/index.d.ts",
   "scripts": {
