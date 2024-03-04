@@ -18,6 +18,7 @@ FROM node:18-slim AS runner
 WORKDIR /home/app
 COPY --from=BUILDER /home/app/node_modules ./node_modules
 COPY --from=BUILDER /home/app/package* ./
+COPY --from=BUILDER /home/app/build ./
 
 ENV PORT 80
 EXPOSE 80
