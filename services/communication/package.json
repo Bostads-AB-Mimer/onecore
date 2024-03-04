@@ -10,7 +10,8 @@
     "test": "jest",
     "build": "tsc",
     "dev": "nodemon -e ts,js --exec ts-node src/index ",
-    "lint": "eslint -c .eslintrc src/"
+    "lint": "eslint -c .eslintrc src/",
+    "start": "node index"
   },
   "keywords": [],
   "author": "",
