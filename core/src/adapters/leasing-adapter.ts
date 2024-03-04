@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { Contact, Lease } from 'onecore-types'
-import config from '../../../common/config'
+import { ConsumerReport, Contact, Lease } from 'onecore-types'
+import config from '../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -32,15 +32,55 @@ const getContactForPnr = async (
   return contactResponse.data.data
 }
 
+const getContact = async (contactId: string): Promise<Contact | undefined> => {
+  try {
+    const contactResponse = await axios(
+      tenantsLeasesServiceUrl + '/contact/contactCode/' + contactId
+    )
+
+    return contactResponse.data.data
+  } catch (error) {
+    return undefined
+  }
+}
+
+const createLease = async (
+  objectId: string,
+  contactId: string,
+  fromDate: string,
+  companyCode: string
+) => {
+  const axiosOptions = {
+    method: 'POST',
+    data: {
+      parkingSpaceId: objectId,
+      contactCode: contactId,
+      fromDate,
+      companyCode,
+    },
+  }
+
+  const result = await axios(tenantsLeasesServiceUrl + '/leases', axiosOptions)
+
+  return result.data
+}
+
 const getCreditInformation = async (
   nationalRegistrationNumber: string
-): Promise<any> => {
+): Promise<ConsumerReport> => {
   const informationResponse = await axios(
     tenantsLeasesServiceUrl +
       '/cas/getConsumerReport/' +
       nationalRegistrationNumber
   )
-  return informationResponse.data
+  return informationResponse.data.data
 }
 
-export { getLease, getLeasesForPnr, getContactForPnr, getCreditInformation }
+export {
+  getLease,
+  getLeasesForPnr,
+  getContactForPnr,
+  getContact,
+  createLease,
+  getCreditInformation,
+}

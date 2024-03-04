@@ -1,14 +1,19 @@
 import axios from 'axios'
-import { MaterialChoice, MaterialOption, RentalProperty } from 'onecore-types'
-import config from '../../../common/config'
+import {
+  MaterialChoice,
+  MaterialOption,
+  ParkingSpace,
+  RentalProperty,
+} from 'onecore-types'
+import config from '../common/config'
 
-const propertyInfoServiceUrl = config.propertyInfoService.url
+const propertyManagementServiceUrl = config.propertyInfoService.url
 
 const getRentalProperty = async (
   rentalPropertyId: string
 ): Promise<RentalProperty> => {
   const propertyResponse = await axios(
-    propertyInfoServiceUrl + '/rentalproperties/' + rentalPropertyId
+    propertyManagementServiceUrl + '/rentalproperties/' + rentalPropertyId
   )
 
   return propertyResponse.data
@@ -16,7 +21,7 @@ const getRentalProperty = async (
 
 const getRoomTypeWithMaterialOptions = async (apartmentId: string) => {
   const materialOptionGroupsResponse = await axios(
-    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-options`
+    `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/material-options`
   )
 
   return materialOptionGroupsResponse.data
@@ -26,7 +31,7 @@ const getMaterialOption = async (
   materialOptionId: string
 ): Promise<MaterialOption | undefined> => {
   const materialOptionGroupsResponse = await axios(
-    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-options/${materialOptionId}`
+    `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/material-options/${materialOptionId}`
   )
 
   return materialOptionGroupsResponse.data
@@ -34,7 +39,7 @@ const getMaterialOption = async (
 
 const getRoomsWithMaterialChoices = async (apartmentId: string) => {
   const materialOptionGroupsResponse = await axios(
-    `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/rooms-with-material-choices`
+    `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/rooms-with-material-choices`
   )
 
   return materialOptionGroupsResponse.data
@@ -44,9 +49,9 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
   let url
 
   if (contractId) {
-    url = `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
+    url = `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
   } else {
-    url = `${propertyInfoServiceUrl}/rentalproperties/${apartmentId}/material-choices`
+    url = `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/material-choices`
   }
 
   const materialOptionGroupsResponse = await axios(url)
@@ -56,7 +61,7 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
 
 const getMaterialChoiceStatuses = async (projectCode: string) => {
   const materialOptionGroupsResponse = await axios(
-    `${propertyInfoServiceUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}`
+    `${propertyManagementServiceUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}`
   )
 
   return materialOptionGroupsResponse.data
@@ -67,7 +72,7 @@ const saveMaterialChoice = async (
   materialChoices: Array<MaterialChoice>
 ) => {
   await axios(
-    `${propertyInfoServiceUrl}/rentalproperties/${rentalPropertyId}/material-choices`,
+    `${propertyManagementServiceUrl}/rentalproperties/${rentalPropertyId}/material-choices`,
     {
       method: 'post',
       data: materialChoices,
@@ -75,6 +80,20 @@ const saveMaterialChoice = async (
   ).then((result) => {
     return result
   })
+}
+
+const getParkingSpace = async (
+  parkingSpaceId: string
+): Promise<ParkingSpace | undefined> => {
+  try {
+    const parkingSpaceResponse = await axios(
+      `${propertyManagementServiceUrl}/parkingspaces/${parkingSpaceId}`
+    )
+
+    return parkingSpaceResponse.data
+  } catch (error) {
+    return undefined
+  }
 }
 
 export {
@@ -85,4 +104,5 @@ export {
   getMaterialChoiceStatuses,
   saveMaterialChoice,
   getRoomsWithMaterialChoices,
+  getParkingSpace,
 }

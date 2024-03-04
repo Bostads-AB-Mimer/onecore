@@ -14,8 +14,9 @@ import {
   saveMaterialChoice,
   getMaterialChoiceStatuses,
   getRoomsWithMaterialChoices,
-} from './adapters/rental-property-adapter'
+} from '../../adapters/property-management-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
+import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/floorplan', async (ctx) => {
@@ -100,6 +101,49 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = {
       data: responseData,
+    }
+  })
+
+  router.post('(.*)/parkingspaces/:parkingSpaceId/leases', async (ctx) => {
+    const parkingSpaceId = ctx.params.parkingSpaceId
+
+    if (!parkingSpaceId) {
+      ctx.status = 400
+      ctx.body = {
+        message:
+          'Parking space id is missing. It needs to be passed in the url.',
+      }
+
+      return
+    }
+
+    const contactId = ctx.request.body.contactId
+
+    if (!contactId) {
+      ctx.status = 400
+      ctx.body = {
+        message:
+          'Contact id is missing. It needs to be passed in the body (contactId)',
+      }
+
+      return
+    }
+
+    try {
+      const result = await createLeaseForExternalParkingSpace(
+        parkingSpaceId,
+        contactId
+      )
+
+      ctx.status = result.httpStatus
+      ctx.body = result.response
+    } catch (error) {
+      // Step 6: Communicate error to dev team and customer service
+      console.log('Error', error)
+      ctx.status = 500
+      ctx.body = {
+        message: 'A technical error has occured',
+      }
     }
   })
 }

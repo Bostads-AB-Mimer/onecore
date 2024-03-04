@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
-import * as rentalPropertyAdapter from '../adapters/rental-property-adapter'
+import * as rentalPropertyAdapter from '../../../adapters/property-management-adapter'
 
 const app = new Koa()
 const router = new KoaRouter()

@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
-import * as tenantLeaseAdapter from '../adapters/tenant-lease-adapter'
+import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import { Contact, Lease, ConsumerReport } from 'onecore-types'
 
 const app = new Koa()
@@ -22,10 +22,20 @@ describe('lease-service', () => {
       leaseStartDate: new Date('2023-06-01T09:57:53.144Z'),
       leaseEndDate: new Date('2023-06-01T09:57:53.144Z'),
       status: 0,
-      tenantContactIds: ['4417', '5602'],
+      tenantContactIds: ['P4417', 'P5602'],
+      address: undefined,
+      noticeGivenBy: undefined,
+      noticeDate: undefined,
+      noticeTimeTenant: undefined,
+      preferredMoveOutDate: undefined,
+      contractDate: undefined,
+      terminationDate: undefined,
+      lastDebitDate: undefined,
+      approvalDate: undefined,
       tenants: [
         {
-          contactId: '4417',
+          contactCode: 'P4417',
+          contactKey: 'ABC',
           firstName: 'Anneli',
           lastName: 'Forsberg',
           nationalRegistrationNumber: '20740522-7848',
@@ -36,17 +46,27 @@ describe('lease-service', () => {
             postalCode: '72489',
             city: 'Västerås',
           },
-          mobilePhone: '+465480978306',
-          phoneNumber: '+460777174972',
+          phoneNumbers: [
+            {
+              isMainNumber: true,
+              phoneNumber: '+465480978306',
+              type: 'mobile',
+            },
+            {
+              isMainNumber: false,
+              phoneNumber: '+460777174972',
+              type: 'home',
+            },
+          ],
           emailAddress: 'test@test.se',
-          leaseId: '1',
-          lease: undefined,
+          leaseIds: ['1'],
+          leases: undefined,
           fullName: 'Anneli Forsberg',
-          type: 'type',
-          lastUpdated: undefined,
+          isTenant: true,
         },
         {
-          contactId: '5602',
+          contactCode: 'P5602',
+          contactKey: 'ABC',
           firstName: 'Berit',
           lastName: 'Holmgren',
           nationalRegistrationNumber: '20850523-6536',
@@ -57,25 +77,34 @@ describe('lease-service', () => {
             postalCode: '72489',
             city: 'Västerås',
           },
-          mobilePhone: '+467932495313',
-          phoneNumber: '+469731498801',
+          phoneNumbers: [
+            {
+              isMainNumber: true,
+              phoneNumber: '+467932495313',
+              type: 'mobile',
+            },
+            {
+              isMainNumber: false,
+              phoneNumber: '+469731498801',
+              type: 'home',
+            },
+          ],
           emailAddress: 'test@test.se',
-          leaseId: '1',
-          lease: undefined,
-          fullName: 'Anneli Forsberg',
-          type: 'type',
-          lastUpdated: undefined,
+          leaseIds: ['1'],
+          leases: undefined,
+          fullName: 'Berit Holmgren',
+          isTenant: true,
         },
       ],
       rentalPropertyId: '264',
       rentalProperty: undefined,
       type: 'type',
       rentInfo: undefined,
-      lastUpdated: undefined,
     }
 
     contactMock = {
-      contactId: 'P965339',
+      contactCode: 'P965339',
+      contactKey: 'DEF',
       firstName: 'Erik',
       lastName: 'Lundberg',
       fullName: 'Erik Lundberg',
@@ -87,13 +116,22 @@ describe('lease-service', () => {
         postalCode: '72266',
         city: 'Västerås',
       },
-      mobilePhone: '+460759429414',
-      phoneNumber: '+465292643751',
+      phoneNumbers: [
+        {
+          isMainNumber: true,
+          phoneNumber: '+460759429414',
+          type: 'mobile',
+        },
+        {
+          isMainNumber: false,
+          phoneNumber: '+465292643751',
+          type: 'home',
+        },
+      ],
       emailAddress: 'erik.lundberg@mimer.nu',
-      leaseId: undefined,
-      lease: undefined,
-      lastUpdated: undefined,
-      type: 'type',
+      leaseIds: undefined,
+      leases: undefined,
+      isTenant: false,
     }
 
     consumerReportMock = {
@@ -162,7 +200,7 @@ describe('lease-service', () => {
     it('responds with a credit information', async () => {
       const getCreditInformationSpy = jest
         .spyOn(tenantLeaseAdapter, 'getCreditInformation')
-        .mockResolvedValue({ consumerReportMock })
+        .mockResolvedValue(consumerReportMock)
 
       const res = await request(app.callback()).get(
         '/cas/getConsumerReport/194512121122'
@@ -171,7 +209,7 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getCreditInformationSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.data)).toEqual(
-        JSON.stringify({ consumerReportMock })
+        JSON.stringify(consumerReportMock)
       )
     })
   })
