@@ -1,13 +1,7 @@
-import {
-  ParkingSpaceApplicationCategory,
-  ParkingSpaceType,
-} from './enums.js';
+import { ParkingSpaceApplicationCategory, ParkingSpaceType } from "./src/enums.js";
 
 // Keys are from Xpand DB table BABPT
-export const parkingSpaceTypeTranslation: Record<
-  string,
-  ParkingSpaceType
-> = {
+export const parkingSpaceTypeTranslation: Record<string, ParkingSpaceType> = {
   VARMG: ParkingSpaceType.WarmGarage,
   KALLG: ParkingSpaceType.ColdGarage,
   TERMOG: ParkingSpaceType.ThermalGarage,
@@ -32,10 +26,7 @@ export const parkingSpaceTypeTranslation: Record<
 };
 
 // Keys are from the mimer.nu api.
-export const parkingSpaceApplicationCategoryTranslation: Record<
-  string,
-  ParkingSpaceApplicationCategory
-> = {
-  'Bilplats (extern)': ParkingSpaceApplicationCategory.external,
-  'Bilplats (intern)': ParkingSpaceApplicationCategory.internal,
+export const parkingSpaceApplicationCategoryTranslation: Record<string, ParkingSpaceApplicationCategory> = {
+  "Bilplats (extern)": ParkingSpaceApplicationCategory.external,
+  "Bilplats (intern)": ParkingSpaceApplicationCategory.internal,
 };
