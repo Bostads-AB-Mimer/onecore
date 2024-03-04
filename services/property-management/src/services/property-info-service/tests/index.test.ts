@@ -5,6 +5,12 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as materialOptionsAdapter from '../adapters/material-options-adapter'
 import * as roomTypesAdapter from '../adapters/contech-os-adapter'
+import * as xpandAdapter from '../adapters/xpand-adapter'
+import {
+  ParkingSpace,
+  ParkingSpaceApplicationCategory,
+  ParkingSpaceType,
+} from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -357,5 +363,50 @@ describe('GET /rentalproperties/:apartmentId/material-choices', () => {
     expect(res.status).toBe(200)
     expect(materialChoicesSpy).toHaveBeenCalled()
     expect(res.body.materialChoices).toBeDefined()
+  })
+})
+
+describe('parking spaces', () => {
+  describe('GET /parkingspaces/:id', () => {
+    it('Gets and returns a parking space', async () => {
+      const mockedParkingSpace: ParkingSpace = {
+        address: {
+          street: 'Parkeringsgatan',
+          number: '1',
+          city: 'Västerås',
+          postalCode: '12345',
+        },
+        applicationCategory: ParkingSpaceApplicationCategory.internal,
+        parkingSpaceId: '123-456-789',
+        rent: {
+          currentRent: {
+            currentRent: 123,
+            vat: 3,
+            additionalChargeAmount: undefined,
+            additionalChargeDescription: undefined,
+            rentEndDate: undefined,
+            rentStartDate: undefined,
+          },
+          futureRents: undefined,
+        },
+        vacantFrom: new Date(),
+        type: ParkingSpaceType.Garage,
+      }
+      const getParkingPaceSpy = jest
+        .spyOn(xpandAdapter, 'getParkingSpace')
+        .mockResolvedValue(mockedParkingSpace)
+
+      const res = await request(app.callback()).get(
+        `/parkingspaces/${mockedParkingSpace.parkingSpaceId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getParkingPaceSpy).toHaveBeenCalledWith(
+        mockedParkingSpace.parkingSpaceId
+      )
+      expect(res.body).toStrictEqual(
+        JSON.parse(JSON.stringify(mockedParkingSpace))
+      )
+    })
   })
 })
