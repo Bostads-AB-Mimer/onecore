@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.3...v1.6.0) (2024-03-04)
+
+
+### Features
+
+* Reworked distribution build with tsup ([629a989](https://github.com/Bostads-AB-Mimer/onecore-types/commit/629a9896d801023fa4719678f7ccc2bf0dc6b7d6))
+
 ## [1.5.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.2...v1.5.3) (2024-03-01)
 
 
