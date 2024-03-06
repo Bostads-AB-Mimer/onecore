@@ -121,7 +121,7 @@ describe('invoices-service', () => {
       expect(res.status).toBe(200)
       expect(res.body.data).toBeInstanceOf(Object)
       expect(getInvoicesSpy).toHaveBeenCalled()
-      expect(res.body.data.invoices).toBeDefined()
+      expect(res.body.data.unpaidInvoices).toBeDefined()
       expect(res.body.data.numberOfUnpaidInvoices).toBeDefined()
       expect(res.body.data.accumulatedLastDebitDaysSinceToday).toBeDefined()
     })

@@ -139,10 +139,10 @@ const getLeasesForNationalRegistrationNumber = async (
     const leases = await getLeasesByContactKey(contact[0].contactKey)
 
     if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
-      return leases.filter(isLeaseActive)
+      return leases
     }
 
-    return leases
+    return leases.filter(isLeaseActive)
   }
 
   return undefined
@@ -164,10 +164,10 @@ const getLeasesForContactCode = async (
     const leases = await getLeasesByContactKey(contact[0].contactKey)
 
     if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
-      return leases.filter(isLeaseActive)
+      return leases
     }
 
-    return leases
+    return leases.filter(isLeaseActive)
   }
 }
 
