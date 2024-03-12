@@ -1,8 +1,10 @@
 import {
+  InvoiceTransactionType,
   LeaseStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
-} from './enums.js'
+  PaymentStatus,
+} from './enums'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -174,11 +176,14 @@ interface Invoice {
   invoiceDate: Date
   expirationDate: Date
   debitStatus: number
-  paymentStatus: number
+  paymentStatus: PaymentStatus
+  transactionType: InvoiceTransactionType
   transactionTypeName: string
+  paidAmount?: number
+  daysSinceLastDebitDate?: number
 }
 
-interface UnpaidInvoices {
+/*interface UnpaidInvoices {
   unpaidInvoices: UnpaidInvoice[]
   numberOfUnpaidInvoices: number
   accumulatedLastDebitDaysSinceToday: number
@@ -190,7 +195,7 @@ interface UnpaidInvoice {
   fromDate: Date
   toDate: Date
   daysSinceLastDebitDate: number
-}
+}*/
 
 export type {
   Contact,
@@ -207,8 +212,8 @@ export type {
   ConsumerReportError,
   Invoices,
   Invoice,
-  UnpaidInvoices,
-  UnpaidInvoice,
+  /*  UnpaidInvoices,
+  UnpaidInvoice,*/
   ParkingSpace,
   Email,
 }
