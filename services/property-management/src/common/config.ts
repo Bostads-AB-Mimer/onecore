@@ -16,6 +16,12 @@ export interface Config {
   }
   xpandService: {
     url: string
+  },
+  xpandSoap: {
+    username: string
+    password: string
+    url: string
+    messageCulture: string
   }
 }
 
@@ -33,6 +39,12 @@ const config = configPackage({
     xpandService: {
       url: 'https://mypages-wapp-t.azurewebsites.net/api',
     },
+    xpandSoap: {
+      username: '',
+      password: '',
+      url: '',
+      messageCulture: '1053',
+    },
   },
 })
 
@@ -41,4 +53,5 @@ export default {
   database: config.get('database'),
   contechOs: config.get('contechOs'),
   xpandService: config.get('xpandService'),
+  xpandSoap: config.get('xpandSoap'),
 } as Config
