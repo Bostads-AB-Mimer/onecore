@@ -36,7 +36,8 @@ const transformFromDbContact = (
       city: row.city,
     },
     phoneNumbers: phoneNumbers,
-    emailAddress: row.emailAddress,
+    emailAddress:
+      process.env.NODE_ENV === 'prodution' ? row.emailAddress : 'redacted',
     isTenant: leases.length > 0,
   }
 
@@ -227,8 +228,6 @@ const getContactQuery = () => {
     .innerJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
     .innerJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
 }
-
-
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
   const rows = await db('cmtel')

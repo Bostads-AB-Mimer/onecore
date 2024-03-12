@@ -1,4 +1,11 @@
-import { Invoice, Invoices, UnpaidInvoice, UnpaidInvoices } from 'onecore-types'
+import {
+  Invoice,
+  InvoiceTransactionType,
+  Invoices,
+  PaymentStatus,
+  invoiceTransactionTypeTranslation,
+  paymentStatusTranslation,
+} from 'onecore-types'
 import knex from 'knex'
 import Config from '../../../common/config'
 
@@ -6,6 +13,27 @@ const db = knex({
   client: 'mssql',
   connection: Config.database,
 })
+
+const getTransactionType = (transactionTypeString: any) => {
+  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
+    return InvoiceTransactionType.Other
+  }
+
+  let transactionType =
+    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
+
+  if (!transactionType) {
+    transactionType = InvoiceTransactionType.Other
+  }
+
+  return transactionType
+}
+
+const getPaymentStatus = (paymentStatusNumber: number) => {
+  let paymentStatus = paymentStatusTranslation[paymentStatusNumber]
+
+  return paymentStatus
+}
 
 function transformFromDbInvoice(row: any): Invoice {
   return {
@@ -17,14 +45,15 @@ function transformFromDbInvoice(row: any): Invoice {
     invoiceDate: row.invoiceDate,
     expirationDate: row.expirationDate,
     debitStatus: row.debitStatus,
-    paymentStatus: row.paymentStatus,
+    paymentStatus: getPaymentStatus(row.paymentStatus),
+    transactionType: getTransactionType(row.transactionType),
     transactionTypeName: row.transactionTypeName.trim(),
   }
 }
 
 const getInvoicesByContactCode = async (
   contactKey: string
-): Promise<Invoices | undefined> => {
+): Promise<Invoice[] | undefined> => {
   const rows = await db
     .select(
       'krfkh.invoice as invoiceId',
@@ -36,6 +65,7 @@ const getInvoicesByContactCode = async (
       'krfkh.expdate as expirationDate',
       'krfkh.debstatus as debitStatus',
       'krfkh.paystatus as paymentStatus',
+      'krfkh.keyrevrt as transactionType',
       'revrt.name as transactionTypeName'
     )
     .from('krfkh')
@@ -45,32 +75,7 @@ const getInvoicesByContactCode = async (
     .orderBy('krfkh.fromdate', 'desc')
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows.map(transformFromDbInvoice)
-
-    if (invoices.length === 0) {
-      return undefined
-    }
-
-    let unpaidInvoices = invoices.filter(
-      (invoice: any) =>
-        invoice.paymentStatus === 0 || invoice.paymentStatus === 1
-    )
-    const paidInvoices = invoices.filter(
-      (invoice: any) => invoice.paymentStatus > 1
-    )
-
-    unpaidInvoices = unpaidInvoices.filter((unpaidInvoice) => {
-      // If a paid invoice exists with the same invoice id and amount is 0, the invoice is considered paid (probably handled by debt collector)
-      return !paidInvoices.some(
-        (paidInvoice) =>
-          paidInvoice.invoiceId === unpaidInvoice.invoiceId &&
-          unpaidInvoice.amount === 0
-      )
-    })
-
-    return {
-      unpaidInvoices: unpaidInvoices,
-      paidInvoices: paidInvoices,
-    }
+    return invoices
   }
 
   return undefined
@@ -78,36 +83,14 @@ const getInvoicesByContactCode = async (
 
 const getUnpaidInvoicesByContactCode = async (
   contactKey: string
-): Promise<UnpaidInvoices | undefined> => {
+): Promise<Invoice[] | undefined> => {
   const allInvoices = await getInvoicesByContactCode(contactKey)
 
-  if (allInvoices?.unpaidInvoices == undefined) {
-    return undefined
-  }
+  const unpaidInvoices = allInvoices?.filter((invoice: Invoice) => {
+    return invoice.paymentStatus === PaymentStatus.Unpaid
+  })
 
-  let accumulatedLastDebitDaysSinceToday = 0
-
-  const unpaidInvoices: UnpaidInvoice[] | undefined =
-    allInvoices?.unpaidInvoices.map((invoice: Invoice) => {
-      const today = new Date()
-      const daysSinceLastDebitDate = Math.floor(
-        (today.getTime() - invoice.fromDate.getTime()) / (1000 * 60 * 60 * 24)
-      )
-      accumulatedLastDebitDaysSinceToday += daysSinceLastDebitDate
-      return {
-        invoiceId: invoice.invoiceId,
-        amount: invoice.amount,
-        fromDate: invoice.fromDate,
-        toDate: invoice.toDate,
-        daysSinceLastDebitDate: daysSinceLastDebitDate,
-      }
-    })
-
-  return {
-    unpaidInvoices: unpaidInvoices,
-    numberOfUnpaidInvoices: unpaidInvoices.length,
-    accumulatedLastDebitDaysSinceToday: accumulatedLastDebitDaysSinceToday,
-  }
+  return unpaidInvoices
 }
 
 export { getInvoicesByContactCode, getUnpaidInvoicesByContactCode }
