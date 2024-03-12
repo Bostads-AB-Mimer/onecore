@@ -1,47 +1,16 @@
 import axios from 'axios'
 import Config from '../../../common/config'
+import { ParkingSpace } from 'onecore-types'
 import {
-  parkingSpaceApplicationCategoryTranslation,
-  parkingSpaceTypeTranslation,
-  ParkingSpace,
-  ParkingSpaceApplicationCategory,
-  ParkingSpaceType,
-} from 'onecore-types'
+  getParkingSpaceApplicationCategory,
+  getParkingSpaceType,
+  getStreet,
+  getStreetNumber,
+} from '../../../utils/parking-spaces'
 
-const getParkingSpaceType = (typeCode: string) => {
-  let type = parkingSpaceTypeTranslation[typeCode]
-
-  if (!type) {
-    type = ParkingSpaceType.ParkingSpaceWithoutElectricity
-  }
-
-  return type
-}
-
-const getParkingSpaceApplicationCategory = (waitingListType: string) => {
-  let category = parkingSpaceApplicationCategoryTranslation[waitingListType]
-
-  if (!category) {
-    category = ParkingSpaceApplicationCategory.internal
-  }
-
-  return category
-}
-
-const getStreet = (streetAndNumber: string) => {
-  const matches = streetAndNumber.split(/([^0-9]+) ([0-9].*)/)
-
-  return matches[1]
-}
-
-const getStreetNumber = (streetAndNumber: string) => {
-  const matches = streetAndNumber.split(/([^0-9]+) ([0-9].*)/)
-
-  return matches.length > 1 ? matches[2] : ''
-}
 
 const getParkingSpace = async (
-  parkingSpaceId: string
+  parkingSpaceId: string,
 ): Promise<ParkingSpace | undefined> => {
   try {
     const url = `${Config.xpandService.url}/publishedrentalobjects/parkings/${parkingSpaceId}`
@@ -75,7 +44,7 @@ const getParkingSpace = async (
       },
       type: getParkingSpaceType(response.data.objectTypeCode),
       applicationCategory: getParkingSpaceApplicationCategory(
-        response.data.waitingListType
+        response.data.waitingListType,
       ),
     }
 
