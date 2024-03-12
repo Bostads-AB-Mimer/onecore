@@ -6,7 +6,7 @@ import { ParkingSpace } from 'onecore-types'
 import { getParkingSpaceApplicationCategory, getParkingSpaceType } from '../../../utils/parking-spaces'
 
 
-const getPublishedParkings08352 = async (
+const getPublishedParkingSpaceFromSoapService = async (
   parkingSpaceId: string,
 ) => {
   const base64credentials = Buffer.from(
@@ -90,4 +90,4 @@ const getPublishedParkings08352 = async (
   }
 }
 
-export { getPublishedParkings08352 }
+export { getPublishedParkingSpaceFromSoapService }
