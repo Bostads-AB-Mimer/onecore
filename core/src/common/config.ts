@@ -30,6 +30,7 @@ export interface Config {
   }
   emailAddresses: {
     leasing: string
+    tenantDefault: string
   }
 }
 
@@ -55,7 +56,8 @@ const config = configPackage({
       maxFailedLoginAttempts: 3,
     },
     emailAddresses: {
-      leasing: 'uthyrning@mimer.nu',
+      leasing: '',
+      tenantDefault: '',
     },
   },
 })

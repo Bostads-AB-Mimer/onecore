@@ -8,6 +8,7 @@ import {
   createLease,
   getContact,
   getCreditInformation,
+  getInternalCreditInformation,
 } from '../../adapters/leasing-adapter'
 import {
   ParkingSpaceApplicationCategory,
@@ -94,8 +95,15 @@ export const createLeaseForExternalParkingSpace = async (
         } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`
       )
     } else {
-      creditCheck = true
-      log.push(`Intern kreditkontroll genomförd, resultat: ${creditCheck}`)
+      creditCheck = await getInternalCreditInformation(
+        applicantContact.contactCode
+      )
+
+      log.push(
+        `Intern kreditkontroll genomförd, resultat: ${
+          creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
+        }`
+      )
     }
 
     if (creditCheck) {
@@ -159,6 +167,7 @@ export const createLeaseForExternalParkingSpace = async (
       }
     }
   } catch (error: any) {
+    console.error('External parking space uncaught error', error)
     return {
       processStatus: ProcessStatus.failed,
       httpStatus: 500,

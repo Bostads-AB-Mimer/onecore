@@ -32,7 +32,7 @@ export const mockedParkingSpace: ParkingSpace = {
   vacantFrom: new Date(),
 }
 
-export const mockedApplicant: Contact = {
+export const mockedApplicantWithoutLeases: Contact = {
   contactCode: 'P12345',
   contactKey: 'ABC',
   address: {
@@ -49,6 +49,11 @@ export const mockedApplicant: Contact = {
   phoneNumbers: [],
   emailAddress: 'test@mimer.nu',
   isTenant: true,
+}
+
+export const mockedApplicantWithLeases: Contact = {
+  leaseIds: ['123-456-789/01', '789-456-123/02'],
+  ...mockedApplicantWithoutLeases,
 }
 
 export const successfulConsumerReport: ConsumerReport = {

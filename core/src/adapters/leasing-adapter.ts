@@ -1,6 +1,14 @@
 import axios from 'axios'
-import { ConsumerReport, Contact, Lease } from 'onecore-types'
+import {
+  ConsumerReport,
+  Contact,
+  Invoice,
+  InvoiceTransactionType,
+  Lease,
+} from 'onecore-types'
 import config from '../common/config'
+import dayjs from 'dayjs'
+import { serialize } from 'v8'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -76,6 +84,32 @@ const getCreditInformation = async (
   return informationResponse.data.data
 }
 
+const getInternalCreditInformation = async (
+  contactCode: string
+): Promise<boolean> => {
+  const result = await axios(
+    tenantsLeasesServiceUrl + '/contact/invoices/contactCode/' + contactCode
+  )
+
+  const invoices = result.data.data as Invoice[] | undefined
+  const sixMonthsMs = 1000 * 60 * 60 * 24 * 182
+
+  let hasDebtCollection = false
+
+  if (invoices) {
+    hasDebtCollection ||= invoices.some((invoice: Invoice) => {
+      return (
+        invoice.transactionType ===
+          (InvoiceTransactionType.Reminder ||
+            InvoiceTransactionType.DebtCollection) &&
+        -dayjs(invoice.expirationDate).diff() < sixMonthsMs
+      )
+    })
+  }
+
+  return !hasDebtCollection
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -83,4 +117,5 @@ export {
   getContact,
   createLease,
   getCreditInformation,
+  getInternalCreditInformation,
 }
