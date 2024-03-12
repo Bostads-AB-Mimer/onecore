@@ -1,19 +1,19 @@
 import {
   sendNotificationToContact,
   sendNotificationToRole,
-} from '../../adapters/communication-adapter'
-import { getParkingSpace } from '../../adapters/property-management-adapter'
-import { ProcessResult, ProcessStatus } from '../../common/types'
+} from '../../../adapters/communication-adapter'
+import { getParkingSpace } from '../../../adapters/property-management-adapter'
+import { ProcessResult, ProcessStatus } from '../../../common/types'
+import {
+  ParkingSpaceApplicationCategory,
+  parkingSpaceApplicationCategoryTranslation,
+} from 'onecore-types'
 import {
   createLease,
   getContact,
   getCreditInformation,
   getInternalCreditInformation,
-} from '../../adapters/leasing-adapter'
-import {
-  ParkingSpaceApplicationCategory,
-  parkingSpaceApplicationCategoryTranslation,
-} from 'onecore-types'
+} from '../../../adapters/leasing-adapter'
 
 //
 // PROCESS (Create lease for external parking space)
@@ -32,7 +32,7 @@ import {
 //
 export const createLeaseForExternalParkingSpace = async (
   parkingSpaceId: string,
-  contactId: string
+  contactId: string,
 ): Promise<ProcessResult> => {
   const log: string[] = [
     `Ansökan om extern bilplats`,
@@ -86,23 +86,23 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (!applicantContact.leaseIds || applicantContact.leaseIds.length == 0) {
       const creditInformation = await getCreditInformation(
-        applicantContact.nationalRegistrationNumber
+        applicantContact.nationalRegistrationNumber,
       )
       creditCheck = creditInformation.status === '1'
       log.push(
         `Extern kreditupplysning genomförd. Resultat: ${
           creditInformation.status_text
-        } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`
+        } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`,
       )
     } else {
       creditCheck = await getInternalCreditInformation(
-        applicantContact.contactCode
+        applicantContact.contactCode,
       )
 
       log.push(
         `Intern kreditkontroll genomförd, resultat: ${
           creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
-        }`
+        }`,
       )
     }
 
@@ -112,26 +112,26 @@ export const createLeaseForExternalParkingSpace = async (
         parkingSpace.parkingSpaceId,
         applicantContact.contactCode,
         new Date().toISOString(),
-        '001'
+        '001',
       )
 
       log.push(`Kontrakt skapat: ${lease.LeaseId}`)
 
       if (parkingSpace.rent.currentRent.vat) {
         log.push(
-          'OBS: Moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
+          'OBS: Moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.',
         )
       }
 
       await sendNotificationToContact(
         applicantContact,
         'Godkänd ansökan om extern bilplats',
-        `Din ansökan om bilplats har godkänts. Du kommer inom kort att få ett kontrakt att skriva under digitalt.\nKontraktet har nummer ${lease.LeaseId} om du behöver referera till det i kontakt med kundcenter.\n\nMed vänlig hälsning,\nBostads Mimer AB`
+        `Din ansökan om bilplats har godkänts. Du kommer inom kort att få ett kontrakt att skriva under digitalt.\nKontraktet har nummer ${lease.LeaseId} om du behöver referera till det i kontakt med kundcenter.\n\nMed vänlig hälsning,\nBostads Mimer AB`,
       )
       await sendNotificationToRole(
         'leasing',
         'Godkänd ansökan om extern bilplats',
-        log.join('\n')
+        log.join('\n'),
       )
 
       return {
@@ -144,18 +144,18 @@ export const createLeaseForExternalParkingSpace = async (
       }
     } else {
       log.push(
-        `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`
+        `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`,
       )
 
       await sendNotificationToContact(
         applicantContact,
         'Nekad ansökan om extern bilplats',
-        'Din ansökan om bilplats kunde tyvärr inte godkännas på grund av ouppfyllda kreditkrav.\n\nOm du har frågor kring din ansökan, kontakta Mimers kundcenter. Du hittar kontaktuppgifter på https://www.mimer.nu/kontakta-oss/.\n\nMed vänlig hälsning,\nBostads Mimer AB'
+        'Din ansökan om bilplats kunde tyvärr inte godkännas på grund av ouppfyllda kreditkrav.\n\nOm du har frågor kring din ansökan, kontakta Mimers kundcenter. Du hittar kontaktuppgifter på https://www.mimer.nu/kontakta-oss/.\n\nMed vänlig hälsning,\nBostads Mimer AB',
       )
       await sendNotificationToRole(
         'leasing',
         'Nekad ansökan om extern bilplats',
-        log.join('\n')
+        log.join('\n'),
       )
 
       return {

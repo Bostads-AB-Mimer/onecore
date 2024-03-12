@@ -24,9 +24,8 @@ const getLeasesForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Lease[]> => {
   const leasesResponse = await axios(
-    tenantsLeasesServiceUrl + '/leases/for/' + nationalRegistrationNumber
+    tenantsLeasesServiceUrl + '/leases/for/nationalRegistrationNumber/' + nationalRegistrationNumber
   )
-
   return leasesResponse.data.data
 }
 

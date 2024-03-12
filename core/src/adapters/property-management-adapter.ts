@@ -82,6 +82,9 @@ const saveMaterialChoice = async (
   })
 }
 
+//todo: refactor the subsequent requests to use same data source (soap api)
+//todo: getParkingSpace uses the mimer.nu api
+//todo: getPublishedParkingSpace uses the soap service
 const getParkingSpace = async (
   parkingSpaceId: string
 ): Promise<ParkingSpace | undefined> => {
@@ -97,6 +100,20 @@ const getParkingSpace = async (
   }
 }
 
+const getPublishedParkingSpace = async (
+  parkingSpaceId: string
+): Promise<ParkingSpace | undefined> => {
+  try {
+    const parkingSpaceResponse = await axios(
+      `${propertyManagementServiceUrl}/publishedParkingSpaces/${parkingSpaceId}`
+    )
+
+    return parkingSpaceResponse.data
+  } catch (error) {
+    return undefined
+  }
+}
+
 export {
   getRentalProperty,
   getRoomTypeWithMaterialOptions,
@@ -106,4 +123,5 @@ export {
   saveMaterialChoice,
   getRoomsWithMaterialChoices,
   getParkingSpace,
+  getPublishedParkingSpace
 }

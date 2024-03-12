@@ -4,10 +4,10 @@ import {
   ParkingSpace,
   ParkingSpaceApplicationCategory,
 } from 'onecore-types'
-import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
-import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import * as communcationAdapter from '../../../adapters/communication-adapter'
-import { ProcessStatus } from '../../../common/types'
+import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
+import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as communcationAdapter from '../../../../adapters/communication-adapter'
+import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
 import {
   mockedParkingSpace,
