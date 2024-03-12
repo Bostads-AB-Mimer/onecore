@@ -20,6 +20,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/easy-soap-request": "^4.1.4",
     "@types/jest": "^29.5.11",
     "@types/koa": "2.13.8",
     "@types/koa__cors": "^5.0.0",
@@ -45,6 +46,9 @@
     "@koa/router": "^12.0.1",
     "axios": "^1.6.5",
     "dotenv": "^16.3.2",
+    "easy-soap-request": "^5.6.1",
+    "fast-xml-parser": "^4.3.5",
+    "http-errors": "^2.0.0",
     "knex": "^2.5.1",
     "koa": "^2.15.0",
     "koa-body": "^6.0.1",

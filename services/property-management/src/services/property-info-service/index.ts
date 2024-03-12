@@ -21,6 +21,7 @@ import {
 } from './adapters/material-options-adapter'
 import { MaterialChoice, MaterialOptionGroup } from 'onecore-types'
 import { getParkingSpace } from './adapters/xpand-adapter'
+import { getPublishedParkingSpaceFromSoapService } from './adapters/xpand-soap-adapter'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -104,9 +105,15 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = responseData
   })
-
+  //todo: refactor the subsequent requests to use same data source (use soap service instead of mimer.nu api)
   router.get('(.*)/parkingspaces/:id', async (ctx) => {
     const responseData = await getParkingSpace(ctx.params.id)
+
+    ctx.body = responseData
+  })
+
+  router.get('(.*)/publishedParkingSpaces/:id', async (ctx) => {
+    const responseData = await getPublishedParkingSpaceFromSoapService(ctx.params.id)
 
     ctx.body = responseData
   })
