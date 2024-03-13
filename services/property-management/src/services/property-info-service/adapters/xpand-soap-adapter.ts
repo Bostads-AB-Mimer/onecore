@@ -85,7 +85,6 @@ const getPublishedParkingSpaceFromSoapService = async (
 
 
   } else if (parsedResponse.PublishedRentalObjects08352 === '') {
-    console.log('404')
     throw createHttpError(404, 'Parking space not found')
   }
 }
