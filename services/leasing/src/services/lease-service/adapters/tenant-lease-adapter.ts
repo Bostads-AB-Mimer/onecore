@@ -1,4 +1,4 @@
-import { Lease, Contact } from 'onecore-types'
+import { Lease, Contact, Listing, Applicant } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
@@ -338,6 +338,40 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
   )
 }
 
+const createListing = async (listingData: Listing): Promise<number> => {
+  const [listingId] = await db('Listings').insert({
+    Address: listingData.address,
+    FreeField1Caption: listingData.freeField1Caption,
+    FreeField1Code: listingData.freeField1Code,
+    FreeField3Caption: listingData.freeField3Caption,
+    FreeField3Code: listingData.freeField3Code,
+    MonthlyRent: listingData.monthlyRent,
+    ObjectTypeCaption: listingData.objectTypeCaption,
+    ObjectTypeCode: listingData.objectTypeCode,
+    RentalPropertyId: listingData.rentalPropertyId,
+    PublishedFrom: listingData.publishedFrom,
+    PublishedTo: listingData.publishedTo,
+    VacantFrom: listingData.vacantFrom,
+    Status: listingData.status,
+    WaitingListType: listingData.waitingListType,
+  }, 'id'); // Assuming 'id' is the auto-increment primary key of the Listings table
+  
+  return listingId;
+}
+
+// Function to insert an application into the database
+const createApplication = async (applicationData: any): Promise<number> => {
+  const [applicationId] = await db('Applications').insert({
+    ListingId: applicationData.listingId,
+    ApplicantName: applicationData.applicantName,
+    ApplicantContactCode: applicationData.applicantContactCode,
+    ApplicationDate: applicationData.applicationDate,
+    ApplicationType: applicationData.applicationType,
+  }, 'id'); // Assuming 'id' is the auto-increment primary key of the Applications table
+  
+  return applicationId;
+}
+
 export {
   getLease,
   getLeases,
@@ -346,4 +380,6 @@ export {
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   isLeaseActive,
+  createListing,
+  createApplication,
 }
