@@ -1,5 +1,69 @@
 # Changelog
 
+## [1.7.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.6.0...v1.7.0) (2024-03-12)
+
+
+### Features
+
+* force release ([2af60c9](https://github.com/Bostads-AB-Mimer/onecore-types/commit/2af60c9fb5bf357ac586255f7a403112c6697945))
+
+## [1.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.3...v1.6.0) (2024-03-04)
+
+
+### Features
+
+* Reworked distribution build with tsup ([629a989](https://github.com/Bostads-AB-Mimer/onecore-types/commit/629a9896d801023fa4719678f7ccc2bf0dc6b7d6))
+
+## [1.5.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.2...v1.5.3) (2024-03-01)
+
+
+### Bug Fixes
+
+* convert to esm ([9ff7778](https://github.com/Bostads-AB-Mimer/onecore-types/commit/9ff77782f7472810a1e31aa01ed7124382ca1238))
+
+## [1.5.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.1...v1.5.2) (2024-03-01)
+
+
+### Bug Fixes
+
+* Changes tsconfig moduleResolution ([b6c8b37](https://github.com/Bostads-AB-Mimer/onecore-types/commit/b6c8b3705b563c085760fe762742e110e500d1cf))
+
+## [1.5.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.5.0...v1.5.1) (2024-02-29)
+
+
+### Bug Fixes
+
+* Updates npmignore and refactors types ([c081c40](https://github.com/Bostads-AB-Mimer/onecore-types/commit/c081c401948eaaee01f81c0b134023d8fb2b3ca6))
+
+## [1.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.4.0...v1.5.0) (2024-02-28)
+
+
+### Features
+
+* 1141 external parking spaces ([ed8b868](https://github.com/Bostads-AB-Mimer/onecore-types/commit/ed8b8689ea08f3db9d9847701d5f65f3c7eb415c))
+* 1141 external parking spaces ([3c010d8](https://github.com/Bostads-AB-Mimer/onecore-types/commit/3c010d820c6bc13e17c49ef900b793d937ec3120))
+
+## [1.4.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.3.1...v1.4.0) (2024-02-28)
+
+
+### Features
+
+* 1141 external parking spaces ([3c010d8](https://github.com/Bostads-AB-Mimer/onecore-types/commit/3c010d820c6bc13e17c49ef900b793d937ec3120))
+
+## [1.3.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.3.0...v1.3.1) (2024-02-28)
+
+
+### Features
+
+* new types for parking spaces process ([435873e](https://github.com/Bostads-AB-Mimer/onecore-types/commit/435873ec671effb53d5f769c2d9e0f7a5e89bd87))
+
+## [1.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.2.0...v1.3.0) (2024-02-27)
+
+
+### Features
+
+* 1202 create types for invoices ([#21](https://github.com/Bostads-AB-Mimer/onecore-types/issues/21)) ([d938d1d](https://github.com/Bostads-AB-Mimer/onecore-types/commit/d938d1d2cf458dab077505d09585ab5076974920))
+
 ## [1.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.1.0...v1.2.0) (2024-02-14)
 
 
