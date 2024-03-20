@@ -1,6 +1,7 @@
 import {
   InvoiceTransactionType,
   LeaseStatus,
+  ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
@@ -210,7 +211,7 @@ interface Listing {
   publishedFrom: Date;
   publishedTo: Date;
   vacantFrom: Date;
-  status: string;
+  status: ListingStatus;
   waitingListType?: string | undefined;
 }
 
@@ -221,7 +222,7 @@ interface Applicant {
   applicationDate: Date;
   applicationType?: string | undefined;
   rentalObjectCode?: string | undefined;
-  status: string;
+  status: ListingStatus;
   listingId: number;
 }
 
