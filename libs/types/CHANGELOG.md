@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.7.0...v1.8.0) (2024-03-20)
+
+
+### Features
+
+* 1268 validate that applicant belongs to waiting list ([#34](https://github.com/Bostads-AB-Mimer/onecore-types/issues/34)) ([fe7593a](https://github.com/Bostads-AB-Mimer/onecore-types/commit/fe7593a295974a368d82860630e5c5c508eb4652))
+
 ## [1.7.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.6.0...v1.7.0) (2024-03-12)
 
 
