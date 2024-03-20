@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.8.0...v1.8.1) (2024-03-20)
+
+
+### Bug Fixes
+
+* remove node types from tsconfig.json to make build pass ([8802197](https://github.com/Bostads-AB-Mimer/onecore-types/commit/8802197dde3ba0e35d21633bb6a4f37b36a06a59))
+
 ## [1.8.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.7.0...v1.8.0) (2024-03-20)
 
 
