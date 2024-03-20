@@ -209,6 +209,8 @@ interface Applicant {
   contactCode: string;
   applicationDate: Date;
   applicationType?: string | undefined;
+  rentalObjectCode?: string | undefined;
+  status: string;
   listingId: number;
 }
 
