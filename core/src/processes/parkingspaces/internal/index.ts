@@ -1,13 +1,16 @@
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import {
+  addApplicantToWaitingList,
   getContact,
   getLeasesForPnr,
+  getWaitingList,
 } from '../../../adapters/leasing-adapter'
 import {
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
 } from 'onecore-types'
+import { HttpStatusCode } from 'axios'
 
 //
 // PROCESS part 1 (Create note of interest for internal parking space)
@@ -74,25 +77,84 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       }
     }
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForPnr(applicantContact.nationalRegistrationNumber)
-    if(leases.length < 1){
+    const leases = await getLeasesForPnr(
+      applicantContact.nationalRegistrationNumber
+    )
+    if (leases.length < 1) {
       return {
         processStatus: ProcessStatus.failed,
         httpStatus: 403,
         response: {
-          message: "Applicant is not a tenant",
+          message: 'Applicant is not a tenant',
         },
       }
     }
 
-    //todo step 3.b Check if applicant is in queue for parking spaces, if not add to queue
+    //step 3.b Check if applicant is in queue for parking spaces, if not add to queue
+    const waitingList = await getWaitingList(
+      applicantContact.nationalRegistrationNumber
+    )
 
+    let shouldAddApplicantToWaitingList = false
+    let isInWaitingListForInternalParking = false
+    let isInWaitingListForExternalParking = false
+    if (waitingList.length > 0) {
+      isInWaitingListForInternalParking = waitingList.some(
+        (o) => o.waitingListTypeCaption === 'Bilplats (intern)'
+      )
+      isInWaitingListForExternalParking = waitingList.some(
+        (o) => o.waitingListTypeCaption === 'Bilplats (extern)'
+      )
+      if (
+        !isInWaitingListForInternalParking ||
+        !isInWaitingListForExternalParking
+      ) {
+        shouldAddApplicantToWaitingList = true
+      }
+    } else {
+      shouldAddApplicantToWaitingList = true
+    }
+    //xpand handles internal and external waiting list synonymously
+    //a user should therefore always be placed in both waiting list
+    if (shouldAddApplicantToWaitingList) {
+      if (!isInWaitingListForInternalParking) {
+        log.push(`Sökande saknas i kö för intern parkeringsplats.`)
+        const result = await addApplicantToWaitingList(
+          applicantContact.nationalRegistrationNumber,
+          applicantContact.contactCode,
+          'Bilplats (intern)'
+        )
+        if (result.status == HttpStatusCode.Created) {
+          log.push(`Sökande placerad i kö för intern parkeringsplats`)
+        } else {
+          throw Error(result.statusText)
+        }
+      }
+      if (!isInWaitingListForExternalParking) {
+        log.push(`Sökande saknas i kö för extern parkeringsplats.`)
+        const result = await addApplicantToWaitingList(
+          applicantContact.nationalRegistrationNumber,
+          applicantContact.contactCode,
+          'Bilplats (extern)'
+        )
+        if (result.status == HttpStatusCode.Created) {
+          log.push(`Sökande placerad i kö för extern parkeringsplats`)
+        } else {
+          throw Error(result.statusText)
+        }
+      }
+    }
+
+    log.push(
+      `Validering genomförd. Sökande godkänd för att anmäla intresse på bilplats ${parkingSpaceId}`
+    )
+    console.log(log) //log output up to this point for historic reasons and for test cases
     //todo: validation is now done, continue to pass application data to onecore-leasing
     return {
       processStatus: ProcessStatus.inProgress,
       httpStatus: 500,
       response: {
-        message: "implement passing application data to onecore-leasing",
+        message: 'implement passing application data to onecore-leasing',
       },
     }
   } catch (error: any) {
@@ -116,14 +178,13 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 // 5. If applicant accepts offer, contract is created and sent via email. the other applicants are notified that the parking space has been rented.
 // 6. If offer is declined, the user is removed from list of applicants, process starts over from step 6
 // 7. If no applicants are found, the ad is published as an external parking space
-export const createLeaseForInternalParkingSpace = async (
-): Promise<ProcessResult> => {
-
-  return {
-    processStatus: ProcessStatus.inProgress,
-    httpStatus: 500,
-    response: {
-      message: "todo",
-    },
+export const createLeaseForInternalParkingSpace =
+  async (): Promise<ProcessResult> => {
+    return {
+      processStatus: ProcessStatus.inProgress,
+      httpStatus: 500,
+      response: {
+        message: 'todo',
+      },
+    }
   }
-}
