@@ -10,6 +10,8 @@ exports.up = function(knex) {
       table.string('ContactCode').notNullable();
       table.dateTime('ApplicationDate').notNullable();
       table.string('ApplicationType');
+      table.string('RentalObjectCode');
+      table.integer('Status').notNullable();
       table.integer('ListingId').unsigned();
       table.foreign('ListingId').references('listing.Id');
     });

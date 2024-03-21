@@ -20,7 +20,7 @@ exports.up = function(knex) {
       table.dateTime('PublishedFrom').notNullable();
       table.dateTime('PublishedTo').notNullable();
       table.dateTime('VacantFrom').notNullable();
-      table.string('Status').notNullable(); // Consider using an ENUM for predefined status values
+      table.integer('Status').notNullable();
       table.string('WaitingListType');
     });
   };

@@ -14,35 +14,18 @@ import {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   createListing,
-  createApplication
+  createApplication,
+  removeApplicationByListingId
 } from './adapters/tenant-lease-adapter'
 import { createLease } from './adapters/xpand-soap-adapter'
 import { getInvoicesByContactCode, getUnpaidInvoicesByContactCode } from './adapters/invoices-adapter'
+import { Applicant, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
   contactCode: string
   fromDate: string
   companyCode: string
-}
-
-interface CreateListingRequest {
-  address1: string;
-  freeTable1Caption: string;
-  freeTable1Code: string;
-  freeTable3Caption: string;
-  freeTable3Code: number;
-  monthRent: number;
-  objectTypeCaption: string;
-  objectTypeCode: string;
-  parkingNumber: string;
-  publishedFrom: string;
-  publishedTo: string;
-  rentalObjectCode: string;
-  rentalObjectTypeCaption: string;
-  rentalObjectTypeCode: string;
-  vacantFrom: string;
-  waitingListType: string;
 }
 
 export const routes = (router: KoaRouter) => {
@@ -189,26 +172,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/listings', async (ctx) => {
     try {
-      const request = <CreateListingRequest>ctx.request.body;
-      
-      const listingId = await createListing({
-        address: request.address1,
-        freeField1Caption: request.freeTable1Caption,
-        freeField1Code: request.freeTable1Code,
-        freeField3Caption: request.freeTable3Caption,
-        freeField3Code: request.freeTable3Code,
-        monthlyRent: request.monthRent,
-        objectTypeCaption: request.objectTypeCaption,
-        objectTypeCode: request.objectTypeCode,
-        rentalPropertyId: request.parkingNumber, 
-        rentalObjectTypeCaption: request.rentalObjectTypeCaption,
-        rentalObjectTypeCode: request.rentalObjectTypeCode,
-        publishedFrom: new Date(request.publishedFrom),
-        publishedTo: new Date(request.publishedTo),
-        vacantFrom: new Date(request.vacantFrom),
-        status: "active",
-        waitingListType: request.waitingListType,
-      });
+      const listingData = <Listing>ctx.request.body;
+      const listingId = await createListing(listingData);
 
       ctx.status = 201; // HTTP status code for Created
       ctx.body = { listingId };
@@ -230,7 +195,8 @@ export const routes = (router: KoaRouter) => {
     try {
       // Validate applicationData here
 
-      const applicationId = await createApplication(ctx.request.body);
+      const applicantData = <Applicant>ctx.request.body;
+      const applicationId = await createApplication(applicantData);
 
       ctx.status = 201; // HTTP status code for Created
       ctx.body = { applicationId };
@@ -244,5 +210,24 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.delete('/listings/application/:listingId', async (ctx) => {
+    try {
+      const { listingId } = ctx.params;
+  
+      await removeApplicationByListingId(listingId);
+      ctx.status = 200; // Successfully deleted
+      ctx.body = { message: 'Application removed successfully.' };
+    } catch (error) {
+      ctx.status = 500; // Internal Server Error
+  
+      if (error instanceof Error) {
+        ctx.body = { error: error.message };
+      } else {
+        ctx.body = { error: 'An unexpected error occurred.' };
+      }
+    }
+  });
+  
 
 }
