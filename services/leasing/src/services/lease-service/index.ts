@@ -13,6 +13,8 @@ import {
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
+  createListing,
+  createApplication
 } from './adapters/tenant-lease-adapter'
 import {
   addApplicantToToWaitingList,
@@ -23,6 +25,7 @@ import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
 } from './adapters/invoices-adapter'
+import { Applicant, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
@@ -177,6 +180,50 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           error: error.message,
         }
+      }
+    }
+  })
+
+  /**
+   * Creates a new listing.
+   */
+  router.post('(.*)/listings', async (ctx) => {
+    try {
+      const listingData = <Listing>ctx.request.body;
+      const listingId = await createListing(listingData);
+
+      ctx.status = 201; // HTTP status code for Created
+      ctx.body = { listingId };
+    } catch (error) {
+      ctx.status = 500; // Internal Server Error
+
+      if (error instanceof Error) {
+        ctx.body = { error: error.message };
+      } else {
+        ctx.body = { error: 'An unexpected error occurred.' };
+      }
+    }
+  })
+
+  /**
+   * Endpoint to apply for a listing.
+   */
+  router.post('(.*)/listings/apply', async (ctx) => {
+    try {
+      // Validate applicationData here
+
+      const applicantData = <Applicant>ctx.request.body;
+      const applicationId = await createApplication(applicantData);
+
+      ctx.status = 201; // HTTP status code for Created
+      ctx.body = { applicationId };
+    } catch (error) {
+      ctx.status = 500; // Internal Server Error
+
+      if (error instanceof Error) {
+        ctx.body = { error: error.message };
+      } else {
+        ctx.body = { error: 'An unexpected error occurred.' };
       }
     }
   })

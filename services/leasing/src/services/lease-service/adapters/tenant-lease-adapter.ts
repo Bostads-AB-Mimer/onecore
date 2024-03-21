@@ -1,4 +1,4 @@
-import { Lease, Contact } from 'onecore-types'
+import { Lease, Contact, Listing, Applicant } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
@@ -338,6 +338,38 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
   )
 }
 
+const createListing = async (listingData: Listing) => {
+  await db('Listing').insert({
+    Address: listingData.address,
+    FreeField1Caption: listingData.freeField1Caption,
+    FreeField1Code: listingData.freeField1Code,
+    FreeField3Caption: listingData.freeField3Caption,
+    FreeField3Code: listingData.freeField3Code,
+    MonthlyRent: listingData.monthlyRent,
+    ObjectTypeCaption: listingData.objectTypeCaption,
+    ObjectTypeCode: listingData.objectTypeCode,
+    RentalPropertyId: listingData.rentalPropertyId,
+    PublishedFrom: listingData.publishedFrom,
+    PublishedTo: listingData.publishedTo,
+    VacantFrom: listingData.vacantFrom,
+    Status: listingData.status,
+    WaitingListType: listingData.waitingListType,
+  });
+}
+
+const createApplication = async (applicationData: Applicant) => {
+  console.log(applicationData);
+  await db('applicant').insert({
+    Name: applicationData.name,
+    ContactCode: applicationData.contactCode,
+    ApplicationDate: applicationData.applicationDate,
+    ApplicationType: applicationData.applicationType,
+    RentalObjectCode: applicationData.rentalObjectCode,
+    Status: applicationData.status,
+    ListingId: applicationData.listingId,
+  });
+}
+
 export {
   getLease,
   getLeases,
@@ -346,4 +378,6 @@ export {
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   isLeaseActive,
+  createListing,
+  createApplication,
 }
