@@ -370,12 +370,6 @@ const createApplication = async (applicationData: Applicant) => {
   });
 }
 
-const removeApplicationByListingId = async (listingId: string) => {
-  await db('applicant')
-    .where('ListingId', listingId)
-    .delete();
-}
-
 export {
   getLease,
   getLeases,
@@ -386,5 +380,4 @@ export {
   isLeaseActive,
   createListing,
   createApplication,
-  removeApplicationByListingId,
 }

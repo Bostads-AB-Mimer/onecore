@@ -211,23 +211,4 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.delete('/listings/application/:listingId', async (ctx) => {
-    try {
-      const { listingId } = ctx.params;
-  
-      await removeApplicationByListingId(listingId);
-      ctx.status = 200; // Successfully deleted
-      ctx.body = { message: 'Application removed successfully.' };
-    } catch (error) {
-      ctx.status = 500; // Internal Server Error
-  
-      if (error instanceof Error) {
-        ctx.body = { error: error.message };
-      } else {
-        ctx.body = { error: 'An unexpected error occurred.' };
-      }
-    }
-  });
-  
-
 }
