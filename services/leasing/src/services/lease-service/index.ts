@@ -14,8 +14,7 @@ import {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   createListing,
-  createApplication,
-  removeApplicationByListingId
+  createApplication
 } from './adapters/tenant-lease-adapter'
 import { createLease } from './adapters/xpand-soap-adapter'
 import { getInvoicesByContactCode, getUnpaidInvoicesByContactCode } from './adapters/invoices-adapter'
