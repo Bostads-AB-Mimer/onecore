@@ -56,6 +56,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "mssql": "^9.3.2",
+    "onecore-types": "^1.8.1",
     "personnummer": "^3.2.1",
     "randexp": "^0.5.3",
     "strong-soap": "^4.0.0",
