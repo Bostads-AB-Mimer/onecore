@@ -339,7 +339,7 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
 }
 
 const createListing = async (listingData: Listing) => {
-  await db('Listings').insert({
+  await db('Listing').insert({
     Address: listingData.address,
     FreeField1Caption: listingData.freeField1Caption,
     FreeField1Code: listingData.freeField1Code,
