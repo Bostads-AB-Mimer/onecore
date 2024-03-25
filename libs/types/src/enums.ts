@@ -45,10 +45,17 @@ enum PaymentStatus {
   Unpaid = 2,
 }
 
+enum ListingStatus {
+  Active = 1,
+  Assigned = 2,
+  Deleted = 3,
+}
+
 export {
   LeaseStatus,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,
   InvoiceTransactionType,
+  ListingStatus
 }

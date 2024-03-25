@@ -1,6 +1,7 @@
 import {
   InvoiceTransactionType,
   LeaseStatus,
+  ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
@@ -194,6 +195,37 @@ interface WaitingList {
   waitingListTypeCaption: string
 }
 
+interface Listing {
+  id: number;
+  address: string;
+  monthlyRent: number;
+  freeField1Caption?: string | undefined;
+  freeField1Code?: string | undefined;
+  freeField3Caption?: string | undefined;
+  freeField3Code?: number | undefined;
+  objectTypeCaption?: string | undefined;
+  objectTypeCode?: string | undefined;
+  rentalPropertyId?: string | undefined;
+  rentalObjectTypeCaption?: string | undefined;
+  rentalObjectTypeCode?: string | undefined;
+  publishedFrom: Date;
+  publishedTo: Date;
+  vacantFrom: Date;
+  status: ListingStatus;
+  waitingListType?: string | undefined;
+}
+
+interface Applicant {
+  id: number;
+  name: string;
+  contactCode: string;
+  applicationDate: Date;
+  applicationType?: string | undefined;
+  rentalObjectCode?: string | undefined;
+  status: ListingStatus;
+  listingId: number;
+}
+
 /*interface UnpaidInvoices {
   unpaidInvoices: UnpaidInvoice[]
   numberOfUnpaidInvoices: number
@@ -228,4 +260,6 @@ export type {
   ParkingSpace,
   Email,
   WaitingList,
+  Listing,
+  Applicant,
 }
