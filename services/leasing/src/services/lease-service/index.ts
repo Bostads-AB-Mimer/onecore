@@ -14,7 +14,9 @@ import {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   createListing,
-  createApplication
+  createApplication,
+  getAllListingsWithApplicants,
+  createListingAndApplicant
 } from './adapters/tenant-lease-adapter'
 import {
   addApplicantToToWaitingList,

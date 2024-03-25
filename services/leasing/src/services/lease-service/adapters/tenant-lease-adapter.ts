@@ -363,7 +363,7 @@ const createListing = async (listingData: Listing) => {
  * @param {Listing} listingData - The listing data to check.
  * @returns {Promise<boolean>} - True if exists, false otherwise.
  */
-const listingExists = async (listingData: Listing): Promise<boolean> => {
+const doesListingExists = async (listingData: Listing): Promise<boolean> => {
   // Guess
   const { address, objectTypeCode, rentalPropertyId } = listingData;
 
@@ -373,7 +373,7 @@ const listingExists = async (listingData: Listing): Promise<boolean> => {
       ObjectTypeCode: objectTypeCode,
       RentalPropertyId: rentalPropertyId,
     })
-    .first(); // Use .first() to get just one record if it exists
+    .first();
 
   return !!existingListing; // Convert to boolean: true if exists, false otherwise
 };
@@ -390,6 +390,65 @@ const createApplication = async (applicationData: Applicant) => {
     ListingId: applicationData.listingId,
   });
 }
+
+const createListingAndApplicant = async (listingData: Listing, applicationData: Applicant) => {
+  // Start a transaction
+  const trx = await db.transaction();
+
+  try {
+    
+    // Check if the listing already exists
+    const listingExists = await doesListingExists(listingData);
+    
+    let listingId;
+
+    if (!listingExists) {
+      // Insert the new listing and get its ID
+      [listingId] = await trx('Listing').insert({
+        Address: listingData.address,
+        FreeField1Caption: listingData.freeField1Caption,
+        FreeField1Code: listingData.freeField1Code,
+        FreeField3Caption: listingData.freeField3Caption,
+        FreeField3Code: listingData.freeField3Code,
+        MonthlyRent: listingData.monthlyRent,
+        ObjectTypeCaption: listingData.objectTypeCaption,
+        ObjectTypeCode: listingData.objectTypeCode,
+        RentalPropertyId: listingData.rentalPropertyId,
+        PublishedFrom: listingData.publishedFrom,
+        PublishedTo: listingData.publishedTo,
+        VacantFrom: listingData.vacantFrom,
+        Status: listingData.status,
+        WaitingListType: listingData.waitingListType,
+      }).returning('id');
+    } else {
+      throw new Error('Listing already exists.');
+    }
+
+    // Use the listing ID for the application
+    applicationData.listingId = listingId;
+
+    // Insert the applicant
+    await trx('Applicant').insert({
+      Name: applicationData.name,
+      ContactCode: applicationData.contactCode,
+      ApplicationDate: applicationData.applicationDate,
+      ApplicationType: applicationData.applicationType,
+      RentalObjectCode: applicationData.rentalObjectCode,
+      Status: applicationData.status,
+      ListingId: applicationData.listingId,
+    });
+
+    // Commit the transaction
+    await trx.commit();
+
+    return { listingId, message: 'Listing and application created successfully.' };
+  } catch (error) {
+    // Rollback the transaction in case of an error
+    await trx.rollback();
+    throw error; // Re-throw the error to be handled by the caller
+  }
+};
+
 
 const getAllListingsWithApplicants = async () => {
   return db('Listing')
@@ -412,5 +471,7 @@ export {
   isLeaseActive,
   createListing,
   createApplication,
+  doesListingExists,
+  createListingAndApplicant,
   getAllListingsWithApplicants,
 }
