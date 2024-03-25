@@ -357,6 +357,27 @@ const createListing = async (listingData: Listing) => {
   });
 }
 
+/**
+ * Checks if a listing already exists based on unique criteria.
+ * 
+ * @param {Listing} listingData - The listing data to check.
+ * @returns {Promise<boolean>} - True if exists, false otherwise.
+ */
+const listingExists = async (listingData: Listing): Promise<boolean> => {
+  // Guess
+  const { address, objectTypeCode, rentalPropertyId } = listingData;
+
+  const existingListing = await db('Listing')
+    .where({
+      Address: address,
+      ObjectTypeCode: objectTypeCode,
+      RentalPropertyId: rentalPropertyId,
+    })
+    .first(); // Use .first() to get just one record if it exists
+
+  return !!existingListing; // Convert to boolean: true if exists, false otherwise
+};
+
 const createApplication = async (applicationData: Applicant) => {
   console.log(applicationData);
   await db('applicant').insert({
@@ -370,6 +391,17 @@ const createApplication = async (applicationData: Applicant) => {
   });
 }
 
+const getAllListingsWithApplicants = async () => {
+  return db('Listing')
+    .leftJoin('Applicant', 'Listing.id', 'Applicant.listingId')
+    .select(
+      'Listing.*',
+      db.raw('JSON_AGG(Applicant.*) as applicants') // Aggregate all applicants into a JSON array under each listing
+    )
+    .groupBy('Listing.id');
+};
+
+
 export {
   getLease,
   getLeases,
@@ -380,4 +412,5 @@ export {
   isLeaseActive,
   createListing,
   createApplication,
+  getAllListingsWithApplicants,
 }

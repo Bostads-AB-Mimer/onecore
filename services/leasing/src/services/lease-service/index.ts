@@ -228,6 +228,19 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/listings-with-applicants', async (ctx) => {
+    try {
+      const listingsWithApplicants = await getAllListingsWithApplicants();
+      ctx.body = listingsWithApplicants;
+      ctx.status = 200;
+    } catch (error) {
+      console.error('Error fetching listings with applicants:', error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching listings with applicants.' };
+    }
+  });
+  
+
   /**
    * Gets the waiting lists of a person.
    */
