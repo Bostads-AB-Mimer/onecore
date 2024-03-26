@@ -341,14 +341,15 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
 const createListing = async (listingData: Listing) => {
   await db('Listing').insert({
     Address: listingData.address,
-    FreeField1Caption: listingData.freeField1Caption,
-    FreeField1Code: listingData.freeField1Code,
-    FreeField3Caption: listingData.freeField3Caption,
-    FreeField3Code: listingData.freeField3Code,
+    DistrictCaption: listingData.districtCaption,
+    DistrictCode: listingData.districtCode,
+    BlockCaption: listingData.blockCaption,
+    BlockCode: listingData.blockCode,
     MonthlyRent: listingData.monthlyRent,
     ObjectTypeCaption: listingData.objectTypeCaption,
     ObjectTypeCode: listingData.objectTypeCode,
-    RentalPropertyId: listingData.rentalPropertyId,
+    RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
+    RentalObjectTypeCode: listingData.rentalObjectTypeCode,
     PublishedFrom: listingData.publishedFrom,
     PublishedTo: listingData.publishedTo,
     VacantFrom: listingData.vacantFrom,
@@ -364,14 +365,14 @@ const createListing = async (listingData: Listing) => {
  * @returns {Promise<boolean>} - True if exists, false otherwise.
  */
 const doesListingExists = async (listingData: Listing): Promise<boolean> => {
-  // Guess
-  const { address, objectTypeCode, rentalPropertyId } = listingData;
+
+  const { address, districtCode, blockCode } = listingData;
 
   const existingListing = await db('Listing')
     .where({
       Address: address,
-      ObjectTypeCode: objectTypeCode,
-      RentalPropertyId: rentalPropertyId,
+      DistrictCode: districtCode,
+      BlockCode: blockCode
     })
     .first();
 
@@ -391,74 +392,33 @@ const createApplication = async (applicationData: Applicant) => {
   });
 }
 
-const createListingAndApplicant = async (listingData: Listing, applicationData: Applicant) => {
-  // Start a transaction
-  const trx = await db.transaction();
-
-  try {
-    
-    // Check if the listing already exists
-    const listingExists = await doesListingExists(listingData);
-    
-    let listingId;
-
-    if (!listingExists) {
-      // Insert the new listing and get its ID
-      [listingId] = await trx('Listing').insert({
-        Address: listingData.address,
-        FreeField1Caption: listingData.freeField1Caption,
-        FreeField1Code: listingData.freeField1Code,
-        FreeField3Caption: listingData.freeField3Caption,
-        FreeField3Code: listingData.freeField3Code,
-        MonthlyRent: listingData.monthlyRent,
-        ObjectTypeCaption: listingData.objectTypeCaption,
-        ObjectTypeCode: listingData.objectTypeCode,
-        RentalPropertyId: listingData.rentalPropertyId,
-        PublishedFrom: listingData.publishedFrom,
-        PublishedTo: listingData.publishedTo,
-        VacantFrom: listingData.vacantFrom,
-        Status: listingData.status,
-        WaitingListType: listingData.waitingListType,
-      }).returning('id');
-    } else {
-      throw new Error('Listing already exists.');
-    }
-
-    // Use the listing ID for the application
-    applicationData.listingId = listingId;
-
-    // Insert the applicant
-    await trx('Applicant').insert({
-      Name: applicationData.name,
-      ContactCode: applicationData.contactCode,
-      ApplicationDate: applicationData.applicationDate,
-      ApplicationType: applicationData.applicationType,
-      RentalObjectCode: applicationData.rentalObjectCode,
-      Status: applicationData.status,
-      ListingId: applicationData.listingId,
-    });
-
-    // Commit the transaction
-    await trx.commit();
-
-    return { listingId, message: 'Listing and application created successfully.' };
-  } catch (error) {
-    // Rollback the transaction in case of an error
-    await trx.rollback();
-    throw error; // Re-throw the error to be handled by the caller
-  }
-};
-
-
 const getAllListingsWithApplicants = async () => {
-  return db('Listing')
-    .leftJoin('Applicant', 'Listing.id', 'Applicant.listingId')
-    .select(
-      'Listing.*',
-      db.raw('JSON_AGG(Applicant.*) as applicants') // Aggregate all applicants into a JSON array under each listing
-    )
-    .groupBy('Listing.id');
+  const listings = await db('Listing').select('*');
+
+  for (let listing of listings) {
+    const applicants = await db('Applicant')
+      .where('listingId', listing.Id)
+      .select('*');
+
+    listing.applicants = applicants;
+  }
+
+  return listings;
 };
+
+const getApplicantsByContactCode = async (contactCode: string) => {
+  return db('Applicant')
+    .where({ ContactCode: contactCode });
+}
+
+const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
+  return db('Applicant')
+    .where({
+      ContactCode: contactCode,
+      RentalObjectCode: rentalObjectCode
+    })
+    .first();
+}
 
 
 export {
@@ -472,6 +432,7 @@ export {
   createListing,
   createApplication,
   doesListingExists,
-  createListingAndApplicant,
   getAllListingsWithApplicants,
+  getApplicantsByContactCode,
+  getApplicantsByContactCodeAndRentalObjectCode
 }
