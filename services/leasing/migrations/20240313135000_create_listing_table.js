@@ -6,6 +6,7 @@
 exports.up = function(knex) {
     return knex.schema.createTable('listing', (table) => {
       table.increments('Id').primary();
+      table.string('RentalObjectCode').unique().notNullable();
       table.string('Address').notNullable();
       table.decimal('MonthlyRent').notNullable();
       table.string('DistrictCaption'); // Updated to match the new interface

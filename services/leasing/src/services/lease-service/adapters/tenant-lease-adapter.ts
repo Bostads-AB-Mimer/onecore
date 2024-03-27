@@ -340,6 +340,7 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
 
 const createListing = async (listingData: Listing) => {
   await db('Listing').insert({
+    RentalObjectCode: listingData.rentalObjectCode,
     Address: listingData.address,
     DistrictCaption: listingData.districtCaption,
     DistrictCode: listingData.districtCode,
@@ -361,22 +362,17 @@ const createListing = async (listingData: Listing) => {
 /**
  * Checks if a listing already exists based on unique criteria.
  * 
- * @param {Listing} listingData - The listing data to check.
- * @returns {Promise<boolean>} - True if exists, false otherwise.
+ * @param {string} rentalObjectCode - The rental object code of the listing (originally from xpand)
+ * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
  */
-const doesListingExists = async (listingData: Listing): Promise<boolean> => {
-
-  const { address, districtCode, blockCode } = listingData;
-
+const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<Listing> => {
   const existingListing = await db('Listing')
     .where({
-      Address: address,
-      DistrictCode: districtCode,
-      BlockCode: blockCode
+      RentalObjectCode: rentalObjectCode
     })
     .first();
 
-  return !!existingListing; // Convert to boolean: true if exists, false otherwise
+  return existingListing;
 };
 
 const createApplication = async (applicationData: Applicant) => {
@@ -386,7 +382,6 @@ const createApplication = async (applicationData: Applicant) => {
     ContactCode: applicationData.contactCode,
     ApplicationDate: applicationData.applicationDate,
     ApplicationType: applicationData.applicationType,
-    RentalObjectCode: applicationData.rentalObjectCode,
     Status: applicationData.status,
     ListingId: applicationData.listingId,
   });
@@ -431,7 +426,7 @@ export {
   isLeaseActive,
   createListing,
   createApplication,
-  doesListingExists,
+  getListingByRentalObjectCode,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode

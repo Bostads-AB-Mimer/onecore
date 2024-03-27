@@ -18,6 +18,7 @@ import {
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
+  getListingByRentalObjectCode,
 } from './adapters/tenant-lease-adapter'
 import {
   addApplicantToToWaitingList,
@@ -228,6 +229,19 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.get('/listings/:rentalObjectCode', async (ctx) => {
+    try {
+      const rentaLObjectCode = ctx.params.rentalObjectCode;
+      const listing = await getListingByRentalObjectCode(rentaLObjectCode);
+      ctx.body = listing;
+      ctx.status = 200;
+    } catch (error) {
+      console.error('Error fetching listing:', ctx.params.rentalObjectCode , error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching listing with the provided rentalObjectCode: ' + ctx.params.rentalObjectCode };
+    }
+  });
 
   router.get('/listings-with-applicants', async (ctx) => {
     try {
