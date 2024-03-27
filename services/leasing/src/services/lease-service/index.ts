@@ -14,7 +14,11 @@ import {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   createListing,
-  createApplication
+  createApplication,
+  getAllListingsWithApplicants,
+  getApplicantsByContactCode,
+  getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
+  getListingByRentalObjectCode,
 } from './adapters/tenant-lease-adapter'
 import {
   addApplicantToToWaitingList,
@@ -210,8 +214,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/listings/apply', async (ctx) => {
     try {
-      // Validate applicationData here
-
       const applicantData = <Applicant>ctx.request.body;
       const applicationId = await createApplication(applicantData);
 
@@ -227,6 +229,77 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.get('/listings/:rentalObjectCode', async (ctx) => {
+    try {
+      const rentaLObjectCode = ctx.params.rentalObjectCode;
+      const listing = await getListingByRentalObjectCode(rentaLObjectCode);
+      ctx.body = listing;
+      ctx.status = 200;
+    } catch (error) {
+      console.error('Error fetching listing:', ctx.params.rentalObjectCode , error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching listing with the provided rentalObjectCode: ' + ctx.params.rentalObjectCode };
+    }
+  });
+
+  router.get('/listings-with-applicants', async (ctx) => {
+    try {
+      const listingsWithApplicants = await getAllListingsWithApplicants();
+      ctx.body = listingsWithApplicants;
+      ctx.status = 200;
+    } catch (error) {
+      console.error('Error fetching listings with applicants:', error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching listings with applicants.' };
+    }
+  });
+  
+  router.get('/applicants/:contactCode/', async (ctx) => {
+    const { contactCode } = ctx.params; // Extracting from URL parameters
+  
+    try {
+      const applicants = await getApplicantsByContactCode(contactCode);
+      ctx.body = applicants;
+      ctx.status = 200;
+  
+      if (!applicants) {
+        ctx.status = 404; // Not Found
+        ctx.body = { error: 'Applicanst not found for the provided contactCode.' };
+      } else {
+        ctx.status = 200; // OK
+        ctx.body = applicants;
+      }
+    } catch (error) {
+      console.error('Error fetching applicant by contactCode:', error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching the applicant.' };
+    }
+  });
+  
+  router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx) => {
+    const { contactCode, rentalObjectCode } = ctx.params; // Extracting from URL parameters
+  
+    try {
+      const applicant = await getApplicantByContactCodeAndRentalObjectCode(contactCode, rentalObjectCode);
+      ctx.body = applicant;
+      ctx.status = 200;
+  
+      if (!applicant) {
+        ctx.status = 404; // Not Found
+        ctx.body = { error: 'Applicant not found for the provided contactCode and rentalObjectCode.' };
+      } else {
+        ctx.status = 200; // OK
+        ctx.body = applicant;
+      }
+    } catch (error) {
+      console.error('Error fetching applicant by contactCode and rentalObjectCode:', error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching the applicant.' };
+    }
+  });
+  
+    
 
   /**
    * Gets the waiting lists of a person.

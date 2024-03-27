@@ -6,15 +6,15 @@
 exports.up = function(knex) {
     return knex.schema.createTable('listing', (table) => {
       table.increments('Id').primary();
+      table.string('RentalObjectCode').unique().notNullable();
       table.string('Address').notNullable();
-      table.integer('MonthlyRent').notNullable();
-      table.string('FreeField1Caption');
-      table.string('FreeField1Code');
-      table.string('FreeField3Caption');
-      table.integer('FreeField3Code');
+      table.decimal('MonthlyRent').notNullable();
+      table.string('DistrictCaption'); // Updated to match the new interface
+      table.string('DistrictCode'); // Updated to match the new interface
+      table.string('BlockCaption'); // Updated to match the new interface
+      table.string('BlockCode'); // Updated to match the new interface
       table.string('ObjectTypeCaption');
       table.string('ObjectTypeCode');
-      table.string('RentalPropertyId');
       table.string('RentalObjectTypeCaption');
       table.string('RentalObjectTypeCode');
       table.dateTime('PublishedFrom').notNullable();

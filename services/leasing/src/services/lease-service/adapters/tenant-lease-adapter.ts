@@ -340,15 +340,17 @@ const isLeaseActive = (lease: Lease | PartialLease): boolean => {
 
 const createListing = async (listingData: Listing) => {
   await db('Listing').insert({
+    RentalObjectCode: listingData.rentalObjectCode,
     Address: listingData.address,
-    FreeField1Caption: listingData.freeField1Caption,
-    FreeField1Code: listingData.freeField1Code,
-    FreeField3Caption: listingData.freeField3Caption,
-    FreeField3Code: listingData.freeField3Code,
+    DistrictCaption: listingData.districtCaption,
+    DistrictCode: listingData.districtCode,
+    BlockCaption: listingData.blockCaption,
+    BlockCode: listingData.blockCode,
     MonthlyRent: listingData.monthlyRent,
     ObjectTypeCaption: listingData.objectTypeCaption,
     ObjectTypeCode: listingData.objectTypeCode,
-    RentalPropertyId: listingData.rentalPropertyId,
+    RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
+    RentalObjectTypeCode: listingData.rentalObjectTypeCode,
     PublishedFrom: listingData.publishedFrom,
     PublishedTo: listingData.publishedTo,
     VacantFrom: listingData.vacantFrom,
@@ -357,6 +359,22 @@ const createListing = async (listingData: Listing) => {
   });
 }
 
+/**
+ * Checks if a listing already exists based on unique criteria.
+ * 
+ * @param {string} rentalObjectCode - The rental object code of the listing (originally from xpand)
+ * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
+ */
+const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<Listing> => {
+  const existingListing = await db('Listing')
+    .where({
+      RentalObjectCode: rentalObjectCode
+    })
+    .first();
+
+  return existingListing;
+};
+
 const createApplication = async (applicationData: Applicant) => {
   console.log(applicationData);
   await db('applicant').insert({
@@ -364,11 +382,39 @@ const createApplication = async (applicationData: Applicant) => {
     ContactCode: applicationData.contactCode,
     ApplicationDate: applicationData.applicationDate,
     ApplicationType: applicationData.applicationType,
-    RentalObjectCode: applicationData.rentalObjectCode,
     Status: applicationData.status,
     ListingId: applicationData.listingId,
   });
 }
+
+const getAllListingsWithApplicants = async () => {
+  const listings = await db('Listing').select('*');
+
+  for (let listing of listings) {
+    const applicants = await db('Applicant')
+      .where('listingId', listing.Id)
+      .select('*');
+
+    listing.applicants = applicants;
+  }
+
+  return listings;
+};
+
+const getApplicantsByContactCode = async (contactCode: string) => {
+  return db('Applicant')
+    .where({ ContactCode: contactCode });
+}
+
+const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
+  return db('Applicant')
+    .where({
+      ContactCode: contactCode,
+      RentalObjectCode: rentalObjectCode
+    })
+    .first();
+}
+
 
 export {
   getLease,
@@ -380,4 +426,8 @@ export {
   isLeaseActive,
   createListing,
   createApplication,
+  getListingByRentalObjectCode,
+  getAllListingsWithApplicants,
+  getApplicantsByContactCode,
+  getApplicantsByContactCodeAndRentalObjectCode
 }
