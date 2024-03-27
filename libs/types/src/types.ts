@@ -197,6 +197,7 @@ interface WaitingList {
 
 interface Listing {
   id: number;
+  rentalObjectCode: string;
   address: string;
   monthlyRent: number;
   districtCaption?: string;
@@ -220,7 +221,6 @@ interface Applicant {
   contactCode: string;
   applicationDate: Date;
   applicationType?: string | undefined;
-  rentalObjectCode?: string | undefined;
   status: ListingStatus;
   listingId: number;
 }
