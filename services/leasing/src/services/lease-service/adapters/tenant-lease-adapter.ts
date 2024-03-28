@@ -172,6 +172,41 @@ const getLeasesForContactCode = async (
   }
 }
 
+const getLeasesForPropertyId = async (
+  propertyId: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const leases: Lease[] = []
+  const rows = await db('hyavk')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate'
+    )
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
+
+  for (const row of rows) {
+    const lease = await transformFromDbLease(row, [], [])
+    leases.push(lease)
+  }
+  if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+    return leases
+  }
+
+  return leases.filter(isLeaseActive)
+}
+
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
   includeTerminatedLeases: string | string[] | undefined
@@ -208,6 +243,26 @@ const getContactByContactCode = async (
   return null
 }
 
+const getContactByPhoneNumber = async (
+  phoneNumber: string,
+  includeTerminatedLeases: string | string[] | undefined
+) => {
+  const keycmobj = await getContactForPhoneNumber(phoneNumber)
+  if (keycmobj && keycmobj.length > 0) {
+    const rows = await getContactQuery()
+      .where({ 'cmobj.keycmobj': keycmobj[0].keycmobj })
+      .limit(1)
+    if (rows && rows.length > 0) {
+      const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
+      const leases = await getLeaseIds(
+        rows[0].contactKey,
+        includeTerminatedLeases
+      )
+      return transformFromDbContact(rows[0], phoneNumbers, leases)
+    }
+  }
+}
+
 const getContactQuery = () => {
   return db('cmctc')
     .select(
@@ -237,6 +292,13 @@ const getPhoneNumbersForContact = async (keycmobj: string) => {
       'main as isMainNumber'
     )
     .where({ keycmobj: keycmobj })
+  return rows
+}
+
+const getContactForPhoneNumber = async (phoneNumber: string) => {
+  const rows = await db('cmtel')
+    .select('keycmobj as keycmobj')
+    .where({ cmtelben: phoneNumber })
   return rows
 }
 
@@ -421,8 +483,10 @@ export {
   getLeases,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
+  getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
+  getContactByPhoneNumber,
   isLeaseActive,
   createListing,
   createApplication,
