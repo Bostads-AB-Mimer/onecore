@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.8.1...v1.9.0) (2024-03-27)
+
+
+### Features
+
+* listing and applicant types ([744c035](https://github.com/Bostads-AB-Mimer/onecore-types/commit/744c035486fb858d13b1f3e7a1b46744108d047e))
+
 ## [1.8.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.8.0...v1.8.1) (2024-03-20)
 
 
