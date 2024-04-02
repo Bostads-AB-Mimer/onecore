@@ -19,7 +19,12 @@ import {
   filterRoomTypes,
   sortRoomTypes,
 } from './adapters/material-options-adapter'
-import { MaterialChoice, MaterialOptionGroup } from 'onecore-types'
+import { 
+  MaterialChoice, 
+  MaterialOptionGroup,
+  Listing,
+  ListingStatus,
+ } from 'onecore-types'
 import { getParkingSpace } from './adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from './adapters/xpand-soap-adapter'
 
@@ -113,8 +118,30 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/publishedParkingSpaces/:id', async (ctx) => {
-    const responseData = await getPublishedParkingSpaceFromSoapService(ctx.params.id)
-
-    ctx.body = responseData
+    const xpandParkingSpace = await getPublishedParkingSpaceFromSoapService(ctx.params.id)
+    if (!xpandParkingSpace) {
+      ctx.status = 404
+      return
+    }
+    const listing: Listing = {
+      id: -1,
+      rentalObjectCode: xpandParkingSpace.parkingSpaceId,
+      address: xpandParkingSpace.address.street,
+      monthlyRent: xpandParkingSpace.rent.currentRent.currentRent,
+      districtCaption: xpandParkingSpace.freeTable1Caption,
+      districtCode: xpandParkingSpace.freeTable1Code,
+      blockCaption: xpandParkingSpace.freeTable3Caption,
+      blockCode: xpandParkingSpace.freeTable3Code,
+      objectTypeCaption: xpandParkingSpace.objectTypeCaption,
+      objectTypeCode: xpandParkingSpace.objectTypeCode,
+      rentalObjectTypeCaption: xpandParkingSpace.rentalObjectTypeCaption,
+      rentalObjectTypeCode: xpandParkingSpace.rentalObjectTypeCode,
+      publishedFrom: xpandParkingSpace.publishedFrom,
+      publishedTo: xpandParkingSpace.publishedTo,
+      vacantFrom: xpandParkingSpace.vacantFrom,
+      status: ListingStatus.Active,
+      waitingListType: xpandParkingSpace.waitingListType, 
+    };
+    ctx.body = listing
   })
 }

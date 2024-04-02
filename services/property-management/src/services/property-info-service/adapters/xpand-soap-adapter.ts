@@ -2,7 +2,7 @@ import soapRequest from 'easy-soap-request'
 import { XMLParser } from 'fast-xml-parser'
 import createHttpError from 'http-errors'
 import Config from '../../../common/config'
-import { ParkingSpace } from 'onecore-types'
+import { XpandParkingSpace } from '../../../types/xpandTypes'
 import { getParkingSpaceApplicationCategory, getParkingSpaceType } from '../../../utils/parking-spaces'
 
 
@@ -51,7 +51,7 @@ const getPublishedParkingSpaceFromSoapService = async (
     const publishedRentalObject = parsedResponse.PublishedRentalObjects08352.PublishedRentalObjectDataContract08352
     //todo: fetch more fields from xpand db? the soap service does not include detailed address for example
     try {
-      const parkingSpace: ParkingSpace = {
+      const parkingSpace: XpandParkingSpace = {
         parkingSpaceId: publishedRentalObject['RentalObjectCode'],
         address: {
           street: publishedRentalObject['Address1'],
@@ -60,6 +60,12 @@ const getPublishedParkingSpaceFromSoapService = async (
           city: '',
         },
         vacantFrom: publishedRentalObject['VacantFrom'],
+        publishedFrom: publishedRentalObject['PublishedFrom'],
+        publishedTo: publishedRentalObject['PublishedTo'],
+        freeTable1Caption: publishedRentalObject['FreeTable1Caption'],
+        freeTable1Code: publishedRentalObject['FreeTable1Code'],
+        freeTable3Caption: publishedRentalObject['FreeTable3Caption'],
+        freeTable3Code: publishedRentalObject['FreeTable3Code'],
         rent: {
           currentRent: {
             leaseId: undefined,
@@ -75,8 +81,13 @@ const getPublishedParkingSpaceFromSoapService = async (
         },
         type: getParkingSpaceType(publishedRentalObject['ObjectTypeCode']),
         applicationCategory: getParkingSpaceApplicationCategory(
-          publishedRentalObject['WaitingListType'],
+          publishedRentalObject['WaitingListType']
         ),
+        waitingListType: publishedRentalObject['WaitingListType'],
+        rentalObjectTypeCaption: publishedRentalObject['RentalObjectTypeCaption'],
+        rentalObjectTypeCode: publishedRentalObject['RentalObjectTypeCode'],
+        objectTypeCaption: publishedRentalObject['ObjectTypeCaption'],
+        objectTypeCode: publishedRentalObject['ObjectTypeCode'],
       }
       return parkingSpace
     } catch (e) {
