@@ -9,7 +9,7 @@ import {
   addApplicantToToWaitingList,
   getWaitingList,
 } from '../adapters/xpand-soap-adapter'
-import { WaitingList } from '../../../../../onecore-types'
+import { WaitingList } from 'onecore-types'
 import * as http from 'http'
 import { HttpStatusCode } from 'axios'
 
@@ -87,7 +87,9 @@ describe('POST contact/waitingList', () => {
         throw new Error('Oh no')
       })
 
-    const result = await request(app.callback()).post('/contact/waitingList/123')
+    const result = await request(app.callback()).post(
+      '/contact/waitingList/123'
+    )
 
     expect(xpandAdapterSpy).toHaveBeenCalled
     expect(result.status).toEqual(HttpStatusCode.InternalServerError)
