@@ -13,6 +13,7 @@ exports.up = function(knex) {
       table.integer('Status').notNullable();
       table.integer('ListingId').unsigned();
       table.foreign('ListingId').references('listing.Id');
+      table.unique(['ContactCode', 'ListingId']);
     });
   };
   
