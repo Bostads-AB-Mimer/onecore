@@ -13,22 +13,26 @@ import {
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
-  createListing,
+
+} from './adapters/xpand/tenant-lease-adapter'
+
+import {  createListing,
   createApplication,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
-  getListingByRentalObjectCode,
-} from './adapters/tenant-lease-adapter'
+  getListingByRentalObjectCode,}
+from './adapters/listing-adapter'
+
 import {
   addApplicantToToWaitingList,
   createLease,
   getWaitingList,
-} from './adapters/xpand-soap-adapter'
+} from './adapters/xpand/xpand-soap-adapter'
 import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
-} from './adapters/invoices-adapter'
+} from './adapters/xpand/invoices-adapter'
 import { Applicant, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
@@ -194,6 +198,12 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/listings', async (ctx) => {
     try {
       const listingData = <Listing>ctx.request.body;
+      var existingListing = await getListingByRentalObjectCode(listingData.rentalObjectCode)
+      if(existingListing != null && existingListing.rentalObjectCode === listingData.rentalObjectCode){
+        ctx.status = 409
+        return
+      }
+
       const listingId = await createListing(listingData);
 
       ctx.status = 201; // HTTP status code for Created

@@ -5,8 +5,8 @@ import bodyParser from 'koa-bodyparser'
 import { Lease } from 'onecore-types'
 
 import { routes } from '../index'
-import * as tenantLeaseAdapter from '../adapters/tenant-lease-adapter'
-import * as xpandSoapAdapter from '../adapters/xpand-soap-adapter'
+import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 
 const app = new Koa()
 const router = new KoaRouter()

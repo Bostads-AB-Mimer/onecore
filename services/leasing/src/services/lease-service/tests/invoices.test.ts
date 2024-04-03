@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
-import * as invoiceAdapter from '../adapters/invoices-adapter'
+import * as invoiceAdapter from '../adapters/xpand/invoices-adapter'
 import { InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 
 const app = new Koa()

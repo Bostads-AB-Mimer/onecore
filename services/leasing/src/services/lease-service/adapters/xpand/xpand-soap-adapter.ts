@@ -2,7 +2,7 @@ import soapRequest from 'easy-soap-request'
 import { XMLParser } from 'fast-xml-parser'
 import createHttpError from 'http-errors'
 
-import Config from '../../../common/config'
+import Config from '../../../../common/config'
 import { WaitingList } from 'onecore-types'
 
 const createLease = async (

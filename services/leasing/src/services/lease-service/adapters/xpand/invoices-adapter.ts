@@ -1,17 +1,16 @@
 import {
   Invoice,
   InvoiceTransactionType,
-  Invoices,
   PaymentStatus,
   invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from 'onecore-types'
 import knex from 'knex'
-import Config from '../../../common/config'
+import Config from '../../../../common/config'
 
 const db = knex({
   client: 'mssql',
-  connection: Config.database,
+  connection: Config.xpandDatabase,
 })
 
 const getTransactionType = (transactionTypeString: any) => {
