@@ -1,10 +1,9 @@
-import { Applicant, Listing } from 'onecore-types'
+import { Applicant, Listing, ListingStatus } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
 
-console.log("config: ")
-console.log(Config)
+//todo: handle case conversion, db schema is pascalcase but onecore-types is camelcase
 
 const db = knex({
   client: 'mssql',
@@ -12,24 +11,46 @@ const db = knex({
 })
 
 const createListing = async (listingData: Listing) => {
-  await db('Listing').insert({
-    RentalObjectCode: listingData.rentalObjectCode,
-    Address: listingData.address,
-    DistrictCaption: listingData.districtCaption,
-    DistrictCode: listingData.districtCode,
-    BlockCaption: listingData.blockCaption,
-    BlockCode: listingData.blockCode,
-    MonthlyRent: listingData.monthlyRent,
-    ObjectTypeCaption: listingData.objectTypeCaption,
-    ObjectTypeCode: listingData.objectTypeCode,
-    RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
-    RentalObjectTypeCode: listingData.rentalObjectTypeCode,
-    PublishedFrom: listingData.publishedFrom,
-    PublishedTo: listingData.publishedTo,
-    VacantFrom: listingData.vacantFrom,
-    Status: listingData.status,
-    WaitingListType: listingData.waitingListType,
-  });
+  const insertedRow = await db('Listing')
+    .insert({
+      RentalObjectCode: listingData.rentalObjectCode,
+      Address: listingData.address,
+      DistrictCaption: listingData.districtCaption,
+      DistrictCode: listingData.districtCode,
+      BlockCaption: listingData.blockCaption,
+      BlockCode: listingData.blockCode,
+      MonthlyRent: listingData.monthlyRent,
+      ObjectTypeCaption: listingData.objectTypeCaption,
+      ObjectTypeCode: listingData.objectTypeCode,
+      RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
+      RentalObjectTypeCode: listingData.rentalObjectTypeCode,
+      PublishedFrom: listingData.publishedFrom,
+      PublishedTo: listingData.publishedTo,
+      VacantFrom: listingData.vacantFrom,
+      Status: listingData.status,
+      WaitingListType: listingData.waitingListType,
+    })
+    .returning('*');
+
+  return {
+    id: insertedRow[0].Id,
+    rentalObjectCode: insertedRow[0].RentalObjectCode,
+    address:  insertedRow[0].Address,
+    monthlyRent:  insertedRow[0].MonthlyRent,
+    districtCaption:  insertedRow[0].DistrictCaption,
+    districtCode:  insertedRow[0].DistrictCode,
+    blockCaption:  insertedRow[0].BlockCaption,
+    blockCode:  insertedRow[0].BlockCode,
+    objectTypeCaption:  insertedRow[0].ObjectTypeCaption,
+    objectTypeCode:  insertedRow[0].ObjectTypeCode,
+    rentalObjectTypeCaption:  insertedRow[0].RentalObjectTypeCaption,
+    rentalObjectTypeCode:  insertedRow[0].RentalObjectCode,
+    publishedFrom:  insertedRow[0].PublishedFrom,
+    publishedTo:  insertedRow[0].PublishedTo,
+    vacantFrom:  insertedRow[0].VacantFrom,
+    status:  insertedRow[0].Status,
+    waitingListType:  insertedRow[0].WaitingListType
+  }
 }
 
 /**
@@ -38,31 +59,35 @@ const createListing = async (listingData: Listing) => {
  * @param {string} rentalObjectCode - The rental object code of the listing (originally from xpand)
  * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
  */
-const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<Listing> => {
-  const existingListing = await db('Listing')
+const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<Listing | undefined> => {
+  const listing = await db('Listing')
     .where({
       RentalObjectCode: rentalObjectCode
     })
     .first();
 
+  if(listing == undefined){
+    return undefined
+  }
+
   return  {
-    id: existingListing.Id,
-    rentalObjectCode: existingListing.RentalObjectCode,
-    address: existingListing.Address,
-    monthlyRent: existingListing.MonthlyRent,
-    districtCaption: existingListing.DistrictCaption,
-    districtCode: existingListing.DistrictCode,
-    blockCaption: existingListing.BlockCaption,
-    blockCode: existingListing.BlockCode,
-    objectTypeCaption: existingListing.ObjectTypeCaption,
-    objectTypeCode: existingListing.ObjectTypeCode,
-    rentalObjectTypeCaption: existingListing.RentalObjectTypeCaption,
-    rentalObjectTypeCode: existingListing.RentalObjectTypeCode,
-    publishedFrom: existingListing.PublishedFrom,
-    publishedTo: existingListing.PublishedTo,
-    vacantFrom: existingListing.VacantFrom,
-    status: existingListing.Status,
-    waitingListType: existingListing.WaitingListType
+    id: listing.Id,
+    rentalObjectCode: listing.RentalObjectCode,
+    address: listing.Address,
+    monthlyRent: listing.MonthlyRent,
+    districtCaption: listing.DistrictCaption,
+    districtCode: listing.DistrictCode,
+    blockCaption: listing.BlockCaption,
+    blockCode: listing.BlockCode,
+    objectTypeCaption: listing.ObjectTypeCaption,
+    objectTypeCode: listing.ObjectTypeCode,
+    rentalObjectTypeCaption: listing.RentalObjectTypeCaption,
+    rentalObjectTypeCode: listing.RentalObjectTypeCode,
+    publishedFrom: listing.PublishedFrom,
+    publishedTo: listing.PublishedTo,
+    vacantFrom: listing.VacantFrom,
+    status: listing.Status,
+    waitingListType: listing.WaitingListType
   };
 };
 

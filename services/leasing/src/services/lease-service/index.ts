@@ -195,6 +195,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * Creates a new listing.
    */
+  //todo: test cases to write:
+  //can add listing
+  //cannot add duplicate listing
   router.post('(.*)/listings', async (ctx) => {
     try {
       const listingData = <Listing>ctx.request.body;
@@ -204,10 +207,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const listingId = await createListing(listingData);
+      const listing = await createListing(listingData);
 
       ctx.status = 201; // HTTP status code for Created
-      ctx.body = { listingId };
+      ctx.body = listing;
     } catch (error) {
       ctx.status = 500; // Internal Server Error
 
@@ -224,7 +227,7 @@ export const routes = (router: KoaRouter) => {
    */
   //todo: test cases to write:
   //can add applicant
-  //cannot add applicant twice
+  //cannot add duplicate applicant
   //handle non existing applicant contact code
 
   router.post('(.*)/listings/apply', async (ctx) => {
@@ -254,6 +257,11 @@ export const routes = (router: KoaRouter) => {
     try {
       const rentaLObjectCode = ctx.params.rentalObjectCode;
       const listing = await getListingByRentalObjectCode(rentaLObjectCode);
+      if(listing == undefined){
+        ctx.status = 404;
+        return
+      }
+
       ctx.body = listing;
       ctx.status = 200;
     } catch (error) {
