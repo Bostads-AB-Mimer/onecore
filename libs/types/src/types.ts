@@ -213,6 +213,7 @@ interface Listing {
   vacantFrom: Date;
   status: ListingStatus;
   waitingListType?: string | undefined;
+  applicationCategory: ParkingSpaceApplicationCategory
 }
 
 interface Applicant {
@@ -220,7 +221,7 @@ interface Applicant {
   name: string;
   contactCode: string;
   applicationDate: Date;
-  applicationType?: string | undefined;
+  applicationType?: string | undefined; //todo: "Additional" or "Replace". Should be an enum in the future
   status: ListingStatus;
   listingId: number;
 }
