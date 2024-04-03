@@ -117,11 +117,9 @@ export const createLeaseForExternalParkingSpace = async (
 
       log.push(`Kontrakt skapat: ${lease.LeaseId}`)
 
-      if (parkingSpace.rent.currentRent.vat) {
-        log.push(
-          'OBS: Moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
-        )
-      }
+      log.push(
+        'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
+      )
 
       await sendNotificationToContact(
         applicantContact,

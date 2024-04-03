@@ -9,7 +9,6 @@ import {
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
-import { serialize } from 'v8'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -94,16 +93,16 @@ const getInternalCreditInformation = async (
   )
 
   const invoices = result.data.data as Invoice[] | undefined
-  const sixMonthsMs = 1000 * 60 * 60 * 24 * 182
+  const oneDayMs = 24 * 60 * 60 * 1000
+  const sixMonthsMs = 182 * oneDayMs
 
   let hasDebtCollection = false
 
   if (invoices) {
-    hasDebtCollection ||= invoices.some((invoice: Invoice) => {
+    hasDebtCollection = invoices.some((invoice: Invoice) => {
       return (
-        invoice.transactionType ===
-          (InvoiceTransactionType.Reminder ||
-            InvoiceTransactionType.DebtCollection) &&
+        (invoice.transactionType === InvoiceTransactionType.Reminder ||
+          invoice.transactionType === InvoiceTransactionType.DebtCollection) &&
         -dayjs(invoice.expirationDate).diff() < sixMonthsMs
       )
     })

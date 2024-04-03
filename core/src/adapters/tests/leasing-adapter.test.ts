@@ -13,7 +13,6 @@ import {
   mockedProblematicInvoices,
   mockedWaitingList,
 } from './leasing-adapter.mocks'
-import exp from 'constants'
 const mockAxios = axios as AxiosMock
 
 describe('leasing-adapter', () => {
