@@ -222,16 +222,26 @@ export const routes = (router: KoaRouter) => {
   /**
    * Endpoint to apply for a listing.
    */
+  //todo: test cases to write:
+  //can add applicant
+  //cannot add applicant twice
+  //handle non existing applicant contact code
+
   router.post('(.*)/listings/apply', async (ctx) => {
     try {
       const applicantData = <Applicant>ctx.request.body;
+      var existingApplicant =  await getApplicantsByContactCode(applicantData.contactCode)
+      if(existingApplicant != undefined){
+        ctx.status = 409;
+        return
+      }
+
       const applicationId = await createApplication(applicantData);
 
       ctx.status = 201; // HTTP status code for Created
       ctx.body = { applicationId };
     } catch (error) {
       ctx.status = 500; // Internal Server Error
-
       if (error instanceof Error) {
         ctx.body = { error: error.message };
       } else {

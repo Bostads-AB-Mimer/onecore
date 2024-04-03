@@ -93,7 +93,7 @@ const getAllListingsWithApplicants = async () => {
 
 const getApplicantsByContactCode = async (contactCode: string) => {
   return db('Applicant')
-    .where({ ContactCode: contactCode });
+    .where({ ContactCode: contactCode }).first();
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
