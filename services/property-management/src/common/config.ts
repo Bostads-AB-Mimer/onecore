@@ -16,12 +16,15 @@ export interface Config {
   }
   xpandService: {
     url: string
-  },
+  }
   xpandSoap: {
     username: string
     password: string
     url: string
     messageCulture: string
+  }
+  appsMimerNu: {
+    url: string
   }
 }
 
@@ -45,6 +48,9 @@ const config = configPackage({
       url: '',
       messageCulture: '1053',
     },
+    appsMimerNu: {
+      url: 'https://apps.mimer.nu/api/1.1/obj/apartment',
+    },
   },
 })
 
@@ -54,4 +60,5 @@ export default {
   contechOs: config.get('contechOs'),
   xpandService: config.get('xpandService'),
   xpandSoap: config.get('xpandSoap'),
+  appsMimerNu: config.get('appsMimerNu'),
 } as Config
