@@ -32,7 +32,8 @@ import {
 //
 export const createLeaseForExternalParkingSpace = async (
   parkingSpaceId: string,
-  contactId: string
+  contactId: string,
+  startDate: string | undefined
 ): Promise<ProcessResult> => {
   const log: string[] = [
     `Ansökan om extern bilplats`,
@@ -62,7 +63,7 @@ export const createLeaseForExternalParkingSpace = async (
     ) {
       return {
         processStatus: ProcessStatus.failed,
-        httpStatus: 400,
+        httpStatus: 404,
         response: {
           message: `This process currently only handles external parking spaces. The parking space provided is not external (it is ${parkingSpace.applicationCategory}, ${parkingSpaceApplicationCategoryTranslation.external}).`,
         },
@@ -83,8 +84,10 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     let creditCheck = false
+    const applicantHasNoLease =
+      !applicantContact.leaseIds || applicantContact.leaseIds.length == 0
 
-    if (!applicantContact.leaseIds || applicantContact.leaseIds.length == 0) {
+    if (applicantHasNoLease) {
       const creditInformation = await getCreditInformation(
         applicantContact.nationalRegistrationNumber
       )
@@ -111,7 +114,7 @@ export const createLeaseForExternalParkingSpace = async (
       const lease = await createLease(
         parkingSpace.parkingSpaceId,
         applicantContact.contactCode,
-        new Date().toISOString(),
+        startDate != undefined ? startDate : new Date().toISOString(),
         '001'
       )
 
@@ -160,6 +163,9 @@ export const createLeaseForExternalParkingSpace = async (
         processStatus: ProcessStatus.failed,
         httpStatus: 400,
         response: {
+          reason: applicantHasNoLease
+            ? 'External check failed'
+            : 'Internal check failed',
           message: 'The parking space lease application has been rejected',
         },
       }

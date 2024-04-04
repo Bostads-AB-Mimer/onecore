@@ -130,10 +130,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const startDate = ctx.request.body.startDate
+
     try {
       const result = await createLeaseForExternalParkingSpace(
         parkingSpaceId,
-        contactId
+        contactId,
+        startDate
       )
 
       ctx.status = result.httpStatus
@@ -148,44 +151,47 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/parkingspaces/:parkingSpaceId/noteofinterests', async (ctx) => {
-    const parkingSpaceId = ctx.params.parkingSpaceId
-    if (!parkingSpaceId) {
-      ctx.status = 400
-      ctx.body = {
-        message:
-          'Parking space id is missing. It needs to be passed in the url.',
+  router.post(
+    '(.*)/parkingspaces/:parkingSpaceId/noteofinterests',
+    async (ctx) => {
+      const parkingSpaceId = ctx.params.parkingSpaceId
+      if (!parkingSpaceId) {
+        ctx.status = 400
+        ctx.body = {
+          message:
+            'Parking space id is missing. It needs to be passed in the url.',
+        }
+
+        return
       }
 
-      return
-    }
+      const contactId = ctx.request.body.contactId
 
-    const contactId = ctx.request.body.contactId
-
-    if (!contactId) {
-      ctx.status = 400
-      ctx.body = {
-        message:
-          'Contact id is missing. It needs to be passed in the body (contactId)',
+      if (!contactId) {
+        ctx.status = 400
+        ctx.body = {
+          message:
+            'Contact id is missing. It needs to be passed in the body (contactId)',
+        }
+        return
       }
-      return
-    }
 
-    try {
-      const result = await createNoteOfInterestForInternalParkingSpace(
-        parkingSpaceId,
-        contactId
-      )
+      try {
+        const result = await createNoteOfInterestForInternalParkingSpace(
+          parkingSpaceId,
+          contactId
+        )
 
-      ctx.status = result.httpStatus
-      ctx.body = result.response
-    } catch (error) {
-      // Step 6: Communicate error to dev team and customer service
-      console.log('Error', error)
-      ctx.status = 500
-      ctx.body = {
-        message: 'A technical error has occured',
+        ctx.status = result.httpStatus
+        ctx.body = result.response
+      } catch (error) {
+        // Step 6: Communicate error to dev team and customer service
+        console.log('Error', error)
+        ctx.status = 500
+        ctx.body = {
+          message: 'A technical error has occured',
+        }
       }
     }
-  })
+  )
 }

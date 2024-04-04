@@ -56,7 +56,7 @@ describe('parkingspaces', () => {
         objectId: string,
         contactId: string,
         fromDate: string,
-        companyCode: string
+        companyCode: string,
       ],
       any
     >
@@ -88,7 +88,11 @@ describe('parkingspaces', () => {
     it('gets the parking space', async () => {
       getParkingSpaceSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(getParkingSpaceSpy).toHaveBeenCalledWith('foo')
     })
@@ -98,7 +102,8 @@ describe('parkingspaces', () => {
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        '2034-04-21'
       )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -114,17 +119,22 @@ describe('parkingspaces', () => {
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        '2034-04-21'
       )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
-      expect(result.httpStatus).toBe(400)
+      expect(result.httpStatus).toBe(404)
     })
 
     it('gets the applicant contact', async () => {
       getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(getContactSpy).toHaveBeenCalledWith('bar')
     })
@@ -135,7 +145,8 @@ describe('parkingspaces', () => {
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        '2034-04-21'
       )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -150,7 +161,11 @@ describe('parkingspaces', () => {
         .mockReset()
         .mockResolvedValue(successfulConsumerReport)
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(getCreditInformationSpy).toHaveBeenCalledWith('1212121212')
     })
@@ -161,7 +176,8 @@ describe('parkingspaces', () => {
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        '2034-04-21'
       )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -173,7 +189,11 @@ describe('parkingspaces', () => {
       getCreditInformationSpy.mockResolvedValue(failedConsumerReport)
       sendNotificationToContactSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(sendNotificationToContactSpy).toHaveBeenCalledWith(
         expect.anything(),
@@ -187,7 +207,11 @@ describe('parkingspaces', () => {
       getCreditInformationSpy.mockResolvedValue(failedConsumerReport)
       sendNotificationToRoleSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(sendNotificationToRoleSpy).toHaveBeenCalledWith(
         'leasing',
@@ -201,7 +225,11 @@ describe('parkingspaces', () => {
       getInternalCreditInformationSpy.mockReset()
       getCreditInformationSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(getInternalCreditInformationSpy).toHaveBeenCalledWith(
         mockedApplicantWithLeases.contactCode
@@ -215,7 +243,8 @@ describe('parkingspaces', () => {
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        '2034-04-21'
       )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -225,7 +254,11 @@ describe('parkingspaces', () => {
     it('creates a contract if external credit check succeeds', async () => {
       createContractSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(createContractSpy).toHaveBeenCalledWith(
         mockedParkingSpace.parkingSpaceId,
@@ -241,7 +274,11 @@ describe('parkingspaces', () => {
       getCreditInformationSpy
         .mockReset()
         .mockResolvedValue(failedConsumerReport)
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(createContractSpy).not.toHaveBeenCalledWith()
     })
@@ -253,7 +290,11 @@ describe('parkingspaces', () => {
       getInternalCreditInformationSpy.mockReset().mockResolvedValue(true)
       getCreditInformationSpy.mockReset()
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(createContractSpy).toHaveBeenCalledWith(
         mockedParkingSpace.parkingSpaceId,
@@ -268,7 +309,11 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValue(mockedApplicantWithLeases)
       getInternalCreditInformationSpy.mockReset().mockResolvedValue(false)
 
-      await parkingProcesses.createLeaseForExternalParkingSpace('foo', 'bar')
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
 
       expect(createContractSpy).not.toHaveBeenCalledWith()
     })
