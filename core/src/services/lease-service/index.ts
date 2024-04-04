@@ -11,6 +11,7 @@ import {
   getLease,
   getLeasesForPnr,
   getCreditInformation,
+  getContactForPhoneNumber,
 } from '../../adapters/leasing-adapter'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -54,6 +55,17 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/:pnr', async (ctx: any) => {
     const responseData = await getContactForPnr(ctx.params.pnr)
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
+   * Returns a contact by phone number
+   */
+  router.get('(.*)/contact/phoneNumber/:pnr', async (ctx: any) => {
+    const responseData = await getContactForPhoneNumber(ctx.params.pnr)
 
     ctx.body = {
       data: responseData,

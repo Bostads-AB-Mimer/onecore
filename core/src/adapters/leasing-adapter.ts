@@ -31,6 +31,13 @@ const getLeasesForPnr = async (
   return leasesResponse.data.data
 }
 
+const getLeasesForPropertyId = async (propertyId: string): Promise<Lease[]> => {
+  const leasesResponse = await axios(
+    tenantsLeasesServiceUrl + '/leases/for/propertyId/' + propertyId
+  )
+  return leasesResponse.data.data
+}
+
 const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
@@ -45,6 +52,20 @@ const getContact = async (contactId: string): Promise<Contact | undefined> => {
   try {
     const contactResponse = await axios(
       tenantsLeasesServiceUrl + '/contact/contactCode/' + contactId
+    )
+
+    return contactResponse.data.data
+  } catch (error) {
+    return undefined
+  }
+}
+
+const getContactForPhoneNumber = async (
+  phoneNumber: string
+): Promise<Contact | undefined> => {
+  try {
+    const contactResponse = await axios(
+      tenantsLeasesServiceUrl + '/contact/phoneNumber/' + phoneNumber
     )
 
     return contactResponse.data.data
@@ -145,8 +166,10 @@ const addApplicantToWaitingList = async (
 export {
   getLease,
   getLeasesForPnr,
+  getLeasesForPropertyId,
   getContactForPnr,
   getContact,
+  getContactForPhoneNumber,
   createLease,
   getCreditInformation,
   getInternalCreditInformation,
