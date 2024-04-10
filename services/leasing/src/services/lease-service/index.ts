@@ -232,17 +232,20 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/listings/apply', async (ctx) => {
     try {
-      const applicantData = <Applicant>ctx.request.body;
-      var existingApplicant =  await getApplicantsByContactCode(applicantData.contactCode)
-      if(existingApplicant != undefined){
-        ctx.status = 409;
-        return
-      }
+      const applicantData = <Applicant>ctx.request.body
+      //todo: we need better validation than below outcommented code
+      //todo: the db contraint is table.unique(['ContactCode', 'ListingId']);
+      //todo: therefore validate same constraint
+      // var existingApplicant =  await getApplicantsByContactCode(applicantData.contactCode)
+      // if(existingApplicant != undefined){
+      //   ctx.status = 409;
+      //   return
+      // }
 
-      const applicationId = await createApplication(applicantData);
+      const applicationId = await createApplication(applicantData)
 
-      ctx.status = 201; // HTTP status code for Created
-      ctx.body = { applicationId };
+      ctx.status = 201 // HTTP status code for Created
+      ctx.body = { applicationId }
     } catch (error) {
       ctx.status = 500; // Internal Server Error
       if (error instanceof Error) {

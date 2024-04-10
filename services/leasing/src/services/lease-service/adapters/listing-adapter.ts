@@ -102,6 +102,8 @@ const createApplication = async (applicationData: Applicant) => {
   });
 }
 
+
+//todo: use type and do type conversion to camelCase
 const getAllListingsWithApplicants = async () => {
   const listings = await db('Listing').select('*');
 
