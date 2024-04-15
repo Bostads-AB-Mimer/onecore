@@ -127,7 +127,7 @@ export const createLeaseForExternalParkingSpace = async (
       await sendNotificationToContact(
         applicantContact,
         'Godkänd ansökan om extern bilplats',
-        `Din ansökan om bilplats har godkänts. Du kommer inom kort att få ett kontrakt att skriva under digitalt.\nKontraktet har nummer ${lease.LeaseId} om du behöver referera till det i kontakt med kundcenter.\n\nMed vänlig hälsning,\nBostads Mimer AB`
+    `Din ansökan om bilplats har godkänts. Du kommer inom kort få ett kontrakt att skriva under digitalt.\nKontraktet har nummer ${lease.LeaseId} om du behöver referera till det i kontakt med kundcenter.\n\n**Din första faktura för din bilplats kan du se på Mina sidor. Logga in och klicka på Mina fakturor så ser du sista betalningsdag. Glöm inte att betala den i tid för att undvika förseningsavgifter.**\n\n**Eventuella nycklar hämtar du på Mimers kundcenter på Gasverksgatan 7 efter klockan 12 dagen då ditt hyreskontrakt börjar gälla. Om den dagen inträffar på en lördag, söndag eller en helgdag är du välkommen att hämta nycklarna efter klockan 12 den första vardagen därefter.**\n\nMed vänlig hälsning,\nBostads Mimer AB`
       )
       await sendNotificationToRole(
         'leasing',
