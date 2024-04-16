@@ -23,10 +23,7 @@ import {  createListing,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
   getListingByRentalObjectCode,
   applicationExists
-} from './adapters/tenant-lease-adapter'
-  getListingByRentalObjectCode,}
-from './adapters/listing-adapter'
-
+} from './adapters/listing-adapter'
 import {
   addApplicantToToWaitingList,
   createLease,
@@ -237,7 +234,6 @@ export const routes = (router: KoaRouter) => {
     try {
       const applicantData = <Applicant>ctx.request.body;
 
-      // Check if the applicant has already applied for the same listing
       const exists = await applicationExists(applicantData.contactCode, applicantData.listingId);
       if (exists) {
         ctx.status = 409; // Conflict
