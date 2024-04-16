@@ -25,9 +25,11 @@ import {
   Listing,
   ListingStatus,
 } from 'onecore-types'
-import { getParkingSpace } from './adapters/xpand-adapter'
+import {
+  getRentalPropertyInfo,
+  getParkingSpace,
+} from './adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from './adapters/xpand-soap-adapter'
-import { getRentalPropertyInfo } from './adapters/apps-mimer-nu-adapter'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -151,7 +153,6 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/rentalPropertyInfo/:id', async (ctx) => {
     const responseData = await getRentalPropertyInfo(ctx.params.id)
-
     ctx.body = responseData
   })
 }

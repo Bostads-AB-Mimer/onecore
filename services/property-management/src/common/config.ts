@@ -4,7 +4,14 @@ dotenv.config()
 
 export interface Config {
   port: number
-  database: {
+  xpandDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
+  propertyManagementDatabase: {
     host: string
     user: string
     password: string
@@ -20,21 +27,25 @@ export interface Config {
     url: string
     messageCulture: string
   }
-  appsMimerNu: {
-    url: string
-  }
 }
 
 const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5010,
-    database: {
+    xpandDatabase: {
+      host: '',
+      user: '',
+      password: '',
+      port: 5432,
+      database: '',
+    },
+    propertyManagementDatabase: {
       host: 'localhost',
       user: 'sa',
       password: '',
       port: 1433,
-      database: 'property-info',
+      database: 'property-management',
     },
     xpandService: {
       url: 'https://mypages-wapp-t.azurewebsites.net/api',
@@ -45,15 +56,13 @@ const config = configPackage({
       url: '',
       messageCulture: '1053',
     },
-    appsMimerNu: {
-      url: 'https://apps.mimer.nu/api/1.1/obj/apartment',
-    },
   },
 })
 
 export default {
   port: config.get('port'),
-  database: config.get('database'),
+  xpandDatabase: config.get('xpandDatabase'),
+  propertyManagementDatabase: config.get('propertyManagementDatabase'),
   xpandService: config.get('xpandService'),
   xpandSoap: config.get('xpandSoap'),
   appsMimerNu: config.get('appsMimerNu'),

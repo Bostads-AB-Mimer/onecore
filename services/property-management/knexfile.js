@@ -9,11 +9,11 @@ module.exports = {
   dev: {
     client: 'mssql',
     connection: {
-      host: process.env.DATABASE__HOST,
-      database: process.env.DATABASE__DATABASE,
-      user: process.env.DATABASE__USER,
-      password: process.env.DATABASE__PASSWORD,
-      port: parseInt(process.env.DATABASE__PORT),
+      host: process.env.PROPERTY_MANAGEMENT_DATABASE__HOST,
+      database: process.env.PROPERTY_MANAGEMENT_DATABASE__DATABASE,
+      user: process.env.PROPERTY_MANAGEMENT_DATABASE__USER,
+      password: process.env.PROPERTY_MANAGEMENT_DATABASE__PASSWORD,
+      port: parseInt(process.env.PROPERTY_MANAGEMENT_DATABASE__PORT),
     },
     migrations: {
       tableName: 'knex_migrations',
