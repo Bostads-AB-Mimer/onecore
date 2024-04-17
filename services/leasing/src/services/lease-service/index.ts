@@ -10,6 +10,8 @@ import KoaRouter from '@koa/router'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
+  getLeasesForPropertyId,
+  getContactForPhoneNumber,
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
@@ -77,6 +79,20 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Returns leases for a property id with populated sub objects
+   */
+  router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
+    const responseData = await getLeasesForPropertyId(
+      ctx.params.propertyId,
+      ctx.query.includeTerminatedLeases
+    )
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
    * Returns a lease with populated sub objects
    */
   router.get('(.*)/leases/:id', async (ctx) => {
@@ -126,6 +142,20 @@ export const routes = (router: KoaRouter) => {
     const responseData = await getContactByContactCode(
       ctx.params.contactCode,
       ctx.query.includeTerminatedLeases
+    )
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
+   * Gets a person by phone number.
+   */
+  router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx: any) => {
+    const responseData = await getContactForPhoneNumber(
+      ctx.params.phoneNumber,
+      //ctx.query.includeTerminatedLeases /TODO: Implement this?
     )
 
     ctx.body = {
@@ -212,12 +242,12 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 201; // HTTP status code for Created
       ctx.body = listing;
     } catch (error) {
-      ctx.status = 500; // Internal Server Error
+      ctx.status = 500 // Internal Server Error
 
       if (error instanceof Error) {
-        ctx.body = { error: error.message };
+        ctx.body = { error: error.message }
       } else {
-        ctx.body = { error: 'An unexpected error occurred.' };
+        ctx.body = { error: 'An unexpected error occurred.' }
       }
     }
   })
@@ -247,9 +277,9 @@ export const routes = (router: KoaRouter) => {
     } catch (error) {
       ctx.status = 500; // Internal Server Error
       if (error instanceof Error) {
-        ctx.body = { error: error.message };
+        ctx.body = { error: error.message }
       } else {
-        ctx.body = { error: 'An unexpected error occurred.' };
+        ctx.body = { error: 'An unexpected error occurred.' }
       }
     }
   })
@@ -266,69 +296,88 @@ export const routes = (router: KoaRouter) => {
       ctx.body = listing;
       ctx.status = 200;
     } catch (error) {
-      console.error('Error fetching listing:', ctx.params.rentalObjectCode , error);
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: 'An error occurred while fetching listing with the provided rentalObjectCode: ' + ctx.params.rentalObjectCode };
+      console.error(
+        'Error fetching listing:',
+        ctx.params.rentalObjectCode,
+        error
+      )
+      ctx.status = 500 // Internal Server Error
+      ctx.body = {
+        error:
+          'An error occurred while fetching listing with the provided rentalObjectCode: ' +
+          ctx.params.rentalObjectCode,
+      }
     }
-  });
+  })
 
   router.get('/listings-with-applicants', async (ctx) => {
     try {
-      const listingsWithApplicants = await getAllListingsWithApplicants();
-      ctx.body = listingsWithApplicants;
-      ctx.status = 200;
+      const listingsWithApplicants = await getAllListingsWithApplicants()
+      ctx.body = listingsWithApplicants
+      ctx.status = 200
     } catch (error) {
-      console.error('Error fetching listings with applicants:', error);
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: 'An error occurred while fetching listings with applicants.' };
+      console.error('Error fetching listings with applicants:', error)
+      ctx.status = 500 // Internal Server Error
+      ctx.body = {
+        error: 'An error occurred while fetching listings with applicants.',
+      }
     }
-  });
-  
+  })
+
   router.get('/applicants/:contactCode/', async (ctx) => {
-    const { contactCode } = ctx.params; // Extracting from URL parameters
-  
+    const { contactCode } = ctx.params // Extracting from URL parameters
+
     try {
-      const applicants = await getApplicantsByContactCode(contactCode);
-      ctx.body = applicants;
-      ctx.status = 200;
-  
+      const applicants = await getApplicantsByContactCode(contactCode)
+      ctx.body = applicants
+      ctx.status = 200
+
       if (!applicants) {
-        ctx.status = 404; // Not Found
-        ctx.body = { error: 'Applicanst not found for the provided contactCode.' };
+        ctx.status = 404 // Not Found
+        ctx.body = {
+          error: 'Applicanst not found for the provided contactCode.',
+        }
       } else {
-        ctx.status = 200; // OK
-        ctx.body = applicants;
+        ctx.status = 200 // OK
+        ctx.body = applicants
       }
     } catch (error) {
-      console.error('Error fetching applicant by contactCode:', error);
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: 'An error occurred while fetching the applicant.' };
+      console.error('Error fetching applicant by contactCode:', error)
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching the applicant.' }
     }
-  });
-  
+  })
+
   router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx) => {
-    const { contactCode, rentalObjectCode } = ctx.params; // Extracting from URL parameters
-  
+    const { contactCode, rentalObjectCode } = ctx.params // Extracting from URL parameters
+
     try {
-      const applicant = await getApplicantByContactCodeAndRentalObjectCode(contactCode, rentalObjectCode);
-      ctx.body = applicant;
-      ctx.status = 200;
-  
+      const applicant = await getApplicantByContactCodeAndRentalObjectCode(
+        contactCode,
+        rentalObjectCode
+      )
+      ctx.body = applicant
+      ctx.status = 200
+
       if (!applicant) {
-        ctx.status = 404; // Not Found
-        ctx.body = { error: 'Applicant not found for the provided contactCode and rentalObjectCode.' };
+        ctx.status = 404 // Not Found
+        ctx.body = {
+          error:
+            'Applicant not found for the provided contactCode and rentalObjectCode.',
+        }
       } else {
-        ctx.status = 200; // OK
-        ctx.body = applicant;
+        ctx.status = 200 // OK
+        ctx.body = applicant
       }
     } catch (error) {
-      console.error('Error fetching applicant by contactCode and rentalObjectCode:', error);
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: 'An error occurred while fetching the applicant.' };
+      console.error(
+        'Error fetching applicant by contactCode and rentalObjectCode:',
+        error
+      )
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: 'An error occurred while fetching the applicant.' }
     }
-  });
-  
-    
+  })
 
   /**
    * Gets the waiting lists of a person.
@@ -336,7 +385,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/contact/waitingList/:nationalRegistrationNumber',
     async (ctx: any) => {
-      try{
+      try {
         const responseData = await getWaitingList(
           ctx.params.nationalRegistrationNumber
         )
@@ -345,14 +394,14 @@ export const routes = (router: KoaRouter) => {
           data: responseData,
         }
       } catch (error: unknown) {
-          ctx.status = 500
+        ctx.status = 500
 
-          if (error instanceof Error) {
-            ctx.body = {
-              error: error.message,
-            }
+        if (error instanceof Error) {
+          ctx.body = {
+            error: error.message,
           }
         }
+      }
     }
   )
 

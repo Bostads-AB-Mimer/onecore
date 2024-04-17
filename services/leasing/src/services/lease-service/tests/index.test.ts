@@ -218,6 +218,22 @@ describe('lease-service', () => {
     })
   })
 
+  describe('GET /getLeasesForPropertyId', () => {
+    it('responds with an array of leases', async () => {
+      const getLeasesSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValue(leaseMock)
+
+      const res = await request(app.callback()).get(
+        '/leases/for/propertyId/110-007-01-0203'
+      )
+      expect(res.status).toBe(200)
+      expect(res.body.data).toBeInstanceOf(Array)
+      expect(getLeasesSpy).toHaveBeenCalled()
+      expect(res.body.data.length).toBe(3)
+    })
+  })
+
   describe('GET /leases/:id', () => {
     it('responds with a lease', async () => {
       const getLeaseSpy = jest

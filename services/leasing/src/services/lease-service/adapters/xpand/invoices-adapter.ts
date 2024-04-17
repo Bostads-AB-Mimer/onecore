@@ -73,7 +73,9 @@ const getInvoicesByContactCode = async (
     .where({ 'cmctc.cmctckod': contactKey })
     .orderBy('krfkh.fromdate', 'desc')
   if (rows && rows.length > 0) {
-    const invoices: Invoice[] = rows.map(transformFromDbInvoice)
+    const invoices: Invoice[] = rows
+      .filter((row) => row.invoiceId)
+      .map(transformFromDbInvoice)
     return invoices
   }
 

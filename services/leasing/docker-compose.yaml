@@ -7,11 +7,11 @@ services:
     container_name: sql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${DATABASE__PASSWORD}
+      - MSSQL_SA_PASSWORD=${LEASING_DATABASE__DATABASE}
     networks:
       - tenants-leases
     ports:
-      - "1433:1433"
+      - '1433:1433'
     volumes:
       - sql:/var/opt/mssql
 

@@ -21,11 +21,4 @@ Start the development server: `npm run dev`
 
 ## Env
 
-- DATABASE\_\_PASSWORD - password for database
-- DATABASE\_\_HOST - "localhost" for local dev environment
-- DATABASE\_\_USER - database username, default "sa"
-- DATABASE\_\_DATABASE=tenants-leases
-- DATABASE\_\_PORT=1433
-- XPAND_SOAP\_\_USERNAME=
-- XPAND_SOAP\_\_PASSWORD=
-- XPAND_SOAP\_\_URL=
+According to .env.template.
