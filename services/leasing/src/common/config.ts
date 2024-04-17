@@ -5,7 +5,14 @@ dotenv.config()
 
 export interface Config {
   port: number
-  database: {
+  xpandDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
+  leasingDatabase: {
     host: string
     user: string
     password: string
@@ -30,7 +37,14 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5020,
-    database: {
+    xpandDatabase: {
+      host: '',
+      user: '',
+      password: '',
+      port: 5432,
+      database: '',
+    },
+    leasingDatabase: {
       host: 'localhost',
       user: 'sa',
       password: '',
@@ -54,7 +68,8 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
-  database: config.get('database'),
+  xpandDatabase: config.get('xpandDatabase'),
+  leasingDatabase: config.get('leasingDatabase'),
   xpandSoap: config.get('xpandSoap'),
   creditsafe: config.get('creditsafe'),
 } as Config

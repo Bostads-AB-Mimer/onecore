@@ -10,27 +10,31 @@ import KoaRouter from '@koa/router'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
-  getContactByPhoneNumber,
+  getLeasesForPropertyId,
+  getContactForPhoneNumber,
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
-  createListing,
+
+} from './adapters/xpand/tenant-lease-adapter'
+
+import {  createListing,
   createApplication,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
   getListingByRentalObjectCode,
-  getLeasesForPropertyId,
-} from './adapters/tenant-lease-adapter'
+  applicationExists
+} from './adapters/listing-adapter'
 import {
   addApplicantToToWaitingList,
   createLease,
   getWaitingList,
-} from './adapters/xpand-soap-adapter'
+} from './adapters/xpand/xpand-soap-adapter'
 import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
-} from './adapters/invoices-adapter'
+} from './adapters/xpand/invoices-adapter'
 import { Applicant, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
@@ -149,9 +153,9 @@ export const routes = (router: KoaRouter) => {
    * Gets a person by phone number.
    */
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx: any) => {
-    const responseData = await getContactByPhoneNumber(
+    const responseData = await getContactForPhoneNumber(
       ctx.params.phoneNumber,
-      ctx.query.includeTerminatedLeases
+      //ctx.query.includeTerminatedLeases /TODO: Implement this?
     )
 
     ctx.body = {
@@ -221,13 +225,22 @@ export const routes = (router: KoaRouter) => {
   /**
    * Creates a new listing.
    */
+  //todo: test cases to write:
+  //can add listing
+  //cannot add duplicate listing
   router.post('(.*)/listings', async (ctx) => {
     try {
-      const listingData = <Listing>ctx.request.body
-      const listingId = await createListing(listingData)
+      const listingData = <Listing>ctx.request.body;
+      var existingListing = await getListingByRentalObjectCode(listingData.rentalObjectCode)
+      if(existingListing != null && existingListing.rentalObjectCode === listingData.rentalObjectCode){
+        ctx.status = 409
+        return
+      }
 
-      ctx.status = 201 // HTTP status code for Created
-      ctx.body = { listingId }
+      const listing = await createListing(listingData);
+
+      ctx.status = 201; // HTTP status code for Created
+      ctx.body = listing;
     } catch (error) {
       ctx.status = 500 // Internal Server Error
 
@@ -242,16 +255,27 @@ export const routes = (router: KoaRouter) => {
   /**
    * Endpoint to apply for a listing.
    */
+  //todo: test cases to write:
+  //can add applicant
+  //cannot add duplicate applicant
+  //handle non existing applicant contact code
+
   router.post('(.*)/listings/apply', async (ctx) => {
     try {
-      const applicantData = <Applicant>ctx.request.body
-      const applicationId = await createApplication(applicantData)
+      const applicantData = <Applicant>ctx.request.body;
 
-      ctx.status = 201 // HTTP status code for Created
-      ctx.body = { applicationId }
+      const exists = await applicationExists(applicantData.contactCode, applicantData.listingId);
+      if (exists) {
+        ctx.status = 409; // Conflict
+        ctx.body = { error: 'Applicant has already applied for this listing.' };
+        return;
+      }
+
+      const applicationId = await createApplication(applicantData);
+      ctx.status = 201; // HTTP status code for Created
+      ctx.body = { applicationId };
     } catch (error) {
-      ctx.status = 500 // Internal Server Error
-
+      ctx.status = 500; // Internal Server Error
       if (error instanceof Error) {
         ctx.body = { error: error.message }
       } else {
@@ -262,10 +286,15 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/listings/:rentalObjectCode', async (ctx) => {
     try {
-      const rentaLObjectCode = ctx.params.rentalObjectCode
-      const listing = await getListingByRentalObjectCode(rentaLObjectCode)
-      ctx.body = listing
-      ctx.status = 200
+      const rentaLObjectCode = ctx.params.rentalObjectCode;
+      const listing = await getListingByRentalObjectCode(rentaLObjectCode);
+      if(listing == undefined){
+        ctx.status = 404;
+        return
+      }
+
+      ctx.body = listing;
+      ctx.status = 200;
     } catch (error) {
       console.error(
         'Error fetching listing:',
