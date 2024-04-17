@@ -18,20 +18,4 @@ Note: The microservices leasing and property-management must be running for this
 
 ## Env
 
-config.json template:
-
-```
-{
-  "port": 5010,
-  "tenantsLeasesService": {
-    "url": "http://localhost:5020"
-  },
-  "auth": {
-    "testAccount": {
-      "userName": "service-account-name",
-      "salt": "password salt (create with /auth/generate-hash)",
-      "hash": "password hash (create with /auth/generate-hash)"
-    }
-  }
-}
-```
+According to .env.template.
