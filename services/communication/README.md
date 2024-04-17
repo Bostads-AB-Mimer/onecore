@@ -15,3 +15,7 @@ Start the development server: `npm run dev`
 ### Try out the service
 
 `curl -X POST -H "Content-Type: application/json" -d '{"to":"<email>", "subject":"<subject>", "text":"<text>"}' http://localhost:5040/sendMessage`
+
+## Env
+
+According to .env.template.
