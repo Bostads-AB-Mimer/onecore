@@ -11,9 +11,6 @@ export interface Config {
     port: number
     database: string
   }
-  contechOs: {
-    url: string
-  }
   xpandService: {
     url: string
   }
@@ -57,7 +54,6 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   database: config.get('database'),
-  contechOs: config.get('contechOs'),
   xpandService: config.get('xpandService'),
   xpandSoap: config.get('xpandSoap'),
   appsMimerNu: config.get('appsMimerNu'),

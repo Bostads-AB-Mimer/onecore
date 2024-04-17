@@ -21,8 +21,4 @@ Start the development server: `npm run dev`
 
 ## Env
 
-- DATABASE\_\_PASSWORD - password for database
-- DATABASE\_\_HOST - "localhost" for local dev environment
-- DATABASE\_\_USER - database username, default "sa"
-- DATABASE\_\_DATABASE=properties
-- DATABASE\_\_PORT=1433
+According to .env.template.
