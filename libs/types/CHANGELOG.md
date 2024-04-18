@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.0...v1.9.1) (2024-04-03)
+
+
+### Bug Fixes
+
+* add applicationCategory to Listing ([f22e30b](https://github.com/Bostads-AB-Mimer/onecore-types/commit/f22e30b2e17113c1ca800de061b0f1d8474d4d6f))
+
 ## [1.9.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.8.1...v1.9.0) (2024-03-27)
 
 
