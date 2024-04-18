@@ -19,14 +19,15 @@ import {
   filterRoomTypes,
   sortRoomTypes,
 } from './adapters/material-options-adapter'
-import { 
-  MaterialChoice, 
+import {
+  MaterialChoice,
   MaterialOptionGroup,
   Listing,
   ListingStatus,
- } from 'onecore-types'
+} from 'onecore-types'
 import { getParkingSpace } from './adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from './adapters/xpand-soap-adapter'
+import { getRentalPropertyInfo } from './adapters/apps-mimer-nu-adapter'
 
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -118,7 +119,9 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/publishedParkingSpaces/:id', async (ctx) => {
-    const xpandParkingSpace = await getPublishedParkingSpaceFromSoapService(ctx.params.id)
+    const xpandParkingSpace = await getPublishedParkingSpaceFromSoapService(
+      ctx.params.id
+    )
     if (!xpandParkingSpace) {
       ctx.status = 404
       return
@@ -142,7 +145,14 @@ export const routes = (router: KoaRouter) => {
       status: ListingStatus.Active,
       waitingListType: xpandParkingSpace.waitingListType,
       applicationCategory: xpandParkingSpace.applicationCategory
-    };
+    }
+
     ctx.body = listing
+  })
+
+  router.get('(.*)/rentalPropertyInfo/:id', async (ctx) => {
+    const responseData = await getRentalPropertyInfo(ctx.params.id)
+
+    ctx.body = responseData
   })
 }
