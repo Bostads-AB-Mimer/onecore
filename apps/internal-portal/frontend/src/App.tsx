@@ -12,6 +12,9 @@ import GraphikRegular from '../assets/Graphik-Regular.woff2'
 import GraphikBold from '../assets/Graphik-Bold.woff2'
 import Login from './pages/Login/Login'
 import MaterialChoiceDetails from './pages/MaterialChoiceDetails/MaterialChoiceDetails'
+import ParkingSpaces from './pages/Parkingspaces/Index'
+
+import type {} from '@mui/x-data-grid/themeAugmentation';
 
 declare module '@mui/material/styles' {
   interface TypographyVariants {
@@ -75,7 +78,7 @@ const mdTheme = createTheme({
   palette: {
     mode: 'light',
     background: {
-      default: 'white',
+
     },
     divider: '#951B81',
   },
@@ -211,6 +214,17 @@ const mdTheme = createTheme({
         },
       },
     },
+    MuiDataGrid: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'white',
+          border: 'none',
+        },
+        columnHeader: {
+          borderBottom: '2px solid black'
+        },
+      },
+    },
     MuiCardActions: {
       styleOverrides: {
         root: {
@@ -252,6 +266,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home></Home>} />
               <Route path="/logout" element={<Login></Login>} />
+              <Route path="/parkingspaces" element={<ParkingSpaces></ParkingSpaces>} />
               <Route
                 path="/materialval/utskrift"
                 element={<MaterialChoiceDetails />}
