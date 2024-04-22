@@ -168,17 +168,17 @@ export const routes = (router: KoaRouter) => {
 
       const contactCode = ctx.request.body.contactCode
 
-      if (contactCode == '') {
+      if (contactCode && contactCode == '') {
         ctx.status = 400
         ctx.body = {
           message:
-            'Contact id is missing. It needs to be passed in the body (contactId)',
+            'Contact code is missing. It needs to be passed in the body (contactId)',
         }
         return
       }
 
       const applicationType = ctx.request.body.applicationType
-      if (applicationType == '') {
+      if (applicationType && applicationType == '') {
         ctx.status = 400
         ctx.body = {
           message:
