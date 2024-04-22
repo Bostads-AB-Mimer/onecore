@@ -79,11 +79,18 @@ const transformFromDbLease = (
   return lease
 }
 
-//todo: include contact/tentant info
-const getLease = async (leaseId: string): Promise<Lease | undefined> => {
+const getLease = async (
+  leaseId: string,
+  includeContacts: string | string[] | undefined
+): Promise<Lease | undefined> => {
   const rows = await getLeaseById(leaseId)
   if (rows.length > 0) {
-    return transformFromDbLease(rows[0], [], [])
+    if (includeContacts) {
+      const tenants = await getContactsByLeaseId(leaseId)
+      return transformFromDbLease(rows[0], [], tenants)
+    } else {
+      return transformFromDbLease(rows[0], [], [])
+    }
   }
   return undefined
 }
@@ -123,10 +130,10 @@ const getLeases = async (leaseIds: string[] | undefined): Promise<Lease[]> => {
   return leases
 }
 
-//todo: include contact/tentant info
 const getLeasesForNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: string | string[] | undefined,
+  includeContacts: string | string[] | undefined
 ) => {
   const contact = await db('cmctc')
     .select('cmctc.keycmctc as contactKey')
@@ -143,6 +150,13 @@ const getLeasesForNationalRegistrationNumber = async (
       return leases
     }
 
+    if (includeContacts) {
+      for (const lease of leases) {
+        const tenants = await getContactsByLeaseId(lease.leaseId)
+        lease.tenants = tenants
+      }
+    }
+
     return leases.filter(isLeaseActive)
   }
 
@@ -151,7 +165,8 @@ const getLeasesForNationalRegistrationNumber = async (
 
 const getLeasesForContactCode = async (
   contactCode: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: string | string[] | undefined,
+  includeContacts: string | string[] | undefined
 ) => {
   const contact = await db('cmctc')
     .select('cmctc.keycmctc as contactKey')
@@ -168,13 +183,21 @@ const getLeasesForContactCode = async (
       return leases
     }
 
+    if (includeContacts) {
+      for (const lease of leases) {
+        const tenants = await getContactsByLeaseId(lease.leaseId)
+        lease.tenants = tenants
+      }
+    }
+
     return leases.filter(isLeaseActive)
   }
 }
 
 const getLeasesForPropertyId = async (
   propertyId: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: string | string[] | undefined,
+  includeContacts: string | string[] | undefined
 ) => {
   const leases: Lease[] = []
   const rows = await db('hyavk')
@@ -197,8 +220,12 @@ const getLeasesForPropertyId = async (
     .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
 
   for (const row of rows) {
-    const lease = await transformFromDbLease(row, [], [])
-    leases.push(lease)
+    if (includeContacts) {
+      const tenants = await getContactsByLeaseId(row.leaseId)
+      leases.push(transformFromDbLease(row, [], tenants))
+    } else {
+      leases.push(transformFromDbLease(row, [], []))
+    }
   }
   if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
     return leases
@@ -261,6 +288,27 @@ const getContactByPhoneNumber = async (
       return transformFromDbContact(rows[0], phoneNumbers, leases)
     }
   }
+}
+
+const getContactsByLeaseId = async (leaseId: string) => {
+  const contacts: Contact[] = []
+  const rows = await db('hyavk')
+    .select('hyavk.keycmctc as contactKey')
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .where({ hyobjben: leaseId })
+
+  for (let row of rows) {
+    row = await getContactQuery()
+      .where({ 'cmctc.keycmctc': row.contactKey })
+      .limit(1)
+
+    if (row && row.length > 0) {
+      const phoneNumbers = await getPhoneNumbersForContact(row[0].keycmobj)
+      contacts.push(transformFromDbContact(row[0], phoneNumbers, []))
+    }
+  }
+
+  return contacts
 }
 
 const getContactQuery = () => {
@@ -409,5 +457,5 @@ export {
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactForPhoneNumber,
-  isLeaseActive
+  isLeaseActive,
 }
