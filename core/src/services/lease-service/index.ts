@@ -11,6 +11,9 @@ import {
   getLease,
   getLeasesForPnr,
   getCreditInformation,
+  getListingsWithApplicants,
+  getApplicantsByContactCode,
+  getApplicantByContactCodeAndRentalObjectCode,
   getContactForPhoneNumber,
 } from '../../adapters/leasing-adapter'
 
@@ -81,5 +84,38 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       data: responseData,
     }
+  })
+
+  /**
+   * Get all Listings with Applicants
+   */
+  router.get('/listings-with-applicants', async (ctx: any) => {
+    const responseData = await getListingsWithApplicants()
+
+    ctx.body = responseData
+  })
+
+  /**
+   * Get all Applicants by contact code
+   */
+  router.get('/applicants/:contactCode', async (ctx: any) => {
+    const responseData = await getApplicantsByContactCode(
+      ctx.params.contactCode
+    )
+
+    ctx.body = responseData
+  })
+
+  /**
+   * Get Applicant by contact code and rental object code
+   */
+  router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx: any) => {
+    const { contactCode, rentalObjectCode } = ctx.params
+    const responseData = await getApplicantByContactCodeAndRentalObjectCode(
+      contactCode,
+      rentalObjectCode
+    )
+
+    ctx.body = responseData
   })
 }

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import {
+  Listing,
   MaterialChoice,
   MaterialOption,
   ParkingSpace,
@@ -123,7 +124,7 @@ const getParkingSpace = async (
 
 const getPublishedParkingSpace = async (
   parkingSpaceId: string
-): Promise<ParkingSpace | undefined> => {
+): Promise<Listing | undefined> => {
   try {
     const parkingSpaceResponse = await axios(
       `${propertyManagementServiceUrl}/publishedParkingSpaces/${parkingSpaceId}`
@@ -131,6 +132,7 @@ const getPublishedParkingSpace = async (
 
     return parkingSpaceResponse.data
   } catch (error) {
+    console.error('Error retrieving parking space', error)
     return undefined
   }
 }

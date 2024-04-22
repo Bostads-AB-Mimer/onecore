@@ -51,6 +51,6 @@
     "koa-bodyparser": "^4.4.1",
     "koa-jwt": "^4.0.4",
     "koa-pino-logger": "^4.0.0",
-    "onecore-types": "^1.8.0"
+    "onecore-types": "^1.9.1"
   }
 }

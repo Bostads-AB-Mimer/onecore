@@ -1,36 +1,30 @@
 import {
-  ConsumerReport,
   Contact,
   Lease,
   LeaseStatus,
-  ParkingSpace,
-  ParkingSpaceApplicationCategory,
-  ParkingSpaceType,
+  Listing,
   WaitingList,
 } from 'onecore-types'
 
-export const mockedParkingSpace: ParkingSpace = {
-  parkingSpaceId: '123-456-789/0',
-  address: {
-    street: 'Gatan',
-    number: '1',
-    postalCode: '12345',
-    city: 'Västerås',
-  },
-  rent: {
-    currentRent: {
-      currentRent: 123,
-      vat: 0,
-      rentStartDate: undefined,
-      rentEndDate: undefined,
-      additionalChargeAmount: undefined,
-      additionalChargeDescription: undefined,
-    },
-    futureRents: undefined,
-  },
-  type: ParkingSpaceType.Garage,
-  applicationCategory: ParkingSpaceApplicationCategory.internal,
-  vacantFrom: new Date(),
+export const mockedParkingSpace: Listing = {
+  id: 1,
+  rentalObjectCode: '705-808-00-0006',
+  address: 'Svarvargatan 4',
+  monthlyRent: 698.33,
+  districtCaption: 'Malmaberg',
+  districtCode: 'MAL',
+  blockCaption: 'LINDAREN 2',
+  blockCode: '1401',
+  objectTypeCaption: 'Carport',
+  objectTypeCode: 'CPORT',
+  rentalObjectTypeCaption: 'Standard hyresobjektstyp',
+  rentalObjectTypeCode: 'STD',
+  publishedFrom: new Date('2024-03-26T10:06:56'),
+  publishedTo: new Date('2024-05-04T23:59:59'),
+  vacantFrom: new Date('2023-02-01T00:00:00'),
+  status: 1,
+  waitingListType: 'Bilplats (intern)',
+  applicationCategory: 0,
 }
 
 export const mockedApplicant: Contact = {

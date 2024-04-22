@@ -1,7 +1,8 @@
 import {
+  Applicant,
   Contact,
   Lease,
-  ParkingSpace,
+  Listing,
   ParkingSpaceApplicationCategory,
   WaitingList,
 } from 'onecore-types'
@@ -18,10 +19,12 @@ import {
 import { create } from 'domain'
 import exp from 'constants'
 
+//todo: mock database since actual inserts are happening in the real db
+
 describe('parkingspaces', () => {
   describe('createNoteOfInterestForInternalParkingSpace', () => {
     let getParkingSpaceSpy: jest.SpyInstance<
-      Promise<ParkingSpace | undefined>,
+      Promise<Listing | undefined>,
       [parkingSpaceId: string],
       any
     >
@@ -38,6 +41,21 @@ describe('parkingspaces', () => {
     let getWaitingListSpy: jest.SpyInstance<
       Promise<WaitingList[] | undefined>,
       [nationalRegistrationNumber: string],
+      any
+    >
+    let getListingByRentalObjectCodeSpy: jest.SpyInstance<
+      Promise<any | undefined>,
+      [rentalObjectCode: string],
+      any
+    >
+    let createNewListingSpy: jest.SpyInstance<
+      Promise<any | undefined>,
+      [listingData: Listing],
+      any
+    >
+    let applyForListingSpy: jest.SpyInstance<
+      Promise<any | undefined>,
+      [applicantData: Applicant],
       any
     >
 
@@ -57,12 +75,22 @@ describe('parkingspaces', () => {
       getWaitingListSpy = jest
         .spyOn(leasingAdapter, 'getWaitingList')
         .mockResolvedValue(mockedWaitingList)
+      //todo: mock axios response with body
+      getListingByRentalObjectCodeSpy = jest.spyOn(
+        leasingAdapter,
+        'getListingByRentalObjectCode'
+      )
+      //todo: mock axios response with body
+      createNewListingSpy = jest.spyOn(leasingAdapter, 'createNewListing')
+      //todo: mock axios response with body
+      applyForListingSpy = jest.spyOn(leasingAdapter, 'applyForListing')
     })
 
     it('gets the parking space', async () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        'baz'
       )
 
       expect(getParkingSpaceSpy).toHaveBeenCalledWith('foo')
@@ -74,7 +102,8 @@ describe('parkingspaces', () => {
       const result =
         await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
           'foo',
-          'bar'
+          'bar',
+          'baz'
         )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -86,7 +115,8 @@ describe('parkingspaces', () => {
       const result =
         await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
           'foo',
-          'bar'
+          'bar',
+          'baz'
         )
       expect(result.processStatus).toBe(ProcessStatus.failed)
       expect(result.httpStatus).toBe(403)
@@ -102,7 +132,8 @@ describe('parkingspaces', () => {
       const result =
         await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
           'foo',
-          'bar'
+          'bar',
+          'baz'
         )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -114,7 +145,8 @@ describe('parkingspaces', () => {
 
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        'baz'
       )
 
       expect(getContactSpy).toHaveBeenCalledWith('bar')
@@ -127,7 +159,8 @@ describe('parkingspaces', () => {
       const result =
         await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
           'foo',
-          'bar'
+          'bar',
+          'baz'
         )
 
       expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -138,7 +171,8 @@ describe('parkingspaces', () => {
       const logSpy = jest.spyOn(global.console, 'log')
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
-        'bar'
+        'bar',
+        'baz'
       )
       expect(logSpy.mock.calls[0][0].length).toBe(4)
       expect(logSpy.mock.calls[0][0][3]).toEqual(
@@ -146,4 +180,8 @@ describe('parkingspaces', () => {
       )
     })
   })
+
+  //todo: write tests for step 4.b Add parking space listing to onecore-leases
+
+  // todo: write tests for step 4.c Add applicant to onecore-leasing database
 })

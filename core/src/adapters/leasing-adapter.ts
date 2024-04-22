@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { AxiosError, HttpStatusCode } from 'axios'
 import {
   ConsumerReport,
   Contact,
@@ -6,9 +6,16 @@ import {
   InvoiceTransactionType,
   Lease,
   WaitingList,
+  Listing,
+  Applicant,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
+
+//todo: move to global config or handle error statuses in middleware
+axios.defaults.validateStatus = function (status) {
+  return status >= 200 && status < 500 // override Axios throwing errors so that we can handle errors manually
+}
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -163,6 +170,81 @@ const addApplicantToWaitingList = async (
   )
 }
 
+const createNewListing = async (listingData: Listing) => {
+  try {
+    return await axios.post(`${tenantsLeasesServiceUrl}/listings`, listingData)
+  } catch (error) {
+    console.error('Error creating new listing:', error)
+    return undefined
+  }
+}
+
+const applyForListing = async (applicantData: Applicant) => {
+  try {
+    return await axios.post(
+      `${tenantsLeasesServiceUrl}/listings/apply`,
+      applicantData
+    )
+  } catch (error) {
+    console.error('Error applying for listing:', error)
+    return undefined
+  }
+}
+
+const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
+  try {
+    return await axios.get(
+      `${tenantsLeasesServiceUrl}/listings/${rentalObjectCode}`
+    )
+  } catch (error) {
+    console.error('Error fetching listing by rental object code:', error)
+    return undefined
+  }
+}
+
+const getListingsWithApplicants = async (): Promise<any[] | undefined> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/listings-with-applicants`
+    )
+    return response.data
+  } catch (error) {
+    console.error('Error fetching listings with applicants:', error)
+    return undefined
+  }
+}
+
+const getApplicantsByContactCode = async (
+  contactCode: string
+): Promise<any[] | undefined> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/`
+    )
+    return response.data
+  } catch (error) {
+    console.error('Error fetching applicants by contact code:', error)
+    return undefined
+  }
+}
+const getApplicantByContactCodeAndRentalObjectCode = async (
+  contactCode: string,
+  rentalObjectCode: string
+): Promise<any | undefined> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${rentalObjectCode}`
+    )
+    return response.data
+  } catch (error) {
+    console.error(
+      'Error fetching applicant by contact code and rental object code:',
+      error
+    )
+    return undefined
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -175,4 +257,10 @@ export {
   getInternalCreditInformation,
   getWaitingList,
   addApplicantToWaitingList,
+  createNewListing,
+  getListingByRentalObjectCode,
+  applyForListing,
+  getListingsWithApplicants,
+  getApplicantsByContactCode,
+  getApplicantByContactCodeAndRentalObjectCode,
 }

@@ -18,6 +18,7 @@ import {
 import { getFloorPlanStream } from './adapters/document-adapter'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { createNoteOfInterestForInternalParkingSpace } from '../../processes/parkingspaces/internal'
+import App from '../../app'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/floorplan', async (ctx) => {
@@ -165,9 +166,9 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const contactId = ctx.request.body.contactId
+      const contactCode = ctx.request.body.contactCode
 
-      if (!contactId) {
+      if (contactCode == '') {
         ctx.status = 400
         ctx.body = {
           message:
@@ -176,10 +177,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      const applicationType = ctx.request.body.applicationType
+      if (applicationType == '') {
+        ctx.status = 400
+        ctx.body = {
+          message:
+            'Application type is missing. It needs to be passed in the body (applicationType)',
+        }
+        return
+      }
+
       try {
         const result = await createNoteOfInterestForInternalParkingSpace(
           parkingSpaceId,
-          contactId
+          contactCode,
+          applicationType
         )
 
         ctx.status = result.httpStatus
