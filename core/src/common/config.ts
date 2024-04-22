@@ -22,6 +22,12 @@ export interface Config {
   communicationService: {
     url: string
   }
+  ticketingService: {
+    url: string
+    database: string
+    username: string
+    password: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -50,6 +56,12 @@ const config = configPackage({
     communicationService: {
       url: 'http://localhost:5040',
     },
+    ticketingService: {
+      url: 'http://127.0.0.1:8069',
+      database: 'odoo',
+      username: 'admin',
+      password: 'admin',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -68,6 +80,7 @@ export default {
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
+  ticketingService: config.get('ticketingService'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
 } as Config

@@ -7,6 +7,7 @@ import {
 } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfo } from '../../adapters/property-management-adapter'
 import { Lease, RentalPropertyInfo } from 'onecore-types'
+import { getTicketByContactCode } from './adapters/odoo-adapter'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -100,6 +101,27 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = {
       data: responseData,
+    }
+  })
+
+  router.get('(.*)/ticketsByContactCode/:code', async (ctx: any) => {
+    try {
+      const tickets = await getTicketByContactCode(ctx.params.code)
+      if (tickets && tickets.length > 0) {
+        ctx.body = {
+          totalCount: tickets.length,
+          workOrders: tickets,
+        }
+      } else {
+        ctx.status = 404
+        ctx.body = { error: 'No tickets found' }
+        return
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error' }
+      return
     }
   })
 }
