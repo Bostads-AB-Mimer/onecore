@@ -12,28 +12,44 @@ import dayjs from 'dayjs'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-const getLease = async (leaseId: string): Promise<Lease> => {
+const getLease = async (
+  leaseId: string,
+  includeContacts: string | string[] | undefined
+): Promise<Lease> => {
   const leaseResponse = await axios(
-    tenantsLeasesServiceUrl + '/leases/' + leaseId
+    tenantsLeasesServiceUrl +
+      '/leases/' +
+      leaseId +
+      (includeContacts ? '?includeContacts=true' : '')
   )
 
   return leaseResponse.data.data
 }
 
 const getLeasesForPnr = async (
-  nationalRegistrationNumber: string
+  nationalRegistrationNumber: string,
+  includeTerminatedLeases: string | string[] | undefined,
+  includeContacts: string | string[] | undefined
 ): Promise<Lease[]> => {
   const leasesResponse = await axios(
     tenantsLeasesServiceUrl +
       '/leases/for/nationalRegistrationNumber/' +
-      nationalRegistrationNumber
+      nationalRegistrationNumber +
+      (includeContacts ? '?includeContacts=true' : '')
   )
   return leasesResponse.data.data
 }
 
-const getLeasesForPropertyId = async (propertyId: string): Promise<Lease[]> => {
+const getLeasesForPropertyId = async (
+  propertyId: string,
+  includeTerminatedLeases: string | string[] | undefined,
+  includeContacts: string | string[] | undefined
+): Promise<Lease[]> => {
   const leasesResponse = await axios(
-    tenantsLeasesServiceUrl + '/leases/for/propertyId/' + propertyId
+    tenantsLeasesServiceUrl +
+      '/leases/for/propertyId/' +
+      propertyId +
+      (includeContacts ? '?includeContacts=true' : '')
   )
   return leasesResponse.data.data
 }
