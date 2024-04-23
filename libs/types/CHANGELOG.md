@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.1...v1.10.0) (2024-04-23)
+
+
+### Features
+
+* 1346 add applicant list to listings ([#44](https://github.com/Bostads-AB-Mimer/onecore-types/issues/44)) ([cb709d7](https://github.com/Bostads-AB-Mimer/onecore-types/commit/cb709d747451ba1d9ab200195a086a4cc24c9097))
+
 ## [1.9.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.0...v1.9.1) (2024-04-03)
 
 
