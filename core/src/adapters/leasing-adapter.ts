@@ -207,6 +207,17 @@ const applyForListing = async (applicantData: Applicant) => {
   }
 }
 
+const getListingByListingId = async (listingId: string) => {
+  try {
+    return await axios.get(
+      `${tenantsLeasesServiceUrl}/listings/by-id/${listingId}`
+    )
+  } catch (error) {
+    console.error('Error fetching listing by rental object code:', error)
+    return undefined
+  }
+}
+
 const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
   try {
     return await axios.get(
@@ -274,6 +285,7 @@ export {
   getWaitingList,
   addApplicantToWaitingList,
   createNewListing,
+  getListingByListingId,
   getListingByRentalObjectCode,
   applyForListing,
   getListingsWithApplicants,

@@ -11,6 +11,7 @@ import {
   getLease,
   getLeasesForPnr,
   getCreditInformation,
+  getListingByListingId,
   getListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
@@ -84,6 +85,17 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/leases/:id', async (ctx) => {
     const responseData = await getLeaseWithRelatedEntities(ctx.params.id)
+
+    ctx.body = {
+      data: responseData,
+    }
+  })
+
+  /**
+   * Returns a listing with the provided listing id
+   */
+  router.get('(.*)/listing/:id', async (ctx) => {
+    const responseData = await getListingByListingId(ctx.params.id)
 
     ctx.body = {
       data: responseData,
