@@ -18,7 +18,7 @@ import {
 } from '../../adapters/leasing-adapter'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
-  const lease = await getLease(rentalId)
+  const lease = await getLease(rentalId, 'true')
 
   return lease
 }
@@ -26,7 +26,11 @@ const getLeaseWithRelatedEntities = async (rentalId: string) => {
 const getLeasesWithRelatedEntitiesForPnr = async (
   nationalRegistrationNumber: string
 ) => {
-  const leases = await getLeasesForPnr(nationalRegistrationNumber)
+  const leases = await getLeasesForPnr(
+    nationalRegistrationNumber,
+    undefined,
+    'true'
+  )
 
   return leases
 }
