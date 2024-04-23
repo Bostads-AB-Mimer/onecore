@@ -32,8 +32,11 @@ export const routes = (router: KoaRouter) => {
       switch (ctx.query.typeOfNumber) {
         case 'propertyId': {
           const propertyInfo = await getRentalPropertyInfo(ctx.params.number)
-          const leases = await getLeasesForPropertyId(ctx.params.number)
-          console.log(leases)
+          const leases = await getLeasesForPropertyId(
+            ctx.params.number,
+            undefined,
+            'true'
+          )
           const propertyInfoWithLeases: RentalPropertyInfoWithLeases = {
             ...propertyInfo,
             leases: leases,
@@ -42,7 +45,10 @@ export const routes = (router: KoaRouter) => {
           break
         }
         case 'leaseId': {
-          const lease = await getLease(encodeURIComponent(ctx.params.number))
+          const lease = await getLease(
+            encodeURIComponent(ctx.params.number),
+            'true'
+          )
           if (lease) {
             const propertyInfoWithLease =
               await getRentalPropertyInfoWithLeases(lease)
@@ -51,7 +57,11 @@ export const routes = (router: KoaRouter) => {
           break
         }
         case 'pnr': {
-          const leases = await getLeasesForPnr(ctx.params.number)
+          const leases = await getLeasesForPnr(
+            ctx.params.number,
+            undefined,
+            'true'
+          )
           if (leases) {
             for (const lease of leases) {
               const propertyInfoWithLease =
@@ -65,7 +75,9 @@ export const routes = (router: KoaRouter) => {
           const contact = await getContactForPhoneNumber(ctx.params.number)
           if (contact) {
             const leases = await getLeasesForPnr(
-              contact.nationalRegistrationNumber
+              contact.nationalRegistrationNumber,
+              undefined,
+              'true'
             )
             if (leases) {
               for (const lease of leases) {

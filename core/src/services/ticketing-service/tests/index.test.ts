@@ -6,6 +6,7 @@ import * as propertyManagementAdapter from '../../../adapters/property-managemen
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import { Lease, Contact } from 'onecore-types'
+import console from 'console'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -170,7 +171,7 @@ describe('routes', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(getLeaseSpy).toHaveBeenCalledWith('123')
+    expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
     expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
   })
 
@@ -179,12 +180,21 @@ describe('routes', () => {
       .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
       .mockResolvedValue(rentalPropertyInfoMock)
 
+    const getLeasesForPropertyIdSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+      .mockResolvedValue([leaseMock])
+
     const res = await request(app.callback()).get(
       '/propertyInfo/456?typeOfNumber=propertyId'
     )
 
     expect(res.status).toBe(200)
     expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
+    expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
+      '456',
+      undefined,
+      'true'
+    )
   })
 
   it('should handle pnr case', async () => {
@@ -201,7 +211,7 @@ describe('routes', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123')
+    expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', undefined, 'true')
     expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
   })
 
@@ -223,7 +233,7 @@ describe('routes', () => {
 
     expect(res.status).toBe(200)
     expect(getContactForPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
-    expect(getLeaseSpy).toHaveBeenCalledWith('123')
+    expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
     expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
   })
 })
