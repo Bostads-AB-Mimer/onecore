@@ -1,4 +1,4 @@
-import { Applicant, Listing, ListingStatus } from 'onecore-types'
+import { Applicant, Listing, ListingStatus, ApplicantStatus } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
@@ -91,6 +91,44 @@ const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<L
   };
 };
 
+/**
+ * Checks if a listing already exists based on unique criteria.
+ *
+ * @param {number} listingId - The rental object code of the listing (originally from xpand)
+ * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
+ */
+const getListingById = async (listingId: string): Promise<Listing | undefined> => {
+  const listing = await db('Listing')
+    .where({
+      Id: listingId
+    })
+    .first();
+
+  if(listing == undefined){
+    return undefined
+  }
+
+  return  {
+    id: listing.Id,
+    rentalObjectCode: listing.RentalObjectCode,
+    address: listing.Address,
+    monthlyRent: listing.MonthlyRent,
+    districtCaption: listing.DistrictCaption,
+    districtCode: listing.DistrictCode,
+    blockCaption: listing.BlockCaption,
+    blockCode: listing.BlockCode,
+    objectTypeCaption: listing.ObjectTypeCaption,
+    objectTypeCode: listing.ObjectTypeCode,
+    rentalObjectTypeCaption: listing.RentalObjectTypeCaption,
+    rentalObjectTypeCode: listing.RentalObjectTypeCode,
+    publishedFrom: listing.PublishedFrom,
+    publishedTo: listing.PublishedTo,
+    vacantFrom: listing.VacantFrom,
+    status: listing.Status,
+    waitingListType: listing.WaitingListType
+  };
+};
+
 const createApplication = async (applicationData: Applicant) => {
   await db('applicant').insert({
     Name: applicationData.name,
@@ -101,6 +139,29 @@ const createApplication = async (applicationData: Applicant) => {
     ListingId: applicationData.listingId,
   });
 }
+
+/**
+ * Updates the status of an existing applicant using the ApplicantStatus enum.
+ * 
+ * @param {number} applicantId - The ID of the applicant to update.
+ * @param {ApplicantStatus} newStatus - The new status to set for the applicant.
+ * @returns {Promise<boolean>} - Returns true if the update was successful, false otherwise.
+ */
+const updateApplicantStatus = async (applicantId: number, status: ApplicantStatus) => {
+  try {
+
+    const updateCount = await db('applicant')
+      .where('Id', applicantId)
+      .update({
+        Status: status
+      });
+
+    return updateCount > 0;
+  } catch (error) {
+    console.error('Error updating applicant status:', error);
+    throw error;
+  }
+};
 
 
 //todo: use type and do type conversion to camelCase
@@ -120,7 +181,8 @@ const getAllListingsWithApplicants = async () => {
 
 const getApplicantsByContactCode = async (contactCode: string) => {
   return db('Applicant')
-    .where({ ContactCode: contactCode }).first();
+    .where({ ContactCode: contactCode })
+    .select('*');
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
@@ -145,9 +207,11 @@ const applicationExists = async (contactCode: string, listingId: number) => {
 export {
   createListing,
   createApplication,
+  getListingById,
   getListingByRentalObjectCode,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode,
-  applicationExists
+  applicationExists,
+  updateApplicantStatus
 }

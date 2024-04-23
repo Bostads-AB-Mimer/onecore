@@ -24,7 +24,9 @@ import {  createListing,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
   getListingByRentalObjectCode,
-  applicationExists
+  applicationExists,
+  updateApplicantStatus,
+  getListingById,
 } from './adapters/listing-adapter'
 import {
   addApplicantToToWaitingList,
@@ -35,7 +37,7 @@ import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
 } from './adapters/xpand/invoices-adapter'
-import { Applicant, Listing } from 'onecore-types'
+import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
@@ -284,6 +286,32 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/listings/by-id/:listingId', async (ctx) => {
+    try {
+      const listingId = ctx.params.listingId;
+      const listing = await getListingById(listingId);
+      if(listing == undefined){
+        ctx.status = 404;
+        return
+      }
+
+      ctx.body = listing;
+      ctx.status = 200;
+    } catch (error) {
+      console.error(
+        'Error fetching listing:',
+        ctx.params.listingId,
+        error
+      )
+      ctx.status = 500 // Internal Server Error
+      ctx.body = {
+        error:
+          'An error occurred while fetching listing with the provided listingId: ' +
+          ctx.params.listingId,
+      }
+    }
+  })
+
   router.get('/listings/:rentalObjectCode', async (ctx) => {
     try {
       const rentaLObjectCode = ctx.params.rentalObjectCode;
@@ -312,6 +340,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/listings-with-applicants', async (ctx) => {
     try {
+      console.log('Fetching listings with applicants...')
       const listingsWithApplicants = await getAllListingsWithApplicants()
       ctx.body = listingsWithApplicants
       ctx.status = 200
@@ -378,6 +407,28 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'An error occurred while fetching the applicant.' }
     }
   })
+
+  router.patch('/applicants/:id/status', async (ctx) => {
+    const { id } = ctx.params;
+    const status = ctx.request.body as any;
+
+    try {
+      console.log('Updating applicant status with id:', id, 'to:', status);
+      const applicantUpdated = await updateApplicantStatus(Number(id), status.status);
+      if (applicantUpdated) {
+        ctx.status = 200;
+        ctx.body = { message: 'Applicant status updated successfully' };
+      } else {
+        ctx.status = 404;
+        ctx.body = { error: 'Applicant not found' };
+      }
+    } catch (error) {
+      console.error('Error updating applicant status:', error);
+      ctx.status = 500; // Internal Server Error
+      ctx.body = { error: 'An error occurred while updating the applicant status.' };
+    }
+});
+
 
   /**
    * Gets the waiting lists of a person.
