@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.11.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.1...v1.11.0) (2024-04-23)
+
+
+### Features
+
+* (1319) new property-info types ([6d7b3dc](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6d7b3dc0a16943808604e0df491dfd889d05496f))
+
+## [1.10.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.0...v1.10.1) (2024-04-23)
+
+
+### Bug Fixes
+
+* remove applicationCategory from Listing ([e28ee16](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e28ee16b9433b65d66031a877eac20d2a16c1252))
+
+## [1.10.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.1...v1.10.0) (2024-04-23)
+
+
+### Features
+
+* 1346 add applicant list to listings ([#44](https://github.com/Bostads-AB-Mimer/onecore-types/issues/44)) ([cb709d7](https://github.com/Bostads-AB-Mimer/onecore-types/commit/cb709d747451ba1d9ab200195a086a4cc24c9097))
+
 ## [1.9.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.0...v1.9.1) (2024-04-03)
 
 

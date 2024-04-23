@@ -197,34 +197,88 @@ interface WaitingList {
 }
 
 interface Listing {
-  id: number;
-  rentalObjectCode: string;
-  address: string;
-  monthlyRent: number;
-  districtCaption?: string;
-  districtCode?: string;
-  blockCaption?: string;
-  blockCode?: string;
-  objectTypeCaption?: string | undefined;
-  objectTypeCode?: string | undefined;
-  rentalObjectTypeCaption?: string | undefined;
-  rentalObjectTypeCode?: string | undefined;
-  publishedFrom: Date;
-  publishedTo: Date;
-  vacantFrom: Date;
-  status: ListingStatus;
-  waitingListType?: string | undefined;
-  applicationCategory: ParkingSpaceApplicationCategory
+  id: number
+  rentalObjectCode: string
+  address: string
+  monthlyRent: number
+  districtCaption?: string
+  districtCode?: string
+  blockCaption?: string
+  blockCode?: string
+  objectTypeCaption?: string | undefined
+  objectTypeCode?: string | undefined
+  rentalObjectTypeCaption?: string | undefined
+  rentalObjectTypeCode?: string | undefined
+  publishedFrom: Date
+  publishedTo: Date
+  vacantFrom: Date
+  status: ListingStatus
+  waitingListType?: string | undefined
+  applicants?: Applicant[]
 }
 
 interface Applicant {
-  id: number;
-  name: string;
-  contactCode: string;
-  applicationDate: Date;
-  applicationType?: string | undefined; //todo: "Additional" or "Replace". Should be an enum in the future
-  status: ApplicantStatus;
-  listingId: number;
+  id: number
+  name: string
+  contactCode: string
+  applicationDate: Date
+  applicationType?: string | undefined //todo: "Additional" or "Replace". Should be an enum in the future
+  status: ApplicantStatus
+  listingId: number
+}
+
+interface RentalPropertyInfo {
+  id: string
+  type: string
+  property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
+  maintenanceUnits?: MaintenanceUnitInfo[]
+}
+
+interface ApartmentInfo {
+  rentalTypeCode: string
+  rentalType: string
+  address: string
+  code: string
+  number: string
+  type: string
+  entrance: string
+  floor: string
+  hasElevator: boolean
+  washSpace: string
+  area: number
+  estateCode: string
+  estate: string
+  buildingCode: string
+  building: string
+}
+
+interface CommercialSpaceInfo {
+  rentalTypeCode: string
+  rentalType: string
+  address: string
+  code: string
+  type: string
+  entrance: string
+  estateCode: string
+  estate: string
+  buildingCode: string
+  building: string
+}
+
+interface ParkingSpaceInfo {
+  rentalTypeCode: string
+  rentalType: string
+  address: string
+  code: string
+}
+
+interface MaintenanceUnitInfo {
+  code: string
+  caption: string
+  typeCode: string | null
+  typeCaption: string | null
+  estateCode: string
+  estate: string
 }
 
 /*interface UnpaidInvoices {
@@ -263,4 +317,9 @@ export type {
   WaitingList,
   Listing,
   Applicant,
+  RentalPropertyInfo,
+  ApartmentInfo,
+  CommercialSpaceInfo,
+  ParkingSpaceInfo,
+  MaintenanceUnitInfo,
 }
