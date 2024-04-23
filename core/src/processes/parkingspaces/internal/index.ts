@@ -69,7 +69,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         processStatus: ProcessStatus.failed,
         httpStatus: 400,
         response: {
-          message: `This process currently only handles internal parking spaces. The parking space provided is not internal (it is ${parkingSpace.applicationCategory}, ${parkingSpaceApplicationCategoryTranslation.internal}).`,
+          message: `This process currently only handles internal parking spaces. The parking space provided is not internal (it is ${parkingSpaceApplicationType}, ${parkingSpaceApplicationCategoryTranslation.internal}).`,
         },
       }
     }
