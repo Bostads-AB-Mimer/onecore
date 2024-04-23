@@ -213,7 +213,6 @@ interface Listing {
   vacantFrom: Date;
   status: ListingStatus;
   waitingListType?: string | undefined;
-  applicationCategory: ParkingSpaceApplicationCategory
   applicants?: Applicant[]
 }
 
