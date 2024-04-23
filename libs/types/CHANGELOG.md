@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.1...v1.11.0) (2024-04-23)
+
+
+### Features
+
+* (1319) new property-info types ([6d7b3dc](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6d7b3dc0a16943808604e0df491dfd889d05496f))
+
 ## [1.10.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.0...v1.10.1) (2024-04-23)
 
 
