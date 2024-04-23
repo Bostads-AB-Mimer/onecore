@@ -7,6 +7,7 @@ import * as materialOptionsAdapter from '../adapters/material-options-adapter'
 import * as roomTypesAdapter from '../adapters/contech-os-adapter'
 import * as xpandAdapter from '../adapters/xpand-adapter'
 import {
+  RentalPropertyInfo,
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
@@ -19,6 +20,95 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('propery-info-service index', () => {
+  describe('GET /rentalPropertyInfo/:id', () => {
+    let rentalPropertyInfoMock: RentalPropertyInfo
+    beforeEach(() => {
+      rentalPropertyInfoMock = {
+        id: '705-022-04-0201',
+        type: 'Apartment',
+        property: {
+          rentalTypeCode: 'KORTTID',
+          rentalType: 'Korttidskontrakt',
+          address: 'STENTORPSGATAN 9 A',
+          code: '0201',
+          number: '1101',
+          type: '3 rum och kök',
+          entrance: '04',
+          floor: '2',
+          hasElevator: false,
+          washSpace: 'B',
+          area: 73,
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          buildingCode: '705-022',
+          building: 'STENTORPSGATAN 7-9',
+        },
+        maintenanceUnits: [
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705Y01',
+            caption: 'Skötselyta/Mark',
+            typeCode: null,
+            typeCaption: null,
+          },
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705S18',
+            caption: 'STENTORPG. 1-13, 2-16',
+            typeCode: 'TRS',
+            typeCaption: 'Trappstädning',
+          },
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705T17',
+            caption: 'TVÄTTSTUGA Stentorpsgatan 13 B',
+            typeCode: 'TVÄTTSTUGA',
+            typeCaption: 'Tvättstuga',
+          },
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705M03',
+            caption: 'Miljöbod Ö48 Stentorpsg. 13',
+            typeCode: 'MILJÖBOD',
+            typeCaption: 'Miljöbod',
+          },
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705S12',
+            caption: 'SKYDDSRUM Stentorpsgatan 9 C',
+            typeCode: 'SKY',
+            typeCaption: 'Skyddsrum',
+          },
+          {
+            estateCode: '02301',
+            estate: 'KOLAREN 1',
+            code: '705L08',
+            caption: 'STENTORPSGATAN 7',
+            typeCode: 'LEKPLATS',
+            typeCaption: 'Lekplats',
+          },
+        ],
+      }
+    })
+    it('responds with an object', async () => {
+      const getRentalPropertyInfoSpy = jest
+        .spyOn(xpandAdapter, 'getRentalPropertyInfo')
+        .mockResolvedValue(rentalPropertyInfoMock)
+
+      const res = await request(app.callback()).get(
+        '/rentalPropertyInfo/705-022-04-0201'
+      )
+      expect(res.status).toBe(200)
+      expect(res.body).toBeInstanceOf(Object)
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
+    })
+  })
+
   describe('GET /rentalproperties/:apartmentId/rooms-with-material-choices', () => {
     let roomTypes: any, choices: any
 

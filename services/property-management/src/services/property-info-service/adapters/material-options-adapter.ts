@@ -10,7 +10,7 @@ import config from '../../../common/config'
 
 const db = knex({
   client: 'mssql',
-  connection: config.database,
+  connection: config.propertyManagementDatabase,
 })
 
 const cancelPreviousChoice = async (
