@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.0...v1.10.1) (2024-04-23)
+
+
+### Bug Fixes
+
+* remove applicationCategory from Listing ([e28ee16](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e28ee16b9433b65d66031a877eac20d2a16c1252))
+
 ## [1.10.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.9.1...v1.10.0) (2024-04-23)
 
 
