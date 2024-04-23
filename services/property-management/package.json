@@ -54,7 +54,7 @@
     "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
-    "onecore-types": "^1.9.1",
+    "onecore-types": "^1.10.1",
     "tedious": "^16.6.1"
   }
 }

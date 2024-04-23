@@ -144,7 +144,6 @@ export const routes = (router: KoaRouter) => {
       vacantFrom: xpandParkingSpace.vacantFrom,
       status: ListingStatus.Active,
       waitingListType: xpandParkingSpace.waitingListType,
-      applicationCategory: xpandParkingSpace.applicationCategory
     }
 
     ctx.body = listing
