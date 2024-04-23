@@ -214,6 +214,7 @@ interface Listing {
   status: ListingStatus;
   waitingListType?: string | undefined;
   applicationCategory: ParkingSpaceApplicationCategory
+  applicants?: Applicant[]
 }
 
 interface Applicant {
