@@ -58,9 +58,12 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       }
     }
 
+    const parkingSpaceApplicationType = parkingSpace.waitingListType
+      ? parkingSpaceApplicationCategoryTranslation[parkingSpace.waitingListType]
+      : undefined
+
     if (
-      parkingSpace.applicationCategory !=
-      ParkingSpaceApplicationCategory.internal
+      parkingSpaceApplicationType != ParkingSpaceApplicationCategory.internal
     ) {
       return {
         processStatus: ProcessStatus.failed,
