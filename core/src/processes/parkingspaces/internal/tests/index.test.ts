@@ -35,7 +35,11 @@ describe('parkingspaces', () => {
     >
     let getLeasesForPnrSpy: jest.SpyInstance<
       Promise<Lease[] | undefined>,
-      [nationalRegistrationNumber: string],
+      [
+        nationalRegistrationNumber: string,
+        includeTerminatedLeases: string | string[] | undefined,
+        includeContacts: string | string[] | undefined,
+      ],
       any
     >
     let getWaitingListSpy: jest.SpyInstance<
