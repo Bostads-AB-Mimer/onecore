@@ -5,11 +5,8 @@ import {
   getLeasesForPnr,
   getLeasesForPropertyId,
 } from '../../adapters/leasing-adapter'
-import {
-  RentalPropertyInfo,
-  getRentalPropertyInfo,
-} from '../../adapters/property-management-adapter'
-import { Lease } from 'onecore-types'
+import { getRentalPropertyInfo } from '../../adapters/property-management-adapter'
+import { Lease, RentalPropertyInfo } from 'onecore-types'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -30,6 +27,9 @@ export const routes = (router: KoaRouter) => {
 
     try {
       switch (ctx.query.typeOfNumber) {
+        // getRentalPropertyInfo can be refactored into separate endpoints for fetching more specific data. From leases we know if the property is an apartment or a parking space or a commercial space.
+        // However, fetching property type from leases brings an issue when searching for a property without an active lease.
+
         case 'propertyId': {
           const propertyInfo = await getRentalPropertyInfo(ctx.params.number)
           const leases = await getLeasesForPropertyId(
@@ -99,9 +99,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.body = {
-      data: responseData.filter(
-        (item: any) => item.id !== undefined && item.id !== null
-      ),
+      data: responseData,
     }
   })
 }

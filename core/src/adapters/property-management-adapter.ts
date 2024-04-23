@@ -5,19 +5,11 @@ import {
   MaterialOption,
   ParkingSpace,
   RentalProperty,
+  RentalPropertyInfo,
 } from 'onecore-types'
 import config from '../common/config'
 
 // Temporary interface to be replaced by the one from onecore-types when propertyInfo is fetched from xpand
-export interface RentalPropertyInfo {
-  id: string
-  address: string
-  type: string
-  size: string
-  estateCode: string
-  estateName: string
-  blockCode: string
-}
 
 const propertyManagementServiceUrl = config.propertyInfoService.url
 

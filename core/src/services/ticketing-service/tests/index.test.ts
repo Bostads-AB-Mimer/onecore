@@ -5,24 +5,13 @@ import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
-import { Lease, Contact } from 'onecore-types'
-import console from 'console'
+import { Lease, Contact, RentalPropertyInfo } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use(router.routes())
-
-interface RentalPropertyInfo {
-  id: string
-  address: string
-  type: string
-  size: string
-  estateCode: string
-  estateName: string
-  blockCode: string
-}
 
 describe('routes', () => {
   let leaseMock: Lease,
@@ -148,15 +137,78 @@ describe('routes', () => {
     }
 
     rentalPropertyInfoMock = {
-      id: '456',
-      address: 'Gatvägen 29',
-      type: '3 RUM OCH KÖK',
-      size: '72',
-      estateCode: '12345',
-      estateName: 'Test Estate',
-      blockCode: '987-654',
+      id: '705-022-04-0201',
+      type: 'Apartment',
+      property: {
+        rentalTypeCode: 'KORTTID',
+        rentalType: 'Korttidskontrakt',
+        address: 'STENTORPSGATAN 9 A',
+        code: '0201',
+        number: '1101',
+        type: '3 rum och kök',
+        entrance: '04',
+        floor: '2',
+        hasElevator: false,
+        washSpace: 'B',
+        area: 73,
+        estateCode: '02301',
+        estate: 'KOLAREN 1',
+        buildingCode: '705-022',
+        building: 'STENTORPSGATAN 7-9',
+      },
+      maintenanceUnits: [
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705Y01',
+          caption: 'Skötselyta/Mark',
+          typeCode: null,
+          typeCaption: null,
+        },
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705S18',
+          caption: 'STENTORPG. 1-13, 2-16',
+          typeCode: 'TRS',
+          typeCaption: 'Trappstädning',
+        },
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705T17',
+          caption: 'TVÄTTSTUGA Stentorpsgatan 13 B',
+          typeCode: 'TVÄTTSTUGA',
+          typeCaption: 'Tvättstuga',
+        },
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705M03',
+          caption: 'Miljöbod Ö48 Stentorpsg. 13',
+          typeCode: 'MILJÖBOD',
+          typeCaption: 'Miljöbod',
+        },
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705S12',
+          caption: 'SKYDDSRUM Stentorpsgatan 9 C',
+          typeCode: 'SKY',
+          typeCaption: 'Skyddsrum',
+        },
+        {
+          estateCode: '02301',
+          estate: 'KOLAREN 1',
+          code: '705L08',
+          caption: 'STENTORPSGATAN 7',
+          typeCode: 'LEKPLATS',
+          typeCaption: 'Lekplats',
+        },
+      ],
     }
   })
+
   it('should handle leaseId case', async () => {
     const getLeaseSpy = jest
       .spyOn(tenantLeaseAdapter, 'getLease')
