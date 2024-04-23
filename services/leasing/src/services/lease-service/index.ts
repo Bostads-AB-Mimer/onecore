@@ -340,7 +340,6 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/applicants/:contactCode/', async (ctx) => {
     const { contactCode } = ctx.params // Extracting from URL parameters
-
     try {
       const applicants = await getApplicantsByContactCode(contactCode)
       ctx.body = applicants
@@ -349,7 +348,7 @@ export const routes = (router: KoaRouter) => {
       if (!applicants) {
         ctx.status = 404 // Not Found
         ctx.body = {
-          error: 'Applicanst not found for the provided contactCode.',
+          error: 'Applicant not found for the provided contactCode.',
         }
       } else {
         ctx.status = 200 // OK
