@@ -2,7 +2,7 @@ import {
   Applicant,
   Invoice,
   Listing,
-  ListingStatus,
+  ListingStatus, ApplicantStatus,
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
 } from 'onecore-types'
@@ -92,6 +92,25 @@ const getListingByRentalObjectCode = async (rentalObjectCode: string): Promise<L
   return transformFromDbListing(listing)
 };
 
+/**
+ * Checks if a listing already exists based on unique criteria.
+ *
+ * @param {number} listingId - The rental object code of the listing (originally from xpand)
+ * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
+ */
+const getListingById = async (listingId: string): Promise<Listing | undefined> => {
+  const listing = await db('Listing')
+    .where({
+      Id: listingId
+    })
+    .first();
+
+  if(listing == undefined){
+    return undefined
+  }
+  return transformFromDbListing(listing)
+};
+
 const createApplication = async (applicationData: Applicant) => {
   await db('applicant').insert({
     Name: applicationData.name,
@@ -103,6 +122,30 @@ const createApplication = async (applicationData: Applicant) => {
   });
 }
 
+/**
+ * Updates the status of an existing applicant using the ApplicantStatus enum.
+ * 
+ * @param {number} applicantId - The ID of the applicant to update.
+ * @param {ApplicantStatus} newStatus - The new status to set for the applicant.
+ * @returns {Promise<boolean>} - Returns true if the update was successful, false otherwise.
+ */
+const updateApplicantStatus = async (applicantId: number, status: ApplicantStatus) => {
+  try {
+
+    const updateCount = await db('applicant')
+      .where('Id', applicantId)
+      .update({
+        Status: status
+      });
+
+    return updateCount > 0;
+  } catch (error) {
+    console.error('Error updating applicant status:', error);
+    throw error;
+  }
+}
+
+//todo: use type and do type conversion to camelCase
 const getAllListingsWithApplicants = async () => {
   const dbListings: Listing[] = await db('Listing').select('*');
   let transformedListings: Listing[]  = []
@@ -128,13 +171,16 @@ const getAllListingsWithApplicants = async () => {
 };
 
 const getApplicantsByContactCode = async (contactCode: string) => {
-  const result =  await db('Applicant')
-    .where({ ContactCode: contactCode }).first();
+  const result = await db('Applicant')
+    .where({ ContactCode: contactCode })
+    .select('*');
 
-  if(result == undefined)
-    return undefined
-
-  return transformDbApplicant(result)
+    if (result == undefined){
+      return undefined
+    }
+    
+    // Map result array to Applicant objects
+    return result.map(transformDbApplicant);
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
@@ -164,9 +210,11 @@ const applicationExists = async (contactCode: string, listingId: number) => {
 export {
   createListing,
   createApplication,
+  getListingById,
   getListingByRentalObjectCode,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode,
-  applicationExists
+  applicationExists,
+  updateApplicantStatus
 }
