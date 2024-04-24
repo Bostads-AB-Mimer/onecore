@@ -163,6 +163,17 @@ const updateApplicantStatus = async (applicantId: number, status: ApplicantStatu
   }
 };
 
+const mapToApplicant = (applicant: any): Applicant => {
+  return {
+    id: applicant.Id,
+    name: applicant.Name,
+    contactCode: applicant.ContactCode,
+    applicationDate: applicant.ApplicationDate,
+    applicationType: applicant.ApplicationType,
+    status: applicant.Status,
+    listingId: applicant.ListingId
+  }
+}
 
 //todo: use type and do type conversion to camelCase
 const getAllListingsWithApplicants = async () => {
@@ -180,9 +191,21 @@ const getAllListingsWithApplicants = async () => {
 };
 
 const getApplicantsByContactCode = async (contactCode: string) => {
-  return db('Applicant')
+  const result = await db('Applicant')
     .where({ ContactCode: contactCode })
     .select('*');
+
+    if (result == undefined){
+      return undefined
+    }
+    // Create a new array of applicants with the mapToApplicant function
+    // results contains a list of applicants
+    const list = result.map(mapToApplicant);
+    console.log(list);
+    for (let applicant of list) {
+      console.log(applicant);
+    }
+    return list;
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
