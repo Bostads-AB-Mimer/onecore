@@ -9,6 +9,7 @@ import {
   Listing,
   Applicant,
   ApplicantStatus,
+  ApplicantWithListing
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -255,6 +256,26 @@ const getApplicantsByContactCode = async (
     return undefined
   }
 }
+
+const getApplicantsAndListingByContactCode = async (
+  contactCode: string
+): Promise<any[] | undefined> => {
+  const applicantsAndListings: ApplicantWithListing[] = []
+  try {
+    const applicantsResponse = await getApplicantsByContactCode(contactCode) as Applicant[]
+    for (const applicant of applicantsResponse) {
+      const listingResponse = await getListingByListingId(applicant.listingId.toString())
+      if (listingResponse) {
+        applicantsAndListings.push({ applicant, listing: listingResponse.data })
+      }
+    }
+    return applicantsAndListings
+  } catch (error) {
+    console.error('Error fetching applicants and listings by contact code:', error)
+    return undefined
+  }
+}
+
 const getApplicantByContactCodeAndRentalObjectCode = async (
   contactCode: string,
   rentalObjectCode: string
@@ -329,6 +350,7 @@ export {
   applyForListing,
   getListingsWithApplicants,
   getApplicantsByContactCode,
+  getApplicantsAndListingByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
