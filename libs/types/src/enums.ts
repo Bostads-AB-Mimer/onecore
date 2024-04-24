@@ -51,11 +51,22 @@ enum ListingStatus {
   Deleted = 3,
 }
 
+enum ApplicantStatus {
+  Active = 1,
+  Assigned = 2,
+  AssignedToOther = 3,
+  WithdrawnByUser = 4,
+  WithdrawnByManager = 5,
+  //PendingReview = 6 // ?
+  //Rejected = 7 // ?
+}
+
 export {
   LeaseStatus,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,
   InvoiceTransactionType,
-  ListingStatus
+  ListingStatus,
+  ApplicantStatus
 }

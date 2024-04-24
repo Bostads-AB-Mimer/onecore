@@ -1,4 +1,5 @@
 import {
+  ApplicantStatus,
   InvoiceTransactionType,
   LeaseStatus,
   ListingStatus,
@@ -222,9 +223,15 @@ interface Applicant {
   contactCode: string
   applicationDate: Date
   applicationType?: string | undefined //todo: "Additional" or "Replace". Should be an enum in the future
-  status: ListingStatus
+  status: ApplicantStatus
   listingId: number
 }
+
+interface ApplicantWithListing {
+  applicant: Applicant;
+  listing: Listing;
+}
+
 
 interface RentalPropertyInfo {
   id: string
@@ -316,6 +323,7 @@ export type {
   WaitingList,
   Listing,
   Applicant,
+  ApplicantWithListing,
   RentalPropertyInfo,
   ApartmentInfo,
   CommercialSpaceInfo,
