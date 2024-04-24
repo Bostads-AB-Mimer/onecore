@@ -15,10 +15,10 @@ import {
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
-
 } from './adapters/xpand/tenant-lease-adapter'
 
-import {  createListing,
+import {
+  createListing,
   createApplication,
   getAllListingsWithApplicants,
   getApplicantsByContactCode,
@@ -58,7 +58,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
     const responseData = await getLeasesForNationalRegistrationNumber(
       ctx.params.pnr,
-      ctx.query.includeTerminatedLeases
+      ctx.query.includeTerminatedLeases,
+      ctx.query.includeContacts
     )
 
     ctx.body = {
@@ -72,7 +73,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
     const responseData = await getLeasesForContactCode(
       ctx.params.pnr,
-      ctx.query.includeTerminatedLeases
+      ctx.query.includeTerminatedLeases,
+      ctx.query.includeContacts
     )
 
     ctx.body = {
@@ -86,7 +88,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
     const responseData = await getLeasesForPropertyId(
       ctx.params.propertyId,
-      ctx.query.includeTerminatedLeases
+      ctx.query.includeTerminatedLeases,
+      ctx.query.includeContacts
     )
 
     ctx.body = {
@@ -98,7 +101,10 @@ export const routes = (router: KoaRouter) => {
    * Returns a lease with populated sub objects
    */
   router.get('(.*)/leases/:id', async (ctx) => {
-    const responseData = await getLease(ctx.params.id)
+    const responseData = await getLease(
+      ctx.params.id,
+      ctx.query.includeContacts
+    )
 
     ctx.body = {
       data: responseData,
@@ -156,7 +162,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx: any) => {
     const responseData = await getContactForPhoneNumber(
-      ctx.params.phoneNumber,
+      ctx.params.phoneNumber
       //ctx.query.includeTerminatedLeases /TODO: Implement this?
     )
 
@@ -232,17 +238,22 @@ export const routes = (router: KoaRouter) => {
   //cannot add duplicate listing
   router.post('(.*)/listings', async (ctx) => {
     try {
-      const listingData = <Listing>ctx.request.body;
-      var existingListing = await getListingByRentalObjectCode(listingData.rentalObjectCode)
-      if(existingListing != null && existingListing.rentalObjectCode === listingData.rentalObjectCode){
+      const listingData = <Listing>ctx.request.body
+      const existingListing = await getListingByRentalObjectCode(
+        listingData.rentalObjectCode
+      )
+      if (
+        existingListing != null &&
+        existingListing.rentalObjectCode === listingData.rentalObjectCode
+      ) {
         ctx.status = 409
         return
       }
 
-      const listing = await createListing(listingData);
+      const listing = await createListing(listingData)
 
-      ctx.status = 201; // HTTP status code for Created
-      ctx.body = listing;
+      ctx.status = 201 // HTTP status code for Created
+      ctx.body = listing
     } catch (error) {
       ctx.status = 500 // Internal Server Error
 
@@ -264,20 +275,23 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/listings/apply', async (ctx) => {
     try {
-      const applicantData = <Applicant>ctx.request.body;
+      const applicantData = <Applicant>ctx.request.body
 
-      const exists = await applicationExists(applicantData.contactCode, applicantData.listingId);
+      const exists = await applicationExists(
+        applicantData.contactCode,
+        applicantData.listingId
+      )
       if (exists) {
-        ctx.status = 409; // Conflict
-        ctx.body = { error: 'Applicant has already applied for this listing.' };
-        return;
+        ctx.status = 409 // Conflict
+        ctx.body = { error: 'Applicant has already applied for this listing.' }
+        return
       }
 
-      const applicationId = await createApplication(applicantData);
-      ctx.status = 201; // HTTP status code for Created
-      ctx.body = { applicationId };
+      const applicationId = await createApplication(applicantData)
+      ctx.status = 201 // HTTP status code for Created
+      ctx.body = { applicationId }
     } catch (error) {
-      ctx.status = 500; // Internal Server Error
+      ctx.status = 500 // Internal Server Error
       if (error instanceof Error) {
         ctx.body = { error: error.message }
       } else {
@@ -355,7 +369,6 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/applicants/:contactCode/', async (ctx) => {
     const { contactCode } = ctx.params // Extracting from URL parameters
-
     try {
       const applicants = await getApplicantsByContactCode(contactCode)
       ctx.body = applicants
@@ -364,7 +377,7 @@ export const routes = (router: KoaRouter) => {
       if (!applicants) {
         ctx.status = 404 // Not Found
         ctx.body = {
-          error: 'Applicanst not found for the provided contactCode.',
+          error: 'Applicant not found for the provided contactCode.',
         }
       } else {
         ctx.status = 200 // OK
