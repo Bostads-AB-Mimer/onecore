@@ -37,7 +37,7 @@ import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
 } from './adapters/xpand/invoices-adapter'
-import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
+import { Applicant, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
