@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.11.0...v1.12.0) (2024-04-24)
+
+
+### Features
+
+* add type for pairing a listing and applicant ([c670e22](https://github.com/Bostads-AB-Mimer/onecore-types/commit/c670e22b37b459a9fc3ee3239de575d22ecd870a))
+
 ## [1.11.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.10.1...v1.11.0) (2024-04-23)
 
 
