@@ -108,26 +108,7 @@ const getListingById = async (listingId: string): Promise<Listing | undefined> =
   if(listing == undefined){
     return undefined
   }
-
-  return  {
-    id: listing.Id,
-    rentalObjectCode: listing.RentalObjectCode,
-    address: listing.Address,
-    monthlyRent: listing.MonthlyRent,
-    districtCaption: listing.DistrictCaption,
-    districtCode: listing.DistrictCode,
-    blockCaption: listing.BlockCaption,
-    blockCode: listing.BlockCode,
-    objectTypeCaption: listing.ObjectTypeCaption,
-    objectTypeCode: listing.ObjectTypeCode,
-    rentalObjectTypeCaption: listing.RentalObjectTypeCaption,
-    rentalObjectTypeCode: listing.RentalObjectTypeCode,
-    publishedFrom: listing.PublishedFrom,
-    publishedTo: listing.PublishedTo,
-    vacantFrom: listing.VacantFrom,
-    status: listing.Status,
-    waitingListType: listing.WaitingListType
-  };
+  return transformFromDbListing(listing)
 };
 
 const createApplication = async (applicationData: Applicant) => {
@@ -161,18 +142,6 @@ const updateApplicantStatus = async (applicantId: number, status: ApplicantStatu
   } catch (error) {
     console.error('Error updating applicant status:', error);
     throw error;
-  }
-};
-
-const mapToApplicant = (applicant: any): Applicant => {
-  return {
-    id: applicant.Id,
-    name: applicant.Name,
-    contactCode: applicant.ContactCode,
-    applicationDate: applicant.ApplicationDate,
-    applicationType: applicant.ApplicationType,
-    status: applicant.Status,
-    listingId: applicant.ListingId
   }
 }
 
@@ -211,7 +180,7 @@ const getApplicantsByContactCode = async (contactCode: string) => {
     }
     
     // Map result array to Applicant objects
-    return result.map(mapToApplicant);
+    return result.map(transformDbApplicant);
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
