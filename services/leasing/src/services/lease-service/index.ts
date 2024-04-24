@@ -413,7 +413,6 @@ export const routes = (router: KoaRouter) => {
     const status = ctx.request.body as any;
 
     try {
-      console.log('Updating applicant status with id:', id, 'to:', status);
       const applicantUpdated = await updateApplicantStatus(Number(id), status.status);
       if (applicantUpdated) {
         ctx.status = 200;
