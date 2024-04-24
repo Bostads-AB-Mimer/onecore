@@ -8,6 +8,7 @@ import {
   WaitingList,
   Listing,
   Applicant,
+  ApplicantStatus,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -221,7 +222,7 @@ const getListingByListingId = async (listingId: string) => {
 const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
   try {
     return await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
     )
   } catch (error) {
     console.error('Error fetching listing by rental object code:', error)
@@ -272,6 +273,44 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
   }
 }
 
+const updateApplicantStatus = async (
+  applicantId: string,
+  status: ApplicantStatus
+): Promise<any> => {
+  try {
+    const response = await axios.patch(
+      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
+      { status }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error patching applicant status:', error);
+    throw new Error(`Failed to update status for applicant ${applicantId}`);
+  }
+};
+
+const withdrawApplicantByManager = async (
+  applicantId: string 
+): Promise<any> => {
+  try {
+    return await updateApplicantStatus(applicantId, ApplicantStatus.WithdrawnByManager);
+  } catch (error) {
+    console.error('Error withdrawing applicant by manager:', error);
+    return undefined
+  }
+}
+
+const withdrawApplicantByUser = async (
+  applicantId: string 
+): Promise<any> => {
+  try {
+    return await updateApplicantStatus(applicantId, ApplicantStatus.WithdrawnByUser);
+  } catch (error) {
+    console.error('Error withdrawing applicant by user:', error);
+    return undefined
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -291,4 +330,6 @@ export {
   getListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
+  withdrawApplicantByManager,
+  withdrawApplicantByUser,
 }

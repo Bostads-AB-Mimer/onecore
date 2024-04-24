@@ -11,6 +11,7 @@ import {
 } from '../../../adapters/leasing-adapter'
 import {
   Applicant,
+  ApplicantStatus,
   ListingStatus,
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
@@ -187,7 +188,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         contactCode: applicantContact.contactCode,
         applicationDate: new Date(),
         applicationType: applicationType,
-        status: ListingStatus.Active,
+        status: ApplicantStatus.Active,
         listingId: listing.data?.id, //null should not be allowed
       }
 
