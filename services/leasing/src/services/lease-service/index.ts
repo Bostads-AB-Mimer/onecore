@@ -312,7 +312,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('/listings/:rentalObjectCode', async (ctx) => {
+  router.get('/listings/by-code/:rentalObjectCode', async (ctx) => {
     try {
       const rentaLObjectCode = ctx.params.rentalObjectCode;
       const listing = await getListingByRentalObjectCode(rentaLObjectCode);
