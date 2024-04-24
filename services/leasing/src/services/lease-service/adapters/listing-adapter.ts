@@ -198,14 +198,9 @@ const getApplicantsByContactCode = async (contactCode: string) => {
     if (result == undefined){
       return undefined
     }
-    // Create a new array of applicants with the mapToApplicant function
-    // results contains a list of applicants
-    const list = result.map(mapToApplicant);
-    console.log(list);
-    for (let applicant of list) {
-      console.log(applicant);
-    }
-    return list;
+    
+    // Map result array to Applicant objects
+    return result.map(mapToApplicant);
 }
 
 const getApplicantsByContactCodeAndRentalObjectCode = async (contactCode: string, rentalObjectCode: string) => {
