@@ -227,6 +227,12 @@ interface Applicant {
   listingId: number
 }
 
+interface ApplicantWithListing {
+  applicant: Applicant;
+  listing: Listing;
+}
+
+
 interface RentalPropertyInfo {
   id: string
   type: string
@@ -317,6 +323,7 @@ export type {
   WaitingList,
   Listing,
   Applicant,
+  ApplicantWithListing,
   RentalPropertyInfo,
   ApartmentInfo,
   CommercialSpaceInfo,
