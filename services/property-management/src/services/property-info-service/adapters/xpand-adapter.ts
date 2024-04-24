@@ -97,7 +97,7 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
   }
 
   return {
-    id: row.rental_id,
+    id: row.rental_property_id,
     type: rentalPropertyType,
     property: property,
   }
@@ -107,23 +107,24 @@ const transformFromDbMaintenanceUnits = (rows: any): MaintenanceUnitInfo[] => {
   return rows.map((row: any) => {
     row = trimRow(row)
     return {
+      id: row.keycmobj,
+      rentalPropertyId: row.rental_property_id,
+      code: row.code,
+      caption: row.caption,
+      type: row.type,
       estateCode: row.estate_code,
       estate: row.estate,
-      code: row.maintenance_unit_code,
-      caption: row.maintenance_unit_caption,
-      typeCode: row.maintenance_unit_type_code,
-      typeCaption: row.maintenance_unit_type_caption,
     }
   })
 }
 
 const getRentalPropertyInfo = async (
-  property_id: string
+  rentalPropertyId: string
 ): Promise<RentalPropertyInfo | undefined> => {
   const row = await db('cmobj')
     .select(
       'cmobt.keycmobt',
-      'babuf.hyresid as rental_id',
+      'babuf.hyresid as rental_property_id',
       'babuf.caption as address',
       'babuf.vancode as entrance',
       'babuf.fstcode as estate_code',
@@ -159,7 +160,7 @@ const getRentalPropertyInfo = async (
     })
     .leftJoin('balok', 'cmobj.keycmobj', 'balok.keycmobj')
     .leftJoin('balot', 'balok.keybalot', 'balot.keybalot')
-    .where('hyinf.hyresid', property_id)
+    .where('hyinf.hyresid', rentalPropertyId)
 
   if (!row || row.length === 0) {
     return undefined
@@ -167,31 +168,32 @@ const getRentalPropertyInfo = async (
 
   const rentalPropertyInfo = transformFromDbRentalPropertyInfo(row)
 
-  if ('estateCode' in rentalPropertyInfo.property) {
-    const maintenanceUnits = await getMaintenanceUnits(
-      rentalPropertyInfo.property.estateCode
-    )
-    if (maintenanceUnits) {
-      rentalPropertyInfo.maintenanceUnits = maintenanceUnits
-    }
+  const maintenanceUnits = await getMaintenanceUnits(rentalPropertyId)
+  if (maintenanceUnits) {
+    rentalPropertyInfo.maintenanceUnits = maintenanceUnits
   }
 
   return rentalPropertyInfo
 }
 
-const getMaintenanceUnits = async (estate_code: string) => {
-  const rows = await db('bauhe')
+const getMaintenanceUnits = async (
+  rentalPropertyId: string
+): Promise<MaintenanceUnitInfo[] | undefined> => {
+  const rows = await db('baxyk')
     .select(
-      'babuf.fstcode as estate_code',
-      'babuf.fstcaption as estate',
-      'bauhe.code as maintenance_unit_code',
-      'bauhe.caption as maintenance_unit_caption',
-      'bauht.code as maintenance_unit_type_code',
-      'bauht.caption as maintenance_unit_type_caption'
+      'baxyk.keycmobj',
+      'prop_babuf.hyresid as rental_property_id',
+      'mu_babuf.code as code',
+      'mu_babuf.caption as caption',
+      'bauht.caption as type',
+      'mu_babuf.fstcode as estate_code',
+      'mu_babuf.fstcaption as estate'
     )
-    .innerJoin('babuf', 'bauhe.keycmobj', 'babuf.keycmobj')
-    .leftJoin('bauht', 'bauhe.keybauht', 'bauht.keybauht')
-    .where('babuf.fstcode', estate_code)
+    .innerJoin('babuf as mu_babuf', 'baxyk.keycmobj', 'mu_babuf.keycmobj')
+    .innerJoin('babuf as prop_babuf', 'baxyk.keycmobj2', 'prop_babuf.keycmobj')
+    .innerJoin('bauhe', 'mu_babuf.keycmobj', 'bauhe.keycmobj')
+    .innerJoin('bauht', 'bauhe.keybauht', 'bauht.keybauht')
+    .where('prop_babuf.hyresid', rentalPropertyId)
 
   if (!rows || rows.length === 0) {
     return undefined
