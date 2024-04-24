@@ -30,7 +30,7 @@ export const routes = (router: KoaRouter) => {
         // getRentalPropertyInfo can be refactored into separate endpoints for fetching more specific data. From leases we know if the property is an apartment or a parking space or a commercial space.
         // However, fetching property type from leases brings an issue when searching for a property without an active lease.
 
-        case 'propertyId': {
+        case 'rentalPropertyId': {
           const propertyInfo = await getRentalPropertyInfo(ctx.params.number)
           const leases = await getLeasesForPropertyId(
             ctx.params.number,
