@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.12.0...v1.13.0) (2024-04-25)
+
+
+### Features
+
+* force release ([eeacd4f](https://github.com/Bostads-AB-Mimer/onecore-types/commit/eeacd4f8b4dc7dfbaffb09a69ee60ff0352c07ec))
+
 ## [1.12.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.11.0...v1.12.0) (2024-04-24)
 
 
