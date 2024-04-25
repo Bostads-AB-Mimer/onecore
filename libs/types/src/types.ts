@@ -279,10 +279,11 @@ interface ParkingSpaceInfo {
 }
 
 interface MaintenanceUnitInfo {
+  id: string
+  rentalPropertyId: string
   code: string
   caption: string
-  typeCode: string | null
-  typeCaption: string | null
+  type: string
   estateCode: string
   estate: string
 }
