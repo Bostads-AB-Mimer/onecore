@@ -46,7 +46,7 @@ describe('propery-info-service index', () => {
         maintenanceUnits: [
           {
             id: '_3CF0USZU9PDOQQ',
-            rentalId: '705-022-04-0201',
+            rentalPropertyId: '705-022-04-0201',
             code: '705M03',
             caption: 'Miljöbod Ö48 Stentorpsg. 13',
             type: 'Miljöbod',
@@ -55,7 +55,7 @@ describe('propery-info-service index', () => {
           },
           {
             id: '_3CF0UQJ76PDOQQ',
-            rentalId: '705-022-04-0201',
+            rentalPropertyId: '705-022-04-0201',
             code: '705M02',
             caption: 'Miljöbod Ö47 Stentorpsg. 7-9',
             type: 'Miljöbod',
@@ -64,7 +64,7 @@ describe('propery-info-service index', () => {
           },
           {
             id: '_3SB0PK5VC9K1IT',
-            rentalId: '705-022-04-0201',
+            rentalPropertyId: '705-022-04-0201',
             code: '705T15',
             caption: 'TVÄTTSTUGA Stentorpsgatan 7 C',
             type: 'Tvättstuga',
