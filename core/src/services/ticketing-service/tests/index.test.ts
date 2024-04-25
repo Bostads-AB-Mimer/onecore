@@ -227,7 +227,7 @@ describe('routes', () => {
     expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
   })
 
-  it('should handle propertyId case', async () => {
+  it('should handle rentalPropertyId case', async () => {
     const getRentalPropertyInfoSpy = jest
       .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
       .mockResolvedValue(rentalPropertyInfoMock)
@@ -237,7 +237,7 @@ describe('routes', () => {
       .mockResolvedValue([leaseMock])
 
     const res = await request(app.callback()).get(
-      '/propertyInfo/456?typeOfNumber=propertyId'
+      '/propertyInfo/456?typeOfNumber=rentalPropertyId'
     )
 
     expect(res.status).toBe(200)
