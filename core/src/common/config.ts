@@ -38,6 +38,12 @@ export interface Config {
     leasing: string
     tenantDefault: string
   }
+  ticketingService: {
+    url: string
+    database: string
+    username: string
+    password: string
+  }
 }
 
 const config = configPackage({
@@ -71,6 +77,9 @@ const config = configPackage({
       leasing: '',
       tenantDefault: '',
     },
+    ticketingService: {
+      url: 'http://127.0.0.1:8069',
+    },
   },
 })
 
@@ -83,4 +92,5 @@ export default {
   ticketingService: config.get('ticketingService'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  ticketingService: config.get('ticketingService'),
 } as Config
