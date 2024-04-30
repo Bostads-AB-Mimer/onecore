@@ -56,12 +56,6 @@ const config = configPackage({
     communicationService: {
       url: 'http://localhost:5040',
     },
-    ticketingService: {
-      url: 'http://127.0.0.1:8069',
-      database: 'odoo',
-      username: 'admin',
-      password: 'admin',
-    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -70,6 +64,9 @@ const config = configPackage({
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
+    },
+    ticketingService: {
+      url: 'http://127.0.0.1:8069',
     },
   },
 })
@@ -80,7 +77,7 @@ export default {
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
-  ticketingService: config.get('ticketingService'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  ticketingService: config.get('ticketingService'),
 } as Config

@@ -6,12 +6,20 @@ import {
   getLeasesForPropertyId,
 } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfo } from '../../adapters/property-management-adapter'
-import { Lease, RentalPropertyInfo } from 'onecore-types'
+import {
+  ApartmentInfo,
+  CommercialSpaceInfo,
+  Lease,
+  RentalPropertyInfo,
+} from 'onecore-types'
+import { createNewTicket } from './adapters/odoo-adapter'
 import { getTicketByContactCode } from './adapters/odoo-adapter'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
 }
+
+const equipmentList = ['TM', 'MA', 'TT', 'TS']
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/propertyInfo/:number', async (ctx: any) => {
@@ -122,6 +130,68 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = { error: 'Internal server error' }
       return
+    }
+  })
+
+  router.post('(.*)/createTicket/:contactCode', async (ctx) => {
+    try {
+      if (!ctx.params.contactCode) return ctx.throw(400, 'Contact code missing')
+      const { rentalObjectCode, accessOptions, pet, rows } = ctx.request.body
+      const laundryRoomTickets = rows.filter(
+        (row: any) => row.locationCode === 'TV'
+      )
+
+      if (laundryRoomTickets.length === 0)
+        return ctx.throw(
+          400,
+          'Bad request, no laundry room tickets found in request'
+        )
+
+      for (const ticket of laundryRoomTickets) {
+        if (equipmentList.includes(ticket.partOfBuildingCode)) {
+          const rentalPropertyInfo =
+            await getRentalPropertyInfo(rentalObjectCode)
+
+          const laundryRoom = rentalPropertyInfo.maintenanceUnits?.find(
+            (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
+          )
+
+          if (!laundryRoom)
+            return ctx.throw(400, 'No laundry room found in rental property')
+
+          const ticketId = await createNewTicket({
+            contact_code: ctx.params.contactCode,
+            rental_property_id: rentalObjectCode,
+            hearing_impaired: accessOptions.type === 1,
+            phone_number: accessOptions.phoneNumber,
+            call_between: accessOptions.callBetween,
+            pet: pet,
+            space_code: ticket.locationCode,
+            equipment_code: ticket.partOfBuildingCode,
+            description: ticket.description,
+            name: 'Felanmäld tvättstuga - ' + ticket.partOfBuildingCode,
+            email_address: accessOptions.email,
+            building_code: (
+              rentalPropertyInfo.property as ApartmentInfo | CommercialSpaceInfo
+            ).buildingCode,
+            building: (
+              rentalPropertyInfo.property as ApartmentInfo | CommercialSpaceInfo
+            ).building,
+            estate_code: laundryRoom.estateCode,
+            estate: laundryRoom.estate,
+            code: laundryRoom.code,
+            space_caption: laundryRoom.caption,
+          })
+
+          ctx.body = { data: `Ticket created with ID ${ticketId}` }
+        }
+      }
+    } catch (error) {
+      console.error('Error creating a new ticket:', error)
+      ctx.status = 500
+      ctx.body = {
+        message: 'Failed to create a new ticket',
+      }
     }
   })
 }
