@@ -1,34 +1,22 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
+import { Listing } from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-export interface Account {
-  name: string
-  username: string
-}
-
-export interface ProfileResponse {
-  account: Account | undefined
-}
-
-export const useProfile = () => {
-  return useQuery<ProfileResponse, AxiosError>({
-    queryKey: ['account'],
-    queryFn: async () => {
-      const { data } = await axios.get<ProfileResponse>(
-        `${backendUrl}/auth/profile`,
-        {
+export const useParkingSpaces = () =>
+  useQuery<Array<Listing>, AxiosError>({
+    queryKey: ['parkingSpaces'],
+    queryFn: () =>
+      axios
+        .get(`${backendUrl}/leases/listings-with-applicants`, {
           headers: {
             Accept: 'application/json',
             'Access-Control-Allow-Credentials': true,
           },
           withCredentials: true,
-        }
-      )
-
-      return data
-    },
+        })
+        .then((res) => res.data),
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
         return false
@@ -36,7 +24,4 @@ export const useProfile = () => {
         return failureCount < 3
       }
     },
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
   })
-}

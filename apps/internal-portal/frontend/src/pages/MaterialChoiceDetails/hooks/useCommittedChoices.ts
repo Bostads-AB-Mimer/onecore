@@ -1,18 +1,18 @@
 import axios, { AxiosError } from 'axios'
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export interface ChoicesResponse {
-  materialChoices: MaterialChoice[] | undefined;
+  materialChoices: MaterialChoice[] | undefined
 }
 
 export interface MaterialChoice {
-  MaterialChoiceId: string;
-  RoomType: string;
-  Caption: string;
-  ShortDescription: string;
-  ApartmentId: string;
+  MaterialChoiceId: string
+  RoomType: string
+  Caption: string
+  ShortDescription: string
+  ApartmentId: string
 }
 
 export const useCommittedChoices = (apartmentId: string) => {
@@ -43,3 +43,4 @@ export const useCommittedChoices = (apartmentId: string) => {
     staleTime: Infinity,
   })
 }
+

@@ -1,8 +1,15 @@
+import { Suspense } from 'react'
+import { ErrorBoundary } from 'react-error-boundary'
 import { CssBaseline, Grid, ThemeProvider, createTheme } from '@mui/material'
 import { Routes, Route } from 'react-router-dom'
-import { QueryCache, QueryClient, QueryClientProvider } from 'react-query'
+import {
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { alpha } from '@mui/material/styles'
+import type {} from '@mui/x-data-grid/themeAugmentation'
 
 import Home from './pages/Home/Home'
 import SiteHeader from './components/SiteHeader'
@@ -12,9 +19,9 @@ import GraphikRegular from '../assets/Graphik-Regular.woff2'
 import GraphikBold from '../assets/Graphik-Bold.woff2'
 import Login from './pages/Login/Login'
 import MaterialChoiceDetails from './pages/MaterialChoiceDetails/MaterialChoiceDetails'
-import ParkingSpaces from './pages/Parkingspaces/Index'
-
-import type {} from '@mui/x-data-grid/themeAugmentation';
+import ParkingSpaces from './pages/ParkingSpaces'
+import ParkingSpace from './pages/ParkingSpace'
+import { ParkingSpaceLoading } from './pages/ParkingSpace/components'
 
 declare module '@mui/material/styles' {
   interface TypographyVariants {
@@ -26,6 +33,13 @@ declare module '@mui/material/styles' {
   interface TypographyVariantsOptions {
     title?: React.CSSProperties
     hMenu?: React.CSSProperties
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsVariantOverrides {
+    dark: true
+    'dark-outlined': true
   }
 }
 
@@ -77,10 +91,9 @@ const graphikBold = {
 const mdTheme = createTheme({
   palette: {
     mode: 'light',
-    background: {
-
-    },
+    background: {},
     divider: '#951B81',
+    grey: { '200': 'rgba(217, 217, 217, 0.5)' },
   },
   typography: {
     title: {
@@ -164,16 +177,43 @@ const mdTheme = createTheme({
       },
       styleOverrides: {
         root: {
-          marginTop: 20,
-          marginBottom: 20,
           textTransform: 'initial',
-          backgroundColor: '#00578A',
-          borderRadius: '100px',
+          backgroundColor: 'black',
           fontFamily: 'graphikRegular',
           fontSize: 14,
           fontWeight: 500,
         },
       },
+      variants: [
+        {
+          props: { variant: 'dark' },
+          style: {
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 700,
+            backgrundColor: 'rgba(0, 0, 0, 1)',
+            color: 'rgba(255, 255, 255, 1)',
+            transition: 'none',
+            ':hover': {
+              background: 'black',
+            },
+          },
+        },
+        {
+          props: { variant: 'dark-outlined' },
+          style: {
+            borderRadius: '8px',
+            textTransform: 'none',
+            border: '2px solid black',
+            fontWeight: 700,
+            color: 'rgba(0, 0, 0, 1)',
+            background: 'white',
+            ':hover': {
+              background: 'white',
+            },
+          },
+        },
+      ],
     },
     MuiLink: {
       styleOverrides: {
@@ -221,8 +261,9 @@ const mdTheme = createTheme({
           border: 'none',
         },
         columnHeader: {
-          borderBottom: '2px solid black'
+          borderBottom: '2px solid black',
         },
+        cell: { fontSize: '1.25em' },
       },
     },
     MuiCardActions: {
@@ -240,7 +281,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 15 * (60 * 1000), // 15 mins
-      cacheTime: 30 * (60 * 1000), // 30 mins
+      gcTime: 30 * (60 * 1000), // 30 mins
     },
   },
   queryCache: new QueryCache({
@@ -254,6 +295,19 @@ const queryClient = new QueryClient({
   }),
 })
 
+const PageBase = (props: {
+  children: React.ReactNode
+  fallback?: React.ReactNode
+}) => {
+  return (
+    <ErrorBoundary fallback={<div>error</div>}>
+      <Suspense fallback={props.fallback ?? <div>LOADING</div>}>
+        {props.children}
+      </Suspense>
+    </ErrorBoundary>
+  )
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -264,13 +318,21 @@ function App() {
           <Grid item xs={11}>
             <SiteHeader />
             <Routes>
-              <Route path="/" element={<Home></Home>} />
-              <Route path="/logout" element={<Login></Login>} />
-              <Route path="/parkingspaces" element={<ParkingSpaces></ParkingSpaces>} />
+              <Route path="/" element={<Home />} />
+              <Route path="/parkingspaces" element={<ParkingSpaces />} />
+              <Route
+                path="/parkingspace/:id"
+                element={
+                  <PageBase fallback={<ParkingSpaceLoading />}>
+                    <ParkingSpace />
+                  </PageBase>
+                }
+              />
               <Route
                 path="/materialval/utskrift"
                 element={<MaterialChoiceDetails />}
               />
+              <Route path="/logout" element={<Login />} />
             </Routes>
           </Grid>
           <Grid item xs={0.5} />

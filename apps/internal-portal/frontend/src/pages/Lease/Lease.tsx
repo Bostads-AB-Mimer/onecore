@@ -1,5 +1,5 @@
 import { Typography, Divider, Grid, Box } from '@mui/material'
-import { Contact, Rent } from 'onecore-types'
+import { Rent } from 'onecore-types'
 
 import { useLease } from './hooks/useLease'
 
@@ -83,7 +83,8 @@ const Lease = () => {
             <Grid container sx={{ marginLeft: 1, marginTop: 1 }}>
               <Grid item xs={12}>
                 {lease.tenants &&
-                  lease.tenants.map((tenant: Contact) => (
+                  lease.tenants.map((tenant) => (
+                    // TODO: tenant.contactId doesn't exist
                     <Box sx={{ marginBottom: 1 }} key={tenant.contactId}>
                       {tenant.firstName + ' ' + tenant.lastName}
                       <br />
@@ -121,7 +122,7 @@ const Lease = () => {
                   lease.rentInfo?.futureRents.map((rent: Rent) => (
                     <Grid container sx={{ marginTop: 1 }} key={rent.rentId}>
                       <Grid item xs={4}>
-                        År {rent.rentStartDate.toString().split('-')[0]}
+                        År {rent.rentStartDate?.toString().split('-')[0]}
                       </Grid>
                       <Grid item xs={8}>
                         <b>{rent.currentRent + ' kr/mån*'}</b>
