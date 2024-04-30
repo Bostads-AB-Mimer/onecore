@@ -152,8 +152,6 @@ export const routes = (router: KoaRouter) => {
           const rentalPropertyInfo =
             await getRentalPropertyInfo(rentalObjectCode)
 
-          console.log('rentalPropertyInfo', rentalPropertyInfo)
-
           const laundryRoom = rentalPropertyInfo.maintenanceUnits?.find(
             (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
           )
