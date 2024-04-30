@@ -100,9 +100,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/listing/:id', async (ctx) => {
     const responseData = await getListingByListingId(ctx.params.id)
 
-    ctx.body = {
-      data: responseData,
-    }
+    ctx.body = responseData
   })
 
   /**
@@ -150,25 +148,26 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
-    const responseData = await withdrawApplicantByManager(ctx.params.applicantId);
+    const responseData = await withdrawApplicantByManager(
+      ctx.params.applicantId
+    )
     if (responseData.error) {
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: responseData.error };
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: responseData.error }
     } else {
-      ctx.status = 200; // OK
-      ctx.body = { message: 'Applicant successfully withdrawn by manager.' };
-    }
-  })
-  
-  router.delete('/applicants/:applicantId/by-user', async (ctx) => {
-    const responseData = await withdrawApplicantByUser(ctx.params.applicantId);
-    if (responseData.error) {
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: responseData.error };
-    } else {
-      ctx.status = 200; // OK
-      ctx.body = { message: 'Applicant successfully withdrawn by user.' };
+      ctx.status = 200 // OK
+      ctx.body = { message: 'Applicant successfully withdrawn by manager.' }
     }
   })
 
+  router.delete('/applicants/:applicantId/by-user', async (ctx) => {
+    const responseData = await withdrawApplicantByUser(ctx.params.applicantId)
+    if (responseData.error) {
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: responseData.error }
+    } else {
+      ctx.status = 200 // OK
+      ctx.body = { message: 'Applicant successfully withdrawn by user.' }
+    }
+  })
 }
