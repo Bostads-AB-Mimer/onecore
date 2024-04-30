@@ -11,10 +11,14 @@ import {
   getLease,
   getLeasesForPnr,
   getCreditInformation,
+  getListingByListingId,
   getListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
   getContactForPhoneNumber,
+  withdrawApplicantByManager,
+  withdrawApplicantByUser,
+  getApplicantsAndListingByContactCode,
 } from '../../adapters/leasing-adapter'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -91,6 +95,15 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Returns a listing with the provided listing id
+   */
+  router.get('(.*)/listing/:id', async (ctx) => {
+    const responseData = await getListingByListingId(ctx.params.id)
+
+    ctx.body = responseData
+  })
+
+  /**
    * Get all Listings with Applicants
    */
   router.get('/listings-with-applicants', async (ctx: any) => {
@@ -111,6 +124,17 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Get all Applicants and related Listing by contact code
+   */
+  router.get('/applicants-with-listings/:contactCode', async (ctx: any) => {
+    const responseData = await getApplicantsAndListingByContactCode(
+      ctx.params.contactCode
+    )
+
+    ctx.body = responseData
+  })
+
+  /**
    * Get Applicant by contact code and rental object code
    */
   router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx: any) => {
@@ -121,5 +145,29 @@ export const routes = (router: KoaRouter) => {
     )
 
     ctx.body = responseData
+  })
+
+  router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
+    const responseData = await withdrawApplicantByManager(
+      ctx.params.applicantId
+    )
+    if (responseData.error) {
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: responseData.error }
+    } else {
+      ctx.status = 200 // OK
+      ctx.body = { message: 'Applicant successfully withdrawn by manager.' }
+    }
+  })
+
+  router.delete('/applicants/:applicantId/by-user', async (ctx) => {
+    const responseData = await withdrawApplicantByUser(ctx.params.applicantId)
+    if (responseData.error) {
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: responseData.error }
+    } else {
+      ctx.status = 200 // OK
+      ctx.body = { message: 'Applicant successfully withdrawn by user.' }
+    }
   })
 }

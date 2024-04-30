@@ -8,6 +8,8 @@ import {
   WaitingList,
   Listing,
   Applicant,
+  ApplicantStatus,
+  ApplicantWithListing,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -207,6 +209,18 @@ const applyForListing = async (applicantData: Applicant) => {
   }
 }
 
+const getListingByListingId = async (listingId: string) => {
+  try {
+    const result = await axios.get(
+      `${tenantsLeasesServiceUrl}/listings/by-id/${listingId}`
+    )
+    return result.data
+  } catch (error) {
+    console.error('Error fetching listing by rental object code:', error)
+    return undefined
+  }
+}
+
 const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
   try {
     return await axios.get(
@@ -243,6 +257,33 @@ const getApplicantsByContactCode = async (
     return undefined
   }
 }
+
+const getApplicantsAndListingByContactCode = async (
+  contactCode: string
+): Promise<any[] | undefined> => {
+  const applicantsAndListings: ApplicantWithListing[] = []
+  try {
+    const applicantsResponse = (await getApplicantsByContactCode(
+      contactCode
+    )) as Applicant[]
+    for (const applicant of applicantsResponse) {
+      const listingResponse = await getListingByListingId(
+        applicant.listingId.toString()
+      )
+      if (listingResponse) {
+        applicantsAndListings.push({ applicant, listing: listingResponse.data })
+      }
+    }
+    return applicantsAndListings
+  } catch (error) {
+    console.error(
+      'Error fetching applicants and listings by contact code:',
+      error
+    )
+    return undefined
+  }
+}
+
 const getApplicantByContactCodeAndRentalObjectCode = async (
   contactCode: string,
   rentalObjectCode: string
@@ -261,6 +302,48 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
   }
 }
 
+const updateApplicantStatus = async (
+  applicantId: string,
+  status: ApplicantStatus
+): Promise<any> => {
+  try {
+    const response = await axios.patch(
+      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
+      { status }
+    )
+    return response.data
+  } catch (error) {
+    console.error('Error patching applicant status:', error)
+    throw new Error(`Failed to update status for applicant ${applicantId}`)
+  }
+}
+
+const withdrawApplicantByManager = async (
+  applicantId: string
+): Promise<any> => {
+  try {
+    return await updateApplicantStatus(
+      applicantId,
+      ApplicantStatus.WithdrawnByManager
+    )
+  } catch (error) {
+    console.error('Error withdrawing applicant by manager:', error)
+    return undefined
+  }
+}
+
+const withdrawApplicantByUser = async (applicantId: string): Promise<any> => {
+  try {
+    return await updateApplicantStatus(
+      applicantId,
+      ApplicantStatus.WithdrawnByUser
+    )
+  } catch (error) {
+    console.error('Error withdrawing applicant by user:', error)
+    return undefined
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -274,9 +357,13 @@ export {
   getWaitingList,
   addApplicantToWaitingList,
   createNewListing,
+  getListingByListingId,
   getListingByRentalObjectCode,
   applyForListing,
   getListingsWithApplicants,
   getApplicantsByContactCode,
+  getApplicantsAndListingByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
+  withdrawApplicantByManager,
+  withdrawApplicantByUser,
 }
