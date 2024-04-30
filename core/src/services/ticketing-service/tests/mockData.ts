@@ -1,5 +1,5 @@
 import { Contact, Lease, RentalPropertyInfo } from 'onecore-types'
-import { OdooGetTicket, TicketOdoo } from '../adapters/odoo-adapter'
+import { OdooGetTicket } from '../adapters/odoo-adapter'
 
 export const ticketRequestMockData = {
   rentalObjectCode: '705-022-04-0201',

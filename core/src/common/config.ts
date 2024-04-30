@@ -67,6 +67,9 @@ const config = configPackage({
     },
     ticketingService: {
       url: 'http://127.0.0.1:8069',
+      database: '',
+      username: '',
+      password: '',
     },
   },
 })
