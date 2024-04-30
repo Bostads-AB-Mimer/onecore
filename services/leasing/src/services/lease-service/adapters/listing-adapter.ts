@@ -130,6 +130,21 @@ const getListingById = async (
   return transformListing(parseApplicantsJson(result))
 }
 
+const getApplicantById = async (
+  applicantId: number
+): Promise<Applicant | undefined> => {
+  const applicant = await db('Applicant')
+    .where({
+      Id: applicantId,
+    })
+    .first()
+
+  if (applicant == undefined) {
+    return undefined
+  }
+  return transformDbApplicant(applicant)
+}
+
 const createApplication = async (applicationData: Applicant) => {
   await db('applicant').insert({
     Name: applicationData.name,
@@ -239,6 +254,7 @@ export {
   getListingById,
   getListingByRentalObjectCode,
   getAllListingsWithApplicants,
+  getApplicantById,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode,
   applicationExists,
