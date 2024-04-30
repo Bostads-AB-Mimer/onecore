@@ -54,4 +54,5 @@ const getFromCore = async (
     throw error
   }
 }
+
 export { getFromCore }

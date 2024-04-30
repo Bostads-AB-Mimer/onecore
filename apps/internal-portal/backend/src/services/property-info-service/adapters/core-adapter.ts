@@ -1,5 +1,5 @@
 import Config from '../../../common/config'
-import {getFromCore} from "../../common/adapters/core-adapter";
+import { getFromCore } from '../../common/adapters/core-adapter'
 
 const coreBaseUrl = Config.core.url
 
@@ -13,14 +13,14 @@ const getMaterialChoiceStatuses = async (projectCode: string) => {
 }
 
 const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
-  let url;
+  let url
 
   if (contractId) {
     url = `${coreBaseUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
   } else {
     url = `${coreBaseUrl}/rentalproperties/${apartmentId}/material-choices`
   }
-  
+
   const committedChoicesResponse = await getFromCore({
     method: 'get',
     url: url,
@@ -28,4 +28,5 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
 
   return committedChoicesResponse.data
 }
+
 export { getMaterialChoiceStatuses, getMaterialChoices }
