@@ -157,9 +157,8 @@ describe('invoices-service', () => {
 
   describe('getUnpaidInvoicesByContactCode', () => {
     it('should return unpaid invoices for a contact', async () => {
-      const result = await invoiceAdapter.getUnpaidInvoicesByContactCode(
-        'contactKey'
-      )
+      const result =
+        await invoiceAdapter.getUnpaidInvoicesByContactCode('contactKey')
 
       expect(result).toBeDefined()
       expect(result).toHaveLength(3)

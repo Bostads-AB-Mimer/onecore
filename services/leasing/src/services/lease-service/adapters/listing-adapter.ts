@@ -1,12 +1,4 @@
-import {
-  Applicant,
-  Invoice,
-  Listing,
-  ListingStatus,
-  ApplicantStatus,
-  ParkingSpaceApplicationCategory,
-  parkingSpaceApplicationCategoryTranslation,
-} from 'onecore-types'
+import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
@@ -17,6 +9,8 @@ const db = knex({
 })
 
 function transformFromDbListing(row: any): Listing {
+  // TODO: Listing has some properties T | undefined.
+  // However, this function is returning null when the db returns null
   return {
     id: row.Id,
     rentalObjectCode: row.RentalObjectCode,
@@ -44,6 +38,7 @@ function transformDbApplicant(row: any): Applicant {
     name: row.Name,
     contactCode: row.ContactCode,
     applicationDate: row.ApplicationDate,
+    applicationType: row.ApplicationType,
     status: row.Status,
     listingId: row.ListingId,
   }
@@ -98,22 +93,41 @@ const getListingByRentalObjectCode = async (
 /**
  * Checks if a listing already exists based on unique criteria.
  *
- * @param {number} listingId - The rental object code of the listing (originally from xpand)
+ * @param {string} listingId - The rental object code of the listing (originally from xpand)
  * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
  */
 const getListingById = async (
   listingId: string
 ): Promise<Listing | undefined> => {
-  const listing = await db('Listing')
-    .where({
-      Id: listingId,
-    })
+  const result = await db
+    .from('listing AS l')
+    .select(
+      'l.*',
+      db.raw(`
+      (
+        SELECT a.*
+        FROM applicant a
+        WHERE a.ListingId = l.Id
+        FOR JSON PATH
+      ) as applicants
+    `)
+    )
+    .where('l.Id', listingId)
     .first()
 
-  if (listing == undefined) {
-    return undefined
-  }
-  return transformFromDbListing(listing)
+  const parseApplicantsJson = (row: { applicants?: string }) => ({
+    ...row,
+    applicants: row.applicants ? JSON.parse(row.applicants) : [],
+  })
+
+  const transformListing = (row: { applicants: Array<unknown> }): Listing => ({
+    ...transformFromDbListing(row),
+    applicants: row.applicants.map(transformDbApplicant),
+  })
+
+  if (!result) return undefined
+
+  return transformListing(parseApplicantsJson(result))
 }
 
 const getApplicantById = async (
@@ -165,29 +179,34 @@ const updateApplicantStatus = async (
   }
 }
 
-//todo: use type and do type conversion to camelCase
 const getAllListingsWithApplicants = async () => {
-  const dbListings: Listing[] = await db('Listing').select('*')
-  let transformedListings: Listing[] = []
+  const query = `
+    SELECT
+      l.*,
+      (
+        SELECT a.*
+        FROM applicant a
+        WHERE a.ListingId = l.Id
+        FOR JSON PATH
+      ) as applicants
+    FROM listing l
+  `
 
-  for (const listing of dbListings) {
-    let transformedListing = transformFromDbListing(listing)
-    transformedListings.push(transformedListing)
-  }
+  const parseApplicantsJson = (row: { applicants?: string }) => ({
+    ...row,
+    applicants: row.applicants ? JSON.parse(row.applicants) : [],
+  })
 
-  for (const listing of transformedListings) {
-    const dbApplicants = await db('Applicant')
-      .where('ListingId', listing.id)
-      .select('*')
+  const transformListing = (row: { applicants: Array<unknown> }) => ({
+    ...transformFromDbListing(row),
+    applicants: row.applicants.map(transformDbApplicant),
+  })
 
-    let transformedApplicants: Applicant[] = []
-    for (const applicant of dbApplicants) {
-      transformedApplicants.push(transformDbApplicant(applicant))
-    }
-    listing.applicants = transformedApplicants
-  }
+  const result: Array<Listing> = await db
+    .raw(query)
+    .then((rows) => rows.map(parseApplicantsJson).map(transformListing))
 
-  return transformedListings
+  return result
 }
 
 const getApplicantsByContactCode = async (contactCode: string) => {
