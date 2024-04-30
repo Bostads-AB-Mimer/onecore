@@ -100,7 +100,7 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   return tickets.map(transformTicket)
 }
 
-const createNewTicket = async (ticket: TicketOdoo): Promise<any> => {
+const createNewTicket = async (ticket: TicketOdoo): Promise<number> => {
   await odoo.connect()
   return await odoo.create('maintenance.request', ticket)
 }
