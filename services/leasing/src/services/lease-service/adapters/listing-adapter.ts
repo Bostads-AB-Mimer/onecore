@@ -116,16 +116,12 @@ const getListingById = async (
   return transformFromDbListing(listing)
 }
 
-/**
- * Gets an applicant by Id
- *
- * @param {number} id - The id of the application
- * @returns {Promise<Applicant>} - Promise that resolves to the existing listing if it exists.
- */
-const getApplicantById = async (id: number): Promise<Applicant | undefined> => {
+const getApplicantById = async (
+  applicantId: number
+): Promise<Applicant | undefined> => {
   const applicant = await db('Applicant')
     .where({
-      Id: id,
+      Id: applicantId,
     })
     .first()
 
