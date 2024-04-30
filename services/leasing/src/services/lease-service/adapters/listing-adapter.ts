@@ -38,6 +38,7 @@ function transformDbApplicant(row: any): Applicant {
     name: row.Name,
     contactCode: row.ContactCode,
     applicationDate: row.ApplicationDate,
+    applicationType: row.ApplicationType,
     status: row.Status,
     listingId: row.ListingId,
   }
