@@ -210,7 +210,7 @@ const applyForListing = async (applicantData: Applicant) => {
 const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
   try {
     return await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
     )
   } catch (error) {
     console.error('Error fetching listing by rental object code:', error)
