@@ -271,7 +271,7 @@ const getApplicantsAndListingByContactCode = async (
         applicant.listingId.toString()
       )
       if (listingResponse) {
-        applicantsAndListings.push({ applicant, listing: listingResponse.data })
+        applicantsAndListings.push({ applicant, listing: listingResponse })
       }
     }
     return applicantsAndListings
@@ -302,14 +302,13 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
   }
 }
 
-const updateApplicantStatus = async (
-  applicantId: string,
-  status: ApplicantStatus
+const withdrawApplicantByManager = async (
+  applicantId: string
 ): Promise<any> => {
   try {
     const response = await axios.patch(
       `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status }
+      { status: ApplicantStatus.WithdrawnByManager }
     )
     return response.data
   } catch (error) {
@@ -318,26 +317,16 @@ const updateApplicantStatus = async (
   }
 }
 
-const withdrawApplicantByManager = async (
-  applicantId: string
+const withdrawApplicantByUser = async (
+  applicantId: string,
+  contactCode: string
 ): Promise<any> => {
   try {
-    return await updateApplicantStatus(
-      applicantId,
-      ApplicantStatus.WithdrawnByManager
+    const response = await axios.patch(
+      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
+      { status: ApplicantStatus.WithdrawnByUser, contactCode: contactCode }
     )
-  } catch (error) {
-    console.error('Error withdrawing applicant by manager:', error)
-    return undefined
-  }
-}
-
-const withdrawApplicantByUser = async (applicantId: string): Promise<any> => {
-  try {
-    return await updateApplicantStatus(
-      applicantId,
-      ApplicantStatus.WithdrawnByUser
-    )
+    return response.data
   } catch (error) {
     console.error('Error withdrawing applicant by user:', error)
     return undefined
