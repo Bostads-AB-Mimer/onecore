@@ -85,6 +85,7 @@ const Lease = () => {
                 {lease.tenants &&
                   lease.tenants.map((tenant) => (
                     // TODO: tenant.contactId doesn't exist
+                    // @ts-ignore
                     <Box sx={{ marginBottom: 1 }} key={tenant.contactId}>
                       {tenant.firstName + ' ' + tenant.lastName}
                       <br />
