@@ -7,7 +7,7 @@ import * as odooAdapter from '../adapters/odoo-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import { Lease, Contact, RentalPropertyInfo } from 'onecore-types'
-import { OdooGetTicket, TicketOdoo } from '../adapters/odoo-adapter'
+import { OdooGetTicket } from '../adapters/odoo-adapter'
 import {
   contactMockData,
   leaseMockData,
@@ -172,8 +172,8 @@ describe('ticketing-service index', () => {
     })
 
     it('should create ticket', async () => {
-      const createNewTicketSpy = jest
-        .spyOn(odooAdapter, 'createNewTicket')
+      const createTicketSpy = jest
+        .spyOn(odooAdapter, 'createTicket')
         .mockResolvedValue(Promise.resolve(13))
 
       const getRentalPropertyInfoSpy = jest
@@ -186,7 +186,7 @@ describe('ticketing-service index', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.data).toBeDefined()
-      expect(createNewTicketSpy).toHaveBeenCalled()
+      expect(createTicketSpy).toHaveBeenCalled()
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
     })
   })

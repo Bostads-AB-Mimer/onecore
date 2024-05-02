@@ -12,14 +12,15 @@ import {
   Lease,
   RentalPropertyInfo,
 } from 'onecore-types'
-import { createNewTicket } from './adapters/odoo-adapter'
-import { getTicketByContactCode } from './adapters/odoo-adapter'
+import {
+  createTicket,
+  getMaintenanceTeamId,
+  getTicketByContactCode,
+} from './adapters/odoo-adapter'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
 }
-
-const equipmentList = ['TM', 'MA', 'TT', 'TS']
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/propertyInfo/:number', async (ctx: any) => {
@@ -134,6 +135,8 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/createTicket/:contactCode', async (ctx) => {
+    const equipmentList = ['TM', 'MA', 'TT', 'TS']
+
     try {
       if (!ctx.params.contactCode) return ctx.throw(400, 'Contact code missing')
       const { rentalObjectCode, accessOptions, pet, rows } = ctx.request.body
@@ -146,6 +149,9 @@ export const routes = (router: KoaRouter) => {
           400,
           'Bad request, no laundry room tickets found in request'
         )
+      const maintenanceTeamId = await getMaintenanceTeamId(
+        'Vitvarureperatör Mimer'
+      )
 
       for (const ticket of laundryRoomTickets) {
         if (equipmentList.includes(ticket.partOfBuildingCode)) {
@@ -159,7 +165,7 @@ export const routes = (router: KoaRouter) => {
           if (!laundryRoom)
             return ctx.throw(400, 'No laundry room found in rental property')
 
-          const ticketId = await createNewTicket({
+          const ticketId = await createTicket({
             contact_code: ctx.params.contactCode,
             rental_property_id: rentalObjectCode,
             hearing_impaired: accessOptions.type === 1,
@@ -181,6 +187,7 @@ export const routes = (router: KoaRouter) => {
             estate: laundryRoom.estate,
             code: laundryRoom.code,
             space_caption: laundryRoom.caption,
+            maintenance_team_id: maintenanceTeamId,
           })
 
           ctx.body = { data: `Ticket created with ID ${ticketId}` }

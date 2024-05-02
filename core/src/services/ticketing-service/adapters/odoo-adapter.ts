@@ -18,7 +18,7 @@ export interface OdooGetTicket {
 }
 
 // TODO: Add a type for the ticket in onecore-types
-export interface TicketOdoo {
+export interface OdooPostTicket {
   contact_code: string
   rental_property_id: string
   hearing_impaired: boolean
@@ -36,6 +36,7 @@ export interface TicketOdoo {
   estate: string
   code: string
   space_caption: string
+  maintenance_team_id: number
 }
 
 const odoo = new Odoo({
@@ -100,8 +101,19 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   return tickets.map(transformTicket)
 }
 
-const createNewTicket = async (ticket: TicketOdoo): Promise<number> => {
+const createTicket = async (ticket: OdooPostTicket): Promise<number> => {
   await odoo.connect()
   return await odoo.create('maintenance.request', ticket)
 }
-export { createNewTicket, getTicketByContactCode }
+
+const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
+  await odoo.connect()
+
+  const team: number[] = await odoo.search('maintenance.team', {
+    name: teamName,
+  })
+
+  return team[0]
+}
+
+export { createTicket, getTicketByContactCode, getMaintenanceTeamId }
