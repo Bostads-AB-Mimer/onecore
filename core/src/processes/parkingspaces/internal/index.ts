@@ -15,8 +15,7 @@ import {
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
 } from 'onecore-types'
-import axios, { AxiosError, HttpStatusCode } from 'axios'
-import * as http from 'http'
+import { HttpStatusCode } from 'axios'
 
 //
 // PROCESS part 1 (Create note of interest for internal parking space)
@@ -85,6 +84,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         },
       }
     }
+
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesForPnr(
       applicantContact.nationalRegistrationNumber,
