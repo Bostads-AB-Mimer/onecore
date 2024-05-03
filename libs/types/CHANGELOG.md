@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.13.0...v1.14.0) (2024-05-03)
+
+
+### Features
+
+* 1368 add types for priority list ([#52](https://github.com/Bostads-AB-Mimer/onecore-types/issues/52)) ([f61c3f0](https://github.com/Bostads-AB-Mimer/onecore-types/commit/f61c3f0e0b58f03c84581e99fd34e1513f1e6e9b))
+
 ## [1.13.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.12.0...v1.13.0) (2024-04-25)
 
 
