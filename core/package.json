@@ -53,6 +53,6 @@
     "koa-jwt": "^4.0.4",
     "koa-pino-logger": "^4.0.0",
     "odoo-await": "^3.4.1",
-    "onecore-types": "^1.13.0"
+    "onecore-types": "^1.14.0"
   }
 }

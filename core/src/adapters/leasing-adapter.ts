@@ -302,6 +302,20 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
   }
 }
 
+const getListingByIdWithDetailedApplicants = async (
+  listingId: string
+): Promise<any | undefined> => {
+  try {
+    const response = await axios(
+      `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
+    )
+    return response.data
+  } catch (error) {
+    console.error('Error fetching listing with detailed applicant data:', error)
+    return undefined
+  }
+}
+
 const withdrawApplicantByManager = async (
   applicantId: string
 ): Promise<any> => {
@@ -353,6 +367,7 @@ export {
   getApplicantsByContactCode,
   getApplicantsAndListingByContactCode,
   getApplicantByContactCodeAndRentalObjectCode,
+  getListingByIdWithDetailedApplicants,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
 }

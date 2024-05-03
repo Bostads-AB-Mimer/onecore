@@ -13,7 +13,10 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('lease-service', () => {
-  let leaseMock: Lease, contactMock: Contact, consumerReportMock: ConsumerReport
+  let leaseMock: Lease,
+    contactMock: Contact,
+    consumerReportMock: ConsumerReport,
+    listingWithDetailedApplicantsMock: any[] //todo: map to type when type defined
 
   beforeEach(() => {
     leaseMock = {
@@ -151,6 +154,49 @@ describe('lease-service', () => {
       zip: '72266',
       city: 'Västerås',
     }
+
+    listingWithDetailedApplicantsMock = [
+      {
+        id: 3005,
+        name: 'Sökande Fiktiv',
+        contactCode: 'P145241',
+        applicationDate: '2024-04-30T14:39:55.1210000',
+        applicationType: 'Additional',
+        status: 1,
+        listingId: 3030,
+        queuePoints: 1761,
+        address: {
+          street: 'Fiktiggatan 1',
+          number: '',
+          postalCode: '72222',
+          city: 'VÄSTERÅS',
+        },
+        currentHousingContract: {
+          leaseId: '306-001-01-0101/07',
+          leaseNumber: '07',
+          rentalPropertyId: '306-001-01-0101',
+          type: 'Bostadskontrakt               ',
+          leaseStartDate: '2024-01-01T00:00:00.000Z',
+          leaseEndDate: null,
+          tenantContactIds: [],
+          tenants: [],
+          noticeGivenBy: null,
+          noticeDate: null,
+          noticeTimeTenant: 3,
+          preferredMoveOutDate: null,
+          terminationDate: null,
+          contractDate: '2023-09-27T00:00:00.000Z',
+          lastDebitDate: null,
+          approvalDate: '2023-09-27T00:00:00.000Z',
+          residentalArea: {
+            code: 'PET',
+            caption: 'Pettersberg',
+          },
+        },
+        upcomingHousingContract: null,
+        parkingSpaceContracts: [],
+      },
+    ]
   })
 
   describe('GET /leases/for/:pnr', () => {
@@ -210,6 +256,24 @@ describe('lease-service', () => {
       expect(getCreditInformationSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.data)).toEqual(
         JSON.stringify(consumerReportMock)
+      )
+    })
+  })
+
+  describe('GET /listing/:listingId/applicants/details', () => {
+    it('responds with a listing with detailed applicant data', async () => {
+      const getListingByIdWithDetailedApplicantsSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getListingByIdWithDetailedApplicants')
+        .mockResolvedValue(listingWithDetailedApplicantsMock)
+
+      const res = await request(app.callback()).get(
+        '/listing/1337/applicants/details'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getListingByIdWithDetailedApplicantsSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body)).toEqual(
+        JSON.stringify(listingWithDetailedApplicantsMock)
       )
     })
   })

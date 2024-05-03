@@ -19,6 +19,7 @@ import {
   withdrawApplicantByManager,
   withdrawApplicantByUser,
   getApplicantsAndListingByContactCode,
+  getListingByIdWithDetailedApplicants,
 } from '../../adapters/leasing-adapter'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -129,6 +130,17 @@ export const routes = (router: KoaRouter) => {
   router.get('/applicants-with-listings/:contactCode', async (ctx: any) => {
     const responseData = await getApplicantsAndListingByContactCode(
       ctx.params.contactCode
+    )
+
+    ctx.body = responseData
+  })
+
+  /**
+   * Gets a listing with detailed applicant data
+   */
+  router.get('/listing/:listingId/applicants/details', async (ctx: any) => {
+    const responseData = await getListingByIdWithDetailedApplicants(
+      ctx.params.listingId
     )
 
     ctx.body = responseData

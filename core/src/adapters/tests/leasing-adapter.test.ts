@@ -9,10 +9,12 @@ jest.mock('axios')
 import * as leasingAdapter from '../leasing-adapter'
 import {
   mockedInvoices,
+  mockedListingWithDetailedApplicants,
   mockedOldProblematicInvoices,
   mockedProblematicInvoices,
   mockedWaitingList,
 } from './leasing-adapter.mocks'
+import exp from 'constants'
 const mockAxios = axios as AxiosMock
 
 describe('leasing-adapter', () => {
@@ -59,6 +61,19 @@ describe('leasing-adapter', () => {
 
       const result = await leasingAdapter.getWaitingList('P123456')
       expect(result).toEqual(mockedWaitingList)
+    })
+  })
+
+  describe('getListingByIdWithDetailedApplicants', () => {
+    it('should return a listing with detailed applicants', async () => {
+      mockAxios.mockResolvedValue({
+        data: mockedListingWithDetailedApplicants,
+      })
+
+      const result =
+        await leasingAdapter.getListingByIdWithDetailedApplicants('1337')
+      expect(result)
+      expect(result).toEqual(mockedListingWithDetailedApplicants)
     })
   })
 
