@@ -58,7 +58,7 @@ const getDetailedApplicantInformation = async (applicant: Applicant) => {
     )
 
     for (const lease of activeAndUpcomingLeases) {
-      lease.residentalArea = await getResidentialAreaByRentalPropertyId(
+      lease.residentialArea = await getResidentialAreaByRentalPropertyId(
         lease.rentalPropertyId
       )
     }
@@ -143,7 +143,7 @@ const parseLeasesForHousingContracts = (
 
   //only 1 active housing contract found
   if (housingContracts.length == 1) {
-    return [housingContracts[0], null]
+    return [housingContracts[0], undefined]
   }
 
   //applicant have 1 active and 1 pending contract
@@ -151,7 +151,8 @@ const parseLeasesForHousingContracts = (
     const currentDate = new Date()
     const currentActiveLease = leases.find(
       (lease) =>
-        lease.lastDebitDate !== null && lease.leaseStartDate < currentDate
+        (lease.lastDebitDate === null || lease.lastDebitDate === undefined) &&
+        lease.leaseStartDate <= currentDate
     )
 
     if (currentActiveLease == undefined) {
@@ -160,7 +161,8 @@ const parseLeasesForHousingContracts = (
 
     const pendingLease = leases.find(
       (lease) =>
-        lease.lastDebitDate === null && lease.leaseStartDate > currentDate
+        (lease.lastDebitDate === null || lease.lastDebitDate === undefined) &&
+        lease.leaseStartDate > currentDate
     )
 
     if (pendingLease == undefined) {

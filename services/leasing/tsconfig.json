@@ -5,6 +5,7 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./build",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["jest","node"]
   }
 }

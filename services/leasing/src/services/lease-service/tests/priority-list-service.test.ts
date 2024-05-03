@@ -77,31 +77,39 @@ const mockedLeasesWithHousingAndParkingSpaceContracts: Lease[] = [
     contractDate: new Date('2024-02-01T00:00:00.000Z'),
     lastDebitDate: undefined,
     approvalDate: new Date('2024-02-01T00:00:00.000Z'),
+    status: LeaseStatus.Active,
+    rentInfo: undefined,
+    address: undefined,
   },
   //P-Platskontrakt
   {
     leaseId: '508-713-00-0009/19',
     leaseNumber: '19',
     rentalPropertyId: '508-713-00-0009',
+    rentalProperty: undefined,
     type: 'P-Platskontrakt',
-    leaseStartDate: '2024-03-01T00:00:00.000Z',
-    leaseEndDate: null,
+    leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
+    leaseEndDate: undefined,
     tenantContactIds: [],
     tenants: [],
-    noticeGivenBy: null,
-    noticeDate: null,
-    noticeTimeTenant: 3,
-    preferredMoveOutDate: null,
-    terminationDate: null,
-    contractDate: '2024-02-01T00:00:00.000Z',
-    lastDebitDate: null,
-    approvalDate: '2024-02-01T00:00:00.000Z',
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: '3',
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
+    contractDate: new Date('2024-02-01T00:00:00.000Z'),
+    lastDebitDate: undefined,
+    approvalDate: new Date('2024-02-01T00:00:00.000Z'),
+    status: LeaseStatus.Active,
+    rentInfo: undefined,
+    address: undefined,
   },
   //P-Platskontrakt
   {
     leaseId: '216-704-00-0017/02',
     leaseNumber: '02',
     rentalPropertyId: '216-704-00-0017',
+    rentalProperty: undefined,
     type: 'P-Platskontrakt',
     leaseStartDate: new Date('2024-04-02T00:00:00.000Z'),
     leaseEndDate: undefined,
@@ -115,6 +123,9 @@ const mockedLeasesWithHousingAndParkingSpaceContracts: Lease[] = [
     contractDate: new Date(),
     lastDebitDate: new Date(),
     approvalDate: new Date(),
+    status: LeaseStatus.Active,
+    rentInfo: undefined,
+    address: undefined,
   },
 ]
 
@@ -131,119 +142,143 @@ const mockedLeasesWithUpcomingHousingContract: Lease[] = [
     leaseId: '605-004-01-0103/01T',
     leaseNumber: '01T',
     rentalPropertyId: '605-004-01-0103',
+    rentalProperty: undefined,
     type: 'Bostadskontrakt               ',
     leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-    leaseEndDate: null,
+    leaseEndDate: undefined,
     tenantContactIds: [],
     tenants: [],
     noticeGivenBy: 'G',
     noticeDate: thirtyDaysInThePastDate, //new Date('2024-03-11T00:00:00.000Z'),
-    noticeTimeTenant: 3,
+    noticeTimeTenant: '3',
     preferredMoveOutDate: thirtyDaysInTheFutureDate, //new Date('2024-04-30T00:00:00.000Z'),
-    terminationDate: null,
+    terminationDate: thirtyDaysInTheFutureDate,
     contractDate: new Date('2021-09-08T00:00:00.000Z'),
     lastDebitDate: thirtyDaysInTheFutureDate, //new Date('2024-06-30T00:00:00.000Z'),
     approvalDate: new Date('2021-09-08T00:00:00.000Z'),
+    status: LeaseStatus.Active,
+    rentInfo: undefined,
+    address: undefined,
   },
   //upcoming housing contract to replace current active contract
   {
     leaseId: '605-004-01-0103/01',
     leaseNumber: '01',
     rentalPropertyId: '605-004-01-0103',
+    rentalProperty: undefined,
     type: 'Bostadskontrakt               ',
     leaseStartDate: thirtyDaysInTheFutureDate, //new Date('2024-07-01T00:00:00.000Z'),
-    leaseEndDate: null,
+    leaseEndDate: undefined,
     tenantContactIds: [],
     tenants: [],
-    noticeGivenBy: null,
-    noticeDate: null,
-    noticeTimeTenant: 3,
-    preferredMoveOutDate: null,
-    terminationDate: null,
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: '3',
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
     contractDate: new Date('2024-03-11T00:00:00.000Z'),
-    lastDebitDate: null,
+    lastDebitDate: undefined,
     approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+    status: LeaseStatus.Upcoming,
+    rentInfo: undefined,
+    address: undefined,
   },
   //parking space contract
   {
     leaseId: '605-703-00-0014/01',
     leaseNumber: '01',
     rentalPropertyId: '605-703-00-0014',
+    rentalProperty: undefined,
     type: 'P-Platskontrakt               ',
     leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-    leaseEndDate: null,
+    leaseEndDate: undefined,
     tenantContactIds: [],
     tenants: [],
-    noticeGivenBy: null,
-    noticeDate: null,
-    noticeTimeTenant: 3,
-    preferredMoveOutDate: null,
-    terminationDate: null,
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: '3',
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
     contractDate: new Date('2021-12-02T00:00:00.000Z'),
-    lastDebitDate: null,
+    lastDebitDate: undefined,
     approvalDate: new Date('2021-12-02T00:00:00.000Z'),
+    status: LeaseStatus.Active,
+    rentInfo: undefined,
+    address: undefined,
   },
 ]
 
 // 1 active housing contract, 1 upcoming housing contract, 1 active parkingspace
-const mockedLeasesWithOneActiveHousingContractAndOneTerminatedHousingContract =
+const mockedLeasesWithOneActiveHousingContractAndOneTerminatedHousingContract: Lease[] =
   [
     //old and terminated housing contract
     {
       leaseId: '704-003-02-0302/02',
       leaseNumber: '02',
       rentalPropertyId: '704-003-02-0302',
+      rentalProperty: undefined,
       type: 'Bostadskontrakt               ',
       leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
-      leaseEndDate: null,
+      leaseEndDate: undefined,
       tenantContactIds: [],
       tenants: [],
       noticeGivenBy: 'G',
       noticeDate: new Date('2019-09-04T00:00:00.000Z'),
-      noticeTimeTenant: 3,
+      noticeTimeTenant: '3',
       preferredMoveOutDate: new Date('2019-09-30T00:00:00.000Z'),
-      terminationDate: null,
+      terminationDate: undefined,
       contractDate: new Date('2010-12-28T00:00:00.000Z'),
       lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
       approvalDate: new Date('2010-12-28T00:00:00.000Z'),
+      status: LeaseStatus.Upcoming,
+      rentInfo: undefined,
+      address: undefined,
     },
     //active housing contract
     {
       leaseId: '104-061-02-0202/11',
       leaseNumber: '11',
       rentalPropertyId: '104-061-02-0202',
+      rentalProperty: undefined,
       type: 'Bostadskontrakt               ',
       leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
-      leaseEndDate: null,
+      leaseEndDate: undefined,
       tenantContactIds: [],
       tenants: [],
-      noticeGivenBy: null,
-      noticeDate: null,
-      noticeTimeTenant: 3,
-      preferredMoveOutDate: null,
-      terminationDate: null,
+      noticeGivenBy: undefined,
+      noticeDate: undefined,
+      noticeTimeTenant: '3',
+      preferredMoveOutDate: undefined,
+      terminationDate: undefined,
       contractDate: new Date('2019-09-04T00:00:00.000Z'),
-      lastDebitDate: null,
+      lastDebitDate: undefined,
       approvalDate: new Date('2019-09-04T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+      rentInfo: undefined,
+      address: undefined,
     },
     //active parking space contract
     {
       leaseId: '104-071-99-0049/19',
       leaseNumber: '19',
       rentalPropertyId: '104-071-99-0049',
+      rentalProperty: undefined,
       type: 'Garagekontrakt                ',
       leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
-      leaseEndDate: null,
+      leaseEndDate: undefined,
       tenantContactIds: [],
       tenants: [],
-      noticeGivenBy: null,
-      noticeDate: null,
-      noticeTimeTenant: 3,
-      preferredMoveOutDate: null,
-      terminationDate: null,
+      noticeGivenBy: undefined,
+      noticeDate: undefined,
+      noticeTimeTenant: '3',
+      preferredMoveOutDate: undefined,
+      terminationDate: undefined,
       contractDate: new Date('2022-06-29T00:00:00.000Z'),
-      lastDebitDate: null,
+      lastDebitDate: undefined,
       approvalDate: new Date('2022-06-29T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+      rentInfo: undefined,
+      address: undefined,
     },
   ]
 
@@ -371,12 +406,15 @@ describe('parseLeasesForHousingContract', () => {
       mockedLeasesWithOneActiveHousingContractAndOneTerminatedHousingContract.filter(
         isLeaseActiveOrUpcoming
       )
+
+    expect(filteredLeases).toHaveLength(2)
+
     const result = parseLeasesForHousingContracts(filteredLeases)
 
     expect(result).toBeDefined()
     if (result) {
       expect(result[0]).toBeDefined()
-      expect(result[1]).toBeNull()
+      expect(result[1]).toBeUndefined()
     }
   })
 
@@ -384,6 +422,8 @@ describe('parseLeasesForHousingContract', () => {
     const filteredLeases: Lease[] =
       mockedLeasesWithUpcomingHousingContract.filter(isLeaseActiveOrUpcoming)
     const result = parseLeasesForHousingContracts(filteredLeases)
+
+    expect(filteredLeases).toHaveLength(3)
 
     expect(result).toBeDefined()
     if (result) {
