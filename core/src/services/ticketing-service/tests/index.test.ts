@@ -185,7 +185,7 @@ describe('ticketing-service index', () => {
         .send(ticketRequest)
 
       expect(res.status).toBe(200)
-      expect(res.body.data).toBeDefined()
+      expect(res.body.message).toBeDefined()
       expect(createTicketSpy).toHaveBeenCalled()
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
     })

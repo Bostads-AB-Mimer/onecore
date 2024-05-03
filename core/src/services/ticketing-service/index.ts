@@ -117,6 +117,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const tickets = await getTicketByContactCode(ctx.params.code)
       if (tickets && tickets.length > 0) {
+        ctx.status = 200
         ctx.body = {
           totalCount: tickets.length,
           workOrders: tickets,
@@ -138,45 +139,58 @@ export const routes = (router: KoaRouter) => {
     const equipmentList = ['TM', 'MA', 'TT', 'TS']
 
     try {
-      if (!ctx.params.contactCode) return ctx.throw(400, 'Contact code missing')
-      const { rentalObjectCode, accessOptions, pet, rows } = ctx.request.body
-      const laundryRoomTickets = rows.filter(
-        (row: any) => row.locationCode === 'TV'
+      if (!ctx.params.contactCode) {
+        ctx.status = 400
+        ctx.body = {
+          message: 'Contact code is missing. It needs to be passed in the url.',
+        }
+        return
+      }
+      const { RentalObjectCode, AccessOptions, Pet, Rows } = ctx.request.body
+      const laundryRoomTickets = Rows.filter(
+        (row: any) => row.LocationCode === 'TV'
       )
 
-      if (laundryRoomTickets.length === 0)
-        return ctx.throw(
-          400,
-          'Bad request, no laundry room tickets found in request'
-        )
+      if (laundryRoomTickets.length === 0) {
+        ctx.status = 400
+        ctx.body = {
+          message: 'Bad request, no laundry room tickets found in request',
+        }
+        return
+      }
       const maintenanceTeamId = await getMaintenanceTeamId(
         'Vitvarureperatör Mimer'
       )
 
       for (const ticket of laundryRoomTickets) {
-        if (equipmentList.includes(ticket.partOfBuildingCode)) {
+        if (equipmentList.includes(ticket.PartOfBuildingCode)) {
           const rentalPropertyInfo =
-            await getRentalPropertyInfo(rentalObjectCode)
+            await getRentalPropertyInfo(RentalObjectCode)
 
           const laundryRoom = rentalPropertyInfo.maintenanceUnits?.find(
             (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
           )
 
-          if (!laundryRoom)
-            return ctx.throw(400, 'No laundry room found in rental property')
+          if (!laundryRoom) {
+            ctx.status = 400
+            ctx.body = {
+              message: 'No laundry room found for rental property',
+            }
+            return
+          }
 
           const ticketId = await createTicket({
             contact_code: ctx.params.contactCode,
-            rental_property_id: rentalObjectCode,
-            hearing_impaired: accessOptions.type === 1,
-            phone_number: accessOptions.phoneNumber,
-            call_between: accessOptions.callBetween,
-            pet: pet,
-            space_code: ticket.locationCode,
-            equipment_code: ticket.partOfBuildingCode,
-            description: ticket.description,
-            name: 'Felanmäld tvättstuga - ' + ticket.partOfBuildingCode,
-            email_address: accessOptions.email,
+            rental_property_id: RentalObjectCode,
+            hearing_impaired: AccessOptions.Type === 1,
+            phone_number: AccessOptions.PhoneNumber,
+            call_between: AccessOptions.CallBetween,
+            pet: Pet,
+            space_code: ticket.LocationCode,
+            equipment_code: ticket.PartOfBuildingCode,
+            description: ticket.Description,
+            name: 'Felanmäld tvättstuga - ' + ticket.PartOfBuildingCode,
+            email_address: AccessOptions.Email,
             building_code: (
               rentalPropertyInfo.property as ApartmentInfo | CommercialSpaceInfo
             ).buildingCode,
@@ -190,7 +204,8 @@ export const routes = (router: KoaRouter) => {
             maintenance_team_id: maintenanceTeamId,
           })
 
-          ctx.body = { data: `Ticket created with ID ${ticketId}` }
+          ctx.status = 200
+          ctx.body = { message: `Ticket created with ID ${ticketId}` }
         }
       }
     } catch (error) {
