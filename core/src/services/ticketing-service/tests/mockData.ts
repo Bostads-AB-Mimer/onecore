@@ -2,20 +2,20 @@ import { Contact, Lease, RentalPropertyInfo } from 'onecore-types'
 import { OdooGetTicket } from '../adapters/odoo-adapter'
 
 export const ticketRequestMockData = {
-  rentalObjectCode: '705-022-04-0201',
-  images: [],
-  accessOptions: {
-    type: 0,
-    email: 'test@test.se',
-    phoneNumber: '0734567891',
-    callBetween: '08:00 - 17:00',
+  RentalObjectCode: '705-022-04-0201',
+  Images: [],
+  AccessOptions: {
+    Type: 0,
+    Email: 'test@test.se',
+    PhoneNumber: '0734567891',
+    CallBetween: '08:00 - 17:00',
   },
-  pet: 'Ja, cirka 20-25 katter. Svårt att hålla koll nuförtiden',
-  rows: [
+  Pet: 'Ja, cirka 20-25 katter. Svårt att hålla koll nuförtiden',
+  Rows: [
     {
-      locationCode: 'TV',
-      partOfBuildingCode: 'TS',
-      description:
+      LocationCode: 'TV',
+      PartOfBuildingCode: 'TS',
+      Description:
         'Torkskåpet är en portal till en annan värld med ett talade lejon som heter Aslan.',
     },
   ],
