@@ -1,5 +1,7 @@
 enum LeaseStatus {
   Active,
+  Upcoming = 1,
+  Terminated = 2,
 }
 
 enum ParkingSpaceType {

@@ -51,6 +51,12 @@ interface Lease {
   contractDate: Date | undefined
   lastDebitDate: Date | undefined
   approvalDate: Date | undefined
+  residentialArea?: ResidentialArea
+}
+
+interface ResidentialArea {
+  code: string
+  caption: string
 }
 
 interface RentalProperty {
