@@ -38,6 +38,7 @@ import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
 } from './adapters/xpand/invoices-adapter'
+import { getDetailedApplicantInformation } from './priority-list-service'
 import { Applicant, ApplicantStatus, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
@@ -77,7 +78,6 @@ export const routes = (router: KoaRouter) => {
       ctx.query.includeTerminatedLeases,
       ctx.query.includeContacts
     )
-
     ctx.body = {
       data: responseData,
     }
@@ -501,4 +501,41 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * Gets detailed information on a listings applicants
+   * Returns a list of all applicants on a listing by listing id
+   * Uses ListingId instead of rentalObjectCode since multiple listings can share the same rentalObjectCode for historical reasons
+   */
+  router.get('(.*)/listing/:listingId/applicants/details', async (ctx) => {
+    try {
+      const listingId = ctx.params.listingId
+      const listing = await getListingById(listingId)
+
+      if (!listing) {
+        ctx.status = 404
+        return
+      }
+
+      const result: any = []
+
+      if (listing.applicants) {
+        for (const applicant of listing.applicants) {
+          const detailedApplicant =
+            await getDetailedApplicantInformation(applicant)
+          result.push(detailedApplicant)
+        }
+      }
+
+      ctx.body = result
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+        }
+      }
+    }
+  })
 }

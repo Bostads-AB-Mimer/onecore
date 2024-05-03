@@ -2,11 +2,13 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease } from 'onecore-types'
+import { Lease, Listing } from 'onecore-types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
+import * as listingAdapter from '../adapters/listing-adapter'
+import * as priorityListService from '../priority-list-service'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -16,6 +18,8 @@ app.use(router.routes())
 
 describe('lease-service', () => {
   let leaseMock: Array<Lease>
+  let listingMock: Listing
+  let detailedApplicantMock: any //todo: update when type interface defined
 
   // Mock until this bug is fixed: https://github.com/kulshekhar/ts-jest/issues/3397
   const LeaseStatus = {
@@ -184,6 +188,85 @@ describe('lease-service', () => {
         approvalDate: new Date('2023-08-11T07:45:09.833Z'),
       },
     ]
+    listingMock = {
+      id: 3030,
+      rentalObjectCode: '705-808-00-0006',
+      address: 'Svarvargatan 4',
+      monthlyRent: 698.33,
+      districtCaption: 'Malmaberg',
+      districtCode: 'MAL',
+      blockCaption: 'LINDAREN 2',
+      blockCode: '1401',
+      objectTypeCaption: 'Carport',
+      objectTypeCode: 'CPORT',
+      rentalObjectTypeCaption: 'Standard hyresobjektstyp',
+      rentalObjectTypeCode: 'STD',
+      publishedFrom: new Date(),
+      publishedTo: new Date(),
+      vacantFrom: new Date(),
+      status: 1,
+      waitingListType: 'Bilplats (intern)',
+      applicants: [
+        {
+          id: 3005,
+          name: 'Sökande Fiktiv',
+          contactCode: 'P145241',
+          applicationDate: new Date(),
+          applicationType: 'Additional',
+          status: 1,
+          listingId: 3030,
+        },
+        {
+          id: 3006,
+          name: 'Testsson Stina',
+          contactCode: 'P174965',
+          applicationDate: new Date(),
+          applicationType: 'Additional',
+          status: 1,
+          listingId: 3030,
+        },
+      ],
+    }
+    detailedApplicantMock = {
+      id: 3005,
+      name: 'Sökande Fiktiv',
+      contactCode: 'P145241',
+      applicationDate: new Date(),
+      applicationType: 'Additional',
+      status: 1,
+      listingId: 3030,
+      queuePoints: 1761,
+      address: {
+        street: 'Fiktiggatan 1',
+        number: '',
+        postalCode: '72222',
+        city: 'VÄSTERÅS',
+      },
+      currentHousingContract: {
+        leaseId: '306-001-01-0101/07',
+        leaseNumber: '07',
+        rentalPropertyId: '306-001-01-0101',
+        type: 'Bostadskontrakt               ',
+        leaseStartDate: new Date(),
+        leaseEndDate: null,
+        tenantContactIds: [],
+        tenants: [],
+        noticeGivenBy: null,
+        noticeDate: null,
+        noticeTimeTenant: 3,
+        preferredMoveOutDate: null,
+        terminationDate: null,
+        contractDate: new Date(),
+        lastDebitDate: null,
+        approvalDate: new Date(),
+        residentalArea: {
+          code: 'PET',
+          caption: 'Pettersberg',
+        },
+      },
+      upcomingHousingContract: null,
+      parkingSpaceContracts: [],
+    }
   })
 
   describe('GET /getLeasesForNationalRegistrationNumber', () => {
@@ -245,6 +328,37 @@ describe('lease-service', () => {
       expect(getLeaseSpy).toHaveBeenCalled()
 
       expect(res.body.data.leaseId).toEqual('406-097-11-0201/06')
+    })
+  })
+
+  describe('GET /listing/:listingId/applicants/details', () => {
+    it('responds with 404 if no listing found', async () => {
+      const getListingSpy = jest
+        .spyOn(listingAdapter, 'getListingById')
+        .mockResolvedValueOnce(undefined)
+
+      const res = await request(app.callback()).get(
+        '/listing/1337/applicants/details'
+      )
+      expect(getListingSpy).toHaveBeenCalled()
+      expect(res.status).toBe(404)
+    })
+    it('responds with 200 on success', async () => {
+      const getListingSpy = jest
+        .spyOn(listingAdapter, 'getListingById')
+        .mockResolvedValue(listingMock)
+
+      const priorityListServiceSpy = jest
+        .spyOn(priorityListService, 'getDetailedApplicantInformation')
+        .mockResolvedValue(detailedApplicantMock)
+
+      const res = await request(app.callback()).get(
+        '/listing/1337/applicants/details'
+      )
+      expect(getListingSpy).toHaveBeenCalled()
+      expect(priorityListServiceSpy).toHaveBeenCalled()
+      expect(res.status).toBe(200)
+      expect(res.body).toBeDefined()
     })
   })
 
