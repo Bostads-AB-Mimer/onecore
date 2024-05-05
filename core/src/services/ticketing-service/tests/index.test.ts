@@ -135,7 +135,7 @@ describe('ticketing-service index', () => {
       expect(res.body.workOrders).toHaveLength(2)
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
-    it('should return 404 if no tickets found', async () => {
+    it('should return 200 if no tickets found', async () => {
       const getTicketByContactCodeSpy = jest
         .spyOn(odooAdapter, 'getTicketByContactCode')
         .mockResolvedValue([])
@@ -144,9 +144,9 @@ describe('ticketing-service index', () => {
         '/api/ticketsByContactCode/P174958'
       )
 
-      expect(res.status).toBe(404)
-      expect(res.body).toHaveProperty('error')
-      expect(res.body.error).toBe('No tickets found')
+      expect(res.status).toBe(200)
+      expect(res.body).toHaveProperty('message')
+      expect(res.body.message).toBe('No tickets found')
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
     it('should return 500 if error', async () => {
@@ -159,8 +159,8 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(500)
-      expect(res.body).toHaveProperty('error')
-      expect(res.body.error).toBe('Internal server error')
+      expect(res.body).toHaveProperty('message')
+      expect(res.body.message).toBe('Internal server error')
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
   })
