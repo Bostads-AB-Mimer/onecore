@@ -185,6 +185,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       const applicant: Applicant = {
         id: 0, //should not be passed
         name: applicantContact.fullName,
+        nationalRegistrationNumber: applicantContact.nationalRegistrationNumber,
         contactCode: applicantContact.contactCode,
         applicationDate: new Date(),
         applicationType: applicationType,
