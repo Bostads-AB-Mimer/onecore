@@ -136,7 +136,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/createTicket/:contactCode', async (ctx) => {
-    const equipmentList = ['TM', 'MA', 'TT', 'TS']
+    const equipmentList = ['TM', 'MA', 'TT', 'TÅ']
 
     try {
       if (!ctx.params.contactCode) {
