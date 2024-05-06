@@ -21,6 +21,7 @@ import {
   getApplicantsAndListingByContactCode,
   getListingByIdWithDetailedApplicants,
 } from '../../adapters/leasing-adapter'
+import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await getLease(rentalId, 'true')
@@ -111,6 +112,35 @@ export const routes = (router: KoaRouter) => {
     const responseData = await getListingsWithApplicants()
 
     ctx.body = responseData
+  })
+
+  /**
+   * Create Offer for a listing
+   */
+  router.post('(.*)/listings/:listingId/offers', async (ctx) => {
+    const listingId = ctx.params.listingId
+    if (!listingId) {
+      ctx.status = 400
+      ctx.body = {
+        message: 'Listing id is missing. It needs to be passed in the url.',
+      }
+
+      return
+    }
+
+    try {
+      const result = await createOfferForInternalParkingSpace(listingId)
+
+      ctx.status = result.httpStatus
+      ctx.body = result.response
+    } catch (error) {
+      // Step 6: Communicate error to dev team and customer service
+      console.log('Error', error)
+      ctx.status = 500
+      ctx.body = {
+        message: 'A technical error has occured',
+      }
+    }
   })
 
   /**
