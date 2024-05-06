@@ -123,14 +123,14 @@ export const routes = (router: KoaRouter) => {
           workOrders: tickets,
         }
       } else {
-        ctx.status = 404
-        ctx.body = { error: 'No tickets found' }
+        ctx.status = 200
+        ctx.body = { message: 'No tickets found' }
         return
       }
     } catch (error) {
       console.error('Error:', error)
       ctx.status = 500
-      ctx.body = { error: 'Internal server error' }
+      ctx.body = { message: 'Internal server error' }
       return
     }
   })

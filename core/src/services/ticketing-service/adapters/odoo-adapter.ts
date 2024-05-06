@@ -2,6 +2,7 @@ import Odoo from 'odoo-await'
 import Config from '../../../common/config'
 
 export interface OdooGetTicket {
+  uuid: string
   id: number
   phone_number: string
   contact_code: string
@@ -12,7 +13,7 @@ export interface OdooGetTicket {
   space_code: string
   equipment_code: string
   rental_property_id: string
-  request_date: string
+  create_date: string
   write_date: string
   stage_id: [number, string]
 }
@@ -46,27 +47,59 @@ const odoo = new Odoo({
   password: Config.ticketingService.password,
 })
 
+const spaceCodes: Record<string, string> = {
+  TV: 'Tvättstuga',
+}
+
+const equipmentCodes: Record<string, string> = {
+  TM: 'Tvättmaskin',
+  TT: 'Torktumlare',
+  TS: 'Torkskåp',
+  MA: 'Mangel',
+}
+
+const transformSpaceCode = (space_code: string) => {
+  return spaceCodes[space_code]
+}
+
+const transformEquipmentCode = (equipment_code: string) => {
+  return equipmentCodes[equipment_code]
+}
+
+const removePTags = (text: string): string => text.replace(/<\/?p>/g, '')
+
 const transformTicket = (ticket: OdooGetTicket) => {
+  const spaceCode = transformSpaceCode(ticket.space_code)
+  const equipmentCode = transformEquipmentCode(ticket.equipment_code)
+  const description = removePTags(ticket.description)
+  const statusMap: { [key: number]: string } = {
+    1: 'Mottagen',
+    2: 'Påbörjad',
+    3: 'Pågående',
+    4: 'Avslutad',
+  }
+  const status = statusMap[ticket.stage_id[0]]
+
   return {
-    accessCaption: 'Huvudnyckel',
-    caption: `WEBB: ${ticket.space_code}, ${ticket.equipment_code}`,
-    code: ticket.id.toString(),
-    contactCode: ticket.contact_code,
-    description: `${ticket.space_code}, ${ticket.equipment_code}': ${ticket.description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
-    detailsCaption: `${ticket.space_code}, ${ticket.equipment_code}': ${ticket.description}`,
-    externalResource: false,
-    id: `Odoo ${ticket.id}`,
-    lastChange: ticket.write_date,
-    priority: ticket.priority,
-    registered: ticket.request_date,
-    rentalObjectCode: ticket.rental_property_id,
-    status: ticket.stage_id[1],
-    useMasterKey: true,
-    workOrderRows: [
+    AccessCaption: 'Huvudnyckel',
+    Caption: `WEBB: ${spaceCode}, ${equipmentCode}`,
+    Code: 'Odoo',
+    ContactCode: ticket.contact_code,
+    Description: `${spaceCode}, ${equipmentCode}': ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
+    DetailsCaption: `${spaceCode}, ${equipmentCode}': ${description}`,
+    ExternalResource: false,
+    Id: ticket.uuid,
+    LastChange: ticket.write_date || ticket.create_date,
+    Priority: ticket.priority || '',
+    Registered: ticket.create_date,
+    RentalObjectCode: ticket.rental_property_id,
+    Status: status,
+    UseMasterKey: true,
+    WorkOrderRows: [
       {
-        description: ticket.description,
-        locationCode: ticket.space_code,
-        equipmentCode: ticket.equipment_code,
+        Description: ticket.description,
+        LocationCode: spaceCode,
+        EquipmentCode: equipmentCode,
       },
     ],
   }
@@ -78,16 +111,16 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   const domain: any[] = [['contact_code', '=', contactCode]]
 
   const fields: string[] = [
+    'uuid',
     'contact_code',
     'description',
-    'id',
     'priority',
     'pet',
     'call_between',
     'space_code',
     'equipment_code',
     'rental_property_id',
-    'request_date',
+    'create_date',
     'write_date',
     'stage_id',
   ]

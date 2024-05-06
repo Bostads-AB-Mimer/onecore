@@ -192,6 +192,7 @@ export const rentalPropertyInfoMockData: RentalPropertyInfo = {
 
 export const ticketsMockData: OdooGetTicket[] = [
   {
+    uuid: '2fc2276a-13a5-4472-8a0e-e4b12b18d453',
     id: 4,
     contact_code: 'P174958',
     phone_number: '070-1234567',
@@ -202,11 +203,12 @@ export const ticketsMockData: OdooGetTicket[] = [
     space_code: 'TV',
     equipment_code: 'TT',
     rental_property_id: '705-022-04-0201',
-    request_date: '2024-04-24',
+    create_date: '2024-04-26 13:21:20',
     write_date: '2024-04-26 13:21:20',
     stage_id: [1, 'New Request'],
   },
   {
+    uuid: '2fc2276a-13a5-4472-8a0e-e4b12b18d453',
     id: 2,
     contact_code: 'P174958',
     phone_number: '070-1234567',
@@ -217,7 +219,7 @@ export const ticketsMockData: OdooGetTicket[] = [
     space_code: 'TV',
     equipment_code: 'TM',
     rental_property_id: '705-022-04-0201',
-    request_date: '2024-04-24',
+    create_date: '2024-04-26 13:21:20',
     write_date: '2024-04-26 13:21:20',
     stage_id: [1, 'New Request'],
   },
