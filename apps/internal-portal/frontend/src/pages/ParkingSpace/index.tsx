@@ -19,7 +19,6 @@ const ParkingSpace = () => {
   })
 
   const sharedProps = {
-    cellClassName: '',
     editable: false,
     flex: 1,
     headerClassName: 'font-bison-bold text-lg text-fuscous-gray',
@@ -99,6 +98,7 @@ const ParkingSpace = () => {
         Intresseanmälningar {parkingSpaceListing.address}
       </Typography>
       <DataGridTable
+        emptyLabel="Det finns inga sökande att visa..."
         columns={columns}
         rows={parkingSpaceListing.applicants ?? []}
         getRowId={(row: any) => row.id}
