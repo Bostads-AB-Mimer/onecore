@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.15.0...v1.15.1) (2024-05-07)
+
+
+### Bug Fixes
+
+* export residential area ([325fc78](https://github.com/Bostads-AB-Mimer/onecore-types/commit/325fc78d9bd854f59d2d84c006de3ce26a454931))
+
 ## [1.15.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.14.0...v1.15.0) (2024-05-07)
 
 
