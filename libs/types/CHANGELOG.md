@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.14.0...v1.15.0) (2024-05-07)
+
+
+### Features
+
+* add nationalRegistrationNumber to applicant ([6f60a76](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6f60a761fc085b071d9bd45a2adf5443af9dcf90))
+
 ## [1.14.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.13.0...v1.14.0) (2024-05-03)
 
 
