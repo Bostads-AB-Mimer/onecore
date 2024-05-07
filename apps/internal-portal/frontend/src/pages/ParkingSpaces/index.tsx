@@ -1,9 +1,9 @@
-import { Box, IconButton, TextField, Typography } from '@mui/material'
+import { Box, IconButton, Stack, TextField, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
 import type { GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
-import { Link } from 'react-router-dom'
 import { Listing } from 'onecore-types'
+import { Link } from 'react-router-dom'
 
 import { DataGridTable } from '../../components'
 import { useParkingSpaces } from './hooks/useParkingSpaces'
@@ -113,11 +113,27 @@ const ParkingSpaces = () => {
       </Box>
       {parkingSpaces.error && 'Error'}
       <DataGridTable
-        emptyLabel="Det finns inga annonser att visa..."
+        slots={{
+          noRowsOverlay: () => (
+            <Stack
+              paddingTop="1rem"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Typography fontSize="14px">
+                Det finns inga annonser att visa...
+              </Typography>
+            </Stack>
+          ),
+        }}
         columns={columns}
         rows={filterListings(parkingSpaces.data ?? [], searchString)}
-        getRowId={(row: Listing) => row.id}
+        getRowId={(row) => row.id}
         loading={parkingSpaces.status === 'pending'}
+        rowHeight={65}
+        disableRowSelectionOnClick
+        hideFooter
+        autoHeight
       />
     </>
   )

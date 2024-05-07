@@ -17,6 +17,7 @@ export interface Props {
   applicantName: string
   listingAddress: string
   listingId: string
+  disabled: boolean
 }
 
 export const RemoveApplicantFromListing = (props: Props) => {
@@ -30,7 +31,11 @@ export const RemoveApplicantFromListing = (props: Props) => {
 
   return (
     <>
-      <Button variant="dark" onClick={() => setOpen(true)}>
+      <Button
+        disabled={props.disabled}
+        variant="dark"
+        onClick={() => setOpen(true)}
+      >
         Ta bort
       </Button>
       <Dialog onClose={() => setOpen(false)} open={open} maxWidth="xs">
@@ -66,7 +71,11 @@ export const RemoveApplicantFromListing = (props: Props) => {
               justifyContent="space-between"
               paddingTop="1rem"
             >
-              <Button variant="dark-outlined" onClick={() => setOpen(false)}>
+              <Button
+                variant="dark-outlined"
+                onClick={() => setOpen(false)}
+                disabled={removeListing.isPending}
+              >
                 Nej, avbryt
               </Button>
               <Button
