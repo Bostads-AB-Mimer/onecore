@@ -25,7 +25,10 @@ const getListingWithApplicants = async (listingId: string) => {
   }).then((res) => res.data)
 
   return await Promise.all([listing, applicants]).then(
-    ([listing, applicants]: any) => ({ ...listing, applicants })
+    ([listing, applicants]: any) => ({
+      ...listing,
+      applicants: applicants || [],
+    })
   )
 }
 
