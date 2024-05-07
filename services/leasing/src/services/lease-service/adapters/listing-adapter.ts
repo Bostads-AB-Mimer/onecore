@@ -275,7 +275,7 @@ const getApplicantByListingId = async (listingId: number) => {
   const dbApplicants = await db('Applicant')
     .where('ListingId', listingId)
     .select('*')
-  let transformedApplicants: Applicant[] = []
+  const transformedApplicants: Applicant[] = []
   for (const applicant of dbApplicants) {
     transformedApplicants.push(transformDbApplicant(applicant))
   }
