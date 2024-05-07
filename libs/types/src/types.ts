@@ -337,4 +337,5 @@ export type {
   CommercialSpaceInfo,
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
+  ResidentialArea
 }
