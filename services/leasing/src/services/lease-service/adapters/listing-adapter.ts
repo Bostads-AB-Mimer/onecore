@@ -37,6 +37,7 @@ function transformDbApplicant(row: any): Applicant {
   return {
     id: row.Id,
     name: row.Name,
+    nationalRegistrationNumber: row.NationalRegistrationNumber,
     contactCode: row.ContactCode,
     applicationDate: row.ApplicationDate,
     applicationType: row.ApplicationType,
@@ -155,6 +156,7 @@ const getApplicantById = async (
 const createApplication = async (applicationData: Applicant) => {
   await db('applicant').insert({
     Name: applicationData.name,
+    NationalRegistrationNumber: applicationData.nationalRegistrationNumber,
     ContactCode: applicationData.contactCode,
     ApplicationDate: applicationData.applicationDate,
     ApplicationType: applicationData.applicationType,
@@ -273,7 +275,7 @@ const getApplicantByListingId = async (listingId: number) => {
   const dbApplicants = await db('Applicant')
     .where('ListingId', listingId)
     .select('*')
-  let transformedApplicants: Applicant[] = []
+  const transformedApplicants: Applicant[] = []
   for (const applicant of dbApplicants) {
     transformedApplicants.push(transformDbApplicant(applicant))
   }
