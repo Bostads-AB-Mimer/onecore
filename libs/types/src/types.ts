@@ -226,6 +226,7 @@ interface Listing {
 interface Applicant {
   id: number
   name: string
+  nationalRegistrationNumber: string
   contactCode: string
   applicationDate: Date
   applicationType?: string | undefined //todo: "Additional" or "Replace". Should be an enum in the future
