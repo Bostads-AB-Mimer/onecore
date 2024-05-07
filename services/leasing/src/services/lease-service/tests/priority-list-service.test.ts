@@ -22,6 +22,7 @@ import { leaseTypes } from '../../../constants/leaseTypes'
 
 const mockedApplicant: Applicant = {
   id: 2004,
+  nationalRegistrationNumber: '197001011234',
   name: 'Sökande Fiktiv',
   contactCode: 'P145241',
   applicationDate: new Date('2024-04-23T10:05:07.244Z'),
