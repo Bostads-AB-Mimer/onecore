@@ -19,7 +19,9 @@ import {
   withdrawApplicantByManager,
   withdrawApplicantByUser,
   getApplicantsAndListingByContactCode,
+  getListingByIdWithDetailedApplicants,
 } from '../../adapters/leasing-adapter'
+import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await getLease(rentalId, 'true')
@@ -100,9 +102,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/listing/:id', async (ctx) => {
     const responseData = await getListingByListingId(ctx.params.id)
 
-    ctx.body = {
-      data: responseData,
-    }
+    ctx.body = responseData
   })
 
   /**
@@ -112,6 +112,35 @@ export const routes = (router: KoaRouter) => {
     const responseData = await getListingsWithApplicants()
 
     ctx.body = responseData
+  })
+
+  /**
+   * Create Offer for a listing
+   */
+  router.post('(.*)/listings/:listingId/offers', async (ctx) => {
+    const listingId = ctx.params.listingId
+    if (!listingId) {
+      ctx.status = 400
+      ctx.body = {
+        message: 'Listing id is missing. It needs to be passed in the url.',
+      }
+
+      return
+    }
+
+    try {
+      const result = await createOfferForInternalParkingSpace(listingId)
+
+      ctx.status = result.httpStatus
+      ctx.body = result.response
+    } catch (error) {
+      // Step 6: Communicate error to dev team and customer service
+      console.log('Error', error)
+      ctx.status = 500
+      ctx.body = {
+        message: 'A technical error has occured',
+      }
+    }
   })
 
   /**
@@ -137,6 +166,17 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Gets a listing with detailed applicant data
+   */
+  router.get('/listing/:listingId/applicants/details', async (ctx: any) => {
+    const responseData = await getListingByIdWithDetailedApplicants(
+      ctx.params.listingId
+    )
+
+    ctx.body = responseData
+  })
+
+  /**
    * Get Applicant by contact code and rental object code
    */
   router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx: any) => {
@@ -150,25 +190,32 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
-    const responseData = await withdrawApplicantByManager(ctx.params.applicantId);
+    const responseData = await withdrawApplicantByManager(
+      ctx.params.applicantId
+    )
     if (responseData.error) {
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: responseData.error };
+      ctx.status = 500 // Internal Server Error
+      ctx.body = { error: responseData.error }
     } else {
-      ctx.status = 200; // OK
-      ctx.body = { message: 'Applicant successfully withdrawn by manager.' };
-    }
-  })
-  
-  router.delete('/applicants/:applicantId/by-user', async (ctx) => {
-    const responseData = await withdrawApplicantByUser(ctx.params.applicantId);
-    if (responseData.error) {
-      ctx.status = 500; // Internal Server Error
-      ctx.body = { error: responseData.error };
-    } else {
-      ctx.status = 200; // OK
-      ctx.body = { message: 'Applicant successfully withdrawn by user.' };
+      ctx.status = 200 // OK
+      ctx.body = { message: 'Applicant successfully withdrawn by manager.' }
     }
   })
 
+  router.delete(
+    '/applicants/:applicantId/by-user/:contactCode',
+    async (ctx) => {
+      const responseData = await withdrawApplicantByUser(
+        ctx.params.applicantId,
+        ctx.params.contactCode
+      )
+      if (responseData.error) {
+        ctx.status = 500 // Internal Server Error
+        ctx.body = { error: responseData.error }
+      } else {
+        ctx.status = 200 // OK
+        ctx.body = { message: 'Applicant successfully withdrawn by user.' }
+      }
+    }
+  )
 }

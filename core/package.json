@@ -1,5 +1,5 @@
 {
-  "version": "1.0.35",
+  "version": "1.0.50",
   "description": "",
   "main": "./src/index.ts",
   "private": "true",
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
     "build": "tsc",
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon -e ts,js --exec npm run start",
@@ -51,6 +52,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-jwt": "^4.0.4",
     "koa-pino-logger": "^4.0.0",
+    "odoo-await": "^3.4.1",
     "onecore-types": "^1.15.0"
   }
 }

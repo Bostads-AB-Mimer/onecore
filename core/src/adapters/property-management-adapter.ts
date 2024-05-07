@@ -24,10 +24,10 @@ const getRentalProperty = async (
 }
 
 const getRentalPropertyInfo = async (
-  propertyId: string
+  rentalPropertyId: string
 ): Promise<RentalPropertyInfo> => {
   const propertyResponse = await axios(
-    propertyManagementServiceUrl + '/rentalPropertyInfo/' + propertyId
+    propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
   )
 
   return propertyResponse.data

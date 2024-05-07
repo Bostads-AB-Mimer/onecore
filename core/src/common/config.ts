@@ -22,6 +22,12 @@ export interface Config {
   communicationService: {
     url: string
   }
+  ticketingService: {
+    url: string
+    database: string
+    username: string
+    password: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -59,6 +65,12 @@ const config = configPackage({
       leasing: '',
       tenantDefault: '',
     },
+    ticketingService: {
+      url: 'http://127.0.0.1:8069',
+      database: '',
+      username: '',
+      password: '',
+    },
   },
 })
 
@@ -70,4 +82,5 @@ export default {
   communicationService: config.get('communicationService'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  ticketingService: config.get('ticketingService'),
 } as Config
