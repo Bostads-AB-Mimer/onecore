@@ -6,18 +6,17 @@ import { DataGridTable } from '../../../components'
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { RemoveApplicantFromListing } from './RemoveApplicantFromListing'
 
+const sharedProps = {
+  editable: false,
+  flex: 1,
+}
+
 export const Applicants = (props: { listingId: string }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
     id: props.listingId,
   })
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE')
-
-  const sharedProps = {
-    editable: false,
-    flex: 1,
-    headerClassName: 'font-bison-bold text-lg text-fuscous-gray',
-  }
 
   const columns: GridColDef[] = [
     {

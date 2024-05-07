@@ -12,7 +12,6 @@ import * as utils from '../../utils'
 const sharedProps = {
   editable: false,
   flex: 1,
-  headerClassName: 'font-bison-bold text-lg text-fuscous-gray',
 }
 
 const ParkingSpaces = () => {
@@ -80,7 +79,7 @@ const ParkingSpaces = () => {
       disableColumnMenu: true,
       renderCell: (v) => (
         <Link to={`/parkingspace/${v.id}`}>
-          <IconButton>
+          <IconButton sx={{ color: 'black' }}>
             <Chevron />
           </IconButton>
         </Link>

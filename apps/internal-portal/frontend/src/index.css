@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -11,17 +7,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@font-face {
-  font-family: 'bison';
-  src: url('../assets/Bison-Regular.woff2') format('truetype');
-}
-
-@font-face {
-  font-family: 'bison-bold';
-  src: url('../assets/Bison-Bold.woff2') format('truetype');
-}
-
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+a {
+  text-decoration: inherit;
+  color: inherit;
 }

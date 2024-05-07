@@ -34,6 +34,16 @@ declare module '@mui/material/Typography' {
   }
 }
 
+declare module '@mui/material/styles' {
+  interface Palette {
+    warmGrey: Palette['primary']
+  }
+
+  interface PaletteOptions {
+    warmGrey?: PaletteOptions['primary']
+  }
+}
+
 const bison = {
   fontFamily: 'bison',
   fontStyle: 'normal',
@@ -71,12 +81,15 @@ const graphikBold = {
   `,
 }
 
-export const mdTheme = createTheme({
+const theme = createTheme({
   palette: {
     mode: 'light',
     background: {},
     divider: '#951B81',
     grey: { '200': 'rgba(217, 217, 217, 0.5)' },
+    warmGrey: {
+      main: 'rgba(73, 72, 69, 1)',
+    },
   },
   typography: {
     title: {
@@ -127,6 +140,9 @@ export const mdTheme = createTheme({
       paddingTop: 5,
     },
   },
+})
+
+export const mdTheme = createTheme(theme, {
   components: {
     MuiCssBaseline: {
       styleOverrides: {
@@ -248,6 +264,9 @@ export const mdTheme = createTheme({
         },
         columnHeader: {
           borderBottom: '2px solid black',
+          fontFamily: 'bisonBold',
+          fontSize: '1.125rem',
+          color: theme.palette.warmGrey.main,
         },
         cell: { fontSize: '1.25em' },
       },
