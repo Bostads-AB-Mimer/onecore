@@ -14,12 +14,19 @@ const getListingsWithApplicants = async () => {
 }
 
 const getListingWithApplicants = async (listingId: string) => {
-  const response = await getFromCore({
+  const listing = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}`,
-  })
+  }).then((res) => res.data)
 
-  return response.data
+  const applicants = getFromCore({
+    method: 'get',
+    url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
+  }).then((res) => res.data)
+
+  return await Promise.all([listing, applicants]).then(
+    ([listing, applicants]: any) => ({ ...listing, applicants })
+  )
 }
 
 const removeApplicant = async (applicantId: string) => {

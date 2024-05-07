@@ -9,11 +9,17 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/leases/listing-with-applicants/:leasingId', async (ctx) => {
-    const listing = await coreAdapter.getListingWithApplicants(
-      ctx.params.leasingId
-    )
+    try {
+      const response = await coreAdapter.getListingWithApplicants(
+        ctx.params.leasingId
+      )
 
-    ctx.body = listing
+      ctx.status = 200
+      ctx.body = response
+    } catch (err) {
+      console.log(err)
+      ctx.status = 500
+    }
   })
 
   router.delete('(.*)/applicant/:applicantId', async (ctx) => {
