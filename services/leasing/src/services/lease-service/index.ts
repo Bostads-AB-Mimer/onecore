@@ -10,24 +10,24 @@ import KoaRouter from '@koa/router'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
-  getLeasesForPropertyId,
   getContactForPhoneNumber,
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
+  getLeasesForPropertyId,
 } from './adapters/xpand/tenant-lease-adapter'
 
 import {
-  createListing,
+  applicationExists,
   createApplication,
+  createListing,
   getAllListingsWithApplicants,
   getApplicantById,
   getApplicantsByContactCode,
   getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
-  getListingByRentalObjectCode,
-  applicationExists,
-  updateApplicantStatus,
   getListingById,
+  getListingByRentalObjectCode,
+  updateApplicantStatus,
 } from './adapters/listing-adapter'
 import {
   addApplicantToToWaitingList,
@@ -38,7 +38,11 @@ import {
   getInvoicesByContactCode,
   getUnpaidInvoicesByContactCode,
 } from './adapters/xpand/invoices-adapter'
-import { getDetailedApplicantInformation } from './priority-list-service'
+import {
+  addPriorityToApplicantsBasedOnRentalRules,
+  getDetailedApplicantInformation,
+  sortApplicantsBasedOnRentalRules,
+} from './priority-list-service'
 import { Applicant, ApplicantStatus, Listing } from 'onecore-types'
 
 interface CreateLeaseRequest {
@@ -504,7 +508,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * Gets detailed information on a listings applicants
-   * Returns a list of all applicants on a listing by listing id
+   * Returns a sorted list by rental rules for internal parking spaces of all applicants on a listing by listing id
    * Uses ListingId instead of rentalObjectCode since multiple listings can share the same rentalObjectCode for historical reasons
    */
   router.get('(.*)/listing/:listingId/applicants/details', async (ctx) => {
@@ -517,17 +521,22 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const result: any = []
+      const applicants: any = []
 
       if (listing.applicants) {
         for (const applicant of listing.applicants) {
           const detailedApplicant =
             await getDetailedApplicantInformation(applicant)
-          result.push(detailedApplicant)
+          applicants.push(detailedApplicant)
         }
       }
 
-      ctx.body = result
+      const applicantsWithPriority = addPriorityToApplicantsBasedOnRentalRules(
+        listing,
+        applicants
+      )
+
+      ctx.body = sortApplicantsBasedOnRentalRules(applicantsWithPriority)
     } catch (error: unknown) {
       ctx.status = 500
 

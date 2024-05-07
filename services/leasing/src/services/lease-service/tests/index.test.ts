@@ -9,6 +9,7 @@ import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as listingAdapter from '../adapters/listing-adapter'
 import * as priorityListService from '../priority-list-service'
+import { leaseTypes } from '../../../constants/leaseTypes'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -69,7 +70,7 @@ describe('lease-service', () => {
           city: 'Westeros',
         },
         rentalPropertyId: '406-097-11-0201',
-        type: 'Bostadskontrakt',
+        type: leaseTypes.housingContract,
         rentalProperty: undefined,
         rentInfo: undefined,
         noticeGivenBy: '',
@@ -80,6 +81,10 @@ describe('lease-service', () => {
         contractDate: new Date('2023-08-11T07:45:09.833Z'),
         lastDebitDate: undefined,
         approvalDate: new Date('2023-08-11T07:45:09.833Z'),
+        residentialArea: {
+          code: 'MAL',
+          caption: 'Malmaberg',
+        },
       },
       {
         leaseId: '102-008-03-0202/07',
@@ -122,7 +127,7 @@ describe('lease-service', () => {
           city: 'Westeros',
         },
         rentalPropertyId: '102-008-03-0202',
-        type: 'Bostadskontrakt',
+        type: leaseTypes.housingContract,
         rentalProperty: undefined,
         rentInfo: undefined,
         noticeGivenBy: '',
@@ -133,6 +138,10 @@ describe('lease-service', () => {
         contractDate: new Date('2023-08-11T07:45:09.833Z'),
         lastDebitDate: undefined,
         approvalDate: new Date('2023-08-11T07:45:09.833Z'),
+        residentialArea: {
+          code: 'MAL',
+          caption: 'Malmaberg',
+        },
       },
       {
         leaseId: '102-008-03-0202/07',
@@ -175,7 +184,7 @@ describe('lease-service', () => {
           city: 'Westeros',
         },
         rentalPropertyId: '102-008-03-0202',
-        type: 'Bostadskontrakt',
+        type: leaseTypes.housingContract,
         rentalProperty: undefined,
         rentInfo: undefined,
         noticeGivenBy: '',
@@ -186,6 +195,10 @@ describe('lease-service', () => {
         contractDate: new Date('2023-08-11T07:45:09.833Z'),
         lastDebitDate: undefined,
         approvalDate: new Date('2023-08-11T07:45:09.833Z'),
+        residentialArea: {
+          code: 'MAL',
+          caption: 'Malmaberg',
+        },
       },
     ]
     listingMock = {
@@ -246,7 +259,7 @@ describe('lease-service', () => {
         leaseId: '306-001-01-0101/07',
         leaseNumber: '07',
         rentalPropertyId: '306-001-01-0101',
-        type: 'Bostadskontrakt               ',
+        type: leaseTypes.housingContract,
         leaseStartDate: new Date(),
         leaseEndDate: null,
         tenantContactIds: [],
@@ -259,7 +272,7 @@ describe('lease-service', () => {
         contractDate: new Date(),
         lastDebitDate: null,
         approvalDate: new Date(),
-        residentalArea: {
+        residentialArea: {
           code: 'PET',
           caption: 'Pettersberg',
         },

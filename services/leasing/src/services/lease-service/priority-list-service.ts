@@ -7,6 +7,7 @@
 import {
   Applicant,
   Lease,
+  Listing,
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
   WaitingList,
@@ -14,9 +15,10 @@ import {
 import { getWaitingList } from './adapters/xpand/xpand-soap-adapter'
 import {
   getContactByContactCode,
-  getResidentialAreaByRentalPropertyId,
   getLeasesForContactCode,
+  getResidentialAreaByRentalPropertyId,
 } from './adapters/xpand/tenant-lease-adapter'
+import { leaseTypes } from '../../constants/leaseTypes'
 
 const getDetailedApplicantInformation = async (applicant: Applicant) => {
   try {
@@ -89,6 +91,117 @@ const getDetailedApplicantInformation = async (applicant: Applicant) => {
   }
 }
 
+//todo: should use and return defined interface type
+const addPriorityToApplicantsBasedOnRentalRules = (
+  listing: Listing,
+  applicants: any[]
+) => {
+  const applicantsWithAssignedPriority: any[] = [] //todo: use defined interface
+  for (const applicant of applicants) {
+    applicantsWithAssignedPriority.push(
+      assignPriorityToApplicantBasedOnRentalRules(listing, applicant)
+    )
+  }
+
+  return applicantsWithAssignedPriority
+}
+
+const sortApplicantsBasedOnRentalRules = (applicants: any[]): any[] => {
+  return Array.from(applicants).sort((a, b) => {
+    //sort by priority (ascending)
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority
+    }
+
+    //sort by queue points (descending)
+    return b.queuePoints - a.queuePoints
+  })
+}
+
+//todo: should use and return defined interface type from onecore-types
+const assignPriorityToApplicantBasedOnRentalRules = (
+  listing: Listing,
+  applicant: any
+): any => {
+  if (applicant.listingId !== listing.id) {
+    throw new Error(
+      `applicant ${applicant.contactCode} does not belong to listing ${listing.id}`
+    )
+  }
+
+  //priority  1
+
+  //Applicant has no active parking space contract and is tenant in same area as listing
+  if (!applicant.parkingSpaceContracts.length) {
+    if (
+      applicant.currentHousingContract.residentialArea.code ===
+      listing.districtCode
+    ) {
+      return {
+        ...applicant,
+        priority: 1,
+      }
+    }
+
+    //Applicant has no active parking space contract and has upcoming housing contract in same area as listing
+    if (applicant.upcomingHousingContract) {
+      if (
+        applicant.upcomingHousingContract.residentialArea.code ===
+        listing.districtCode
+      ) {
+        return {
+          ...applicant,
+          priority: 1,
+        }
+      }
+    }
+  }
+
+  //Applicant has 1 active contract for parking space and wishes to replace current parking space
+  if (
+    applicant.parkingSpaceContracts.length === 1 &&
+    applicant.applicationType === 'Replace'
+  ) {
+    return {
+      ...applicant,
+      priority: 1,
+    }
+  }
+
+  //priority 2
+
+  //Applicant has 1 active parking space contract and wishes to rent an additional parking space
+  if (
+    applicant.parkingSpaceContracts.length === 1 &&
+    applicant.applicationType === 'Additional'
+  ) {
+    return {
+      ...applicant,
+      priority: 2,
+    }
+  }
+
+  //Applicant has more than 1 active parking space contract and wishes to replace 1 parking space contract
+  if (
+    applicant.parkingSpaceContracts.length > 1 &&
+    applicant.applicationType === 'Replace'
+  ) {
+    return {
+      ...applicant,
+      priority: 2,
+    }
+  }
+
+  //priority 3
+
+  //Applicant has more 2 or more active parking space and wishes to rent an additional parking space
+
+  return {
+    ...applicant,
+    priority: 3,
+  }
+}
+
 //helper function to filter all non-terminated and all still active contracts with a last debit date
 const isLeaseActiveOrUpcoming = (lease: Lease): boolean => {
   const currentDate = new Date()
@@ -136,7 +249,7 @@ const parseLeasesForHousingContracts = (
   const housingContracts: Lease[] = []
   for (const lease of leases) {
     //use startsWith to handle whitespace issues from xpand
-    if (lease.type.startsWith('Bostadskontrakt')) {
+    if (lease.type.includes(leaseTypes.housingContract)) {
       housingContracts.push(lease)
     }
   }
@@ -179,7 +292,7 @@ const parseLeasesForParkingSpaces = (leases: Lease[]): Lease[] | undefined => {
   const parkingSpaces: Lease[] = []
   for (const lease of leases) {
     //use startsWith to handle whitespace issues from xpand
-    if (lease.type.startsWith('P-Platskontrakt')) {
+    if (lease.type.includes(leaseTypes.parkingspaceContract)) {
       parkingSpaces.push(lease)
     }
   }
@@ -188,6 +301,9 @@ const parseLeasesForParkingSpaces = (leases: Lease[]): Lease[] | undefined => {
 
 export {
   getDetailedApplicantInformation,
+  addPriorityToApplicantsBasedOnRentalRules,
+  sortApplicantsBasedOnRentalRules,
+  assignPriorityToApplicantBasedOnRentalRules,
   parseWaitingListForInternalParkingSpace,
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
