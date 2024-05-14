@@ -3,14 +3,16 @@ import { XMLParser } from 'fast-xml-parser'
 import createHttpError from 'http-errors'
 import Config from '../../../common/config'
 import { XpandParkingSpace } from '../../../types/xpandTypes'
-import { getParkingSpaceApplicationCategory, getParkingSpaceType } from '../../../utils/parking-spaces'
-
+import {
+  getParkingSpaceApplicationCategory,
+  getParkingSpaceType,
+} from '../../../utils/parking-spaces'
 
 const getPublishedParkingSpaceFromSoapService = async (
-  parkingSpaceId: string,
+  parkingSpaceId: string
 ) => {
   const base64credentials = Buffer.from(
-    Config.xpandSoap.username + ':' + Config.xpandSoap.password,
+    Config.xpandSoap.username + ':' + Config.xpandSoap.password
   ).toString('base64')
   const sampleHeaders = {
     'Content-Type': 'application/soap+xml;charset=UTF-8;',
@@ -19,7 +21,7 @@ const getPublishedParkingSpaceFromSoapService = async (
   }
 
   const xml = `<soap:Envelope xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:ser='http://incit.xpand.eu/service/' xmlns:inc='http://incit.xpand.eu/'>
-  <soap:Header xmlns:wsa='http://www.w3.org/2005/08/addressing'><wsa:Action>http://incit.xpand.eu/service/IGetPublishedParkings08352/GetPublishedParkings08352</wsa:Action><wsa:To>https://pdatest.mimer.nu:9055/Incit/Service/External/ServiceCatalogue/</wsa:To></soap:Header>
+  <soap:Header xmlns:wsa='http://www.w3.org/2005/08/addressing'><wsa:Action>http://incit.xpand.eu/service/IGetPublishedParkings08352/GetPublishedParkings08352</wsa:Action><wsa:To>${Config.xpandSoap.url}</wsa:To></soap:Header>
    <soap:Body>
       <ser:GetPublishedRentalObjectsRequest08352>
          <inc:CompanyCode>001</inc:CompanyCode>
@@ -48,7 +50,9 @@ const getPublishedParkingSpaceFromSoapService = async (
     parser.parse(body)['Envelope']['Body']['PublishedRentalObjectResult08352']
 
   if (parsedResponse.PublishedRentalObjects08352 !== '') {
-    const publishedRentalObject = parsedResponse.PublishedRentalObjects08352.PublishedRentalObjectDataContract08352
+    const publishedRentalObject =
+      parsedResponse.PublishedRentalObjects08352
+        .PublishedRentalObjectDataContract08352
     //todo: fetch more fields from xpand db? the soap service does not include detailed address for example
     try {
       const parkingSpace: XpandParkingSpace = {
@@ -84,7 +88,8 @@ const getPublishedParkingSpaceFromSoapService = async (
           publishedRentalObject['WaitingListType']
         ),
         waitingListType: publishedRentalObject['WaitingListType'],
-        rentalObjectTypeCaption: publishedRentalObject['RentalObjectTypeCaption'],
+        rentalObjectTypeCaption:
+          publishedRentalObject['RentalObjectTypeCaption'],
         rentalObjectTypeCode: publishedRentalObject['RentalObjectTypeCode'],
         objectTypeCaption: publishedRentalObject['ObjectTypeCaption'],
         objectTypeCode: publishedRentalObject['ObjectTypeCode'],
@@ -93,8 +98,6 @@ const getPublishedParkingSpaceFromSoapService = async (
     } catch (e) {
       throw createHttpError(500, 'Unknown error when parsing body')
     }
-
-
   } else if (parsedResponse.PublishedRentalObjects08352 === '') {
     throw createHttpError(404, 'Parking space not found')
   }
