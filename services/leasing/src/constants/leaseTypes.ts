@@ -9,7 +9,7 @@ const leaseTypes = {
   commercialTenantContract: 'Lokalkontrakt',
   renegotiationContract: 'Omförhandlingskontrakt',
   otherContract: 'Övrigt',
-  parkingspaceContract: 'P-platskontrakt',
+  parkingspaceContract: 'P-Platskontrakt',
 }
 
 export { leaseTypes }
