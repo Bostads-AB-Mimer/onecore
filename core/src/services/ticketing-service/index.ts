@@ -16,6 +16,7 @@ import {
   createTicket,
   getMaintenanceTeamId,
   getTicketByContactCode,
+  transformEquipmentCode,
 } from './adapters/odoo-adapter'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
@@ -136,8 +137,6 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/createTicket/:contactCode', async (ctx) => {
-    const equipmentList = ['TM', 'MA', 'TT', 'TÅ']
-
     try {
       if (!ctx.params.contactCode) {
         ctx.status = 400
@@ -147,14 +146,11 @@ export const routes = (router: KoaRouter) => {
         return
       }
       const { RentalObjectCode, AccessOptions, Pet, Rows } = ctx.request.body
-      const laundryRoomTickets = Rows.filter(
-        (row: any) => row.LocationCode === 'TV'
-      )
 
-      if (laundryRoomTickets.length === 0) {
+      if (Rows.length === 0) {
         ctx.status = 400
         ctx.body = {
-          message: 'Bad request, no laundry room tickets found in request',
+          message: 'Bad request, no tickets found in request',
         }
         return
       }
@@ -162,51 +158,71 @@ export const routes = (router: KoaRouter) => {
         'Vitvarureperatör Mimer'
       )
 
-      for (const ticket of laundryRoomTickets) {
-        if (equipmentList.includes(ticket.PartOfBuildingCode)) {
-          const rentalPropertyInfo =
-            await getRentalPropertyInfo(RentalObjectCode)
+      const propertyInfo = await getRentalPropertyInfo(RentalObjectCode)
+      const leases = await getLeasesForPropertyId(
+        RentalObjectCode,
+        'false',
+        'true'
+      )
 
-          const laundryRoom = rentalPropertyInfo.maintenanceUnits?.find(
-            (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
-          )
+      const propertyInfoWithLeases: RentalPropertyInfoWithLeases = {
+        ...propertyInfo,
+        leases: leases.filter((lease: Lease) => lease.terminationDate === null),
+      }
+      const tenants: any = propertyInfoWithLeases.leases[0].tenants
 
-          if (!laundryRoom) {
-            ctx.status = 400
-            ctx.body = {
-              message: 'No laundry room found for rental property',
-            }
-            return
+      for (const ticket of Rows) {
+        const laundryRoom = propertyInfoWithLeases.maintenanceUnits?.find(
+          (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
+        )
+
+        if (!laundryRoom) {
+          ctx.status = 400
+          ctx.body = {
+            message: 'No laundry room found for rental property',
           }
-
-          const ticketId = await createTicket({
-            contact_code: ctx.params.contactCode,
-            rental_property_id: RentalObjectCode,
-            hearing_impaired: AccessOptions.Type === 1,
-            phone_number: AccessOptions.PhoneNumber,
-            call_between: AccessOptions.CallBetween,
-            pet: Pet,
-            space_code: ticket.LocationCode,
-            equipment_code: ticket.PartOfBuildingCode,
-            description: ticket.Description,
-            name: 'Felanmäld tvättstuga - ' + ticket.PartOfBuildingCode,
-            email_address: AccessOptions.Email,
-            building_code: (
-              rentalPropertyInfo.property as ApartmentInfo | CommercialSpaceInfo
-            ).buildingCode,
-            building: (
-              rentalPropertyInfo.property as ApartmentInfo | CommercialSpaceInfo
-            ).building,
-            estate_code: laundryRoom.estateCode,
-            estate: laundryRoom.estate,
-            code: laundryRoom.code,
-            space_caption: laundryRoom.caption,
-            maintenance_team_id: maintenanceTeamId,
-          })
-
-          ctx.status = 200
-          ctx.body = { message: `Ticket created with ID ${ticketId}` }
+          return
         }
+
+        const type = 'Tvättstuga'
+        const address = laundryRoom.caption.replace('TVÄTTSTUGA ', '')
+
+        const ticketId = await createTicket({
+          contact_code: ctx.params.contactCode,
+          rental_property_id: RentalObjectCode,
+          hearing_impaired: AccessOptions.Type === 1,
+          phone_number: AccessOptions.PhoneNumber || tenants[0].phoneNumber[0],
+          call_between: AccessOptions.CallBetween,
+          pet: Pet,
+          space_code: ticket.LocationCode,
+          equipment_code: ticket.PartOfBuildingCode,
+          description: ticket.Description,
+          name:
+            'Felanmäld tvättstuga - ' +
+            transformEquipmentCode(ticket.PartOfBuildingCode),
+          email_address: AccessOptions.Email || tenants[0].emailAddress,
+          building_code: (
+            propertyInfoWithLeases.property as
+              | ApartmentInfo
+              | CommercialSpaceInfo
+          ).buildingCode,
+          building: (
+            propertyInfoWithLeases.property as
+              | ApartmentInfo
+              | CommercialSpaceInfo
+          ).building,
+          estate_code: laundryRoom.estateCode,
+          estate: laundryRoom.estateCode + ' ' + laundryRoom.estate,
+          code: laundryRoom.code,
+          space_caption: type,
+          maintenance_team_id: maintenanceTeamId,
+          tenant_id: tenants[0].firstName + ' ' + tenants[0].lastName,
+          national_registration_number: tenants[0].nationalRegistrationNumber,
+          address: address,
+        })
+
+        ctx.status = 200
+        ctx.body = { message: `Ticket created with ID ${ticketId}` }
       }
     } catch (error) {
       console.error('Error creating a new ticket:', error)

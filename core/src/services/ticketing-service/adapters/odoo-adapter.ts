@@ -38,6 +38,9 @@ export interface OdooPostTicket {
   code: string
   space_caption: string
   maintenance_team_id: number
+  tenant_id: string
+  national_registration_number: string
+  address: string
 }
 
 const odoo = new Odoo({
@@ -83,7 +86,7 @@ const transformTicket = (ticket: OdooGetTicket) => {
   return {
     AccessCaption: 'Huvudnyckel',
     Caption: `WEBB: ${spaceCode}, ${equipmentCode}`,
-    Code: 'Odoo',
+    Code: 'od-' + ticket.id,
     ContactCode: ticket.contact_code,
     Description: `${spaceCode}, ${equipmentCode}': ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
     DetailsCaption: `${spaceCode}, ${equipmentCode}': ${description}`,
@@ -149,4 +152,9 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
   return team[0]
 }
 
-export { createTicket, getTicketByContactCode, getMaintenanceTeamId }
+export {
+  createTicket,
+  getTicketByContactCode,
+  getMaintenanceTeamId,
+  transformEquipmentCode,
+}
