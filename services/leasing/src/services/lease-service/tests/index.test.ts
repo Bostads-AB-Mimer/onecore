@@ -222,6 +222,7 @@ describe('lease-service', () => {
       applicants: [
         {
           id: 3005,
+          nationalRegistrationNumber: '194808075577',
           name: 'Sökande Fiktiv',
           contactCode: 'P145241',
           applicationDate: new Date(),
@@ -231,6 +232,7 @@ describe('lease-service', () => {
         },
         {
           id: 3006,
+          nationalRegistrationNumber: '198001011234',
           name: 'Testsson Stina',
           contactCode: 'P174965',
           applicationDate: new Date(),
