@@ -15,11 +15,22 @@ type PartialLease = {
   terminationDate: Lease['terminationDate']
 }
 
+function trimRow(obj: any): any {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      typeof value === 'string' ? value.trimEnd() : value,
+    ])
+  )
+}
+
 const transformFromDbContact = (
   row: any,
   phoneNumbers: any,
   leases: any
 ): Contact => {
+  row = trimRow(row)
+
   const contact = {
     contactCode: row.contactCode,
     contactKey: row.contactKey,
@@ -100,7 +111,8 @@ const getLeasesForNationalRegistrationNumber = async (
   includeTerminatedLeases: string | string[] | undefined,
   includeContacts: string | string[] | undefined
 ) => {
-  const contact = await db('cmctc')
+  const contact = await db
+    .from('cmctc')
     .select('cmctc.keycmctc as contactKey')
     .limit(1)
     .where({
@@ -133,7 +145,8 @@ const getLeasesForContactCode = async (
   includeTerminatedLeases: string | string[] | undefined,
   includeContacts: string | string[] | undefined
 ) => {
-  const contact = await db('cmctc')
+  const contact = await db
+    .from('cmctc')
     .select('cmctc.keycmctc as contactKey')
     .limit(1)
     .where({
@@ -165,7 +178,8 @@ const getLeasesForPropertyId = async (
   includeContacts: string | string[] | undefined
 ) => {
   const leases: Lease[] = []
-  const rows = await db('hyavk')
+  const rows = await db
+    .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -202,7 +216,8 @@ const getLeasesForPropertyId = async (
 const getResidentialAreaByRentalPropertyId = async (
   rentalPropertyId: string
 ) => {
-  const rows = await db('babya')
+  const rows = await db
+    .from('babya')
     .select('babya.code', 'babya.caption')
     .innerJoin('bafst', 'bafst.keybabya', 'babya.keybabya')
     .innerJoin('babuf', 'bafst.keycmobj', 'babuf.keyobjfst')
@@ -277,7 +292,8 @@ const getContactByPhoneNumber = async (
 
 const getContactsByLeaseId = async (leaseId: string) => {
   const contacts: Contact[] = []
-  const rows = await db('hyavk')
+  const rows = await db
+    .from('hyavk')
     .select('hyavk.keycmctc as contactKey')
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ hyobjben: leaseId })
@@ -297,7 +313,8 @@ const getContactsByLeaseId = async (leaseId: string) => {
 }
 
 const getContactQuery = () => {
-  return db('cmctc')
+  return db
+    .from('cmctc')
     .select(
       'cmctc.cmctckod as contactCode',
       'cmctc.fnamn as firstName',
@@ -318,18 +335,25 @@ const getContactQuery = () => {
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
-  const rows = await db('cmtel')
+  let rows = await db
+    .from('cmtel')
     .select(
       'cmtelben as phoneNumber',
       'keycmtet as type',
       'main as isMainNumber'
     )
     .where({ keycmobj: keycmobj })
+
+  rows = rows.map((row) => {
+    return trimRow(row)
+  })
+
   return rows
 }
 
 const getContactForPhoneNumber = async (phoneNumber: string) => {
-  const rows = await db('cmtel')
+  const rows = await db
+    .from('cmtel')
     .select('keycmobj as keycmobj')
     .where({ cmtelben: phoneNumber })
   return rows
@@ -344,7 +368,8 @@ const getLeaseIds = async (
   includeTerminatedLeases = Array.isArray(includeTerminatedLeases)
     ? includeTerminatedLeases[0]
     : includeTerminatedLeases
-  const rows = await db('hyavk')
+  const rows = await db
+    .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyobj.fdate as leaseStartDate',
@@ -360,7 +385,8 @@ const getLeaseIds = async (
 }
 
 const getLeasesByContactKey = async (keycmctc: string) => {
-  const rows = await db('hyavk')
+  const rows = await db
+    .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -389,7 +415,8 @@ const getLeasesByContactKey = async (keycmctc: string) => {
 }
 
 const getLeaseById = async (hyobjben: string) => {
-  const rows = await db('hyavk')
+  const rows = await db
+    .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
