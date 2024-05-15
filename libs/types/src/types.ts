@@ -235,10 +235,9 @@ interface Applicant {
 }
 
 interface ApplicantWithListing {
-  applicant: Applicant;
-  listing: Listing;
+  applicant: Applicant
+  listing: Listing
 }
-
 
 interface RentalPropertyInfo {
   id: string
@@ -295,19 +294,14 @@ interface MaintenanceUnitInfo {
   estate: string
 }
 
-/*interface UnpaidInvoices {
-  unpaidInvoices: UnpaidInvoice[]
-  numberOfUnpaidInvoices: number
-  accumulatedLastDebitDaysSinceToday: number
-}
+type SystemStatus = 'active' | 'impaired' | 'failure' | 'unknown'
 
-interface UnpaidInvoice {
-  invoiceId: string
-  amount: number
-  fromDate: Date
-  toDate: Date
-  daysSinceLastDebitDate: number
-}*/
+interface SystemHealth {
+  name: string
+  status: SystemStatus
+  subsystems?: SystemHealth[]
+  statusMessage?: string
+}
 
 export type {
   Contact,
@@ -324,8 +318,6 @@ export type {
   ConsumerReportError,
   Invoices,
   Invoice,
-  /*  UnpaidInvoices,
-  UnpaidInvoice,*/
   ParkingSpace,
   Email,
   WaitingList,
@@ -337,5 +329,7 @@ export type {
   CommercialSpaceInfo,
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
-  ResidentialArea
+  ResidentialArea,
+  SystemHealth,
+  SystemStatus,
 }
