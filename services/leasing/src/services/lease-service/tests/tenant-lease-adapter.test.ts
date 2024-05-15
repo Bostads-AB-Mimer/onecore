@@ -7,27 +7,6 @@ jest.mock('knex', () => () => ({
   innerJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
-  /*then: jest.fn().mockResolvedValue([
-    {
-      contactCode: 'P123456',
-      firstName: 'Test ',
-      lastName: 'Testman  ',
-      fullName: 'Test Testman   ',
-      nationalRegistrationNumber: '121212121212',
-      birthDate: '1212-12-12',
-      street: 'Gatvägen 12    ',
-      postalCode: '12345 ',
-      city: null,
-      emailAddress: 'noreply@mimer.nu  ',
-      keycmobj: '12345',
-      contactKey: '_ADBAEC',
-    },
-  ]) 
-    .mockResolvedValue([
-      {
-        telefon: 'nummer',
-      },
-    ]),*/
   then: jest
     .fn()
     .mockImplementationOnce((callback) =>
@@ -64,7 +43,6 @@ jest.mock('knex', () => () => ({
 
 describe(tenantLeaseAdapter.getContactByContactCode, () => {
   it('returns a contact with trimmed string fields', async () => {
-    process.env.NODE_ENV = 'production'
     const contact = await tenantLeaseAdapter.getContactByContactCode(
       'P123456',
       undefined
@@ -92,10 +70,8 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
           isMainNumber: true,
         },
       ],
-      emailAddress: 'noreply@mimer.nu',
+      emailAddress: 'redacted',
       isTenant: false,
     })
-
-    delete process.env.NODE_ENV
   })
 })
