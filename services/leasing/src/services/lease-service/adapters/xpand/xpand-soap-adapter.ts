@@ -69,7 +69,11 @@ const createLease = async (
     if (parsedResponse.Success === true) {
       return parsedResponse.ObjectDescription
     } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
-      throw createHttpError(404, 'Parking space not found')
+      throw createHttpError(
+        404,
+        'Parking space not found when creating lease',
+        rentalPropertyId
+      )
     }
     throw createHttpError(500, parsedResponse.Message)
     //TODO: handle more errors...
