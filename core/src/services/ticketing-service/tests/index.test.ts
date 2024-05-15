@@ -166,28 +166,37 @@ describe('ticketing-service index', () => {
   })
 
   describe('POST /createTicket/:contactCode', () => {
-    let ticketRequest: any
+    let ticketRequestMock: any
     beforeEach(() => {
-      ticketRequest = ticketRequestMockData
+      ticketRequestMock = ticketRequestMockData
     })
 
     it('should create ticket', async () => {
-      const createTicketSpy = jest
-        .spyOn(odooAdapter, 'createTicket')
-        .mockResolvedValue(Promise.resolve(13))
+      const getMaintenanceTeamIdSpy = jest
+        .spyOn(odooAdapter, 'getMaintenanceTeamId')
+        .mockResolvedValue(1)
 
       const getRentalPropertyInfoSpy = jest
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
         .mockResolvedValue(rentalPropertyInfoMockData)
 
+      const getLeasesForPropertyIdSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValue([leaseMockData])
+
+      const createTicketSpy = jest
+        .spyOn(odooAdapter, 'createTicket')
+        .mockResolvedValue(Promise.resolve(13))
       const res = await request(app.callback())
         .post('/api/createTicket/P174958')
-        .send(ticketRequest)
+        .send(ticketRequestMock)
 
       expect(res.status).toBe(200)
       expect(res.body.message).toBeDefined()
       expect(createTicketSpy).toHaveBeenCalled()
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
+      expect(getLeasesForPropertyIdSpy).toHaveBeenCalled()
+      expect(getMaintenanceTeamIdSpy).toHaveBeenCalled()
     })
   })
 })
