@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.15.1...v1.15.2) (2024-05-15)
+
+
+### Features
+
+* types for system health ([64c1ed5](https://github.com/Bostads-AB-Mimer/onecore-types/commit/64c1ed5b41b2d963b55d3f4427e63c745d1b70d2))
+
 ## [1.15.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.15.0...v1.15.1) (2024-05-07)
 
 
