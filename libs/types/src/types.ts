@@ -6,6 +6,7 @@ import {
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
+  OfferStatus,
 } from './enums'
 
 interface Contact {
@@ -234,6 +235,17 @@ interface Applicant {
   listingId: number
 }
 
+interface Offer {
+  id: number
+  sentAt: Date
+  expiresAt: Date
+  answeredAt: Date
+  selectedApplicants: Array<Applicant>
+  status: OfferStatus
+  listingId: number
+  offeredApplicant: Applicant
+}
+
 interface ApplicantWithListing {
   applicant: Applicant
   listing: Listing
@@ -324,6 +336,7 @@ export type {
   Listing,
   Applicant,
   ApplicantWithListing,
+  Offer,
   RentalPropertyInfo,
   ApartmentInfo,
   CommercialSpaceInfo,

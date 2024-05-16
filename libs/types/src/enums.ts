@@ -63,6 +63,13 @@ enum ApplicantStatus {
   //Rejected = 7 // ?
 }
 
+enum OfferStatus {
+  Active = 1,
+  Accepted = 2,
+  Declined = 3,
+  Expired = 4,
+}
+
 export {
   LeaseStatus,
   ParkingSpaceType,
@@ -70,5 +77,6 @@ export {
   PaymentStatus,
   InvoiceTransactionType,
   ListingStatus,
-  ApplicantStatus
+  ApplicantStatus,
+  OfferStatus,
 }
