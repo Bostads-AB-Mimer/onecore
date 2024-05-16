@@ -28,6 +28,7 @@ import {
 import {
   getRentalPropertyInfo,
   getParkingSpace,
+  getMaintenanceUnits,
 } from './adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from './adapters/xpand-soap-adapter'
 
@@ -153,6 +154,11 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/rentalPropertyInfo/:id', async (ctx) => {
     const responseData = await getRentalPropertyInfo(ctx.params.id)
+    ctx.body = responseData
+  })
+
+  router.get('(.*)/maintenanceUnits/:id', async (ctx) => {
+    const responseData = await getMaintenanceUnits(ctx.params.id)
     ctx.body = responseData
   })
 }
