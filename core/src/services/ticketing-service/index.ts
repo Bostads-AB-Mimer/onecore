@@ -5,7 +5,10 @@ import {
   getLeasesForPnr,
   getLeasesForPropertyId,
 } from '../../adapters/leasing-adapter'
-import { getRentalPropertyInfo } from '../../adapters/property-management-adapter'
+import {
+  getMaintenanceUnitsForRentalProperty,
+  getRentalPropertyInfo,
+} from '../../adapters/property-management-adapter'
 import {
   ApartmentInfo,
   CommercialSpaceInfo,
@@ -126,6 +129,36 @@ export const routes = (router: KoaRouter) => {
       } else {
         ctx.status = 200
         ctx.body = { message: 'No tickets found' }
+        return
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      ctx.status = 500
+      ctx.body = { message: 'Internal server error' }
+      return
+    }
+  })
+
+  router.get('(.*)/maintenanceUnits/:rentalPropertyId/:type?', async (ctx) => {
+    try {
+      const maintenanceUnits = await getMaintenanceUnitsForRentalProperty(
+        ctx.params.rentalPropertyId
+      )
+      if (maintenanceUnits && maintenanceUnits.length > 0) {
+        // Filter by type if type is provided
+        if (ctx.params.type) {
+          ctx.status = 200
+          ctx.body = maintenanceUnits.filter(
+            (unit) => unit.type.toUpperCase() === ctx.params.type.toUpperCase()
+          )
+          return
+        }
+        // Return all maintenance units if no type is provided
+        ctx.status = 200
+        ctx.body = maintenanceUnits
+      } else {
+        ctx.status = 200
+        ctx.body = { message: 'No maintenance units found' }
         return
       }
     } catch (error) {
