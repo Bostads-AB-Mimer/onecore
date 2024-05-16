@@ -63,230 +63,12 @@ const mockedWaitingListWithoutInternalParkingSpace: WaitingList[] = [
   },
 ]
 
-const mockedLeasesWithHousingAndParkingSpaceContracts: Lease[] = [
-  //Bostadskontrakt
-  {
-    leaseId: '705-022-04-0201/11',
-    leaseNumber: '11',
-    rentalPropertyId: '705-022-04-0201',
-    rentalProperty: undefined,
-    type: 'Bostadskontrakt',
-    leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
-    contractDate: new Date('2024-02-01T00:00:00.000Z'),
-    lastDebitDate: undefined,
-    approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-    status: LeaseStatus.Active,
-    rentInfo: undefined,
-    address: undefined,
-  },
-  //P-Platskontrakt
-  {
-    leaseId: '508-713-00-0009/19',
-    leaseNumber: '19',
-    rentalPropertyId: '508-713-00-0009',
-    rentalProperty: undefined,
-    type: leaseTypes.parkingspaceContract,
-    leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
-    contractDate: new Date('2024-02-01T00:00:00.000Z'),
-    lastDebitDate: undefined,
-    approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-    status: LeaseStatus.Active,
-    rentInfo: undefined,
-    address: undefined,
-  },
-  //P-Platskontrakt
-  {
-    leaseId: '216-704-00-0017/02',
-    leaseNumber: '02',
-    rentalPropertyId: '216-704-00-0017',
-    rentalProperty: undefined,
-    type: leaseTypes.parkingspaceContract,
-    leaseStartDate: new Date('2024-04-02T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: '',
-    noticeDate: new Date(),
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: new Date(),
-    terminationDate: new Date(),
-    contractDate: new Date(),
-    lastDebitDate: new Date(),
-    approvalDate: new Date(),
-    status: LeaseStatus.Active,
-    rentInfo: undefined,
-    address: undefined,
-  },
-]
-
 //dynamic dates for active and upcoming contracts
 const currentDate = new Date()
 const thirtyDaysInThePastDate = new Date()
 const thirtyDaysInTheFutureDate = new Date()
 thirtyDaysInThePastDate.setDate(currentDate.getDate() + 30)
 thirtyDaysInTheFutureDate.setDate(currentDate.getDate() + 30)
-
-const mockedLeasesWithUpcomingHousingContract: Lease[] = [
-  //still active but soon to be terminated housing contract
-  {
-    leaseId: '605-004-01-0103/01T',
-    leaseNumber: '01T',
-    rentalPropertyId: '605-004-01-0103',
-    rentalProperty: undefined,
-    type: 'Bostadskontrakt               ',
-    leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: 'G',
-    noticeDate: thirtyDaysInThePastDate, //new Date('2024-03-11T00:00:00.000Z'),
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: thirtyDaysInTheFutureDate, //new Date('2024-04-30T00:00:00.000Z'),
-    terminationDate: thirtyDaysInTheFutureDate,
-    contractDate: new Date('2021-09-08T00:00:00.000Z'),
-    lastDebitDate: thirtyDaysInTheFutureDate, //new Date('2024-06-30T00:00:00.000Z'),
-    approvalDate: new Date('2021-09-08T00:00:00.000Z'),
-    status: LeaseStatus.Active,
-    rentInfo: undefined,
-    address: undefined,
-  },
-  //upcoming housing contract to replace current active contract
-  {
-    leaseId: '605-004-01-0103/01',
-    leaseNumber: '01',
-    rentalPropertyId: '605-004-01-0103',
-    rentalProperty: undefined,
-    type: 'Bostadskontrakt               ',
-    leaseStartDate: thirtyDaysInTheFutureDate, //new Date('2024-07-01T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
-    contractDate: new Date('2024-03-11T00:00:00.000Z'),
-    lastDebitDate: undefined,
-    approvalDate: new Date('2024-03-11T00:00:00.000Z'),
-    status: LeaseStatus.Upcoming,
-    rentInfo: undefined,
-    address: undefined,
-  },
-  //parking space contract
-  {
-    leaseId: '605-703-00-0014/01',
-    leaseNumber: '01',
-    rentalPropertyId: '605-703-00-0014',
-    rentalProperty: undefined,
-    type: leaseTypes.parkingspaceContract,
-    leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-    leaseEndDate: undefined,
-    tenantContactIds: [],
-    tenants: [],
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: '3',
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
-    contractDate: new Date('2021-12-02T00:00:00.000Z'),
-    lastDebitDate: undefined,
-    approvalDate: new Date('2021-12-02T00:00:00.000Z'),
-    status: LeaseStatus.Active,
-    rentInfo: undefined,
-    address: undefined,
-  },
-]
-
-// 1 active housing contract, 1 upcoming housing contract, 1 active parkingspace
-const mockedLeasesWithOneActiveHousingContractAndOneTerminatedHousingContract: Lease[] =
-  [
-    //old and terminated housing contract
-    {
-      leaseId: '704-003-02-0302/02',
-      leaseNumber: '02',
-      rentalPropertyId: '704-003-02-0302',
-      rentalProperty: undefined,
-      type: 'Bostadskontrakt               ',
-      leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
-      leaseEndDate: undefined,
-      tenantContactIds: [],
-      tenants: [],
-      noticeGivenBy: 'G',
-      noticeDate: new Date('2019-09-04T00:00:00.000Z'),
-      noticeTimeTenant: '3',
-      preferredMoveOutDate: new Date('2019-09-30T00:00:00.000Z'),
-      terminationDate: undefined,
-      contractDate: new Date('2010-12-28T00:00:00.000Z'),
-      lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
-      approvalDate: new Date('2010-12-28T00:00:00.000Z'),
-      status: LeaseStatus.Upcoming,
-      rentInfo: undefined,
-      address: undefined,
-    },
-    //active housing contract
-    {
-      leaseId: '104-061-02-0202/11',
-      leaseNumber: '11',
-      rentalPropertyId: '104-061-02-0202',
-      rentalProperty: undefined,
-      type: 'Bostadskontrakt               ',
-      leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
-      leaseEndDate: undefined,
-      tenantContactIds: [],
-      tenants: [],
-      noticeGivenBy: undefined,
-      noticeDate: undefined,
-      noticeTimeTenant: '3',
-      preferredMoveOutDate: undefined,
-      terminationDate: undefined,
-      contractDate: new Date('2019-09-04T00:00:00.000Z'),
-      lastDebitDate: undefined,
-      approvalDate: new Date('2019-09-04T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-      rentInfo: undefined,
-      address: undefined,
-    },
-    //active parking space contract
-    {
-      leaseId: '104-071-99-0049/19',
-      leaseNumber: '19',
-      rentalPropertyId: '104-071-99-0049',
-      rentalProperty: undefined,
-      type: 'Garagekontrakt                ',
-      leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
-      leaseEndDate: undefined,
-      tenantContactIds: [],
-      tenants: [],
-      noticeGivenBy: undefined,
-      noticeDate: undefined,
-      noticeTimeTenant: '3',
-      preferredMoveOutDate: undefined,
-      terminationDate: undefined,
-      contractDate: new Date('2022-06-29T00:00:00.000Z'),
-      lastDebitDate: undefined,
-      approvalDate: new Date('2022-06-29T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-      rentInfo: undefined,
-      address: undefined,
-    },
-  ]
 
 const mockedApplicantFromXpand: Contact = {
   contactCode: 'P145241',
@@ -408,10 +190,39 @@ describe('parseWaitingList', () => {
 
 describe('parseLeasesForHousingContract', () => {
   it('should return 1 housing contract if only 1 active housing contract', async () => {
-    const filteredLeases: Lease[] =
-      mockedLeasesWithOneActiveHousingContractAndOneTerminatedHousingContract.filter(
-        isLeaseActiveOrUpcoming
-      )
+    const terminatedHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
+      noticeDate: new Date('2019-09-04T00:00:00.000Z'),
+      contractDate: new Date('2010-12-28T00:00:00.000Z'),
+      lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
+      approvalDate: new Date('2010-12-28T00:00:00.000Z'),
+      status: LeaseStatus.Terminated,
+    }).build()
+
+    const activeHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
+      contractDate: new Date('2019-09-04T00:00:00.000Z'),
+      approvalDate: new Date('2019-09-04T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+    }).build()
+
+    const activParkingSpaceContract = LeaseFactory.params({
+      type: leaseTypes.parkingspaceContract,
+      leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
+      contractDate: new Date('2022-06-29T00:00:00.000Z'),
+      approvalDate: new Date('2022-06-29T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+    }).build()
+
+    const leases = [
+      terminatedHousingContract,
+      activeHousingContract,
+      activParkingSpaceContract,
+    ]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
 
     expect(filteredLeases).toHaveLength(2)
 
@@ -425,8 +236,43 @@ describe('parseLeasesForHousingContract', () => {
   })
 
   it('should return 1 active housing contract and 1 upcoming housing contract', async () => {
-    const filteredLeases: Lease[] =
-      mockedLeasesWithUpcomingHousingContract.filter(isLeaseActiveOrUpcoming)
+    const soonToBeTerminatedHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
+      noticeGivenBy: 'G',
+      noticeDate: thirtyDaysInThePastDate,
+      noticeTimeTenant: '3',
+      preferredMoveOutDate: thirtyDaysInTheFutureDate,
+      terminationDate: thirtyDaysInTheFutureDate,
+      contractDate: new Date('2021-09-08T00:00:00.000Z'),
+      lastDebitDate: thirtyDaysInTheFutureDate,
+      approvalDate: new Date('2021-09-08T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+    }).build()
+
+    const upcomingHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+      contractDate: new Date('2024-03-11T00:00:00.000Z'),
+      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+      status: LeaseStatus.Upcoming,
+    }).build()
+
+    const parkingSpaceContract = LeaseFactory.params({
+      type: leaseTypes.parkingspaceContract,
+      leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
+      contractDate: new Date('2021-12-02T00:00:00.000Z'),
+      approvalDate: new Date('2021-12-02T00:00:00.000Z'),
+      status: LeaseStatus.Active,
+    }).build()
+
+    const leases = [
+      soonToBeTerminatedHousingContract,
+      upcomingHousingContract,
+      parkingSpaceContract,
+    ]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
     const result = parseLeasesForHousingContracts(filteredLeases)
 
     expect(filteredLeases).toHaveLength(3)
@@ -434,6 +280,29 @@ describe('parseLeasesForHousingContract', () => {
     expect(result).toBeDefined()
     if (result) {
       expect(result[0]).toBeDefined()
+      expect(result[1]).toBeDefined()
+    }
+  })
+
+  it('should return empty active housing contract and 1 upcoming housing contract', async () => {
+    const upcomingHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+      contractDate: new Date('2024-03-11T00:00:00.000Z'),
+      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+      status: LeaseStatus.Upcoming,
+    }).build()
+
+    const leases = [upcomingHousingContract]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
+    const result = parseLeasesForHousingContracts(filteredLeases)
+
+    expect(filteredLeases).toHaveLength(1)
+
+    expect(result).toBeDefined()
+    if (result) {
+      expect(result[0]).toBeUndefined()
       expect(result[1]).toBeDefined()
     }
   })
@@ -446,9 +315,24 @@ describe('parseLeasesForHousingContract', () => {
 
 describe('parseLeasesForParkingSpaces', () => {
   it('should return all parking spaces from leases', async () => {
-    const result = parseLeasesForParkingSpaces(
-      mockedLeasesWithHousingAndParkingSpaceContracts
-    )
+    const housingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      status: LeaseStatus.Active,
+    }).build()
+
+    const parkingSpacContract1 = LeaseFactory.params({
+      type: leaseTypes.parkingspaceContract,
+      status: LeaseStatus.Active,
+    }).build()
+
+    const parkingSpacContract2 = LeaseFactory.params({
+      type: leaseTypes.parkingspaceContract,
+      status: LeaseStatus.Active,
+    }).build()
+
+    const leases = [housingContract, parkingSpacContract1, parkingSpacContract2]
+
+    const result = parseLeasesForParkingSpaces(leases)
 
     expect(result).toBeDefined()
     expect(Array.isArray(result)).toBe(true)
@@ -622,13 +506,13 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 })
 
 describe('sortApplicantsBasedOnRentalRules', () => {
-  it('should short applicants in expected order based on rental rules', () => {
+  it('should sort applicants in expected order based on rental rules', () => {
     const listing = ListingFactory.params({
       districtCode: 'XYZ',
     }).build()
 
     //priority 1 applicant
-    //has no parking space contract and valid housing contract in same residential area as listing
+    //has no parking space contract and active housing contract in same residential area as listing
     const applicant1HousingContract = LeaseFactory.params({
       residentialArea: {
         code: 'XYZ',
@@ -767,5 +651,67 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     expect(sortedApplicantsBasedOnRentalRules[5].contactCode).toEqual(
       applicant6.contactCode
     ) //priority 3 and lowest queuePoints
+  })
+
+  it('should handle priority 1 applicants with current and upcoming housing contracts', () => {
+    const listing = ListingFactory.params({
+      districtCode: 'XYZ',
+    }).build()
+
+    //priority 1 applicant
+    //has no parking space contract and active housing contract in same residential area as listing
+    const applicant1HousingContract = LeaseFactory.params({
+      residentialArea: {
+        code: 'XYZ',
+      },
+    }).build()
+
+    const applicant1 = ApplicantFactory.params({
+      currentHousingContract: applicant1HousingContract,
+      listingId: listing.id,
+      queuePoints: 20,
+    }).build()
+
+    //priority 1 applicant
+    //has no parking space contract and upcoming housing contract in same residential area as listing
+    const applicant2UpcomingHousingContract = LeaseFactory.params({
+      type: leaseTypes.housingContract,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+      contractDate: new Date('2024-03-11T00:00:00.000Z'),
+      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+      status: LeaseStatus.Upcoming,
+      residentialArea: {
+        code: 'XYZ',
+      },
+    }).build()
+
+    const applicant2 = ApplicantFactory.params({
+      upcomingHousingContract: applicant2UpcomingHousingContract,
+      listingId: listing.id,
+      queuePoints: 10,
+    }).build()
+
+    const applicants = [applicant1, applicant2]
+
+    const applicantsWithPriority = addPriorityToApplicantsBasedOnRentalRules(
+      listing,
+      applicants
+    )
+    expect(
+      applicantsWithPriority.filter((applicant) => applicant.priority === 1)
+    ).toHaveLength(2)
+
+    const sortedApplicantsBasedOnRentalRules = sortApplicantsBasedOnRentalRules(
+      applicantsWithPriority
+    )
+
+    expect(sortedApplicantsBasedOnRentalRules).toHaveLength(applicants.length)
+
+    expect(sortedApplicantsBasedOnRentalRules[0].contactCode).toEqual(
+      applicant1.contactCode
+    )
+    expect(sortedApplicantsBasedOnRentalRules[1].contactCode).toEqual(
+      applicant2.contactCode
+    )
   })
 })

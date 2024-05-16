@@ -133,13 +133,15 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has no active parking space contract and is tenant in same area as listing
   if (!applicant.parkingSpaceContracts.length) {
-    if (
-      applicant.currentHousingContract.residentialArea.code ===
-      listing.districtCode
-    ) {
-      return {
-        ...applicant,
-        priority: 1,
+    if (applicant.currentHousingContract) {
+      if (
+        applicant.currentHousingContract.residentialArea.code ===
+        listing.districtCode
+      ) {
+        return {
+          ...applicant,
+          priority: 1,
+        }
       }
     }
 
@@ -244,8 +246,12 @@ const parseWaitingListForInternalParkingSpace = (
 const parseLeasesForHousingContracts = (
   leases: Lease[]
 ):
-  | [currentHousingContract: Lease, upcomingHousingContract: Lease | undefined]
+  | [
+      currentHousingContract: Lease | undefined,
+      upcomingHousingContract: Lease | undefined,
+    ]
   | undefined => {
+  const currentDate = new Date()
   const housingContracts: Lease[] = []
   for (const lease of leases) {
     //use startsWith to handle whitespace issues from xpand
@@ -256,33 +262,40 @@ const parseLeasesForHousingContracts = (
 
   //only 1 active housing contract found
   if (housingContracts.length == 1) {
-    return [housingContracts[0], undefined]
+    const lease = housingContracts[0]
+    const hasLeaseStarted = lease.leaseStartDate <= currentDate
+
+    //if lease has started we have an active contract, otherwise an upcoming contract
+    return hasLeaseStarted ? [lease, undefined] : [undefined, lease]
   }
 
-  //applicant have 1 active and 1 pending contract
+  //applicant have 1 active and 1 upcoming contract
   if (housingContracts.length == 2) {
-    const currentDate = new Date()
-    const currentActiveLease = leases.find(
-      (lease) =>
-        (lease.lastDebitDate === null || lease.lastDebitDate === undefined) &&
-        lease.leaseStartDate <= currentDate
-    )
+    const currentActiveLease = leases.find((lease) => {
+      const lastDebitDateNotSet =
+        lease.lastDebitDate === null || lease.lastDebitDate === undefined
+      const hasLeaseStarted = lease.leaseStartDate <= currentDate
+
+      return lastDebitDateNotSet && hasLeaseStarted
+    })
 
     if (currentActiveLease == undefined) {
       throw new Error('could not find any active lease')
     }
 
-    const pendingLease = leases.find(
-      (lease) =>
-        (lease.lastDebitDate === null || lease.lastDebitDate === undefined) &&
-        lease.leaseStartDate > currentDate
-    )
+    const upcomingLease = leases.find((lease) => {
+      const lastDebitDateNotSet =
+        lease.lastDebitDate === null || lease.lastDebitDate === undefined
+      const isLeaseUpcoming = lease.leaseStartDate > currentDate
 
-    if (pendingLease == undefined) {
+      return lastDebitDateNotSet && isLeaseUpcoming
+    })
+
+    if (upcomingLease == undefined) {
       throw new Error('could not find any pending lease')
     }
 
-    return [currentActiveLease, pendingLease]
+    return [currentActiveLease, upcomingLease]
   }
 
   return undefined

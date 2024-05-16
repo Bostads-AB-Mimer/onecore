@@ -10,7 +10,7 @@ const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
   status: LeaseStatus.Active,
   tenantContactIds: undefined,
   tenants: undefined,
-  rentalPropertyId: '605-703-00-0014',
+  rentalPropertyId: `605-703-00-0014-${sequence}`,
   rentalProperty: undefined,
   type: leaseTypes.parkingspaceContract,
   rentInfo: undefined,
