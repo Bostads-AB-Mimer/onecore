@@ -16,7 +16,7 @@ export const ticketRequestMockData = {
       LocationCode: 'TV',
       PartOfBuildingCode: 'TS',
       Description:
-        'Torkskåpet är en portal till en annan värld med ett talade lejon som heter Aslan.',
+        'Torkar inte mina kläder. Har försökt med olika program och mängder',
     },
   ],
 }

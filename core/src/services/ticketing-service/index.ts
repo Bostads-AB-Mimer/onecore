@@ -167,7 +167,7 @@ export const routes = (router: KoaRouter) => {
 
       const propertyInfoWithLeases: RentalPropertyInfoWithLeases = {
         ...propertyInfo,
-        leases: leases.filter((lease: Lease) => lease.terminationDate === null),
+        leases: leases.filter((lease: Lease) => !lease.terminationDate),
       }
       const tenants: any = propertyInfoWithLeases.leases[0].tenants
 
