@@ -75,13 +75,6 @@ const transformTicket = (ticket: OdooGetTicket) => {
   const spaceCode = transformSpaceCode(ticket.space_code)
   const equipmentCode = transformEquipmentCode(ticket.equipment_code)
   const description = removePTags(ticket.description)
-  const statusMap: { [key: number]: string } = {
-    1: 'Mottagen',
-    2: 'Påbörjad',
-    3: 'Pågående',
-    4: 'Avslutad',
-  }
-  const status = statusMap[ticket.stage_id[0]]
 
   return {
     AccessCaption: 'Huvudnyckel',
@@ -96,7 +89,7 @@ const transformTicket = (ticket: OdooGetTicket) => {
     Priority: ticket.priority || '',
     Registered: ticket.create_date,
     RentalObjectCode: ticket.rental_property_id,
-    Status: status,
+    Status: ticket.stage_id[1],
     UseMasterKey: true,
     WorkOrderRows: [
       {
