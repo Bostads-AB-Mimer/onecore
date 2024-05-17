@@ -5,14 +5,17 @@
  */
 exports.up = function (knex) {
   return knex.schema.createTable('offer', (table) => {
-    table.increments('Id').primary().notNullable()
+    table.increments('Id').primary()
     table.dateTime('SentAt')
     table.dateTime('ExpiresAt').notNullable()
     table.dateTime('AnsweredAt')
     table.string('SelectionSnapshot').notNullable() // JSON
     table.string('Status').notNullable()
-    table.foreign('ListingId').references('Listing.Id').notNullable()
-    table.foreign('ApplicantId').references('Applicant.Id').notNullable()
+    table.integer('ListingId').notNullable().unsigned()
+    table.integer('ApplicantId').notNullable().unsigned()
+
+    table.foreign('ListingId').references('Listing.Id')
+    table.foreign('ApplicantId').references('Applicant.Id')
   })
 }
 
