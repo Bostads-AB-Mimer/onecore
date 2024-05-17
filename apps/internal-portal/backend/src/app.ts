@@ -28,17 +28,20 @@ const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
   sameSite: undefined,
 }
 
-app.use(session(CONFIG, app))
+// TODO (17-05-2024): Uncomment this after internal testing by David
+// app.use(session(CONFIG, app))
 
 app.use(async (ctx, next) => {
   if (ctx.request.path.match('(.*)/auth/')) {
     return next()
   } else {
-    if (!ctx.session?.isAuthenticated) {
-      ctx.status = 401
-    } else {
-      return next()
-    }
+    // TODO (17-05-2024): Uncomment this after internal testing by David
+
+    // if (!ctx.session?.isAuthenticated) {
+    // ctx.status = 401
+    // } else {
+    return next()
+    // }
   }
 })
 
