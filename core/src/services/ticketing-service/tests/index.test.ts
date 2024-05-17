@@ -216,7 +216,7 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual(maintenanceUnitsMock)
+      expect(res.body).toEqual({ content: maintenanceUnitsMock })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
@@ -235,10 +235,9 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual([
-        maintenanceUnitsMock[0],
-        maintenanceUnitsMock[1],
-      ])
+      expect(res.body).toEqual({
+        content: [maintenanceUnitsMock[0], maintenanceUnitsMock[1]],
+      })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )

@@ -148,14 +148,17 @@ export const routes = (router: KoaRouter) => {
         // Filter by type if type is provided
         if (ctx.params.type) {
           ctx.status = 200
-          ctx.body = maintenanceUnits.filter(
-            (unit) => unit.type.toUpperCase() === ctx.params.type.toUpperCase()
-          )
+          ctx.body = {
+            content: maintenanceUnits.filter(
+              (unit) =>
+                unit.type.toUpperCase() === ctx.params.type.toUpperCase()
+            ),
+          }
           return
         }
         // Return all maintenance units if no type is provided
         ctx.status = 200
-        ctx.body = maintenanceUnits
+        ctx.body = { content: maintenanceUnits }
       } else {
         ctx.status = 200
         ctx.body = { message: 'No maintenance units found' }
