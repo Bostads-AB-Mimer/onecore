@@ -1,6 +1,7 @@
 import axios from 'axios'
 import {
   Listing,
+  MaintenanceUnitInfo,
   MaterialChoice,
   MaterialOption,
   ParkingSpace,
@@ -30,6 +31,15 @@ const getRentalPropertyInfo = async (
     propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
   )
 
+  return propertyResponse.data
+}
+
+const getMaintenanceUnitsForRentalProperty = async (
+  rentalPropertyId: string
+): Promise<MaintenanceUnitInfo[]> => {
+  const propertyResponse = await axios(
+    propertyManagementServiceUrl + '/maintenanceUnits/' + rentalPropertyId
+  )
   return propertyResponse.data
 }
 
@@ -132,6 +142,7 @@ const getPublishedParkingSpace = async (
 export {
   getRentalProperty,
   getRentalPropertyInfo,
+  getMaintenanceUnitsForRentalProperty,
   getRoomTypeWithMaterialOptions,
   getMaterialOption,
   getMaterialChoices,

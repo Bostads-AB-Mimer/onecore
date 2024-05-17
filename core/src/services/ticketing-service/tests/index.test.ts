@@ -6,7 +6,12 @@ import * as propertyManagementAdapter from '../../../adapters/property-managemen
 import * as odooAdapter from '../adapters/odoo-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
-import { Lease, Contact, RentalPropertyInfo } from 'onecore-types'
+import {
+  Lease,
+  Contact,
+  RentalPropertyInfo,
+  MaintenanceUnitInfo,
+} from 'onecore-types'
 import { OdooGetTicket } from '../adapters/odoo-adapter'
 import {
   contactMockData,
@@ -197,6 +202,54 @@ describe('ticketing-service index', () => {
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalled()
       expect(getMaintenanceTeamIdSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /maintenanceUnits/:rentalPropertyId/:type?', () => {
+    let maintenanceUnitsMock: MaintenanceUnitInfo[]
+    beforeEach(() => {
+      maintenanceUnitsMock =
+        rentalPropertyInfoMockData.maintenanceUnits as MaintenanceUnitInfo[]
+    })
+
+    it('should return all maintenance units', async () => {
+      const getMaintenanceUnitsForRentalPropertySpy = jest
+        .spyOn(
+          propertyManagementAdapter,
+          'getMaintenanceUnitsForRentalProperty'
+        )
+        .mockResolvedValue(maintenanceUnitsMock)
+
+      const res = await request(app.callback()).get(
+        '/api/maintenanceUnits/705-022-04-0201'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ content: maintenanceUnitsMock })
+      expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
+        '705-022-04-0201'
+      )
+    })
+
+    it('should return maintenance units by type', async () => {
+      const getMaintenanceUnitsForRentalPropertySpy = jest
+        .spyOn(
+          propertyManagementAdapter,
+          'getMaintenanceUnitsForRentalProperty'
+        )
+        .mockResolvedValue(maintenanceUnitsMock)
+
+      const res = await request(app.callback()).get(
+        '/api/maintenanceUnits/705-022-04-0201/Miljöbod'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({
+        content: [maintenanceUnitsMock[0], maintenanceUnitsMock[1]],
+      })
+      expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
+        '705-022-04-0201'
+      )
     })
   })
 })
