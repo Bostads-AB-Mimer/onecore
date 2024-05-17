@@ -1,4 +1,4 @@
-import { Divider, Typography } from '@mui/material'
+import { Typography } from '@mui/material'
 import { Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 
@@ -15,17 +15,10 @@ const ParkingSpace = () => {
 
   return (
     <>
-      <PageGoBackTo to="/parkingspaces" text="Översikt Intresseanmälningar" />
+      <PageGoBackTo to="/parkingspaces" text="Översikt lediga bilplatser" />
       <Suspense fallback={<ApplicantsLoading />}>
         <Applicants listingId={routeParams.id ?? ''} />
       </Suspense>
-      <Divider
-        sx={{
-          borderBottomWidth: '1.85px',
-          borderColor: 'black',
-          paddingTop: '4rem',
-        }}
-      />
       <Typography paddingY="2rem" variant="h1">
         Objektsinformation
       </Typography>

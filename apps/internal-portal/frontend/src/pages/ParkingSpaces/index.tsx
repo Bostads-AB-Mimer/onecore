@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { DataGridTable } from '../../components'
 import { useParkingSpaces } from './hooks/useParkingSpaces'
 import * as utils from '../../utils'
+import { mdTheme } from '../../theme'
 
 const sharedProps = {
   editable: false,
@@ -47,6 +48,11 @@ const ParkingSpaces = () => {
       ...sharedProps,
     },
     {
+      field: 'waitingListType',
+      headerName: 'Typ',
+      ...sharedProps,
+    },
+    {
       field: 'monthlyRent',
       headerName: 'Hyra',
       ...sharedProps,
@@ -61,13 +67,13 @@ const ParkingSpaces = () => {
     },
     {
       field: 'publishedTo',
-      headerName: 'Datum tilldelas',
+      headerName: 'Publicerad T.O.M',
       ...sharedProps,
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
     },
     {
       field: 'vacantFrom',
-      headerName: 'Ledig från och med',
+      headerName: 'Ledig FR.O.M',
       ...sharedProps,
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
     },
@@ -101,17 +107,22 @@ const ParkingSpaces = () => {
         alignItems="flex-end"
         paddingBottom="2rem"
       >
-        <Typography variant="h1">
-          Intresseanmälningar Parkeringsplats
-        </Typography>
+        <Typography variant="h1">Bilplatser</Typography>
         <SearchApplicant
           onChange={onSearch}
           disabled={parkingSpaces.isLoading}
-          placeholder="Sök kundnummer"
+          placeholder="Sök kundnummer, personnummer..."
         />
       </Box>
       {parkingSpaces.error && 'Error'}
       <DataGridTable
+        initialState={{
+          sorting: {
+            sortModel: [{ field: 'queuePoints', sort: 'desc' }],
+          },
+          pagination: { paginationModel: { pageSize: 5 } },
+        }}
+        pageSizeOptions={[5, 10, 25]}
         slots={{
           noRowsOverlay: () => (
             <Stack
@@ -127,14 +138,10 @@ const ParkingSpaces = () => {
         }}
         columns={columns}
         rows={filterListings(parkingSpaces.data ?? [], searchString)}
-        getRowClassName={(params) =>
-          params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
-        }
         getRowId={(row) => row.id}
         loading={parkingSpaces.status === 'pending'}
-        rowHeight={65}
+        rowHeight={72}
         disableRowSelectionOnClick
-        hideFooter
         autoHeight
       />
     </>
@@ -183,9 +190,9 @@ const SearchApplicant = (props: SearchApplicantProps) => (
         paddingBottom: '2px',
         color: '#000',
         '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: '#2e2e2e',
-          borderRadius: '8px',
-          borderWidth: '2.5px',
+          borderColor: mdTheme.palette.warmGrey.main,
+          borderRadius: '4px',
+          borderWidth: '1.5px',
         },
         '&.Mui-focused': {
           '& .MuiOutlinedInput-notchedOutline': {

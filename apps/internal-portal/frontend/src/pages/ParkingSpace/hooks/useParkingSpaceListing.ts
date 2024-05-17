@@ -31,6 +31,7 @@ export type ListingWithDetailedApplicants = Listing & {
     queuePoints: number
     status: ApplicantStatus
     upcomingHousingContracts: unknown
+    priority: number
   }>
 }
 

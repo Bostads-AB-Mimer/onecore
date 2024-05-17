@@ -53,17 +53,31 @@ export const Applicants = (props: { listingId: string }) => {
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
     },
     {
-      field: 'currentHousingContract',
+      field: 'parkingSpaceContracts',
       headerName: 'Har bilplats',
-      valueFormatter: (v) => (v.value ? 'Ja' : 'Nej'),
+      valueFormatter: (v) => (v.value.length ? 'Ja' : 'Nej'),
       ...sharedProps,
       flex: 0.75,
     },
     {
-      field: 'applicationType',
-      headerName: 'Ärende',
+      field: 'foo',
+      headerName: 'Svar erbj.',
       renderCell: (v) => v.value || <i>N/A</i>,
       ...sharedProps,
+    },
+    {
+      field: 'applicationType',
+      headerName: 'Ärende',
+      renderCell: (v) => v.formattedValue || <i>N/A</i>,
+      valueFormatter: (v) => (v.value === 'Replace' ? 'Byte' : 'Hyra flera'),
+      ...sharedProps,
+    },
+    {
+      field: 'priority',
+      headerName: 'Prioritetsgrupp',
+      ...sharedProps,
+      valueFormatter: (v) => formatApplicantStatus(v.value),
+      renderCell: (v) => v.value ?? <i>N/A</i>,
     },
     {
       field: 'action',
@@ -92,13 +106,8 @@ export const Applicants = (props: { listingId: string }) => {
         columns={columns}
         rows={parkingSpaceListing.applicants}
         getRowId={(row) => row.id}
-        getRowClassName={(params) =>
-          params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
-        }
         initialState={{
-          sorting: {
-            sortModel: [{ field: 'queuePoints', sort: 'desc' }],
-          },
+          pagination: { paginationModel: { pageSize: 5 } },
         }}
         slots={{
           noRowsOverlay: () => (
@@ -113,10 +122,10 @@ export const Applicants = (props: { listingId: string }) => {
             </Stack>
           ),
         }}
-        rowHeight={65}
+        pageSizeOptions={[5, 10, 25]}
+        rowHeight={72}
         disableRowSelectionOnClick
         autoHeight
-        hideFooter
       />
     </>
   )
