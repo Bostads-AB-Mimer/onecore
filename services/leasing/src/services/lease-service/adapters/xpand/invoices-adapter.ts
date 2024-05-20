@@ -29,7 +29,7 @@ const getTransactionType = (transactionTypeString: any) => {
 }
 
 const getPaymentStatus = (paymentStatusNumber: number) => {
-  let paymentStatus = paymentStatusTranslation[paymentStatusNumber]
+  const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
 
   return paymentStatus
 }
