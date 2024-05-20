@@ -7,6 +7,7 @@ import config from './common/config'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
+import { routes as healthRoutes } from './services/health-service'
 
 const app = new Koa()
 
@@ -21,6 +22,7 @@ app.use(bodyParser())
 const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
+healthRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 app.use(jwt({ secret: config.auth.secret }))
