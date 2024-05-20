@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.16.0...v1.17.0) (2024-05-20)
+
+
+### Features
+
+* 1457 create response types POC ([#61](https://github.com/Bostads-AB-Mimer/onecore-types/issues/61)) ([5deb5eb](https://github.com/Bostads-AB-Mimer/onecore-types/commit/5deb5eb2bd41e967b7a39900d3842c064dbf4328))
+
 ## [1.16.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.15.2...v1.16.0) (2024-05-20)
 
 
