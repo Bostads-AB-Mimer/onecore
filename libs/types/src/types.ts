@@ -237,15 +237,14 @@ interface Applicant {
 
 interface Offer {
   id: number
-  sentAt: Date
+  sentAt: Date | null
   expiresAt: Date
-  answeredAt: Date
+  answeredAt: Date | null
   selectedApplicants: Array<Applicant>
   status: OfferStatus
   listingId: number
   offeredApplicant: Applicant
 }
-
 interface ApplicantWithListing {
   applicant: Applicant
   listing: Listing
