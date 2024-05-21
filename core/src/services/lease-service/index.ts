@@ -55,7 +55,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Returns credit information
    */
-  router.get('(.*)/cas/getConsumerReport/:pnr', async (ctx: any) => {
+  router.get('(.*)/cas/getConsumerReport/:pnr', async (ctx) => {
     const responseData = await getCreditInformation(ctx.params.pnr)
 
     ctx.body = {
@@ -66,7 +66,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Returns a contact
    */
-  router.get('(.*)/contact/:pnr', async (ctx: any) => {
+  router.get('(.*)/contact/:pnr', async (ctx) => {
     const responseData = await getContactForPnr(ctx.params.pnr)
 
     ctx.body = {
@@ -77,7 +77,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Returns a contact by phone number
    */
-  router.get('(.*)/contact/phoneNumber/:pnr', async (ctx: any) => {
+  router.get('(.*)/contact/phoneNumber/:pnr', async (ctx) => {
     const responseData = await getContactForPhoneNumber(ctx.params.pnr)
 
     ctx.body = {
@@ -108,7 +108,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Get all Listings with Applicants
    */
-  router.get('/listings-with-applicants', async (ctx: any) => {
+  router.get('/listings-with-applicants', async (ctx) => {
     const responseData = await getListingsWithApplicants()
 
     ctx.body = responseData
@@ -146,7 +146,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Get all Applicants by contact code
    */
-  router.get('/applicants/:contactCode', async (ctx: any) => {
+  router.get('/applicants/:contactCode', async (ctx) => {
     const responseData = await getApplicantsByContactCode(
       ctx.params.contactCode
     )
@@ -157,7 +157,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Get all Applicants and related Listing by contact code
    */
-  router.get('/applicants-with-listings/:contactCode', async (ctx: any) => {
+  router.get('/applicants-with-listings/:contactCode', async (ctx) => {
     const responseData = await getApplicantsAndListingByContactCode(
       ctx.params.contactCode
     )
@@ -168,7 +168,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Gets a listing with detailed applicant data
    */
-  router.get('/listing/:listingId/applicants/details', async (ctx: any) => {
+  router.get('/listing/:listingId/applicants/details', async (ctx) => {
     const responseData = await getListingByIdWithDetailedApplicants(
       ctx.params.listingId
     )
@@ -179,7 +179,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * Get Applicant by contact code and rental object code
    */
-  router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx: any) => {
+  router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx) => {
     const { contactCode, rentalObjectCode } = ctx.params
     const responseData = await getApplicantByContactCodeAndRentalObjectCode(
       contactCode,

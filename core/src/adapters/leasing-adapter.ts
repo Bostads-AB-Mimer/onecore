@@ -1,4 +1,4 @@
-import axios, { AxiosError, HttpStatusCode } from 'axios'
+import axios from 'axios'
 import {
   ConsumerReport,
   Contact,
@@ -10,6 +10,7 @@ import {
   Applicant,
   ApplicantStatus,
   ApplicantWithListing,
+  Offer,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -347,6 +348,25 @@ const withdrawApplicantByUser = async (
   }
 }
 
+type CreateOfferParams = Omit<
+  Offer,
+  'id' | 'sentAt' | 'answeredAt' | 'offeredApplicant' | 'createdAt'
+> & { applicantId: number }
+
+const createOffer = async (params: CreateOfferParams): Promise<Offer> => {
+  try {
+    const response = await axios.post<{ data: Offer }>(
+      `${tenantsLeasesServiceUrl}/offer`,
+      params
+    )
+
+    return response.data.data
+  } catch (err) {
+    console.error('Error creating offer:', err)
+    throw err
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -370,4 +390,5 @@ export {
   getListingByIdWithDetailedApplicants,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
+  createOffer,
 }
