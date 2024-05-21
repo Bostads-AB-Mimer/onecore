@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
     "build": "tsc",
     "start": "npm run migrate:up && node index",
     "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
@@ -15,7 +16,8 @@
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
     "migrate:down": "knex migrate:down --env dev",
-    "seed": "knex seed:run --env dev"
+    "seed": "knex seed:run --env dev",
+    "ts:watch": "tsc --watch --noEmit"
   },
   "author": "",
   "license": "MIT",
@@ -35,6 +37,7 @@
     "eslint-plugin-node": "11.1.0",
     "jest": "29.5.0",
     "nodemon": "^3.0.3",
+    "onecore-types": "^1.18.0",
     "supertest": "6.3.3",
     "ts-jest": "29.1.0",
     "ts-node": "^10.9.2",
@@ -57,11 +60,11 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "mssql": "^9.3.2",
-    "onecore-types": "^1.15.2",
     "personnummer": "^3.2.1",
     "prettier": "^3.2.5",
     "randexp": "^0.5.3",
     "strong-soap": "^4.0.0",
-    "tedious": "^16.6.1"
+    "tedious": "^16.6.1",
+    "zod": "^3.23.8"
   }
 }
