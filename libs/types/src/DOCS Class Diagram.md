@@ -380,6 +380,7 @@ class Offer {
 +status: OfferStatus
 +listingId: number
 +offeredApplicant: Applicant
++createdAt: Date
 }
 
 class ApplicantWithListing {

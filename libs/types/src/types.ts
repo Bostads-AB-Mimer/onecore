@@ -244,6 +244,7 @@ interface Offer {
   status: OfferStatus
   listingId: number
   offeredApplicant: Applicant
+  createdAt: Date
 }
 interface ApplicantWithListing {
   applicant: Applicant
