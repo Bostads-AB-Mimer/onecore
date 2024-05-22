@@ -304,7 +304,7 @@ const getExpiredListings = async () => {
   const currentDate = new Date()
   const listings = await db('listing')
     .where('PublishedTo', '<', currentDate)
-    .andWhere('Status', '!=', 4) // Assuming 4 is the status code for 'Expired'
+    .andWhere('Status', '==', ApplicantStatus.Active) // Assuming 4 is the status code for 'Expired'
 
   return listings
 }
