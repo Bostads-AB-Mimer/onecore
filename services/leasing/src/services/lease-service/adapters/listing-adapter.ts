@@ -300,6 +300,23 @@ const applicationExists = async (contactCode: string, listingId: number) => {
   return !!result // Convert result to boolean: true if exists, false if not
 }
 
+const getExpiredListings = async () => {
+  const currentDate = new Date()
+  const listings = await db('listing')
+    .where('PublishedTo', '<', currentDate)
+    .andWhere('Status', '!=', 4) // Assuming 4 is the status code for 'Expired'
+
+  return listings
+}
+
+const updateListingStatuses = async (listingIds: number[], status: number) => {
+  const updateCount = await db('listing')
+    .whereIn('Id', listingIds)
+    .update({ Status: status })
+
+  return updateCount
+}
+
 export {
   createListing,
   createApplication,
@@ -311,4 +328,6 @@ export {
   getApplicantsByContactCodeAndRentalObjectCode,
   applicationExists,
   updateApplicantStatus,
+  getExpiredListings,
+  updateListingStatuses
 }

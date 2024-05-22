@@ -15,7 +15,8 @@
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
     "migrate:down": "knex migrate:down --env dev",
-    "seed": "knex seed:run --env dev"
+    "seed": "knex seed:run --env dev",
+    "script:expire-listings": "ts-node src/scripts/expire-listings.ts"
   },
   "author": "",
   "license": "MIT",
