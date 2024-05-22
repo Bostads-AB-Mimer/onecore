@@ -51,6 +51,7 @@ enum ListingStatus {
   Active = 1,
   Assigned = 2,
   Deleted = 3,
+  Expired = 4,
 }
 
 enum ApplicantStatus {
