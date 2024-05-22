@@ -1,5 +1,5 @@
 {
-  "version": "1.0.67",
+  "version": "1.0.71",
   "description": "",
   "main": "./src/index.ts",
   "private": "true",
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
     "build": "tsc",
     "start": "npm run migrate:up && node index",
     "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
@@ -16,7 +17,8 @@
     "migrate:up": "knex migrate:latest --env dev",
     "migrate:down": "knex migrate:down --env dev",
     "seed": "knex seed:run --env dev",
-    "script:expire-listings": "ts-node src/scripts/expire-listings.ts"
+    "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
+    "ts:watch": "tsc --watch --noEmit"
   },
   "author": "",
   "license": "MIT",
@@ -63,6 +65,7 @@
     "prettier": "^3.2.5",
     "randexp": "^0.5.3",
     "strong-soap": "^4.0.0",
-    "tedious": "^16.6.1"
+    "tedious": "^16.6.1",
+    "zod": "^3.23.8"
   }
 }

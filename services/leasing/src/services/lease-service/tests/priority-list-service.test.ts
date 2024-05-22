@@ -17,7 +17,11 @@ import {
 } from '../priority-list-service'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
-import { ApplicantFactory, LeaseFactory, ListingFactory } from './factory'
+import {
+  DetailedApplicantFactory,
+  LeaseFactory,
+  ListingFactory,
+} from './factory'
 import { leaseTypes } from '../../../constants/leaseTypes'
 
 const mockedApplicant: Applicant = {
@@ -350,9 +354,9 @@ describe('parseLeasesForParkingSpaces', () => {
 
 describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('should throw error if applicant does not belong to the same listing', () => {
-    const listing = ListingFactory.build()
+    const listing = ListingFactory.build({ id: 1 })
 
-    const applicant = ApplicantFactory.build()
+    const applicant = DetailedApplicantFactory.build({ listingId: 2 })
 
     expect(() =>
       assignPriorityToApplicantBasedOnRentalRules(listing, applicant)
@@ -370,7 +374,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       currentHousingContract: currentHousingContract,
       listingId: listing.id,
     }).build()
@@ -400,7 +404,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       currentHousingContract: currentHousingContract,
       upcomingHousingContract: upcomingHousingContract,
       listingId: listing.id,
@@ -419,7 +423,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
     const parkingSpaceContract = LeaseFactory.build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       applicationType: 'Replace', //todo: add as enum
       parkingSpaceContracts: [parkingSpaceContract],
       currentHousingContract: LeaseFactory.params({}).build(),
@@ -439,7 +443,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
     const parkingSpaceContract = LeaseFactory.build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       applicationType: 'Additional', //todo: add as enum
       parkingSpaceContracts: [parkingSpaceContract],
       currentHousingContract: LeaseFactory.params({}).build(),
@@ -461,7 +465,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
     const parkingSpaceContract2 = LeaseFactory.build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       applicationType: 'Replace', //todo: add as enum
       parkingSpaceContracts: [parkingSpaceContract1, parkingSpaceContract2],
       currentHousingContract: LeaseFactory.params({}).build(),
@@ -485,7 +489,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
     const parkingSpaceContract3 = LeaseFactory.build()
 
-    const applicant = ApplicantFactory.params({
+    const applicant = DetailedApplicantFactory.params({
       applicationType: 'Additional', //todo: add as enum
       parkingSpaceContracts: [
         parkingSpaceContract1,
@@ -519,7 +523,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant1 = ApplicantFactory.params({
+    const applicant1 = DetailedApplicantFactory.params({
       currentHousingContract: applicant1HousingContract,
       listingId: listing.id,
       queuePoints: 10,
@@ -539,7 +543,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant2 = ApplicantFactory.params({
+    const applicant2 = DetailedApplicantFactory.params({
       currentHousingContract: applicant2CurrentHousingContract,
       upcomingHousingContract: applicant2UpcomingHousingContract,
       listingId: listing.id,
@@ -550,7 +554,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     //active parking space contract and applicationType equals Replace
     const applicant3ParkingSpaceContract = LeaseFactory.build()
 
-    const applicant3 = ApplicantFactory.params({
+    const applicant3 = DetailedApplicantFactory.params({
       applicationType: 'Replace', //todo: add as enum
       parkingSpaceContracts: [applicant3ParkingSpaceContract],
       currentHousingContract: LeaseFactory.params({}).build(),
@@ -562,7 +566,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     //active parking space contract and applicationType equals Additional
     const applicant4ParkingSpaceContract = LeaseFactory.build()
 
-    const applicant4 = ApplicantFactory.params({
+    const applicant4 = DetailedApplicantFactory.params({
       applicationType: 'Additional', //todo: add as enum
       parkingSpaceContracts: [applicant4ParkingSpaceContract],
       currentHousingContract: LeaseFactory.params({}).build(),
@@ -575,7 +579,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     const applicant5ParkingSpaceContract1 = LeaseFactory.build()
     const applicant5ParkingSpaceContract2 = LeaseFactory.build()
 
-    const applicant5 = ApplicantFactory.params({
+    const applicant5 = DetailedApplicantFactory.params({
       applicationType: 'Replace', //todo: add as enum
       parkingSpaceContracts: [
         applicant5ParkingSpaceContract1,
@@ -592,7 +596,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     const Applicant6parkingSpaceContract2 = LeaseFactory.build()
     const Applicant6parkingSpaceContract3 = LeaseFactory.build()
 
-    const applicant6 = ApplicantFactory.params({
+    const applicant6 = DetailedApplicantFactory.params({
       applicationType: 'Additional', //todo: add as enum
       parkingSpaceContracts: [
         Applicant6parkingSpaceContract1,
@@ -666,7 +670,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant1 = ApplicantFactory.params({
+    const applicant1 = DetailedApplicantFactory.params({
       currentHousingContract: applicant1HousingContract,
       listingId: listing.id,
       queuePoints: 20,
@@ -685,7 +689,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       },
     }).build()
 
-    const applicant2 = ApplicantFactory.params({
+    const applicant2 = DetailedApplicantFactory.params({
       upcomingHousingContract: applicant2UpcomingHousingContract,
       listingId: listing.id,
       queuePoints: 10,
@@ -700,6 +704,63 @@ describe('sortApplicantsBasedOnRentalRules', () => {
     expect(
       applicantsWithPriority.filter((applicant) => applicant.priority === 1)
     ).toHaveLength(2)
+
+    const sortedApplicantsBasedOnRentalRules = sortApplicantsBasedOnRentalRules(
+      applicantsWithPriority
+    )
+
+    expect(sortedApplicantsBasedOnRentalRules).toHaveLength(applicants.length)
+
+    expect(sortedApplicantsBasedOnRentalRules[0].contactCode).toEqual(
+      applicant1.contactCode
+    )
+    expect(sortedApplicantsBasedOnRentalRules[1].contactCode).toEqual(
+      applicant2.contactCode
+    )
+  })
+
+  it('should handle applicants with undefined priority', () => {
+    const listing = ListingFactory.params({
+      districtCode: 'XYZ',
+    }).build()
+
+    //priority 1 applicant
+    //has no parking space contract and active housing contract in same residential area as listing
+    const applicant1HousingContract = LeaseFactory.params({
+      residentialArea: {
+        code: 'XYZ',
+      },
+    }).build()
+
+    const applicant1 = DetailedApplicantFactory.params({
+      currentHousingContract: applicant1HousingContract,
+      listingId: listing.id,
+      queuePoints: 20,
+    }).build()
+
+    //priority undefined applicant
+    //has no active or upcoming housing contract
+    const applicant2 = DetailedApplicantFactory.params({
+      currentHousingContract: undefined,
+      upcomingHousingContract: undefined,
+      listingId: listing.id,
+      queuePoints: 10,
+    }).build()
+
+    const applicants = [applicant1, applicant2]
+
+    const applicantsWithPriority = addPriorityToApplicantsBasedOnRentalRules(
+      listing,
+      applicants
+    )
+    expect(
+      applicantsWithPriority.filter((applicant) => applicant.priority === 1)
+    ).toHaveLength(1)
+    expect(
+      applicantsWithPriority.filter(
+        (applicant) => applicant.priority === undefined
+      )
+    ).toHaveLength(1)
 
     const sortedApplicantsBasedOnRentalRules = sortApplicantsBasedOnRentalRules(
       applicantsWithPriority

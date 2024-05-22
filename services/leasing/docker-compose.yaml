@@ -7,7 +7,7 @@ services:
     container_name: sql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${LEASING_DATABASE__DATABASE}
+      - MSSQL_SA_PASSWORD=${LEASING_DATABASE__PASSWORD}
     networks:
       - tenants-leases
     ports:

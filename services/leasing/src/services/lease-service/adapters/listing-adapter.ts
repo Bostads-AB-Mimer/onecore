@@ -1,12 +1,5 @@
 import { Applicant, Listing, ApplicantStatus, ListingStatus } from 'onecore-types'
-
-import knex from 'knex'
-import Config from '../../../common/config'
-
-const db = knex({
-  client: 'mssql',
-  connection: Config.leasingDatabase,
-})
+import { db } from './db'
 
 function transformFromDbListing(row: any): Listing {
   // TODO: Listing has some properties T | undefined.
@@ -263,24 +256,6 @@ const getApplicantsByContactCodeAndRentalObjectCode = async (
   if (result == undefined) return undefined
 
   return transformDbApplicant(result)
-}
-
-/**
- * Gets an applicant by listing id
- *
- * @param {number} listingId - The ID of the listing the applicant belongs to.
- * @returns {Promise<Applicant[] | []> } - Returns a list of applicants or empty list if not found.
- */
-const getApplicantByListingId = async (listingId: number) => {
-  const dbApplicants = await db('Applicant')
-    .where('ListingId', listingId)
-    .select('*')
-  const transformedApplicants: Applicant[] = []
-  for (const applicant of dbApplicants) {
-    transformedApplicants.push(transformDbApplicant(applicant))
-  }
-
-  return transformedApplicants
 }
 
 /**
