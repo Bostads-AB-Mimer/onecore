@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.18.0...v1.19.0) (2024-05-22)
+
+
+### Features
+
+* expired listings status ([4867a21](https://github.com/Bostads-AB-Mimer/onecore-types/commit/4867a2193195b2e7886b78d156c34a259ca58ad3))
+
 ## [1.18.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.17.0...v1.18.0) (2024-05-21)
 
 
