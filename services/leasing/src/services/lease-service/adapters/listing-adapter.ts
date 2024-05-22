@@ -1,4 +1,4 @@
-import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
+import { Applicant, Listing, ApplicantStatus, ListingStatus } from 'onecore-types'
 import { db } from './db'
 
 function transformFromDbListing(row: any): Listing {
@@ -275,6 +275,22 @@ const applicationExists = async (contactCode: string, listingId: number) => {
   return !!result // Convert result to boolean: true if exists, false if not
 }
 
+const getExpiredListings = async () => {
+  const currentDate = new Date()
+  const listings = await db('listing')
+    .where('PublishedTo', '<', currentDate)
+    .andWhere('Status', '==', ListingStatus.Active)
+  return listings
+}
+
+const updateListingStatuses = async (listingIds: number[], status: ListingStatus) => {
+  const updateCount = await db('listing')
+    .whereIn('Id', listingIds)
+    .update({ Status: status })
+
+  return updateCount
+}
+
 export {
   createListing,
   createApplication,
@@ -286,4 +302,6 @@ export {
   getApplicantsByContactCodeAndRentalObjectCode,
   applicationExists,
   updateApplicantStatus,
+  getExpiredListings,
+  updateListingStatuses
 }
