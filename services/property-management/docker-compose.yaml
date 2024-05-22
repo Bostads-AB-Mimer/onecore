@@ -7,7 +7,7 @@ services:
     container_name: sql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${DATABASE__PASSWORD}
+      - MSSQL_SA_PASSWORD=${PROPERTY_MANAGEMENT_DATABASE__PASSWORD}
     networks:
       - property-info
     ports:
