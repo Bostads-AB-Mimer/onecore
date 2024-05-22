@@ -1,4 +1,4 @@
-import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
+import { Applicant, Listing, ApplicantStatus, ListingStatus } from 'onecore-types'
 
 import knex from 'knex'
 import Config from '../../../common/config'
@@ -304,12 +304,11 @@ const getExpiredListings = async () => {
   const currentDate = new Date()
   const listings = await db('listing')
     .where('PublishedTo', '<', currentDate)
-    .andWhere('Status', '==', ApplicantStatus.Active) // Assuming 4 is the status code for 'Expired'
-
+    .andWhere('Status', '==', ListingStatus.Active)
   return listings
 }
 
-const updateListingStatuses = async (listingIds: number[], status: number) => {
+const updateListingStatuses = async (listingIds: number[], status: ListingStatus) => {
   const updateCount = await db('listing')
     .whereIn('Id', listingIds)
     .update({ Status: status })
