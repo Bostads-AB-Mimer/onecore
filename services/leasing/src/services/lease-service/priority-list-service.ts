@@ -6,6 +6,7 @@
 
 import {
   Applicant,
+  DetailedApplicant,
   Lease,
   Listing,
   ParkingSpaceApplicationCategory,
@@ -20,7 +21,9 @@ import {
 } from './adapters/xpand/tenant-lease-adapter'
 import { leaseTypes } from '../../constants/leaseTypes'
 
-const getDetailedApplicantInformation = async (applicant: Applicant) => {
+const getDetailedApplicantInformation = async (
+  applicant: Applicant
+): Promise<DetailedApplicant> => {
   try {
     const applicantFromXpand = await getContactByContactCode(
       applicant.contactCode,
@@ -76,7 +79,6 @@ const getDetailedApplicantInformation = async (applicant: Applicant) => {
 
     const parkingSpaces = parseLeasesForParkingSpaces(activeAndUpcomingLeases)
 
-    //todo: define the proper interface type to return
     return {
       ...applicant,
       queuePoints: waitingListForInternalParkingSpace.queuePoints,
@@ -91,12 +93,11 @@ const getDetailedApplicantInformation = async (applicant: Applicant) => {
   }
 }
 
-//todo: should use and return defined interface type
 const addPriorityToApplicantsBasedOnRentalRules = (
   listing: Listing,
-  applicants: any[]
+  applicants: DetailedApplicant[]
 ) => {
-  const applicantsWithAssignedPriority: any[] = [] //todo: use defined interface
+  const applicantsWithAssignedPriority: DetailedApplicant[] = []
   for (const applicant of applicants) {
     applicantsWithAssignedPriority.push(
       assignPriorityToApplicantBasedOnRentalRules(listing, applicant)
@@ -106,11 +107,19 @@ const addPriorityToApplicantsBasedOnRentalRules = (
   return applicantsWithAssignedPriority
 }
 
-const sortApplicantsBasedOnRentalRules = (applicants: any[]): any[] => {
+const sortApplicantsBasedOnRentalRules = (
+  applicants: DetailedApplicant[]
+): DetailedApplicant[] => {
   return Array.from(applicants).sort((a, b) => {
+    //undefined priority is the lowest priority
+    const aPriority =
+      a.priority !== undefined ? a.priority : Number.MAX_SAFE_INTEGER
+    const bPriority =
+      b.priority !== undefined ? b.priority : Number.MAX_SAFE_INTEGER
+
     //sort by priority (ascending)
-    if (a.priority !== b.priority) {
-      return a.priority - b.priority
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority
     }
 
     //sort by queue points (descending)
@@ -118,11 +127,10 @@ const sortApplicantsBasedOnRentalRules = (applicants: any[]): any[] => {
   })
 }
 
-//todo: should use and return defined interface type from onecore-types
 const assignPriorityToApplicantBasedOnRentalRules = (
   listing: Listing,
-  applicant: any
-): any => {
+  applicant: DetailedApplicant
+): DetailedApplicant => {
   if (applicant.listingId !== listing.id) {
     throw new Error(
       `applicant ${applicant.contactCode} does not belong to listing ${listing.id}`
@@ -132,10 +140,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   //priority  1
 
   //Applicant has no active parking space contract and is tenant in same area as listing
-  if (!applicant.parkingSpaceContracts.length) {
+  if (!applicant.parkingSpaceContracts?.length) {
     if (applicant.currentHousingContract) {
       if (
-        applicant.currentHousingContract.residentialArea.code ===
+        applicant.currentHousingContract?.residentialArea?.code ===
         listing.districtCode
       ) {
         return {
@@ -148,7 +156,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     //Applicant has no active parking space contract and has upcoming housing contract in same area as listing
     if (applicant.upcomingHousingContract) {
       if (
-        applicant.upcomingHousingContract.residentialArea.code ===
+        applicant.upcomingHousingContract?.residentialArea?.code ===
         listing.districtCode
       ) {
         return {
@@ -161,7 +169,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has 1 active contract for parking space and wishes to replace current parking space
   if (
-    applicant.parkingSpaceContracts.length === 1 &&
+    applicant.parkingSpaceContracts?.length === 1 &&
     applicant.applicationType === 'Replace'
   ) {
     return {
@@ -174,7 +182,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has 1 active parking space contract and wishes to rent an additional parking space
   if (
-    applicant.parkingSpaceContracts.length === 1 &&
+    applicant.parkingSpaceContracts?.length === 1 &&
     applicant.applicationType === 'Additional'
   ) {
     return {
@@ -185,6 +193,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has more than 1 active parking space contract and wishes to replace 1 parking space contract
   if (
+    applicant.parkingSpaceContracts &&
     applicant.parkingSpaceContracts.length > 1 &&
     applicant.applicationType === 'Replace'
   ) {
@@ -196,11 +205,20 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //priority 3
 
-  //Applicant has more 2 or more active parking space and wishes to rent an additional parking space
+  //Applicant has 2 or more active parking space and wishes to rent an additional parking space
+  if (
+    applicant.parkingSpaceContracts &&
+    applicant.parkingSpaceContracts.length >= 2
+  ) {
+    return {
+      ...applicant,
+      priority: 3,
+    }
+  }
 
   return {
     ...applicant,
-    priority: 3,
+    priority: undefined,
   }
 }
 

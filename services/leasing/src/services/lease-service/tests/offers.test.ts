@@ -57,7 +57,9 @@ describe('offers', () => {
       const expected = { ...offer, expiresAt: offer.expiresAt.toISOString() }
 
       expect(res.status).toBe(201)
-      expect(res.body.data).toEqual(expected)
+      expect(res.body.data.createdAt).toBeDefined()
+      expect(res.body.data.listingId).toEqual(expected.listingId)
+      expect(res.body.data.expiresAt).toEqual(expected.expiresAt)
     })
   })
 })

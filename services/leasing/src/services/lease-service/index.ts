@@ -1,5 +1,10 @@
 import KoaRouter from '@koa/router'
-import { Applicant, ApplicantStatus, Listing } from 'onecore-types'
+import {
+  Applicant,
+  ApplicantStatus,
+  Listing,
+  DetailedApplicant,
+} from 'onecore-types'
 
 import {
   getContactByContactCode,
@@ -509,7 +514,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const applicants: any = []
+      const applicants: DetailedApplicant[] = []
 
       if (listing.applicants) {
         for (const applicant of listing.applicants) {
