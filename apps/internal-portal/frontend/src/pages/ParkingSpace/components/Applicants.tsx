@@ -68,8 +68,12 @@ export const Applicants = (props: { listingId: string }) => {
     {
       field: 'applicationType',
       headerName: 'Ärende',
-      renderCell: (v) => v.formattedValue || <i>N/A</i>,
-      valueFormatter: (v) => (v.value === 'Replace' ? 'Byte' : 'Hyra flera'),
+      renderCell: (v) => {
+        const hasParkingSpace = Boolean(v.row.parkingSpaceContracts?.length)
+        if (v.value === 'Additional')
+          return hasParkingSpace ? 'Hyra flera' : 'Hyra en'
+        else return 'Byte'
+      },
       ...sharedProps,
     },
     {
