@@ -10,6 +10,12 @@ import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as listingAdapter from '../adapters/listing-adapter'
 import * as priorityListService from '../priority-list-service'
 import { leaseTypes } from '../../../constants/leaseTypes'
+import {
+  ApplicantFactory,
+  DetailedApplicantFactory,
+  LeaseFactory,
+  ListingFactory,
+} from './factory'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -371,6 +377,41 @@ describe('lease-service', () => {
       expect(priorityListServiceSpy).toHaveBeenCalled()
       expect(res.status).toBe(200)
       expect(res.body).toBeDefined()
+    })
+  })
+
+  describe('GET /applicants/:contactCode/:listingId', () => {
+    it('responds with 404 if no listing found', async () => {
+      const getListingSpy = jest
+        .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
+        .mockResolvedValueOnce(undefined)
+
+      const res = await request(app.callback()).get('/applicants/123/456')
+      expect(getListingSpy).toHaveBeenCalled()
+      expect(res.status).toBe(404)
+    })
+    it('responds with 200 on success', async () => {
+      const listing = ListingFactory.params({}).build()
+
+      const applicant = ApplicantFactory.params({
+        listingId: listing.id,
+      }).build()
+
+      const getListingSpy = jest
+        .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
+        .mockResolvedValue(applicant)
+
+      const res = await request(app.callback()).get(
+        `/applicants/${applicant.contactCode}/${listing.id}`
+      )
+      expect(getListingSpy).toHaveBeenCalled()
+      expect(res.status).toBe(200)
+      expect(res.body).toBeDefined()
+      expect(res.body.id).toEqual(applicant.id)
+      expect(res.body.listingId).toEqual(applicant.listingId)
+      expect(res.body.name).toEqual(applicant.name)
+      expect(res.body.contactCode).toEqual(applicant.contactCode)
+      expect(res.body.applicationType).toEqual(applicant.applicationType)
     })
   })
 

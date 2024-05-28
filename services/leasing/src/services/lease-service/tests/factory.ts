@@ -1,5 +1,7 @@
 import { Factory } from 'fishery'
 import {
+  Applicant,
+  ApplicantStatus,
   DetailedApplicant,
   Lease,
   LeaseStatus,
@@ -40,6 +42,17 @@ const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
     code: 'MAL',
     caption: 'Malmaberg',
   },
+}))
+
+const ApplicantFactory = Factory.define<Applicant>(({ sequence, params }) => ({
+  id: sequence,
+  name: 'Test Testsson',
+  nationalRegistrationNumber: '199404084924',
+  contactCode: `P${158769 + sequence}`,
+  applicationDate: new Date(),
+  applicationType: 'Additional',
+  status: ApplicantStatus.Active,
+  listingId: sequence,
 }))
 
 const DetailedApplicantFactory = Factory.define<DetailedApplicant>(
@@ -99,4 +112,10 @@ const OfferFactory = Factory.define<Offer>(({ sequence }) => ({
   createdAt: new Date(),
 }))
 
-export { LeaseFactory, DetailedApplicantFactory, ListingFactory, OfferFactory }
+export {
+  LeaseFactory,
+  ApplicantFactory,
+  DetailedApplicantFactory,
+  ListingFactory,
+  OfferFactory,
+}
