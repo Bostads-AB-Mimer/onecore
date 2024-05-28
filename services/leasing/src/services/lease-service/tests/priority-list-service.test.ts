@@ -115,7 +115,7 @@ describe('getDetailedApplicantInformation', () => {
   it('should throw error if applicant not found from contact query', async () => {
     const getContactByContactCodeSpy = jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValue(null)
+      .mockResolvedValueOnce(null)
 
     await expect(() =>
       getDetailedApplicantInformation(mockedApplicant)
@@ -129,11 +129,11 @@ describe('getDetailedApplicantInformation', () => {
   it('should throw error if waiting list not found for applicant', async () => {
     const tenantLeaseAdapterSpy = jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValue(mockedApplicantFromXpand)
+      .mockResolvedValueOnce(mockedApplicantFromXpand)
 
     const getWaitingListSpy = jest
       .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValue([])
+      .mockResolvedValueOnce([])
 
     await expect(() =>
       getDetailedApplicantInformation(mockedApplicant)
@@ -148,15 +148,15 @@ describe('getDetailedApplicantInformation', () => {
   it('should throw error if leases not found for applicant', async () => {
     const getContactByContactCodeSpy = jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValue(mockedApplicantFromXpand)
+      .mockResolvedValueOnce(mockedApplicantFromXpand)
 
     const getWaitingListSpy = jest
       .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValue(mockedWaitingListWithInteralParkingSpace)
+      .mockResolvedValueOnce(mockedWaitingListWithInteralParkingSpace)
 
     const getLeasesForContactCodeSpy = jest
       .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-      .mockResolvedValue(undefined)
+      .mockResolvedValueOnce(undefined)
 
     await expect(() =>
       getDetailedApplicantInformation(mockedApplicant)

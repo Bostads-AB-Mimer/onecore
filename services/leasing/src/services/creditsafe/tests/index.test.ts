@@ -39,7 +39,7 @@ describe('getCreditInformation', () => {
         `,
       },
     }
-    ;(soapRequest as jest.Mock).mockResolvedValue(CASResponse)
+    ;(soapRequest as jest.Mock).mockResolvedValueOnce(CASResponse)
 
     const data = await getCreditInformation(originalPnr)
 
@@ -88,7 +88,7 @@ describe('getCreditInformation', () => {
         `,
       },
     }
-    ;(soapRequest as jest.Mock).mockResolvedValue(CASResponse)
+    ;(soapRequest as jest.Mock).mockResolvedValueOnce(CASResponse)
 
     const data = await getCreditInformation(originalPnr)
 
@@ -146,7 +146,7 @@ describe('getCreditInformation', () => {
         `,
       },
     }
-    ;(soapRequest as jest.Mock).mockResolvedValue(CASResponse)
+    ;(soapRequest as jest.Mock).mockResolvedValueOnce(CASResponse)
 
     const data = await getCreditInformation(originalPnr)
 

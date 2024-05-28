@@ -18,7 +18,9 @@
     "migrate:down": "knex migrate:down --env dev",
     "seed": "knex seed:run --env dev",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
-    "ts:watch": "tsc --watch --noEmit"
+    "ts:watch": "tsc --watch --noEmit",
+    "test:ci": "jest --silent",
+    "ts:ci": "tsc --noEmit"
   },
   "author": "",
   "license": "MIT",

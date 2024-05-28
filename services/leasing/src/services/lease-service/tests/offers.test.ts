@@ -54,7 +54,11 @@ describe('offers', () => {
       }
 
       const res = await request(app.callback()).post('/offer').send(payload)
-      const expected = { ...offer, expiresAt: offer.expiresAt.toISOString() }
+      const expected = {
+        ...offer,
+        expiresAt: offer.expiresAt.toISOString(),
+        createdAt: offer.createdAt.toISOString(),
+      }
 
       expect(res.status).toBe(201)
       expect(res.body.data.createdAt).toBeDefined()

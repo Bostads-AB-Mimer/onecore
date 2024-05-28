@@ -3,11 +3,8 @@ import request from 'supertest'
 import errorHandler from './error-handler'
 
 describe('errorHandler', () => {
-  let app: Koa<Koa.DefaultState, Koa.DefaultContext>
-  beforeEach(() => {
-    app = new Koa()
-    app.use(errorHandler())
-  })
+  const app = new Koa()
+  app.use(errorHandler())
 
   it('catches errors and passes the error message along to the response', async () => {
     app.use(async () => {
