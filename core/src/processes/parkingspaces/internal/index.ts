@@ -8,6 +8,7 @@ import {
   getLeasesForPnr,
   getListingByRentalObjectCode,
   getWaitingList,
+  getInternalCreditInformation,
 } from '../../../adapters/leasing-adapter'
 import {
   Applicant,
@@ -97,6 +98,32 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         httpStatus: 403,
         response: {
           message: 'Applicant is not a tenant',
+        },
+      }
+    }
+
+    //step 3.a.1. Perform credit check
+    const creditCheck = await getInternalCreditInformation(
+      applicantContact.contactCode
+    )
+
+    log.push(
+      `Intern kreditkontroll genomförd, resultat: ${
+        creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
+      }`
+    )
+
+    if (!creditCheck) {
+      log.push(
+        `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`
+      )
+
+      return {
+        processStatus: ProcessStatus.failed,
+        httpStatus: 400,
+        response: {
+          reason: 'Internal check failed',
+          message: 'The parking space lease application has been rejected',
         },
       }
     }

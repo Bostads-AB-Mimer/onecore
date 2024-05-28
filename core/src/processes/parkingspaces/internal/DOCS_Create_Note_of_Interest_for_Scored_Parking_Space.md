@@ -10,7 +10,10 @@ C --> |No| O
 C --> |Yes| D[Get Contact]
 D --> F{Is Contact<br/>a Tenant?}
 F --> |No| O[End]
-F --> |Yes| H{Is Contact in Waiting<br/>List for Parking Space?}
+F --> |Yes| P[Perform Internal Credit Check]
+P --> Q{Is Applicant Eligable for Lease?}
+Q --> |No| O
+Q --> |Yes| H{Is Contact in Waiting<br/>List for Parking Space?}
 H --> |No| I[Add Contact<br/>to Waiting List]
 I --> J[Create Listing]
 J --> K[Create Application]
@@ -50,6 +53,14 @@ sequenceDiagram
         Core-->User: show error message
     end
 
+    Core ->> Leasing: Credit Check
+    Leasing ->> XPand DB: Get Leases
+    XPand DB -->> Leasing: Leases
+    Leasing -->> Core: Credit Check Response
+
+    break when Applicant is not Eligible for Lease
+        Core-->User: show error message
+    end
     alt Contact is not in Waiting List
         Core ->> Leasing: Add Contact to Waiting List
         Leasing ->> XPand SOAP: Add Contact to Waiting List
@@ -64,4 +75,6 @@ sequenceDiagram
     Leasing ->> OneCore DB: Create Applicant
 
     Core ->> User: Note of Interest Created
+
+
 ```
