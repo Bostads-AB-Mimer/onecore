@@ -1,0 +1,40 @@
+{
+  "name": "onecore-utilities",
+  "version": "0.0.1",
+  "description": "ONECore common utilities",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bostads-AB-Mimer/onecore-utilities.git"
+  },
+  "author": "Anders Norrback Bornholm",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bostads-AB-Mimer/onecore-utilities/issues"
+  },
+  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-utilities#readme",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "koa": "^2.15.3",
+    "pino": "^9.1.0",
+    "pino-elasticsearch": "^8.0.0",
+    "pino-multi-stream": "^6.0.0",
+    "pino-pretty": "^11.1.0",
+    "release-please": "^16.8.0"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/pino-multi-stream": "^5.1.6",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  }
+}
