@@ -22,6 +22,10 @@ describe('parkingspaces', () => {
 
     const getContactSpy = jest.spyOn(leasingAdapter, 'getContact')
     const getLeasesForPnrSpy = jest.spyOn(leasingAdapter, 'getLeasesForPnr')
+    const getInternalCreditInformationSpy = jest.spyOn(
+      leasingAdapter,
+      'getInternalCreditInformation'
+    )
     const getWaitingListSpy = jest.spyOn(leasingAdapter, 'getWaitingList')
     const applyForListingSpy = jest.spyOn(leasingAdapter, 'applyForListing')
     const addApplicantToWaitingListSpy = jest.spyOn(
@@ -122,10 +126,43 @@ describe('parkingspaces', () => {
       expect(result.httpStatus).toBe(404)
     })
 
+    it('performs internal credit check', async () => {
+      getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+      getContactSpy.mockResolvedValue(mockedApplicant)
+      getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
+
+      await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+        'foo',
+        'bar',
+        'baz'
+      )
+
+      expect(getInternalCreditInformationSpy).toHaveBeenCalledWith('P12345')
+    })
+
+    it('returns an error if credit check fails', async () => {
+      getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+      getContactSpy.mockResolvedValue(mockedApplicant)
+      getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(false)
+
+      const result =
+        await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+          'foo',
+          'bar',
+          'baz'
+        )
+
+      expect(result.processStatus).toBe(ProcessStatus.failed)
+      expect(result.httpStatus).toBe(400)
+    })
+
     it('adds applicant to internal waiting list if not in it already', async () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce([
         {
           applicantCaption: 'Foo Bar',
@@ -157,6 +194,7 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce([
         {
           applicantCaption: 'Foo Bar',
@@ -198,6 +236,7 @@ describe('parkingspaces', () => {
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
       getWaitingListSpy.mockResolvedValueOnce(mockedWaitingList)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       applyForListingSpy.mockResolvedValueOnce({ status: 201 } as any)
 
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -213,6 +252,7 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce(mockedWaitingList)
       applyForListingSpy.mockResolvedValueOnce({ status: 201 } as any)
       getListingByRentalObjectCodeSpy.mockResolvedValueOnce({
@@ -254,6 +294,7 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce(mockedWaitingList)
       applyForListingSpy.mockResolvedValueOnce({ status: 201 } as any)
       getListingByRentalObjectCodeSpy.mockResolvedValueOnce({
@@ -286,6 +327,7 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce(mockedWaitingList)
       applyForListingSpy.mockResolvedValueOnce({ status: 201 } as any)
       getListingByRentalObjectCodeSpy.mockResolvedValueOnce({
@@ -311,6 +353,7 @@ describe('parkingspaces', () => {
       getContactSpy.mockResolvedValueOnce(mockedApplicant)
       getParkingSpaceSpy.mockResolvedValueOnce(mockedParkingSpace)
       getLeasesForPnrSpy.mockResolvedValueOnce(mockedLeases)
+      getInternalCreditInformationSpy.mockResolvedValueOnce(true)
       getWaitingListSpy.mockResolvedValueOnce(mockedWaitingList)
       applyForListingSpy.mockResolvedValueOnce({
         status: HttpStatusCode.Conflict,
