@@ -17,7 +17,7 @@
     "url": "git+https://github.com/Bostads-AB-Mimer/onecore-utilities.git"
   },
   "author": "Anders Norrback Bornholm",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "bugs": {
     "url": "https://github.com/Bostads-AB-Mimer/onecore-utilities/issues"
   },
