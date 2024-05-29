@@ -1,5 +1,6 @@
 import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
 import { db } from './db'
+import { logger } from 'onecore-utilities'
 
 function transformFromDbListing(row: any): Listing {
   // TODO: Listing has some properties T | undefined.
@@ -94,6 +95,7 @@ const getListingByRentalObjectCode = async (
 const getListingById = async (
   listingId: string
 ): Promise<Listing | undefined> => {
+  logger.info({ listingId }, 'Getting listing from leasing DB')
   const result = await db
     .from('listing AS l')
     .select(
@@ -120,7 +122,15 @@ const getListingById = async (
     applicants: row.applicants.map(transformDbApplicant),
   })
 
-  if (!result) return undefined
+  if (!result) {
+    logger.info(
+      { listingId },
+      'Getting listing from leasing DB complete - listing not found'
+    )
+    return undefined
+  }
+
+  logger.info({ listingId }, 'Getting listing from leasing DB complete')
 
   return transformListing(parseApplicantsJson(result))
 }
@@ -134,6 +144,7 @@ const getListingById = async (
 const getApplicantById = async (
   applicantId: number
 ): Promise<Applicant | undefined> => {
+  logger.info({ applicantId }, 'Getting applicant from leasing DB')
   const applicant = await db('Applicant')
     .where({
       Id: applicantId,
@@ -141,12 +152,24 @@ const getApplicantById = async (
     .first()
 
   if (applicant == undefined) {
+    logger.info(
+      { applicantId },
+      'Getting applicant from leasing DB complete - applicant not found'
+    )
     return undefined
   }
+
+  logger.info({ applicantId }, 'Getting applicant from leasing DB complete')
+
   return transformDbApplicant(applicant)
 }
 
 const createApplication = async (applicationData: Applicant) => {
+  logger.info(
+    { applicationId: applicationData.id },
+    'Creating application in listing DB'
+  )
+
   await db('applicant').insert({
     Name: applicationData.name,
     NationalRegistrationNumber: applicationData.nationalRegistrationNumber,
@@ -156,6 +179,11 @@ const createApplication = async (applicationData: Applicant) => {
     Status: applicationData.status,
     ListingId: applicationData.listingId,
   })
+
+  logger.info(
+    { applicationId: applicationData.id },
+    'Creating application in listing DB complete'
+  )
 }
 
 /**
@@ -176,7 +204,7 @@ const updateApplicantStatus = async (
 
     return updateCount > 0
   } catch (error) {
-    console.error('Error updating applicant status:', error)
+    logger.error(error, 'Error updating applicant status')
     throw error
   }
 }

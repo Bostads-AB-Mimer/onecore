@@ -20,6 +20,7 @@ import {
   getResidentialAreaByRentalPropertyId,
 } from './adapters/xpand/tenant-lease-adapter'
 import { leaseTypes } from '../../constants/leaseTypes'
+import { logger } from 'onecore-utilities'
 
 const getDetailedApplicantInformation = async (
   applicant: Applicant
@@ -88,7 +89,7 @@ const getDetailedApplicantInformation = async (
       parkingSpaceContracts: parkingSpaces,
     }
   } catch (error) {
-    console.error('Error in getDetailedApplicantInformation:', error)
+    logger.error(error, 'Error in getDetailedApplicantInformation')
     throw error // Re-throw the error to propagate it upwards
   }
 }
@@ -298,6 +299,9 @@ const parseLeasesForHousingContracts = (
     })
 
     if (currentActiveLease == undefined) {
+      logger.error(
+        'Could not find active lease in parseLeasesForHousingContracts'
+      )
       throw new Error('could not find any active lease')
     }
 
@@ -310,7 +314,10 @@ const parseLeasesForHousingContracts = (
     })
 
     if (upcomingLease == undefined) {
-      throw new Error('could not find any pending lease')
+      logger.error(
+        'Could not find any pending lease in parseLeasesForHousingContracts'
+      )
+      throw new Error('Could not find any pending lease')
     }
 
     return [currentActiveLease, upcomingLease]
