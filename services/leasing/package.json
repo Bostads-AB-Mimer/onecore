@@ -1,5 +1,5 @@
 {
-  "version": "1.0.71",
+  "version": "1.0.74",
   "description": "",
   "main": "./src/index.ts",
   "private": "true",
@@ -17,7 +17,10 @@
     "migrate:up": "knex migrate:latest --env dev",
     "migrate:down": "knex migrate:down --env dev",
     "seed": "knex seed:run --env dev",
-    "ts:watch": "tsc --watch --noEmit"
+    "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
+    "ts:watch": "tsc --watch --noEmit",
+    "test:ci": "jest --silent",
+    "ts:ci": "tsc --noEmit"
   },
   "author": "",
   "license": "MIT",
@@ -60,8 +63,8 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "mssql": "^9.3.2",
-    "onecore-types": "^1.18.0",
     "onecore-utilities": "0.0.1",
+    "onecore-types": "^1.19.0",
     "personnummer": "^3.2.1",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",

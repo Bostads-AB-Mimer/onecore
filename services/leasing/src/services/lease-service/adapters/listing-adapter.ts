@@ -1,4 +1,9 @@
-import { Applicant, Listing, ApplicantStatus } from 'onecore-types'
+import {
+  Applicant,
+  Listing,
+  ApplicantStatus,
+  ListingStatus,
+} from 'onecore-types'
 import { db } from './db'
 import { logger } from 'onecore-utilities'
 
@@ -267,17 +272,17 @@ const getApplicantsByContactCode = async (contactCode: string) => {
  * Gets an applicant by contact code and rental object code
  *
  * @param {string} contactCode - The applicants contact code.
- * @param {string} rentalObjectCode - The rental object code of the listing that the applicant belongs to.
+ * @param {string} listingId - The id of the listing that the applicant belongs to.
  * @returns {Promise<Applicant | undefined>} - Returns the applicant.
  */
-const getApplicantsByContactCodeAndRentalObjectCode = async (
+const getApplicantByContactCodeAndListingId = async (
   contactCode: string,
-  rentalObjectCode: string
+  listingId: number
 ) => {
   const result = await db('Applicant')
     .where({
       ContactCode: contactCode,
-      RentalObjectCode: rentalObjectCode,
+      ListingId: listingId,
     })
     .first()
 
@@ -303,6 +308,25 @@ const applicationExists = async (contactCode: string, listingId: number) => {
   return !!result // Convert result to boolean: true if exists, false if not
 }
 
+const getExpiredListings = async () => {
+  const currentDate = new Date()
+  const listings = await db('listing')
+    .where('PublishedTo', '<', currentDate)
+    .andWhere('Status', '==', ListingStatus.Active)
+  return listings
+}
+
+const updateListingStatuses = async (
+  listingIds: number[],
+  status: ListingStatus
+) => {
+  const updateCount = await db('listing')
+    .whereIn('Id', listingIds)
+    .update({ Status: status })
+
+  return updateCount
+}
+
 export {
   createListing,
   createApplication,
@@ -311,7 +335,9 @@ export {
   getAllListingsWithApplicants,
   getApplicantById,
   getApplicantsByContactCode,
-  getApplicantsByContactCodeAndRentalObjectCode,
+  getApplicantByContactCodeAndListingId,
   applicationExists,
   updateApplicantStatus,
+  getExpiredListings,
+  updateListingStatuses,
 }

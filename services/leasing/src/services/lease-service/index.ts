@@ -23,7 +23,7 @@ import {
   getAllListingsWithApplicants,
   getApplicantById,
   getApplicantsByContactCode,
-  getApplicantsByContactCodeAndRentalObjectCode as getApplicantByContactCodeAndRentalObjectCode,
+  getApplicantByContactCodeAndListingId,
   getListingById,
   getListingByRentalObjectCode,
   updateApplicantStatus,
@@ -383,13 +383,12 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('/applicants/:contactCode/:rentalObjectCode', async (ctx) => {
-    const { contactCode, rentalObjectCode } = ctx.params // Extracting from URL parameters
-
+  router.get('/applicants/:contactCode/:listingId', async (ctx) => {
+    const { contactCode, listingId } = ctx.params // Extracting from URL parameters
     try {
-      const applicant = await getApplicantByContactCodeAndRentalObjectCode(
+      const applicant = await getApplicantByContactCodeAndListingId(
         contactCode,
-        rentalObjectCode
+        parseInt(listingId)
       )
       ctx.body = applicant
       ctx.status = 200
@@ -398,7 +397,7 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 404 // Not Found
         ctx.body = {
           error:
-            'Applicant not found for the provided contactCode and rentalObjectCode.',
+            'Applicant not found for the provided contactCode and listingId.',
         }
       } else {
         ctx.status = 200 // OK

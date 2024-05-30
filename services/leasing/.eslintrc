@@ -33,7 +33,10 @@
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
       }
-    ]
+    ],
+    "node/no-unpublished-import": ["error", {
+      "allowModules": ["onecore-types"]
+    }]
   },
   "overrides": [
     {
