@@ -1,6 +1,8 @@
 import pino from 'pino';
 import Koa from 'koa';
 import * as axios from 'axios';
+export { axios as axiosTypes };
+import { AsyncLocalStorage } from 'async_hooks';
 
 declare const logger: pino.Logger<never>;
 
@@ -11,4 +13,7 @@ declare const middlewares: {
 
 declare const instance: axios.AxiosInstance;
 
-export { instance as loggedAxios, logger, middlewares as loggerMiddlewares };
+declare const storage: AsyncLocalStorage<unknown>;
+declare const getCorrelationId: () => string | undefined | null;
+
+export { getCorrelationId, instance as loggedAxios, logger, middlewares as loggerMiddlewares, storage as loggingStorage };

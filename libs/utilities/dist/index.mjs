@@ -25,6 +25,21 @@ import pinoElastic from "pino-elasticsearch";
 import { multistream } from "pino-multi-stream";
 import pretty from "pino-pretty";
 import { randomUUID } from "crypto";
+
+// src/logging/loggingStorage.ts
+import { AsyncLocalStorage } from "async_hooks";
+var storage = new AsyncLocalStorage();
+var getCorrelationId = () => {
+  const store = storage.getStore();
+  if (store) {
+    const correlationId = store.correlationId;
+    return correlationId;
+  } else {
+    return void 0;
+  }
+};
+
+// src/logging/logger.ts
 var streamToElastic = pinoElastic({
   index: "onecore-logging",
   node: process.env.ELASTICSEARCH_LOGGING_HOST || "http://localhost:9200",
@@ -40,82 +55,124 @@ var prettyStream = pretty({
   singleLine: true,
   messageFormat: "{msg} {request.path} {request.status}"
 });
-var pinoOptions = {};
+var pinoOptions = {
+  mixin() {
+    return { correlationId: getCorrelationId() };
+  }
+};
+var childProperties = {
+  application: {
+    name: process.env.APPLICATION_NAME || "application",
+    environment: process.env.NODE_ENV
+  }
+};
 var logger = pino(
   pinoOptions,
   multistream([{ stream: prettyStream }, { stream: streamToElastic }])
-).child({ application: { name: "core", environment: process.env.NODE_ENV } });
+).child(childProperties);
 var logger_default = logger;
-var getCorrelationId = (ctx) => {
+var getCorrelationId2 = (ctx) => {
   var _a;
   return (_a = ctx.header["x-correlation-id"]) != null ? _a : randomUUID();
 };
 var middlewares = {
-  pre: (ctx, next) => {
+  pre: (ctx, next) => __async(void 0, null, function* () {
     var _a;
-    ctx.logger = logger.child({ correlationId: getCorrelationId(ctx) });
-    ctx.logger.info(
-      {
-        request: {
-          path: ctx.path,
-          user: (_a = ctx.state) == null ? void 0 : _a.user,
-          method: ctx.method
-        }
-      },
-      "Incoming request"
-    );
-    return next();
-  },
+    let correlationId = getCorrelationId2(ctx);
+    ctx.correlationId = correlationId;
+    if (ctx.path !== "/health") {
+      ctx.logger = logger.child({ correlationId: ctx.correlationId });
+      ctx.logger.info(
+        {
+          request: {
+            path: ctx.path,
+            user: (_a = ctx.state) == null ? void 0 : _a.user,
+            method: ctx.method
+          }
+        },
+        "Incoming request"
+      );
+    }
+    if (storage) {
+      yield storage.run({ correlationId }, () => __async(void 0, null, function* () {
+        return yield next();
+      }));
+    } else {
+      return yield next();
+    }
+  }),
   post: (ctx, next) => __async(void 0, null, function* () {
     var _a;
     yield next();
-    ctx.logger.info(
-      {
-        request: {
-          path: ctx.path,
-          user: (_a = ctx.state) == null ? void 0 : _a.user,
-          method: ctx.method,
-          status: ctx.status
-        }
-      },
-      "Incoming request complete"
-    );
+    if (ctx.path !== "/health") {
+      ctx.logger.info(
+        {
+          request: {
+            path: ctx.path,
+            user: (_a = ctx.state) == null ? void 0 : _a.user,
+            method: ctx.method,
+            status: ctx.status
+          }
+        },
+        "Incoming request complete"
+      );
+    }
   })
 };
 
 // src/logging/loggedAxios.ts
 import axios from "axios";
 var instance = axios.create();
+var getCorrelationId3 = () => {
+  if (storage && storage.getStore()) {
+    const correlationId = storage.getStore().correlationId;
+    return correlationId;
+  }
+  return null;
+};
 instance.interceptors.request.use((request) => {
   var _a;
+  const correlationId = getCorrelationId3();
+  if (correlationId) {
+    request.headers["x-correlation-id"] = correlationId;
+  }
   const requestFields = {
     url: request.url,
     headers: request.headers,
-    method: request.method
+    method: request.method,
+    correlationId: request.headers["x-correlation-id"]
   };
   logger_default.info(
     requestFields,
-    `Outgoing request: ${(_a = request.method) == null ? void 0 : _a.toUpperCase()} ${request.url}`
+    `HTTP request: ${(_a = request.method) == null ? void 0 : _a.toUpperCase()} ${request.url}`
   );
   return request;
 });
 instance.interceptors.response.use((response) => {
   var _a;
+  const correlationId = getCorrelationId3();
   const responseFields = {
     status: response.status,
     headers: response.headers,
-    url: response.config.url
+    url: response.config.url,
+    correlationId
   };
   logger_default.info(
     responseFields,
-    `Outgoing response: ${(_a = response.config.method) == null ? void 0 : _a.toUpperCase()} ${response.config.url} ${response.status}`
+    `HTTP response: ${(_a = response.config.method) == null ? void 0 : _a.toUpperCase()} ${response.config.url} ${response.status}`
   );
   return response;
 });
 var loggedAxios_default = instance;
+
+// src/index.ts
+import * as axiosTypes from "axios";
 export {
+  axiosTypes,
+  getCorrelationId,
   loggedAxios_default as loggedAxios,
   logger_default as logger,
-  middlewares as loggerMiddlewares
+  middlewares as loggerMiddlewares,
+  storage as loggingStorage
 };
 //# sourceMappingURL=index.mjs.map
