@@ -8,6 +8,7 @@ import {
   PaymentStatus,
   OfferStatus,
 } from './enums'
+import { DetailedApplicant } from './response-types'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -240,7 +241,7 @@ interface Offer {
   sentAt: Date | null
   expiresAt: Date
   answeredAt: Date | null
-  selectedApplicants: Array<Applicant>
+  selectedApplicants: Array<DetailedApplicant>
   status: OfferStatus
   listingId: number
   offeredApplicant: Applicant
