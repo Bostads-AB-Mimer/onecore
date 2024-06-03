@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.0.1...v1.0.2) (2024-06-03)
+
+
+### Features
+
+* Fix leaks ([#6](https://github.com/Bostads-AB-Mimer/onecore-utilities/issues/6)) ([de47651](https://github.com/Bostads-AB-Mimer/onecore-utilities/commit/de47651a591050dc86e826d39873e1a61034052d))
+
 ## [1.0.1](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.0.0...v1.0.1) (2024-05-30)
 
 
