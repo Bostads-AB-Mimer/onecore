@@ -113,17 +113,19 @@ In your application's folder, run `npm link onecore-utilities`
 
 This will symlink the application's node_modules/onecore-utilities to this project folder.
 
-When you are done, run `npm unlink onecore-utilities` in the application's folder.
+When you are done, run `npm unlink --no-save onecore-utilities` in the application's folder (which removes the symlink, but not the package from package.json)
 
 ### Releases
 
-This package uses Google's Release Please package, that will create a PR for release every time it encounters a merged commit message starting with one of the following:
+This package uses Google's Release Please package, that will create a PR for release every time it encounters a merge commit message starting with one of the following:
 
 - fix: which represents bug fixes, and correlates to a SemVer patch.
 - feat: which represents a new feature, and correlates to a SemVer minor.
 - feat!:, or fix!:, refactor!:, etc., which represent a breaking change (indicated by the !) and will result in a SemVer major.
 
 (the full information is here: https://www.conventionalcommits.org/en/v1.0.0/)
+
+Important: It is the merge PR commit message, not any random commit message.
 
 So the process to make a new version that is released to NPM is:
 
