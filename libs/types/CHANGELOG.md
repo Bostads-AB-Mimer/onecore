@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.19.0...v1.20.0) (2024-06-03)
+
+
+### Features
+
+* add new applicant statuses ([#68](https://github.com/Bostads-AB-Mimer/onecore-types/issues/68)) ([13b5b15](https://github.com/Bostads-AB-Mimer/onecore-types/commit/13b5b15270d5bec6dbdd7d78165f138dd1ee3e9b))
+
 ## [1.19.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.18.0...v1.19.0) (2024-05-22)
 
 
