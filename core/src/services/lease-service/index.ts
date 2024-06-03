@@ -118,29 +118,13 @@ export const routes = (router: KoaRouter) => {
    * Create Offer for a listing
    */
   router.post('(.*)/listings/:listingId/offers', async (ctx) => {
-    const listingId = ctx.params.listingId
-    if (!listingId) {
-      ctx.status = 400
-      ctx.body = {
-        message: 'Listing id is missing. It needs to be passed in the url.',
-      }
+    const result = await createOfferForInternalParkingSpace(
+      ctx.params.listingId
+    )
+    console.log(result)
 
-      return
-    }
-
-    try {
-      const result = await createOfferForInternalParkingSpace(listingId)
-
-      ctx.status = result.httpStatus
-      ctx.body = result.response
-    } catch (error) {
-      // Step 6: Communicate error to dev team and customer service
-      console.log('Error', error)
-      ctx.status = 500
-      ctx.body = {
-        message: 'A technical error has occured',
-      }
-    }
+    ctx.status = result.httpStatus
+    // Step 6: Communicate error to dev team and customer service
   })
 
   /**

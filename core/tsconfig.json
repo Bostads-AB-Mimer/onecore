@@ -1,7 +1,7 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDirs": ["./src", "./test"],
     "outDir": "./build",
     "resolveJsonModule": true,
     "esModuleInterop": true,

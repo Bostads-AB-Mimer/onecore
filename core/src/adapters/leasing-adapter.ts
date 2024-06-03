@@ -11,6 +11,7 @@ import {
   ApplicantStatus,
   ApplicantWithListing,
   Offer,
+  DetailedApplicant,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -210,14 +211,16 @@ const applyForListing = async (applicantData: Applicant) => {
   }
 }
 
-const getListingByListingId = async (listingId: string) => {
+const getListingByListingId = async (
+  listingId: string
+): Promise<Listing | undefined> => {
   try {
     const result = await axios.get(
       `${tenantsLeasesServiceUrl}/listings/by-id/${listingId}`
     )
     return result.data
   } catch (error) {
-    console.error('Error fetching listing by rental object code:', error)
+    console.error('Error fetching listing by listing id:', error)
     return undefined
   }
 }
@@ -303,9 +306,10 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
   }
 }
 
+// TODO: This function does not actually get the listing
 const getListingByIdWithDetailedApplicants = async (
   listingId: string
-): Promise<any | undefined> => {
+): Promise<Array<DetailedApplicant> | undefined> => {
   try {
     const response = await axios(
       `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
@@ -367,6 +371,23 @@ const createOffer = async (params: CreateOfferParams): Promise<Offer> => {
   }
 }
 
+const updateApplicantStatus = async (params: {
+  contactCode: string
+  applicantId: number
+  status: ApplicantStatus
+}) => {
+  try {
+    const response = await axios.patch(
+      `${tenantsLeasesServiceUrl}/applicants/${params.applicantId}/status`,
+      params
+    )
+    return response.data
+  } catch (err) {
+    console.error('Error updating applicant status:', err)
+    throw err
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -391,4 +412,5 @@ export {
   withdrawApplicantByManager,
   withdrawApplicantByUser,
   createOffer,
+  updateApplicantStatus,
 }
