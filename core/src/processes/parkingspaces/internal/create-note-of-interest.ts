@@ -14,6 +14,8 @@ import {
   createNewListing,
   applyForListing,
   getInternalCreditInformation,
+  setApplicantStatusActive,
+  getApplicantByContactCodeAndListingId,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
@@ -193,37 +195,85 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     //todo: fix schema for listingId in leasing, null should not be allowed
     //todo: or add a request type with only required fields
     if (listing?.data != undefined) {
-      const applicant: Applicant = {
-        id: 0, //should not be passed
-        name: applicantContact.fullName,
-        nationalRegistrationNumber: applicantContact.nationalRegistrationNumber,
-        contactCode: applicantContact.contactCode,
-        applicationDate: new Date(),
-        applicationType: applicationType,
-        status: ApplicantStatus.Active,
-        listingId: listing.data?.id, //null should not be allowed
-      }
+      const applicantResponse = await getApplicantByContactCodeAndListingId(
+        contactCode,
+        listing.data.id
+      )
 
-      const applyForListingResult = await applyForListing(applicant)
+      //create new applicant if applicant does not exist
+      //todo: use request type
+      if (applicantResponse.status == HttpStatusCode.NotFound) {
+        const applicantRequestBody: Applicant = {
+          id: 0, //should not be passed
+          name: applicantContact.fullName,
+          nationalRegistrationNumber:
+            applicantContact.nationalRegistrationNumber,
+          contactCode: applicantContact.contactCode,
+          applicationDate: new Date(),
+          applicationType: applicationType,
+          status: ApplicantStatus.Active,
+          listingId: listing.data?.id, //null should not be allowed
+        }
 
-      if (applyForListingResult?.status == HttpStatusCode.Created) {
-        log.push(`Sökande skapad i onecore-leasing. Process avslutad.`)
-        console.log(log)
-        return {
-          processStatus: ProcessStatus.successful,
-          data: null,
-          httpStatus: 200,
-          response: {
-            message: `Applicant ${contactCode} successfully applied to parking space ${parkingSpaceId}`,
-          },
+        const applyForListingResult =
+          await applyForListing(applicantRequestBody)
+
+        if (applyForListingResult?.status == HttpStatusCode.Created) {
+          log.push(`Sökande skapad i onecore-leasing. Process avslutad.`)
+          console.log(log)
+          return {
+            processStatus: ProcessStatus.successful,
+            data: null,
+            httpStatus: 200,
+            response: {
+              message: `Applicant ${contactCode} successfully applied to parking space ${parkingSpaceId}`,
+            },
+          }
+        }
+
+        if (applyForListingResult?.status == HttpStatusCode.Conflict) {
+          log.push(
+            `Sökande existerar redan i onecore-leasing. Process avslutad`
+          )
+          console.log(log)
+          return {
+            processStatus: ProcessStatus.successful,
+            data: null,
+            httpStatus: 200,
+            response: {
+              message: `Applicant ${contactCode} already has application for ${parkingSpaceId}`,
+            },
+          }
         }
       }
-      if (applyForListingResult?.status == HttpStatusCode.Conflict) {
-        log.push(`Sökande existerar redan i onecore-leasing. Process avslutad`)
-        console.log(log)
-        return makeProcessError('applicant-already-exists', 200, {
-          message: 'Applicant already exists in listing',
-        })
+
+      //if applicant has previously applied and withdrawn application, allow for subsequent application
+      else if (applicantResponse.data) {
+        const applicationWithDrawnByUser =
+          applicantResponse.data.status == ApplicantStatus.WithdrawnByUser
+        const applicationWithDrawnByManager =
+          applicantResponse.data.status == ApplicantStatus.WithdrawnByManager
+
+        if (applicationWithDrawnByUser || applicationWithDrawnByManager) {
+          log.push(
+            `Sökande har tidigare ansökt bilplats ${parkingSpaceId} men återkallat sin ansökan. Skapar ny ansökan.`
+          )
+
+          await setApplicantStatusActive(
+            applicantResponse.data.id,
+            applicantResponse.data.contactCode
+          )
+
+          console.log(log)
+          return {
+            processStatus: ProcessStatus.successful,
+            data: null,
+            httpStatus: 200,
+            response: {
+              message: `Applicant ${contactCode} successfully applied to parking space ${parkingSpaceId}`,
+            },
+          }
+        }
       }
     }
 

@@ -288,18 +288,17 @@ const getApplicantsAndListingByContactCode = async (
   }
 }
 
-const getApplicantByContactCodeAndRentalObjectCode = async (
+const getApplicantByContactCodeAndListingId = async (
   contactCode: string,
-  rentalObjectCode: string
+  listingId: string
 ): Promise<any | undefined> => {
   try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${rentalObjectCode}`
+    return await axios.get(
+      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}}`
     )
-    return response.data
   } catch (error) {
     console.error(
-      'Error fetching applicant by contact code and rental object code:',
+      'Error fetching applicant by contact code and listing id:',
       error
     )
     return undefined
@@ -309,7 +308,7 @@ const getApplicantByContactCodeAndRentalObjectCode = async (
 // TODO: This function does not actually get the listing
 const getListingByIdWithDetailedApplicants = async (
   listingId: string
-): Promise<Array<DetailedApplicant> | undefined> => {
+): Promise<DetailedApplicant[] | undefined> => {
   try {
     const response = await axios(
       `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
@@ -318,6 +317,25 @@ const getListingByIdWithDetailedApplicants = async (
   } catch (error) {
     console.error('Error fetching listing with detailed applicant data:', error)
     return undefined
+  }
+}
+
+const setApplicantStatusActive = async (
+  applicantId: string,
+  contactCode: string
+): Promise<any> => {
+  try {
+    const response = await axios.patch(
+      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
+      { status: ApplicantStatus.Active, contactCode: contactCode }
+    )
+    return response.data
+  } catch (error) {
+    console.error(
+      `Error setting applicantStatus active on user with contactcode ${contactCode}:`,
+      error
+    )
+    throw new Error(`Failed to update status for applicant ${applicantId}`)
   }
 }
 
@@ -407,10 +425,11 @@ export {
   getListingsWithApplicants,
   getApplicantsByContactCode,
   getApplicantsAndListingByContactCode,
-  getApplicantByContactCodeAndRentalObjectCode,
+  getApplicantByContactCodeAndListingId,
   getListingByIdWithDetailedApplicants,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
+  setApplicantStatusActive,
   createOffer,
   updateApplicantStatus,
 }
