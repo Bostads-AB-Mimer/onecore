@@ -25,7 +25,7 @@ authRoutes(publicRouter)
 healthRoutes(publicRouter)
 app.use(publicRouter.routes())
 
-// app.use(jwt({ secret: config.auth.secret }))
+app.use(jwt({ secret: config.auth.secret }))
 
 app.use(api.routes())
 
