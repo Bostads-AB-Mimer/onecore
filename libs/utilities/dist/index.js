@@ -53,7 +53,7 @@ __export(src_exports, {
   axiosTypes: () => axiosTypes,
   getCorrelationId: () => getCorrelationId,
   loggedAxios: () => loggedAxios_default,
-  logger: () => logger_default,
+  logger: () => logger,
   loggerMiddlewares: () => middlewares,
   loggingStorage: () => storage
 });
@@ -93,7 +93,7 @@ var prettyStream = (0, import_pino_pretty.default)({
   colorize: true,
   ignore: "application,request",
   singleLine: true,
-  messageFormat: "{msg} {request.path} {request.status}"
+  messageFormat: "{msg} {request.method} {request.path} {request.status}"
 });
 var pinoOptions = {
   mixin() {
@@ -110,7 +110,6 @@ var logger = (0, import_pino.default)(
   pinoOptions,
   (0, import_pino_multi_stream.multistream)([{ stream: prettyStream }, { stream: streamToElastic }])
 ).child(childProperties);
-var logger_default = logger;
 var getCorrelationId2 = (ctx) => {
   var _a;
   return (_a = ctx.header["x-correlation-id"]) != null ? _a : (0, import_crypto.randomUUID)();
@@ -162,7 +161,6 @@ var middlewares = {
 
 // src/logging/loggedAxios.ts
 var import_axios = __toESM(require("axios"));
-var instance = import_axios.default.create();
 var getCorrelationId3 = () => {
   if (storage && storage.getStore()) {
     const correlationId = storage.getStore().correlationId;
@@ -170,7 +168,7 @@ var getCorrelationId3 = () => {
   }
   return null;
 };
-instance.interceptors.request.use((request) => {
+import_axios.default.interceptors.request.use((request) => {
   var _a;
   const correlationId = getCorrelationId3();
   if (correlationId) {
@@ -182,13 +180,13 @@ instance.interceptors.request.use((request) => {
     method: request.method,
     correlationId: request.headers["x-correlation-id"]
   };
-  logger_default.info(
+  logger.info(
     requestFields,
     `HTTP request: ${(_a = request.method) == null ? void 0 : _a.toUpperCase()} ${request.url}`
   );
   return request;
 });
-instance.interceptors.response.use((response) => {
+import_axios.default.interceptors.response.use((response) => {
   var _a;
   const correlationId = getCorrelationId3();
   const responseFields = {
@@ -197,13 +195,13 @@ instance.interceptors.response.use((response) => {
     url: response.config.url,
     correlationId
   };
-  logger_default.info(
+  logger.info(
     responseFields,
     `HTTP response: ${(_a = response.config.method) == null ? void 0 : _a.toUpperCase()} ${response.config.url} ${response.status}`
   );
   return response;
 });
-var loggedAxios_default = instance;
+var loggedAxios_default = import_axios.default;
 
 // src/index.ts
 var axiosTypes = __toESM(require("axios"));

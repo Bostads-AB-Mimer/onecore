@@ -53,7 +53,7 @@ var prettyStream = pretty({
   colorize: true,
   ignore: "application,request",
   singleLine: true,
-  messageFormat: "{msg} {request.path} {request.status}"
+  messageFormat: "{msg} {request.method} {request.path} {request.status}"
 });
 var pinoOptions = {
   mixin() {
@@ -70,7 +70,6 @@ var logger = pino(
   pinoOptions,
   multistream([{ stream: prettyStream }, { stream: streamToElastic }])
 ).child(childProperties);
-var logger_default = logger;
 var getCorrelationId2 = (ctx) => {
   var _a;
   return (_a = ctx.header["x-correlation-id"]) != null ? _a : randomUUID();
@@ -122,7 +121,6 @@ var middlewares = {
 
 // src/logging/loggedAxios.ts
 import axios from "axios";
-var instance = axios.create();
 var getCorrelationId3 = () => {
   if (storage && storage.getStore()) {
     const correlationId = storage.getStore().correlationId;
@@ -130,7 +128,7 @@ var getCorrelationId3 = () => {
   }
   return null;
 };
-instance.interceptors.request.use((request) => {
+axios.interceptors.request.use((request) => {
   var _a;
   const correlationId = getCorrelationId3();
   if (correlationId) {
@@ -142,13 +140,13 @@ instance.interceptors.request.use((request) => {
     method: request.method,
     correlationId: request.headers["x-correlation-id"]
   };
-  logger_default.info(
+  logger.info(
     requestFields,
     `HTTP request: ${(_a = request.method) == null ? void 0 : _a.toUpperCase()} ${request.url}`
   );
   return request;
 });
-instance.interceptors.response.use((response) => {
+axios.interceptors.response.use((response) => {
   var _a;
   const correlationId = getCorrelationId3();
   const responseFields = {
@@ -157,13 +155,13 @@ instance.interceptors.response.use((response) => {
     url: response.config.url,
     correlationId
   };
-  logger_default.info(
+  logger.info(
     responseFields,
     `HTTP response: ${(_a = response.config.method) == null ? void 0 : _a.toUpperCase()} ${response.config.url} ${response.status}`
   );
   return response;
 });
-var loggedAxios_default = instance;
+var loggedAxios_default = axios;
 
 // src/index.ts
 import * as axiosTypes from "axios";
@@ -171,7 +169,7 @@ export {
   axiosTypes,
   getCorrelationId,
   loggedAxios_default as loggedAxios,
-  logger_default as logger,
+  logger,
   middlewares as loggerMiddlewares,
   storage as loggingStorage
 };

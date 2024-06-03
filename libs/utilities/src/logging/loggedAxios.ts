@@ -1,8 +1,6 @@
 import axios from 'axios'
-import logger from './logger'
+import { logger } from './logger'
 import { storage } from './loggingStorage'
-
-const instance = axios.create()
 
 const getCorrelationId = (): string | undefined | null => {
   if (storage && storage.getStore()) {
@@ -15,7 +13,7 @@ const getCorrelationId = (): string | undefined | null => {
   return null
 }
 
-instance.interceptors.request.use((request) => {
+axios.interceptors.request.use((request) => {
   const correlationId = getCorrelationId()
 
   if (correlationId) {
@@ -37,7 +35,7 @@ instance.interceptors.request.use((request) => {
   return request
 })
 
-instance.interceptors.response.use((response) => {
+axios.interceptors.response.use((response) => {
   const correlationId = getCorrelationId()
 
   const responseFields = {
@@ -55,8 +53,4 @@ instance.interceptors.response.use((response) => {
   return response
 })
 
-export default instance
-
-/*export const setStorage = (storage: AsyncLocalStorage<unknown>) => {
-  asyncLocalStorage = storage
-}*/
+export default axios
