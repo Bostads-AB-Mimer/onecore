@@ -44,6 +44,8 @@ import {
 } from './priority-list-service'
 
 import { routes as offerRoutes } from './offers'
+import { z } from 'zod'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
@@ -413,37 +415,46 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.patch('/applicants/:id/status', async (ctx) => {
-    const { id } = ctx.params
-    const { status, contactCode } = ctx.request.body as any
+  const updateApplicantStatusParams = z.object({
+    status: z.nativeEnum(ApplicantStatus),
+    contactCode: z.string(),
+  })
 
-    try {
-      //if the applicant is withdrawn by the user, make sure the application belongs to that particular user
-      if (status == ApplicantStatus.WithdrawnByUser) {
-        const applicant = await getApplicantById(Number(id))
-        if (applicant?.contactCode != contactCode) {
+  router.patch(
+    '/applicants/:id/status',
+    parseRequestBody(updateApplicantStatusParams),
+    async (ctx) => {
+      const { id } = ctx.params
+      const { status, contactCode } = ctx.request.body
+
+      try {
+        //if the applicant is withdrawn by the user, make sure the application belongs to that particular user
+        if (status === ApplicantStatus.WithdrawnByUser) {
+          const applicant = await getApplicantById(Number(id))
+          if (applicant?.contactCode != contactCode) {
+            ctx.status = 404
+            ctx.body = { error: 'Applicant not found for this contactCode' }
+            return
+          }
+        }
+
+        const applicantUpdated = await updateApplicantStatus(Number(id), status)
+        if (applicantUpdated) {
+          ctx.status = 200
+          ctx.body = { message: 'Applicant status updated successfully' }
+        } else {
           ctx.status = 404
-          ctx.body = { error: 'Applicant not found for this contactCode' }
-          return
+          ctx.body = { error: 'Applicant not found' }
+        }
+      } catch (error) {
+        console.error('Error updating applicant status:', error)
+        ctx.status = 500 // Internal Server Error
+        ctx.body = {
+          error: 'An error occurred while updating the applicant status.',
         }
       }
-
-      const applicantUpdated = await updateApplicantStatus(Number(id), status)
-      if (applicantUpdated) {
-        ctx.status = 200
-        ctx.body = { message: 'Applicant status updated successfully' }
-      } else {
-        ctx.status = 404
-        ctx.body = { error: 'Applicant not found' }
-      }
-    } catch (error) {
-      console.error('Error updating applicant status:', error)
-      ctx.status = 500 // Internal Server Error
-      ctx.body = {
-        error: 'An error occurred while updating the applicant status.',
-      }
     }
-  })
+  )
 
   /**
    * Gets the waiting lists of a person.
