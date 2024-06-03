@@ -123,6 +123,8 @@ This package uses Google's Release Please package, that will create a PR for rel
 - feat: which represents a new feature, and correlates to a SemVer minor.
 - feat!:, or fix!:, refactor!:, etc., which represent a breaking change (indicated by the !) and will result in a SemVer major.
 
+(the full information is here: https://www.conventionalcommits.org/en/v1.0.0/)
+
 So the process to make a new version that is released to NPM is:
 
 1. Create a branch
