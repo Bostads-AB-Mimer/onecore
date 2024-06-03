@@ -60,6 +60,9 @@ enum ApplicantStatus {
   AssignedToOther = 3,
   WithdrawnByUser = 4,
   WithdrawnByManager = 5,
+  Offered = 6,
+  OfferAccepted = 7,
+  OfferDeclined = 8,
   //PendingReview = 6 // ?
   //Rejected = 7 // ?
 }
