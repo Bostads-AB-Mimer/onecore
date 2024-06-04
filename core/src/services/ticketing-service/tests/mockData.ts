@@ -101,9 +101,9 @@ export const leaseMockData: Lease = {
       isTenant: true,
     },
   ],
-  rentalPropertyId: '456',
+  rentalPropertyId: '705-022-04-0201',
   rentalProperty: undefined,
-  type: 'type',
+  type: 'bostadskontrakt',
   rentInfo: undefined,
 }
 
