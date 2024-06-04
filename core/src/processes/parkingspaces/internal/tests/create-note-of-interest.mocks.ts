@@ -19,9 +19,9 @@ export const mockedParkingSpace: Listing = {
   objectTypeCode: 'CPORT',
   rentalObjectTypeCaption: 'Standard hyresobjektstyp',
   rentalObjectTypeCode: 'STD',
-  publishedFrom: new Date('2024-03-26T10:06:56'),
-  publishedTo: new Date('2024-05-04T23:59:59'),
-  vacantFrom: new Date('2023-02-01T00:00:00'),
+  publishedFrom: new Date('2024-03-26T09:06:56.000Z'),
+  publishedTo: new Date('2024-05-04T21:59:59.000Z'),
+  vacantFrom: new Date('2023-01-31T23:00:00.000Z'),
   status: 1,
   waitingListType: 'Bilplats (intern)',
 }

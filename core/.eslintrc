@@ -22,7 +22,7 @@
     }
   },
   "rules": {
-    "node/no-unsupported-features/es-syntax": ["error", { "ignores": ["modules"] }]
+    "node/no-unsupported-features/es-syntax": ["error", { "ignores": ["modules"] }],
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
@@ -30,7 +30,7 @@
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
       }
-    ],
+    ]
   },
   "overrides": [{
     "files": ["src/**/*.test.ts", "test/**/*.ts"],

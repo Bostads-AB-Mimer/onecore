@@ -8,12 +8,14 @@
   },
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch",
     "build": "holidays2json --pick SE --min && tsc",
+    "test:watch": "TZ=UTC jest --watch",
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon -e ts,js --exec npm run start",
     "lint": "eslint -c .eslintrc src/",
-    "ts:watch": "tsc --watch --noEmit"
+    "ts:watch": "tsc --watch --noEmit",
+    "test:ci": "TZ=UTC jest --silent",
+    "ts:ci": "tsc --noEmit"
   },
   "author": "",
   "license": "MIT",
@@ -50,6 +52,7 @@
     "date-holidays": "^3.23.12",
     "dayjs": "^1.11.10",
     "dotenv": "^16.4.5",
+    "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "koa": "^2.15.0",
     "koa-body": "^6.0.1",
