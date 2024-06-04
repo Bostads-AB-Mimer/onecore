@@ -31,6 +31,11 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     leasingAdapter,
     'addApplicantToWaitingList'
   )
+  const getApplicantByContactCodeAndListingIdSpy = jest.spyOn(
+    leasingAdapter,
+    'getApplicantByContactCodeAndListingId'
+  )
+
   const getListingByRentalObjectCodeSpy = jest.spyOn(
     leasingAdapter,
     'getListingByRentalObjectCode'
@@ -303,6 +308,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       headers: {},
       config: {} as InternalAxiosRequestConfig,
     })
+    getApplicantByContactCodeAndListingIdSpy.mockResolvedValueOnce({
+      status: 404,
+    })
 
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
@@ -336,6 +344,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       headers: {},
       config: {} as InternalAxiosRequestConfig,
     })
+    getApplicantByContactCodeAndListingIdSpy.mockResolvedValueOnce({
+      status: 404,
+    })
 
     const response =
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -364,6 +375,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       headers: {},
       config: {} as InternalAxiosRequestConfig,
     })
+    getApplicantByContactCodeAndListingIdSpy.mockResolvedValueOnce({
+      status: 404,
+    })
 
     const response =
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -373,5 +387,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       )
 
     expect(response.processStatus).toBe(ProcessStatus.successful)
+  })
+
+  it('returns ProcessStatus.Success if the user applies a second time after the user has withdrawn the application', async () => {
+    console.log('implement')
   })
 })
