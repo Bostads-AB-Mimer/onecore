@@ -1,5 +1,6 @@
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
+import {DetailedApplicant, Listing} from "onecore-types";
 
 const coreBaseUrl = Config.core.url
 
@@ -13,23 +14,23 @@ const getListingsWithApplicants = async () => {
   return listingsResponse.data
 }
 
-const getListingWithApplicants = async (listingId: string) => {
-  const listing = getFromCore({
+const getListingWithApplicants = async (listingId: string): Promise<Listing & { applicants: DetailedApplicant[] }> => {
+  const listing: Promise<Listing> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}`,
   }).then((res) => res.data)
 
-  const applicants = getFromCore({
+  const applicants: Promise<DetailedApplicant[]> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
   }).then((res) => res.data)
 
-  return await Promise.all([listing, applicants]).then(
-    ([listing, applicants]: any) => ({
-      ...listing,
-      applicants: applicants || [],
-    })
-  )
+  const [listingResult, applicantsResult] = await Promise.all([listing, applicants])
+
+  return {
+    ...listingResult,
+    applicants: applicantsResult || [],
+  }
 }
 
 const removeApplicant = async (applicantId: string) => {
