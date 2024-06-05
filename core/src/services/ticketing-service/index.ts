@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  getContact,
   getContactForPhoneNumber,
   getLease,
   getLeasesForPnr,
@@ -139,7 +140,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/maintenanceUnits/:rentalPropertyId/:type?', async (ctx) => {
+  router.get('(.*)/maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?', async (ctx) => {
     try {
       const maintenanceUnits = await getMaintenanceUnitsForRentalProperty(
         ctx.params.rentalPropertyId
@@ -157,6 +158,37 @@ export const routes = (router: KoaRouter) => {
           return
         }
         // Return all maintenance units if no type is provided
+        ctx.status = 200
+        ctx.body = { content: maintenanceUnits }
+      } else {
+        ctx.status = 200
+        ctx.body = { message: 'No maintenance units found' }
+        return
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      ctx.status = 500
+      ctx.body = { message: 'Internal server error' }
+      return
+    }
+  })
+
+  router.get('(.*)/maintenanceUnitsByContactCode/:contactCode', async (ctx) => {
+    try {
+      const contact = await getContact(ctx.params.contactCode)
+      if (!contact) {
+        ctx.status = 400
+        ctx.body = { message: 'Contact not found' }
+        return
+      }
+      const leases = await getLeasesForPnr(contact.nationalRegistrationNumber, 'false', 'false')
+      const promises = leases
+        .filter(lease => lease.type.toLocaleLowerCase().trimEnd() === "bostadskontrakt")
+        .map(lease => getMaintenanceUnitsForRentalProperty(lease.rentalPropertyId));
+
+      const maintenanceUnits = (await Promise.all(promises)).flat();
+
+      if (maintenanceUnits && maintenanceUnits.length > 0) {
         ctx.status = 200
         ctx.body = { content: maintenanceUnits }
       } else {

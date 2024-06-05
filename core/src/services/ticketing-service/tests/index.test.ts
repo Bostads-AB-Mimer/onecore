@@ -53,7 +53,7 @@ describe('ticketing-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
-      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
     })
 
     it('should handle rentalPropertyId case', async () => {
@@ -66,13 +66,13 @@ describe('ticketing-service index', () => {
         .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get(
-        '/propertyInfo/456?typeOfNumber=rentalPropertyId'
+        '/propertyInfo/705-022-04-0201?typeOfNumber=rentalPropertyId'
       )
 
       expect(res.status).toBe(200)
-      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
-        '456',
+        '705-022-04-0201',
         undefined,
         'true'
       )
@@ -93,7 +93,7 @@ describe('ticketing-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', undefined, 'true')
-      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
     })
 
     it('should handle phoneNumber case', async () => {
@@ -115,7 +115,7 @@ describe('ticketing-service index', () => {
       expect(res.status).toBe(200)
       expect(getContactForPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
       expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
-      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('456')
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
     })
   })
 
@@ -205,7 +205,7 @@ describe('ticketing-service index', () => {
     })
   })
 
-  describe('GET /maintenanceUnits/:rentalPropertyId/:type?', () => {
+  describe('GET /maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?', () => {
     let maintenanceUnitsMock: MaintenanceUnitInfo[]
     beforeEach(() => {
       maintenanceUnitsMock =
@@ -221,7 +221,7 @@ describe('ticketing-service index', () => {
         .mockResolvedValue(maintenanceUnitsMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/705-022-04-0201'
+        '/api/maintenanceUnitsByRentalPropertyId/705-022-04-0201'
       )
 
       expect(res.status).toBe(200)
@@ -240,13 +240,44 @@ describe('ticketing-service index', () => {
         .mockResolvedValue(maintenanceUnitsMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/705-022-04-0201/Miljöbod'
+        '/api/maintenanceUnitsByRentalPropertyId/705-022-04-0201/Miljöbod'
       )
 
       expect(res.status).toBe(200)
       expect(res.body).toEqual({
         content: [maintenanceUnitsMock[0], maintenanceUnitsMock[1]],
       })
+      expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
+        '705-022-04-0201'
+      )
+    })
+  })
+
+  describe('GET /maintenanceUnitsByContactCode/:contactCode', () => {
+    let maintenanceUnitsMock: MaintenanceUnitInfo[]
+    beforeEach(() => {
+      maintenanceUnitsMock =
+        rentalPropertyInfoMockData.maintenanceUnits as MaintenanceUnitInfo[]
+    })
+
+    it('should return all maintenance units', async () => {
+      const getContactSpy = jest.spyOn(tenantLeaseAdapter, 'getContact').mockResolvedValue(contactMockData)
+      const getLeasesForPnrSpy = jest.spyOn(tenantLeaseAdapter, 'getLeasesForPnr').mockResolvedValue([leaseMockData])
+      const getMaintenanceUnitsForRentalPropertySpy = jest
+        .spyOn(
+          propertyManagementAdapter,
+          'getMaintenanceUnitsForRentalProperty'
+        )
+        .mockResolvedValue(maintenanceUnitsMock)
+
+      const res = await request(app.callback()).get(
+        '/api/maintenanceUnitsByContactCode/P965339'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ content: maintenanceUnitsMock })
+      expect(getContactSpy).toHaveBeenCalledWith('P965339')
+      expect(getLeasesForPnrSpy).toHaveBeenCalledWith('194512121122', 'false', 'false')
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
