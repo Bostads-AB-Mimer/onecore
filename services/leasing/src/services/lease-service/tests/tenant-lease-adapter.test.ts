@@ -1,3 +1,16 @@
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+  }
+})
+
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 
 jest.mock('knex', () => () => ({

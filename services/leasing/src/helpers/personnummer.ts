@@ -1,3 +1,4 @@
+import { logger } from 'onecore-utilities'
 import personnummer from 'personnummer'
 
 /**
@@ -8,7 +9,7 @@ export const format = (pnr: string): string => {
   try {
     return personnummer.parse(pnr).format().replace('-', '').replace('+', '')
   } catch (error) {
-    console.log('Error parsing', pnr, error)
+    logger.error(error, 'Error parsing national identity number ' + pnr)
     throw error
   }
 }

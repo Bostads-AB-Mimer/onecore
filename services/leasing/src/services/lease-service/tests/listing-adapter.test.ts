@@ -1,3 +1,16 @@
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+  }
+})
+
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
 import * as listingAdapter from '../adapters/listing-adapter'
 

@@ -7,6 +7,7 @@ import {
 } from 'onecore-types'
 import knex from 'knex'
 import Config from '../../../../common/config'
+import { logger } from 'onecore-utilities'
 
 const db = knex({
   client: 'mssql',
@@ -53,6 +54,10 @@ function transformFromDbInvoice(row: any): Invoice {
 const getInvoicesByContactCode = async (
   contactKey: string
 ): Promise<Invoice[] | undefined> => {
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB'
+  )
   const rows = await db
     .select(
       'krfkh.invoice as invoiceId',
@@ -76,9 +81,17 @@ const getInvoicesByContactCode = async (
     const invoices: Invoice[] = rows
       .filter((row) => row.invoiceId)
       .map(transformFromDbInvoice)
+    logger.info(
+      { contactCode: contactKey },
+      'Getting invoices by contact code from Xpand DB completed'
+    )
     return invoices
   }
 
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB completed - no invoices found'
+  )
   return undefined
 }
 

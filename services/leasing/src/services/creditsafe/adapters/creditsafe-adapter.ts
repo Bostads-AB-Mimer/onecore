@@ -4,6 +4,7 @@ import { XMLParser } from 'fast-xml-parser'
 import { format } from '../../../helpers/personnummer'
 import { ConsumerReport, ConsumerReportError } from 'onecore-types'
 import config from '../../../common/config'
+import { logger } from 'onecore-utilities'
 
 const CASXML = (pnr: string) => dedent`
     <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -22,11 +23,13 @@ const CASXML = (pnr: string) => dedent`
       </soap:Body>
     </soap:Envelope>
   `
+
 const getConsumerReport = async (pnr: string): Promise<ConsumerReport> => {
   const xml = CASXML(pnr)
   const url = config.creditsafe.url
 
   try {
+    logger.info({ url }, 'Outgoing request to Creditsafe')
     const { response } = await soapRequest({
       url: url,
       headers: {
@@ -34,6 +37,10 @@ const getConsumerReport = async (pnr: string): Promise<ConsumerReport> => {
       },
       xml: xml,
     })
+    logger.info(
+      { headers: response.headers },
+      'Outgoing request to Creditsafe completed'
+    )
 
     const { body } = response
 
@@ -58,7 +65,7 @@ const getConsumerReport = async (pnr: string): Promise<ConsumerReport> => {
       city: data.Town,
     }
   } catch (error) {
-    console.error(error)
+    logger.error(error)
     throw error
   }
 }
@@ -72,7 +79,7 @@ export const getCreditInformation = async (
 
     return info
   } catch (error) {
-    console.error(error)
+    logger.error(error)
     return Promise.reject(error)
   }
 }

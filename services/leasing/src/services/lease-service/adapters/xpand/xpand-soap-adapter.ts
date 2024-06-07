@@ -4,6 +4,7 @@ import createHttpError from 'http-errors'
 
 import Config from '../../../../common/config'
 import { WaitingList } from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 const createLease = async (
   fromDate: Date,
@@ -78,7 +79,7 @@ const createLease = async (
     throw createHttpError(500, parsedResponse.Message)
     //TODO: handle more errors...
   } catch (error: unknown) {
-    console.error(error)
+    logger.error(error, 'Error creating lease Xpand SOAP API')
     throw error
   }
 }
@@ -139,6 +140,7 @@ const getWaitingList = async (nationalRegistrationNumber: string) => {
       }
       return waitingList
     } catch (e) {
+      logger.error(e, 'Error getting waiting list using Xpand SOAP API')
       throw createHttpError(500, 'Unknown error when parsing body')
     }
   }
@@ -193,7 +195,10 @@ const addApplicantToToWaitingList = async (
       )
     }
   } catch (error) {
-    console.error(error)
+    logger.error(
+      error,
+      'Error adding applicant to waitinglist using Xpand SOAP API'
+    )
     throw error
   }
 }

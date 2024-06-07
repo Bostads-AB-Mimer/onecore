@@ -1,3 +1,16 @@
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+  }
+})
+
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
@@ -132,6 +145,7 @@ describe('invoices-service', () => {
 
   describe('getInvoicesByContactCode', () => {
     it('should return invoices for a contact', async () => {
+      jest.spyOn(invoiceAdapter, 'getInvoicesByContactCode')
       const result = await invoiceAdapter.getInvoicesByContactCode('contactKey')
 
       expect(result).toBeDefined()

@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from 'axios'
+import { loggedAxios as axios, axiosTypes } from 'onecore-utilities'
 import dotenv from 'dotenv'
 dotenv.config()
 import { Contact, LeaseStatus, Lease } from './types'
@@ -44,7 +44,9 @@ const createXpandHeaders = (accessToken: string) => {
   return xpandHeaders
 }
 
-const getFromXpand = async (url: string): Promise<AxiosResponse<any, any>> => {
+const getFromXpand = async (
+  url: string
+): Promise<axiosTypes.AxiosResponse<any, any>> => {
   if (!accessToken) {
     accessToken = await getAccessToken()
   }
@@ -54,7 +56,7 @@ const getFromXpand = async (url: string): Promise<AxiosResponse<any, any>> => {
       headers: createXpandHeaders(accessToken ?? ''),
     })
   } catch (error) {
-    const axiosErr = error as AxiosError
+    const axiosErr = error as axiosTypes.AxiosError
 
     if (axiosErr.response?.status === 401) {
       accessToken = await getAccessToken()
@@ -163,13 +165,9 @@ const syncContractToTenantsLeases = async (contract: any) => {
     rentInfo: undefined,
   }
 
-  const result = axios.post(
-    `${tenantLeasesUrl}/leases`,
-    transformedContract,
-    {
-      headers: tenantsLeasesHeaders,
-    }
-  )
+  const result = axios.post(`${tenantLeasesUrl}/leases`, transformedContract, {
+    headers: tenantsLeasesHeaders,
+  })
 
   return result
 }

@@ -4,6 +4,7 @@ import { db } from './db'
 import { DbApplicant, DbOffer } from './types'
 
 import * as dbUtils from './utils'
+import { logger } from 'onecore-utilities'
 
 type CreateOfferParams = Omit<
   Offer,
@@ -23,7 +24,11 @@ export async function create(params: CreateOfferParams) {
     .first()
 
   if (!applicant) {
-    throw new Error('applicant not found')
+    logger.error(
+      { applicantId: params.applicantId, listingId: params.listingId },
+      'Applicant not found when creating offer'
+    )
+    throw new Error('Applicant not found when creating offer')
   }
 
   const [offer] = await db<DbOffer>('offer')
