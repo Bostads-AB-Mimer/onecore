@@ -72,14 +72,12 @@ export const routes = (router: KoaRouter) => {
           break
         case 'impaired':
           if (health.status !== 'failure') {
-            console.log('health.status was', health.status, ', now: impaired')
             health.status = 'impaired'
             health.statusMessage = 'Failure because of impaired subsystem'
           }
           break
         case 'unknown':
           if (health.status !== 'failure' && health.status !== 'impaired') {
-            console.log('health.status was', health.status, ', now: unknown')
             health.status = 'unknown'
             health.statusMessage = 'Unknown because subsystem status is unknown'
           }

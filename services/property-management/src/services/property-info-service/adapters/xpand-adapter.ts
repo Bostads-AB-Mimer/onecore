@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { loggedAxios as axios } from 'onecore-utilities'
 import knex from 'knex'
 import Config from '../../../common/config'
 import {
@@ -15,6 +15,7 @@ import {
   getStreet,
   getStreetNumber,
 } from '../../../utils/parking-spaces'
+import { logger } from 'onecore-utilities'
 
 const db = knex({
   client: 'mssql',
@@ -92,7 +93,7 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
       }
     }
   } catch (error) {
-    console.error('Error transforming from db', error)
+    logger.error(error, 'Error transforming rental property from db')
     throw error
   }
 
@@ -243,7 +244,7 @@ const getParkingSpace = async (
 
     return parkingSpace
   } catch (error) {
-    console.error('Error getting parking space', error)
+    logger.error(error, 'Error getting parking space')
     return undefined
   }
 }

@@ -7,6 +7,7 @@ import {
   getParkingSpaceApplicationCategory,
   getParkingSpaceType,
 } from '../../../utils/parking-spaces'
+import { logger } from 'onecore-utilities'
 
 const getPublishedParkingSpaceFromSoapService = async (
   parkingSpaceId: string
@@ -30,6 +31,8 @@ const getPublishedParkingSpaceFromSoapService = async (
       </ser:GetPublishedRentalObjectsRequest08352>
    </soap:Body>
 </soap:Envelope>`
+
+  logger.info({ parkingSpaceId }, 'Getting parking space from Xpand SOAP API')
 
   const { response } = await soapRequest({
     url: Config.xpandSoap.url,
@@ -94,11 +97,24 @@ const getPublishedParkingSpaceFromSoapService = async (
         objectTypeCaption: publishedRentalObject['ObjectTypeCaption'],
         objectTypeCode: publishedRentalObject['ObjectTypeCode'],
       }
+
+      logger.info(
+        { parkingSpaceId },
+        'Getting parking space from Xpand SOAP API complete'
+      )
       return parkingSpace
     } catch (e) {
+      logger.error(
+        { parkingSpaceId },
+        'Unknown error parsing body when getting parking space from Xpand SOAP API'
+      )
       throw createHttpError(500, 'Unknown error when parsing body')
     }
   } else if (parsedResponse.PublishedRentalObjects08352 === '') {
+    logger.error(
+      { parkingSpaceId },
+      'Getting parking space from Xpand SOAP API complete - parking space not found'
+    )
     throw createHttpError(404, 'Parking space not found')
   }
 }

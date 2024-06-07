@@ -7,6 +7,7 @@ import {
 
 import knex from 'knex'
 import config from '../../../common/config'
+import { logger } from 'onecore-utilities'
 
 const db = knex({
   client: 'mssql',
@@ -17,7 +18,6 @@ const cancelPreviousChoice = async (
   newChoices: Array<string>,
   aparmentId: string
 ) => {
-  console.log('cancel choice')
   await db('MaterialChoice')
     .where({
       'MaterialChoice.ApartmentId': aparmentId,
@@ -34,7 +34,7 @@ const cancelPreviousChoice = async (
             'MaterialChoice.MaterialChoiceId': row.MaterialChoiceId,
           })
           .update({ DateOfCancellation: new Date(), Status: 'Cancelled' })
-          .catch((error) => console.log(error))
+          .catch((error) => logger.error(error))
       })
     })
 }
@@ -68,7 +68,7 @@ const saveMaterialChoices = async (
       return responseData
     })
     .catch((error) => {
-      console.error(error)
+      logger.error(error, 'Error saving material choices')
     })
 }
 
@@ -330,8 +330,6 @@ const getMaterialChoicesByRoomTypes = async ({
 }
 
 const getMaterialChoicesByApartmentId = async (apartmentId: string) => {
-  console.log('get choices by apartmentId')
-
   const rows = await db('MaterialChoice')
     .select(
       'MaterialChoice.MaterialChoiceId',
@@ -377,7 +375,6 @@ const getApartmentMaterialChoiceStatuses = async (projectCode: string) => {
 const getAllSubmittedMaterialChoices = async (): Promise<{
   [apartmentId: string]: Array<MaterialOptionGroup>
 }> => {
-  console.log('get all saved choices')
   const rows = await db('MaterialChoice')
     .select('ApartmentId')
     .distinct()

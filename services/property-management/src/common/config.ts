@@ -32,7 +32,7 @@ export interface Config {
 const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
-    port: 5010,
+    port: 5030,
     xpandDatabase: {
       host: '',
       user: '',
