@@ -14,6 +14,7 @@ import {
   getCreditInformation,
   getInternalCreditInformation,
 } from '../../../adapters/leasing-adapter'
+import { logger } from 'onecore-utilities'
 
 //
 // PROCESS (Create lease for external parking space)
@@ -176,7 +177,7 @@ export const createLeaseForExternalParkingSpace = async (
       }
     }
   } catch (error: any) {
-    console.error('External parking space uncaught error', error)
+    logger.error(error, 'External parking space uncaught error')
     return {
       processStatus: ProcessStatus.failed,
       error: 'internal-error',

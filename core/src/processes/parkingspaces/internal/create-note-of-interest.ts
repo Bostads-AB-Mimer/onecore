@@ -20,6 +20,7 @@ import {
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import { makeProcessError } from '../utils'
+import { logger } from 'onecore-utilities'
 
 // PROCESS Part 1 - Create note of interest for internal parking space
 //
@@ -152,6 +153,10 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         if (result.status == HttpStatusCode.Created) {
           log.push(`Sökande placerad i kö för intern parkeringsplats`)
         } else {
+          logger.error(
+            result,
+            'Could not add applicant to internal waiting list'
+          )
           throw Error(result.statusText)
         }
       }
@@ -165,6 +170,10 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         if (result.status == HttpStatusCode.Created) {
           log.push(`Sökande placerad i kö för extern parkeringsplats`)
         } else {
+          logger.error(
+            result,
+            'Could not add applicant to external waiting list'
+          )
           throw Error(result.statusText)
         }
       }
@@ -220,7 +229,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
         if (applyForListingResult?.status == HttpStatusCode.Created) {
           log.push(`Sökande skapad i onecore-leasing. Process avslutad.`)
-          console.log(log)
+          logger.debug(log)
           return {
             processStatus: ProcessStatus.successful,
             data: null,
@@ -235,7 +244,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
           log.push(
             `Sökande existerar redan i onecore-leasing. Process avslutad`
           )
-          console.log(log)
+          logger.debug(log)
           return {
             processStatus: ProcessStatus.successful,
             data: null,
@@ -264,7 +273,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
             applicantResponse.data.contactCode
           )
 
-          console.log(log)
+          logger.debug(log)
           return {
             processStatus: ProcessStatus.successful,
             data: null,
@@ -277,10 +286,18 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       }
     }
 
+    logger.error(
+      listing,
+      'Create not of interest for internal parking space failed due to unknown error'
+    )
     return makeProcessError('internal-error', 500, {
       message: 'failed due to unknown error',
     })
   } catch (error: any) {
+    logger.error(
+      error,
+      'Create not of interest for internal parking space failed'
+    )
     return makeProcessError('internal-error', 500, {
       message: error.message,
     })

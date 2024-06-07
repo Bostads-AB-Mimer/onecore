@@ -1,8 +1,8 @@
-import axios from 'axios'
-import Config from '../../../common/config'
+import { loggedAxios as axios } from 'onecore-utilities'
+import config from '../../../common/config'
 
 const getFloorPlanStream = async (rentalPropertyId: string) => {
-  const url = `${Config.documentsService.url}/floorplan/${rentalPropertyId}`
+  const url = `${config.documentsService.url}/floorplan/${rentalPropertyId}`
 
   const response = await axios({
     method: 'get',

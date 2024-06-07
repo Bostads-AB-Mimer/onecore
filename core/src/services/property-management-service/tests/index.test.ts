@@ -1,3 +1,19 @@
+import axios from 'axios'
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+    loggedAxios: axios,
+    axiosTypes: axios,
+  }
+})
+
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'

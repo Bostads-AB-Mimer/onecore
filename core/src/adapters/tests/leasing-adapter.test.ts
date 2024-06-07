@@ -1,6 +1,20 @@
-import { HttpStatusCode } from 'axios'
-import nock from 'nock'
+import axios, { HttpStatusCode } from 'axios'
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+    loggedAxios: axios,
+    axiosTypes: axios,
+  }
+})
 
+import nock from 'nock'
 import config from '../../common/config'
 import * as leasingAdapter from '../leasing-adapter'
 import {

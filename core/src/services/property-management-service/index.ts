@@ -18,7 +18,7 @@ import {
 import { getFloorPlanStream } from './adapters/document-adapter'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { createNoteOfInterestForInternalParkingSpace } from '../../processes/parkingspaces/internal'
-import App from '../../app'
+import { logger } from 'onecore-utilities'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/:id/floorplan', async (ctx) => {
@@ -144,7 +144,7 @@ export const routes = (router: KoaRouter) => {
       ctx.body = result.response
     } catch (error) {
       // Step 6: Communicate error to dev team and customer service
-      console.log('Error', error)
+      logger.error(error, 'Error')
       ctx.status = 500
       ctx.body = {
         message: 'A technical error has occured',
@@ -198,7 +198,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = result.response
       } catch (error) {
         // Step 6: Communicate error to dev team and customer service
-        console.log('Error', error)
+        logger.error(error, 'Error')
         ctx.status = 500
         ctx.body = {
           message: 'A technical error has occured',

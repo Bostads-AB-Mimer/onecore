@@ -4,6 +4,7 @@ import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as utils from '../../../utils'
 import { makeProcessError } from '../utils'
+import { logger } from 'onecore-utilities'
 
 type CreateOfferError =
   | 'no-listing'
@@ -24,9 +25,14 @@ export const createOfferForInternalParkingSpace = async (
 
   try {
     const listing = await leasingAdapter.getListingByListingId(listingId)
-    if (!listing) return makeProcessError('no-listing', 500)
-    if (listing.status !== ListingStatus.Expired)
+    if (!listing) {
+      logger.error('Listing not found')
+      return makeProcessError('no-listing', 500)
+    }
+    if (listing.status !== ListingStatus.Expired) {
+      logger.error(listing, 'Listing not expired')
       return makeProcessError('listing-not-expired', 500)
+    }
 
     // TODO: Maybe we want to make a credit check here?
 
@@ -46,6 +52,10 @@ export const createOfferForInternalParkingSpace = async (
       })
       log.push(`Updated status for applicant ${applicant.id}`)
     } catch (_err) {
+      logger.error(
+        _err,
+        'Error creating offer for internal parking space - could not update applicant status'
+      )
       return makeProcessError('update-applicant-status', 500)
     }
 
@@ -58,7 +68,7 @@ export const createOfferForInternalParkingSpace = async (
         status: OfferStatus.Active,
       })
       log.push(`Created offer ${offer.id}`)
-      console.log(log)
+      logger.debug(log)
 
       return {
         processStatus: ProcessStatus.successful,
@@ -66,6 +76,10 @@ export const createOfferForInternalParkingSpace = async (
         data: null,
       }
     } catch (_err) {
+      logger.error(
+        _err,
+        'Error creating offer for internal parking space - could not create offer'
+      )
       return makeProcessError('create-offer', 500)
     }
 

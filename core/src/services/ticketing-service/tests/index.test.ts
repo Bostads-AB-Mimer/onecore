@@ -21,6 +21,22 @@ import {
   ticketsMockData,
 } from './mockData'
 
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+    loggedAxios: {
+      defaults: {},
+    },
+  }
+})
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)

@@ -22,6 +22,7 @@ import {
   getTicketByContactCode,
   transformEquipmentCode,
 } from './adapters/odoo-adapter'
+import { logger } from 'onecore-utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -109,7 +110,7 @@ export const routes = (router: KoaRouter) => {
           break
       }
     } catch (error) {
-      console.log('Error', error)
+      logger.error(error, 'Error retrieving property info')
       ctx.throw(500, 'Internal server error')
     }
 
@@ -133,7 +134,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
     } catch (error) {
-      console.error('Error:', error)
+      logger.error(error, 'Error getting tickets by contact code')
       ctx.status = 500
       ctx.body = { message: 'Internal server error' }
       return
@@ -166,7 +167,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
     } catch (error) {
-      console.error('Error:', error)
+      logger.error(error, 'Error retreiving maintenance units by property')
       ctx.status = 500
       ctx.body = { message: 'Internal server error' }
       return
@@ -293,7 +294,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { message: `Ticket created with ID ${ticketId}` }
       }
     } catch (error) {
-      console.error('Error creating a new ticket:', error)
+      logger.error(error, 'Error creating new ticket')
       ctx.status = 500
       ctx.body = {
         message: 'Failed to create a new ticket',

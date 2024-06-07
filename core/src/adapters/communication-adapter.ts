@@ -1,6 +1,7 @@
-import axios from 'axios'
+import { loggedAxios as axios } from 'onecore-utilities'
 import config from '../common/config'
 import { Contact } from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,
@@ -30,9 +31,9 @@ export const sendNotificationToContact = async (
 
     return result.data
   } catch (error) {
-    console.error(
-      `Error sending notification to contact ${recipientContact.contactCode}`,
-      error
+    logger.error(
+      error,
+      `Error sending notification to contact ${recipientContact.contactCode}`
     )
   }
 }
@@ -72,6 +73,6 @@ export const sendNotificationToRole = async (
 
     return result.data
   } catch (error) {
-    console.error(`Error sending notification to role ${recipientRole}`, error)
+    logger.error(error, `Error sending notification to role ${recipientRole}`)
   }
 }

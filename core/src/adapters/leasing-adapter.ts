@@ -1,4 +1,5 @@
-import axios from 'axios'
+import { loggedAxios as axios, logger } from 'onecore-utilities'
+
 import {
   ConsumerReport,
   Contact,
@@ -194,7 +195,7 @@ const createNewListing = async (listingData: Listing) => {
   try {
     return await axios.post(`${tenantsLeasesServiceUrl}/listings`, listingData)
   } catch (error) {
-    console.error('Error creating new listing:', error)
+    logger.error(error, 'Error creating new listing:')
     return undefined
   }
 }
@@ -206,7 +207,7 @@ const applyForListing = async (applicantData: Applicant) => {
       applicantData
     )
   } catch (error) {
-    console.error('Error applying for listing:', error)
+    logger.error(error, 'Error applying for listing:', error)
     return undefined
   }
 }
@@ -220,18 +221,20 @@ const getListingByListingId = async (
     )
     return result.data
   } catch (error) {
-    console.error('Error fetching listing by listing id:', error)
+    logger.error(error, 'Error fetching listing by rental object code')
     return undefined
   }
 }
 
 const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
   try {
-    return await axios.get(
+    const response = await axios.get(
       `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
     )
+
+    return response
   } catch (error) {
-    console.error('Error fetching listing by rental object code:', error)
+    logger.error(error, 'Error fetching listing by rental object code:', error)
     return undefined
   }
 }
@@ -243,7 +246,7 @@ const getListingsWithApplicants = async (): Promise<any[] | undefined> => {
     )
     return response.data
   } catch (error) {
-    console.error('Error fetching listings with applicants:', error)
+    logger.error(error, 'Error fetching listings with applicants:')
     return undefined
   }
 }
@@ -257,7 +260,7 @@ const getApplicantsByContactCode = async (
     )
     return response.data
   } catch (error) {
-    console.error('Error fetching applicants by contact code:', error)
+    logger.error(error, 'Error fetching applicants by contact code:')
     return undefined
   }
 }
@@ -280,7 +283,8 @@ const getApplicantsAndListingByContactCode = async (
     }
     return applicantsAndListings
   } catch (error) {
-    console.error(
+    logger.error(
+      error,
       'Error fetching applicants and listings by contact code:',
       error
     )
@@ -297,9 +301,9 @@ const getApplicantByContactCodeAndListingId = async (
       `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}}`
     )
   } catch (error) {
-    console.error(
-      'Error fetching applicant by contact code and listing id:',
-      error
+    logger.error(
+      error,
+      'Error fetching applicant by contact code and rental object code'
     )
     return undefined
   }
@@ -315,7 +319,11 @@ const getListingByIdWithDetailedApplicants = async (
     )
     return response.data
   } catch (error) {
-    console.error('Error fetching listing with detailed applicant data:', error)
+    logger.error(
+      error,
+      'Error fetching listing with detailed applicant data:',
+      error
+    )
     return undefined
   }
 }
@@ -331,9 +339,9 @@ const setApplicantStatusActive = async (
     )
     return response.data
   } catch (error) {
-    console.error(
-      `Error setting applicantStatus active on user with contactcode ${contactCode}:`,
-      error
+    logger.error(
+      error,
+      `Error setting applicantStatus active on user with contactcode ${contactCode}`
     )
     throw new Error(`Failed to update status for applicant ${applicantId}`)
   }
@@ -349,7 +357,7 @@ const withdrawApplicantByManager = async (
     )
     return response.data
   } catch (error) {
-    console.error('Error patching applicant status:', error)
+    logger.error(error, 'Error patching applicant status:', error)
     throw new Error(`Failed to update status for applicant ${applicantId}`)
   }
 }
@@ -365,7 +373,7 @@ const withdrawApplicantByUser = async (
     )
     return response.data
   } catch (error) {
-    console.error('Error withdrawing applicant by user:', error)
+    logger.error(error, 'Error withdrawing applicant by user:', error)
     return undefined
   }
 }
@@ -384,7 +392,7 @@ const createOffer = async (params: CreateOfferParams): Promise<Offer> => {
 
     return response.data.data
   } catch (err) {
-    console.error('Error creating offer:', err)
+    logger.error(err, 'Error creating offer:')
     throw err
   }
 }
@@ -401,7 +409,7 @@ const updateApplicantStatus = async (params: {
     )
     return response.data
   } catch (err) {
-    console.error('Error updating applicant status:', err)
+    logger.error(err, 'Error updating applicant status')
     throw err
   }
 }

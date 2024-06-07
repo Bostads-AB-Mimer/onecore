@@ -102,11 +102,7 @@ const transformTicket = (ticket: OdooGetTicket) => {
 }
 
 const getTicketByContactCode = async (contactCode: string): Promise<any> => {
-  console.log('getTicketByContactCode: connecting to odoo', odoo)
-
   await odoo.connect()
-
-  console.log('getTicketByContactCode: connection successful, reading tickets')
 
   const domain: any[] = [['contact_code', '=', contactCode]]
 
@@ -130,8 +126,6 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
     domain,
     fields
   )
-
-  console.log('getTicketByContactCode: tickets received, transforming', tickets)
 
   return tickets.map(transformTicket)
 }

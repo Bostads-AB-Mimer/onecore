@@ -9,15 +9,22 @@ import api from './api'
 import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
 
+import { logger, loggerMiddlewares } from 'onecore-utilities'
+
 const app = new Koa()
 
 app.use(cors())
 
 app.on('error', (err) => {
-  console.error(err)
+  logger.error(err)
 })
 
 app.use(bodyParser())
+
+// Log the start and completion of all incoming requests
+app.use(loggerMiddlewares.pre)
+//app.use(loggerMiddlewares.pre)
+app.use(loggerMiddlewares.post)
 
 const publicRouter = new KoaRouter()
 
