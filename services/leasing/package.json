@@ -1,5 +1,5 @@
 {
-  "version": "1.0.74",
+  "version": "1.0.75",
   "description": "",
   "main": "./src/index.ts",
   "private": "true",
@@ -63,8 +63,8 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "mssql": "^9.3.2",
-    "onecore-types": "^1.19.0",
     "onecore-utilities": "^1.0.2",
+    "onecore-types": "^1.21.1",
     "personnummer": "^3.2.1",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",
