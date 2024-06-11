@@ -76,7 +76,6 @@ var getCorrelationId2 = (ctx) => {
 };
 var middlewares = {
   pre: (ctx, next) => __async(void 0, null, function* () {
-    var _a;
     let correlationId = getCorrelationId2(ctx);
     ctx.correlationId = correlationId;
     if (ctx.path !== "/health") {
@@ -85,8 +84,8 @@ var middlewares = {
         {
           request: {
             path: ctx.path,
-            user: (_a = ctx.state) == null ? void 0 : _a.user,
-            method: ctx.method
+            method: ctx.method,
+            ip: ctx.request.ip
           }
         },
         "Incoming request"
@@ -128,8 +127,28 @@ var getCorrelationId3 = () => {
   }
   return null;
 };
+var loggingExlusionFilters = null;
+var setExclusionFilters = (exlusionFilters) => {
+  loggingExlusionFilters = exlusionFilters;
+};
+var isUrlExcluded = (url) => {
+  if (loggingExlusionFilters) {
+    const isExcluded = loggingExlusionFilters.some((exclusionFilter) => {
+      if (url && exclusionFilter.test(url)) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+    return isExcluded;
+  }
+  return false;
+};
 axios.interceptors.request.use((request) => {
   var _a;
+  if (isUrlExcluded(request.url)) {
+    return request;
+  }
   const correlationId = getCorrelationId3();
   if (correlationId) {
     request.headers["x-correlation-id"] = correlationId;
@@ -148,6 +167,9 @@ axios.interceptors.request.use((request) => {
 });
 axios.interceptors.response.use((response) => {
   var _a;
+  if (isUrlExcluded(response.config.url)) {
+    return response;
+  }
   const correlationId = getCorrelationId3();
   const responseFields = {
     status: response.status,
@@ -171,6 +193,7 @@ export {
   loggedAxios_default as loggedAxios,
   logger,
   middlewares as loggerMiddlewares,
-  storage as loggingStorage
+  storage as loggingStorage,
+  setExclusionFilters as setAxiosExclusionFilters
 };
 //# sourceMappingURL=index.mjs.map

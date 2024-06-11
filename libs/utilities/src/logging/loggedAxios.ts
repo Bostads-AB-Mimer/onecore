@@ -13,7 +13,33 @@ const getCorrelationId = (): string | undefined | null => {
   return null
 }
 
+let loggingExlusionFilters: RegExp[] | null = null
+
+export const setExclusionFilters = (exlusionFilters: RegExp[]) => {
+  loggingExlusionFilters = exlusionFilters
+}
+
+const isUrlExcluded = (url: string | undefined) => {
+  if (loggingExlusionFilters) {
+    const isExcluded = loggingExlusionFilters.some((exclusionFilter) => {
+      if (url && exclusionFilter.test(url)) {
+        return true
+      } else {
+        return false
+      }
+    })
+
+    return isExcluded
+  }
+
+  return false
+}
+
 axios.interceptors.request.use((request) => {
+  if (isUrlExcluded(request.url)) {
+    return request
+  }
+
   const correlationId = getCorrelationId()
 
   if (correlationId) {
@@ -36,6 +62,10 @@ axios.interceptors.request.use((request) => {
 })
 
 axios.interceptors.response.use((response) => {
+  if (isUrlExcluded(response.config.url)) {
+    return response
+  }
+
   const correlationId = getCorrelationId()
 
   const responseFields = {

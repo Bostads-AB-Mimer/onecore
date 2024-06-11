@@ -45,8 +45,6 @@ export const logger = pino(
   multistream([{ stream: prettyStream }, { stream: streamToElastic }])
 ).child(childProperties)
 
-//export default logger
-
 const getCorrelationId = (
   ctx: Koa.ParameterizedContext<Koa.DefaultState, Koa.DefaultContext, any>
 ) => {
@@ -68,8 +66,8 @@ export const middlewares = {
         {
           request: {
             path: ctx.path,
-            user: ctx.state?.user,
             method: ctx.method,
+            ip: ctx.request.ip,
           },
         },
         'Incoming request'

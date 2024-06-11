@@ -55,7 +55,8 @@ __export(src_exports, {
   loggedAxios: () => loggedAxios_default,
   logger: () => logger,
   loggerMiddlewares: () => middlewares,
-  loggingStorage: () => storage
+  loggingStorage: () => storage,
+  setAxiosExclusionFilters: () => setExclusionFilters
 });
 module.exports = __toCommonJS(src_exports);
 
@@ -116,7 +117,6 @@ var getCorrelationId2 = (ctx) => {
 };
 var middlewares = {
   pre: (ctx, next) => __async(void 0, null, function* () {
-    var _a;
     let correlationId = getCorrelationId2(ctx);
     ctx.correlationId = correlationId;
     if (ctx.path !== "/health") {
@@ -125,8 +125,8 @@ var middlewares = {
         {
           request: {
             path: ctx.path,
-            user: (_a = ctx.state) == null ? void 0 : _a.user,
-            method: ctx.method
+            method: ctx.method,
+            ip: ctx.request.ip
           }
         },
         "Incoming request"
@@ -168,8 +168,28 @@ var getCorrelationId3 = () => {
   }
   return null;
 };
+var loggingExlusionFilters = null;
+var setExclusionFilters = (exlusionFilters) => {
+  loggingExlusionFilters = exlusionFilters;
+};
+var isUrlExcluded = (url) => {
+  if (loggingExlusionFilters) {
+    const isExcluded = loggingExlusionFilters.some((exclusionFilter) => {
+      if (url && exclusionFilter.test(url)) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+    return isExcluded;
+  }
+  return false;
+};
 import_axios.default.interceptors.request.use((request) => {
   var _a;
+  if (isUrlExcluded(request.url)) {
+    return request;
+  }
   const correlationId = getCorrelationId3();
   if (correlationId) {
     request.headers["x-correlation-id"] = correlationId;
@@ -188,6 +208,9 @@ import_axios.default.interceptors.request.use((request) => {
 });
 import_axios.default.interceptors.response.use((response) => {
   var _a;
+  if (isUrlExcluded(response.config.url)) {
+    return response;
+  }
   const correlationId = getCorrelationId3();
   const responseFields = {
     status: response.status,
@@ -212,6 +235,7 @@ var axiosTypes = __toESM(require("axios"));
   loggedAxios,
   logger,
   loggerMiddlewares,
-  loggingStorage
+  loggingStorage,
+  setAxiosExclusionFilters
 });
 //# sourceMappingURL=index.js.map
