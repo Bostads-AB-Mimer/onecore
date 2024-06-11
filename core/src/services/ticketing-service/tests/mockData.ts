@@ -206,6 +206,7 @@ export const ticketsMockData: OdooGetTicket[] = [
     create_date: '2024-04-26 13:21:20',
     write_date: '2024-04-26 13:21:20',
     stage_id: [1, 'New Request'],
+    name: '',
   },
   {
     uuid: '2fc2276a-13a5-4472-8a0e-e4b12b18d453',
@@ -222,5 +223,6 @@ export const ticketsMockData: OdooGetTicket[] = [
     create_date: '2024-04-26 13:21:20',
     write_date: '2024-04-26 13:21:20',
     stage_id: [1, 'New Request'],
+    name: '',
   },
 ]

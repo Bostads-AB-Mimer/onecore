@@ -70,7 +70,9 @@ const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
   const contactResponse = await axios(
-    tenantsLeasesServiceUrl + '/contact/' + nationalRegistrationNumber
+    tenantsLeasesServiceUrl +
+      '/contact/nationalRegistrationNumber/' +
+      nationalRegistrationNumber
   )
 
   return contactResponse.data.data
