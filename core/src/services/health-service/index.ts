@@ -1,7 +1,12 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
-import axios from 'axios'
+import {
+  loggedAxios as axios,
+  setAxiosExclusionFilters,
+} from 'onecore-utilities'
 import { SystemHealth } from 'onecore-types'
+
+setAxiosExclusionFilters([/.*?\/health$/])
 
 const oneCoreServiceProbe = async (
   systemName: string,
