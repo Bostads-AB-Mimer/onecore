@@ -14,6 +14,7 @@ import {
   saveMaterialChoice,
   getMaterialChoiceStatuses,
   getRoomsWithMaterialChoices,
+  getRentalPropertyInfoFromXpand,
 } from '../../adapters/property-management-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
@@ -206,4 +207,12 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  router.get('(.*)/propertyInfoFromXpand/:rentalObjectCode', async (ctx) => {
+    const res = await getRentalPropertyInfoFromXpand(
+      ctx.params.rentalObjectCode
+    )
+    ctx.status = res.status
+    ctx.body = res.data
+  })
 }

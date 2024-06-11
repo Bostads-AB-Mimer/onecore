@@ -23,6 +23,10 @@ const getRentalProperty = async (
   return propertyResponse.data
 }
 
+//todo: this function needs to be refactored to use a pattern like "getRentalPropertyInfoFromXpand".
+//todo: body is possible null from propertyManagementServiceUrl and without a status returned
+//todo: its not possible for a caller to know what has gone wrong (or ok)
+//todo: modify calling code to use a pattern like in "getRentalPropertyInfoFromXpand"
 const getRentalPropertyInfo = async (
   rentalPropertyId: string
 ): Promise<RentalPropertyInfo> => {
@@ -31,6 +35,19 @@ const getRentalPropertyInfo = async (
   )
 
   return propertyResponse.data
+}
+
+//todo: copy of getRentalPropertyInfo above
+//todo: added because callers needs to know more about the response than just the body
+const getRentalPropertyInfoFromXpand = async (rentalPropertyId: string) => {
+  const propertyResponse = await axios(
+    propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
+  )
+
+  return {
+    status: propertyResponse.status,
+    data: propertyResponse.data,
+  }
 }
 
 const getMaintenanceUnitsForRentalProperty = async (
@@ -150,4 +167,5 @@ export {
   getRoomsWithMaterialChoices,
   getParkingSpace,
   getPublishedParkingSpace,
+  getRentalPropertyInfoFromXpand,
 }
