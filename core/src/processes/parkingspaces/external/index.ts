@@ -95,6 +95,7 @@ export const createLeaseForExternalParkingSpace = async (
     ) {
       return {
         processStatus: ProcessStatus.failed,
+        error: 'applicant-missing-address',
         httpStatus: 404,
         response: {
           message: `Applicant ${contactId} has no address.`,
