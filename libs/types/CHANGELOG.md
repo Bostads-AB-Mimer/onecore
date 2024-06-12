@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.21.1...v1.22.0) (2024-06-12)
+
+
+### Features
+
+* 1410 - Endpoints to get offer ([e9ce629](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e9ce629922303bf5b4d943bfd000c6fef7d68e1e))
+
 ## [1.21.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.21.0...v1.21.1) (2024-06-03)
 
 
