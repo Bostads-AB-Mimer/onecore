@@ -32,6 +32,7 @@ import {
   mockedLease,
   mockedApplicantWithoutLeases,
   mockedApplicantWithLeases,
+  mockedApplicantWithoutAddress,
 } from './index.mocks'
 
 describe('parkingspaces', () => {
@@ -158,6 +159,20 @@ describe('parkingspaces', () => {
     it('returns an error if the applicant contact could not be retrieved', async () => {
       getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
       getContactSpy.mockResolvedValue(undefined)
+
+      const result = await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(result.processStatus).toBe(ProcessStatus.failed)
+      expect(result.httpStatus).toBe(404)
+    })
+
+    it('returns an error if the applicant has no address', async () => {
+      getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+      getContactSpy.mockResolvedValue(mockedApplicantWithoutAddress)
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',

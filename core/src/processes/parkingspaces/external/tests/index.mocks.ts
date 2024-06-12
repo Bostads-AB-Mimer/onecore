@@ -51,6 +51,25 @@ export const mockedApplicantWithoutLeases: Contact = {
   isTenant: true,
 }
 
+export const mockedApplicantWithoutAddress: any = {
+  contactCode: 'P12345',
+  contactKey: 'ABC',
+  address: {
+    street: null,
+    number: null,
+    postalCode: null,
+    city: null,
+  },
+  birthDate: new Date(),
+  firstName: 'Foo',
+  lastName: 'Bar',
+  fullName: 'Foo Bar',
+  nationalRegistrationNumber: '1212121212',
+  phoneNumbers: [],
+  emailAddress: 'test@mimer.nu',
+  isTenant: true,
+}
+
 export const mockedApplicantWithLeases: Contact = {
   leaseIds: ['123-456-789/01', '789-456-123/02'],
   ...mockedApplicantWithoutLeases,

@@ -87,6 +87,22 @@ export const createLeaseForExternalParkingSpace = async (
       }
     }
 
+    // Step 2.a Check for address
+    if (
+      !applicantContact.address?.street ||
+      !applicantContact.address?.city ||
+      !applicantContact.address?.postalCode
+    ) {
+      return {
+        processStatus: ProcessStatus.failed,
+        httpStatus: 404,
+        response: {
+          message: `Applicant ${contactId} has no address.`,
+          reason: 'No address found for applicant',
+        },
+      }
+    }
+
     let creditCheck = false
     const applicantHasNoLease =
       !applicantContact.leaseIds || applicantContact.leaseIds.length == 0

@@ -8,7 +8,9 @@ A[Start] -->B(Get Parking Space)
 B --> C{Is the Parking<br/>Space Non Scored?}
 C --> |No| O[End]
 C --> |Yes| D[Get Applicant with Leases]
-D --> F{Is the Applicant<br/>a Tenant?}
+D --> Q{Does Applicant have an Address?}
+Q --> |Yes| F{Is the Applicant<br/>a Tenant?}
+Q --> |No| O
 F --> |No| L[Perform Credit Check]
 L --> I
 F --> |Yes| H[Perform Internal Credit Check]
@@ -53,6 +55,10 @@ sequenceDiagram
     Leasing ->> XPand DB: Get Applicant
     XPand DB -->> Leasing:Applicant
     Leasing -->> Core: Applicant
+
+    break when Applicant is not found or address is missing
+        Core-->User: show error message
+    end
 
     alt Is Applicant a Tenant
         Core ->> Leasing: Perform Internal Credit Check
