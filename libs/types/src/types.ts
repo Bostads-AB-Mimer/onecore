@@ -325,6 +325,7 @@ interface ParkingSpaceOfferEmail extends Email {
   type: string;
   parkingSpaceId: string;
   objectId: string;
+  hasParkingSpace: boolean;
 }
 
 export type {
