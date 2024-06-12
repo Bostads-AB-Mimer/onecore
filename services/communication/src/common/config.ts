@@ -7,6 +7,7 @@ export interface Config {
   infobip: {
     baseUrl: string
     apiKey: string
+    parkingSpaceOfferTempalteId: number
   }
 }
 

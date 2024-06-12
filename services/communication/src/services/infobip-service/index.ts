@@ -1,7 +1,8 @@
 import KoaRouter from '@koa/router'
 import validator from 'validator'
-import { sendEmail } from './adapters/infobip-adapter'
-import { Email } from 'onecore-types'
+import { sendEmail, sendParkingSpaceOffer } from './adapters/infobip-adapter'
+import { Email, ParkingSpaceOfferEmail } from 'onecore-types'
+import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
@@ -21,6 +22,44 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.post('(.*)/sendParkingSpaceOffer', async (ctx) => {
+    const emailData = ctx.request.body
+    if (!isParkingSpaceOfferEmail(emailData)) {
+      ctx.throw(400, 'Message is not an email object')
+      return
+    }
+    try {
+      const result = await sendParkingSpaceOffer(emailData)
+      ctx.status = 200
+      ctx.body = result.data
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+}
+
+export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSpaceOfferEmail => {
+  return (
+    typeof emailData === 'object' &&
+    emailData !== null &&
+    typeof emailData.to === 'string' &&
+    validator.isEmail(emailData.to) &&
+    typeof emailData.subject === 'string' &&
+    typeof emailData.text === 'string' &&
+    typeof emailData.address === 'string' &&
+    typeof emailData.firstName === 'string' &&
+    typeof emailData.availableFrom === 'string' &&
+    typeof emailData.deadlineDate === 'string' &&
+    typeof emailData.rent === 'string' &&
+    typeof emailData.type === 'string' &&
+    typeof emailData.parkingSpaceId === 'string' &&
+    typeof emailData.objectId === 'string' &&
+    typeof emailData.hasParkingSpace === 'boolean'
+  );
 }
 
 export const isMessageEmail = (message: any): message is Email => {
