@@ -7,9 +7,7 @@ import {
   isListingInAreaWithSpecificRentalRules,
   isHousingContractsOfApplicantInSameAreaAsListing,
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
-} from '../rental-rules-validator'
-import config from '../../../common/config'
-import nock from 'nock'
+} from '../residential-area-rental-rules-validator'
 
 describe('isListingInAreaWithSpecificRentalRules', () => {
   it('shouldReturnFalseIfListingIsNotInAreaWithSpecificRentalRules', () => {
