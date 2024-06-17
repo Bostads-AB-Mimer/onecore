@@ -1,6 +1,6 @@
 import { loggedAxios as axios } from 'onecore-utilities'
 import config from '../common/config'
-import { Contact } from 'onecore-types'
+import { Contact, ParkingSpaceOfferEmail } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
 export const sendNotificationToContact = async (
@@ -74,5 +74,35 @@ export const sendNotificationToRole = async (
     return result.data
   } catch (error) {
     logger.error(error, `Error sending notification to role ${recipientRole}`)
+  }
+}
+
+export const sendParkingSpaceOfferEmail = async (
+  parkingSpaceDetails: ParkingSpaceOfferEmail
+) => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: parkingSpaceDetails,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendParkingSpaceOffer`,
+      axiosOptions
+    )
+
+    if (result.status !== 200) {
+      throw new Error('Error sending parking space offer')
+    }
+
+    return result.data;
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending parking space offer to ${parkingSpaceDetails.to}`
+    )
   }
 }
