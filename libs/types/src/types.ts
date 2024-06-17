@@ -316,18 +316,6 @@ interface SystemHealth {
   statusMessage?: string
 }
 
-interface ParkingSpaceOfferEmail extends Email {
-  adress: string;
-  firstName: string;
-  availableFrom: string;
-  deadlineDate: string;
-  rent: string;
-  type: string;
-  parkingSpaceId: string;
-  objectId: string;
-  hasParkingSpace: boolean;
-}
-
 export type {
   Contact,
   Lease,
@@ -357,6 +345,5 @@ export type {
   MaintenanceUnitInfo,
   ResidentialArea,
   SystemHealth,
-  SystemStatus,
-  ParkingSpaceOfferEmail
+  SystemStatus
 }
