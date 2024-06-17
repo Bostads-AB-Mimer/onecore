@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.1...v1.23.2) (2024-06-17)
+
+
+### Bug Fixes
+
+* spelling ([630ea2f](https://github.com/Bostads-AB-Mimer/onecore-types/commit/630ea2f3c3dec05fad2c552a8a065d9c591ab7a7))
+
 ## [1.23.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.0...v1.23.1) (2024-06-17)
 
 
