@@ -43,7 +43,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
     const toField = JSON.stringify({
       to: email.to,
       placeholders: {
-        'adress': email.adress,
+        'adress': email.address,
         'firstName': email.firstName,
         'availableFrom': email.availableFrom,
         'deadlineDate': email.deadlineDate,
