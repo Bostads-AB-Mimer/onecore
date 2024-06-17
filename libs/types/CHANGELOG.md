@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.0...v1.23.1) (2024-06-17)
+
+
+### Bug Fixes
+
+* export mail-types ([602325b](https://github.com/Bostads-AB-Mimer/onecore-types/commit/602325bd7132b568fe90014dfff504cc5be028db))
+
 ## [1.23.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.22.0...v1.23.0) (2024-06-17)
 
 
