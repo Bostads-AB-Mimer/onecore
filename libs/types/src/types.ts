@@ -345,5 +345,5 @@ export type {
   MaintenanceUnitInfo,
   ResidentialArea,
   SystemHealth,
-  SystemStatus,
+  SystemStatus
 }
