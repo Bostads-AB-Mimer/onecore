@@ -14,7 +14,7 @@ export interface Config {
 const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
-    port: 5020,
+    port: 5040,
     infobip: {
       baseUrl: '',
       apiKey: '',

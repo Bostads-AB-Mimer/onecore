@@ -1,6 +1,8 @@
 import app from './app'
+import config from './common/config'
+import { logger } from 'onecore-utilities'
 
-const PORT = process.env.PORT || 5040
+const PORT = config.port || 5040
 app.listen(PORT, () => {
-  console.log(`listening on http://localhost:${PORT}`)
+  logger.info(`listening on http://localhost:${PORT}`)
 })

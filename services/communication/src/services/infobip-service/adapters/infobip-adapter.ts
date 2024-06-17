@@ -1,6 +1,7 @@
 import { Infobip, AuthType } from '@infobip-api/sdk'
 import config from '../../../common/config'
 import { Email, ParkingSpaceOfferEmail } from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 const infobip = new Infobip({
   baseUrl: config.infobip.baseUrl,
@@ -12,7 +13,7 @@ const NewParkingSpaceOfferTemplateId = 200000000092027;
 const ExistingParkingSpaceOfferTemplateId = 200000000094058;
 
 export const sendEmail = async (message: Email) => {
-  console.log('Sending email', config.infobip)
+  logger.info({ to: message.to, subject: message.subject }, 'Sending email')
 
   try {
     const response = await infobip.channels.email.send({
@@ -22,12 +23,16 @@ export const sendEmail = async (message: Email) => {
       text: message.text,
     })
     if (response.status === 200) {
+      logger.info(
+        { to: message.to, subject: message.subject },
+        'Sending email complete'
+      )
       return response.data
     } else {
       throw new Error(response.body)
     }
   } catch (error) {
-    console.error(error)
+    logger.error(error)
     throw error
   }
 }

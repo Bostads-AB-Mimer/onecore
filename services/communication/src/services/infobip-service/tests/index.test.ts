@@ -1,3 +1,16 @@
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+    },
+  }
+})
+
 import { isMessageEmail } from '../index'
 
 describe('isMessageEmail', () => {

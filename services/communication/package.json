@@ -1,6 +1,6 @@
 {
   "name": "onecore-communication",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "",
   "main": "index.js",
   "engines": {
@@ -48,6 +48,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "onecore-types": "^1.23.1",
+    "onecore-utilities": "^1.0.2",
     "validator": "^13.11.0"
   }
 }
