@@ -1,7 +1,7 @@
 import { Email } from './types';
 
 interface ParkingSpaceOfferEmail extends Email {
-  adress: string;
+  address: string;
   firstName: string;
   availableFrom: string;
   deadlineDate: string;
