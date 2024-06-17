@@ -74,6 +74,25 @@ describe('createOfferForInternalParkingSpace', () => {
     })
   })
 
+  it('fails if retrieving contact information fails', async () => {
+    jest.spyOn(leasingAdapter, 'getListingByListingId').mockResolvedValueOnce(
+      factory.listing.build({ status: ListingStatus.Expired })
+    );
+    jest.spyOn(leasingAdapter, 'getListingByIdWithDetailedApplicants').mockResolvedValueOnce(
+      factory.detailedApplicant.buildList(1)
+    );
+    jest.spyOn(leasingAdapter, 'getContact')
+      .mockResolvedValueOnce(undefined);
+  
+    const result = await createOfferForInternalParkingSpace('123');
+  
+    expect(result).toEqual({
+      processStatus: ProcessStatus.failed,
+      error: 'get-contact',
+      httpStatus: 500,
+    });
+  });  
+
   it('fails if update applicant status fails', async () => {
     jest
       .spyOn(leasingAdapter, 'getListingByListingId')
@@ -83,6 +102,9 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(leasingAdapter, 'getListingByIdWithDetailedApplicants')
       .mockResolvedValueOnce(factory.detailedApplicant.buildList(1))
+    jest
+        .spyOn(leasingAdapter, 'getContact')
+        .mockResolvedValueOnce(factory.contact.build());
     jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockRejectedValueOnce(null)
@@ -106,6 +128,9 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByIdWithDetailedApplicants')
       .mockResolvedValueOnce(factory.detailedApplicant.buildList(1))
     jest
+      .spyOn(leasingAdapter, 'getContact')
+      .mockResolvedValueOnce(factory.contact.build());
+    jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
     jest.spyOn(leasingAdapter, 'createOffer').mockRejectedValueOnce(null)
@@ -128,6 +153,9 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(leasingAdapter, 'getListingByIdWithDetailedApplicants')
       .mockResolvedValueOnce(factory.detailedApplicant.buildList(1))
+    jest
+        .spyOn(leasingAdapter, 'getContact')
+        .mockResolvedValueOnce(factory.contact.build());
     jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
