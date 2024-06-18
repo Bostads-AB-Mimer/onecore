@@ -3,6 +3,7 @@ import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as utils from '../../../utils'
+import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { logger } from 'onecore-utilities'
 
@@ -12,6 +13,8 @@ type CreateOfferError =
   | 'no-applicants'
   | 'create-offer'
   | 'update-applicant-status'
+  | 'get-contact'
+  | 'send-email'
   | 'unknown'
 
 export const createOfferForInternalParkingSpace = async (
@@ -44,6 +47,13 @@ export const createOfferForInternalParkingSpace = async (
     if (!applicants?.length) return makeProcessError('no-applicants', 500)
     const [applicant] = applicants
 
+
+    const contact = await leasingAdapter.getContact(applicant.contactCode)
+    if (!contact) {
+      logger.error('Could not find contact')
+      return makeProcessError('get-contact', 500)
+    }
+
     try {
       await leasingAdapter.updateApplicantStatus({
         applicantId: applicant.id,
@@ -70,6 +80,28 @@ export const createOfferForInternalParkingSpace = async (
       log.push(`Created offer ${offer.id}`)
       logger.debug(log)
 
+      try {
+        await communicationAdapter.sendParkingSpaceOfferEmail({
+          to: contact.emailAddress,
+          subject: 'Erbjudande om intern bilplats',
+          text: 'Erbjudande om intern bilplats',
+          adress: listing.address,
+          firstName: applicant.name,
+          availableFrom: new Date(listing.vacantFrom).toISOString(),
+          deadlineDate: new Date(offer.expiresAt).toISOString(),
+          rent: String(listing.monthlyRent),
+          type: listing.rentalObjectTypeCaption ?? '',
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          hasParkingSpace: false,
+        })
+      } catch (_err) {
+        logger.error(
+          _err,
+          'Error creating offer for internal parking space - could not send email'
+        )
+        return makeProcessError('send-email', 500)
+      }
       return {
         processStatus: ProcessStatus.successful,
         httpStatus: 200,
