@@ -47,7 +47,6 @@ export const createOfferForInternalParkingSpace = async (
     if (!applicants?.length) return makeProcessError('no-applicants', 500)
     const [applicant] = applicants
 
-
     const contact = await leasingAdapter.getContact(applicant.contactCode)
     if (!contact) {
       logger.error('Could not find contact')
@@ -85,7 +84,7 @@ export const createOfferForInternalParkingSpace = async (
           to: contact.emailAddress,
           subject: 'Erbjudande om intern bilplats',
           text: 'Erbjudande om intern bilplats',
-          adress: listing.address,
+          address: listing.address,
           firstName: applicant.name,
           availableFrom: new Date(listing.vacantFrom).toISOString(),
           deadlineDate: new Date(offer.expiresAt).toISOString(),
