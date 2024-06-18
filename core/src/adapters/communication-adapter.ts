@@ -94,7 +94,7 @@ export const sendParkingSpaceOfferEmail = async (
       axiosOptions
     )
 
-    if (result.status !== 200) {
+    if (result.status !== 204) {
       throw new Error('Error sending parking space offer')
     }
 

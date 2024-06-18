@@ -81,14 +81,14 @@ export const createOfferForInternalParkingSpace = async (
       logger.debug(log)
 
       try {
-        communicationAdapter.sendParkingSpaceOfferEmail({
+        await communicationAdapter.sendParkingSpaceOfferEmail({
           to: contact.emailAddress,
           subject: 'Erbjudande om intern bilplats',
           text: 'Erbjudande om intern bilplats',
           adress: listing.address,
           firstName: applicant.name,
-          availableFrom: listing.vacantFrom.toISOString(),
-          deadlineDate: offer.expiresAt.toISOString(),
+          availableFrom: listing.vacantFrom.toString(),
+          deadlineDate: offer.expiresAt.toString(),
           rent: String(listing.monthlyRent),
           type: listing.rentalObjectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
