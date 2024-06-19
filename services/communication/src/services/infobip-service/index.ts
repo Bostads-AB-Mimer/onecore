@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import validator from 'validator'
-import { sendEmail, sendParkingSpaceOffer } from './adapters/infobip-adapter'
-import { Email, ParkingSpaceOfferEmail } from 'onecore-types'
+import { sendEmail, sendParkingSpaceOffer, sendParkingSpaceAssignedToOther } from './adapters/infobip-adapter'
+import { Email, ParkingSpaceOfferEmail, ParkingSpaceNotificationEmail } from 'onecore-types'
 import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
@@ -31,6 +31,24 @@ export const routes = (router: KoaRouter) => {
     }
     try {
       const result = await sendParkingSpaceOffer(emailData)
+      ctx.status = 200
+      ctx.body = result.data
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/sendNotification', async (ctx) => {
+    const { applicants } = ctx.request.body as { applicants: ParkingSpaceNotificationEmail[] }
+    if (!Array.isArray(applicants)) {
+      ctx.throw(400, 'Message is not an email object')
+      return;
+    }
+    try {
+      const result = await sendParkingSpaceAssignedToOther(applicants)
       ctx.status = 200
       ctx.body = result.data
     } catch (error: any) {
