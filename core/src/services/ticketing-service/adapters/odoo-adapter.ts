@@ -5,6 +5,7 @@ export interface OdooGetTicket {
   uuid: string
   id: number
   phone_number: string
+  name: string
   contact_code: string
   description: string
   priority: string
@@ -62,11 +63,13 @@ const equipmentCodes: Record<string, string> = {
 }
 
 const transformSpaceCode = (space_code: string) => {
-  return spaceCodes[space_code]
+  return spaceCodes[space_code] != undefined ? spaceCodes[space_code] : ''
 }
 
 const transformEquipmentCode = (equipment_code: string) => {
-  return equipmentCodes[equipment_code]
+  return equipmentCodes[equipment_code] != undefined
+    ? equipmentCodes[equipment_code]
+    : ''
 }
 
 const removePTags = (text: string): string => text.replace(/<\/?p>/g, '')
@@ -78,11 +81,21 @@ const transformTicket = (ticket: OdooGetTicket) => {
 
   return {
     AccessCaption: 'Huvudnyckel',
-    Caption: `WEBB: ${spaceCode}, ${equipmentCode}`,
+    Caption:
+      spaceCode && equipmentCode
+        ? `WEBB: ${spaceCode}, ${equipmentCode}`
+        : `WEBB: ${ticket.name}`,
     Code: 'od-' + ticket.id,
     ContactCode: ticket.contact_code,
-    Description: `${spaceCode}, ${equipmentCode}': ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
-    DetailsCaption: `${spaceCode}, ${equipmentCode}': ${description}`,
+    Description:
+      spaceCode && equipmentCode
+        ? `${spaceCode}, ${equipmentCode}: `
+        : ticket.name +
+          ` ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
+    DetailsCaption:
+      spaceCode && equipmentCode
+        ? `${spaceCode}, ${equipmentCode}`
+        : ticket.name + `: ${description}`,
     ExternalResource: false,
     Id: ticket.uuid,
     LastChange: ticket.write_date || ticket.create_date,
@@ -109,6 +122,7 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   const fields: string[] = [
     'uuid',
     'contact_code',
+    'name',
     'description',
     'priority',
     'pet',
@@ -119,6 +133,7 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
     'create_date',
     'write_date',
     'stage_id',
+    'phone_number',
   ]
 
   const tickets: OdooGetTicket[] = await odoo.searchRead(
