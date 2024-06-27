@@ -141,38 +141,41 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?', async (ctx) => {
-    try {
-      const maintenanceUnits = await getMaintenanceUnitsForRentalProperty(
-        ctx.params.rentalPropertyId
-      )
-      if (maintenanceUnits && maintenanceUnits.length > 0) {
-        // Filter by type if type is provided
-        if (ctx.params.type) {
-          ctx.status = 200
-          ctx.body = {
-            content: maintenanceUnits.filter(
-              (unit) =>
-                unit.type.toUpperCase() === ctx.params.type.toUpperCase()
-            ),
+  router.get(
+    '(.*)/maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?',
+    async (ctx) => {
+      try {
+        const maintenanceUnits = await getMaintenanceUnitsForRentalProperty(
+          ctx.params.rentalPropertyId
+        )
+        if (maintenanceUnits && maintenanceUnits.length > 0) {
+          // Filter by type if type is provided
+          if (ctx.params.type) {
+            ctx.status = 200
+            ctx.body = {
+              content: maintenanceUnits.filter(
+                (unit) =>
+                  unit.type.toUpperCase() === ctx.params.type.toUpperCase()
+              ),
+            }
+            return
           }
+          // Return all maintenance units if no type is provided
+          ctx.status = 200
+          ctx.body = { content: maintenanceUnits }
+        } else {
+          ctx.status = 200
+          ctx.body = { message: 'No maintenance units found' }
           return
         }
-        // Return all maintenance units if no type is provided
-        ctx.status = 200
-        ctx.body = { content: maintenanceUnits }
-      } else {
-        ctx.status = 200
-        ctx.body = { message: 'No maintenance units found' }
+      } catch (error) {
+        logger.error(error, 'Error retreiving maintenance units by property')
+        ctx.status = 500
+        ctx.body = { message: 'Internal server error' }
         return
       }
-    } catch (error) {
-      logger.error(error, 'Error retreiving maintenance units by property')
-      ctx.status = 500
-      ctx.body = { message: 'Internal server error' }
-      return
     }
-  })
+  )
 
   router.get('(.*)/maintenanceUnitsByContactCode/:contactCode', async (ctx) => {
     try {
@@ -182,12 +185,21 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { message: 'Contact not found' }
         return
       }
-      const leases = await getLeasesForPnr(contact.nationalRegistrationNumber, 'false', 'false')
+      const leases = await getLeasesForPnr(
+        contact.nationalRegistrationNumber,
+        'false',
+        'false'
+      )
       const promises = leases
-        .filter(lease => lease.type.toLocaleLowerCase().trimEnd() === "bostadskontrakt")
-        .map(lease => getMaintenanceUnitsForRentalProperty(lease.rentalPropertyId));
+        .filter(
+          (lease) =>
+            lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
+        )
+        .map((lease) =>
+          getMaintenanceUnitsForRentalProperty(lease.rentalPropertyId)
+        )
 
-      const maintenanceUnits = (await Promise.all(promises)).flat();
+      const maintenanceUnits = (await Promise.all(promises)).flat()
 
       if (maintenanceUnits && maintenanceUnits.length > 0) {
         ctx.status = 200
@@ -288,6 +300,8 @@ export const routes = (router: KoaRouter) => {
           tenant_id: tenants[0].firstName + ' ' + tenants[0].lastName,
           national_registration_number: tenants[0].nationalRegistrationNumber,
           address: address,
+          maintenance_unit_code: ticket.MaintenanceUnitCode,
+          maintenance_unit_caption: ticket.MaintenanceUnitCaption,
         })
 
         ctx.status = 200
