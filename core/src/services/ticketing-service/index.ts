@@ -166,6 +166,7 @@ export const routes = (router: KoaRouter) => {
         } else {
           ctx.status = 200
           ctx.body = { message: 'No maintenance units found' }
+          logger.info('No maintenance units found')
           return
         }
       } catch (error) {
@@ -207,6 +208,7 @@ export const routes = (router: KoaRouter) => {
       } else {
         ctx.status = 200
         ctx.body = { message: 'No maintenance units found' }
+        logger.info('No maintenance units found')
         return
       }
     } catch (error) {
