@@ -42,6 +42,8 @@ export interface OdooPostTicket {
   tenant_id: string
   national_registration_number: string
   address: string
+  maintenance_unit_code: string
+  maintenance_unit_caption: string
 }
 
 const odoo = new Odoo({
@@ -134,6 +136,8 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
     'write_date',
     'stage_id',
     'phone_number',
+    'maintenance_unit_code',
+    'maintenance_unit_caption',
   ]
 
   const tickets: OdooGetTicket[] = await odoo.searchRead(
