@@ -77,6 +77,7 @@ export const createOfferForInternalParkingSpace = async (
         status: OfferStatus.Active,
       })
       log.push(`Created offer ${offer.id}`)
+      console.log(log)
       logger.debug(log)
 
       try {

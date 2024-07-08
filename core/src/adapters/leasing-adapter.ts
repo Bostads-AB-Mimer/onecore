@@ -16,6 +16,7 @@ import {
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
+import { AdapterResult } from './types'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -78,6 +79,27 @@ const getContactForPnr = async (
   return contactResponse.data.data
 }
 
+const getContactsDataBySearchQuery = async (
+  q: string
+): Promise<
+  AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode'>>, unknown>
+> => {
+  try {
+    const response = await axios.get<{ data: Array<Contact> }>(
+      `${tenantsLeasesServiceUrl}/contacts/search?q=${q}`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.data }
+    }
+
+    throw response.data
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.getContactsBySearchQuery')
+    return { ok: false, err }
+  }
+}
+
 const getContact = async (contactId: string): Promise<Contact | undefined> => {
   try {
     const contactResponse = await axios(
@@ -90,6 +112,23 @@ const getContact = async (contactId: string): Promise<Contact | undefined> => {
   }
 }
 
+const getContactByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> => {
+  try {
+    const res = await axios.get<{ data: Contact }>(
+      `${tenantsLeasesServiceUrl}/contact/contactCode/${contactCode}`
+    )
+
+    if (!res.data.data) return { ok: false, err: 'not-found' }
+
+    return { ok: true, data: res.data.data }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getContactForPhoneNumber = async (
   phoneNumber: string
 ): Promise<Contact | undefined> => {
@@ -97,7 +136,6 @@ const getContactForPhoneNumber = async (
     const contactResponse = await axios(
       tenantsLeasesServiceUrl + '/contact/phoneNumber/' + phoneNumber
     )
-
     return contactResponse.data.data
   } catch (error) {
     return undefined
@@ -202,7 +240,7 @@ const createNewListing = async (listingData: Listing) => {
   }
 }
 
-const applyForListing = async (applicantData: Applicant) => {
+const applyForListing = async (applicantData: Omit<Applicant, 'id'>) => {
   try {
     return await axios.post(
       `${tenantsLeasesServiceUrl}/listings/apply`,
@@ -442,4 +480,6 @@ export {
   setApplicantStatusActive,
   createOffer,
   updateApplicantStatus,
+  getContactsDataBySearchQuery,
+  getContactByContactCode,
 }

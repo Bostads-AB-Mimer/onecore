@@ -6,8 +6,9 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { logger } from 'onecore-utilities'
+
 import {
-  getContactForPnr,
   getLease,
   getLeasesForPnr,
   getCreditInformation,
@@ -20,9 +21,12 @@ import {
   withdrawApplicantByUser,
   getApplicantsAndListingByContactCode,
   getListingByIdWithDetailedApplicants,
+  getContactsDataBySearchQuery,
+  getContactByContactCode,
+  getContactForPnr,
 } from '../../adapters/leasing-adapter'
+import { ProcessStatus } from '../../common/types'
 import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
-import { logger } from 'onecore-utilities'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await getLease(rentalId, 'true')
@@ -65,13 +69,45 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
-   * Returns a contact
+   * Returns a contact by national registration number
    */
   router.get('(.*)/contact/:pnr', async (ctx) => {
     const responseData = await getContactForPnr(ctx.params.pnr)
 
     ctx.body = {
       data: responseData,
+    }
+  })
+
+  /**
+   * Returns a list of contacts by search query (natregnumber or contact code)
+   */
+  router.get('(.*)/contacts/search', async (ctx) => {
+    if (typeof ctx.query.q !== 'string') {
+      ctx.status = 400
+      return
+    }
+
+    const result = await getContactsDataBySearchQuery(ctx.query.q)
+
+    if (!result.ok) {
+      ctx.status = 500
+    } else {
+      ctx.status = 200
+      ctx.body = { data: result.data }
+    }
+  })
+
+  router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
+    const res = await getContactByContactCode(ctx.params.contactCode)
+    if (!res.ok) {
+      ctx.status = res.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      data: res.data,
     }
   })
 
@@ -122,9 +158,15 @@ export const routes = (router: KoaRouter) => {
     const result = await createOfferForInternalParkingSpace(
       ctx.params.listingId
     )
-    logger.debug(result)
 
-    ctx.status = result.httpStatus
+    if (result.processStatus === ProcessStatus.successful) {
+      logger.info(result)
+      ctx.status = 201
+      return
+    }
+
+    ctx.status = 500
+
     // Step 6: Communicate error to dev team and customer service
   })
 

@@ -21,6 +21,7 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import { Contact, Lease, ConsumerReport } from 'onecore-types'
+import * as factory from '../../../../test/factories'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -291,6 +292,64 @@ describe('lease-service', () => {
       expect(JSON.stringify(res.body)).toEqual(
         JSON.stringify(listingWithDetailedApplicantsMock)
       )
+    })
+  })
+
+  describe('GET /contact/contactCode/:contactCode', () => {
+    it('returns 200 and a contact', async () => {
+      const contact = factory.contact.build()
+      const getContactByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValueOnce({ ok: true, data: contact })
+
+      const res = await request(app.callback()).get(
+        `/contact/contactCode/${contact.contactCode}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getContactByContactCodeSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contact))
+    })
+
+    it('returns 404 if no contact', async () => {
+      const contact = factory.contact.build()
+      const getContactByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        `/contact/contactCode/${contact.contactCode}`
+      )
+
+      expect(res.status).toBe(404)
+      expect(getContactByContactCodeSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /contacts/search', () => {
+    it('returns 400 if missing query param', async () => {
+      const res = await request(app.callback()).get(`/contacts/search`)
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 and a list of contact data', async () => {
+      const contacts = factory.contact
+        .buildList(1)
+        .map(({ fullName, contactCode }) => ({ fullName, contactCode }))
+
+      const getContactsDataBySearchQuery = jest
+        .spyOn(tenantLeaseAdapter, 'getContactsDataBySearchQuery')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: contacts,
+        })
+
+      const res = await request(app.callback()).get(`/contacts/search?q=foo`)
+
+      expect(res.status).toBe(200)
+      expect(getContactsDataBySearchQuery).toHaveBeenCalled()
+      expect(res.body.data).toEqual(contacts)
     })
   })
 })
