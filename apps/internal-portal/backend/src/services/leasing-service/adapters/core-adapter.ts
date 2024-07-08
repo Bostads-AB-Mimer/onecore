@@ -1,8 +1,11 @@
+import { Applicant, Contact, DetailedApplicant, Listing } from 'onecore-types'
+
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
-import {DetailedApplicant, Listing} from "onecore-types";
 
 const coreBaseUrl = Config.core.url
+
+type AdapterResult<T, E> = { ok: false; err: E } | { ok: true; data: T }
 
 const getListingsWithApplicants = async () => {
   const url = `${coreBaseUrl}/listings-with-applicants`
@@ -14,7 +17,9 @@ const getListingsWithApplicants = async () => {
   return listingsResponse.data
 }
 
-const getListingWithApplicants = async (listingId: string): Promise<Listing & { applicants: DetailedApplicant[] }> => {
+const getListingWithApplicants = async (
+  listingId: string
+): Promise<Listing & { applicants: DetailedApplicant[] }> => {
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}`,
@@ -25,12 +30,12 @@ const getListingWithApplicants = async (listingId: string): Promise<Listing & { 
     url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
   }).then((res) => res.data)
 
-  const [listingResult, applicantsResult] = await Promise.all([listing, applicants])
+  const [listingResult, applicantsResult] = await Promise.all([
+    listing,
+    applicants,
+  ])
 
-  return {
-    ...listingResult,
-    applicants: applicantsResult || [],
-  }
+  return { ...listingResult, applicants: applicantsResult || [] }
 }
 
 const removeApplicant = async (applicantId: string) => {
@@ -42,4 +47,61 @@ const removeApplicant = async (applicantId: string) => {
   return response.data
 }
 
-export { getListingsWithApplicants, getListingWithApplicants, removeApplicant }
+const getContactsDataBySearchQuery = async (
+  q: string
+): Promise<
+  AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode'>>, unknown>
+> => {
+  try {
+    const result = await getFromCore<{ data: Array<Contact> }>({
+      method: 'get',
+      url: `${coreBaseUrl}/contacts/search?q=${q}`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.data }
+  } catch (err) {
+    return { ok: false, err }
+  }
+}
+
+const getContactByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, unknown>> => {
+  try {
+    const result = await getFromCore<{ data: Contact }>({
+      method: 'get',
+      url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.data }
+  } catch (err) {
+    return { ok: false, err }
+  }
+}
+
+const createNoteOfInterestForInternalParkingSpace = async (params: {
+  parkingSpaceId: string
+  applicationType: string
+  contactCode: string
+}): Promise<AdapterResult<unknown, unknown>> => {
+  try {
+    const response = await getFromCore<unknown>({
+      method: 'post',
+      url: `${coreBaseUrl}/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
+      data: params,
+    })
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    return { ok: false, err }
+  }
+}
+
+export {
+  getListingsWithApplicants,
+  getListingWithApplicants,
+  removeApplicant,
+  getContactsDataBySearchQuery,
+  getContactByContactCode,
+  createNoteOfInterestForInternalParkingSpace,
+}

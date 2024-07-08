@@ -32,9 +32,9 @@ const createHeaders = (accessToken: string) => {
   return headers
 }
 
-const getFromCore = async (
+const getFromCore = async <T = any>(
   config: AxiosRequestConfig<any>
-): Promise<AxiosResponse<any, any>> => {
+): Promise<AxiosResponse<T, any>> => {
   if (!accessToken) {
     accessToken = await getAccessToken()
   }
