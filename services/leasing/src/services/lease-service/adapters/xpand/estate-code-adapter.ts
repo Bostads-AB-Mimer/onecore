@@ -36,7 +36,7 @@ const getEstateCodeFromXpandByRentalObjectCode = async (
     .where('hyinf.hyresid', rentalObjectCode)
 
   if (rows.length) {
-    return rows[0]
+    return rows[0].estateCode
   }
   return undefined
 }

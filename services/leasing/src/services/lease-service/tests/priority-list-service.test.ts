@@ -30,11 +30,7 @@ import {
 } from '../priority-list-service'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
-import {
-  DetailedApplicantFactory,
-  LeaseFactory,
-  ListingFactory,
-} from './factory'
+import * as factory from './factories'
 import { leaseTypes } from '../../../constants/leaseTypes'
 
 const mockedApplicant: Applicant = {
@@ -207,31 +203,37 @@ describe('parseWaitingList', () => {
 
 describe('parseLeasesForHousingContract', () => {
   it('should return 1 housing contract if only 1 active housing contract', async () => {
-    const terminatedHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
-      noticeDate: new Date('2019-09-04T00:00:00.000Z'),
-      contractDate: new Date('2010-12-28T00:00:00.000Z'),
-      lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
-      approvalDate: new Date('2010-12-28T00:00:00.000Z'),
-      status: LeaseStatus.Terminated,
-    }).build()
+    const terminatedHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
+        noticeDate: new Date('2019-09-04T00:00:00.000Z'),
+        contractDate: new Date('2010-12-28T00:00:00.000Z'),
+        lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
+        approvalDate: new Date('2010-12-28T00:00:00.000Z'),
+        status: LeaseStatus.Terminated,
+      })
+      .build()
 
-    const activeHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
-      contractDate: new Date('2019-09-04T00:00:00.000Z'),
-      approvalDate: new Date('2019-09-04T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-    }).build()
+    const activeHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
+        contractDate: new Date('2019-09-04T00:00:00.000Z'),
+        approvalDate: new Date('2019-09-04T00:00:00.000Z'),
+        status: LeaseStatus.Active,
+      })
+      .build()
 
-    const activParkingSpaceContract = LeaseFactory.params({
-      type: leaseTypes.parkingspaceContract,
-      leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
-      contractDate: new Date('2022-06-29T00:00:00.000Z'),
-      approvalDate: new Date('2022-06-29T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-    }).build()
+    const activParkingSpaceContract = factory.lease
+      .params({
+        type: leaseTypes.parkingspaceContract,
+        leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
+        contractDate: new Date('2022-06-29T00:00:00.000Z'),
+        approvalDate: new Date('2022-06-29T00:00:00.000Z'),
+        status: LeaseStatus.Active,
+      })
+      .build()
 
     const leases = [
       terminatedHousingContract,
@@ -253,35 +255,41 @@ describe('parseLeasesForHousingContract', () => {
   })
 
   it('should return 1 active housing contract and 1 upcoming housing contract', async () => {
-    const soonToBeTerminatedHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-      noticeGivenBy: 'G',
-      noticeDate: thirtyDaysInThePastDate,
-      noticeTimeTenant: '3',
-      preferredMoveOutDate: thirtyDaysInTheFutureDate,
-      terminationDate: thirtyDaysInTheFutureDate,
-      contractDate: new Date('2021-09-08T00:00:00.000Z'),
-      lastDebitDate: thirtyDaysInTheFutureDate,
-      approvalDate: new Date('2021-09-08T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-    }).build()
+    const soonToBeTerminatedHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
+        noticeGivenBy: 'G',
+        noticeDate: thirtyDaysInThePastDate,
+        noticeTimeTenant: '3',
+        preferredMoveOutDate: thirtyDaysInTheFutureDate,
+        terminationDate: thirtyDaysInTheFutureDate,
+        contractDate: new Date('2021-09-08T00:00:00.000Z'),
+        lastDebitDate: thirtyDaysInTheFutureDate,
+        approvalDate: new Date('2021-09-08T00:00:00.000Z'),
+        status: LeaseStatus.Active,
+      })
+      .build()
 
-    const upcomingHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: thirtyDaysInTheFutureDate,
-      contractDate: new Date('2024-03-11T00:00:00.000Z'),
-      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
-      status: LeaseStatus.Upcoming,
-    }).build()
+    const upcomingHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: thirtyDaysInTheFutureDate,
+        contractDate: new Date('2024-03-11T00:00:00.000Z'),
+        approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+        status: LeaseStatus.Upcoming,
+      })
+      .build()
 
-    const parkingSpaceContract = LeaseFactory.params({
-      type: leaseTypes.parkingspaceContract,
-      leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-      contractDate: new Date('2021-12-02T00:00:00.000Z'),
-      approvalDate: new Date('2021-12-02T00:00:00.000Z'),
-      status: LeaseStatus.Active,
-    }).build()
+    const parkingSpaceContract = factory.lease
+      .params({
+        type: leaseTypes.parkingspaceContract,
+        leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
+        contractDate: new Date('2021-12-02T00:00:00.000Z'),
+        approvalDate: new Date('2021-12-02T00:00:00.000Z'),
+        status: LeaseStatus.Active,
+      })
+      .build()
 
     const leases = [
       soonToBeTerminatedHousingContract,
@@ -302,13 +310,15 @@ describe('parseLeasesForHousingContract', () => {
   })
 
   it('should return empty active housing contract and 1 upcoming housing contract', async () => {
-    const upcomingHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: thirtyDaysInTheFutureDate,
-      contractDate: new Date('2024-03-11T00:00:00.000Z'),
-      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
-      status: LeaseStatus.Upcoming,
-    }).build()
+    const upcomingHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: thirtyDaysInTheFutureDate,
+        contractDate: new Date('2024-03-11T00:00:00.000Z'),
+        approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+        status: LeaseStatus.Upcoming,
+      })
+      .build()
 
     const leases = [upcomingHousingContract]
 
@@ -332,20 +342,26 @@ describe('parseLeasesForHousingContract', () => {
 
 describe('parseLeasesForParkingSpaces', () => {
   it('should return all parking spaces from leases', async () => {
-    const housingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      status: LeaseStatus.Active,
-    }).build()
+    const housingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        status: LeaseStatus.Active,
+      })
+      .build()
 
-    const parkingSpacContract1 = LeaseFactory.params({
-      type: leaseTypes.parkingspaceContract,
-      status: LeaseStatus.Active,
-    }).build()
+    const parkingSpacContract1 = factory.lease
+      .params({
+        type: leaseTypes.parkingspaceContract,
+        status: LeaseStatus.Active,
+      })
+      .build()
 
-    const parkingSpacContract2 = LeaseFactory.params({
-      type: leaseTypes.parkingspaceContract,
-      status: LeaseStatus.Active,
-    }).build()
+    const parkingSpacContract2 = factory.lease
+      .params({
+        type: leaseTypes.parkingspaceContract,
+        status: LeaseStatus.Active,
+      })
+      .build()
 
     const leases = [housingContract, parkingSpacContract1, parkingSpacContract2]
 
@@ -367,9 +383,9 @@ describe('parseLeasesForParkingSpaces', () => {
 
 describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('should throw error if applicant does not belong to the same listing', () => {
-    const listing = ListingFactory.build({ id: 1 })
+    const listing = factory.listing.build({ id: 1 })
 
-    const applicant = DetailedApplicantFactory.build({ listingId: 2 })
+    const applicant = factory.detailedApplicant.build({ listingId: 2 })
 
     expect(() =>
       assignPriorityToApplicantBasedOnRentalRules(listing, applicant)
@@ -377,20 +393,26 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 1 if no parking space contract and valid housing contract in same residential area as listing', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'XYZ',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
 
-    const currentHousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const currentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant = DetailedApplicantFactory.params({
-      currentHousingContract: currentHousingContract,
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        currentHousingContract: currentHousingContract,
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -401,27 +423,35 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 1 if no parking space contract and upcoming housing contract in same residential area as listing', () => {
-    const listing = ListingFactory.params({
-      districtCode: 'XYZ',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
 
-    const currentHousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'ABC',
-      },
-    }).build()
+    const currentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'ABC',
+        },
+      })
+      .build()
 
-    const upcomingHousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const upcomingHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant = DetailedApplicantFactory.params({
-      currentHousingContract: currentHousingContract,
-      upcomingHousingContract: upcomingHousingContract,
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        currentHousingContract: currentHousingContract,
+        upcomingHousingContract: upcomingHousingContract,
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -432,16 +462,18 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 1 if has active parking space contract and applicationType equals Replace', () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
-    const parkingSpaceContract = LeaseFactory.build()
+    const parkingSpaceContract = factory.lease.build()
 
-    const applicant = DetailedApplicantFactory.params({
-      applicationType: 'Replace', //todo: add as enum
-      parkingSpaceContracts: [parkingSpaceContract],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        applicationType: 'Replace', //todo: add as enum
+        parkingSpaceContracts: [parkingSpaceContract],
+        currentHousingContract: factory.lease.params({}).build(),
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -452,16 +484,18 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 2 if has active parking space contract and applicationType equals Additional', () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
-    const parkingSpaceContract = LeaseFactory.build()
+    const parkingSpaceContract = factory.lease.build()
 
-    const applicant = DetailedApplicantFactory.params({
-      applicationType: 'Additional', //todo: add as enum
-      parkingSpaceContracts: [parkingSpaceContract],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        applicationType: 'Additional', //todo: add as enum
+        parkingSpaceContracts: [parkingSpaceContract],
+        currentHousingContract: factory.lease.params({}).build(),
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -472,18 +506,20 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 2 if has more than 1 active parking space contracts and applicationType equals Replace', () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
-    const parkingSpaceContract1 = LeaseFactory.build()
+    const parkingSpaceContract1 = factory.lease.build()
 
-    const parkingSpaceContract2 = LeaseFactory.build()
+    const parkingSpaceContract2 = factory.lease.build()
 
-    const applicant = DetailedApplicantFactory.params({
-      applicationType: 'Replace', //todo: add as enum
-      parkingSpaceContracts: [parkingSpaceContract1, parkingSpaceContract2],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        applicationType: 'Replace', //todo: add as enum
+        parkingSpaceContracts: [parkingSpaceContract1, parkingSpaceContract2],
+        currentHousingContract: factory.lease.params({}).build(),
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -494,24 +530,26 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   })
 
   it('applicant should get priority 3 if has more than 2 active parking space contracts applicationType equals Additional', () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
-    const parkingSpaceContract1 = LeaseFactory.build()
+    const parkingSpaceContract1 = factory.lease.build()
 
-    const parkingSpaceContract2 = LeaseFactory.build()
+    const parkingSpaceContract2 = factory.lease.build()
 
-    const parkingSpaceContract3 = LeaseFactory.build()
+    const parkingSpaceContract3 = factory.lease.build()
 
-    const applicant = DetailedApplicantFactory.params({
-      applicationType: 'Additional', //todo: add as enum
-      parkingSpaceContracts: [
-        parkingSpaceContract1,
-        parkingSpaceContract2,
-        parkingSpaceContract3,
-      ],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.detailedApplicant
+      .params({
+        applicationType: 'Additional', //todo: add as enum
+        parkingSpaceContracts: [
+          parkingSpaceContract1,
+          parkingSpaceContract2,
+          parkingSpaceContract3,
+        ],
+        currentHousingContract: factory.lease.build(),
+        listingId: listing.id,
+      })
+      .build()
 
     const result = assignPriorityToApplicantBasedOnRentalRules(
       listing,
@@ -524,102 +562,122 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
 describe('sortApplicantsBasedOnRentalRules', () => {
   it('should sort applicants in expected order based on rental rules', () => {
-    const listing = ListingFactory.params({
-      districtCode: 'XYZ',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
 
     //priority 1 applicant
     //has no parking space contract and active housing contract in same residential area as listing
-    const applicant1HousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const applicant1HousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant1 = DetailedApplicantFactory.params({
-      currentHousingContract: applicant1HousingContract,
-      listingId: listing.id,
-      queuePoints: 10,
-    }).build()
+    const applicant1 = factory.detailedApplicant
+      .params({
+        currentHousingContract: applicant1HousingContract,
+        listingId: listing.id,
+        queuePoints: 10,
+      })
+      .build()
 
     //priority 1 applicant
     //no parking space contract and upcoming housing contract in same residential area as listing
-    const applicant2CurrentHousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'ABC',
-      },
-    }).build()
+    const applicant2CurrentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'ABC',
+        },
+      })
+      .build()
 
-    const applicant2UpcomingHousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const applicant2UpcomingHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant2 = DetailedApplicantFactory.params({
-      currentHousingContract: applicant2CurrentHousingContract,
-      upcomingHousingContract: applicant2UpcomingHousingContract,
-      listingId: listing.id,
-      queuePoints: 20,
-    }).build()
+    const applicant2 = factory.detailedApplicant
+      .params({
+        currentHousingContract: applicant2CurrentHousingContract,
+        upcomingHousingContract: applicant2UpcomingHousingContract,
+        listingId: listing.id,
+        queuePoints: 20,
+      })
+      .build()
 
     //priority 1 applicant
     //active parking space contract and applicationType equals Replace
-    const applicant3ParkingSpaceContract = LeaseFactory.build()
+    const applicant3ParkingSpaceContract = factory.lease.build()
 
-    const applicant3 = DetailedApplicantFactory.params({
-      applicationType: 'Replace', //todo: add as enum
-      parkingSpaceContracts: [applicant3ParkingSpaceContract],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-      queuePoints: 30,
-    }).build()
+    const applicant3 = factory.detailedApplicant
+      .params({
+        applicationType: 'Replace', //todo: add as enum
+        parkingSpaceContracts: [applicant3ParkingSpaceContract],
+        currentHousingContract: factory.lease.build(),
+        listingId: listing.id,
+        queuePoints: 30,
+      })
+      .build()
 
     //priority 2 applicant
     //active parking space contract and applicationType equals Additional
-    const applicant4ParkingSpaceContract = LeaseFactory.build()
+    const applicant4ParkingSpaceContract = factory.lease.build()
 
-    const applicant4 = DetailedApplicantFactory.params({
-      applicationType: 'Additional', //todo: add as enum
-      parkingSpaceContracts: [applicant4ParkingSpaceContract],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-      queuePoints: 40,
-    }).build()
+    const applicant4 = factory.detailedApplicant
+      .params({
+        applicationType: 'Additional', //todo: add as enum
+        parkingSpaceContracts: [applicant4ParkingSpaceContract],
+        currentHousingContract: factory.lease.build(),
+        listingId: listing.id,
+        queuePoints: 40,
+      })
+      .build()
 
     //priority 2 applicant
     //more than 1 active parking space contracts and applicationType equals Replace
-    const applicant5ParkingSpaceContract1 = LeaseFactory.build()
-    const applicant5ParkingSpaceContract2 = LeaseFactory.build()
+    const applicant5ParkingSpaceContract1 = factory.lease.build()
+    const applicant5ParkingSpaceContract2 = factory.lease.build()
 
-    const applicant5 = DetailedApplicantFactory.params({
-      applicationType: 'Replace', //todo: add as enum
-      parkingSpaceContracts: [
-        applicant5ParkingSpaceContract1,
-        applicant5ParkingSpaceContract2,
-      ],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-      queuePoints: 50,
-    }).build()
+    const applicant5 = factory.detailedApplicant
+      .params({
+        applicationType: 'Replace', //todo: add as enum
+        parkingSpaceContracts: [
+          applicant5ParkingSpaceContract1,
+          applicant5ParkingSpaceContract2,
+        ],
+        currentHousingContract: factory.lease.build(),
+        listingId: listing.id,
+        queuePoints: 50,
+      })
+      .build()
 
     //priority 3 applicant
     //has more than 2 active parking space contracts applicationType equals Additional
-    const Applicant6parkingSpaceContract1 = LeaseFactory.build()
-    const Applicant6parkingSpaceContract2 = LeaseFactory.build()
-    const Applicant6parkingSpaceContract3 = LeaseFactory.build()
+    const Applicant6parkingSpaceContract1 = factory.lease.build()
+    const Applicant6parkingSpaceContract2 = factory.lease.build()
+    const Applicant6parkingSpaceContract3 = factory.lease.build()
 
-    const applicant6 = DetailedApplicantFactory.params({
-      applicationType: 'Additional', //todo: add as enum
-      parkingSpaceContracts: [
-        Applicant6parkingSpaceContract1,
-        Applicant6parkingSpaceContract2,
-        Applicant6parkingSpaceContract3,
-      ],
-      currentHousingContract: LeaseFactory.params({}).build(),
-      listingId: listing.id,
-      queuePoints: 60,
-    }).build()
+    const applicant6 = factory.detailedApplicant
+      .params({
+        applicationType: 'Additional', //todo: add as enum
+        parkingSpaceContracts: [
+          Applicant6parkingSpaceContract1,
+          Applicant6parkingSpaceContract2,
+          Applicant6parkingSpaceContract3,
+        ],
+        currentHousingContract: factory.lease.build(),
+        listingId: listing.id,
+        queuePoints: 60,
+      })
+      .build()
 
     const applicants = [
       applicant1,
@@ -671,42 +729,52 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   })
 
   it('should handle priority 1 applicants with current and upcoming housing contracts', () => {
-    const listing = ListingFactory.params({
-      districtCode: 'XYZ',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
 
     //priority 1 applicant
     //has no parking space contract and active housing contract in same residential area as listing
-    const applicant1HousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const applicant1HousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant1 = DetailedApplicantFactory.params({
-      currentHousingContract: applicant1HousingContract,
-      listingId: listing.id,
-      queuePoints: 20,
-    }).build()
+    const applicant1 = factory.detailedApplicant
+      .params({
+        currentHousingContract: applicant1HousingContract,
+        listingId: listing.id,
+        queuePoints: 20,
+      })
+      .build()
 
     //priority 1 applicant
     //has no parking space contract and upcoming housing contract in same residential area as listing
-    const applicant2UpcomingHousingContract = LeaseFactory.params({
-      type: leaseTypes.housingContract,
-      leaseStartDate: thirtyDaysInTheFutureDate,
-      contractDate: new Date('2024-03-11T00:00:00.000Z'),
-      approvalDate: new Date('2024-03-11T00:00:00.000Z'),
-      status: LeaseStatus.Upcoming,
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const applicant2UpcomingHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: thirtyDaysInTheFutureDate,
+        contractDate: new Date('2024-03-11T00:00:00.000Z'),
+        approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+        status: LeaseStatus.Upcoming,
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant2 = DetailedApplicantFactory.params({
-      upcomingHousingContract: applicant2UpcomingHousingContract,
-      listingId: listing.id,
-      queuePoints: 10,
-    }).build()
+    const applicant2 = factory.detailedApplicant
+      .params({
+        upcomingHousingContract: applicant2UpcomingHousingContract,
+        listingId: listing.id,
+        queuePoints: 10,
+      })
+      .build()
 
     const applicants = [applicant1, applicant2]
 
@@ -733,32 +801,40 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   })
 
   it('should handle applicants with undefined priority', () => {
-    const listing = ListingFactory.params({
-      districtCode: 'XYZ',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
 
     //priority 1 applicant
     //has no parking space contract and active housing contract in same residential area as listing
-    const applicant1HousingContract = LeaseFactory.params({
-      residentialArea: {
-        code: 'XYZ',
-      },
-    }).build()
+    const applicant1HousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
 
-    const applicant1 = DetailedApplicantFactory.params({
-      currentHousingContract: applicant1HousingContract,
-      listingId: listing.id,
-      queuePoints: 20,
-    }).build()
+    const applicant1 = factory.detailedApplicant
+      .params({
+        currentHousingContract: applicant1HousingContract,
+        listingId: listing.id,
+        queuePoints: 20,
+      })
+      .build()
 
     //priority undefined applicant
     //has no active or upcoming housing contract
-    const applicant2 = DetailedApplicantFactory.params({
-      currentHousingContract: undefined,
-      upcomingHousingContract: undefined,
-      listingId: listing.id,
-      queuePoints: 10,
-    }).build()
+    const applicant2 = factory.detailedApplicant
+      .params({
+        currentHousingContract: undefined,
+        upcomingHousingContract: undefined,
+        listingId: listing.id,
+        queuePoints: 10,
+      })
+      .build()
 
     const applicants = [applicant1, applicant2]
 

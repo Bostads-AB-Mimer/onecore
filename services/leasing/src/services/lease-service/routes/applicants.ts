@@ -78,7 +78,7 @@ export const routes = (router: KoaRouter) => {
 
   const updateApplicantStatusParams = z.object({
     status: z.nativeEnum(ApplicantStatus),
-    contactCode: z.string(),
+    contactCode: z.string().optional(),
   })
 
   router.patch(
@@ -92,7 +92,7 @@ export const routes = (router: KoaRouter) => {
         //if the applicant is withdrawn by the user, make sure the application belongs to that particular user
         if (status === ApplicantStatus.WithdrawnByUser) {
           const applicant = await getApplicantById(Number(id))
-          if (applicant?.contactCode != contactCode) {
+          if (applicant?.contactCode !== contactCode) {
             ctx.status = 404
             ctx.body = { error: 'Applicant not found for this contactCode' }
             return

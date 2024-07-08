@@ -11,7 +11,7 @@ jest.mock('onecore-utilities', () => {
   }
 })
 
-import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import * as tenantLeaseAdapter from '../../../adapters/xpand/tenant-lease-adapter'
 
 jest.mock('knex', () => () => ({
   raw: jest.fn().mockReturnThis(),

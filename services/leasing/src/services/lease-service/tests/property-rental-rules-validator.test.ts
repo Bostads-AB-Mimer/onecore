@@ -1,11 +1,10 @@
-import { DetailedApplicantFactory, LeaseFactory } from './factory'
-
 import {
   doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules,
   doesUserHaveHousingContractInSamePropertyAsListing,
 } from '../property-rental-rules-validator'
 import * as estateCodeAdapter from '../adapters/xpand/estate-code-adapter'
 import { getEstateCodeFromXpandByRentalObjectCode } from '../adapters/xpand/estate-code-adapter'
+import * as factory from './factories'
 
 describe('doesPropertyHaveSpecificRentalRules', () => {
   it('shouldReturnFalseIfPropertyDoesNotHaveSpecificRentalRules', () => {
@@ -30,7 +29,7 @@ const listingEstateCode = '24104'
 
 describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
   it('shouldReturnFalseIfNoHousingContract', async () => {
-    const detailedApplicant = DetailedApplicantFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
       currentHousingContract: undefined,
       upcomingHousingContract: undefined,
     })
@@ -59,9 +58,9 @@ describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
       getEstateCodeFromXpandByRentalObjectCode(housingContractRentalObjectCode)
     ).resolves.toBe('NON_MATCHING_ESTATE_CODE')
 
-    const detailedApplicant = DetailedApplicantFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
       currentHousingContract: undefined,
-      upcomingHousingContract: LeaseFactory.build({
+      upcomingHousingContract: factory.lease.build({
         rentalPropertyId: housingContractRentalObjectCode,
       }),
     })
@@ -86,8 +85,8 @@ describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
         return mockData[rentalObjectCode]
       })
 
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         rentalPropertyId: housingContractRentalObjectCode,
       }),
       upcomingHousingContract: undefined,
@@ -113,8 +112,8 @@ describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
         return mockData[rentalObjectCode]
       })
 
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         rentalPropertyId: housingContractRentalObjectCode,
       }),
       upcomingHousingContract: undefined,
@@ -140,9 +139,9 @@ describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
         return mockData[rentalObjectCode]
       })
 
-    const detailedApplicant = DetailedApplicantFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
       currentHousingContract: undefined,
-      upcomingHousingContract: LeaseFactory.build({
+      upcomingHousingContract: factory.lease.build({
         rentalPropertyId: housingContractRentalObjectCode,
       }),
     })

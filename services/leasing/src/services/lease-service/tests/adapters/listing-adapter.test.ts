@@ -12,7 +12,7 @@ jest.mock('onecore-utilities', () => {
 })
 
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
-import * as listingAdapter from '../adapters/listing-adapter'
+import * as listingAdapter from '../../adapters/listing-adapter'
 
 jest.mock('knex', () => () => ({
   raw: jest.fn().mockReturnThis(),

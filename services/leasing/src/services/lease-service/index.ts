@@ -1,5 +1,7 @@
 import KoaRouter from '@koa/router'
-import { Applicant, Listing, DetailedApplicant } from 'onecore-types'
+import { ApplicantStatus, Listing, DetailedApplicant } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+import { z } from 'zod'
 
 import {
   getContactByContactCode,
@@ -25,17 +27,15 @@ import {
   getWaitingList,
 } from './adapters/xpand/xpand-soap-adapter'
 import {
-  getInvoicesByContactCode,
-  getUnpaidInvoicesByContactCode,
-} from './adapters/xpand/invoices-adapter'
-import {
   addPriorityToApplicantsBasedOnRentalRules,
   getDetailedApplicantInformation,
   sortApplicantsBasedOnRentalRules,
 } from './priority-list-service'
 
-import { routes as offerRoutes } from './offers'
-import { logger } from 'onecore-utilities'
+import { routes as offerRoutes } from './routes/offers'
+import { routes as contactRoutes } from './routes/contacts'
+import { routes as invoiceRoutes } from './routes/invoices'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 interface CreateLeaseRequest {
   parkingSpaceId: string
@@ -51,6 +51,8 @@ interface CreateWaitingListRequest {
 
 export const routes = (router: KoaRouter) => {
   offerRoutes(router)
+  contactRoutes(router)
+  invoiceRoutes(router)
   /**
    * Returns leases for a national registration number with populated sub objects
    */
@@ -167,33 +169,6 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
-   * Gets all invoices for a contact, filtered on paid and unpaid.
-   */
-  router.get('(.*)/contact/invoices/contactCode/:contactCode', async (ctx) => {
-    const responseData = await getInvoicesByContactCode(ctx.params.contactCode)
-
-    ctx.body = {
-      data: responseData,
-    }
-  })
-
-  /**
-   * Gets the detailed status of a persons unpaid invoices.
-   */
-  router.get(
-    '(.*)/contact/unpaidInvoices/contactCode/:contactCode',
-    async (ctx) => {
-      const responseData = await getUnpaidInvoicesByContactCode(
-        ctx.params.contactCode
-      )
-
-      ctx.body = {
-        data: responseData,
-      }
-    }
-  )
-
-  /**
    * Creates or updates a lease.
    */
   router.post('(.*)/leases', async (ctx) => {
@@ -255,6 +230,16 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  const CreateApplicantRequestParamsSchema = z.object({
+    name: z.string(),
+    nationalRegistrationNumber: z.string(),
+    contactCode: z.string(),
+    applicationDate: z.coerce.date(),
+    applicationType: z.string().optional(),
+    status: z.nativeEnum(ApplicantStatus),
+    listingId: z.number(),
+  })
+
   /**
    * Endpoint to apply for a listing.
    */
@@ -263,32 +248,39 @@ export const routes = (router: KoaRouter) => {
   //cannot add duplicate applicant
   //handle non existing applicant contact code
 
-  router.post('(.*)/listings/apply', async (ctx) => {
-    try {
-      const applicantData = <Applicant>ctx.request.body
+  router.post(
+    '(.*)/listings/apply',
+    parseRequestBody(CreateApplicantRequestParamsSchema),
+    async (ctx) => {
+      try {
+        const applicantData = ctx.request.body
 
-      const exists = await applicationExists(
-        applicantData.contactCode,
-        applicantData.listingId
-      )
-      if (exists) {
-        ctx.status = 409 // Conflict
-        ctx.body = { error: 'Applicant has already applied for this listing.' }
-        return
-      }
+        const exists = await applicationExists(
+          applicantData.contactCode,
+          applicantData.listingId
+        )
 
-      const applicationId = await createApplication(applicantData)
-      ctx.status = 201 // HTTP status code for Created
-      ctx.body = { applicationId }
-    } catch (error) {
-      ctx.status = 500 // Internal Server Error
-      if (error instanceof Error) {
-        ctx.body = { error: error.message }
-      } else {
-        ctx.body = { error: 'An unexpected error occurred.' }
+        if (exists) {
+          ctx.status = 409 // Conflict
+          ctx.body = {
+            error: 'Applicant has already applied for this listing.',
+          }
+          return
+        }
+
+        const applicationId = await createApplication(applicantData)
+        ctx.status = 201 // HTTP status code for Created
+        ctx.body = { applicationId }
+      } catch (error) {
+        ctx.status = 500 // Internal Server Error
+        if (error instanceof Error) {
+          ctx.body = { error: error.message }
+        } else {
+          ctx.body = { error: 'An unexpected error occurred.' }
+        }
       }
     }
-  })
+  )
 
   router.get('/listings/by-id/:listingId', async (ctx) => {
     try {

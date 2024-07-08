@@ -1,3 +1,7 @@
+import { InvoiceTransactionType, PaymentStatus } from 'onecore-types'
+
+import * as invoiceAdapter from '../../../adapters/xpand/invoices-adapter'
+
 jest.mock('onecore-utilities', () => {
   return {
     logger: {
@@ -10,20 +14,6 @@ jest.mock('onecore-utilities', () => {
     },
   }
 })
-
-import request from 'supertest'
-import Koa from 'koa'
-import KoaRouter from '@koa/router'
-import bodyParser from 'koa-bodyparser'
-import { routes } from '../index'
-import * as invoiceAdapter from '../adapters/xpand/invoices-adapter'
-import { InvoiceTransactionType, PaymentStatus } from 'onecore-types'
-
-const app = new Koa()
-const router = new KoaRouter()
-routes(router)
-app.use(bodyParser())
-app.use(router.routes())
 
 jest.mock('knex', () => () => ({
   select: jest.fn().mockReturnThis(),
@@ -108,74 +98,39 @@ jest.mock('knex', () => () => ({
     ])
   ),
 }))
-describe('invoices-service', () => {
-  describe('GET /getInvoicesByContactCode', () => {
-    it('responds with an object of invoices', async () => {
-      const getInvoicesSpy = jest.spyOn(
-        invoiceAdapter,
-        'getInvoicesByContactCode'
-      )
 
-      const res = await request(app.callback()).get(
-        '/contact/invoices/contactCode/contactKey'
-      )
-      expect(res.status).toBe(200)
-      expect(getInvoicesSpy).toHaveBeenCalled()
-      expect(res.body.data).toBeDefined()
-      expect(res.body.data).toBeInstanceOf(Array)
-    })
+describe('getInvoicesByContactCode', () => {
+  it('should return invoices for a contact', async () => {
+    jest.spyOn(invoiceAdapter, 'getInvoicesByContactCode')
+    const result = await invoiceAdapter.getInvoicesByContactCode('contactKey')
+
+    expect(result).toBeDefined()
+    expect(result).toHaveLength(5)
   })
 
-  describe('GET /getUnpaidInvoicesByContactCode', () => {
-    it('responds with an object of invoices', async () => {
-      const getInvoicesSpy = jest.spyOn(
-        invoiceAdapter,
-        'getUnpaidInvoicesByContactCode'
-      )
+  it('should return unpaid and paid invoices for a contact', async () => {
+    const result = await invoiceAdapter.getInvoicesByContactCode('contactKey')
 
-      const res = await request(app.callback()).get(
-        '/contact/unpaidInvoices/contactCode/contactKey'
-      )
-      expect(res.status).toBe(200)
-      expect(res.body.data).toBeInstanceOf(Object)
-      expect(getInvoicesSpy).toHaveBeenCalled()
-      expect(res.body.data).toBeDefined()
-    })
+    expect(result).toBeDefined()
+    expect(
+      result?.filter((invoice) => {
+        return invoice.paymentStatus === PaymentStatus.Unpaid
+      })
+    ).toHaveLength(3)
+    expect(
+      result?.filter((invoice) => {
+        return invoice.paymentStatus === PaymentStatus.Paid
+      })
+    ).toHaveLength(2)
   })
+})
 
-  describe('getInvoicesByContactCode', () => {
-    it('should return invoices for a contact', async () => {
-      jest.spyOn(invoiceAdapter, 'getInvoicesByContactCode')
-      const result = await invoiceAdapter.getInvoicesByContactCode('contactKey')
+describe('getUnpaidInvoicesByContactCode', () => {
+  it('should return unpaid invoices for a contact', async () => {
+    const result =
+      await invoiceAdapter.getUnpaidInvoicesByContactCode('contactKey')
 
-      expect(result).toBeDefined()
-      expect(result).toHaveLength(5)
-    })
-
-    it('should return unpaid and paid invoices for a contact', async () => {
-      const result = await invoiceAdapter.getInvoicesByContactCode('contactKey')
-
-      expect(result).toBeDefined()
-      expect(
-        result?.filter((invoice) => {
-          return invoice.paymentStatus === PaymentStatus.Unpaid
-        })
-      ).toHaveLength(3)
-      expect(
-        result?.filter((invoice) => {
-          return invoice.paymentStatus === PaymentStatus.Paid
-        })
-      ).toHaveLength(2)
-    })
-  })
-
-  describe('getUnpaidInvoicesByContactCode', () => {
-    it('should return unpaid invoices for a contact', async () => {
-      const result =
-        await invoiceAdapter.getUnpaidInvoicesByContactCode('contactKey')
-
-      expect(result).toBeDefined()
-      expect(result).toHaveLength(3)
-    })
+    expect(result).toBeDefined()
+    expect(result).toHaveLength(3)
   })
 })

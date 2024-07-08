@@ -1,5 +1,3 @@
-import { ApplicantFactory, ListingFactory } from './factory'
-
 jest.mock('onecore-utilities', () => {
   return {
     logger: {

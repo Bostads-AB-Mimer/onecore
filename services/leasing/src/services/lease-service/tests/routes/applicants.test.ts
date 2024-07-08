@@ -1,11 +1,5 @@
 import request from 'supertest'
-import {
-  ApplicantFactory,
-  DetailedApplicantFactory,
-  LeaseFactory,
-  ListingFactory,
-} from '../factory'
-
+import * as factory from '../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
 import * as estateCodeAdapter from '../../adapters/xpand/estate-code-adapter'
 import * as priorityListService from '../../priority-list-service'
@@ -33,11 +27,13 @@ describe('GET /applicants/:contactCode/:listingId', () => {
     expect(res.status).toBe(404)
   })
   it('responds with 200 on success', async () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
@@ -72,7 +68,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 404 if property info does not exist', async () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -94,7 +90,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 200 if rental rules does not apply to property', async () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -122,7 +118,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 404 if applicant does not exist', async () => {
-    const listing = ListingFactory.build()
+    const listing = factory.listing.build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -153,10 +149,12 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 403 if applicant does not have a current or upcoming housing contract in same area as listing', async () => {
-    const listing = ListingFactory.build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing.build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -176,7 +174,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
         return mockData[rentalObjectCode]
       })
 
-    const detailedApplicant = DetailedApplicantFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
       currentHousingContract: undefined,
       upcomingHousingContract: undefined,
     })
@@ -199,10 +197,12 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 403 if user has no current parking space in the same property as listing', async () => {
-    const listing = ListingFactory.build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing.build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -214,8 +214,8 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
 
     const currentHousingContractRentalObjectCode =
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
       upcomingHousingContract: undefined,
@@ -253,10 +253,12 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 409 if user already has parking space in the same property as listing', async () => {
-    const listing = ListingFactory.build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing.build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -269,13 +271,13 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
     const currentHousingContractRentalObjectCode =
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
     const parkingSpaceRentalObjectCode = 'PARKING_SPACE_RENTAL_OBJECT_CODE'
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
       upcomingHousingContract: undefined,
       parkingSpaceContracts: [
-        LeaseFactory.build({
+        factory.lease.build({
           type: leaseTypes.parkingspaceContract,
           rentalPropertyId: parkingSpaceRentalObjectCode,
         }),
@@ -315,10 +317,12 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
   })
 
   it('responds with 403 if user already has parking space but not in the same property as listing', async () => {
-    const listing = ListingFactory.build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing.build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -331,13 +335,13 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:listingId', (
     const currentHousingContractRentalObjectCode =
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
     const parkingSpaceRentalObjectCode = 'PARKING_SPACE_RENTAL_OBJECT_CODE'
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
       upcomingHousingContract: undefined,
       parkingSpaceContracts: [
-        LeaseFactory.build({
+        factory.lease.build({
           type: leaseTypes.parkingspaceContract,
           rentalPropertyId: parkingSpaceRentalObjectCode,
         }),
@@ -393,9 +397,11 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
   })
 
   it('responds with 404 if applicant does not exist', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'OXB',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'OXB',
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -416,9 +422,11 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
   })
 
   it('responds with 200 if rental rules does not apply to listing', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'AREA_WHERE_RULES_DO_NOT_APPLY',
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'AREA_WHERE_RULES_DO_NOT_APPLY',
+      })
+      .build()
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
       .mockResolvedValueOnce(listing)
@@ -435,12 +443,16 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
   })
 
   it('responds with 403 if applicant does not have a current or upcoming housing contract in same area as listing', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'OXB',
-    }).build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'OXB',
+      })
+      .build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -450,7 +462,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
       .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
       .mockResolvedValueOnce(applicant)
 
-    const detailedApplicant = DetailedApplicantFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
       currentHousingContract: undefined,
       upcomingHousingContract: undefined,
     })
@@ -473,12 +485,16 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
   })
 
   it('responds with 200 if applicant has no current parking space in the same area as listing', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'OXB',
-    }).build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'OXB',
+      })
+      .build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -488,8 +504,8 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
       .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
       .mockResolvedValueOnce(applicant)
 
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         residentialArea: { code: 'OXB' },
       }),
       upcomingHousingContract: undefined,
@@ -513,12 +529,16 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
   })
 
   it('responds with 409 if applicant has a current parking space in the same area as listing', async () => {
-    const listing = ListingFactory.params({
-      districtCode: 'OXB',
-    }).build()
-    const applicant = ApplicantFactory.params({
-      listingId: listing.id,
-    }).build()
+    const listing = factory.listing
+      .params({
+        districtCode: 'OXB',
+      })
+      .build()
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
 
     const getListingSpy = jest
       .spyOn(listingAdapter, 'getListingById')
@@ -528,13 +548,13 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:listin
       .spyOn(listingAdapter, 'getApplicantByContactCodeAndListingId')
       .mockResolvedValueOnce(applicant)
 
-    const detailedApplicant = DetailedApplicantFactory.build({
-      currentHousingContract: LeaseFactory.build({
+    const detailedApplicant = factory.detailedApplicant.build({
+      currentHousingContract: factory.lease.build({
         residentialArea: { code: 'OXB' },
       }),
       upcomingHousingContract: undefined,
       parkingSpaceContracts: [
-        LeaseFactory.build({
+        factory.lease.build({
           residentialArea: { code: 'OXB' },
         }),
       ],
