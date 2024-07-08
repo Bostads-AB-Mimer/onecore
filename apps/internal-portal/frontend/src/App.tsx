@@ -1,3 +1,4 @@
+import 'react-toastify/dist/ReactToastify.css'
 import { CssBaseline, Grid, ThemeProvider } from '@mui/material'
 import { Routes, Route, Outlet } from 'react-router-dom'
 import {
@@ -7,6 +8,7 @@ import {
 } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { ErrorBoundary } from 'react-error-boundary'
+import { ToastContainer } from 'react-toastify'
 
 import Home from './pages/Home/Home'
 import SiteHeader from './components/SiteHeader'
@@ -45,6 +47,7 @@ const PageBase = () => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ToastContainer />
       <ThemeProvider theme={mdTheme}>
         <CssBaseline />
         <Grid container sx={{ marginBottom: 2, marginTop: 0 }}>

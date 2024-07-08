@@ -4,9 +4,9 @@ import { Listing } from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-export const useParkingSpaces = () =>
+export const useParkingSpaceListings = () =>
   useQuery<Array<Listing>, AxiosError>({
-    queryKey: ['parkingSpaces'],
+    queryKey: ['parkingSpaceListings'],
     queryFn: () =>
       axios
         .get(`${backendUrl}/leases/listings-with-applicants`, {

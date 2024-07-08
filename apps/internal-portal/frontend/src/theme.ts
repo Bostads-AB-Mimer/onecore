@@ -5,6 +5,7 @@ import Bison from '../assets/Bison-Regular.woff2'
 import GraphikBold from '../assets/Graphik-Bold.woff2'
 import GraphikRegular from '../assets/Graphik-Regular.woff2'
 import type {} from '@mui/x-data-grid/themeAugmentation'
+import { radioClasses } from '@mui/material'
 
 declare module '@mui/material/styles' {
   interface TypographyVariants {
@@ -85,7 +86,7 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     background: {},
-    divider: '#951B81',
+    divider: 'rgba(218, 215, 211, 1)',
     grey: { '200': 'rgba(217, 217, 217, 0.5)' },
     warmGrey: {
       main: 'rgba(73, 72, 69, 1)',
@@ -144,6 +145,16 @@ const theme = createTheme({
 
 export const mdTheme = createTheme(theme, {
   components: {
+    MuiRadio: {
+      styleOverrides: {
+        root: {
+          color: 'black',
+          [`&.${radioClasses.checked}`]: {
+            color: 'black',
+          },
+        },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         html: [
@@ -187,7 +198,7 @@ export const mdTheme = createTheme(theme, {
         {
           props: { variant: 'dark' },
           style: {
-            borderRadius: '8px',
+            borderRadius: '6px',
             textTransform: 'none',
             fontWeight: 700,
             backgrund: 'rgba(0, 0, 0, 1)',
@@ -204,7 +215,7 @@ export const mdTheme = createTheme(theme, {
         {
           props: { variant: 'dark-outlined' },
           style: {
-            borderRadius: '8px',
+            borderRadius: '6px',
             textTransform: 'none',
             border: '2px solid black',
             fontWeight: 700,

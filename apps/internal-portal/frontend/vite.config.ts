@@ -13,7 +13,7 @@ export default defineConfig({
     setupFiles: './src/test/setupTests.ts',
   },
   server: {
-    port: 7000,
+    port: 7003,
     proxy: {
       '/api': {
         target: 'http://localhost:7001',

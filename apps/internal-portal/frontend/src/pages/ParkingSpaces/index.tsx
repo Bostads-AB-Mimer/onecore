@@ -1,14 +1,14 @@
-import { Box, IconButton, Stack, TextField, Typography } from '@mui/material'
+import { Box, IconButton, Stack, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
 import type { GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
 import { Listing } from 'onecore-types'
 import { Link } from 'react-router-dom'
 
-import { DataGridTable } from '../../components'
-import { useParkingSpaces } from './hooks/useParkingSpaces'
+import { DataGridTable, SearchBar } from '../../components'
+import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
-import { mdTheme } from '../../theme'
+import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
 
 const sharedProps = {
   editable: false,
@@ -16,7 +16,7 @@ const sharedProps = {
 }
 
 const ParkingSpaces = () => {
-  const parkingSpaces = useParkingSpaces()
+  const parkingSpaces = useParkingSpaceListings()
   const [searchString, setSearchString] = useState<string>()
   const dateFormatter = new Intl.DateTimeFormat('sv-SE')
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
@@ -78,10 +78,22 @@ const ParkingSpaces = () => {
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
     },
     {
-      field: 'action',
+      field: 'action-add',
       headerName: '',
       sortable: false,
       filterable: false,
+      flex: 1,
+      disableColumnMenu: true,
+      renderCell: (v) => (
+        <CreateApplicantForListing disabled={false} listing={v.row} />
+      ),
+    },
+    {
+      field: 'action-link',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      flex: 0.5,
       disableColumnMenu: true,
       renderCell: (v) => (
         <Link to={`/parkingspace/${v.id}`}>
@@ -108,7 +120,7 @@ const ParkingSpaces = () => {
         paddingBottom="2rem"
       >
         <Typography variant="h1">Bilplatser</Typography>
-        <SearchApplicant
+        <SearchBar
           onChange={onSearch}
           disabled={parkingSpaces.isLoading}
           placeholder="Sök kundnummer, personnummer..."
@@ -167,46 +179,5 @@ const filterListings = (
     return containsContactCode || containsNationalRegistrationNumber
   })
 }
-
-type SearchApplicantProps = {
-  onChange: (v: string) => void
-  disabled: boolean
-  placeholder: string
-}
-
-const SearchApplicant = (props: SearchApplicantProps) => (
-  <TextField
-    size="small"
-    variant="outlined"
-    placeholder={props.placeholder}
-    disabled={props.disabled}
-    onChange={(e) => props.onChange(e.currentTarget.value)}
-    sx={{
-      width: '100%',
-      maxWidth: 350,
-      '& .MuiOutlinedInput-root': {
-        fontSize: '16px',
-        paddingTop: '2px',
-        paddingBottom: '2px',
-        color: '#000',
-        '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: mdTheme.palette.warmGrey.main,
-          borderRadius: '4px',
-          borderWidth: '1.5px',
-        },
-        '&.Mui-focused': {
-          '& .MuiOutlinedInput-notchedOutline': {
-            borderWidth: '2.5px',
-            borderColor: '#2e2e2e',
-          },
-        },
-        '& .MuiInputLabel-outlined': {
-          color: '#2e2e2e',
-          '&.Mui-focused': {},
-        },
-      },
-    }}
-  />
-)
 
 export default ParkingSpaces

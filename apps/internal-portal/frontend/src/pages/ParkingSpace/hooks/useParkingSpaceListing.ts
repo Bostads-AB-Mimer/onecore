@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { DetailedApplicant } from 'onecore-types'
+import { DetailedApplicant, Listing } from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
@@ -10,12 +10,14 @@ export interface ParkingSpaceListing {
 
 type Params = { id: string }
 
+type ResultType = Listing & { applicants: DetailedApplicant[] }
+
 export const useParkingSpaceListing = (params: Params) =>
-  useSuspenseQuery<DetailedApplicant[], AxiosError>({
+  useSuspenseQuery<ResultType, AxiosError>({
     queryKey: ['parkingSpaceListing', params.id],
     queryFn: () =>
       axios
-        .get<DetailedApplicant[]>(
+        .get<ResultType>(
           `${backendUrl}/leases/listing-with-applicants/${params.id}`,
           {
             headers: {

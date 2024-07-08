@@ -141,6 +141,9 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.AssignedToOther]: 'Tilldelad annan',
   [ApplicantStatus.WithdrawnByUser]: 'Borttagen av användare',
   [ApplicantStatus.WithdrawnByManager]: 'Borttagen av medarbetare',
+  [ApplicantStatus.Offered]: 'Erbjuden plats',
+  [ApplicantStatus.OfferAccepted]: 'Erbjudande accepterat',
+  [ApplicantStatus.OfferDeclined]: 'Erbjudande nekat',
 }
 
 const formatApplicantStatus = (v: ApplicantStatus) =>
