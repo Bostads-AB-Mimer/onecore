@@ -62,7 +62,7 @@
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
-    "mssql": "^9.3.2",
+    "mssql": "^11.0.1",
     "onecore-utilities": "^1.0.2",
     "onecore-types": "^1.21.1",
     "personnummer": "^3.2.1",
