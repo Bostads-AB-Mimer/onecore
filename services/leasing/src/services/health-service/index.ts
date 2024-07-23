@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { SystemHealth } from 'onecore-types'
+import { SystemHealth, ListingStatus } from 'onecore-types'
 import config from '../../common/config'
 import knex from 'knex'
 
@@ -49,6 +49,38 @@ const subsystems = [
       }
     },
   },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      try {
+        const db = knex({
+          client: 'mssql',
+          connection: config.xpandDatabase,
+        })
+        const expiredActiveListings = await db('listing')
+          .where('PublishedTo', '<', new Date(Date.now() - 86400000))
+          .andWhere('Status', ListingStatus.Active);
+    
+        if (expiredActiveListings.length > 0) {
+          return {
+            name: 'expire-listings script',
+            status: 'impaired',
+            statusMessage: `Found ${expiredActiveListings.length} listings that should be expired but are still active.`,
+          };
+        }
+        return {
+          name: 'expire-listings script',
+          status: 'active',
+          statusMessage: 'All expired listings are correctly marked as expired.',
+        };
+      } catch (error: any) {
+        return {
+          name: 'expire-listings script',
+          status: 'failure',
+          statusMessage: error.message || 'Failed to query the database for expired listings.',
+        };
+      }
+    },
+  }
 ]
 
 export const routes = (router: KoaRouter) => {
