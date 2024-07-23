@@ -1,4 +1,4 @@
-import { Offer } from 'onecore-types'
+import { OfferWithRentalObjectCode, Offer, Applicant } from 'onecore-types'
 
 import { db } from './db'
 import { DbApplicant, DbOffer } from './types'
@@ -38,6 +38,30 @@ export async function create(params: CreateOfferParams) {
   return transformFromDbOffer(offer, applicant)
 }
 
+export async function getOffersForContact(
+  contactCode: string
+): Promise<Array<OfferWithRentalObjectCode>> {
+  const rows = await db
+    .select(
+      'offer.*',
+      'listing.RentalObjectCode',
+      'applicant.Id as ApplicantApplicantId',
+      'applicant.Name as ApplicantName',
+      'applicant.NationalRegistrationNumber as ApplicantNationalRegistrationNumber',
+      'applicant.ContactCode as ApplicantContactCode',
+      'applicant.ApplicationDate as ApplicantApplicationDate',
+      'applicant.ApplicationType as ApplicantApplicationType',
+      'applicant.Status as ApplicantStatus',
+      'applicant.ListingId as ApplicantListingId'
+    )
+    .from('offer')
+    .innerJoin('listing', 'listing.Id', 'offer.ListingId')
+    .innerJoin('applicant', 'applicant.Id', 'offer.ApplicantId')
+    .where('applicant.ContactCode', contactCode)
+
+  return rows.map((row) => transformToOfferWithRentalObjectCode(row))
+}
+
 const transformFromDbOffer = (o: DbOffer, a: DbApplicant): Offer => {
   const {
     selectionSnapshot: selectedApplicants,
@@ -50,4 +74,33 @@ const transformFromDbOffer = (o: DbOffer, a: DbApplicant): Offer => {
     selectedApplicants: JSON.parse(selectedApplicants),
     offeredApplicant: dbUtils.pascalToCamel(a),
   }
+}
+
+const transformToOfferWithRentalObjectCode = (
+  result: any
+): OfferWithRentalObjectCode => {
+  const applicant: Applicant = {
+    id: result.ApplicantApplicantId,
+    name: result.ApplicantName,
+    nationalRegistrationNumber: result.ApplicantNationalRegistrationNumber,
+    contactCode: result.ApplicantContactCode,
+    applicationDate: result.ApplicantApplicationDate,
+    applicationType: result.ApplicantApplicationType,
+    status: result.ApplicantStatus,
+    listingId: result.ApplicantListingId,
+  }
+  const offerWithRentalObjectCode: OfferWithRentalObjectCode = {
+    id: result.Id,
+    sentAt: result.SentAt,
+    expiresAt: result.ExpiresAt,
+    answeredAt: result.AnsweredAt,
+    selectedApplicants: JSON.parse(result.SelectionSnapshot),
+    status: result.Status,
+    listingId: result.ListingId,
+    offeredApplicant: applicant,
+    createdAt: result.CreatedAt,
+    rentalObjectCode: result.RentalObjectCode,
+  }
+
+  return offerWithRentalObjectCode
 }
