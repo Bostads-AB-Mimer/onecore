@@ -21,6 +21,7 @@ import {
   withdrawApplicantByUser,
   getApplicantsAndListingByContactCode,
   getListingByIdWithDetailedApplicants,
+  getOffersForContact,
   getContactsDataBySearchQuery,
   getContactByContactCode,
   getContactForPnr,
@@ -80,6 +81,22 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Returns all offers for a contact by contactCode
+   */
+  //todo: write swagger docs
+  router.get('(.*)/contacts/:contactCode/offers', async (ctx) => {
+    const res = await getOffersForContact(ctx.params.contactCode)
+    if (!res.ok) {
+      ctx.status = res.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      data: res.data,
+    }
+  })
+  /*
    * Returns a list of contacts by search query (natregnumber or contact code)
    */
   router.get('(.*)/contacts/search', async (ctx) => {
