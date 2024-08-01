@@ -36,7 +36,7 @@ describe('propery-info-service index', () => {
         '/rentalPropertyInfo/705-022-04-0201'
       )
       expect(res.status).toBe(200)
-      expect(res.body).toBeInstanceOf(Object)
+      expect(res.body.content).toBeInstanceOf(Object)
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
     })
   })
@@ -277,7 +277,7 @@ describe('propery-info-service index', () => {
       expect(res.status).toBe(200)
       expect(roomTypesSpy).toHaveBeenCalled()
       expect(materialChoicesSpy).toHaveBeenCalled()
-      expect(res.body.roomTypes).toBeDefined()
+      expect(res.body.content).toBeDefined()
     })
 
     it('returns choice data', async () => {
@@ -296,19 +296,17 @@ describe('propery-info-service index', () => {
       expect(res.status).toBe(200)
       expect(roomTypesSpy).toHaveBeenCalled()
       expect(materialChoicesSpy).toHaveBeenCalled()
-      expect(res.body.roomTypes).toBeDefined()
-      expect(res.body.roomTypes.length).toBe(4)
-      expect(res.body.roomTypes[0].materialOptionGroups.length).toBeGreaterThan(
-        0
-      )
+      expect(res.body.content).toBeDefined()
+      expect(res.body.content.length).toBe(4)
+      expect(res.body.content[0].materialOptionGroups.length).toBeGreaterThan(0)
       expect(
-        res.body.roomTypes[0].materialOptionGroups[0].materialOptions.length
+        res.body.content[0].materialOptionGroups[0].materialOptions.length
       ).toBe(1)
       expect(
-        res.body.roomTypes[0].materialOptionGroups[0].materialOptions[0].caption
+        res.body.content[0].materialOptionGroups[0].materialOptions[0].caption
       ).toBe('Dusch')
       expect(
-        res.body.roomTypes[0].materialOptionGroups[0].materialOptions[0]
+        res.body.content[0].materialOptionGroups[0].materialOptions[0]
           .materialOptionGroupName
       ).toBe('Badrum')
     })
@@ -384,7 +382,7 @@ describe('GET /rentalproperties/:apartmentId/material-choices', () => {
 
     expect(res.status).toBe(200)
     expect(materialChoicesSpy).toHaveBeenCalled()
-    expect(res.body.materialChoices).toBeDefined()
+    expect(res.body.content).toBeDefined()
   })
 })
 
@@ -426,7 +424,7 @@ describe('parking spaces', () => {
       expect(getParkingPaceSpy).toHaveBeenCalledWith(
         mockedParkingSpace.parkingSpaceId
       )
-      expect(res.body).toStrictEqual(
+      expect(res.body.content).toStrictEqual(
         JSON.parse(JSON.stringify(mockedParkingSpace))
       )
     })
@@ -449,13 +447,13 @@ describe('parking spaces', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual(maintenanceUnitsMock)
+      expect(res.body.content).toEqual(maintenanceUnitsMock)
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
     })
 
-    it('should return 204 if no maintenance units are found', async () => {
+    it('should return 404 if no maintenance units are found', async () => {
       const getMaintenanceUnitsForRentalPropertySpy = jest
         .spyOn(xpandAdapter, 'getMaintenanceUnits')
         .mockResolvedValue(undefined)
@@ -463,8 +461,10 @@ describe('parking spaces', () => {
       const res = await request(app.callback()).get(
         '/api/maintenanceUnits/705-022-04-0201'
       )
-
-      expect(res.status).toBe(204)
+      expect(res.status).toBe(404)
+      expect(res.body.reason).toEqual(
+        'No maintenance unit found with the given id'
+      )
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
