@@ -8,6 +8,7 @@ jest.mock('onecore-utilities', () => {
         return
       },
     },
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -37,8 +38,8 @@ describe('GET /getInvoicesByContactCode', () => {
     )
     expect(res.status).toBe(200)
     expect(getInvoicesSpy).toHaveBeenCalled()
-    expect(res.body.data).toBeDefined()
-    expect(res.body.data).toBeInstanceOf(Array)
+    expect(res.body.content).toBeDefined()
+    expect(res.body.content).toBeInstanceOf(Array)
   })
 })
 
@@ -52,8 +53,8 @@ describe('GET /getUnpaidInvoicesByContactCode', () => {
       '/contact/unpaidInvoices/contactCode/contactKey'
     )
     expect(res.status).toBe(200)
-    expect(res.body.data).toBeInstanceOf(Object)
+    expect(res.body.content).toBeInstanceOf(Object)
     expect(getInvoicesSpy).toHaveBeenCalled()
-    expect(res.body.data).toBeDefined()
+    expect(res.body.content).toBeDefined()
   })
 })

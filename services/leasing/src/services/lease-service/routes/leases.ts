@@ -6,6 +6,7 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
+import { generateRouteMetadata } from 'onecore-utilities'
 
 /**
  * @swagger
@@ -55,6 +56,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeContacts',
+    ])
     const responseData = await getLeasesForNationalRegistrationNumber(
       ctx.params.pnr,
       ctx.query.includeTerminatedLeases,
@@ -62,7 +67,8 @@ export const routes = (router: KoaRouter) => {
     )
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -107,6 +113,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeContacts',
+    ])
     const result = await getLeasesForContactCode(
       ctx.params.pnr,
       ctx.query.includeTerminatedLeases,
@@ -114,12 +124,17 @@ export const routes = (router: KoaRouter) => {
     )
     if (!result.ok) {
       ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
       return
     }
 
     ctx.status = 200
     ctx.body = {
-      data: result.data,
+      content: result.data,
+      ...metadata,
     }
   })
 
@@ -164,6 +179,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeContacts',
+    ])
     const responseData = await getLeasesForPropertyId(
       ctx.params.propertyId,
       ctx.query.includeTerminatedLeases,
@@ -171,7 +190,8 @@ export const routes = (router: KoaRouter) => {
     )
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -211,13 +231,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve lease details.
    */
   router.get('(.*)/leases/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
     const responseData = await getLease(
       ctx.params.id,
       ctx.query.includeContacts
     )
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -275,6 +297,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to create lease.
    */
   router.post('(.*)/leases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     try {
       const request = <CreateLeaseRequest>ctx.request.body
 
@@ -285,7 +308,8 @@ export const routes = (router: KoaRouter) => {
         request.companyCode
       )
       ctx.body = {
-        LeaseId: newLeaseId,
+        content: { LeaseId: newLeaseId },
+        ...metadata,
       }
     } catch (error: unknown) {
       ctx.status = 500
@@ -293,6 +317,7 @@ export const routes = (router: KoaRouter) => {
       if (error instanceof Error) {
         ctx.body = {
           error: error.message,
+          ...metadata,
         }
       }
     }

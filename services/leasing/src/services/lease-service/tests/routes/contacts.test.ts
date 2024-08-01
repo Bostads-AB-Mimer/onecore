@@ -8,6 +8,7 @@ jest.mock('onecore-utilities', () => {
         return
       },
     },
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -52,7 +53,7 @@ describe('GET /contacts/search', () => {
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
-      data: expect.arrayContaining([
+      content: expect.arrayContaining([
         expect.objectContaining({ contactCode: 'foo', fullName: 'Foo Bar' }),
       ]),
     })

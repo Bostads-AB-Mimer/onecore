@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import { generateRouteMetadata } from 'onecore-utilities'
 
 import * as invoicesAdapter from '../adapters/xpand/invoices-adapter'
 
@@ -42,12 +43,14 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve invoices.
    */
   router.get('(.*)/contact/invoices/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await invoicesAdapter.getInvoicesByContactCode(
       ctx.params.contactCode
     )
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -84,12 +87,14 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/contact/unpaidInvoices/contactCode/:contactCode',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       const responseData = await invoicesAdapter.getUnpaidInvoicesByContactCode(
         ctx.params.contactCode
       )
 
       ctx.body = {
-        data: responseData,
+        content: responseData,
+        ...metadata,
       }
     }
   )
