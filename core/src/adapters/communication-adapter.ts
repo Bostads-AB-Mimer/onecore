@@ -29,7 +29,7 @@ export const sendNotificationToContact = async (
       axiosOptions
     )
 
-    return result.data
+    return result.data.content
   } catch (error) {
     logger.error(
       error,
@@ -71,7 +71,7 @@ export const sendNotificationToRole = async (
       axiosOptions
     )
 
-    return result.data
+    return result.data.content
   } catch (error) {
     logger.error(error, `Error sending notification to role ${recipientRole}`)
   }
@@ -98,7 +98,7 @@ export const sendParkingSpaceOfferEmail = async (
       throw new Error('Error sending parking space offer')
     }
 
-    return result.data;
+    return result.data.content
   } catch (error) {
     logger.error(
       error,

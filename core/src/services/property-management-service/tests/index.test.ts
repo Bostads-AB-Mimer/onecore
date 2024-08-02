@@ -11,6 +11,7 @@ jest.mock('onecore-utilities', () => {
     },
     loggedAxios: axios,
     axiosTypes: axios,
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -59,7 +60,7 @@ describe('rental-property-service index', () => {
 
       expect(res.status).toBe(200)
       expect(materialChoicesSpy).toHaveBeenCalled()
-      expect(res.body.roomTypes).toBeDefined()
+      expect(res.body.content.roomTypes).toBeDefined()
     })
   })
 })

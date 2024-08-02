@@ -20,7 +20,7 @@ const getRentalProperty = async (
     propertyManagementServiceUrl + '/rentalproperties/' + rentalPropertyId
   )
 
-  return propertyResponse.data
+  return propertyResponse.data.content
 }
 
 //todo: this function needs to be refactored to use a pattern like "getRentalPropertyInfoFromXpand".
@@ -34,7 +34,7 @@ const getRentalPropertyInfo = async (
     propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
   )
 
-  return propertyResponse.data
+  return propertyResponse.data.content
 }
 
 //todo: copy of getRentalPropertyInfo above
@@ -46,7 +46,7 @@ const getRentalPropertyInfoFromXpand = async (rentalPropertyId: string) => {
 
   return {
     status: propertyResponse.status,
-    data: propertyResponse.data,
+    data: propertyResponse.data.content,
   }
 }
 
@@ -56,7 +56,7 @@ const getMaintenanceUnitsForRentalProperty = async (
   const propertyResponse = await axios(
     propertyManagementServiceUrl + '/maintenanceUnits/' + rentalPropertyId
   )
-  return propertyResponse.data
+  return propertyResponse.data.content
 }
 
 const getRoomTypeWithMaterialOptions = async (apartmentId: string) => {
@@ -64,7 +64,7 @@ const getRoomTypeWithMaterialOptions = async (apartmentId: string) => {
     `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/material-options`
   )
 
-  return materialOptionGroupsResponse.data
+  return materialOptionGroupsResponse.data.content
 }
 const getMaterialOption = async (
   apartmentId: string,
@@ -74,7 +74,7 @@ const getMaterialOption = async (
     `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/material-options/${materialOptionId}`
   )
 
-  return materialOptionGroupsResponse.data
+  return materialOptionGroupsResponse.data.content
 }
 
 const getRoomsWithMaterialChoices = async (apartmentId: string) => {
@@ -82,7 +82,7 @@ const getRoomsWithMaterialChoices = async (apartmentId: string) => {
     `${propertyManagementServiceUrl}/rentalproperties/${apartmentId}/rooms-with-material-choices`
   )
 
-  return materialOptionGroupsResponse.data
+  return materialOptionGroupsResponse.data.content
 }
 
 const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
@@ -96,7 +96,7 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
 
   const materialOptionGroupsResponse = await axios(url)
 
-  return materialOptionGroupsResponse.data
+  return materialOptionGroupsResponse.data.content
 }
 
 const getMaterialChoiceStatuses = async (projectCode: string) => {
@@ -104,22 +104,21 @@ const getMaterialChoiceStatuses = async (projectCode: string) => {
     `${propertyManagementServiceUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}`
   )
 
-  return materialOptionGroupsResponse.data
+  return materialOptionGroupsResponse.data.content
 }
 
 const saveMaterialChoice = async (
   rentalPropertyId: string,
   materialChoices: Array<MaterialChoice>
 ) => {
-  await axios(
+  const response = await axios(
     `${propertyManagementServiceUrl}/rentalproperties/${rentalPropertyId}/material-choices`,
     {
       method: 'post',
       data: materialChoices,
     }
-  ).then((result) => {
-    return result
-  })
+  )
+  return response.data.content
 }
 
 //todo: refactor the subsequent requests to use same data source (soap api)
@@ -133,7 +132,7 @@ const getParkingSpace = async (
       `${propertyManagementServiceUrl}/parkingspaces/${parkingSpaceId}`
     )
 
-    return parkingSpaceResponse.data
+    return parkingSpaceResponse.data.content
   } catch (error) {
     logger.error(error, 'Error retrieving parking space')
     return undefined
@@ -148,7 +147,7 @@ const getPublishedParkingSpace = async (
       `${propertyManagementServiceUrl}/publishedParkingSpaces/${parkingSpaceId}`
     )
 
-    return parkingSpaceResponse.data
+    return parkingSpaceResponse.data.content
   } catch (error) {
     logger.error(error, 'Error retrieving parking space')
     return undefined
