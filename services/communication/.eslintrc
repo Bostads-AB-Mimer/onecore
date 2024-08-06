@@ -25,7 +25,8 @@
     "node/no-unsupported-features/es-syntax": [
       "error",
       { "ignores": ["modules"] }
-    ]
+    ],
+   "@typescript-eslint/no-explicit-any": "warn"
   },
   "overrides": [
     {
