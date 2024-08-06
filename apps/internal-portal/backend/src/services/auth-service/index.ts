@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { login, handleRedirect, logout } from './adapters/msal'
+import { generateRouteMetadata } from 'onecore-utilities'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/auth/login', async (ctx) => {
@@ -15,6 +16,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/auth/profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     if (ctx.session?.isAuthenticated && ctx.session?.account) {
       const account = {
         name: ctx.session.account.name,
@@ -22,10 +24,14 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        account,
+        content: {
+          account,
+          ...metadata,
+        },
       }
     } else {
       ctx.status = 401
+      ctx.body = { error: 'Unauthorized', ...metadata }
     }
   })
 }

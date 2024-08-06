@@ -14,7 +14,7 @@ const getListingsWithApplicants = async () => {
     url: url,
   })
 
-  return listingsResponse.data
+  return listingsResponse.data.content
 }
 
 const getListingWithApplicants = async (
@@ -23,12 +23,12 @@ const getListingWithApplicants = async (
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}`,
-  }).then((res) => res.data)
+  }).then((res) => res.data.content)
 
   const applicants: Promise<DetailedApplicant[]> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
-  }).then((res) => res.data)
+  }).then((res) => res.data.content)
 
   const [listingResult, applicantsResult] = await Promise.all([
     listing,
@@ -53,12 +53,12 @@ const getContactsDataBySearchQuery = async (
   AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode'>>, unknown>
 > => {
   try {
-    const result = await getFromCore<{ data: Array<Contact> }>({
+    const result = await getFromCore<{ data: { content: Array<Contact> } }>({
       method: 'get',
       url: `${coreBaseUrl}/contacts/search?q=${q}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data }
+    return { ok: true, data: result.data.content }
   } catch (err) {
     return { ok: false, err }
   }
@@ -68,12 +68,12 @@ const getContactByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<Contact, unknown>> => {
   try {
-    const result = await getFromCore<{ data: Contact }>({
+    const result = await getFromCore<{ data: { content: Contact } }>({
       method: 'get',
       url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data }
+    return { ok: true, data: result.data.content }
   } catch (err) {
     return { ok: false, err }
   }
@@ -85,13 +85,14 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
   contactCode: string
 }): Promise<AdapterResult<unknown, unknown>> => {
   try {
-    const response = await getFromCore<unknown>({
+    // todo: fix type
+    const response = await getFromCore<any>({
       method: 'post',
       url: `${coreBaseUrl}/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
       data: params,
     })
 
-    return { ok: true, data: response.data }
+    return { ok: true, data: response.data.content }
   } catch (err) {
     return { ok: false, err }
   }
