@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import validator from 'validator'
 import { sendEmail, sendParkingSpaceOffer } from './adapters/infobip-adapter'
 import { Email, ParkingSpaceOfferEmail } from 'onecore-types'
-import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
@@ -42,7 +41,9 @@ export const routes = (router: KoaRouter) => {
   })
 }
 
-export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSpaceOfferEmail => {
+export const isParkingSpaceOfferEmail = (
+  emailData: any
+): emailData is ParkingSpaceOfferEmail => {
   return (
     typeof emailData === 'object' &&
     emailData !== null &&
@@ -59,7 +60,7 @@ export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSp
     typeof emailData.parkingSpaceId === 'string' &&
     typeof emailData.objectId === 'string' &&
     typeof emailData.hasParkingSpace === 'boolean'
-  );
+  )
 }
 
 export const isMessageEmail = (message: any): message is Email => {
