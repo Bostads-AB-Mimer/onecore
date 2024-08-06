@@ -17,7 +17,7 @@ export const useRemoveParkingSpaceListing = () => {
           },
           withCredentials: true,
         })
-        .then((res) => res.data),
+        .then((res) => res.data.content),
     onSuccess: (_, params) =>
       queryClient.invalidateQueries({
         queryKey: ['parkingSpaceListing', params.listingId],

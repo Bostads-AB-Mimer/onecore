@@ -21,7 +21,7 @@ export const useCreateApplicantForListing = (listingId: number) => {
           },
           withCredentials: true,
         })
-        .then((res) => res.data),
+        .then((res) => res.data.content),
     onSuccess: () =>
       Promise.all([
         queryClient.refetchQueries({

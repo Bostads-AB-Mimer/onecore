@@ -19,7 +19,7 @@ export const useCommittedChoices = (apartmentId: string) => {
   return useQuery<ChoicesResponse, AxiosError>({
     queryKey: ['apartmentCommittedChoices', apartmentId],
     queryFn: async () => {
-      const { data } = await axios.get<ChoicesResponse>(
+      const { data } = await axios.get<{ content: ChoicesResponse }>(
         `${backendUrl}/rentalproperties/${apartmentId}/material-choices`,
         {
           headers: {
@@ -30,7 +30,7 @@ export const useCommittedChoices = (apartmentId: string) => {
         }
       )
 
-      return data
+      return data.content
     },
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
@@ -43,4 +43,3 @@ export const useCommittedChoices = (apartmentId: string) => {
     staleTime: Infinity,
   })
 }
-

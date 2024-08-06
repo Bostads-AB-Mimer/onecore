@@ -12,7 +12,7 @@ export const useApartmentMaterialChoices = () => {
   return useQuery<ApartmentChoiceStatus[], AxiosError>({
     queryKey: ['apartmentChoices'],
     queryFn: async () => {
-      const { data } = await axios.get<ApartmentChoiceStatus[]>(
+      const { data } = await axios.get<{ content: ApartmentChoiceStatus[] }>(
         `${backendUrl}/rentalproperties/material-choice-statuses`,
         {
           headers: {
@@ -23,7 +23,7 @@ export const useApartmentMaterialChoices = () => {
         }
       )
 
-      return data
+      return data.content
     },
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
