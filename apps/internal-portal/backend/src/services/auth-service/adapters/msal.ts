@@ -162,7 +162,7 @@ const acquireToken = (options: AuthOptions = defaultOptions) => {
           postLogoutRedirectUri: options.postLogoutRedirectUri,
         })(ctx)
       }
-      console.log("error: ", error)
+      console.log('error: ', error)
       ctx.next(error)
     }
   }
@@ -207,7 +207,7 @@ const handleRedirect = (options: AuthOptions = defaultOptions) => {
 
       return ctx.redirect(state.successRedirect)
     } catch (error) {
-      console.log("error: ", error)
+      console.log('error: ', error)
       ctx.next(error)
     }
   }
@@ -297,7 +297,7 @@ const redirectToAuthCodeUrl = (
       )
       ctx.redirect(authCodeUrlResponse)
     } catch (error) {
-      console.log("error", error)
+      console.log('error', error)
       ctx.next(error)
     }
   }
