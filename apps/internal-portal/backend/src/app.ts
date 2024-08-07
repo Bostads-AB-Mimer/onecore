@@ -29,7 +29,7 @@ const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
 }
 
 // TODO (17-05-2024): Uncomment this after internal testing by David
-// app.use(session(CONFIG, app))
+app.use(session(CONFIG, app))
 
 app.use(async (ctx, next) => {
   if (ctx.request.path.match('(.*)/auth/')) {
@@ -37,11 +37,11 @@ app.use(async (ctx, next) => {
   } else {
     // TODO (17-05-2024): Uncomment this after internal testing by David
 
-    // if (!ctx.session?.isAuthenticated) {
-    // ctx.status = 401
-    // } else {
-    return next()
-    // }
+    if (!ctx.session?.isAuthenticated) {
+      ctx.status = 401
+    } else {
+      return next()
+    }
   }
 })
 
