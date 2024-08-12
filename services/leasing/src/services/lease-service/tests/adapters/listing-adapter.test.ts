@@ -17,6 +17,7 @@ import * as listingAdapter from '../../adapters/listing-adapter'
 jest.mock('knex', () => () => ({
   raw: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  from: jest.fn().mockReturnThis(),
   then: jest.fn().mockImplementation((callback) =>
     callback([
       {
@@ -31,9 +32,9 @@ jest.mock('knex', () => () => ({
         ObjectTypeCaption: null,
         RentalObjectTypeCaption: null,
         RentalObjectTypeCode: null,
-        PublishedFrom: new Date('2023-02-28T00:00:00.000Z').toISOString(),
-        PublishedTo: new Date('2023-02-28T00:00:00.000Z').toISOString(),
-        VacantFrom: new Date('2023-02-28T00:00:00.000Z').toISOString(),
+        PublishedFrom: new Date('2023-02-28T00:00:00.000Z'),
+        PublishedTo: new Date('2023-02-28T00:00:00.000Z'),
+        VacantFrom: new Date('2023-02-28T00:00:00.000Z'),
         Status: ListingStatus.Active,
         WaitingListType: null,
         applicants: JSON.stringify([
@@ -58,11 +59,12 @@ jest.mock('knex', () => () => ({
         BlockCaption: null,
         BlockCode: null,
         ObjectTypeCaption: null,
+        ObjectTypeCode: null,
         RentalObjectTypeCaption: null,
         RentalObjectTypeCode: null,
-        PublishedFrom: new Date('2023-02-28T00:00:00.000Z').toISOString(),
-        PublishedTo: new Date('2023-02-28T00:00:00.000Z').toISOString(),
-        VacantFrom: new Date('2023-02-28T00:00:00.000Z').toISOString(),
+        PublishedFrom: new Date('2023-02-28T00:00:00.000Z'),
+        PublishedTo: new Date('2023-02-28T00:00:00.000Z'),
+        VacantFrom: new Date('2023-02-28T00:00:00.000Z'),
         Status: ListingStatus.Active,
         WaitingListType: null,
         applicants: JSON.stringify([
@@ -85,7 +87,37 @@ describe(listingAdapter.getAllListingsWithApplicants, () => {
   it('returns a formatted list of listings and corresponding applicants', async () => {
     const [fst, snd] = await listingAdapter.getAllListingsWithApplicants()
     expect(fst.applicants).toHaveLength(1)
-    expect(fst.applicants?.[0]?.listingId).toBe(fst.id)
+    expect(fst).toEqual({
+      id: 1,
+      rentalObjectCode: '705-025-03-0205/01',
+      address: 'Testgatan 12',
+      monthlyRent: 123,
+      districtCaption: undefined,
+      districtCode: undefined,
+      blockCaption: undefined,
+      blockCode: undefined,
+      objectTypeCaption: undefined,
+      objectTypeCode: undefined,
+      rentalObjectTypeCaption: undefined,
+      rentalObjectTypeCode: undefined,
+      publishedFrom: expect.any(Date),
+      publishedTo: expect.any(Date),
+      vacantFrom: expect.any(Date),
+      status: ListingStatus.Active,
+      waitingListType: undefined,
+      applicants: [
+        {
+          id: 1,
+          name: 'Test Testsson',
+          contactCode: '1234',
+          applicationDate: expect.any(Date),
+          applicationType: undefined,
+          status: ApplicantStatus.Active,
+          listingId: 1,
+          nationalRegistrationNumber: undefined,
+        },
+      ],
+    })
 
     expect(snd.applicants).toHaveLength(1)
     expect(snd.applicants?.[0]?.listingId).toBe(snd.id)
