@@ -51,7 +51,7 @@ describe('GET contact/waitingList', () => {
   it('should return success', async () => {
     const xpandAdapterSpy = jest
       .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValue(mockedWaitingList)
+      .mockResolvedValue({ ok: true, data: mockedWaitingList })
 
     const result = await request(app.callback()).get('/contact/waitingList/123')
 

@@ -13,84 +13,132 @@ import {
   parkingSpaceApplicationCategoryTranslation,
   WaitingList,
 } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+
 import { getWaitingList } from './adapters/xpand/xpand-soap-adapter'
+import { leaseTypes } from '../../constants/leaseTypes'
 import {
   getContactByContactCode,
   getLeasesForContactCode,
   getResidentialAreaByRentalPropertyId,
 } from './adapters/xpand/tenant-lease-adapter'
-import { leaseTypes } from '../../constants/leaseTypes'
-import { logger } from 'onecore-utilities'
+import { AdapterResult } from './adapters/types'
+
+type GetDetailedApplicantError =
+  | 'get-contact'
+  | 'contact-not-found'
+  | 'contact-not-tenant'
+  | 'get-waiting-lists'
+  | 'waiting-list-internal-parking-space-not-found'
+  | 'get-contact-leases'
+  | 'contact-leases-not-found'
+  | 'get-residential-area'
+  | 'housing-contracts-not-found'
 
 const getDetailedApplicantInformation = async (
   applicant: Applicant
-): Promise<DetailedApplicant> => {
-  try {
-    const applicantFromXpand = await getContactByContactCode(
-      applicant.contactCode,
-      'false'
-    )
+): Promise<AdapterResult<DetailedApplicant, GetDetailedApplicantError>> => {
+  const contact = await getContactByContactCode(applicant.contactCode, 'false')
 
-    if (!applicantFromXpand) {
-      throw new Error(
-        `Applicant ${applicant.contactCode} not found in contact query`
-      )
+  if (!contact.ok) {
+    return { ok: false, err: 'get-contact' }
+  }
+
+  if (!contact.data) {
+    return { ok: false, err: 'contact-not-found' }
+  }
+
+  const waitingList = await getWaitingList(
+    contact.data.nationalRegistrationNumber
+  )
+
+  if (!waitingList.ok) {
+    return { ok: false, err: 'get-waiting-lists' }
+  }
+
+  const waitingListForInternalParkingSpace =
+    parseWaitingListForInternalParkingSpace(waitingList.data)
+
+  if (!waitingListForInternalParkingSpace) {
+    return {
+      ok: false,
+      err: 'waiting-list-internal-parking-space-not-found',
     }
+  }
 
-    const applicantWaitingList = await getWaitingList(
-      applicantFromXpand.nationalRegistrationNumber
-    )
-    const waitingListForInternalParkingSpace =
-      parseWaitingListForInternalParkingSpace(applicantWaitingList)
+  const leases = await getLeasesForContactCode(
+    contact.data.contactCode,
+    'true', //this filter does not consider upcoming leases
+    undefined //do not include contacts
+  )
 
-    if (!waitingListForInternalParkingSpace) {
-      throw new Error(
-        `Waiting list for internal parking space not found for applicant ${applicant.contactCode}`
-      )
+  if (!leases.ok) {
+    return {
+      ok: false,
+      err: 'get-contact-leases',
     }
+  }
 
-    const leases = await getLeasesForContactCode(
-      applicant.contactCode,
-      'true', //this filter does not consider upcoming leases
-      undefined //do not include contacts
-    )
-
-    if (!leases) {
-      throw new Error(`Leases not found for applicant ${applicant.contactCode}`)
+  if (!leases.data.length) {
+    return {
+      ok: false,
+      err: 'contact-leases-not-found',
     }
+  }
 
-    const activeAndUpcomingLeases: Lease[] = leases.filter(
-      isLeaseActiveOrUpcoming
-    )
+  const activeAndUpcomingLeases = leases.data.filter(isLeaseActiveOrUpcoming)
 
-    for (const lease of activeAndUpcomingLeases) {
-      lease.residentialArea = await getResidentialAreaByRentalPropertyId(
+  const leasesWithResidentialArea = await Promise.all(
+    activeAndUpcomingLeases.map(async (lease) => {
+      const residentialArea = await getResidentialAreaByRentalPropertyId(
         lease.rentalPropertyId
       )
-    }
 
-    const housingContracts = parseLeasesForHousingContracts(
-      activeAndUpcomingLeases
-    )
-    if (!housingContracts) {
-      throw new Error(
-        `Housing contracts not found for applicant ${applicant.contactCode}`
-      )
-    }
+      if (!residentialArea.ok) {
+        throw new Error('Err getting residential area')
+      }
 
-    const parkingSpaces = parseLeasesForParkingSpaces(activeAndUpcomingLeases)
+      return {
+        ...lease,
+        residentialArea: residentialArea.data,
+      }
+    })
+  )
+    .then((data) => ({ ok: true, data }) as const)
+    .catch((err) => ({ ok: false, err }) as const)
 
-    return {
+  if (!leasesWithResidentialArea.ok) {
+    return { ok: false, err: 'get-residential-area' }
+  }
+
+  const housingContracts = parseLeasesForHousingContracts(
+    leasesWithResidentialArea.data
+  )
+
+  if (!housingContracts) {
+    return { ok: false, err: 'housing-contracts-not-found' }
+  }
+
+  const [currentHousingContract, upcomingHousingContract] = housingContracts
+
+  if (!currentHousingContract && !upcomingHousingContract) {
+    return { ok: false, err: 'housing-contracts-not-found' }
+  }
+
+  const parkingSpaceContracts = parseLeasesForParkingSpaces(
+    leasesWithResidentialArea.data
+  )
+
+  return {
+    ok: true,
+    data: {
       ...applicant,
       queuePoints: waitingListForInternalParkingSpace.queuePoints,
-      address: applicantFromXpand.address,
-      currentHousingContract: housingContracts[0],
-      upcomingHousingContract: housingContracts[1],
-      parkingSpaceContracts: parkingSpaces,
-    }
-  } catch (error) {
-    logger.error(error, 'Error in getDetailedApplicantInformation')
-    throw error // Re-throw the error to propagate it upwards
+      address: contact.data.address,
+      currentHousingContract,
+      upcomingHousingContract,
+      parkingSpaceContracts,
+    },
   }
 }
 
@@ -326,15 +374,10 @@ const parseLeasesForHousingContracts = (
   return undefined
 }
 
-const parseLeasesForParkingSpaces = (leases: Lease[]): Lease[] | undefined => {
-  const parkingSpaces: Lease[] = []
-  for (const lease of leases) {
-    //use startsWith to handle whitespace issues from xpand
-    if (lease.type.includes(leaseTypes.parkingspaceContract)) {
-      parkingSpaces.push(lease)
-    }
-  }
-  return parkingSpaces
+const parseLeasesForParkingSpaces = (
+  leases: Array<Lease & { propertyType?: string }>
+): Array<Lease> => {
+  return leases.filter((v) => v.propertyType === 'babps') // I think 'babps' is xpands name for "bilplats"
 }
 
 export {

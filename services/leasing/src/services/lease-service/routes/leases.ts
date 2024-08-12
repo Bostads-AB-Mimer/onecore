@@ -1,7 +1,4 @@
 import KoaRouter from '@koa/router'
-import { routes as offerRoutes } from './offers'
-import { routes as contactRoutes } from './contacts'
-import { routes as invoiceRoutes } from './invoices'
 import {
   getLease,
   getLeasesForContactCode,
@@ -110,13 +107,19 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
-    const responseData = await getLeasesForContactCode(
+    const result = await getLeasesForContactCode(
       ctx.params.pnr,
       ctx.query.includeTerminatedLeases,
       ctx.query.includeContacts
     )
+    if (!result.ok) {
+      ctx.status = 500
+      return
+    }
+
+    ctx.status = 200
     ctx.body = {
-      data: responseData,
+      data: result.data,
     }
   })
 

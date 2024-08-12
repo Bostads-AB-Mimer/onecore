@@ -1,8 +1,4 @@
 import KoaRouter from '@koa/router'
-import { routes as offerRoutes } from './offers'
-import { routes as contactRoutes } from './contacts'
-import { routes as invoiceRoutes } from './invoices'
-import { routes as leaseRoutes } from './leases'
 import { ApplicantStatus, DetailedApplicant, Listing } from 'onecore-types'
 import {
   applicationExists,
@@ -15,10 +11,6 @@ import {
 import { z } from 'zod'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { logger } from 'onecore-utilities'
-import {
-  addApplicantToToWaitingList,
-  getWaitingList,
-} from '../adapters/xpand/xpand-soap-adapter'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   getDetailedApplicantInformation,
@@ -476,7 +468,9 @@ export const routes = (router: KoaRouter) => {
         for (const applicant of listing.applicants) {
           const detailedApplicant =
             await getDetailedApplicantInformation(applicant)
-          applicants.push(detailedApplicant)
+          if (!detailedApplicant.ok)
+            throw new Error('Err when getting detailed applicant information')
+          applicants.push(detailedApplicant.data)
         }
       }
 

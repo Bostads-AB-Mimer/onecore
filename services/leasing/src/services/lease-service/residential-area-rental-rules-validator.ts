@@ -1,4 +1,4 @@
-import { DetailedApplicant, Listing, ResidentialArea } from 'onecore-types'
+import { DetailedApplicant, ResidentialArea } from 'onecore-types'
 
 //todo: we might need to consider and validate if a housing contract is ending
 //todo: if so we need datetime logic for checkin contract end dates etc
@@ -14,15 +14,18 @@ const residentialAreasWithSpecificRentalRules: ResidentialArea[] = [
   },
 ]
 
-const isListingInAreaWithSpecificRentalRules = (listing: Listing) => {
+const isListingInAreaWithSpecificRentalRules = (districtCode: string) => {
   return residentialAreasWithSpecificRentalRules.some(
-    (area) => area.code === listing.districtCode
+    (area) => area.code === districtCode
   )
 }
 
 const isHousingContractsOfApplicantInSameAreaAsListing = (
-  listing: Listing,
-  applicant: DetailedApplicant
+  districtCode: string,
+  applicant: Pick<
+    DetailedApplicant,
+    'currentHousingContract' | 'upcomingHousingContract'
+  >
 ): boolean => {
   const currentHousingContractDistrictCode =
     applicant.currentHousingContract?.residentialArea?.code
@@ -40,7 +43,7 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
   //applicants current housing contract area does not match listings area
   if (
     currentHousingContractDistrictCode &&
-    currentHousingContractDistrictCode != listing.districtCode
+    currentHousingContractDistrictCode !== districtCode
   ) {
     return false
   }
@@ -51,7 +54,7 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
     upcomingHousingContractDistrictCode
   ) {
     //applicants upcoming housing contract area does not match listings area
-    if (currentHousingContractDistrictCode != listing.districtCode) {
+    if (currentHousingContractDistrictCode !== districtCode) {
       return false
     }
   }
@@ -60,8 +63,8 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
 }
 
 const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (
-  listing: Listing,
-  applicant: DetailedApplicant
+  districtCode: string,
+  applicant: Pick<DetailedApplicant, 'parkingSpaceContracts'>
 ) => {
   if (!applicant.parkingSpaceContracts) {
     return false
@@ -69,7 +72,7 @@ const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (
 
   return applicant.parkingSpaceContracts.some(
     (parkingSpaceContract) =>
-      parkingSpaceContract.residentialArea?.code === listing.districtCode
+      parkingSpaceContract.residentialArea?.code === districtCode
   )
 }
 

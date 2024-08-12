@@ -233,7 +233,7 @@ describe('lease-service', () => {
     it('responds with an array of leases', async () => {
       const getLeasesSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-        .mockResolvedValueOnce(leaseMock)
+        .mockResolvedValueOnce({ ok: true, data: leaseMock })
 
       const res = await request(app.callback()).get(
         '/leases/for/contactCode/P965339'
@@ -331,7 +331,7 @@ describe('lease-service', () => {
 
       const priorityListServiceSpy = jest
         .spyOn(priorityListService, 'getDetailedApplicantInformation')
-        .mockResolvedValue(detailedApplicant as any)
+        .mockResolvedValue({ ok: true, data: detailedApplicant as any })
 
       const res = await request(app.callback()).get(
         '/listing/1337/applicants/details'

@@ -5,6 +5,7 @@ import createHttpError from 'http-errors'
 import Config from '../../../../common/config'
 import { WaitingList } from 'onecore-types'
 import { logger } from 'onecore-utilities'
+import { AdapterResult } from '../types'
 
 const createLease = async (
   fromDate: Date,
@@ -84,7 +85,9 @@ const createLease = async (
   }
 }
 
-const getWaitingList = async (nationalRegistrationNumber: string) => {
+const getWaitingList = async (
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<Array<WaitingList>, 'not-found'>> => {
   const headers = getHeaders()
 
   const xml = `
@@ -118,7 +121,7 @@ const getWaitingList = async (nationalRegistrationNumber: string) => {
     parser.parse(body)['Envelope']['Body']['GetWaitingListTimeResult']
 
   if (!parsedResponse['WaitingListTimes']) {
-    throw createHttpError(404, 'Waiting lists not found')
+    return { ok: false, err: 'not-found' }
   } else {
     try {
       const waitingList: WaitingList[] = []
@@ -138,7 +141,7 @@ const getWaitingList = async (nationalRegistrationNumber: string) => {
 
         waitingList.push(newItem)
       }
-      return waitingList
+      return { ok: true, data: waitingList }
     } catch (e) {
       logger.error(e, 'Error getting waiting list using Xpand SOAP API')
       throw createHttpError(500, 'Unknown error when parsing body')

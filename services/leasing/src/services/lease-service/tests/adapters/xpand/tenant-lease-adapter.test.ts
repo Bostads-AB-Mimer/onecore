@@ -63,29 +63,32 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
     )
 
     expect(contact).toStrictEqual({
-      contactCode: 'P123456',
-      contactKey: '_ADBAEC',
-      firstName: 'Test',
-      lastName: 'Testman',
-      fullName: 'Test Testman',
-      leaseIds: [],
-      nationalRegistrationNumber: '121212121212',
-      birthDate: '1212-12-12',
-      address: {
-        street: 'Gatvägen 12',
-        number: '',
-        postalCode: '12345',
-        city: null,
-      },
-      phoneNumbers: [
-        {
-          phoneNumber: '070123456',
-          type: 'mobil',
-          isMainNumber: true,
+      ok: true,
+      data: {
+        contactCode: 'P123456',
+        contactKey: '_ADBAEC',
+        firstName: 'Test',
+        lastName: 'Testman',
+        fullName: 'Test Testman',
+        leaseIds: [],
+        nationalRegistrationNumber: '121212121212',
+        birthDate: '1212-12-12',
+        address: {
+          street: 'Gatvägen 12',
+          number: '',
+          postalCode: '12345',
+          city: null,
         },
-      ],
-      emailAddress: 'redacted',
-      isTenant: false,
+        phoneNumbers: [
+          {
+            phoneNumber: '070123456',
+            type: 'mobil',
+            isMainNumber: true,
+          },
+        ],
+        emailAddress: 'redacted',
+        isTenant: false,
+      },
     })
   })
 })

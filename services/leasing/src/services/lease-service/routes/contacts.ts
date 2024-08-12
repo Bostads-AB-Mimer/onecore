@@ -1,35 +1,16 @@
 import KoaRouter from '@koa/router'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
-import { routes as offerRoutes } from './offers'
-import { routes as invoiceRoutes } from './invoices'
-import { routes as leaseRoutes } from './leases'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
   getContactForPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
-import { ApplicantStatus, DetailedApplicant, Listing } from 'onecore-types'
-import {
-  applicationExists,
-  createApplication,
-  createListing,
-  getAllListingsWithApplicants,
-  getListingById,
-  getListingByRentalObjectCode,
-} from '../adapters/listing-adapter'
-import { z } from 'zod'
-import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { logger } from 'onecore-utilities'
 import {
   addApplicantToToWaitingList,
   getWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
-import {
-  addPriorityToApplicantsBasedOnRentalRules,
-  getDetailedApplicantInformation,
-  sortApplicantsBasedOnRentalRules,
-} from '../priority-list-service'
 
 /**
  * @swagger
@@ -169,13 +150,24 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contact information.
    */
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
-    const responseData = await getContactByContactCode(
+    const result = await getContactByContactCode(
       ctx.params.contactCode,
       ctx.query.includeTerminatedLeases
     )
 
+    if (!result.ok) {
+      ctx.status = 500
+      return
+    }
+
+    if (!result.data) {
+      ctx.status = 404
+      return
+    }
+
+    ctx.status = 200
     ctx.body = {
-      data: responseData,
+      data: result.data,
     }
   })
 
@@ -250,12 +242,22 @@ export const routes = (router: KoaRouter) => {
     '(.*)/contact/waitingList/:nationalRegistrationNumber',
     async (ctx) => {
       try {
-        const responseData = await getWaitingList(
+        const result = await getWaitingList(
           ctx.params.nationalRegistrationNumber
         )
 
+        if (!result.ok) {
+          ctx.status = 500
+          return
+        }
+
+        if (!result.data) {
+          ctx.status = 400
+          return
+        }
+        ctx.status = 200
         ctx.body = {
-          data: responseData,
+          data: result.data,
         }
       } catch (error: unknown) {
         logger.error(

@@ -1,25 +1,25 @@
 import KoaRouter from '@koa/router'
+import { z } from 'zod'
+import { ApplicantStatus } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+
 import {
   getApplicantByContactCodeAndListingId,
   getApplicantById,
   getApplicantsByContactCode,
-  getListingById,
   updateApplicantStatus,
 } from '../adapters/listing-adapter'
 import { getEstateCodeFromXpandByRentalObjectCode } from '../adapters/xpand/estate-code-adapter'
 import {
   doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules,
-  doesUserHaveHousingContractInSamePropertyAsListing,
+  doesTenantHaveHousingContractInSamePropertyAsListing,
 } from '../property-rental-rules-validator'
-import { getDetailedApplicantInformation } from '../priority-list-service'
-import { logger } from 'onecore-utilities'
+import { getTenant } from '../get-tenant'
 import {
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
   isHousingContractsOfApplicantInSameAreaAsListing,
   isListingInAreaWithSpecificRentalRules,
 } from '../residential-area-rental-rules-validator'
-import { z } from 'zod'
-import { ApplicantStatus } from 'onecore-types'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -375,142 +375,110 @@ export const routes = (router: KoaRouter) => {
    *                   example: An error occurred while validating property rental rules.
    */
   router.get(
-    '(.*)/applicants/validatePropertyRentalRules/:contactCode/:listingId',
+    '(.*)/applicants/validatePropertyRentalRules/:contactCode/:rentalObjectCode',
     async (ctx) => {
       try {
-        const { contactCode, listingId } = ctx.params // Extracting from URL parameters
-        const listing = await getListingById(listingId)
-        if (listing == undefined) {
+        const { contactCode, rentalObjectCode } = ctx.params
+
+        const propertyInfo =
+          await getEstateCodeFromXpandByRentalObjectCode(rentalObjectCode)
+
+        if (!propertyInfo) {
           ctx.status = 404
-          ctx.body = {
-            reason: 'Listing was not found',
-          }
           return
         }
 
-        const listingEstateCode =
-          await getEstateCodeFromXpandByRentalObjectCode(
-            listing.rentalObjectCode
-          )
-
-        if (listingEstateCode == undefined) {
-          ctx.status = 404
+        if (propertyInfo.type !== 'babps') {
+          ctx.status = 400
           ctx.body = {
-            reason: 'Property info for listing was not found',
+            reason: 'Rental object code entity is not a parking space',
           }
-          return
         }
 
         if (
           !doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules(
-            listingEstateCode
+            propertyInfo.estateCode
           )
         ) {
-          //special property rental rules does not apply to this listing
-          ctx.body = {
-            reason: 'No property rental rules applies to this listing',
-          }
           ctx.status = 200
+          ctx.body = {
+            applicationType: 'Additional',
+            reason: 'No property rental rules applies to this parking space',
+          }
           return
         }
 
-        const applicant = await getApplicantByContactCodeAndListingId(
-          contactCode,
-          parseInt(listingId)
+        const contact = await getTenant({ contactCode })
+
+        if (!contact.ok) {
+          ctx.status = 500
+          ctx.body = 'Internal Error'
+          return
+        }
+
+        const subjectHasHousingContractInSamePropertyAsListing =
+          await doesTenantHaveHousingContractInSamePropertyAsListing(
+            contact.data,
+            propertyInfo.estateCode
+          )
+
+        if (!subjectHasHousingContractInSamePropertyAsListing) {
+          ctx.status = 403
+          ctx.body = {
+            reason: 'User is not a current or coming tenant in the property',
+          }
+          return
+        }
+
+        //if subject has no parking space contracts but is a tenant in the property
+        if (!contact.data.parkingSpaceContracts?.length) {
+          //subject is eligible for parking space, applicationType for application should be 'additonal'
+          ctx.status = 200
+          ctx.body = {
+            applicationType: 'Additional',
+            reason:
+              'User is a tenant in the property and does not have any active parking space contracts in the listings residential area. User is eligible to apply with applicationType additional.',
+          }
+          return
+        }
+
+        const getParkingSpacePropertyInfo =
+          contact.data.parkingSpaceContracts.map((lease) =>
+            getEstateCodeFromXpandByRentalObjectCode(lease.rentalPropertyId)
+          )
+
+        const parkingSpaceEstateCodes = await Promise.all(
+          getParkingSpacePropertyInfo
+        ).then((res) => res.filter(Boolean).map((r) => r?.estateCode))
+
+        const subjectNeedsToReplaceParkingSpace = parkingSpaceEstateCodes.some(
+          (v) => v === propertyInfo.estateCode
         )
 
-        if (applicant == undefined) {
-          ctx.status = 404
+        if (subjectNeedsToReplaceParkingSpace) {
+          ctx.status = 200
           ctx.body = {
-            reason: 'Applicant was not found',
-          }
-          return
-        }
-
-        const detailedApplicant =
-          await getDetailedApplicantInformation(applicant)
-
-        //1. fetch the estateCode for the applicant's current or upcoming housing contract
-        //2. check that the housing contract(s) matches the listings estate code
-        //3. if not, the user cannot apply for the parking space
-        //todo: a better future scenario is to include the estate code in onecore database(s)
-        //todo: a lot of this code could be simplified if we did not need to round trip to xpand to get the estate code
-        const applicantHasHousingContractInSamePropertyAsListing =
-          await doesUserHaveHousingContractInSamePropertyAsListing(
-            detailedApplicant,
-            listingEstateCode
-          )
-
-        if (!applicantHasHousingContractInSamePropertyAsListing) {
-          ctx.body = {
+            applicationType: 'Replace',
             reason:
-              'Applicant is not a current or coming tenant in the property',
+              'User already have an active parking space contract in the listings residential area. User is eligible to apply with applicationType Replace.',
           }
-          ctx.status = 403
-          return
-        }
-
-        //if applicant has no parking space contracts but is a tenant in the property
-        if (
-          !detailedApplicant.parkingSpaceContracts ||
-          detailedApplicant.parkingSpaceContracts.length == 0
-        ) {
-          //applicant is eligible for parking space, applicationType for application should be 'additonal'
-          ctx.body = {
-            reason:
-              'User does not have any active parking space contracts in the listings residential area',
-          }
-          ctx.status = 403
-          return
-        }
-
-        //1. fetch the estateCode for each of the applicant's parking space contracts
-        //validation:
-        //2. Check if any of the users parking space contracts matches the listings estate code
-        //3. if any parking space contract matches the listing estatecode, user needs to replace that parking space contract
-        //4. else, the user can apply with applicationType 'additional'
-
-        //todo: refactor and move to property rules validator?
-        let applicantNeedsToReplaceContractToBeAbleToApply = false
-        for (const parkingSpaceContract of detailedApplicant.parkingSpaceContracts) {
-          //
-          const parkingSpaceEstateCode =
-            await getEstateCodeFromXpandByRentalObjectCode(
-              parkingSpaceContract.rentalPropertyId
-            )
-
-          if (parkingSpaceEstateCode != undefined) {
-            if (listingEstateCode == parkingSpaceEstateCode) {
-              applicantNeedsToReplaceContractToBeAbleToApply = true
-              break
-            }
-          }
-        }
-
-        if (applicantNeedsToReplaceContractToBeAbleToApply) {
-          //applicant have an active parking space contract in the same property as the listing
-          //only option is to replace that parking space contract
-          ctx.body = {
-            reason:
-              'User already have an active parking space contract in the listings residential area',
-          }
-          ctx.status = 409
           return
         }
 
         //user has parking space contracts but none in the same property as the listing
+        ctx.status = 200
         ctx.body = {
+          applicationType: 'Additional',
           reason:
-            'User does not have any active parking space contracts in the listings residential area',
+            'User is a tenant in the property and does not have any active parking space contracts in the listings residential area. User is eligible to apply with applicationType additional.',
         }
-        ctx.status = 403
       } catch (error: unknown) {
         ctx.status = 500
 
         if (error instanceof Error) {
           logger.error(
             { err: error },
-            'error when validating residential rules'
+            'Error when validating residential rules'
           )
           ctx.body = {
             error: error.message,
@@ -602,93 +570,74 @@ export const routes = (router: KoaRouter) => {
    */
   router
   router.get(
-    '(.*)/applicants/validateResidentialAreaRentalRules/:contactCode/:listingId',
+    '(.*)/applicants/validateResidentialAreaRentalRules/:contactCode/:districtCode',
     async (ctx) => {
       try {
-        const { contactCode, listingId } = ctx.params // Extracting from URL parameters
-        const listing = await getListingById(listingId)
+        const { contactCode, districtCode } = ctx.params
 
-        if (listing == undefined) {
-          ctx.status = 404
-          ctx.body = {
-            reason: 'Listing was not found',
-          }
-          return
-        }
-
-        if (!isListingInAreaWithSpecificRentalRules(listing)) {
-          //special residential area rental rules does not apply to this listing
+        if (!isListingInAreaWithSpecificRentalRules(districtCode)) {
           ctx.status = 200
           ctx.body = {
-            reason: 'No residential area rental rules applies to this listing',
+            applicationType: 'Additional',
+            reason:
+              'No residential area rental rules applies to this parking space',
           }
           return
         }
 
-        const applicant = await getApplicantByContactCodeAndListingId(
-          contactCode,
-          parseInt(listingId)
-        )
+        const contact = await getTenant({ contactCode })
 
-        if (applicant == undefined) {
-          ctx.status = 404
-          ctx.body = {
-            reason: 'Applicant was not found',
-          }
+        if (!contact.ok) {
+          ctx.status = 500
           return
         }
 
-        const detailedApplicant =
-          await getDetailedApplicantInformation(applicant)
-        //validate listing area specific rental rules
         if (
           !isHousingContractsOfApplicantInSameAreaAsListing(
-            listing,
-            detailedApplicant
+            districtCode,
+            contact.data
           )
         ) {
-          // applicant does not have a housing contract in the same area as the listing
+          ctx.status = 403
           ctx.body = {
             reason:
-              'Applicant does not have any current or upcoming housing contracts in the residential area',
+              'Subject does not have any current or upcoming housing contracts in the residential area',
           }
-          ctx.status = 403
           return
         }
 
         const doesUserHaveExistingParkingSpaceInSameAreaAsListing =
           doesApplicantHaveParkingSpaceContractsInSameAreaAsListing(
-            listing,
-            detailedApplicant
+            districtCode,
+            contact.data
           )
 
         if (!doesUserHaveExistingParkingSpaceInSameAreaAsListing) {
           //applicant is eligible for parking space, applicationType for application should be 'additonal'
-          ctx.body = {
-            reason:
-              'Applicant does not have any active parking space contracts in the listings residential area. Applicant is eligible to apply to parking space.',
-          }
           ctx.status = 200
+          ctx.body = {
+            applicationType: 'Additional',
+            reason:
+              'Subject does not have any active parking space contracts in the listings residential area. Subject is eligible to apply to parking space with applicationType additional.',
+          }
           return
         }
 
         //applicant have an active parking space contract in the same area as the listing
         //only option is to replace that parking space contract
+        ctx.status = 200
         ctx.body = {
+          applicationType: 'Replace',
           reason:
-            'Applicant already have an active parking space contract in the listings residential area',
+            'Subject already have an active parking space contract in the listings residential area. Subject is eligible to apply to parking space with applicationType replace.',
         }
-        ctx.status = 409
-      } catch (error: unknown) {
-        ctx.status = 500
+      } catch (err: unknown) {
+        logger.error(err, 'Error when validating residential rental rules')
 
-        if (error instanceof Error) {
-          logger.error(
-            { err: error },
-            'error when validating residential rules'
-          )
+        ctx.status = 500
+        if (err instanceof Error) {
           ctx.body = {
-            error: error.message,
+            error: err.message,
           }
         }
       }
