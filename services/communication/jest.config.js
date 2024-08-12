@@ -4,4 +4,5 @@ module.exports = {
   testEnvironment: 'node',
   modulePathIgnorePatterns: ['<rootDir>/build/'],
   extensionsToTreatAsEsm: ['.d.ts, .ts'],
+  setupFiles: ['<rootDir>/.jest/env.ts'],
 }

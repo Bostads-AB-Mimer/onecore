@@ -11,7 +11,9 @@
     "build": "tsc",
     "dev": "nodemon -e ts,js --exec ts-node src/index ",
     "lint": "eslint -c .eslintrc src/",
-    "start": "node index"
+    "start": "node index",
+    "test:ci": "jest --silent",
+    "ts:ci": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
