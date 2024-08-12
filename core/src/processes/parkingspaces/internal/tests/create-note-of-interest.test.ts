@@ -32,6 +32,8 @@ import {
   mockedListing,
   mockedListingWithDetailedApplicants,
 } from '../../../../adapters/tests/leasing-adapter.mocks'
+import { ApplicantStatus, ListingStatus } from 'onecore-types'
+import * as factory from '../../../../../test/factories'
 
 const createAxiosResponse = (status: number, data: any): AxiosResponse => {
   return {
@@ -86,6 +88,10 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   jest
     .spyOn(leasingAdapter, 'createNewListing')
     .mockResolvedValue(createAxiosResponse(HttpStatusCode.Created, null))
+
+  jest
+    .spyOn(leasingAdapter, 'setApplicantStatusActive')
+    .mockResolvedValue(createAxiosResponse(HttpStatusCode.Ok, null))
 
   it('gets the parking space', async () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
@@ -413,21 +419,27 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       )
 
     expect(response.processStatus).toBe(ProcessStatus.successful)
+    expect(response.response.message).toBe(
+      'Applicant bar successfully applied to parking space foo'
+    )
     expect(response.httpStatus).toBe(200)
   })
 
-  it('returns ProcessStatus.inProgress if applicant has an application to this listing already', async () => {
+  it('returns ProcessStatus.Success if applicant has an application to this listing already', async () => {
     getContactSpy.mockResolvedValue(mockedApplicant)
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
     getWaitingListSpy.mockResolvedValue(mockedWaitingList)
+    createNewListingSpy.mockResolvedValue(
+      createAxiosResponse(HttpStatusCode.Created, mockedListing)
+    )
     applyForListingSpy.mockResolvedValue({
       status: HttpStatusCode.Conflict,
     } as any)
     getListingByRentalObjectCodeSpy.mockResolvedValue({
       status: HttpStatusCode.NotFound,
-      data: {},
+      data: factory.listing.build({ status: ListingStatus.Active }),
       statusText: '',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
@@ -442,11 +454,81 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
         'bar',
         'baz'
       )
-
     expect(response.processStatus).toBe(ProcessStatus.successful)
+    expect(response.response.message).toBe(
+      'Applicant bar already has application for foo'
+    )
   })
 
   it('returns ProcessStatus.Success if the user applies a second time after the user has withdrawn the application', async () => {
-    console.log('implement')
+    getContactSpy.mockResolvedValue(mockedApplicant)
+    getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+    getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
+    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
+    applyForListingSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+    } as any)
+    getListingByRentalObjectCodeSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+      data: {},
+      statusText: '',
+      headers: {},
+      config: {} as InternalAxiosRequestConfig,
+    })
+    getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+      data: {
+        status: ApplicantStatus.WithdrawnByUser,
+      },
+    })
+
+    const response =
+      await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+        'foo',
+        'bar',
+        'baz'
+      )
+
+    expect(response.processStatus).toBe(ProcessStatus.successful)
+    expect(response.response.message).toBe(
+      'Applicant bar successfully applied to parking space foo'
+    )
+  })
+
+  it('returns ProcessStatus.Success if the user already have active application', async () => {
+    getContactSpy.mockResolvedValue(mockedApplicant)
+    getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+    getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
+    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
+    applyForListingSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+    } as any)
+    getListingByRentalObjectCodeSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+      data: {},
+      statusText: '',
+      headers: {},
+      config: {} as InternalAxiosRequestConfig,
+    })
+    getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
+      status: HttpStatusCode.Ok,
+      data: {
+        status: ApplicantStatus.Active,
+      },
+    })
+
+    const response =
+      await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+        'foo',
+        'bar',
+        'baz'
+      )
+
+    expect(response.processStatus).toBe(ProcessStatus.successful)
+    expect(response.response.message).toBe(
+      'Applicant bar already has application for foo'
+    )
   })
 })

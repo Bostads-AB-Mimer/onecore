@@ -1,9 +1,11 @@
-import { HttpStatusCode } from 'axios'
+import { AxiosResponse, HttpStatusCode } from 'axios'
 import {
   parkingSpaceApplicationCategoryTranslation,
   ParkingSpaceApplicationCategory,
   Applicant,
   ApplicantStatus,
+  Contact,
+  Listing,
 } from 'onecore-types'
 import {
   getContact,
@@ -121,62 +123,30 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       applicantContact.nationalRegistrationNumber
     )
 
-    let shouldAddApplicantToWaitingList = false
-    let isInWaitingListForInternalParking = false
-    let isInWaitingListForExternalParking = false
-    if (waitingList.length > 0) {
-      isInWaitingListForInternalParking = waitingList.some(
-        (o) => o.waitingListTypeCaption === 'Bilplats (intern)'
-      )
-      isInWaitingListForExternalParking = waitingList.some(
-        (o) => o.waitingListTypeCaption === 'Bilplats (extern)'
-      )
-      if (
-        !isInWaitingListForInternalParking ||
-        !isInWaitingListForExternalParking
-      ) {
-        shouldAddApplicantToWaitingList = true
-      }
-    } else {
-      shouldAddApplicantToWaitingList = true
-    }
+    const waitingListStatus = evaluateWaitingListStatus(waitingList)
+    const shouldAddApplicantToWaitingList =
+      waitingListStatus.shouldAddApplicantToWaitingList
+    const isInWaitingListForInternalParking =
+      waitingListStatus.isInWaitingListForInternalParking
+    const isInWaitingListForExternalParking =
+      waitingListStatus.isInWaitingListForExternalParking
+
     //xpand handles internal and external waiting list synonymously
     //a user should therefore always be placed in both waiting list
     if (shouldAddApplicantToWaitingList) {
-      if (!isInWaitingListForInternalParking) {
-        log.push(`Sökande saknas i kö för intern parkeringsplats.`)
-        const result = await addApplicantToWaitingList(
-          applicantContact.nationalRegistrationNumber,
-          applicantContact.contactCode,
-          'Bilplats (intern)'
-        )
-        if (result.status == HttpStatusCode.Created) {
-          log.push(`Sökande placerad i kö för intern parkeringsplats`)
-        } else {
-          logger.error(
-            result,
-            'Could not add applicant to internal waiting list'
-          )
-          throw Error(result.statusText)
-        }
-      }
-      if (!isInWaitingListForExternalParking) {
-        log.push(`Sökande saknas i kö för extern parkeringsplats.`)
-        const result = await addApplicantToWaitingList(
-          applicantContact.nationalRegistrationNumber,
-          applicantContact.contactCode,
-          'Bilplats (extern)'
-        )
-        if (result.status == HttpStatusCode.Created) {
-          log.push(`Sökande placerad i kö för extern parkeringsplats`)
-        } else {
-          logger.error(
-            result,
-            'Could not add applicant to external waiting list'
-          )
-          throw Error(result.statusText)
-        }
-      }
+      await handleWaitingList(
+        isInWaitingListForInternalParking,
+        'intern',
+        applicantContact,
+        log
+      )
+
+      await handleWaitingList(
+        isInWaitingListForExternalParking,
+        'extern',
+        applicantContact,
+        log
+      )
     }
 
     log.push(
@@ -210,19 +180,12 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       )
 
       //create new applicant if applicant does not exist
-      //todo: use request type
       if (applicantResponse.status == HttpStatusCode.NotFound) {
-        const applicantRequestBody: Applicant = {
-          id: 0, //should not be passed
-          name: applicantContact.fullName,
-          nationalRegistrationNumber:
-            applicantContact.nationalRegistrationNumber,
-          contactCode: applicantContact.contactCode,
-          applicationDate: new Date(),
-          applicationType: applicationType,
-          status: ApplicantStatus.Active,
-          listingId: listing.data?.id, //null should not be allowed
-        }
+        const applicantRequestBody = createApplicantRequestBody(
+          applicantContact,
+          applicationType,
+          listing.data
+        )
 
         const applyForListingResult =
           await applyForListing(applicantRequestBody)
@@ -258,10 +221,26 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
       //if applicant has previously applied and withdrawn application, allow for subsequent application
       else if (applicantResponse.data) {
+        const applicantStatus = applicantResponse.data.status
+        const activeApplication = applicantStatus == ApplicantStatus.Active
         const applicationWithDrawnByUser =
-          applicantResponse.data.status == ApplicantStatus.WithdrawnByUser
+          applicantStatus == ApplicantStatus.WithdrawnByUser
         const applicationWithDrawnByManager =
-          applicantResponse.data.status == ApplicantStatus.WithdrawnByManager
+          applicantStatus == ApplicantStatus.WithdrawnByManager
+
+        if (activeApplication) {
+          log.push(
+            `Sökande har redan en aktiv ansökan på bilplats ${parkingSpaceId}.`
+          )
+          return {
+            processStatus: ProcessStatus.successful,
+            data: null,
+            httpStatus: 200,
+            response: {
+              message: `Applicant ${contactCode} already has application for ${parkingSpaceId}`,
+            },
+          }
+        }
 
         if (applicationWithDrawnByUser || applicationWithDrawnByManager) {
           log.push(
@@ -301,5 +280,76 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     return makeProcessError('internal-error', 500, {
       message: error.message,
     })
+  }
+}
+
+const createApplicantRequestBody = (
+  applicantContact: Contact,
+  applicationType: string,
+  listing: Listing
+) => {
+  const applicantRequestBody: Applicant = {
+    id: 0, //should not be passed
+    name: applicantContact.fullName,
+    nationalRegistrationNumber: applicantContact.nationalRegistrationNumber,
+    contactCode: applicantContact.contactCode,
+    applicationDate: new Date(),
+    applicationType: applicationType,
+    status: ApplicantStatus.Active,
+    listingId: listing.id, //null should not be allowed
+  }
+  return applicantRequestBody
+}
+
+const evaluateWaitingListStatus = (waitingList: any) => {
+  let shouldAddApplicantToWaitingList = false
+  let isInWaitingListForInternalParking = false
+  let isInWaitingListForExternalParking = false
+
+  if (waitingList.length > 0) {
+    isInWaitingListForInternalParking = waitingList.some(
+      (o: any) => o.waitingListTypeCaption === 'Bilplats (intern)'
+    )
+    isInWaitingListForExternalParking = waitingList.some(
+      (o: any) => o.waitingListTypeCaption === 'Bilplats (extern)'
+    )
+    if (
+      !isInWaitingListForInternalParking ||
+      !isInWaitingListForExternalParking
+    ) {
+      shouldAddApplicantToWaitingList = true
+    }
+  } else {
+    shouldAddApplicantToWaitingList = true
+  }
+
+  return {
+    shouldAddApplicantToWaitingList,
+    isInWaitingListForInternalParking,
+    isInWaitingListForExternalParking,
+  }
+}
+const handleWaitingList = async (
+  isInWaitingList: boolean,
+  parkingType: string,
+  applicantContact: Contact,
+  log: any[]
+) => {
+  if (!isInWaitingList) {
+    log.push(`Sökande saknas i kö för ${parkingType} parkeringsplats.`)
+    const result = await addApplicantToWaitingList(
+      applicantContact.nationalRegistrationNumber,
+      applicantContact.contactCode,
+      `Bilplats (${parkingType})`
+    )
+    if (result.status == HttpStatusCode.Created) {
+      log.push(`Sökande placerad i kö för ${parkingType} parkeringsplats`)
+    } else {
+      logger.error(
+        result,
+        `Could not add applicant to ${parkingType} waiting list`
+      )
+      throw Error(result.statusText)
+    }
   }
 }
