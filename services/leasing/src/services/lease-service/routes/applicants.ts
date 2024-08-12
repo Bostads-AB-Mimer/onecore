@@ -292,7 +292,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /applicants/validatePropertyRentalRules/{contactCode}/{listingId}:
+   * /applicants/validatePropertyRentalRules/{contactCode}/{rentalObjectCode}:
    *   get:
    *     summary: Validate property rental rules for applicant
    *     description: Validate property rental rules for an applicant based on contact code and listing ID.
@@ -305,14 +305,14 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code of the applicant.
    *       - in: path
-   *         name: listingId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: integer
-   *         description: The listing ID to validate against.
+   *         description: The xpand rental object code of the property.
    *     responses:
    *       200:
-   *         description: No property rental rules apply to this listing.
+   *         description: No property rental rules apply to this property.
    *         content:
    *           application/json:
    *             schema:
@@ -320,9 +320,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 reason:
    *                   type: string
-   *                   example: No property rental rules applies to this listing.
+   *                   example: No property rental rules applies to this
+   *                   property.
    *       403:
-   *         description: Applicant is not eligible for the listing based on property rental rules.
+   *         description: Applicant is not eligible for the property based on property rental rules.
    *         content:
    *           application/json:
    *             schema:
@@ -334,7 +335,7 @@ export const routes = (router: KoaRouter) => {
    *                     notTenant:
    *                       value: Applicant is not a current or coming tenant in the property.
    *                     noParkingContracts:
-   *                       value: User does not have any active parking space contracts in the listings residential area.
+   *                       value: User does not have any active parking space contracts in the property residential area.
    *       404:
    *         description: Listing, property info, or applicant not found.
    *         content:
@@ -490,10 +491,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /applicants/validateResidentialAreaRentalRules/{contactCode}/{listingId}:
+   * /applicants/validateResidentialAreaRentalRules/{contactCode}/{districtCode}:
    *   get:
    *     summary: Validate residential area rental rules for applicant
-   *     description: Validate residential area rental rules for an applicant based on contact code and listing ID.
+   *     description: Validate residential area rental rules for an applicant based on contact code and district code.
    *     tags: [Applicants]
    *     parameters:
    *       - in: path
@@ -503,11 +504,12 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code of the applicant.
    *       - in: path
-   *         name: listingId
+   *         name: districtCode
    *         required: true
    *         schema:
-   *           type: integer
-   *         description: The listing ID to validate against.
+   *           type: string
+   *         description: The xpand district code of the residential area to
+   *         validate against.
    *     responses:
    *       200:
    *         description: No residential area rental rules apply or applicant is eligible to apply for parking space.
