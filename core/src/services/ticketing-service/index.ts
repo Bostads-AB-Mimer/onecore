@@ -28,7 +28,64 @@ interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
 }
 
+/**
+ * @swagger
+ * openapi: 3.0.0
+ * tags:
+ *   - name: Ticketing service
+ *     description: Operations related to tickets in Odoo
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * security:
+ *   - bearerAuth: []
+ */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /propertyInfo/{number}:
+   *   get:
+   *     summary: Get property information by different identifiers
+   *     tags:
+   *       - Ticketing service
+   *     description: Retrieves property information along with associated leases based on the provided identifier type.
+   *     parameters:
+   *       - in: path
+   *         name: number
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The identifier value for fetching property information.
+   *       - in: query
+   *         name: typeOfNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [rentalPropertyId, leaseId, pnr, phoneNumber]
+   *         description: The type of the identifier used to fetch property information.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved property information with leases.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '500':
+   *         description: Internal server error. Failed to retrieve property information.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('(.*)/propertyInfo/:number', async (ctx: any) => {
     const responseData: any = []
 
@@ -119,6 +176,52 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /ticketsByContactCode/{code}:
+   *   get:
+   *     summary: Get tickets by contact code
+   *     tags:
+   *       - Ticketing service
+   *     description: Retrieves all tickets associated with a given contact code.
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to search for tickets.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved tickets.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 totalCount:
+   *                   type: integer
+   *                   description: The total number of tickets found.
+   *                 workOrders:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 message:
+   *                   type: string
+   *                   description: Message indicating no tickets found.
+   *       '500':
+   *         description: Internal server error. Failed to retrieve tickets.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('(.*)/ticketsByContactCode/:code', async (ctx: any) => {
     try {
       const tickets = await getTicketByContactCode(ctx.params.code)
@@ -141,6 +244,55 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /maintenanceUnitsByRentalPropertyId/{rentalPropertyId}/{type}:
+   *   get:
+   *     summary: Get maintenance units by rental property ID
+   *     tags:
+   *       - Ticketing service
+   *     description: Retrieves all maintenance units associated with a given rental property ID. Optionally, filter the maintenance units by type.
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental property ID to search for maintenance units.
+   *       - in: path
+   *         name: type
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The type of maintenance units to filter by (optional).
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 message:
+   *                   type: string
+   *                   description: Message indicating no maintenance units found.
+   *       '500':
+   *         description: Internal server error. Failed to retrieve maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get(
     '(.*)/maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?',
     async (ctx) => {
@@ -178,6 +330,59 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  /**
+   * @swagger
+   * /maintenanceUnitsByContactCode/{contactCode}:
+   *   get:
+   *     summary: Get maintenance units by contact code
+   *     tags:
+   *       - Ticketing service
+   *     description: Retrieves all maintenance units associated with a given contact code.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to search for maintenance units.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 message:
+   *                   type: string
+   *                   description: Message indicating no maintenance units found.
+   *       '400':
+   *         description: Bad request, contact not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Contact not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('(.*)/maintenanceUnitsByContactCode/:contactCode', async (ctx) => {
     try {
       const contact = await getContact(ctx.params.contactCode)
@@ -219,6 +424,103 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /createTicket/{contactCode}:
+   *   post:
+   *     summary: Create a new ticket for maintenance
+   *     tags:
+   *       - Ticketing service
+   *     description: Creates a new maintenance ticket based on the provided contact code and ticket details.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to associate with the ticket.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               RentalObjectCode:
+   *                 type: string
+   *                 description: The rental object code associated with the ticket.
+   *               AccessOptions:
+   *                 type: object
+   *                 properties:
+   *                   Type:
+   *                     type: integer
+   *                     description: Type of access option (1 for hearing impaired).
+   *                   PhoneNumber:
+   *                     type: string
+   *                     description: Phone number for contact.
+   *                   CallBetween:
+   *                     type: string
+   *                     description: Time interval for calls.
+   *                   Email:
+   *                     type: string
+   *                     description: Email address for contact.
+   *               Pet:
+   *                 type: boolean
+   *                 description: Indicates if there is a pet involved.
+   *               Rows:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     LocationCode:
+   *                       type: string
+   *                       description: Code for the location of the ticket.
+   *                     PartOfBuildingCode:
+   *                       type: string
+   *                       description: Code for the part of the building.
+   *                     Description:
+   *                       type: string
+   *                       description: Description of the ticket.
+   *                     MaintenanceUnitCode:
+   *                       type: string
+   *                       description: Code for the maintenance unit.
+   *                     MaintenanceUnitCaption:
+   *                       type: string
+   *                       description: Caption for the maintenance unit.
+   *     responses:
+   *       '200':
+   *         description: Ticket successfully created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Confirmation message with the ID of the created ticket.
+   *       '400':
+   *         description: Bad request. Contact code or required fields missing.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Contact code is missing. It needs to be passed in the url.
+   *       '500':
+   *         description: Internal server error. Failed to create a new ticket.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Failed to create a new ticket
+   *     security:
+   *       - bearerAuth: []
+   */
   router.post('(.*)/createTicket/:contactCode', async (ctx) => {
     try {
       if (!ctx.params.contactCode) {

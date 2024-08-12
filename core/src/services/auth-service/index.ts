@@ -4,6 +4,12 @@ import hash from './hash'
 import { createToken } from './jwt'
 import createHttpError from 'http-errors'
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Auth
+ *     description: Authentication endpoints
+ */
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -11,6 +17,8 @@ export const routes = (router: KoaRouter) => {
    *  get:
    *    summary: Generates a salt and hashes the given password using that salt.
    *    description: Generates a salt and hashes the given password using that salt. Pass cleartext password as query parameter.
+   *    tags:
+   *      - Auth
    *    parameters:
    *      - in: query
    *        name: password
@@ -43,29 +51,51 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /auth/generate-token:
-   *  post:
-   *    summary: Generates a jwt
-   *    description: Validates username + password and returns a valid token to be used in authorization header.
-   *    requestBody:
-   *      required: true
-   *      content:
-   *        application/json:
-   *          schema:
-   *            type: object
-   *            properties:
-   *              username:
-   *                type: string
-   *              password:
-   *                type: string
-   *    responses:
-   *      '200':
-   *        description: 'A valid token'
-   *        schema:
-   *            type: object
-   *            properties:
-   *              token:
-   *                type: string
+   * /auth/generatetoken:
+   *   post:
+   *     summary: Generates a JWT token
+   *     description: Validates username and password from request body and returns a JWT token.
+   *     tags:
+   *       - Auth
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/x-www-form-urlencoded:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               username:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *     responses:
+   *       '200':
+   *         description: A valid JWT token
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 token:
+   *                   type: string
+   *       '400':
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 errorMessage:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
    */
   router.post('(.*)/auth/generatetoken', async (ctx) => {
     const username = ctx.request.body?.username as string

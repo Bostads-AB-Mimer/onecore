@@ -10,10 +10,21 @@ import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
 
 import { logger, loggerMiddlewares } from 'onecore-utilities'
+import { koaSwagger } from 'koa2-swagger-ui'
+import { routes as swagggerRoutes } from './services/swagger'
 
 const app = new Koa()
 
 app.use(cors())
+
+app.use(
+  koaSwagger({
+    routePrefix: '/swagger',
+    swaggerOptions: {
+      url: '/swagger.json',
+    },
+  })
+)
 
 app.on('error', (err) => {
   logger.error(err)
@@ -29,6 +40,7 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
+swagggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 app.use(jwt({ secret: config.auth.secret }))

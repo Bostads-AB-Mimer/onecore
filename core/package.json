@@ -30,6 +30,8 @@
     "@types/node": "^20.11.5",
     "@types/pino-multi-stream": "^5.1.6",
     "@types/supertest": "2.0.12",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui": "^3.52.4",
     "@typescript-eslint/eslint-plugin": "5.59.2",
     "eslint": "8.40.0",
     "eslint-config-prettier": "8.8.0",
@@ -61,12 +63,14 @@
     "koa-bodyparser": "^4.4.1",
     "koa-jwt": "^4.0.4",
     "koa-pino-logger": "^4.0.0",
+    "koa2-swagger-ui": "^5.10.0",
     "odoo-await": "^3.4.1",
     "onecore-types": "^1.23.2",
     "onecore-utilities": "^1.0.3",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",
     "pino-multi-stream": "^6.0.0",
-    "pino-pretty": "^11.0.0"
+    "pino-pretty": "^11.0.0",
+    "swagger-jsdoc": "^6.2.8"
   }
 }
