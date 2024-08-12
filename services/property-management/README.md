@@ -22,3 +22,9 @@ Start the development server: `npm run dev`
 ## Env
 
 According to .env.template.
+
+## Swagger
+
+We utilize `koa2-swagger-ui` and `swagger-jsdoc` for documenting our API. Each endpoint is required to have appropriate
+JSDoc comments and tags for comprehensive documentation. The Swagger document is exposed on `/swagger`.
+
