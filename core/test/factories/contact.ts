@@ -18,4 +18,6 @@ export const ContactFactory = Factory.define<Contact>(({ sequence }) => ({
   phoneNumbers: [],
   emailAddress: 'test@mimer.nu',
   isTenant: true,
+  leaseIds: [],
+  leases: undefined,
 }))

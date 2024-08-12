@@ -21,13 +21,7 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 
-import {
-  Contact,
-  Lease,
-  ConsumerReport,
-  OfferWithRentalObjectCode,
-  OfferStatus,
-} from 'onecore-types'
+import { Lease, ConsumerReport } from 'onecore-types'
 import * as factory from '../../../../test/factories'
 
 const app = new Koa()
@@ -37,11 +31,7 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('lease-service', () => {
-  let leaseMock: Lease,
-    contactMock: Contact,
-    offersMock: Array<OfferWithRentalObjectCode>,
-    consumerReportMock: ConsumerReport,
-    listingWithDetailedApplicantsMock: any[] //todo: map to type when type defined
+  let leaseMock: Lease, consumerReportMock: ConsumerReport
 
   beforeEach(() => {
     leaseMock = {
@@ -129,299 +119,6 @@ describe('lease-service', () => {
       type: 'type',
       rentInfo: undefined,
     }
-
-    contactMock = {
-      contactCode: 'P965339',
-      contactKey: 'DEF',
-      firstName: 'Erik',
-      lastName: 'Lundberg',
-      fullName: 'Erik Lundberg',
-      nationalRegistrationNumber: '194512121122',
-      birthDate: new Date('1945-12-12T00:00:00.000Z'),
-      address: {
-        street: 'Gatvägen',
-        number: '56',
-        postalCode: '72266',
-        city: 'Västerås',
-      },
-      phoneNumbers: [
-        {
-          isMainNumber: true,
-          phoneNumber: '+460759429414',
-          type: 'mobile',
-        },
-        {
-          isMainNumber: false,
-          phoneNumber: '+465292643751',
-          type: 'home',
-        },
-      ],
-      emailAddress: 'erik.lundberg@mimer.nu',
-      leaseIds: undefined,
-      leases: undefined,
-      isTenant: false,
-    }
-
-    offersMock = [
-      {
-        id: 3,
-        sentAt: null,
-        expiresAt: new Date('2024-05-15T13:19:27.000Z'),
-        answeredAt: null,
-        selectedApplicants: [
-          {
-            address: {
-              city: 'JOHANNESHOV',
-              number: '',
-              postalCode: '12139',
-              street: 'Testvägen 25',
-            },
-            applicationDate: new Date('2024-04-30T09:27:16.3440000'),
-            applicationType: 'baz',
-            contactCode: 'P174966',
-            currentHousingContract: {
-              approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-              contractDate: new Date('2024-02-01T00:00:00.000Z'),
-              lastDebitDate: undefined,
-              leaseEndDate: undefined,
-              leaseId: '705-022-04-0201/11',
-              leaseNumber: '11',
-              leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-              noticeDate: undefined,
-              noticeGivenBy: undefined,
-              noticeTimeTenant: '3',
-              preferredMoveOutDate: undefined,
-              rentalPropertyId: '705-022-04-0201',
-              residentialArea: { caption: 'Malmaberg', code: 'MAL' },
-              tenantContactIds: [],
-              tenants: [],
-              terminationDate: undefined,
-              type: 'Bostadskontrakt               ',
-              status: 1,
-              rentalProperty: undefined,
-              rentInfo: undefined,
-              address: undefined,
-            },
-            id: 1011,
-            listingId: 4,
-            name: 'Foo Bar',
-            nationalRegistrationNumber: '19981123-0102',
-            parkingSpaceContracts: [
-              {
-                approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-                contractDate: new Date('2024-02-01T00:00:00.000Z'),
-                lastDebitDate: undefined,
-                leaseEndDate: undefined,
-                leaseId: '508-713-00-0009/19',
-                leaseNumber: '19',
-                leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-                noticeDate: undefined,
-                noticeGivenBy: undefined,
-                noticeTimeTenant: '3',
-                preferredMoveOutDate: undefined,
-                rentalPropertyId: '508-713-00-0009',
-                residentialArea: { caption: 'Skallberget', code: 'SKA' },
-                tenantContactIds: [],
-                tenants: [],
-                terminationDate: undefined,
-                type: 'P-Platskontrakt               ',
-                status: 1,
-                rentalProperty: undefined,
-                rentInfo: undefined,
-                address: undefined,
-              },
-            ],
-            priority: 3,
-            queuePoints: 75,
-            status: 5,
-          },
-          {
-            address: {
-              city: 'VÄSTERÅS',
-              number: '',
-              postalCode: '72222',
-              street: 'Fiktiggatan 1',
-            },
-            applicationDate: new Date('2024-04-19T12:18:01.1400000'),
-            applicationType: 'Byte',
-            contactCode: 'P145241',
-            currentHousingContract: {
-              approvalDate: new Date('2023-09-27T00:00:00.000Z'),
-              contractDate: new Date('2023-09-27T00:00:00.000Z'),
-              lastDebitDate: undefined,
-              leaseEndDate: undefined,
-              leaseId: '306-001-01-0101/07',
-              leaseNumber: '07',
-              leaseStartDate: new Date('2024-01-01T00:00:00.000Z'),
-              noticeDate: undefined,
-              noticeGivenBy: undefined,
-              noticeTimeTenant: '3',
-              preferredMoveOutDate: undefined,
-              rentalPropertyId: '306-001-01-0101',
-              residentialArea: { caption: 'Pettersberg', code: 'PET' },
-              tenantContactIds: [],
-              tenants: [],
-              terminationDate: undefined,
-              type: 'Bostadskontrakt               ',
-              status: 1,
-              rentalProperty: undefined,
-              rentInfo: undefined,
-              address: undefined,
-            },
-            id: 1012,
-            listingId: 4,
-            name: 'Lars Andersson',
-            nationalRegistrationNumber: '19871133-2222',
-            parkingSpaceContracts: [],
-            queuePoints: 1792,
-            status: 5,
-          },
-        ],
-        status: OfferStatus.Active,
-        listingId: 3,
-        offeredApplicant: {
-          id: 1010,
-          name: 'Testsson Stina',
-          nationalRegistrationNumber: '195001182046',
-          contactCode: 'P174965',
-          applicationDate: new Date('2024-05-29T06:01:17.323Z'),
-          applicationType: 'Replace',
-          status: 1,
-          listingId: 3,
-        },
-        createdAt: new Date('2024-05-31T06:04:17.286Z'),
-        rentalObjectCode: '705-808-00-0009',
-      },
-      {
-        id: 3,
-        sentAt: null,
-        expiresAt: new Date('2024-05-15T13:19:27.000Z'),
-        answeredAt: null,
-        selectedApplicants: [
-          {
-            address: {
-              city: 'JOHANNESHOV',
-              number: '',
-              postalCode: '12139',
-              street: 'Testvägen 25',
-            },
-            applicationDate: new Date('2024-04-30T09:27:16.3440000'),
-            applicationType: 'baz',
-            contactCode: 'P174966',
-            currentHousingContract: {
-              approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-              contractDate: new Date('2024-02-01T00:00:00.000Z'),
-              lastDebitDate: undefined,
-              leaseEndDate: undefined,
-              leaseId: '705-022-04-0201/11',
-              leaseNumber: '11',
-              leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-              noticeDate: undefined,
-              noticeGivenBy: undefined,
-              noticeTimeTenant: '3',
-              preferredMoveOutDate: undefined,
-              rentalPropertyId: '705-022-04-0201',
-              residentialArea: { caption: 'Malmaberg', code: 'MAL' },
-              tenantContactIds: [],
-              tenants: [],
-              terminationDate: undefined,
-              type: 'Bostadskontrakt               ',
-              status: 1,
-              rentalProperty: undefined,
-              rentInfo: undefined,
-              address: undefined,
-            },
-            id: 1011,
-            listingId: 4,
-            name: 'Foo Bar',
-            nationalRegistrationNumber: '19981123-0102',
-            parkingSpaceContracts: [
-              {
-                approvalDate: new Date('2024-02-01T00:00:00.000Z'),
-                contractDate: new Date('2024-02-01T00:00:00.000Z'),
-                lastDebitDate: undefined,
-                leaseEndDate: undefined,
-                leaseId: '508-713-00-0009/19',
-                leaseNumber: '19',
-                leaseStartDate: new Date('2024-03-01T00:00:00.000Z'),
-                noticeDate: undefined,
-                noticeGivenBy: undefined,
-                noticeTimeTenant: '3',
-                preferredMoveOutDate: undefined,
-                rentalPropertyId: '508-713-00-0009',
-                residentialArea: { caption: 'Skallberget', code: 'SKA' },
-                tenantContactIds: [],
-                tenants: [],
-                terminationDate: undefined,
-                type: 'P-Platskontrakt               ',
-                status: 1,
-                rentalProperty: undefined,
-                rentInfo: undefined,
-                address: undefined,
-              },
-            ],
-            priority: 3,
-            queuePoints: 75,
-            status: 5,
-          },
-          {
-            address: {
-              city: 'VÄSTERÅS',
-              number: '',
-              postalCode: '72222',
-              street: 'Fiktiggatan 1',
-            },
-            applicationDate: new Date('2024-04-19T12:18:01.1400000'),
-            applicationType: 'Byte',
-            contactCode: 'P145241',
-            currentHousingContract: {
-              approvalDate: new Date('2023-09-27T00:00:00.000Z'),
-              contractDate: new Date('2023-09-27T00:00:00.000Z'),
-              lastDebitDate: undefined,
-              leaseEndDate: undefined,
-              leaseId: '306-001-01-0101/07',
-              leaseNumber: '07',
-              leaseStartDate: new Date('2024-01-01T00:00:00.000Z'),
-              noticeDate: undefined,
-              noticeGivenBy: undefined,
-              noticeTimeTenant: '3',
-              preferredMoveOutDate: undefined,
-              rentalPropertyId: '306-001-01-0101',
-              residentialArea: { caption: 'Pettersberg', code: 'PET' },
-              tenantContactIds: [],
-              tenants: [],
-              terminationDate: undefined,
-              type: 'Bostadskontrakt               ',
-              status: 1,
-              rentalProperty: undefined,
-              rentInfo: undefined,
-              address: undefined,
-            },
-            id: 1012,
-            listingId: 4,
-            name: 'Lars Andersson',
-            nationalRegistrationNumber: '19871133-2222',
-            parkingSpaceContracts: [],
-            queuePoints: 1792,
-            status: 5,
-          },
-        ],
-        status: OfferStatus.Active,
-        listingId: 4,
-        offeredApplicant: {
-          id: 1010,
-          name: 'Testsson Stina',
-          nationalRegistrationNumber: '195001182046',
-          contactCode: 'P174965',
-          applicationDate: new Date('2024-05-29T06:01:17.323Z'),
-          applicationType: 'Replace',
-          status: 1,
-          listingId: 4,
-        },
-        createdAt: new Date('2024-05-31T06:04:17.286Z'),
-        rentalObjectCode: '705-808-00-0009',
-      },
-    ]
     consumerReportMock = {
       pnr: '4512121122',
       template: 'TEST_TEMPLATE',
@@ -439,49 +136,6 @@ describe('lease-service', () => {
       zip: '72266',
       city: 'Västerås',
     }
-
-    listingWithDetailedApplicantsMock = [
-      {
-        id: 3005,
-        name: 'Sökande Fiktiv',
-        contactCode: 'P145241',
-        applicationDate: '2024-04-30T14:39:55.1210000',
-        applicationType: 'Additional',
-        status: 1,
-        listingId: 3030,
-        queuePoints: 1761,
-        address: {
-          street: 'Fiktiggatan 1',
-          number: '',
-          postalCode: '72222',
-          city: 'VÄSTERÅS',
-        },
-        currentHousingContract: {
-          leaseId: '306-001-01-0101/07',
-          leaseNumber: '07',
-          rentalPropertyId: '306-001-01-0101',
-          type: 'Bostadskontrakt               ',
-          leaseStartDate: '2024-01-01T00:00:00.000Z',
-          leaseEndDate: null,
-          tenantContactIds: [],
-          tenants: [],
-          noticeGivenBy: null,
-          noticeDate: null,
-          noticeTimeTenant: 3,
-          preferredMoveOutDate: null,
-          terminationDate: null,
-          contractDate: '2023-09-27T00:00:00.000Z',
-          lastDebitDate: null,
-          approvalDate: '2023-09-27T00:00:00.000Z',
-          residentalArea: {
-            code: 'PET',
-            caption: 'Pettersberg',
-          },
-        },
-        upcomingHousingContract: null,
-        parkingSpaceContracts: [],
-      },
-    ]
   })
 
   describe('GET /leases/for/:pnr', () => {
@@ -515,29 +169,52 @@ describe('lease-service', () => {
 
   describe('GET /contact/:pnr', () => {
     it('responds with a contact', async () => {
+      const contact = factory.contact.build()
       const getContactSpy = jest
         .spyOn(tenantLeaseAdapter, 'getContactForPnr')
-        .mockResolvedValue(contactMock)
+        .mockResolvedValue(contact)
 
       const res = await request(app.callback()).get('/contact/194512121122')
 
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contactMock))
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contact))
     })
   })
 
   describe('GET /contacts/:contactCode/offers', () => {
     it('responds with offers', async () => {
+      const detailedApplicant1 = factory.detailedApplicant.build({
+        contactCode: 'P174965',
+      })
+      const detailedApplicant2 = factory.detailedApplicant.build()
+      const detailedApplicant3 = factory.detailedApplicant.build()
+
+      const offer1 = factory.offerWithRentalObjectCode.build({
+        selectedApplicants: [
+          detailedApplicant1,
+          detailedApplicant2,
+          detailedApplicant3,
+        ],
+        offeredApplicant: detailedApplicant1,
+      })
+
+      const offer2 = factory.offerWithRentalObjectCode.build({
+        selectedApplicants: [detailedApplicant1],
+        offeredApplicant: detailedApplicant1,
+      })
+
+      const offers = [offer1, offer2]
+
       const getOffersForContactSpy = jest
         .spyOn(tenantLeaseAdapter, 'getOffersForContact')
-        .mockResolvedValueOnce({ ok: true, data: offersMock })
+        .mockResolvedValueOnce({ ok: true, data: offers })
 
       const res = await request(app.callback()).get('/contacts/P174965/offers')
 
       expect(res.status).toBe(200)
       expect(getOffersForContactSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(offersMock))
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(offers))
     })
   })
 
@@ -561,9 +238,13 @@ describe('lease-service', () => {
 
   describe('GET /listing/:listingId/applicants/details', () => {
     it('responds with a listing with detailed applicant data', async () => {
+      const detailedApplicants = [
+        factory.detailedApplicant.build(),
+        factory.detailedApplicant.build(),
+      ]
       const getListingByIdWithDetailedApplicantsSpy = jest
         .spyOn(tenantLeaseAdapter, 'getListingByIdWithDetailedApplicants')
-        .mockResolvedValue(listingWithDetailedApplicantsMock)
+        .mockResolvedValue(detailedApplicants)
 
       const res = await request(app.callback()).get(
         '/listing/1337/applicants/details'
@@ -572,7 +253,7 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getListingByIdWithDetailedApplicantsSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body)).toEqual(
-        JSON.stringify(listingWithDetailedApplicantsMock)
+        JSON.stringify(detailedApplicants)
       )
     })
   })

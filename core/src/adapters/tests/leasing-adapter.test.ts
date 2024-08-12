@@ -19,7 +19,7 @@ import config from '../../common/config'
 import * as leasingAdapter from '../leasing-adapter'
 import {
   mockedInvoices,
-  mockedListingWithDetailedApplicants,
+  mockedDetailedApplicants,
   mockedOldProblematicInvoices,
   mockedProblematicInvoices,
   mockedWaitingList,
@@ -83,12 +83,12 @@ describe('leasing-adapter', () => {
     it('should return a listing with detailed applicants', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/listing/)
-        .reply(200, mockedListingWithDetailedApplicants)
+        .reply(200, mockedDetailedApplicants)
 
       const result =
         await leasingAdapter.getListingByIdWithDetailedApplicants('1337')
 
-      expect(result).toEqual(mockedListingWithDetailedApplicants)
+      expect(result).toEqual(mockedDetailedApplicants)
     })
   })
 

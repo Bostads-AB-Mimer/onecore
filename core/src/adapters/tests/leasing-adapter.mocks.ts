@@ -125,9 +125,7 @@ export const mockedWaitingList: WaitingList[] = [
   },
 ]
 
-export const mockedListing = []
-
-export const mockedListingWithDetailedApplicants = [
+export const mockedDetailedApplicants = [
   {
     id: 3005,
     name: 'Sökande Fiktiv',
