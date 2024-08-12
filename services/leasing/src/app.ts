@@ -8,7 +8,18 @@ import { logger, loggerMiddlewares } from 'onecore-utilities'
 
 const app = new Koa()
 
+import { koaSwagger } from 'koa2-swagger-ui'
+
 app.use(cors())
+
+app.use(
+  koaSwagger({
+    routePrefix: '/swagger',
+    swaggerOptions: {
+      url: '/swagger.json',
+    },
+  })
+)
 
 app.on('error', (err) => {
   logger.error(err)

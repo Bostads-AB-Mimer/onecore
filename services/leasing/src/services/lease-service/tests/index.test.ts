@@ -35,6 +35,8 @@ const LeaseStatus = {
   Active: 0,
 }
 
+//todo: refactor according to route dir structure
+
 describe('lease-service', () => {
   const leaseMock: Array<Lease> = [
     {

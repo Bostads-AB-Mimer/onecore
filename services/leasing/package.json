@@ -25,6 +25,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/apidoc": "^0.50.3",
     "@types/easy-soap-request": "^4.1.4",
     "@types/jest": "29.5.1",
     "@types/koa": "2.13.6",
@@ -51,6 +52,8 @@
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
     "@types/easy-soap-request": "^4.1.4",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui": "^3.52.4",
     "axios": "^1.6.5",
     "dedent": "^1.5.1",
     "dotenv": "^16.3.2",
@@ -62,6 +65,7 @@
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
+    "koa2-swagger-ui": "^5.10.0",
     "mssql": "^11.0.1",
     "onecore-utilities": "^1.0.2",
     "onecore-types": "^1.23.2",
@@ -73,6 +77,7 @@
     "prettier": "^3.2.5",
     "randexp": "^0.5.3",
     "strong-soap": "^4.0.0",
+    "swagger-jsdoc": "^6.2.8",
     "tedious": "^18.2.4",
     "zod": "^3.23.8"
   }

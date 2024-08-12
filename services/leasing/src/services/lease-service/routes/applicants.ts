@@ -22,7 +22,55 @@ import { z } from 'zod'
 import { ApplicantStatus } from 'onecore-types'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Applicants
+ *     description: Endpoints related to applicant operations
+ */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /applicants/{contactCode}/:
+   *   get:
+   *     summary: Get applicant based on contact code
+   *     description: Fetches a list of applicants associated with a given contact code.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicants to retrieve.
+   *     responses:
+   *       200:
+   *         description: A list of applicants associated with the contact code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       404:
+   *         description: No applicant found for the provided contact code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Applicant not found for the provided contactCode.
+   *       500:
+   *         description: An error occurred while fetching the applicant.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while fetching the applicant.
+   */
   router.get('/applicants/:contactCode/', async (ctx) => {
     const { contactCode } = ctx.params // Extracting from URL parameters
     try {
@@ -46,6 +94,67 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /applicants/{contactCode}/{listingId}:
+   *   get:
+   *     summary: Get applicant by contact code and listing id
+   *     description: Fetch an applicant by contact code and listing ID.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicant to retrieve.
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The listing ID associated with the applicant.
+   *     responses:
+   *       200:
+   *         description: An applicant associated with the contact code and listing ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 id:
+   *                   type: string
+   *                   description: The unique ID of the applicant.
+   *                 name:
+   *                   type: string
+   *                   description: The name of the applicant.
+   *                 email:
+   *                   type: string
+   *                   description: The email address of the applicant.
+   *                 listingId:
+   *                   type: integer
+   *                   description: The listing ID associated with the applicant.
+   *       404:
+   *         description: No applicant found for the provided contact code and listing ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Applicant not found for the provided contactCode and listingId.
+   *       500:
+   *         description: An error occurred while fetching the applicant.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while fetching the applicant.
+   */
   router.get('/applicants/:contactCode/:listingId', async (ctx) => {
     const { contactCode, listingId } = ctx.params // Extracting from URL parameters
     try {
@@ -81,6 +190,70 @@ export const routes = (router: KoaRouter) => {
     contactCode: z.string().optional(),
   })
 
+  /**
+   * @swagger
+   * /applicants/{id}/status:
+   *   patch:
+   *     summary: Update applicant status
+   *     description: Update the status of an applicant.
+   *     tags: [Applicants]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [Pending, Approved, Rejected, WithdrawnByUser, WithdrawnByAdmin]
+   *                 description: The new status of the applicant.
+   *               contactCode:
+   *                 type: string
+   *                 description: The contact code of the applicant. Required if status is WithdrawnByUser.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The unique ID of the applicant.
+   *     responses:
+   *       200:
+   *         description: Applicant status updated successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Applicant status updated successfully.
+   *       404:
+   *         description: Applicant not found or mismatch in contact code for status WithdrawnByUser.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   examples:
+   *                     applicantNotFound:
+   *                       value: Applicant not found.
+   *                     contactCodeMismatch:
+   *                       value: Applicant not found for this contactCode.
+   *       500:
+   *         description: An error occurred while updating the applicant status.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while updating the applicant status.
+   */
   router.patch(
     '/applicants/:id/status',
     parseRequestBody(updateApplicantStatusParams),
@@ -117,6 +290,90 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  /**
+   * @swagger
+   * /applicants/validatePropertyRentalRules/{contactCode}/{listingId}:
+   *   get:
+   *     summary: Validate property rental rules for applicant
+   *     description: Validate property rental rules for an applicant based on contact code and listing ID.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicant.
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The listing ID to validate against.
+   *     responses:
+   *       200:
+   *         description: No property rental rules apply to this listing.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: No property rental rules applies to this listing.
+   *       403:
+   *         description: Applicant is not eligible for the listing based on property rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     notTenant:
+   *                       value: Applicant is not a current or coming tenant in the property.
+   *                     noParkingContracts:
+   *                       value: User does not have any active parking space contracts in the listings residential area.
+   *       404:
+   *         description: Listing, property info, or applicant not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     listingNotFound:
+   *                       value: Listing was not found.
+   *                     propertyInfoNotFound:
+   *                       value: Property info for listing was not found.
+   *                     applicantNotFound:
+   *                       value: Applicant was not found.
+   *                     contactCodeMismatch:
+   *                       value: Applicant not found for this contactCode.
+   *       409:
+   *         description: User already has an active parking space contract in the listing's residential area.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: User already have an active parking space contract in the listings residential area.
+   *       500:
+   *         description: An error occurred while validating property rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while validating property rental rules.
+   */
   router.get(
     '(.*)/applicants/validatePropertyRentalRules/:contactCode/:listingId',
     async (ctx) => {
@@ -263,6 +520,87 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  /**
+   * @swagger
+   * /applicants/validateResidentialAreaRentalRules/{contactCode}/{listingId}:
+   *   get:
+   *     summary: Validate residential area rental rules for applicant
+   *     description: Validate residential area rental rules for an applicant based on contact code and listing ID.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicant.
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The listing ID to validate against.
+   *     responses:
+   *       200:
+   *         description: No residential area rental rules apply or applicant is eligible to apply for parking space.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     noRules:
+   *                       value: No residential area rental rules applies to this listing.
+   *                     eligible:
+   *                       value: Applicant does not have any active parking space contracts in the listings residential area. Applicant is eligible to apply to parking space.
+   *       403:
+   *         description: Applicant is not eligible for the listing based on residential area rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Applicant does not have any current or upcoming housing contracts in the residential area.
+   *       404:
+   *         description: Listing or applicant not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     listingNotFound:
+   *                       value: Listing was not found.
+   *                     applicantNotFound:
+   *                       value: Applicant was not found.
+   *       409:
+   *         description: User already has an active parking space contract in the listing's residential area.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Applicant already have an active parking space contract in the listings residential area.
+   *       500:
+   *         description: An error occurred while validating residential area rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while validating residential area rental rules.
+   */
+  router
   router.get(
     '(.*)/applicants/validateResidentialAreaRentalRules/:contactCode/:listingId',
     async (ctx) => {
