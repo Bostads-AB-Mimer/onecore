@@ -1,5 +1,3 @@
-import { OfferWithRentalObjectCodeFactory } from '../factories/offer'
-
 jest.mock('onecore-utilities', () => {
   return {
     logger: {
@@ -22,7 +20,6 @@ import { OfferStatus } from 'onecore-types'
 import { routes } from '../../routes/offers'
 import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from '../factories'
-import { detailedApplicant, offerWithRentalObjectCode } from '../factories'
 
 const app = new Koa()
 const router = new KoaRouter()

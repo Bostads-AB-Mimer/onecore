@@ -11,13 +11,7 @@ jest.mock('onecore-utilities', () => {
   }
 })
 
-import {
-  Applicant,
-  Contact,
-  Lease,
-  LeaseStatus,
-  WaitingList,
-} from 'onecore-types'
+import { Contact, Lease, LeaseStatus, WaitingList } from 'onecore-types'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
@@ -32,16 +26,6 @@ import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as factory from './factories'
 import { leaseTypes } from '../../../constants/leaseTypes'
-
-const mockedApplicant: Applicant = {
-  id: 2004,
-  nationalRegistrationNumber: '197001011234',
-  name: 'Sökande Fiktiv',
-  contactCode: 'P145241',
-  applicationDate: new Date('2024-04-23T10:05:07.244Z'),
-  status: 1,
-  listingId: 2029,
-}
 
 const mockedWaitingListWithInteralParkingSpace: WaitingList[] = [
   {
@@ -83,8 +67,10 @@ const thirtyDaysInTheFutureDate = new Date()
 thirtyDaysInThePastDate.setDate(currentDate.getDate() + 30)
 thirtyDaysInTheFutureDate.setDate(currentDate.getDate() + 30)
 
+const contactCodeForApplicantInxpand = 'P145241'
+
 const mockedApplicantFromXpand: Contact = {
-  contactCode: 'P145241',
+  contactCode: contactCodeForApplicantInxpand,
   contactKey: '_5YI0VPRJ5GARYV',
   firstName: 'Fiktiv',
   lastName: 'Sökande',
@@ -125,11 +111,11 @@ describe('getDetailedApplicantInformation', () => {
     const getContactByContactCodeSpy = jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce(null)
-
+    const applicant = factory.applicant.build()
     await expect(() =>
-      getDetailedApplicantInformation(mockedApplicant)
+      getDetailedApplicantInformation(applicant)
     ).rejects.toThrow(
-      `Applicant ${mockedApplicant.contactCode} not found in contact query`
+      `Applicant ${applicant.contactCode} not found in contact query`
     )
 
     expect(getContactByContactCodeSpy).toHaveBeenCalled()
@@ -143,11 +129,11 @@ describe('getDetailedApplicantInformation', () => {
     const getWaitingListSpy = jest
       .spyOn(xpandSoapAdapter, 'getWaitingList')
       .mockResolvedValueOnce([])
-
+    const applicant = factory.applicant.build()
     await expect(() =>
-      getDetailedApplicantInformation(mockedApplicant)
+      getDetailedApplicantInformation(applicant)
     ).rejects.toThrow(
-      `Waiting list for internal parking space not found for applicant ${mockedApplicant.contactCode}`
+      `Waiting list for internal parking space not found for applicant ${applicant.contactCode}`
     )
 
     expect(tenantLeaseAdapterSpy).toHaveBeenCalled()
@@ -167,11 +153,13 @@ describe('getDetailedApplicantInformation', () => {
       .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
       .mockResolvedValueOnce(undefined)
 
+    const applicant = factory.applicant.build({
+      contactCode: contactCodeForApplicantInxpand,
+    })
+
     await expect(() =>
-      getDetailedApplicantInformation(mockedApplicant)
-    ).rejects.toThrow(
-      `Leases not found for applicant ${mockedApplicant.contactCode}`
-    )
+      getDetailedApplicantInformation(applicant)
+    ).rejects.toThrow(`Leases not found for applicant ${applicant.contactCode}`)
 
     expect(getContactByContactCodeSpy).toHaveBeenCalled()
     expect(getWaitingListSpy).toHaveBeenCalled()

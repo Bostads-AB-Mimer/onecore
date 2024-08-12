@@ -68,7 +68,7 @@ describe('GET contact/waitingList', () => {
 
     const result = await request(app.callback()).get('/contact/waitingList/123')
 
-    expect(xpandAdapterSpy).toHaveBeenCalled
+    expect(xpandAdapterSpy).toHaveBeenCalled()
     expect(result.status).toEqual(HttpStatusCode.InternalServerError)
     expect(result.body).toEqual({ error: 'Oh no' })
   })
@@ -99,7 +99,7 @@ describe('POST contact/waitingList', () => {
       '/contact/waitingList/123'
     )
 
-    expect(xpandAdapterSpy).toHaveBeenCalled
+    expect(xpandAdapterSpy).toHaveBeenCalled()
     expect(result.status).toEqual(HttpStatusCode.InternalServerError)
     expect(result.body).toEqual({ error: 'Oh no' })
   })
