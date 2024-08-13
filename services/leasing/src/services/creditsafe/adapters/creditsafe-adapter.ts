@@ -5,6 +5,7 @@ import { format } from '../../../helpers/personnummer'
 import { ConsumerReport, ConsumerReportError } from 'onecore-types'
 import config from '../../../common/config'
 import { logger } from 'onecore-utilities'
+import axios from 'axios'
 
 const CASXML = (pnr: string) => dedent`
     <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -81,5 +82,12 @@ export const getCreditInformation = async (
   } catch (error) {
     logger.error(error)
     return Promise.reject(error)
+  }
+}
+
+export const healthCheck = async () => {
+  const result = await axios(config.creditsafe.url)
+  if (result.status !== 200) {
+    throw new Error(result.data)
   }
 }

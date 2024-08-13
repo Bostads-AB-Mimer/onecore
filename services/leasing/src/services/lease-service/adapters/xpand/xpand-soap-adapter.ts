@@ -206,6 +206,43 @@ const addApplicantToToWaitingList = async (
   }
 }
 
+const healthCheck = async () => {
+  const headers = getHeaders()
+
+  const xml = `
+   <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ser="http://incit.xpand.eu/service/" xmlns:inc="http://incit.xpand.eu/">
+   <soap:Header xmlns:wsa='http://www.w3.org/2005/08/addressing'><wsa:Action>http://incit.xpand.eu/service/IGetPublishedParkings08352/GetPublishedParkings08352_NotLoggedOn</wsa:Action><wsa:To>${Config.xpandSoap.url}</wsa:To></soap:Header>
+   <soap:Body>
+      <ser:GetPublishedRentalObjectsRequest08352>
+        <inc:CompanyCode>001</inc:CompanyCode>
+         <inc:MessageCulture>${Config.xpandSoap.messageCulture}</inc:MessageCulture>
+      </ser:GetPublishedRentalObjectsRequest08352>
+   </soap:Body>
+</soap:Envelope>`
+
+  const { response } = await soapRequest({
+    url: Config.xpandSoap.url,
+    headers: headers,
+    xml: xml,
+  })
+  const { body } = response
+
+  const options = {
+    ignoreAttributes: false,
+    ignoreNameSpace: false,
+    removeNSPrefix: true,
+  }
+
+  const parser = new XMLParser(options)
+
+  const parsedResponse =
+    parser.parse(body)['Envelope']['Body']['PublishedRentalObjectResult08352']
+
+  if (!parsedResponse['PublishedRentalObjects08352']) {
+    throw createHttpError(404, 'Published Parking Spaces not found')
+  }
+}
+
 function getHeaders() {
   const base64credentials = Buffer.from(
     Config.xpandSoap.username + ':' + Config.xpandSoap.password
@@ -218,4 +255,4 @@ function getHeaders() {
   }
 }
 
-export { createLease, getWaitingList, addApplicantToToWaitingList }
+export { createLease, getWaitingList, addApplicantToToWaitingList, healthCheck }

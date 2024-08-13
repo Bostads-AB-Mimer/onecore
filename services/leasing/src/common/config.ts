@@ -31,6 +31,28 @@ export interface Config {
     template: string
     url: string
   }
+  health: {
+    leasingDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    expiredListingsScript: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandSoapApi: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    creditsafe: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -63,6 +85,28 @@ const config = configPackage({
       template: 'PERSON_CAS_P1',
       url: 'https://testwebservice.creditsafe.se/CAS/cas_service.asmx',
     },
+    health: {
+      leasingDatabase: {
+        systemName: 'leasing database',
+        minimumMinutesBetweenRequests: 1,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
+        minimumMinutesBetweenRequests: 1,
+      },
+      expiredListingsScript: {
+        systemName: 'expired listings script',
+        minimumMinutesBetweenRequests: 1,
+      },
+      xpandSoapApi: {
+        systemName: 'xpand soap api',
+        minimumMinutesBetweenRequests: 2,
+      },
+      creditsafe: {
+        systemName: 'creditsafe base url',
+        minimumMinutesBetweenRequests: 2,
+      },
+    },
   },
 })
 
@@ -72,4 +116,5 @@ export default {
   leasingDatabase: config.get('leasingDatabase'),
   xpandSoap: config.get('xpandSoap'),
   creditsafe: config.get('creditsafe'),
+  health: config.get('health'),
 } as Config
