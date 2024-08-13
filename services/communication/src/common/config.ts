@@ -9,6 +9,12 @@ export interface Config {
     apiKey: string
     parkingSpaceOfferTempalteId: number
   }
+  health: {
+    infobip: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -19,10 +25,17 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    health: {
+      infobip: {
+        systemName: 'infobip',
+        minimumMinutesBetweenRequests: 5,
+      },
+    },
   },
 })
 
 export default {
   port: config.get('port'),
   infobip: config.get('infobip'),
+  health: config.get('health'),
 } as Config
