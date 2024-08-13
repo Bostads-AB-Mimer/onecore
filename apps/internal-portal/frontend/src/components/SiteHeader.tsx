@@ -54,7 +54,7 @@ const SiteHeader = () => (
               </IconButton>
               <Typography variant="hMenu">Aktuellt</Typography>
               <MenuItem onClick={popupState.close} sx={styles.menuItem}>
-                <MenuLink href="/materialval" title="Dags för materialval" />
+                <MenuLink href="/parkingspaces" title="Parkeringsplatser" />
               </MenuItem>
               <Divider
                 sx={{
@@ -64,19 +64,7 @@ const SiteHeader = () => (
                 }}
               />
               <MenuItem onClick={popupState.close} sx={styles.menuItem}>
-                <MenuLink href="/" title="Hem" />
-              </MenuItem>
-              <MenuItem onClick={popupState.close} sx={styles.menuItem}>
-                <MenuLink href="/mitt-boende" title="Mitt boende" />
-              </MenuItem>
-              <MenuItem onClick={popupState.close} sx={styles.menuItem}>
-                <MenuLink href="/mina-uppgifter" title="Mina uppgifter" />
-              </MenuItem>
-              <MenuItem onClick={popupState.close} sx={styles.menuItem}>
-                <MenuLink
-                  href="/materialval/val"
-                  title="Beställda materialval"
-                />
+                <MenuLink href="/materialval" title="Materialval" />
               </MenuItem>
             </Menu>
           </Backdrop>

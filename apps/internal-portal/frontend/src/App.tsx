@@ -56,9 +56,10 @@ function App() {
             <SiteHeader />
             <Routes>
               <Route element={<PageBase />}>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<ParkingSpaces />} />
                 <Route path="/parkingspaces" element={<ParkingSpaces />} />
                 <Route path="/parkingspace/:id" element={<ParkingSpace />} />
+                <Route path="/materialval" element={<Home />} />
                 <Route
                   path="/materialval/utskrift"
                   element={<MaterialChoiceDetails />}
