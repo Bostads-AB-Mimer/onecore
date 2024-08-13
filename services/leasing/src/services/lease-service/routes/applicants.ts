@@ -317,8 +317,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 reason:
    *                   type: string
-   *                   example: No property rental rules applies to this
-   *                   property.
+   *                   example: No property rental rules applies to this property.
    *       403:
    *         description: Applicant is not eligible for the property based on property rental rules.
    *         content:
@@ -505,8 +504,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The xpand district code of the residential area to
-   *         validate against.
+   *         description: The xpand district code of the residential area to validate against.
    *     responses:
    *       200:
    *         description: No residential area rental rules apply or applicant is eligible to apply for parking space.
