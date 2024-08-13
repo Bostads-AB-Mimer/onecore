@@ -314,6 +314,7 @@ interface SystemHealth {
   status: SystemStatus
   subsystems?: SystemHealth[]
   statusMessage?: string
+  timeStamp: Date
 }
 
 export type {
@@ -345,5 +346,5 @@ export type {
   MaintenanceUnitInfo,
   ResidentialArea,
   SystemHealth,
-  SystemStatus
+  SystemStatus,
 }
