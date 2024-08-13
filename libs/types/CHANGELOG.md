@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.2...v1.24.0) (2024-08-13)
+
+
+### Features
+
+* 1444 More health routes and time limit between requests ([2e623e6](https://github.com/Bostads-AB-Mimer/onecore-types/commit/2e623e6690471425c6d8bb73022f5a840b9d510d))
+
 ## [1.23.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.1...v1.23.2) (2024-06-17)
 
 
