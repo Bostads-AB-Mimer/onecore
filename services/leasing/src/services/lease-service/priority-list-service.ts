@@ -4,6 +4,7 @@
  * Sorting applicants based on rental rules
  */
 
+import { logger } from 'onecore-utilities'
 import {
   Applicant,
   DetailedApplicant,
@@ -13,7 +14,6 @@ import {
   parkingSpaceApplicationCategoryTranslation,
   WaitingList,
 } from 'onecore-types'
-import { logger } from 'onecore-utilities'
 
 import { getWaitingList } from './adapters/xpand/xpand-soap-adapter'
 import { leaseTypes } from '../../constants/leaseTypes'

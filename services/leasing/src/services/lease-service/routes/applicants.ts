@@ -75,9 +75,6 @@ export const routes = (router: KoaRouter) => {
     const { contactCode } = ctx.params // Extracting from URL parameters
     try {
       const applicants = await getApplicantsByContactCode(contactCode)
-      ctx.body = applicants
-      ctx.status = 200
-
       if (!applicants) {
         ctx.status = 404 // Not Found
         ctx.body = {
