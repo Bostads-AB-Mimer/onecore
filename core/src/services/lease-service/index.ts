@@ -176,12 +176,6 @@ export const routes = (router: KoaRouter) => {
    *     description: Retrieves all offers associated with a specific contact based on the provided contact code.
    *     parameters:
    *       - in: path
-   *         name: any
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: A wildcard parameter to match any route prefix.
-   *       - in: path
    *         name: contactCode
    *         required: true
    *         schema:
