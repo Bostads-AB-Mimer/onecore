@@ -27,6 +27,16 @@ export interface Config {
     url: string
     messageCulture: string
   }
+  health: {
+    propertyManagementDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -56,6 +66,16 @@ const config = configPackage({
       url: '',
       messageCulture: '1053',
     },
+    health: {
+      propertyManagementDatabase: {
+        systemName: 'property management database',
+        minimumMinutesBetweenRequests: 1,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
+        minimumMinutesBetweenRequests: 1,
+      },
+    },
   },
 })
 
@@ -66,4 +86,5 @@ export default {
   xpandService: config.get('xpandService'),
   xpandSoap: config.get('xpandSoap'),
   appsMimerNu: config.get('appsMimerNu'),
+  health: config.get('health'),
 } as Config
