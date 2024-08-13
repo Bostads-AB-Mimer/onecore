@@ -164,9 +164,16 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
   return team[0]
 }
 
+const healthCheck = async () => {
+  await odoo.connect()
+  const team: number[] = await odoo.searchRead('maintenance.team')
+  if (!team && !team[0]) throw new Error('No maintanance team found')
+}
+
 export {
   createTicket,
   getTicketByContactCode,
   getMaintenanceTeamId,
   transformEquipmentCode,
+  healthCheck,
 }
