@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
+import { healthCheck as odooHealthCheck } from '../ticketing-service/adapters/odoo-adapter'
 import {
   loggedAxios as axios,
   setAxiosExclusionFilters,
@@ -8,36 +9,74 @@ import { SystemHealth } from 'onecore-types'
 
 setAxiosExclusionFilters([/.*?\/health$/])
 
+const healthChecks: Map<string, SystemHealth> = new Map()
+
+const probe = async (
+  systemName: string,
+  minimumMinutesBetweenRequests: number,
+  checkFunction: () => any
+): Promise<SystemHealth> => {
+  let currentHealth = healthChecks.get(systemName)
+
+  if (
+    !currentHealth ||
+    Math.floor(
+      (new Date().getTime() - currentHealth.timeStamp.getTime()) / 60000
+    ) >= minimumMinutesBetweenRequests
+  ) {
+    try {
+      const result = await checkFunction()
+
+      if (result) {
+        currentHealth = {
+          status: result.status,
+          name: result.name,
+          subsystems: result.subsystems,
+          timeStamp: new Date(),
+        }
+      } else {
+        currentHealth = {
+          status: 'active',
+          name: systemName,
+          timeStamp: new Date(),
+        }
+      }
+    } catch (error: any) {
+      currentHealth = {
+        status: 'failure',
+        statusMessage: error.message || 'Failed to access ' + systemName,
+        name: systemName,
+        timeStamp: new Date(),
+      }
+    }
+
+    healthChecks.set(systemName, currentHealth)
+  }
+  return currentHealth
+}
+
 const oneCoreServiceProbe = async (
   systemName: string,
+  minimumMinutesBetweenRequests: number,
   systemUrl: string
 ): Promise<SystemHealth> => {
-  try {
+  return await probe(systemName, minimumMinutesBetweenRequests, async () => {
     const result = await axios(systemUrl)
 
     if (result.status === 200) {
       return result.data
     } else {
-      return {
-        name: systemName,
-        status: 'failure',
-        statusMessage: result.data,
-      }
+      throw new Error(result.data)
     }
-  } catch (error: any) {
-    return {
-      name: systemName,
-      status: 'failure',
-      statusMessage: error.message,
-    }
-  }
+  })
 }
 
 const subsystems = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await oneCoreServiceProbe(
-        'leasing',
+        config.health.leasing.systemName,
+        config.health.leasing.minimumMinutesBetweenRequests,
         config.tenantsLeasesService.url + '/health'
       )
     },
@@ -45,7 +84,8 @@ const subsystems = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await oneCoreServiceProbe(
-        'property-management',
+        config.health.propertyManagement.systemName,
+        config.health.propertyManagement.minimumMinutesBetweenRequests,
         config.propertyInfoService.url + '/health'
       )
     },
@@ -53,8 +93,18 @@ const subsystems = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await oneCoreServiceProbe(
-        'communication',
+        config.health.communication.systemName,
+        config.health.communication.minimumMinutesBetweenRequests,
         config.communicationService.url + '/health'
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await probe(
+        config.health.odoo.systemName,
+        config.health.odoo.minimumMinutesBetweenRequests,
+        odooHealthCheck
       )
     },
   },
@@ -113,6 +163,7 @@ export const routes = (router: KoaRouter) => {
       name: 'core',
       status: 'active',
       subsystems: [],
+      timeStamp: new Date(),
     }
 
     // Iterate over subsystems

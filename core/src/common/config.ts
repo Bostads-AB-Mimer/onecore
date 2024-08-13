@@ -38,6 +38,24 @@ export interface Config {
     leasing: string
     tenantDefault: string
   }
+  health: {
+    leasing: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    propertyManagement: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    communication: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    odoo: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -71,6 +89,24 @@ const config = configPackage({
       username: '',
       password: '',
     },
+    health: {
+      leasing: {
+        systemName: 'leasing',
+        minimumMinutesBetweenRequests: 1,
+      },
+      propertyManagement: {
+        systemName: 'property-management',
+        minimumMinutesBetweenRequests: 1,
+      },
+      communication: {
+        systemName: 'communication',
+        minimumMinutesBetweenRequests: 1,
+      },
+      odoo: {
+        systemName: 'odoo',
+        minimumMinutesBetweenRequests: 1,
+      },
+    },
   },
 })
 
@@ -83,4 +119,5 @@ export default {
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
   ticketingService: config.get('ticketingService'),
+  health: config.get('health'),
 } as Config
