@@ -12,6 +12,12 @@ interface ParkingSpaceOfferEmail extends Email {
   hasParkingSpace: boolean;
 }
 
+interface ParkingSpaceOfferSms {
+  phoneNumber: string;
+  firstName: string;
+  deadlineDate: string;
+}
+
 // Can be used for both positive and negative notifications
 interface ParkingSpaceNotificationEmail extends Email {
   address: string;
@@ -20,5 +26,6 @@ interface ParkingSpaceNotificationEmail extends Email {
 
 export type {
   ParkingSpaceOfferEmail,
-  ParkingSpaceNotificationEmail
+  ParkingSpaceNotificationEmail,
+  ParkingSpaceOfferSms,
 }
