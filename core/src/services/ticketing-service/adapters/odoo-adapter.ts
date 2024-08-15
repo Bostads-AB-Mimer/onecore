@@ -74,7 +74,8 @@ const transformEquipmentCode = (equipment_code: string) => {
     : ''
 }
 
-const removePTags = (text: string): string => text.replace(/<\/?p>/g, '')
+const removePTags = (text: string): string =>
+  text ? text.replace(/<\/?p>/g, '') : ''
 
 const transformTicket = (ticket: OdooGetTicket) => {
   const spaceCode = transformSpaceCode(ticket.space_code)
