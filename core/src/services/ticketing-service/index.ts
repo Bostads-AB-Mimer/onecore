@@ -530,7 +530,8 @@ export const routes = (router: KoaRouter) => {
         }
         return
       }
-      const { RentalObjectCode, AccessOptions, Pet, Rows } = ctx.request.body
+      const { RentalObjectCode, AccessOptions, Pet, Rows, Images } =
+        ctx.request.body
 
       if (Rows.length === 0) {
         ctx.status = 400
@@ -582,6 +583,7 @@ export const routes = (router: KoaRouter) => {
           space_code: ticket.LocationCode,
           equipment_code: ticket.PartOfBuildingCode,
           description: ticket.Description,
+          images: Images,
           name:
             'Felanmäld tvättstuga - ' +
             transformEquipmentCode(ticket.PartOfBuildingCode),

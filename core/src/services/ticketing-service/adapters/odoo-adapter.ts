@@ -30,6 +30,7 @@ export interface OdooPostTicket {
   space_code: string
   equipment_code: string
   description: string
+  images: OdooPostTicketImage[]
   name: string
   email_address: string
   building_code: string
@@ -44,6 +45,12 @@ export interface OdooPostTicket {
   address: string
   maintenance_unit_code: string
   maintenance_unit_caption: string
+}
+
+interface OdooPostTicketImage {
+  Filename: string
+  ImageType: number
+  Base64String: string
 }
 
 const odoo = new Odoo({
