@@ -1,6 +1,6 @@
 import { Infobip, AuthType } from '@infobip-api/sdk'
 import config from '../../../common/config'
-import { Email, ParkingSpaceOfferEmail, ParkingSpaceNotificationEmail } from 'onecore-types'
+import { Email, ParkingSpaceOfferEmail, ParkingSpaceNotificationEmail, ParkingSpaceOfferSms } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
 const infobip = new Infobip({
@@ -10,6 +10,7 @@ const infobip = new Infobip({
 })
 
 const NewParkingSpaceOfferTemplateId = 200000000092027;
+const NewParkingSpaceOfferSmsTemplateId = 200000000094113; 
 const ExistingParkingSpaceOfferTemplateId = 200000000094058;
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051; 
 
@@ -69,6 +70,32 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
   } catch (error) {
     console.error(error);
     throw error;
+  }
+};
+
+export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
+  try {
+    const response = await infobip.channels.sms.send({
+        messages: [
+            {
+              destinations: [
+                  { to: sms.phoneNumber },
+              ],
+              from: 'Mimer AB',
+              text: 'Hej firstName! Vad kul att du anmält intresse på den här bilplatsen! Vi vill nu veta om du vill ha kontraktet. Senast deadlineDate behöver du tacka ja eller nej via Mina sidor'.replace('firstName', sms.firstName).replace('deadlineDate', sms.deadlineDate),
+              templateId: NewParkingSpaceOfferSmsTemplateId
+            }
+        ]
+    });
+    console.log('SMS sent successfully:');
+    if (response.status === 200) {
+      return response.data;
+    } else {  
+      throw new Error(response.body);
+    }
+  } catch (error) {
+      console.error('Error sending SMS:', error);
+      throw error;
   }
 };
 

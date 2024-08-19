@@ -1,7 +1,8 @@
 import KoaRouter from '@koa/router'
 import validator from 'validator'
-import { sendEmail, sendParkingSpaceOffer, sendParkingSpaceAssignedToOther } from './adapters/infobip-adapter'
-import { Email, ParkingSpaceOfferEmail, ParkingSpaceNotificationEmail } from 'onecore-types'
+import { validator as phoneValidator, normalize } from 'telefonnummer'
+import { sendEmail, sendParkingSpaceOffer, sendParkingSpaceAssignedToOther, sendParkingSpaceOfferSms } from './adapters/infobip-adapter'
+import { Email, ParkingSpaceOfferEmail, ParkingSpaceNotificationEmail, ParkingSpaceOfferSms } from 'onecore-types'
 import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
@@ -58,6 +59,35 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.post('(.*)/sendSms', async (ctx) => {
+    try {
+      console.log('Sending sms')
+      console.log('payload', ctx.request.body)
+      const sms = ctx.request.body
+      if (!isValidSms(sms)) {
+        ctx.throw(400, 'Message is not an sms object')
+        return
+      }
+  
+      let phoneNumber = sms.phoneNumber
+      if (!phoneValidator(phoneNumber)) {
+        ctx.throw(400, 'Invalid phone number')
+        return
+      }
+      phoneNumber = '46' + normalize(phoneNumber).slice(1)
+  
+      const result = await sendParkingSpaceOfferSms({ ...sms, phoneNumber })
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+    
 }
 
 export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSpaceOfferEmail => {
@@ -77,7 +107,7 @@ export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSp
     typeof emailData.parkingSpaceId === 'string' &&
     typeof emailData.objectId === 'string' &&
     typeof emailData.hasParkingSpace === 'boolean'
-  );
+  )
 }
 
 export const isMessageEmail = (message: any): message is Email => {
@@ -92,4 +122,14 @@ export const isMessageEmail = (message: any): message is Email => {
     message.text &&
     typeof message.text === 'string'
   )
+}
+
+export const isValidSms = (sms: any): sms is ParkingSpaceOfferSms => {
+  return (
+    typeof sms === 'object' &&
+    sms !== null &&
+    typeof sms.phoneNumber === 'string' &&
+    typeof sms.firstName === 'string' && 
+    typeof sms.deadlineDate === 'string'
+  );
 }

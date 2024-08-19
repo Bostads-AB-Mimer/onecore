@@ -49,6 +49,7 @@
     "koa-pino-logger": "^4.0.0",
     "onecore-types": "^1.23.2",
     "onecore-utilities": "^1.0.2",
+    "telefonnummer": "^2.1.0",
     "validator": "^13.11.0"
   }
 }
