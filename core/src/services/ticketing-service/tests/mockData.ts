@@ -3,7 +3,13 @@ import { OdooGetTicket } from '../adapters/odoo-adapter'
 
 export const ticketRequestMockData = {
   RentalObjectCode: '705-022-04-0201',
-  Images: [],
+  Images: [
+    {
+      Filename: 'image.jpeg',
+      ImageType: 1,
+      Base64String: 'base64String',
+    },
+  ],
   AccessOptions: {
     Type: 0,
     Email: 'test@test.se',
