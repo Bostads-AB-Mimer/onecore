@@ -1,16 +1,19 @@
-import configPackage from "@iteam/config";
-import dotenv from "dotenv";
-dotenv.config();
+import configPackage from '@iteam/config'
+import dotenv from 'dotenv'
+dotenv.config()
 
 export interface Config {
-  port: number;
-  xledger: {};
+  port: number
+  xledger: {
+    url: string
+    apiToken: string
+  }
   health: {
     xledger: {
-      systemName: string;
-      minimumMinutesBetweenRequests: number;
-    };
-  };
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -18,20 +21,20 @@ const config = configPackage({
   defaults: {
     port: 5040,
     xledger: {
-      baseUrl: "",
-      apiKey: "",
+      url: 'https://www.xledger.net/graphql',
+      apiToken: '',
     },
     health: {
       xledger: {
-        systemName: "infobip",
+        systemName: 'xledger',
         minimumMinutesBetweenRequests: 5,
       },
     },
   },
-});
+})
 
 export default {
-  port: config.get("port"),
-  xledger: config.get(""),
-  health: config.get("health"),
-} as Config;
+  port: config.get('port'),
+  xledger: config.get('xledger'),
+  health: config.get('health'),
+} as Config

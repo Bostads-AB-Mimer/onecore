@@ -56,6 +56,7 @@
     "date-holidays": "^3.23.12",
     "dayjs": "^1.11.10",
     "dotenv": "^16.4.5",
+    "graphql-request": "^7.1.0",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "koa": "^2.15.0",
