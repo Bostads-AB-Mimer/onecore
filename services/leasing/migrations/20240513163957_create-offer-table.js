@@ -1,6 +1,6 @@
 /**
  * Migration for creating 'offer' table.
- * @param { import("knex").Knex } knex
+ * @param { import('knex').Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = function (knex) {
@@ -21,7 +21,7 @@ exports.up = function (knex) {
 
 /**
  * Migration for dropping 'applicant' table.
- * @param { import("knex").Knex } knex
+ * @param { import('knex').Knex } knex
  * @returns { Promise<void> }
  */
 exports.down = function (knex) {

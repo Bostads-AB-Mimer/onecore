@@ -3,7 +3,7 @@
  * @returns { Promise<void> }
  */
 exports.up = function (knex) {
-  knex.schema.table('applicant', (t) => t.index('ListingId', 'idx_listingId'))
+  return knex.schema.table('applicant', (t) => t.index('ListingId', 'idx_listingId'))
 }
 
 /**
@@ -11,7 +11,7 @@ exports.up = function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = function (knex) {
-  knex.schema.table('applicant', (t) =>
+  return knex.schema.table('applicant', (t) =>
     t.dropIndex('ListingId', 'idx_listingId')
   )
 }

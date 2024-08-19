@@ -19,6 +19,12 @@ Microservice for tenants and leases in ONECore.
 
 Start the development server: `npm run dev`
 
+## Testing
+
+The test suite requires a dedicated database for our database unit tests to run.
+For local development, create a new MSSQL database and make a copy of `.env.test.template` called `.env.test` and supply
+the credentials to your test database.
+
 ## Env
 
 According to .env.template.

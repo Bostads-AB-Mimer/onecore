@@ -179,20 +179,23 @@ const createApplication = async (applicationData: Omit<Applicant, 'id'>) => {
     'Creating application in listing DB'
   )
 
-  await db('applicant').insert({
-    Name: applicationData.name,
-    NationalRegistrationNumber: applicationData.nationalRegistrationNumber,
-    ContactCode: applicationData.contactCode,
-    ApplicationDate: applicationData.applicationDate,
-    ApplicationType: applicationData.applicationType,
-    Status: applicationData.status,
-    ListingId: applicationData.listingId,
-  })
+  const insertedRow = await db('applicant')
+    .insert({
+      Name: applicationData.name,
+      NationalRegistrationNumber: applicationData.nationalRegistrationNumber,
+      ContactCode: applicationData.contactCode,
+      ApplicationDate: applicationData.applicationDate,
+      ApplicationType: applicationData.applicationType,
+      Status: applicationData.status,
+      ListingId: applicationData.listingId,
+    })
+    .returning('*')
 
   logger.info(
     { contactCode: applicationData.contactCode },
     'Creating application in listing DB complete'
   )
+  return transformDbApplicant(insertedRow[0])
 }
 
 /**
@@ -274,11 +277,6 @@ const getApplicantsByContactCode = async (contactCode: string) => {
     .where({ ContactCode: contactCode })
     .select<Array<DbApplicant>>('*')
 
-  if (result == undefined) {
-    return undefined
-  }
-
-  // Map result array to Applicant objects
   return result.map(transformDbApplicant)
 }
 
@@ -319,14 +317,19 @@ const applicationExists = async (contactCode: string, listingId: number) => {
       ListingId: listingId,
     })
     .first()
-  return !!result // Convert result to boolean: true if exists, false if not
+
+  if (!result) {
+    return false
+  }
+
+  return true
 }
 
 const getExpiredListings = async () => {
   const currentDate = new Date()
   const listings = await db('listing')
     .where('PublishedTo', '<', currentDate)
-    .andWhere('Status', '==', ListingStatus.Active)
+    .andWhere('Status', '=', ListingStatus.Active)
   return listings
 }
 
