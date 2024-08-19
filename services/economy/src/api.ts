@@ -1,10 +1,10 @@
-import KoaRouter from "@koa/router";
-import { routes as infobipRoutes } from "./services/economy-service";
-import { routes as healthRoutes } from "./services/health-service";
+import KoaRouter from '@koa/router'
+import { routes as infobipRoutes } from './services/invoice-service'
+import { routes as healthRoutes } from './services/health-service'
 
-const router = new KoaRouter();
+const router = new KoaRouter()
 
-infobipRoutes(router);
-healthRoutes(router);
+infobipRoutes(router)
+healthRoutes(router)
 
-export default router;
+export default router

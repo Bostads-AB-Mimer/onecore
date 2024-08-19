@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { SystemHealth } from 'onecore-types'
 import config from '../../common/config'
-import { healthCheck as infobipHealthCheck } from '../economy-service/adapters/xledger-adapter'
+import { healthCheck as xledgerHealthCheck } from '../invoice-service/adapters/xledger-adapter'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
 
@@ -63,9 +63,9 @@ const subsystems = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await probe(
-        config.health.infobip.systemName,
-        config.health.infobip.minimumMinutesBetweenRequests,
-        infobipHealthCheck
+        config.health.xledger.systemName,
+        config.health.xledger.minimumMinutesBetweenRequests,
+        xledgerHealthCheck
       )
     },
   },
