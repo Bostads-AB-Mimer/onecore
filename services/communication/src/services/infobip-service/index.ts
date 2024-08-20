@@ -41,7 +41,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-
   router.post('(.*)/sendNotification', async (ctx) => {
     const { applicants } = ctx.request.body as { applicants: ParkingSpaceNotificationEmail[] }
     if (!Array.isArray(applicants)) {
@@ -87,10 +86,12 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-    
+
 }
 
-export const isParkingSpaceOfferEmail = (emailData: any): emailData is ParkingSpaceOfferEmail => {
+export const isParkingSpaceOfferEmail = (
+  emailData: any
+): emailData is ParkingSpaceOfferEmail => {
   return (
     typeof emailData === 'object' &&
     emailData !== null &&
