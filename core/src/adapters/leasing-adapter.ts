@@ -14,6 +14,7 @@ import {
   Offer,
   DetailedApplicant,
   OfferWithRentalObjectCode,
+  DetailedOffer,
 } from 'onecore-types'
 import config from '../common/config'
 import dayjs from 'dayjs'
@@ -477,6 +478,25 @@ const getOffersForContact = async (
   }
 }
 
+const getOfferByContactCodeAndOfferId = async (
+  contactCode: string,
+  offerId: string
+): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> => {
+  try {
+    const res = await axios(
+      `${tenantsLeasesServiceUrl}/offers/${offerId}/applicants/${contactCode}`
+    )
+
+    if (res.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: res.data.data }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getOffersForContact')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const validateRentalRules = (
   validationResult: AxiosResponse,
   applicationType: string
@@ -612,6 +632,7 @@ export {
   getOffersForContact,
   getContactsDataBySearchQuery,
   getContactByContactCode,
+  getOfferByContactCodeAndOfferId,
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
 }

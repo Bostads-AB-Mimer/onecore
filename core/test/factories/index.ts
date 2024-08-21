@@ -2,5 +2,6 @@ export { DetailedApplicantFactory as detailedApplicant } from './detailed-applic
 export { ListingFactory as listing } from './listing'
 export { OfferFactory as offer } from './offer'
 export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from './offer'
+export { DetailedOfferFactory as detailedOffer } from './offer'
 export { ApplicantFactory as applicant } from './applicant'
 export { ContactFactory as contact } from './contact'

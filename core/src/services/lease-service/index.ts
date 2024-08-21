@@ -25,6 +25,7 @@ import {
   getContactsDataBySearchQuery,
   getContactByContactCode,
   getContactForPnr,
+  getOfferByContactCodeAndOfferId,
 } from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
 import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
@@ -198,6 +199,58 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/contacts/:contactCode/offers', async (ctx) => {
     const res = await getOffersForContact(ctx.params.contactCode)
+    if (!res.ok) {
+      ctx.status = res.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      data: res.data,
+    }
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/applicants/{contactCode}:
+   *   get:
+   *     summary: Get a specific offer for an applicant
+   *     description: Retrieve details of a specific offer associated with an applicant using contact code and offer ID.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the offer.
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique code identifying the applicant.
+   *     responses:
+   *       200:
+   *         description: Details of the specified offer.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       404:
+   *         description: Offer not found for the specified contact code and offer ID.
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the offer.
+   *     security:
+   *       - bearerAuth: []
+   */
+
+  router.get('(.*)/offers/:offerId/applicants/:contactCode', async (ctx) => {
+    const res = await getOfferByContactCodeAndOfferId(
+      ctx.params.contactCode,
+      ctx.params.offerId
+    )
     if (!res.ok) {
       ctx.status = res.err === 'not-found' ? 404 : 500
       return

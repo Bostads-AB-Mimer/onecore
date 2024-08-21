@@ -218,6 +218,42 @@ describe('lease-service', () => {
     })
   })
 
+  describe('GET /offers/:offerId/applicants/:contactCode', () => {
+    it('responds with an offer', async () => {
+      const detailedApplicant = factory.detailedApplicant.build({
+        contactCode: 'P174965',
+      })
+
+      const offer = factory.detailedOffer.build({
+        offeredApplicant: detailedApplicant,
+      })
+
+      const getOffersForContactSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getOfferByContactCodeAndOfferId')
+        .mockResolvedValueOnce({ ok: true, data: offer })
+
+      const res = await request(app.callback()).get(
+        `/offers/${offer.id}/applicants/${detailedApplicant.contactCode}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getOffersForContactSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(offer))
+    })
+    it('returns 404 if no offer', async () => {
+      const getContactByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getOfferByContactCodeAndOfferId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        `/offers/NON_EXISTING_OFFER/applicants/NON_EXISTING_APPLICANT`
+      )
+
+      expect(res.status).toBe(404)
+      expect(getContactByContactCodeSpy).toHaveBeenCalled()
+    })
+  })
+
   describe('GET /cas/getConsumerReport/:pnr', () => {
     it('responds with a credit information', async () => {
       const getCreditInformationSpy = jest
