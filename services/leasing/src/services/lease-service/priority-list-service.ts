@@ -34,6 +34,10 @@ type GetDetailedApplicantError =
   | 'contact-leases-not-found'
   | 'get-residential-area'
   | 'housing-contracts-not-found'
+import {
+  isHousingContractsOfApplicantInSameAreaAsListing,
+  isListingInAreaWithSpecificRentalRules,
+} from './residential-area-rental-rules-validator'
 
 const getDetailedApplicantInformation = async (
   applicant: Applicant
@@ -186,6 +190,22 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     )
   }
 
+  if (
+    listing.districtCode &&
+    isListingInAreaWithSpecificRentalRules(listing.districtCode) &&
+    !isHousingContractsOfApplicantInSameAreaAsListing(
+      listing.districtCode,
+      applicant
+    )
+  ) {
+    //special residential area rental rules apply to this listing
+    //applicant is not allowed to rent this object, return priority:undefined
+    return {
+      ...applicant,
+      priority: undefined,
+    }
+  }
+
   //priority  1
 
   //Applicant has no active parking space contract and is tenant in same area as listing
@@ -265,6 +285,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     }
   }
 
+  //Applicant is not in any of the 3 priority groups and is not eligible to rent the parking space. Ie because they doesn't have a housing contract
   return {
     ...applicant,
     priority: undefined,

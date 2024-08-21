@@ -554,6 +554,35 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
 
     expect(result.priority).toBe(3)
   })
+
+  it('applicant should not get a priority if not eligible for renting in area with specific rental rule', () => {
+    const listing = factory.listing
+      .params({
+        districtCode: 'CEN',
+      })
+      .build()
+
+    const currentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
+
+    const applicant = factory.detailedApplicant
+      .params({
+        currentHousingContract: currentHousingContract,
+        listingId: listing.id,
+      })
+      .build()
+
+    const result = assignPriorityToApplicantBasedOnRentalRules(
+      listing,
+      applicant
+    )
+    expect(result.priority).toBe(undefined)
+  })
 })
 
 describe('sortApplicantsBasedOnRentalRules', () => {
