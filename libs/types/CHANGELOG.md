@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.24.0...v1.25.0) (2024-08-21)
+
+
+### Features
+
+* 1574 add detailed offer response type ([7e120fd](https://github.com/Bostads-AB-Mimer/onecore-types/commit/7e120fd803cc67c275d3c9a5307bef925bc92c23))
+
 ## [1.24.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.23.2...v1.24.0) (2024-08-13)
 
 
