@@ -79,6 +79,14 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     .mockResolvedValue(createAxiosResponse(HttpStatusCode.Ok, null))
   const createNewListingSpy = jest.spyOn(leasingAdapter, 'createNewListing')
 
+  const validatePropertyRentalRules = jest
+    .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+    .mockResolvedValue({ ok: true, data: { reason: '' } })
+
+  const validateResidentialAreaRentalRules = jest
+    .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+    .mockResolvedValue({ ok: true, data: { reason: '' } })
+
   jest
     .spyOn(leasingAdapter, 'getListingByRentalObjectCode')
     .mockResolvedValue(createAxiosResponse(HttpStatusCode.Ok, null))
@@ -173,6 +181,33 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
     expect(result.httpStatus).toBe(404)
+  })
+
+  it('returns an error if the applicant is not eligible for renting in area with specific rental rule', async () => {
+    getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
+    getContactSpy.mockResolvedValue(mockedApplicant)
+    getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
+    validatePropertyRentalRules.mockResolvedValueOnce({
+      ok: false,
+      err: 'not-found',
+    })
+    validateResidentialAreaRentalRules.mockResolvedValueOnce({
+      ok: false,
+      err: 'not-allowed-to-rent-additional',
+    })
+
+    const result =
+      await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+        'foo',
+        'bar',
+        'baz'
+      )
+
+    expect(result.processStatus).toBe(ProcessStatus.failed)
+    if (result.processStatus == ProcessStatus.failed) {
+      expect(result.httpStatus).toBe(400)
+      expect(result.error).toBe('not-allowed-to-rent-additional')
+    }
   })
 
   it('performs internal credit check', async () => {

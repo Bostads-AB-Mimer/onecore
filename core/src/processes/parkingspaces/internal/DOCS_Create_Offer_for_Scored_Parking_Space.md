@@ -8,13 +8,12 @@ A[Start] -->B(Get Listing)
 B --> C{Is Listing Published<br/>and Ready for Offering?}
 C --> |Yes| O
 C --> |No| D[Get Applicants incl<br/>Contracts and Queue Points]
-D --> K[Update Listing status]
-K --> E[Sort Applicant by Rental Criteria]
-E --> F{Valid Applicant<br/>Found?}
+
+D --> F{Valid Applicant<br/>Found?}
 F --> |No| G[TODO:Re-Publish Parking Space<br/>as None Scored]
 G --> O[End]
 F --> |Yes| H[Create Offer]
-H --> I[Udate Status<br/>on Winning Applicant]
+H --> I[Update Status<br/>on Winning Applicant]
 I --> J[Notify<br/>Winning Applicant]
 J --> O
 ```
@@ -43,13 +42,11 @@ sequenceDiagram
 
     loop for each Listing Ready for Offering
         Note over System,XPand SOAP: Create Offer for Scored Parking Space
-        Core ->>Leasing: Get Listing and Applicants
-        Leasing ->>OneCore DB: Get Listing and Applicants
-        OneCore DB --> Leasing: Listings and Applicants
-        Leasing -->> Core: Listing and Applicants
-        Core ->> Leasing: Update Listing Status
-        Leasing ->> OneCore DB: Update Listing Status
-        Core ->> Leasing: Get detailed Contact data, Contracts and Queue Points for each Applicant
+        Core ->>Leasing: Get Listing
+        Leasing ->>OneCore DB: Get Listing
+        OneCore DB --> Leasing: Listing
+        Leasing -->> Core: Listing
+        Core ->> Leasing: Get detailed Applicant data inkl Contracts and Queue Points for each Applicant
         Leasing ->> XPand DB: Get Contact
         XPand DB -->> Leasing:Contact
         Leasing ->> XPand DB: Get Contracts
@@ -57,8 +54,6 @@ sequenceDiagram
         Leasing ->> XPand SOAP: Get Queue Points
         XPand SOAP -->> Leasing: Queue Points
         Leasing -->> Core:Contracts and Queue Points for each Applicant
-        Core ->> Leasing:Sort Applicants by Rental Criteria
-        Leasing -->> Core: Sorted Applicants
         alt No Valid Applicant Found
             Core ->>Leasing: TODO Re-Publish Listing in None Scored Queue
         else Valid Applicant Found

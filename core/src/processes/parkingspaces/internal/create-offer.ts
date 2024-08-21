@@ -37,15 +37,21 @@ export const createOfferForInternalParkingSpace = async (
       return makeProcessError('listing-not-expired', 500)
     }
 
+    const eligibleApplicants = await leasingAdapter
+      .getListingByIdWithDetailedApplicants(String(listing.id))
+      .then((applicants) => {
+        // filter out any applicants that has no priority. They are not eligible to rent the object of this listing
+        return applicants?.filter((detailedApplicant) => {
+          return detailedApplicant.priority != undefined
+        })
+      })
+
+    if (!eligibleApplicants?.length)
+      return makeProcessError('no-applicants', 500)
+
+    const [applicant] = eligibleApplicants
+
     // TODO: Maybe we want to make a credit check here?
-
-    const applicants =
-      await leasingAdapter.getListingByIdWithDetailedApplicants(
-        String(listing.id)
-      )
-
-    if (!applicants?.length) return makeProcessError('no-applicants', 500)
-    const [applicant] = applicants
 
     const contact = await leasingAdapter.getContact(applicant.contactCode)
     if (!contact) {
@@ -73,7 +79,7 @@ export const createOfferForInternalParkingSpace = async (
         applicantId: applicant.id,
         expiresAt: utils.date.addBusinessDays(new Date(), 2),
         listingId: listing.id,
-        selectedApplicants: applicants,
+        selectedApplicants: eligibleApplicants,
         status: OfferStatus.Active,
       })
       log.push(`Created offer ${offer.id}`)

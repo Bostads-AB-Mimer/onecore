@@ -18,7 +18,7 @@ import {
 import config from '../common/config'
 import dayjs from 'dayjs'
 import { AdapterResult } from './types'
-import { HttpStatusCode } from 'axios'
+import { AxiosResponse, HttpStatusCode } from 'axios'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -351,7 +351,7 @@ const getApplicantByContactCodeAndListingId = async (
   }
 }
 
-// TODO: This function does not actually get the listing
+// TODO: This function does not actually get the listing. Rename and describe function?
 const getListingByIdWithDetailedApplicants = async (
   listingId: string
 ): Promise<DetailedApplicant[] | undefined> => {
@@ -477,6 +477,112 @@ const getOffersForContact = async (
   }
 }
 
+const validateRentalRules = (
+  validationResult: AxiosResponse,
+  applicationType: string
+): AdapterResult<
+  { reason: string },
+  | 'not-found'
+  | 'unknown'
+  | 'contact-not-found'
+  | 'not-a-parking-space'
+  | 'no-contract-in-the-area'
+  | 'not-allowed-to-rent-additional'
+  | 'unexpected-error'
+> => {
+  if (validationResult.status == HttpStatusCode.NotFound) {
+    return { ok: false, err: 'not-found' }
+  } else if (validationResult.status == HttpStatusCode.InternalServerError) {
+    return {
+      ok: false,
+      err: 'contact-not-found',
+    }
+  } else if (validationResult.status == HttpStatusCode.BadRequest) {
+    return {
+      ok: false,
+      err: 'not-a-parking-space',
+    }
+  } else if (validationResult.status == HttpStatusCode.Forbidden) {
+    return {
+      ok: false,
+      err: 'no-contract-in-the-area',
+    }
+  } else if (validationResult.status == HttpStatusCode.Ok) {
+    if (validationResult.data.applicationType == 'Additional') {
+      //Applicant is allowed to rent an additional parking space in this area
+      return { ok: true, data: { reason: validationResult.data.reason } }
+    } else if (
+      validationResult.data.applicationType == 'Replace' &&
+      applicationType == 'Replace'
+    ) {
+      //Applicant is allowed to replace their current parking space for a new one in this area
+      return { ok: true, data: { reason: validationResult.data.reason } }
+    } else {
+      //Applicant is not allowed to rent an additional parking space in this area
+      return {
+        ok: false,
+        err: 'not-allowed-to-rent-additional',
+      }
+    }
+  }
+
+  return { ok: false, err: 'unexpected-error' }
+}
+
+const validateResidentialAreaRentalRules = async (
+  contactCode: string,
+  districtCode: string,
+  applicationType: string
+): Promise<
+  AdapterResult<
+    { reason: string },
+    | 'not-found'
+    | 'unknown'
+    | 'contact-not-found'
+    | 'not-a-parking-space'
+    | 'no-contract-in-the-area'
+    | 'not-allowed-to-rent-additional'
+    | 'unexpected-error'
+  >
+> => {
+  try {
+    const res = await axios(
+      `${tenantsLeasesServiceUrl}/applicants/validateResidentialAreaRentalRules/${contactCode}/${districtCode}`
+    )
+    return validateRentalRules(res, applicationType)
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.validateResidentialAreaRentalRules')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const validatePropertyRentalRules = async (
+  contactCode: string,
+  rentalObjectCode: string,
+  applicationType: string
+): Promise<
+  AdapterResult<
+    { reason: string },
+    | 'not-found'
+    | 'unknown'
+    | 'contact-not-found'
+    | 'not-a-parking-space'
+    | 'no-contract-in-the-area'
+    | 'not-allowed-to-rent-additional'
+    | 'unexpected-error'
+  >
+> => {
+  try {
+    const res = await axios(
+      `${tenantsLeasesServiceUrl}/applicants/validatePropertyRentalRules/${contactCode}/${rentalObjectCode}`
+    )
+    return validateRentalRules(res, applicationType)
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.validatePropertyRentalRules')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -506,4 +612,6 @@ export {
   getOffersForContact,
   getContactsDataBySearchQuery,
   getContactByContactCode,
+  validateResidentialAreaRentalRules,
+  validatePropertyRentalRules,
 }

@@ -18,6 +18,8 @@ import {
   getInternalCreditInformation,
   setApplicantStatusActive,
   getApplicantByContactCodeAndListingId,
+  validateResidentialAreaRentalRules,
+  validatePropertyRentalRules,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
@@ -53,7 +55,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
   try {
     const parkingSpace = await getPublishedParkingSpace(parkingSpaceId)
     // step 1 - get parking space
-    if (!parkingSpace) {
+    if (!parkingSpace || !parkingSpace.districtCode) {
       return {
         processStatus: ProcessStatus.failed,
         error: 'parkingspace-not-found',
@@ -94,6 +96,26 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       return makeProcessError('applicant-not-tenant', 403, {
         message: 'Applicant is not a tenant',
       })
+    }
+    //Check if applicant is eligible for renting in area with specific rental rule
+    const [validationResultResArea, validationResultProperty] =
+      await Promise.all([
+        validateResidentialAreaRentalRules(
+          contactCode,
+          parkingSpace.districtCode,
+          applicationType
+        ),
+        validatePropertyRentalRules(
+          contactCode,
+          parkingSpaceId,
+          applicationType
+        ),
+      ])
+    if (!validationResultResArea.ok) {
+      return makeProcessError(validationResultResArea.err, 400)
+    }
+    if (!validationResultProperty.ok) {
+      return makeProcessError(validationResultProperty.err, 400)
     }
 
     //step 3.a.1. Perform credit check

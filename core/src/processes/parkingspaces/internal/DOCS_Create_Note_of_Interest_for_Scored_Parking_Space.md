@@ -8,8 +8,10 @@ A[Start] -->B(Get Parking Space)
 B --> C{Is the Parking<br/>Space Scored?}
 C --> |No| O
 C --> |Yes| D[Get Contact]
-D --> F{Is Contact<br/>a Tenant?}
-F --> |No| O[End]
+D --> E{Is Contact<br/>a Tenant?}
+E --> |No| O[End]
+E --> F{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
+F --> |No| O
 F --> |Yes| P[Perform Internal Credit Check]
 P --> Q{Is Applicant Eligable for Lease?}
 Q --> |No| O
@@ -50,6 +52,28 @@ sequenceDiagram
     XPand DB -->> Leasing:Contact
     Leasing -->> Core: Contact
     break when Contact is not a tenant
+        Core-->User: show error message
+    end
+
+    Core ->> Leasing: Validate Residential Area Rental Rules
+    Leasing ->> XPand DB:Get Estate Code for Listing
+    XPand DB --> Leasing: Estate Code for Listing
+    Leasing ->> XPand DB:Get Contact
+    XPand DB --> Leasing: Contact
+    Leasing ->> XPand SOAP:Get Waiting Lists
+    XPand SOAP --> Leasing: Waiting Lists
+    Leasing ->> XPand DB:Get Estate Code for Property
+    XPand DB --> Leasing: Estate Code for Property
+    Leasing ->> XPand DB:For Each Parking Space Contract, Get Estate Code
+    XPand DB --> Leasing: Estate Codes for Each Parking Space Contract
+
+    Core ->> Leasing: Validate Property Rental Rules
+    Leasing ->> XPand DB:Get Contact
+    XPand DB --> Leasing: Contact
+    Leasing ->> XPand SOAP:Get Waiting Lists
+    XPand SOAP --> Leasing: Waiting Lists
+
+    break when Applicant is not Eligible to Rent in Parking Space with Specific Rental Rule
         Core-->User: show error message
     end
 
