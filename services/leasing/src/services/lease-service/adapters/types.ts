@@ -12,6 +12,19 @@ export type DbOffer = {
   CreatedAt: Date
 }
 
+export type DbDetailedOffer = {
+  Id: number
+  SentAt: Date | null
+  ExpiresAt: Date
+  AnsweredAt: Date | null
+  Status: OfferStatus
+  ListingId: number
+  ApplicantId: number
+  CreatedAt: Date
+  RentalObjectCode: string
+  VacantFrom: Date
+}
+
 export type DbApplicant = {
   Id: number
   Name: string

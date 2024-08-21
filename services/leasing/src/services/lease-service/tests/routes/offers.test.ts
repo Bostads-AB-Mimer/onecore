@@ -1,3 +1,5 @@
+import { DetailedOfferFactory } from '../factories/offer'
+
 jest.mock('onecore-utilities', () => {
   return {
     logger: {
@@ -20,6 +22,7 @@ import { OfferStatus } from 'onecore-types'
 import { routes } from '../../routes/offers'
 import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from '../factories'
+import { detailedOffer } from '../factories'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -106,6 +109,40 @@ describe('offers', () => {
       expect(res.body.data[0].id).toEqual(offer.id)
       expect(res.body.data[0].listingId).toEqual(offer.listingId)
       expect(res.body.data[0].offeredApplicant.contactCode).toEqual(
+        offer.offeredApplicant.contactCode
+      )
+    })
+  })
+
+  describe('GET /offers/:offerId/applicants/:contactCode', () => {
+    it('responds with 404 if offer not found', async () => {
+      jest
+        .spyOn(offerAdapter, 'getOfferByContactCodeAndOfferId')
+        .mockResolvedValueOnce(undefined)
+      const res = await request(app.callback()).get(
+        '/offers/NON_EXISTING_OFFER/applicants/NON_EXISTING_CONTACT_CODE'
+      )
+      expect(res.status).toBe(404)
+      expect(res.body.data).toBeUndefined()
+    })
+
+    it('responds with 200 on success', async () => {
+      const applicant = factory.detailedApplicant.build()
+      const offer = factory.detailedOffer.build({
+        offeredApplicant: applicant,
+      })
+
+      jest
+        .spyOn(offerAdapter, 'getOfferByContactCodeAndOfferId')
+        .mockResolvedValueOnce(offer)
+      const res = await request(app.callback()).get(
+        `/offers/${offer.id}/applicants/${applicant.contactCode}/`
+      )
+      expect(res.status).toBe(200)
+      expect(res.body.data).toBeDefined()
+      expect(res.body.data.id).toEqual(offer.id)
+      expect(res.body.data.listingId).toEqual(offer.listingId)
+      expect(res.body.data.offeredApplicant.contactCode).toEqual(
         offer.offeredApplicant.contactCode
       )
     })

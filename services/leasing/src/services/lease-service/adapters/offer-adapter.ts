@@ -1,7 +1,13 @@
-import { OfferWithRentalObjectCode, Offer, Applicant } from 'onecore-types'
+import {
+  OfferWithRentalObjectCode,
+  Offer,
+  Applicant,
+  OfferStatus,
+  DetailedOffer,
+} from 'onecore-types'
 
 import { db } from './db'
-import { DbApplicant, DbOffer } from './types'
+import { DbApplicant, DbDetailedOffer, DbOffer } from './types'
 
 import * as dbUtils from './utils'
 import { logger } from 'onecore-utilities'
@@ -35,7 +41,7 @@ export async function create(params: CreateOfferParams) {
     .insert(dbUtils.camelToPascal(values))
     .returning('*')
 
-  return transformFromDbOffer(offer, applicant)
+  return transformToOfferFromDbOffer(offer, applicant)
 }
 
 type GetOffersForContactQueryResult = Array<
@@ -88,7 +94,7 @@ export async function getOffersForContact(
     } = row
 
     return {
-      ...transformFromDbOffer(offer, {
+      ...transformToOfferFromDbOffer(offer, {
         ApplicationDate: ApplicantApplicationDate,
         ContactCode: ApplicantContactCode,
         Id: ApplicantApplicantId,
@@ -103,7 +109,90 @@ export async function getOffersForContact(
   })
 }
 
-const transformFromDbOffer = (o: DbOffer, a: DbApplicant): Offer => {
+export async function getOfferByContactCodeAndOfferId(
+  contactCode: string,
+  offerId: number
+): Promise<DetailedOffer | undefined> {
+  const row = await db
+    .select(
+      'offer.Id',
+      'offer.SentAt',
+      'offer.ExpiresAt',
+      'offer.AnsweredAt',
+      'offer.Status',
+      'offer.ListingId',
+      'offer.ApplicantId',
+      'offer.CreatedAt',
+      'listing.RentalObjectCode',
+      'listing.VacantFrom',
+      'applicant.Id as ApplicantApplicantId',
+      'applicant.Name as ApplicantName',
+      'applicant.NationalRegistrationNumber as ApplicantNationalRegistrationNumber',
+      'applicant.ContactCode as ApplicantContactCode',
+      'applicant.ApplicationDate as ApplicantApplicationDate',
+      'applicant.ApplicationType as ApplicantApplicationType',
+      'applicant.Status as ApplicantStatus',
+      'applicant.ListingId as ApplicantListingId'
+    )
+    .from('offer')
+    .innerJoin('listing', 'listing.Id', 'offer.ListingId')
+    .innerJoin('applicant', 'applicant.Id', 'offer.ApplicantId')
+    .where('offer.Id', offerId)
+    .andWhere('applicant.ContactCode', contactCode)
+    .first()
+
+  if (row == undefined) {
+    logger.info(
+      { offerId },
+      'Getting offer from leasing DB complete - offer not found'
+    )
+    return undefined
+  }
+  const {
+    ApplicantApplicantId,
+    ApplicantName,
+    ApplicantNationalRegistrationNumber,
+    ApplicantApplicationDate,
+    ApplicantApplicationType,
+    ApplicantContactCode,
+    ApplicantStatus,
+    ApplicantListingId,
+    RentalObjectCode,
+    VacantFrom,
+    ...offer
+  } = row
+
+  return {
+    ...transformToDetailedOfferFromDbOffer(offer, {
+      ApplicationDate: ApplicantApplicationDate,
+      ContactCode: ApplicantContactCode,
+      Id: ApplicantApplicantId,
+      ListingId: ApplicantListingId,
+      Name: ApplicantName,
+      NationalRegistrationNumber: ApplicantNationalRegistrationNumber,
+      Status: ApplicantStatus,
+      ApplicationType: ApplicantApplicationType,
+    }),
+    rentalObjectCode: RentalObjectCode,
+    vacantFrom: VacantFrom,
+  }
+}
+
+const transformToDetailedOfferFromDbOffer = (
+  o: DbDetailedOffer,
+  a: DbApplicant
+): DetailedOffer => {
+  const { applicantId: _applicantId, ...offer } = dbUtils.pascalToCamel(o)
+  return {
+    ...offer,
+    offeredApplicant: {
+      ...dbUtils.pascalToCamel(a),
+      applicationType: a.ApplicationType || undefined,
+    },
+  }
+}
+
+const transformToOfferFromDbOffer = (o: DbOffer, a: DbApplicant): Offer => {
   const {
     selectionSnapshot: selectedApplicants,
     applicantId: _applicantId,
