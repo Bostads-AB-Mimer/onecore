@@ -84,19 +84,19 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
                   { to: sms.phoneNumber },
               ],
               from: 'Mimer AB',
-              text: 'Hej firstName! Vad kul att du anmält intresse på den här bilplatsen! Vi vill nu veta om du vill ha kontraktet. Senast deadlineDate behöver du tacka ja eller nej via Mina sidor'.replace('firstName', sms.firstName).replace('deadlineDate', sms.deadlineDate),
+              text:`Hej ${sms.firstName}! Vad kul att du anmält intresse på den här bilplatsen! Vi vill nu veta om du vill ha kontraktet. Senast ${sms.deadlineDate} behöver du tacka ja eller nej via Mina sidor.`,
               templateId: NewParkingSpaceOfferSmsTemplateId
             }
         ]
     })
-    console.log('SMS sent successfully:');
+    logger.info('SMS sent successfully:');
     if (response.status === 200) {
       return response.data;
     } else {  
       throw new Error(response.body);
     }
   } catch (error) {
-      console.error('Error sending SMS:', error);
+      logger.error('Error sending SMS:', error);
       throw error;
   }
 };
@@ -122,7 +122,7 @@ export const sendParkingSpaceAssignedToOther = async (emails: ParkingSpaceNotifi
       throw new Error(response.body);
     }
   } catch (error) {
-    console.error(error)
+    logger.error(error)
     throw error
   }
 }

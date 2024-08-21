@@ -61,8 +61,6 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/sendSms', async (ctx) => {
     try {
-      console.log('Sending sms')
-      console.log('payload', ctx.request.body)
       const sms = ctx.request.body
       if (!isValidSms(sms)) {
         ctx.throw(400, 'Message is not an sms object')
