@@ -40,7 +40,7 @@ export const sendEmail = async (message: Email) => {
 }
 
 export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
-  console.log('Sending template email', config.infobip.baseUrl)
+  logger.info('Sending template email', config.infobip.baseUrl)
   try {
     const toField = JSON.stringify({
       to: email.to,
@@ -70,7 +70,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
       throw new Error(response.body);
     }
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     throw error;
   }
 };
