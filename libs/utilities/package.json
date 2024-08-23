@@ -13,7 +13,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "build": "tsup",
-    "lint": "eslint -c .eslintrc src/"
+    "lint": "eslint -c .eslintrc src/",
+    "ts:watch": "tsc --watch --noEmit",
+    "test:ci": "jest --silent",
+    "ts:ci": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
