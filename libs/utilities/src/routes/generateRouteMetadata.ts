@@ -22,11 +22,13 @@ export const generateRouteMetadata = (
     (path, key) => path.replace(ctx.params[key], `{${key}}`),
     ctx.path
   )
-  const templated = Object.keys(ctx.params).length > 0 || !!ctx.query
+  const templated =
+    Object.keys(ctx.params).length > 0 || (queryParams?.length ?? 0) > 0
 
-  const queryPlaceholders = queryParams && queryParams.length > 0
-    ? '?' + queryParams.map(param => `${param}={${param}}`).join('&')
-    : ''
+  const queryPlaceholders =
+    queryParams && queryParams.length > 0
+      ? '?' + queryParams.map((param) => `${param}={${param}}`).join('&')
+      : ''
 
   return {
     _links: {
