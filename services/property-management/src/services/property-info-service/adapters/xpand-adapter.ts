@@ -111,7 +111,7 @@ const transformFromDbMaintenanceUnits = (rows: any): MaintenanceUnitInfo[] => {
       id: row.keycmobj,
       rentalPropertyId: row.rental_property_id,
       code: row.code,
-      caption: row.caption,
+      caption: row.caption.replace(/\b(TVÄTTSTUGA|Miljöbod)\b/g, '').trim(),
       type: row.type,
       estateCode: row.estate_code,
       estate: row.estate,
