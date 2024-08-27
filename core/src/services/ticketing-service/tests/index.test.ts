@@ -34,6 +34,7 @@ jest.mock('onecore-utilities', () => {
     loggedAxios: {
       defaults: {},
     },
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -70,6 +71,7 @@ describe('ticketing-service index', () => {
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
+      expect(res.body.content).toBeDefined()
     })
 
     it('should handle rentalPropertyId case', async () => {
@@ -92,6 +94,7 @@ describe('ticketing-service index', () => {
         undefined,
         'true'
       )
+      expect(res.body.content).toBeDefined()
     })
 
     it('should handle pnr case', async () => {
@@ -110,6 +113,7 @@ describe('ticketing-service index', () => {
       expect(res.status).toBe(200)
       expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', undefined, 'true')
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
+      expect(res.body.content).toBeDefined()
     })
 
     it('should handle phoneNumber case', async () => {
@@ -132,6 +136,7 @@ describe('ticketing-service index', () => {
       expect(getContactForPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
       expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
+      expect(res.body.content).toBeDefined()
     })
   })
 
@@ -150,13 +155,13 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toHaveProperty('totalCount')
-      expect(res.body.totalCount).toBe(2)
-      expect(res.body).toHaveProperty('workOrders')
-      expect(res.body.workOrders).toHaveLength(2)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(2)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(2)
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
-    it('should return 200 if no tickets found', async () => {
+    it('should return 404 if no tickets found', async () => {
       const getTicketByContactCodeSpy = jest
         .spyOn(odooAdapter, 'getTicketByContactCode')
         .mockResolvedValue([])
@@ -165,9 +170,9 @@ describe('ticketing-service index', () => {
         '/api/ticketsByContactCode/P174958'
       )
 
-      expect(res.status).toBe(200)
-      expect(res.body).toHaveProperty('message')
-      expect(res.body.message).toBe('No tickets found')
+      expect(res.status).toBe(404)
+      expect(res.body).toHaveProperty('reason')
+      expect(res.body.reason).toBe('No tickets found')
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
     it('should return 500 if error', async () => {
@@ -180,8 +185,8 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(500)
-      expect(res.body).toHaveProperty('message')
-      expect(res.body.message).toBe('Internal server error')
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
       expect(getTicketByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
   })
@@ -241,7 +246,7 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual({ content: maintenanceUnitsMock })
+      expect(res.body.content).toEqual(maintenanceUnitsMock)
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
@@ -260,9 +265,10 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual({
-        content: [maintenanceUnitsMock[0], maintenanceUnitsMock[1]],
-      })
+      expect(res.body.content).toEqual([
+        maintenanceUnitsMock[0],
+        maintenanceUnitsMock[1],
+      ])
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )
@@ -277,8 +283,12 @@ describe('ticketing-service index', () => {
     })
 
     it('should return all maintenance units', async () => {
-      const getContactSpy = jest.spyOn(tenantLeaseAdapter, 'getContact').mockResolvedValue(contactMockData)
-      const getLeasesForPnrSpy = jest.spyOn(tenantLeaseAdapter, 'getLeasesForPnr').mockResolvedValue([leaseMockData])
+      const getContactSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContact')
+        .mockResolvedValue(contactMockData)
+      const getLeasesForPnrSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
+        .mockResolvedValue([leaseMockData])
       const getMaintenanceUnitsForRentalPropertySpy = jest
         .spyOn(
           propertyManagementAdapter,
@@ -291,9 +301,13 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual({ content: maintenanceUnitsMock })
+      expect(res.body.content).toEqual(maintenanceUnitsMock)
       expect(getContactSpy).toHaveBeenCalledWith('P965339')
-      expect(getLeasesForPnrSpy).toHaveBeenCalledWith('194512121122', 'false', 'false')
+      expect(getLeasesForPnrSpy).toHaveBeenCalledWith(
+        '194512121122',
+        'false',
+        'false'
+      )
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
       )

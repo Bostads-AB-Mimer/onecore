@@ -11,6 +11,7 @@ jest.mock('onecore-utilities', () => {
     },
     loggedAxios: axios,
     axiosTypes: axios,
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -147,8 +148,8 @@ describe('lease-service', () => {
       const res = await request(app.callback()).get('/leases/for/101010-1010')
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
-      expect(res.body.data).toBeInstanceOf(Array)
-      expect(JSON.stringify(res.body.data[0])).toEqual(
+      expect(res.body.content).toBeInstanceOf(Array)
+      expect(JSON.stringify(res.body.content[0])).toEqual(
         JSON.stringify(leaseMock)
       )
     })
@@ -163,7 +164,9 @@ describe('lease-service', () => {
       const res = await request(app.callback()).get('/leases/1337')
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(leaseMock))
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(leaseMock)
+      )
     })
   })
 
@@ -178,7 +181,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contact))
+      expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(contact))
     })
   })
 
@@ -214,7 +217,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getOffersForContactSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(offers))
+      expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(offers))
     })
   })
 
@@ -238,7 +241,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getOffersForContactSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(offer))
+      expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(offer))
     })
     it('returns 404 if no offer', async () => {
       const getContactByContactCodeSpy = jest
@@ -266,7 +269,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getCreditInformationSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(
+      expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(consumerReportMock)
       )
     })
@@ -288,7 +291,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getListingByIdWithDetailedApplicantsSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body)).toEqual(
+      expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(detailedApplicants)
       )
     })
@@ -307,7 +310,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getContactByContactCodeSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.data)).toEqual(JSON.stringify(contact))
+      expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(contact))
     })
 
     it('returns 404 if no contact', async () => {
@@ -348,7 +351,7 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(getContactsDataBySearchQuery).toHaveBeenCalled()
-      expect(res.body.data).toEqual(contacts)
+      expect(res.body.content).toEqual(contacts)
     })
   })
 })

@@ -6,7 +6,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { logger } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from 'onecore-utilities'
 
 import {
   getLease,
@@ -92,12 +92,14 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/leases/for/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getLeasesWithRelatedEntitiesForPnr(
       ctx.params.pnr
     )
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -127,10 +129,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/cas/getConsumerReport/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getCreditInformation(ctx.params.pnr)
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -160,10 +164,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/contact/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getContactForPnr(ctx.params.pnr)
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -198,15 +204,25 @@ export const routes = (router: KoaRouter) => {
    */
 
   router.get('(.*)/contacts/:contactCode/offers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const res = await getOffersForContact(ctx.params.contactCode)
+
     if (!res.ok) {
-      ctx.status = res.err === 'not-found' ? 404 : 500
-      return
+      if (res.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'not-found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: res.err, ...metadata }
+        return
+      }
     }
 
     ctx.status = 200
     ctx.body = {
-      data: res.data,
+      content: res.data,
+      ...metadata,
     }
   })
 
@@ -247,18 +263,21 @@ export const routes = (router: KoaRouter) => {
    */
 
   router.get('(.*)/offers/:offerId/applicants/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const res = await getOfferByContactCodeAndOfferId(
       ctx.params.contactCode,
       ctx.params.offerId
     )
     if (!res.ok) {
       ctx.status = res.err === 'not-found' ? 404 : 500
+      ctx.body = { error: res.err, ...metadata }
       return
     }
 
     ctx.status = 200
     ctx.body = {
-      data: res.data,
+      content: res.data,
+      ...metadata,
     }
   })
 
@@ -292,18 +311,21 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/contacts/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q'])
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
+      ctx.body = { reason: 'Invalid query parameter', ...metadata }
       return
     }
 
-    const result = await getContactsDataBySearchQuery(ctx.query.q)
+    const res = await getContactsDataBySearchQuery(ctx.query.q)
 
-    if (!result.ok) {
+    if (!res.ok) {
       ctx.status = 500
+      ctx.body = { error: res.err, ...metadata }
     } else {
       ctx.status = 200
-      ctx.body = { data: result.data }
+      ctx.body = { content: res.data, ...metadata }
     }
   })
 
@@ -333,15 +355,24 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const res = await getContactByContactCode(ctx.params.contactCode)
     if (!res.ok) {
-      ctx.status = res.err === 'not-found' ? 404 : 500
-      return
+      if (res.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'not-found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: res.err, ...metadata }
+        return
+      }
     }
 
     ctx.status = 200
     ctx.body = {
-      data: res.data,
+      content: res.data,
+      ...metadata,
     }
   })
 
@@ -371,10 +402,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/contact/phoneNumber/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getContactForPhoneNumber(ctx.params.pnr)
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -407,10 +440,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/leases/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getLeaseWithRelatedEntities(ctx.params.id)
 
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -440,9 +475,10 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('(.*)/listing/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getListingByListingId(ctx.params.id)
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -468,9 +504,10 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/listings-with-applicants', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getListingsWithApplicants()
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -497,6 +534,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.post('(.*)/listings/:listingId/offers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const result = await createOfferForInternalParkingSpace(
       ctx.params.listingId
     )
@@ -504,10 +542,12 @@ export const routes = (router: KoaRouter) => {
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
       ctx.status = 201
+      ctx.body = { message: 'Offer created successfully', ...metadata }
       return
     }
 
     ctx.status = 500
+    ctx.body = { error: result.error, ...metadata }
 
     // Step 6: Communicate error to dev team and customer service
   })
@@ -538,11 +578,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/applicants/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getApplicantsByContactCode(
       ctx.params.contactCode
     )
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -571,11 +612,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/applicants-with-listings/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getApplicantsAndListingByContactCode(
       ctx.params.contactCode
     )
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -604,11 +646,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/listing/:listingId/applicants/details', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getListingByIdWithDetailedApplicants(
       ctx.params.listingId
     )
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -643,13 +686,14 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/applicants/:contactCode/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const { contactCode, listingId } = ctx.params
     const responseData = await getApplicantByContactCodeAndListingId(
       contactCode,
       listingId
     )
 
-    ctx.body = responseData
+    ctx.body = { content: responseData, ...metadata }
   })
 
   /**
@@ -692,15 +736,19 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await withdrawApplicantByManager(
       ctx.params.applicantId
     )
     if (responseData.error) {
       ctx.status = 500 // Internal Server Error
-      ctx.body = { error: responseData.error }
+      ctx.body = { error: responseData.error, ...metadata }
     } else {
       ctx.status = 200 // OK
-      ctx.body = { message: 'Applicant successfully withdrawn by manager.' }
+      ctx.body = {
+        message: 'Applicant successfully withdrawn by manager.',
+        ...metadata,
+      }
     }
   })
 
@@ -752,16 +800,20 @@ export const routes = (router: KoaRouter) => {
   router.delete(
     '/applicants/:applicantId/by-user/:contactCode',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       const responseData = await withdrawApplicantByUser(
         ctx.params.applicantId,
         ctx.params.contactCode
       )
       if (responseData.error) {
         ctx.status = 500 // Internal Server Error
-        ctx.body = { error: responseData.error }
+        ctx.body = { error: responseData.error, ...metadata }
       } else {
         ctx.status = 200 // OK
-        ctx.body = { message: 'Applicant successfully withdrawn by user.' }
+        ctx.body = {
+          message: 'Applicant successfully withdrawn by user.',
+          ...metadata,
+        }
       }
     }
   )

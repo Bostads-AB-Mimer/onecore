@@ -30,7 +30,7 @@ describe('leasing-adapter', () => {
     it('returns true if no problematic invoices', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/contact\/invoices\/contactCode/)
-        .reply(200, { data: mockedInvoices })
+        .reply(200, { content: mockedInvoices })
 
       const result =
         await leasingAdapter.getInternalCreditInformation('P123456')
@@ -41,7 +41,7 @@ describe('leasing-adapter', () => {
     it('returns false if current problematic invoices', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/contact\/invoices\/contactCode/)
-        .reply(200, { data: mockedProblematicInvoices })
+        .reply(200, { content: mockedProblematicInvoices })
 
       const result =
         await leasingAdapter.getInternalCreditInformation('P123456')
@@ -52,7 +52,7 @@ describe('leasing-adapter', () => {
     it('returns true if old problematic invoices', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/contact\/invoices\/contactCode/)
-        .reply(200, { data: mockedOldProblematicInvoices })
+        .reply(200, { content: mockedOldProblematicInvoices })
 
       const result =
         await leasingAdapter.getInternalCreditInformation('P123456')
@@ -65,7 +65,7 @@ describe('leasing-adapter', () => {
     it('should return waiting list', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/contact\/waitingList\//)
-        .reply(200, { data: mockedWaitingList })
+        .reply(200, { content: mockedWaitingList })
 
       const result = await leasingAdapter.getWaitingList('P123456')
 
@@ -83,7 +83,7 @@ describe('leasing-adapter', () => {
     it('should return a listing with detailed applicants', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/listing/)
-        .reply(200, mockedDetailedApplicants)
+        .reply(200, { content: mockedDetailedApplicants })
 
       const result =
         await leasingAdapter.getListingByIdWithDetailedApplicants('1337')
@@ -112,7 +112,7 @@ describe('leasing-adapter', () => {
     it('should try to create an offer', async () => {
       nock(config.tenantsLeasesService.url)
         .post('/offer')
-        .reply(201, { data: { id: 1 } })
+        .reply(201, { content: { id: 1 } })
 
       const result = await leasingAdapter.createOffer({
         expiresAt: new Date(),
@@ -563,7 +563,7 @@ describe('leasing-adapter', () => {
       nock(config.tenantsLeasesService.url)
         .get('/contacts/P174965/offers')
         .reply(200, {
-          data: mockedOffer,
+          content: mockedOffer,
         })
 
       const result = await leasingAdapter.getOffersForContact('P174965')
