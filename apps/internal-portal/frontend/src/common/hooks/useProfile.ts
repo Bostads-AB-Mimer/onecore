@@ -16,7 +16,7 @@ export const useProfile = () => {
   return useQuery<ProfileResponse, AxiosError>({
     queryKey: ['account'],
     queryFn: async () => {
-      const { data } = await axios.get<ProfileResponse>(
+      const { data } = await axios.get<{ content: ProfileResponse }>(
         `${backendUrl}/auth/profile`,
         {
           headers: {
@@ -26,8 +26,7 @@ export const useProfile = () => {
           withCredentials: true,
         }
       )
-
-      return data
+      return data.content
     },
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {

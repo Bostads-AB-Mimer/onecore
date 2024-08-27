@@ -17,7 +17,7 @@ export const useContactByContactCode = (contactCode?: string) =>
           },
           withCredentials: true,
         })
-        .then((res) => res.data),
+        .then((res) => res.data.content),
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
         return false

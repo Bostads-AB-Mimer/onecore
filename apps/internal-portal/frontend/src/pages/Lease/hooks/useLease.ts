@@ -12,7 +12,7 @@ export const useLease = () => {
   return useQuery<LeaseResponse, AxiosError>({
     queryKey: ['lease'],
     queryFn: async () => {
-      const { data } = await axios.get<LeaseResponse>(
+      const { data } = await axios.get<{ content: LeaseResponse }>(
         `${backendUrl}/my-lease`,
         {
           headers: {
@@ -23,7 +23,7 @@ export const useLease = () => {
         }
       )
 
-      return data
+      return data.content
     },
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {

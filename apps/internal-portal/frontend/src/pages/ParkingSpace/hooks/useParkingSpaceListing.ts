@@ -17,7 +17,7 @@ export const useParkingSpaceListing = (params: Params) =>
     queryKey: ['parkingSpaceListing', params.id],
     queryFn: () =>
       axios
-        .get<ResultType>(
+        .get<{ content: ResultType }>(
           `${backendUrl}/leases/listing-with-applicants/${params.id}`,
           {
             headers: {
@@ -27,7 +27,7 @@ export const useParkingSpaceListing = (params: Params) =>
             withCredentials: true,
           }
         )
-        .then((res) => res.data),
+        .then((res) => res.data.content),
 
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {

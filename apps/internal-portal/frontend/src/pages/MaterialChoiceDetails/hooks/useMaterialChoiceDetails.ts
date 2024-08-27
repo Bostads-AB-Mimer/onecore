@@ -12,7 +12,7 @@ export const useMaterialChoiceDetails = () => {
   return useQuery<ContactResponse, AxiosError>({
     queryKey: ['my-details'],
     queryFn: async () => {
-      const { data } = await axios.get<ContactResponse>(
+      const { data } = await axios.get<{ content: ContactResponse }>(
         `${backendUrl}/my-details`,
         {
           headers: {
@@ -22,7 +22,7 @@ export const useMaterialChoiceDetails = () => {
           withCredentials: true,
         }
       )
-      return data
+      return data.content
     },
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
