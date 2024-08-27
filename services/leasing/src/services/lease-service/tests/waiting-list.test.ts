@@ -8,6 +8,7 @@ jest.mock('onecore-utilities', () => {
         return
       },
     },
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 

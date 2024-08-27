@@ -27,6 +27,7 @@ jest.mock('onecore-utilities', () => {
         return
       },
     },
+    generateRouteMetadata: jest.fn(() => ({})),
   }
 })
 
@@ -78,7 +79,7 @@ describe('GET /applicants/:contactCode/:listingId', () => {
       `/applicants/${applicant.contactCode}/${listing.id}`
     )
     expect(res.status).toBe(200)
-    expect(res.body).toMatchObject({
+    expect(res.body.content).toMatchObject({
       id: applicant.id,
       listingId: applicant.listingId,
       name: applicant.name,
@@ -104,7 +105,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.reason).toBe(
+    expect(res.body.message).toBe(
       'No property rental rules applies to this parking space'
     )
   })
@@ -189,7 +190,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       applicationType: 'Additional',
-      reason:
+      message:
         'User is a tenant in the property and does not have any active parking space contracts in the listings residential area. User is eligible to apply with applicationType additional.',
     })
     expect(getTenantSpy).toHaveBeenCalled()
@@ -248,7 +249,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       applicationType: 'Replace',
-      reason:
+      message:
         'User already have an active parking space contract in the listings residential area. User is eligible to apply with applicationType Replace.',
     })
     expect(getTenantSpy).toHaveBeenCalled()
@@ -306,7 +307,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       applicationType: 'Additional',
-      reason:
+      message:
         'User is a tenant in the property and does not have any active parking space contracts in the listings residential area. User is eligible to apply with applicationType additional.',
     })
 
@@ -327,7 +328,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.reason).toBe(
+    expect(res.body.message).toBe(
       'No residential area rental rules applies to this parking space'
     )
   })
@@ -392,7 +393,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.reason).toBe(
+    expect(res.body.message).toBe(
       'Subject does not have any active parking space contracts in the listings residential area. Subject is eligible to apply to parking space with applicationType additional.'
     )
 
@@ -434,7 +435,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       applicationType: 'Replace',
-      reason:
+      message:
         'Subject already have an active parking space contract in the listings residential area. Subject is eligible to apply to parking space with applicationType replace.',
     })
     expect(getTenantSpy).toHaveBeenCalled()

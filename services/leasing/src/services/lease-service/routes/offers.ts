@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { OfferStatus } from 'onecore-types'
-import { logger } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { z } from 'zod'
 
 import * as offerAdapter from './../adapters/offer-adapter'
@@ -77,14 +77,16 @@ export const routes = (router: KoaRouter) => {
     '(.*)/offer',
     parseRequestBody(createOfferRequestParams),
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       try {
         const offer = await offerAdapter.create(ctx.request.body)
 
         ctx.status = 201
-        ctx.body = { data: offer }
+        ctx.body = { content: offer, ...metadata }
       } catch (err) {
         logger.error(err, 'Error creating offer: ')
         ctx.status = 500
+        ctx.body = { error: 'Error creating offer', ...metadata }
       }
     }
   )
@@ -116,13 +118,16 @@ export const routes = (router: KoaRouter) => {
    */
 
   router.get('/contacts/:contactCode/offers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getOffersForContact(ctx.params.contactCode)
     if (!responseData.length) {
       ctx.status = HttpStatusCode.NotFound
+      ctx.body = { error: 'No offers found', ...metadata }
       return
     }
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
