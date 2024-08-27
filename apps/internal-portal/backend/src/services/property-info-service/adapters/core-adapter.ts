@@ -9,7 +9,7 @@ const getMaterialChoiceStatuses = async (projectCode: string) => {
     url: `${coreBaseUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}&includeRentalProperties=false`,
   })
 
-  return materialChoiceStatusResponse.data
+  return materialChoiceStatusResponse.data.content
 }
 
 const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
@@ -26,7 +26,7 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
     url: url,
   })
 
-  return committedChoicesResponse.data
+  return committedChoicesResponse.data.content
 }
 
 export { getMaterialChoiceStatuses, getMaterialChoices }
