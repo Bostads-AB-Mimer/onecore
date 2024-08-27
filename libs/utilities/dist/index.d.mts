@@ -1,5 +1,5 @@
 import pino from 'pino';
-import Koa from 'koa';
+import Koa, { Context } from 'koa';
 import axios__default from 'axios';
 import * as axios from 'axios';
 export { axios as axiosTypes };
@@ -17,4 +17,17 @@ declare const setExclusionFilters: (exlusionFilters: RegExp[]) => void;
 declare const storage: AsyncLocalStorage<unknown>;
 declare const getCorrelationId: () => string | undefined | null;
 
-export { getCorrelationId, logger, middlewares as loggerMiddlewares, storage as loggingStorage, setExclusionFilters as setAxiosExclusionFilters };
+interface RouteMetadata {
+    _links: {
+        self: {
+            href: string;
+        };
+        link: {
+            href: string;
+            templated: boolean;
+        };
+    };
+}
+declare const generateRouteMetadata: (ctx: Context, queryParams?: string[]) => RouteMetadata;
+
+export { generateRouteMetadata, getCorrelationId, logger, middlewares as loggerMiddlewares, storage as loggingStorage, setExclusionFilters as setAxiosExclusionFilters };

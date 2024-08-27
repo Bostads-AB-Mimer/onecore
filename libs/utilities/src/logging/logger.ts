@@ -56,7 +56,7 @@ export const middlewares = {
     ctx: Koa.ParameterizedContext<Koa.DefaultState, Koa.DefaultContext, any>,
     next: Koa.Next
   ) => {
-    let correlationId = getCorrelationId(ctx)
+    const correlationId = getCorrelationId(ctx)
 
     ctx.correlationId = correlationId
     if (ctx.path !== '/health') {

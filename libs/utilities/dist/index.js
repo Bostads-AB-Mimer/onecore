@@ -51,6 +51,7 @@ var __async = (__this, __arguments, generator) => {
 var src_exports = {};
 __export(src_exports, {
   axiosTypes: () => axiosTypes,
+  generateRouteMetadata: () => generateRouteMetadata,
   getCorrelationId: () => getCorrelationId,
   loggedAxios: () => loggedAxios_default,
   logger: () => logger,
@@ -117,7 +118,7 @@ var getCorrelationId2 = (ctx) => {
 };
 var middlewares = {
   pre: (ctx, next) => __async(void 0, null, function* () {
-    let correlationId = getCorrelationId2(ctx);
+    const correlationId = getCorrelationId2(ctx);
     ctx.correlationId = correlationId;
     if (ctx.path !== "/health") {
       ctx.logger = logger.child({ correlationId: ctx.correlationId });
@@ -226,11 +227,35 @@ import_axios.default.interceptors.response.use((response) => {
 });
 var loggedAxios_default = import_axios.default;
 
+// src/routes/generateRouteMetadata.ts
+var generateRouteMetadata = (ctx, queryParams) => {
+  var _a;
+  const baseUrl = `${ctx.protocol}://${ctx.host}`;
+  const pathWithParamsKeys = Object.keys(ctx.params).reduce(
+    (path, key) => path.replace(ctx.params[key], `{${key}}`),
+    ctx.path
+  );
+  const templated = Object.keys(ctx.params).length > 0 || ((_a = queryParams == null ? void 0 : queryParams.length) != null ? _a : 0) > 0;
+  const queryPlaceholders = queryParams && queryParams.length > 0 ? "?" + queryParams.map((param) => `${param}={${param}}`).join("&") : "";
+  return {
+    _links: {
+      self: {
+        href: ctx.href
+      },
+      link: {
+        href: `${baseUrl}${pathWithParamsKeys}${queryPlaceholders}`,
+        templated
+      }
+    }
+  };
+};
+
 // src/index.ts
 var axiosTypes = __toESM(require("axios"));
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   axiosTypes,
+  generateRouteMetadata,
   getCorrelationId,
   loggedAxios,
   logger,
