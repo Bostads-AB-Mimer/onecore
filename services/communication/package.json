@@ -20,7 +20,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/jest": "29.5.1",
-    "@types/koa": "2.13.6",
+    "@types/koa": "2.15.0",
     "@types/koa__cors": "^5.0.0",
     "@types/koa__router": "12.0.0",
     "@types/koa-bodyparser": "^4.3.10",
@@ -50,7 +50,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "onecore-types": "^1.25.1",
-    "onecore-utilities": "^1.0.2",
+    "onecore-utilities": "^1.1.0",
     "telefonnummer": "^2.1.0",
     "validator": "^13.11.0"
   }
