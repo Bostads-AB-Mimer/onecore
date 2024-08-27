@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.0.3...v1.1.0) (2024-08-27)
+
+
+### Features
+
+* 1542 - adds hateoas links generator ([e756832](https://github.com/Bostads-AB-Mimer/onecore-utilities/commit/e756832f17db1c0b4c2d36f54ff26918833a7df3))
+
 ## [1.0.3](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.0.2...v1.0.3) (2024-06-11)
 
 
