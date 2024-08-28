@@ -214,16 +214,6 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   description: Message indicating no tickets found.
-   *       '404':
-   *         description: No tickets found.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 reason:
-   *                   type: string
-   *                   example: No tickets found
    *       '500':
    *         description: Internal server error. Failed to retrieve tickets.
    *         content:
@@ -241,19 +231,13 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const tickets = await getTicketByContactCode(ctx.params.code)
-      if (tickets && tickets.length > 0) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            totalCount: tickets.length,
-            workOrders: tickets,
-          },
-          ...metadata,
-        }
-      } else {
-        ctx.status = 404
-        ctx.body = { reason: 'No tickets found', ...metadata }
-        return
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          totalCount: tickets.length,
+          workOrders: tickets,
+        },
+        ...metadata,
       }
     } catch (error) {
       logger.error(error, 'Error getting tickets by contact code')
@@ -299,16 +283,6 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   description: Message indicating no maintenance units found.
-   *       '404':
-   *         description: No maintenance units found.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 reason:
-   *                   type: string
-   *                   example: No maintenance units found
    *       '500':
    *         description: Internal server error. Failed to retrieve maintenance units.
    *         content:
@@ -347,8 +321,8 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 200
           ctx.body = { content: maintenanceUnits, ...metadata }
         } else {
-          ctx.status = 404
-          ctx.body = { reason: 'No maintenance units found' }
+          ctx.status = 200
+          ctx.body = { content: [], reason: 'No maintenance units found' }
           logger.info('No maintenance units found')
           return
         }
@@ -402,16 +376,6 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Contact not found
-   *       '404':
-   *         description: No maintenance units found.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 reason:
-   *                   type: string
-   *                   example: No maintenance units found
    *       '500':
    *         description: Internal server error. Failed to retrieve maintenance units.
    *         content:
@@ -432,6 +396,7 @@ export const routes = (router: KoaRouter) => {
       if (!contact) {
         ctx.status = 404
         ctx.body = { reason: 'Contact not found', ...metadata }
+        logger.info('Contact not found')
         return
       }
       const leases = await getLeasesForPnr(
@@ -454,8 +419,12 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = { content: maintenanceUnits, ...metadata }
       } else {
-        ctx.status = 404
-        ctx.body = { reason: 'No maintenance units found', ...metadata }
+        ctx.status = 200
+        ctx.body = {
+          content: [],
+          reason: 'No maintenance units found',
+          ...metadata,
+        }
         logger.info('No maintenance units found')
         return
       }
@@ -551,16 +520,6 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Contact code is missing. It needs to be passed in the url.
-   *       '404':
-   *         description: No tickets found in request.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 reason:
-   *                   type: string
-   *                   example: No tickets found in request
    *       '500':
    *         description: Internal server error. Failed to create a new ticket.
    *         content:
