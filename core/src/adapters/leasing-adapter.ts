@@ -108,8 +108,7 @@ const getContact = async (contactId: string): Promise<Contact | undefined> => {
     const contactResponse = await axios(
       tenantsLeasesServiceUrl + '/contact/contactCode/' + contactId
     )
-
-    return contactResponse.data.content
+    return contactResponse.data.data
   } catch (error) {
     return undefined
   }
