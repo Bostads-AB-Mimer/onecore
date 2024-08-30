@@ -52,6 +52,7 @@
     "onecore-types": "^1.25.1",
     "onecore-utilities": "^1.1.0",
     "telefonnummer": "^2.1.0",
+    "tslib": "^2.7.0",
     "validator": "^13.11.0"
   }
 }
