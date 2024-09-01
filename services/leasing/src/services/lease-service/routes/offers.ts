@@ -163,8 +163,6 @@ export const routes = (router: KoaRouter) => {
    */
 
   router.get('/offers/:offerId/applicants/:contactCode', async (ctx) => {
-    console.log(ctx.params.contactCode)
-    console.log(ctx.params.offerId)
     const responseData = await getOfferByContactCodeAndOfferId(
       ctx.params.contactCode,
       parseInt(ctx.params.offerId)
