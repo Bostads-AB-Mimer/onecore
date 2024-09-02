@@ -26,6 +26,19 @@ interface Contact {
   isTenant: boolean
 }
 
+type NonEmptyArray<T> = [T, ...T[]]
+
+// The idea of a tenant is that it definitely has at least one active or upcoming(?) housing contract.
+// In that way it's different than a Contact, which, by how the type looks, we
+// don't know if it's actually a tenant.
+export type Tenant = Omit<Contact, 'leases' | 'isTenant'> & {
+  queuePoints: number
+  currentHousingContract?: Lease
+  upcomingHousingContract?: Lease
+  parkingSpaceContracts?: Lease[]
+  housingContracts: NonEmptyArray<Lease>
+}
+
 interface PhoneNumber {
   phoneNumber: string
   type: string
