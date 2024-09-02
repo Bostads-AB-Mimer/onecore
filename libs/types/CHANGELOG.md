@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.25.1...v1.26.0) (2024-09-02)
+
+
+### Features
+
+* tenant ([6119e7b](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6119e7b59b6b7ddec12081cc773ee1afba02d6c2))
+
 ## [1.25.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.25.0...v1.25.1) (2024-08-23)
 
 
