@@ -1,4 +1,4 @@
-import { AxiosResponse, HttpStatusCode } from 'axios'
+import { HttpStatusCode } from 'axios'
 import {
   parkingSpaceApplicationCategoryTranslation,
   ParkingSpaceApplicationCategory,
@@ -7,6 +7,8 @@ import {
   Contact,
   Listing,
 } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+
 import {
   getContact,
   getLeasesForPnr,
@@ -23,8 +25,7 @@ import {
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
-import { makeProcessError } from '../utils'
-import { logger } from 'onecore-utilities'
+import { makeProcessError, validateRentalRules } from '../utils'
 
 // PROCESS Part 1 - Create note of interest for internal parking space
 //
@@ -41,7 +42,7 @@ import { logger } from 'onecore-utilities'
 export const createNoteOfInterestForInternalParkingSpace = async (
   parkingSpaceId: string,
   contactCode: string,
-  applicationType: string
+  applicationType: 'Replace' | 'Additional'
 ): Promise<ProcessResult<any, any>> => {
   const log: string[] = [
     `Ansökan om intern bilplats`,
@@ -102,15 +103,13 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       await Promise.all([
         validateResidentialAreaRentalRules(
           contactCode,
-          parkingSpace.districtCode,
-          applicationType
+          parkingSpace.districtCode
         ),
-        validatePropertyRentalRules(
-          contactCode,
-          parkingSpaceId,
-          applicationType
-        ),
-      ])
+        validatePropertyRentalRules(contactCode, parkingSpaceId),
+      ]).then((results) =>
+        results.map((res) => validateRentalRules(res, applicationType))
+      )
+
     if (!validationResultResArea.ok) {
       return makeProcessError(validationResultResArea.err, 400)
     }

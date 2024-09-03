@@ -31,6 +31,7 @@ import { HttpStatusCode, InternalAxiosRequestConfig } from 'axios'
 import { mockedDetailedApplicants } from '../../../../adapters/tests/leasing-adapter.mocks'
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
 import * as factory from '../../../../../test/factories'
+import * as processUtils from '../../utils'
 
 const createAxiosResponse = (status: number, data: any): AxiosResponse => {
   return {
@@ -81,11 +82,19 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
   const validatePropertyRentalRules = jest
     .spyOn(leasingAdapter, 'validatePropertyRentalRules')
-    .mockResolvedValue({ ok: true, data: { reason: '' } })
+    .mockResolvedValue({
+      ok: true,
+      data: { reason: '', applicationType: 'Additional' },
+    })
 
   const validateResidentialAreaRentalRules = jest
     .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
-    .mockResolvedValue({ ok: true, data: { reason: '' } })
+    .mockResolvedValue({
+      ok: true,
+      data: { reason: '', applicationType: 'Additional' },
+    })
+
+  const validateRentalRules = jest.spyOn(processUtils, 'validateRentalRules')
 
   jest
     .spyOn(leasingAdapter, 'getListingByRentalObjectCode')
@@ -103,7 +112,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(getParkingSpaceSpy).toHaveBeenCalledWith('foo')
@@ -116,7 +125,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -132,7 +141,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -149,7 +158,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -162,7 +171,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(getContactSpy).toHaveBeenCalledWith('bar')
@@ -176,7 +185,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -189,9 +198,13 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     validatePropertyRentalRules.mockResolvedValueOnce({
       ok: false,
-      err: 'not-found',
+      err: { tag: 'not-found', data: null },
     })
     validateResidentialAreaRentalRules.mockResolvedValueOnce({
+      ok: false,
+      err: { tag: 'no-housing-contract-in-the-area', data: null },
+    })
+    validateRentalRules.mockReturnValueOnce({
       ok: false,
       err: 'not-allowed-to-rent-additional',
     })
@@ -200,14 +213,15 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
-    expect(result.processStatus).toBe(ProcessStatus.failed)
-    if (result.processStatus == ProcessStatus.failed) {
-      expect(result.httpStatus).toBe(400)
-      expect(result.error).toBe('not-allowed-to-rent-additional')
-    }
+    expect(result).toEqual({
+      processStatus: ProcessStatus.failed,
+      httpStatus: 400,
+      error: 'not-allowed-to-rent-additional',
+      response: undefined,
+    })
   })
 
   it('performs internal credit check', async () => {
@@ -219,7 +233,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(getInternalCreditInformationSpy).toHaveBeenCalledWith('P12345')
@@ -235,7 +249,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
@@ -264,7 +278,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(addApplicantToWaitingListSpy).toHaveBeenCalledWith(
@@ -305,7 +319,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(addApplicantToWaitingListSpy).toHaveBeenCalledWith(
@@ -326,7 +340,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(getListingByRentalObjectCodeSpy).toHaveBeenCalledWith('foo')
@@ -350,7 +364,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(createNewListingSpy).toHaveBeenCalledWith({
@@ -398,12 +412,12 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
       'bar',
-      'baz'
+      'Additional'
     )
 
     expect(applyForListingSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        applicationType: 'baz',
+        applicationType: 'Additional',
         contactCode: 'P12345',
         id: 0,
         listingId: undefined,
@@ -447,7 +461,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(response.processStatus).toBe(ProcessStatus.successful)
@@ -487,7 +501,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
     expect(response.processStatus).toBe(ProcessStatus.successful)
     expect(response.response.message).toBe(
@@ -522,7 +536,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(response.processStatus).toBe(ProcessStatus.successful)
@@ -558,7 +572,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
         'foo',
         'bar',
-        'baz'
+        'Additional'
       )
 
     expect(response.processStatus).toBe(ProcessStatus.successful)

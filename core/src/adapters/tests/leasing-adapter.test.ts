@@ -580,81 +580,57 @@ describe('leasing-adapter', () => {
       nock(config.tenantsLeasesService.url)
         .get(/applicants\/validateResidentialAreaRentalRules/)
         .reply(200, { applicationType: 'Replace' })
+
       const result = await leasingAdapter.validateResidentialAreaRentalRules(
         '123',
-        'ABC',
-        'Replace'
+        'ABC'
       )
 
       expect(result.ok).toBe(true)
     })
-    it('calls leasing and parses a failing validation result', async () => {
-      nock(config.tenantsLeasesService.url)
-        .get(/applicants\/validateResidentialAreaRentalRules/)
-        .reply(200, { applicationType: 'Replace' })
-      const result = await leasingAdapter.validateResidentialAreaRentalRules(
-        '123',
-        'ABC',
-        'Additional'
-      )
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('not-allowed-to-rent-additional')
-    })
     it('calls leasing and returns an error', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/applicants\/validateResidentialAreaRentalRules/)
         .reply(400, { reason: 'some-reason' })
+
       const result = await leasingAdapter.validateResidentialAreaRentalRules(
         '123',
-        'ABC',
-        'Additional'
+        'ABC'
       )
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('not-a-parking-space')
-      }
+      expect(result).toMatchObject({ ok: false, err: { tag: 'unknown' } })
     })
   })
+
   describe(leasingAdapter.validatePropertyRentalRules, () => {
     it('calls leasing and parses a passing validation result', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/applicants\/validatePropertyRentalRules/)
         .reply(200, { applicationType: 'Replace' })
+
       const result = await leasingAdapter.validatePropertyRentalRules(
         '123',
-        'ABC',
-        'Replace'
+        'ABC'
       )
 
       expect(result.ok).toBe(true)
     })
-    it('calls leasing and parses a failing validation result', async () => {
-      nock(config.tenantsLeasesService.url)
-        .get(/applicants\/validatePropertyRentalRules/)
-        .reply(200, { applicationType: 'Replace' })
-      const result = await leasingAdapter.validatePropertyRentalRules(
-        '123',
-        'ABC',
-        'Additional'
-      )
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('not-allowed-to-rent-additional')
-    })
     it('calls leasing and returns an error', async () => {
       nock(config.tenantsLeasesService.url)
         .get(/applicants\/validatePropertyRentalRules/)
         .reply(403, { reason: 'some-other-reason' })
+
       const result = await leasingAdapter.validatePropertyRentalRules(
         '123',
-        'ABC',
-        'Additional'
+        'ABC'
       )
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('no-contract-in-the-area')
+      expect(result).toMatchObject({
+        ok: false,
+        err: { tag: 'not-tenant-in-the-property' },
+      })
     })
   })
 })

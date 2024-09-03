@@ -7,31 +7,12 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-
-import {
-  getLease,
-  getLeasesForPnr,
-  getCreditInformation,
-  getListingByListingId,
-  getListingsWithApplicants,
-  getApplicantsByContactCode,
-  getApplicantByContactCodeAndListingId,
-  getContactForPhoneNumber,
-  withdrawApplicantByManager,
-  withdrawApplicantByUser,
-  getApplicantsAndListingByContactCode,
-  getListingByIdWithDetailedApplicants,
-  getOffersForContact,
-  getContactsDataBySearchQuery,
-  getContactByContactCode,
-  getContactForPnr,
-  getOfferByContactCodeAndOfferId,
-} from '../../adapters/leasing-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
 import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
-  const lease = await getLease(rentalId, 'true')
+  const lease = await leasingAdapter.getLease(rentalId, 'true')
 
   return lease
 }
@@ -39,7 +20,7 @@ const getLeaseWithRelatedEntities = async (rentalId: string) => {
 const getLeasesWithRelatedEntitiesForPnr = async (
   nationalRegistrationNumber: string
 ) => {
-  const leases = await getLeasesForPnr(
+  const leases = await leasingAdapter.getLeasesForPnr(
     nationalRegistrationNumber,
     undefined,
     'true'
@@ -130,7 +111,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/cas/getConsumerReport/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getCreditInformation(ctx.params.pnr)
+    const responseData = await leasingAdapter.getCreditInformation(
+      ctx.params.pnr
+    )
 
     ctx.body = {
       content: responseData,
@@ -165,7 +148,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getContactForPnr(ctx.params.pnr)
+    const responseData = await leasingAdapter.getContactForPnr(ctx.params.pnr)
 
     ctx.body = {
       content: responseData,
@@ -205,8 +188,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/contacts/:contactCode/offers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const res = await getOffersForContact(ctx.params.contactCode)
-
+    const res = await leasingAdapter.getOffersForContact(ctx.params.contactCode)
     if (!res.ok) {
       if (res.err === 'not-found') {
         ctx.status = 404
@@ -264,7 +246,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/offers/:offerId/applicants/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const res = await getOfferByContactCodeAndOfferId(
+    const res = await leasingAdapter.getOfferByContactCodeAndOfferId(
       ctx.params.contactCode,
       ctx.params.offerId
     )
@@ -318,7 +300,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const res = await getContactsDataBySearchQuery(ctx.query.q)
+    const res = await leasingAdapter.getContactsDataBySearchQuery(ctx.query.q)
 
     if (!res.ok) {
       ctx.status = 500
@@ -356,7 +338,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const res = await getContactByContactCode(ctx.params.contactCode)
+    const res = await leasingAdapter.getContactByContactCode(
+      ctx.params.contactCode
+    )
+
     if (!res.ok) {
       if (res.err === 'not-found') {
         ctx.status = 404
@@ -367,6 +352,25 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: res.err, ...metadata }
         return
       }
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: res.data,
+      ...metadata,
+    }
+  })
+
+  router.get('(.*)/tenants/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const res = await leasingAdapter.getTenantByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!res.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
     }
 
     ctx.status = 200
@@ -403,7 +407,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/phoneNumber/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getContactForPhoneNumber(ctx.params.pnr)
+    const responseData = await leasingAdapter.getContactForPhoneNumber(
+      ctx.params.pnr
+    )
 
     ctx.body = {
       content: responseData,
@@ -476,7 +482,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/listing/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getListingByListingId(ctx.params.id)
+    const responseData = await leasingAdapter.getListingByListingId(
+      ctx.params.id
+    )
 
     ctx.body = { content: responseData, ...metadata }
   })
@@ -505,9 +513,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getListingsWithApplicants()
+    const result = await leasingAdapter.getListingsWithApplicants()
 
-    ctx.body = { content: responseData, ...metadata }
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**
@@ -579,12 +594,238 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/applicants/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getApplicantsByContactCode(
+    const responseData = await leasingAdapter.getApplicantsByContactCode(
       ctx.params.contactCode
     )
 
     ctx.body = { content: responseData, ...metadata }
   })
+  /**
+   * @swagger
+   * /applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}:
+   *   get:
+   *     summary: Validate property rental rules for applicant
+   *     description: Validate property rental rules for an applicant based on contact code and listing ID.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicant.
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The xpand rental object code of the property.
+   *     responses:
+   *       200:
+   *         description: No property rental rules apply to this property.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 applicationType: string
+   *                 example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
+   *                 reason:
+   *                   type: string
+   *                   example: No property rental rules applies to this property.
+   *       400:
+   *         description: Rental object code is not a parking space.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Rental object code entity is not a parking space.
+   *       403:
+   *         description: Applicant is not eligible for the property based on property rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     notTenant:
+   *                       value: Applicant is not a current or coming tenant in the property.
+   *                     noParkingContracts:
+   *                       value: User does not have any active parking space contracts in the property residential area.
+   *       404:
+   *         description: Listing, property info, or applicant not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     listingNotFound:
+   *                       value: Listing was not found.
+   *                     propertyInfoNotFound:
+   *                       value: Property info for listing was not found.
+   *                     applicantNotFound:
+   *                       value: Applicant was not found.
+   *                     contactCodeMismatch:
+   *                       value: Applicant not found for this contactCode.
+   *       500:
+   *         description: An error occurred while validating property rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while validating property rental rules.
+   */
+  router.get(
+    '(.*)/applicants/validate-rental-rules/property/:contactCode/:rentalObjectCode',
+    async (ctx) => {
+      const res = await leasingAdapter.validatePropertyRentalRules(
+        ctx.params.contactCode,
+        ctx.params.rentalObjectCode
+      )
+
+      if (!res.ok) {
+        if (res.err.tag === 'not-tenant-in-the-property') {
+          ctx.status = 403
+          ctx.body = { data: res.err.data }
+          return
+        }
+
+        if (res.err.tag === 'not-found') {
+          ctx.status = 404
+          ctx.body = { data: res.err.data }
+          return
+        }
+
+        if (res.err.tag === 'not-a-parking-space') {
+          ctx.status = 400
+          ctx.body = { data: res.err.data }
+          return
+        }
+
+        ctx.status = 500
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        data: res.data,
+      }
+    }
+  )
+  /**
+   * @swagger
+   * /applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}:
+   *   get:
+   *     summary: Validate residential area rental rules for applicant
+   *     description: Validate residential area rental rules for an applicant based on contact code and district code.
+   *     tags: [Applicants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the applicant.
+   *       - in: path
+   *         name: districtCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The xpand district code of the residential area to validate against.
+   *     responses:
+   *       200:
+   *         description: Either no residential area rental rules apply or applicant is eligible to apply for parking space.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 applicationType: string
+   *                 example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     noRules:
+   *                       value: No residential area rental rules applies to this listing.
+   *                     eligible:
+   *                       value: Applicant does not have any active parking space contracts in the listings residential area. Applicant is eligible to apply to parking space.
+   *       403:
+   *         description: Applicant is not eligible for the listing based on residential area rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Applicant does not have any current or upcoming housing contracts in the residential area.
+   *       404:
+   *         description: Listing or applicant not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   examples:
+   *                     listingNotFound:
+   *                       value: Listing was not found.
+   *                     applicantNotFound:
+   *                       value: Applicant was not found.
+   *       500:
+   *         description: An error occurred while validating residential area rental rules.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: An error occurred while validating residential area rental rules.
+   */
+  router.get(
+    '(.*)/applicants/validate-rental-rules/residential-area/:contactCode/:districtCode',
+    async (ctx) => {
+      const res = await leasingAdapter.validateResidentialAreaRentalRules(
+        ctx.params.contactCode,
+        ctx.params.districtCode
+      )
+
+      if (!res.ok) {
+        if (res.err.tag === 'no-housing-contract-in-the-area') {
+          ctx.status = 403
+          ctx.body = { data: res.err.data }
+          return
+        }
+
+        if (res.err.tag === 'not-found') {
+          ctx.status = 404
+          ctx.body = { data: res.err.data }
+          return
+        }
+
+        ctx.status = 500
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        data: res.data,
+      }
+    }
+  )
 
   /**
    * @swagger
@@ -613,9 +854,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/applicants-with-listings/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getApplicantsAndListingByContactCode(
-      ctx.params.contactCode
-    )
+    const responseData =
+      await leasingAdapter.getApplicantsAndListingByContactCode(
+        ctx.params.contactCode
+      )
 
     ctx.body = { content: responseData, ...metadata }
   })
@@ -647,9 +889,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/listing/:listingId/applicants/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getListingByIdWithDetailedApplicants(
-      ctx.params.listingId
-    )
+    const responseData =
+      await leasingAdapter.getListingByIdWithDetailedApplicants(
+        ctx.params.listingId
+      )
 
     ctx.body = { content: responseData, ...metadata }
   })
@@ -688,10 +931,11 @@ export const routes = (router: KoaRouter) => {
   router.get('/applicants/:contactCode/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { contactCode, listingId } = ctx.params
-    const responseData = await getApplicantByContactCodeAndListingId(
-      contactCode,
-      listingId
-    )
+    const responseData =
+      await leasingAdapter.getApplicantByContactCodeAndListingId(
+        contactCode,
+        listingId
+      )
 
     ctx.body = { content: responseData, ...metadata }
   })
@@ -737,9 +981,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await withdrawApplicantByManager(
+    const responseData = await leasingAdapter.withdrawApplicantByManager(
       ctx.params.applicantId
     )
+
     if (responseData.error) {
       ctx.status = 500 // Internal Server Error
       ctx.body = { error: responseData.error, ...metadata }
@@ -801,10 +1046,11 @@ export const routes = (router: KoaRouter) => {
     '/applicants/:applicantId/by-user/:contactCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const responseData = await withdrawApplicantByUser(
+      const responseData = await leasingAdapter.withdrawApplicantByUser(
         ctx.params.applicantId,
         ctx.params.contactCode
       )
+
       if (responseData.error) {
         ctx.status = 500 // Internal Server Error
         ctx.body = { error: responseData.error, ...metadata }
