@@ -13,15 +13,13 @@ export const useCreateApplicantForListing = (listingId: number) => {
   const queryClient = useQueryClient()
   return useMutation<unknown, AxiosError, CreateApplicantRequestParams>({
     mutationFn: (params: CreateApplicantRequestParams) =>
-      axios
-        .post<unknown>(`${backendUrl}/listing/applicant`, params, {
-          headers: {
-            Accept: 'application/json',
-            'Access-Control-Allow-Credentials': true,
-          },
-          withCredentials: true,
-        })
-        .then((res) => res.data.content),
+      axios.post<unknown>(`${backendUrl}/listing/applicant`, params, {
+        headers: {
+          Accept: 'application/json',
+          'Access-Control-Allow-Credentials': true,
+        },
+        withCredentials: true,
+      }),
     onSuccess: () =>
       Promise.all([
         queryClient.refetchQueries({

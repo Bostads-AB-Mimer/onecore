@@ -1,6 +1,5 @@
 import { Box, Typography } from '@mui/material'
-
-import { Tenant } from '../../hooks/useTenantWithValidation'
+import { Tenant } from 'onecore-types'
 
 export const ContactInfo = (props: { tenant: Tenant | null }) => (
   <Box>

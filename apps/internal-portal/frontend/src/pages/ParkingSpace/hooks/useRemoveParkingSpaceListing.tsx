@@ -9,15 +9,13 @@ export const useRemoveParkingSpaceListing = () => {
   const queryClient = useQueryClient()
   return useMutation<unknown, AxiosError, Params>({
     mutationFn: (params: Params) =>
-      axios
-        .delete<unknown>(`${backendUrl}/applicant/${params.applicantId}`, {
-          headers: {
-            Accept: 'application/json',
-            'Access-Control-Allow-Credentials': true,
-          },
-          withCredentials: true,
-        })
-        .then((res) => res.data.content),
+      axios.delete<unknown>(`${backendUrl}/applicant/${params.applicantId}`, {
+        headers: {
+          Accept: 'application/json',
+          'Access-Control-Allow-Credentials': true,
+        },
+        withCredentials: true,
+      }),
     onSuccess: (_, params) =>
       queryClient.invalidateQueries({
         queryKey: ['parkingSpaceListing', params.listingId],
