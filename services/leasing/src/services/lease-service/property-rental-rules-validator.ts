@@ -1,5 +1,5 @@
+import { Tenant } from 'onecore-types'
 import { getEstateCodeFromXpandByRentalObjectCode } from './adapters/xpand/estate-code-adapter'
-import { Tenant } from './get-tenant'
 
 const propertiesWithSpecificRentalRules = [
   {

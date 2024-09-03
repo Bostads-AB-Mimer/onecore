@@ -3,6 +3,7 @@ import { Factory } from 'fishery'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { Tenant } from 'onecore-types'
 
 import * as factory from '../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
@@ -10,6 +11,7 @@ import * as estateCodeAdapter from '../../adapters/xpand/estate-code-adapter'
 import * as getTenantService from '../../get-tenant'
 import { leaseTypes } from '../../../../constants/leaseTypes'
 import { routes } from '../../routes/applicants'
+import { LeaseFactory } from '../factories/lease'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -31,7 +33,7 @@ jest.mock('onecore-utilities', () => {
   }
 })
 
-const TenantFactory = Factory.define<getTenantService.Tenant>(() => ({
+const TenantFactory = Factory.define<Tenant>(() => ({
   address: undefined,
   birthDate: new Date(),
   contactCode: '123',
@@ -48,6 +50,7 @@ const TenantFactory = Factory.define<getTenantService.Tenant>(() => ({
   currentHousingContract: undefined,
   parkingSpaceContracts: undefined,
   upcomingHousingContract: undefined,
+  housingContracts: [LeaseFactory.build()],
 }))
 
 beforeEach(jest.restoreAllMocks)

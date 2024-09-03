@@ -1,6 +1,6 @@
-import { Contact, Lease } from 'onecore-types'
-import { AdapterResult } from './adapters/types'
+import { Lease, Tenant } from 'onecore-types'
 
+import { AdapterResult } from './adapters/types'
 import * as estateCodeAdapter from './adapters/xpand/estate-code-adapter'
 import * as tenantLeaseAdapter from './adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from './adapters/xpand/xpand-soap-adapter'
@@ -18,12 +18,7 @@ type GetTenantError =
   | 'housing-contracts-not-found'
   | 'get-lease-property-info'
 
-export type Tenant = Omit<Contact, 'leases' | 'isTenant'> & {
-  queuePoints: number
-  currentHousingContract?: Lease
-  upcomingHousingContract?: Lease
-  parkingSpaceContracts?: Lease[]
-}
+type NonEmptyArray<T> = [T, ...T[]]
 
 export async function getTenant(params: {
   contactCode: string
@@ -155,6 +150,10 @@ export async function getTenant(params: {
       currentHousingContract,
       upcomingHousingContract,
       parkingSpaceContracts,
+      housingContracts: [
+        currentHousingContract,
+        upcomingHousingContract,
+      ].filter(Boolean) as NonEmptyArray<Lease>,
     },
   }
 }

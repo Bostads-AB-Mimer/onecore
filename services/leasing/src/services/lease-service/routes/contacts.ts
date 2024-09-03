@@ -12,6 +12,7 @@ import {
   addApplicantToToWaitingList,
   getWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
+import { getTenant } from '../get-tenant'
 
 /**
  * @swagger
@@ -67,7 +68,7 @@ export const routes = (router: KoaRouter) => {
 
     if (!result.ok) {
       ctx.status = 500
-      ctx.body = { error: result.err || 'Internal server error', ...metadata }
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 
@@ -173,6 +174,59 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = {
       data: result.data,
+    }
+  })
+
+  /**
+   * @swagger
+   * /tenants/contactCode/{contactCode}:
+   *   get:
+   *     summary: Gets tenant by contact code
+   *     description: Retrieve tenant information by contact code.
+   *     tags: [Tenants]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code of the tenant.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved tenant information.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The tenant data.
+   *       404:
+   *         description: Not found.
+   *       500:
+   *         description: Internal server error. Failed to retrieve Tenant information.
+   */
+  router.get('(.*)/tenants/contactCode/:contactCode', async (ctx) => {
+    const result = await getTenant({ contactCode: ctx.params.contactCode })
+    const metadata = generateRouteMetadata(ctx)
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Contact not found' }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
     }
   })
 
