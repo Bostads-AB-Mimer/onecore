@@ -11,11 +11,15 @@ import {
   Radio,
   FormControlLabel,
   RadioGroup,
+  Tab as MuiTab,
+  Stack,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { Listing } from 'onecore-types'
+import { Lease, Listing } from 'onecore-types'
 import { toast } from 'react-toastify'
-import { LoadingButton } from '@mui/lab'
+import { LoadingButton, TabContext, TabList, TabPanel } from '@mui/lab'
+import { styled } from 'styled-components'
+import { GridColDef } from '@mui/x-data-grid'
 
 import {
   CreateApplicantRequestParams,
@@ -24,25 +28,54 @@ import {
 import { SearchContact } from './SearchContact'
 import { ListingInfo } from './ListingInfo'
 import { ContactSearchData } from './types'
-import { useContactByContactCode } from '../../hooks/useContactByContactCode'
+import {
+  TenantWithValidation,
+  useTenantWithValidation,
+} from '../../hooks/useTenantWithValidation'
 import { ContactInfo } from './ContactInfo'
+import { DataGridTable } from '../../../../components'
 
 export interface Props {
   listing: Listing
   disabled: boolean
 }
 
+const Tab = styled(MuiTab)(() => ({
+  fontSize: 20,
+  textTransform: 'uppercase',
+  fontFamily: 'bisonBold',
+  fontWeight: 900,
+  letterSpacing: '-0.00833em',
+  color: 'rgba(0, 0, 0, 0.5)',
+  '&.Mui-selected': {
+    color: 'rgba(0, 0, 0, 0.87)',
+  },
+}))
+
+const Tabs = styled(TabList)(() => ({
+  '& .MuiTabs-indicator': {
+    width: '100%',
+    backgroundColor: 'black',
+    height: '3px',
+  },
+}))
+
 export const CreateApplicantForListing = (props: Props) => {
   const createApplicant = useCreateApplicantForListing(props.listing.id)
   const [open, setOpen] = useState(false)
   const [selectedContact, setSelectedContact] =
     useState<ContactSearchData | null>(null)
+  const [selectedTab, setSelectedTab] = useState('1')
 
   const [applicationType, setApplicationType] = useState<
     'Replace' | 'Additional'
   >()
 
-  const contactQuery = useContactByContactCode(selectedContact?.contactCode)
+  const tenantQuery = useTenantWithValidation(
+    selectedContact?.contactCode,
+    props.listing.districtCode,
+    props.listing.rentalObjectCode
+  )
 
   const onCreate = (params: CreateApplicantRequestParams) =>
     createApplicant.mutate(params, {
@@ -61,6 +94,14 @@ export const CreateApplicantForListing = (props: Props) => {
     setApplicationType(undefined)
   }
 
+  const handleChange = (_e: React.SyntheticEvent, tab: string) =>
+    setSelectedTab(tab)
+
+  const leases =
+    tenantQuery.data?.tenant.housingContracts.concat(
+      tenantQuery.data.tenant.parkingSpaceContracts ?? []
+    ) ?? []
+
   return (
     <>
       <Button
@@ -78,7 +119,7 @@ export const CreateApplicantForListing = (props: Props) => {
           Ny anmälan
         </Box>
       </Button>
-      <Dialog onClose={onCloseModal} open={open} maxWidth="xs" fullWidth>
+      <Dialog onClose={onCloseModal} open={open} maxWidth="sm" fullWidth>
         {createApplicant.error ? (
           <CreateApplicantError reset={createApplicant.reset} />
         ) : (
@@ -105,39 +146,77 @@ export const CreateApplicantForListing = (props: Props) => {
                 <ListingInfo listing={props.listing} />
               </Box>
               <Box paddingX="0.5rem" paddingTop="1rem">
-                <Typography variant="h2">Kundinformation</Typography>
-                <SearchContact
-                  onSelect={setSelectedContact}
-                  contact={selectedContact}
-                />
-                <ContactInfo contact={contactQuery.data ?? null} />
+                <TabContext value={selectedTab}>
+                  <Tabs onChange={handleChange}>
+                    <Tab
+                      disableRipple
+                      label="Kundinformation"
+                      value="1"
+                      sx={{ paddingLeft: 0 }}
+                    />
+                    <Tab
+                      label={`Kontrakt (${leases.length})`}
+                      value="2"
+                      disableRipple
+                    />
+                  </Tabs>
+                  <TabPanel value="1" sx={{ padding: 0 }}>
+                    <SearchContact
+                      onSelect={setSelectedContact}
+                      contact={selectedContact}
+                    />
+                    <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                    <Box>
+                      <Divider />
+                    </Box>
+                  </TabPanel>
+                  <TabPanel value="2" sx={{ padding: 0 }}>
+                    <Leases leases={leases} />
+                  </TabPanel>
+                </TabContext>
               </Box>
-              <Box paddingX="0.5rem">
-                <Divider />
-              </Box>
-              <Box
-                paddingX="0.5rem"
-                paddingTop="0.5rem"
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Typography>Ärendetyp</Typography>
-                <RadioGroup name="radio-buttons-group" row>
-                  <FormControlLabel
-                    checked={applicationType === 'Replace'}
-                    control={<Radio size="small" />}
-                    label="Byte"
-                    onChange={() => setApplicationType('Replace')}
-                  />
-                  <FormControlLabel
-                    checked={applicationType === 'Additional'}
-                    control={<Radio size="small" />}
-                    label="Hyra flera"
-                    onChange={() => setApplicationType('Additional')}
-                  />
-                </RadioGroup>
-              </Box>
+              {tenantQuery.data &&
+                tenantQuery.data.validationResult !== 'ok' && (
+                  <Box>
+                    <Box
+                      paddingX="0.5rem"
+                      paddingTop="0.5rem"
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Typography>Ärendetyp</Typography>
+                      <RadioGroup name="radio-buttons-group" row>
+                        <FormControlLabel
+                          disabled={
+                            tenantQuery?.data.validationResult === 'no-contract'
+                          }
+                          checked={applicationType === 'Replace'}
+                          control={<Radio size="small" />}
+                          label="Byte"
+                          onChange={() => setApplicationType('Replace')}
+                        />
+                        <FormControlLabel
+                          disabled={
+                            tenantQuery?.data.validationResult === 'no-contract'
+                          }
+                          checked={applicationType === 'Additional'}
+                          control={<Radio size="small" />}
+                          label="Hyra flera"
+                          onChange={() => setApplicationType('Additional')}
+                        />
+                      </RadioGroup>
+                    </Box>
+                    <Box paddingX="0.5rem" paddingTop="0.5rem">
+                      <Typography color="error">
+                        {translateValidationResult(
+                          tenantQuery.data.validationResult
+                        )}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
               <Box
                 paddingTop="2rem"
                 display="flex"
@@ -146,20 +225,22 @@ export const CreateApplicantForListing = (props: Props) => {
                 <Button onClick={onCloseModal} variant="dark-outlined">
                   Avbryt
                 </Button>
-                {contactQuery.data && applicationType ? (
+                {tenantQuery.data ? (
                   <LoadingButton
-                    disabled={false}
+                    disabled={
+                      tenantQuery.data.validationResult === 'no-contract'
+                    }
                     loading={createApplicant.isPending}
                     variant="dark"
                     onClick={() =>
                       onCreate({
                         applicationType,
-                        contactCode: contactQuery.data.contactCode,
+                        contactCode: tenantQuery.data.tenant.contactCode,
                         parkingSpaceId: props.listing.rentalObjectCode,
                       })
                     }
                   >
-                    Spara
+                    Lägg till
                   </LoadingButton>
                 ) : (
                   <Button disabled variant="dark">
@@ -174,6 +255,80 @@ export const CreateApplicantForListing = (props: Props) => {
     </>
   )
 }
+
+function translateValidationResult(
+  result: Exclude<TenantWithValidation['validationResult'], 'ok'>
+) {
+  const translationMap: Record<typeof result, string> = {
+    'has-at-least-one-parking-space':
+      'Kunden har redan bilplats. Välj "Byte" eller "Hyra flera"',
+    'needs-replace-by-property':
+      'Kunden måste byta bilplats eftersom denna bilplats ligger i ett begränsat område eller fastighet.',
+    'needs-replace-by-residential-area':
+      'Kunden måste byta bilplats eftersom denna bilplats ligger i ett begränsat område eller fastighet.',
+    'no-contract':
+      'Kunden saknar kontrakt i detta område eller denna fastighet.',
+  }
+
+  return translationMap[result]
+}
+
+const sharedProps = {
+  editable: false,
+  flex: 1,
+}
+
+const columns: GridColDef[] = [
+  {
+    field: 'type',
+    headerName: 'Typ',
+    ...sharedProps,
+  },
+  {
+    field: 'status',
+    headerName: 'Status',
+    ...sharedProps,
+    renderCell: () => 'N/A',
+  },
+  {
+    field: 'address',
+    headerName: 'Adress',
+    ...sharedProps,
+    renderCell: () => 'N/A',
+  },
+  {
+    field: 'monthlyRent',
+    headerName: 'Hyra',
+    ...sharedProps,
+    renderCell: () => 'N/A',
+  },
+]
+
+const Leases = (props: { leases: Lease[] }) => (
+  <DataGridTable
+    sx={{ paddingTop: '1rem' }}
+    initialState={{
+      pagination: { paginationModel: { pageSize: 5 } },
+    }}
+    slots={{
+      noRowsOverlay: () => (
+        <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
+          <Typography fontSize="14px">
+            Det finns inga kontrakt att visa...
+          </Typography>
+        </Stack>
+      ),
+    }}
+    hideFooter
+    columns={columns}
+    rows={props.leases}
+    getRowId={(row) => row.leaseId}
+    loading={false}
+    rowHeight={72}
+    disableRowSelectionOnClick
+    autoHeight
+  />
+)
 
 const CreateApplicantError = (props: { reset: () => void }) => (
   <Box

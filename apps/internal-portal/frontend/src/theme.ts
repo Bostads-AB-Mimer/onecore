@@ -1,11 +1,11 @@
 import { alpha, createTheme } from '@mui/material/styles'
+import type {} from '@mui/x-data-grid/themeAugmentation'
+import { radioClasses } from '@mui/material'
 
 import BisonBold from '../assets/Bison-Bold.woff2'
 import Bison from '../assets/Bison-Regular.woff2'
 import GraphikBold from '../assets/Graphik-Bold.woff2'
 import GraphikRegular from '../assets/Graphik-Regular.woff2'
-import type {} from '@mui/x-data-grid/themeAugmentation'
-import { radioClasses } from '@mui/material'
 
 declare module '@mui/material/styles' {
   interface TypographyVariants {

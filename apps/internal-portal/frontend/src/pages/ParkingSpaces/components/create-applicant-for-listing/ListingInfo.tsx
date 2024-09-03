@@ -18,9 +18,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Område</Typography>
         <Box>
-          <Typography fontWeight="bold">
-            {props.listing.districtCaption}
-          </Typography>
+          <Typography>{props.listing.districtCaption}</Typography>
         </Box>
       </Box>
       <Box
@@ -31,9 +29,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Objektsid</Typography>
         <Box>
-          <Typography fontWeight="bold">
-            {props.listing.rentalObjectCode}
-          </Typography>
+          <Typography>{props.listing.rentalObjectCode}</Typography>
         </Box>
       </Box>
       <Box
@@ -44,9 +40,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Bilplatstyp</Typography>
         <Box>
-          <Typography fontWeight="bold">
-            {props.listing.objectTypeCaption}
-          </Typography>
+          <Typography>{props.listing.objectTypeCaption}</Typography>
         </Box>
       </Box>
       <Box
@@ -57,7 +51,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Hyra</Typography>
         <Box>
-          <Typography fontWeight="bold">{`${numberFormatter.format(
+          <Typography>{`${numberFormatter.format(
             props.listing.monthlyRent
           )}/mån`}</Typography>
         </Box>
@@ -70,9 +64,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Sökande</Typography>
         <Box>
-          <Typography fontWeight="bold">
-            {props.listing.applicants?.length ?? 0}
-          </Typography>
+          <Typography>{props.listing.applicants?.length ?? 0}</Typography>
         </Box>
       </Box>
       <Box
@@ -83,7 +75,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Datum tilldelas</Typography>
         <Box>
-          <Typography fontWeight="bold">
+          <Typography>
             {dateFormatter.format(new Date(props.listing.publishedTo))}
           </Typography>
         </Box>
@@ -96,7 +88,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Ledig från och med</Typography>
         <Box>
-          <Typography fontWeight="bold">
+          <Typography>
             {dateFormatter.format(new Date(props.listing.vacantFrom))}
           </Typography>
         </Box>

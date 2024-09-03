@@ -1,7 +1,8 @@
 import { Box, Typography } from '@mui/material'
-import { Contact } from 'onecore-types'
 
-export const ContactInfo = (props: { contact: Contact | null }) => (
+import { Tenant } from '../../hooks/useTenantWithValidation'
+
+export const ContactInfo = (props: { tenant: Tenant | null }) => (
   <Box>
     <Box
       paddingTop="1rem"
@@ -11,7 +12,7 @@ export const ContactInfo = (props: { contact: Contact | null }) => (
     >
       <Typography>Namn</Typography>
       <Box>
-        <Typography fontWeight="bold">{props.contact?.fullName}</Typography>
+        <Typography>{props.tenant?.fullName}</Typography>
       </Box>
     </Box>
     <Box
@@ -22,8 +23,8 @@ export const ContactInfo = (props: { contact: Contact | null }) => (
     >
       <Typography>Adress</Typography>
       <Box>
-        <Typography fontWeight="bold">
-          {props.contact?.address?.street} {props.contact?.address?.number}
+        <Typography>
+          {props.tenant?.address?.street} {props.tenant?.address?.number}
         </Typography>
       </Box>
     </Box>
@@ -35,7 +36,9 @@ export const ContactInfo = (props: { contact: Contact | null }) => (
     >
       <Typography>Område</Typography>
       <Box>
-        <Typography fontWeight="bold">N/A</Typography>
+        <Typography>
+          {props.tenant?.currentHousingContract?.residentialArea?.caption}
+        </Typography>
       </Box>
     </Box>
     <Box
@@ -44,9 +47,9 @@ export const ContactInfo = (props: { contact: Contact | null }) => (
       flex="1"
       paddingTop="0.5rem"
     >
-      <Typography>Kontraktstatus bostad</Typography>
+      <Typography>Kontrakt</Typography>
       <Box>
-        <Typography fontWeight="bold">N/A</Typography>
+        <Typography>{props.tenant?.leaseIds?.length}</Typography>
       </Box>
     </Box>
     <Box
@@ -55,9 +58,9 @@ export const ContactInfo = (props: { contact: Contact | null }) => (
       flex="1"
       paddingTop="0.5rem"
     >
-      <Typography>Kontrakt bilplats</Typography>
+      <Typography>Köpoäng</Typography>
       <Box>
-        <Typography fontWeight="bold">N/A</Typography>
+        <Typography>{props.tenant?.queuePoints}</Typography>
       </Box>
     </Box>
   </Box>

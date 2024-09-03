@@ -5,7 +5,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export type CreateApplicantRequestParams = {
   parkingSpaceId: string
-  applicationType: string
+  applicationType?: string
   contactCode: string
 }
 

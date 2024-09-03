@@ -1,11 +1,11 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import { Contact } from 'onecore-types'
+import { Tenant } from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export const useContactByContactCode = (contactCode?: string) =>
-  useQuery<Contact, AxiosError>({
+  useQuery<Tenant, AxiosError>({
     queryKey: ['contact', contactCode],
     enabled: Boolean(contactCode),
     queryFn: () =>

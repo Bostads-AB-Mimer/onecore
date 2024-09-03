@@ -49,4 +49,5 @@ const Carousel = ({
     </ul>
   )
 }
+
 export default Carousel
