@@ -1,20 +1,27 @@
-import { Applicant, Contact, DetailedApplicant, Listing } from 'onecore-types'
+import { Contact, DetailedApplicant, Listing, Tenant } from 'onecore-types'
 
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
+import { AxiosError } from 'axios'
 
 const coreBaseUrl = Config.core.url
 
 type AdapterResult<T, E> = { ok: false; err: E } | { ok: true; data: T }
 
-const getListingsWithApplicants = async () => {
-  const url = `${coreBaseUrl}/listings-with-applicants`
-  const listingsResponse = await getFromCore({
-    method: 'get',
-    url: url,
-  })
+const getListingsWithApplicants = async (): Promise<
+  AdapterResult<Array<unknown>, 'unknown'>
+> => {
+  try {
+    const url = `${coreBaseUrl}/listings-with-applicants`
+    const listingsResponse = await getFromCore({
+      method: 'get',
+      url: url,
+    })
 
-  return listingsResponse.data.content
+    return { ok: true, data: listingsResponse.data.content }
+  } catch (err) {
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 const getListingWithApplicants = async (
@@ -53,29 +60,83 @@ const getContactsDataBySearchQuery = async (
   AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode'>>, unknown>
 > => {
   try {
-    const result = await getFromCore<{ data: { content: Array<Contact> } }>({
+    const result = await getFromCore<{ content: Array<Contact> }>({
       method: 'get',
       url: `${coreBaseUrl}/contacts/search?q=${q}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data.content }
+    return { ok: true, data: result.content }
   } catch (err) {
     return { ok: false, err }
   }
 }
 
-const getContactByContactCode = async (
+const getTenantByContactCode = async (
   contactCode: string
-): Promise<AdapterResult<Contact, unknown>> => {
+): Promise<AdapterResult<Tenant, unknown>> => {
   try {
-    const result = await getFromCore<{ data: { content: Contact } }>({
+    const result = await getFromCore<{ content: Tenant }>({
       method: 'get',
-      url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
+      url: `${coreBaseUrl}/tenants/contactCode/${contactCode}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data.content }
+    return { ok: true, data: result.content }
   } catch (err) {
     return { ok: false, err }
+  }
+}
+
+const validatePropertyRentalRules = async (
+  contactCode: string,
+  rentalObjectCode: string
+): Promise<
+  AdapterResult<
+    { applicationType: 'Replace' | 'Additional' },
+    'no-contract-in-area-or-property' | 'unknown'
+  >
+> => {
+  try {
+    const result = await getFromCore<{
+      data: { applicationType: 'Replace' | 'Additional' }
+    }>({
+      method: 'get',
+      url: `${coreBaseUrl}/applicants/validate-rental-rules/property/${contactCode}/${rentalObjectCode}`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 403) {
+      return { ok: false, err: 'no-contract-in-area-or-property' }
+    } else {
+      return { ok: false, err: 'unknown' }
+    }
+  }
+}
+
+const validateResidentialAreaRentalRules = async (
+  contactCode: string,
+  districtCode: string
+): Promise<
+  AdapterResult<
+    { applicationType: 'Replace' | 'Additional' },
+    'no-contract-in-area-or-property' | 'unknown'
+  >
+> => {
+  try {
+    const result = await getFromCore<{
+      data: { applicationType: 'Replace' | 'Additional' }
+    }>({
+      method: 'get',
+      url: `${coreBaseUrl}/applicants/validate-rental-rules/residential-area/${contactCode}/${districtCode}`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 403) {
+      return { ok: false, err: 'no-contract-in-area-or-property' }
+    } else {
+      return { ok: false, err: 'unknown' }
+    }
   }
 }
 
@@ -103,6 +164,8 @@ export {
   getListingWithApplicants,
   removeApplicant,
   getContactsDataBySearchQuery,
-  getContactByContactCode,
+  getTenantByContactCode,
   createNoteOfInterestForInternalParkingSpace,
+  validatePropertyRentalRules,
+  validateResidentialAreaRentalRules,
 }

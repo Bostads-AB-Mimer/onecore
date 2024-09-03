@@ -7,10 +7,16 @@ import * as coreAdapter from './adapters/core-adapter'
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const listings = await coreAdapter.getListingsWithApplicants()
+    const result = await coreAdapter.getListingsWithApplicants()
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
 
+    ctx.status = 200
     ctx.body = {
-      content: listings,
+      content: result.data,
       ...metadata,
     }
   })
@@ -59,7 +65,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/contact/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await coreAdapter.getContactByContactCode(
+    const result = await coreAdapter.getTenantByContactCode(
       ctx.params.contactCode
     )
 
@@ -71,6 +77,93 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal Server Error', ...metadata }
     }
   })
+
+  router.get(
+    '(.*)/get-and-validate-tenant/:contactCode/:districtCode/:rentalObjectCode',
+    async (ctx) => {
+      const getTenant = await coreAdapter.getTenantByContactCode(
+        ctx.params.contactCode
+      )
+
+      if (!getTenant.ok) {
+        ctx.status = 500
+        return
+      }
+
+      const validate = await Promise.all([
+        coreAdapter.validatePropertyRentalRules(
+          ctx.params.contactCode,
+          ctx.params.rentalObjectCode
+        ),
+        coreAdapter.validateResidentialAreaRentalRules(
+          ctx.params.contactCode,
+          ctx.params.districtCode
+        ),
+      ]).then(([validatePropertyResult, validateResidentialAreaResult]) => {
+        const missingContract =
+          (!validatePropertyResult.ok &&
+            validatePropertyResult.err === 'no-contract-in-area-or-property') ||
+          (!validateResidentialAreaResult.ok &&
+            validateResidentialAreaResult.err ===
+              'no-contract-in-area-or-property')
+
+        if (missingContract) {
+          return {
+            ok: true,
+            tenant: getTenant.data,
+            validationResult: 'no-contract',
+          } as const
+        }
+
+        if (!validatePropertyResult.ok || !validateResidentialAreaResult.ok) {
+          return { ok: false } as const
+        }
+
+        if (validatePropertyResult.data.applicationType === 'Replace') {
+          return {
+            ok: true,
+            tenant: getTenant.data,
+            validationResult: 'needs-replace-by-property',
+          } as const
+        }
+
+        if (validateResidentialAreaResult.data.applicationType === 'Replace') {
+          return {
+            ok: true,
+            tenant: getTenant.data,
+            validationResult: 'needs-replace-by-residential-area',
+          } as const
+        }
+
+        if (
+          getTenant.data.parkingSpaceContracts &&
+          getTenant.data.parkingSpaceContracts.length > 0
+        )
+          return {
+            ok: true,
+            tenant: getTenant.data,
+            validationResult: 'has-at-least-one-parking-space',
+          } as const
+
+        return {
+          ok: true,
+          tenant: getTenant.data,
+          validationResult: 'ok',
+        } as const
+      })
+
+      if (!validate.ok) {
+        ctx.status = 500
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        tenant: validate.tenant,
+        validationResult: validate.validationResult,
+      }
+    }
+  )
 
   router.post('(.*)/listing/applicant', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
