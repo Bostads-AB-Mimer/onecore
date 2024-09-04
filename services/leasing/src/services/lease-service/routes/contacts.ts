@@ -112,13 +112,16 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contact information.
    */
   router.get('(.*)/contact/nationalRegistrationNumber/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
     const responseData = await getContactByNationalRegistrationNumber(
       ctx.params.pnr,
       ctx.query.includeTerminatedLeases
     )
 
+    ctx.status = 200
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -156,6 +159,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contact information.
    */
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
     const result = await getContactByContactCode(
       ctx.params.contactCode,
       ctx.query.includeTerminatedLeases
@@ -163,17 +167,20 @@ export const routes = (router: KoaRouter) => {
 
     if (!result.ok) {
       ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 
     if (!result.data) {
       ctx.status = 404
+      ctx.body = { reason: 'Contact not found', ...metadata }
       return
     }
 
     ctx.status = 200
     ctx.body = {
-      data: result.data,
+      content: result.data,
+      ...metadata,
     }
   })
 
@@ -214,12 +221,12 @@ export const routes = (router: KoaRouter) => {
     if (!result.ok) {
       if (result.err === 'contact-not-found') {
         ctx.status = 404
-        ctx.body = { error: 'Contact not found' }
+        ctx.body = { error: 'Contact not found', ...metadata }
         return
       }
 
       ctx.status = 500
-      ctx.body = { error: result.err }
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 
@@ -259,13 +266,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contact information.
    */
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const responseData = await getContactForPhoneNumber(
       ctx.params.phoneNumber
       //ctx.query.includeTerminatedLeases /TODO: Implement this?
     )
-
+    ctx.status = 200
     ctx.body = {
-      data: responseData,
+      content: responseData,
+      ...metadata,
     }
   })
 
@@ -300,6 +309,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/contact/waitingList/:nationalRegistrationNumber',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       try {
         const result = await getWaitingList(
           ctx.params.nationalRegistrationNumber
@@ -307,16 +317,19 @@ export const routes = (router: KoaRouter) => {
 
         if (!result.ok) {
           ctx.status = 500
+          ctx.body = { error: result.err, ...metadata }
           return
         }
 
         if (!result.data) {
           ctx.status = 400
+          ctx.body = { reason: 'Not found', ...metadata }
           return
         }
         ctx.status = 200
         ctx.body = {
-          data: result.data,
+          content: result.data,
+          ...metadata,
         }
       } catch (error: unknown) {
         logger.error(
@@ -328,6 +341,7 @@ export const routes = (router: KoaRouter) => {
         if (error instanceof Error) {
           ctx.body = {
             error: error.message,
+            ...metadata,
           }
         }
       }
@@ -375,6 +389,7 @@ export const routes = (router: KoaRouter) => {
   router.post(
     '(.*)/contact/waitingList/:nationalRegistrationNumber',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       const request = <CreateWaitingListRequest>ctx.request.body
       try {
         await addApplicantToToWaitingList(
@@ -384,6 +399,10 @@ export const routes = (router: KoaRouter) => {
         )
 
         ctx.status = 201
+        ctx.body = {
+          message: 'Applicant successfully added to waiting list',
+          ...metadata,
+        }
       } catch (error: unknown) {
         logger.error(error, 'Error adding contact to waitingList')
         ctx.status = 500
@@ -391,6 +410,7 @@ export const routes = (router: KoaRouter) => {
         if (error instanceof Error) {
           ctx.body = {
             error: error.message,
+            ...metadata,
           }
         }
       }
