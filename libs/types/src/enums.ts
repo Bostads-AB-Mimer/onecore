@@ -1,7 +1,8 @@
 enum LeaseStatus {
-  Active,
-  Upcoming = 1,
-  Terminated = 2,
+  Current = 0, // Gällande
+  Upcoming = 1, // Kommande
+  AboutToEnd = 2, // Uppsagt, kommer att upphöra
+  Ended = 3, //Upphört
 }
 
 enum ParkingSpaceType {
