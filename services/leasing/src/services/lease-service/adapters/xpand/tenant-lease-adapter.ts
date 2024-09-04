@@ -51,7 +51,11 @@ const transformFromDbContact = (
     },
     phoneNumbers: phoneNumbers,
     emailAddress:
-      process.env.NODE_ENV === 'production' ? row.emailAddress : 'redacted',
+      process.env.NODE_ENV === 'production'
+        ? row.emailAddress == null
+          ? undefined
+          : row.emailAddress
+        : 'redacted',
     isTenant: leases.length > 0,
   }
 
@@ -378,7 +382,7 @@ const getContactQuery = () => {
     )
     .innerJoin('cmobj', 'cmobj.keycmobj', 'cmctc.keycmobj')
     .leftJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
-    .innerJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
+    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
