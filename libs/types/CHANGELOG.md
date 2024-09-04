@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.1...v1.26.2) (2024-09-04)
+
+
+### Features
+
+* 1550 Handle null email from DB ([#90](https://github.com/Bostads-AB-Mimer/onecore-types/issues/90)) ([d3060ef](https://github.com/Bostads-AB-Mimer/onecore-types/commit/d3060ef6b763703117f926b60e36482968dcf604))
+
 ## [1.26.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.0...v1.26.1) (2024-09-04)
 
 
