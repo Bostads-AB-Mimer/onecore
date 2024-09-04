@@ -109,7 +109,7 @@ const getContact = async (contactId: string): Promise<Contact | undefined> => {
     const contactResponse = await axios(
       tenantsLeasesServiceUrl + '/contact/contactCode/' + contactId
     )
-    return contactResponse.data.data
+    return contactResponse.data.content
   } catch (error) {
     return undefined
   }
@@ -514,7 +514,7 @@ const getOfferByContactCodeAndOfferId = async (
     if (res.status == HttpStatusCode.NotFound) {
       return { ok: false, err: 'not-found' }
     }
-    return { ok: true, data: res.data.data }
+    return { ok: true, data: res.data.content }
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.getOffersForContact')
     return { ok: false, err: 'unknown' }
