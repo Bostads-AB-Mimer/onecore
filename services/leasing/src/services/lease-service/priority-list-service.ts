@@ -75,7 +75,7 @@ const getDetailedApplicantInformation = async (
     'true', //this filter does not consider upcoming leases
     undefined //do not include contacts
   )
-
+  
   if (!leases.ok) {
     return {
       ok: false,

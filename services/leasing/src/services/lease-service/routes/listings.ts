@@ -468,6 +468,7 @@ export const routes = (router: KoaRouter) => {
         for (const applicant of listing.applicants) {
           const detailedApplicant =
             await getDetailedApplicantInformation(applicant)
+
           if (!detailedApplicant.ok)
             throw new Error('Err when getting detailed applicant information')
           applicants.push(detailedApplicant.data)

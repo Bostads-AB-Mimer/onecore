@@ -8,7 +8,7 @@ export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
   leaseNumber: `0${sequence}`,
   leaseStartDate: new Date(2022, 1),
   leaseEndDate: undefined,
-  status: LeaseStatus.Active,
+  status: LeaseStatus.Current,
   tenantContactIds: undefined,
   tenants: undefined,
   rentalPropertyId: `605-703-00-0014-${sequence}`,

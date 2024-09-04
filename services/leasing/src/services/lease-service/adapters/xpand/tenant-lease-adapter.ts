@@ -1,4 +1,5 @@
 import { Lease, Contact } from 'onecore-types'
+import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
 import knex from 'knex'
 import Config from '../../../../common/config'
@@ -57,41 +58,6 @@ const transformFromDbContact = (
   return contact
 }
 
-const transformFromDbLease = (
-  row: any,
-  tenantContactIds: string[] | undefined,
-  tenants: Contact[] | undefined
-): Lease => {
-  const parsedLeaseId = row.leaseId.split('/')
-  const rentalPropertyId = parsedLeaseId[0]
-  const leaseNumber = parsedLeaseId[1]
-
-  const lease = {
-    leaseId: row.leaseId,
-    leaseNumber: leaseNumber,
-    rentalPropertyId: rentalPropertyId,
-    type: row.leaseType,
-    leaseStartDate: row.fromDate,
-    leaseEndDate: row.toDate,
-    status: row.Status, //todo: support status
-    tenantContactIds,
-    tenants,
-    rentalProperty: undefined,
-    rentInfo: undefined,
-    address: undefined,
-    noticeGivenBy: row.noticeGivenBy,
-    noticeDate: row.noticeDate,
-    noticeTimeTenant: row.noticeTimeTenant,
-    preferredMoveOutDate: row.preferredMoveOutDate,
-    terminationDate: row.terminationDate,
-    contractDate: row.contractDate,
-    lastDebitDate: row.lastDebitDate,
-    approvalDate: row.approvalDate,
-  }
-
-  return lease
-}
-
 const getLease = async (
   leaseId: string,
   includeContacts: string | string[] | undefined
@@ -102,9 +68,9 @@ const getLease = async (
     logger.info({ leaseId }, 'Getting lease Xpand DB complete')
     if (includeContacts) {
       const tenants = await getContactsByLeaseId(leaseId)
-      return transformFromDbLease(rows[0], [], tenants)
+      return transformFromXPandDb.toLease(rows[0], [], tenants)
     } else {
-      return transformFromDbLease(rows[0], [], [])
+      return transformFromXPandDb.toLease(rows[0], [], [])
     }
   }
 
@@ -233,9 +199,9 @@ const getLeasesForPropertyId = async (
   for (const row of rows) {
     if (includeContacts) {
       const tenants = await getContactsByLeaseId(row.leaseId)
-      leases.push(transformFromDbLease(row, [], tenants))
+      leases.push(transformFromXPandDb.toLease(row, [], tenants))
     } else {
-      leases.push(transformFromDbLease(row, [], []))
+      leases.push(transformFromXPandDb.toLease(row, [], []))
     }
   }
   if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
@@ -488,7 +454,7 @@ const getLeasesByContactKey = async (keycmctc: string) => {
 
   const leases: any[] = []
   for (const row of rows) {
-    const lease = transformFromDbLease(row, [], [])
+    const lease = transformFromXPandDb.toLease(row, [], [])
     leases.push(lease)
   }
 

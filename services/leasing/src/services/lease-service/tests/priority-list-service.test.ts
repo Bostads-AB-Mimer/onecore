@@ -203,7 +203,7 @@ describe('parseLeasesForHousingContract', () => {
         contractDate: new Date('2010-12-28T00:00:00.000Z'),
         lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
         approvalDate: new Date('2010-12-28T00:00:00.000Z'),
-        status: LeaseStatus.Terminated,
+        status: LeaseStatus.AboutToEnd,
       })
       .build()
 
@@ -213,7 +213,7 @@ describe('parseLeasesForHousingContract', () => {
         leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
         contractDate: new Date('2019-09-04T00:00:00.000Z'),
         approvalDate: new Date('2019-09-04T00:00:00.000Z'),
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
@@ -223,7 +223,7 @@ describe('parseLeasesForHousingContract', () => {
         leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
         contractDate: new Date('2022-06-29T00:00:00.000Z'),
         approvalDate: new Date('2022-06-29T00:00:00.000Z'),
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
@@ -259,7 +259,7 @@ describe('parseLeasesForHousingContract', () => {
         contractDate: new Date('2021-09-08T00:00:00.000Z'),
         lastDebitDate: thirtyDaysInTheFutureDate,
         approvalDate: new Date('2021-09-08T00:00:00.000Z'),
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
@@ -279,7 +279,7 @@ describe('parseLeasesForHousingContract', () => {
         leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
         contractDate: new Date('2021-12-02T00:00:00.000Z'),
         approvalDate: new Date('2021-12-02T00:00:00.000Z'),
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
@@ -337,21 +337,21 @@ describe('parseLeasesForParkingSpaces', () => {
     const housingContract = factory.lease
       .params({
         type: leaseTypes.housingContract,
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
     const parkingSpacContract1 = factory.lease
       .params({
         type: leaseTypes.parkingspaceContract,
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
     const parkingSpacContract2 = factory.lease
       .params({
         type: leaseTypes.parkingspaceContract,
-        status: LeaseStatus.Active,
+        status: LeaseStatus.Current,
       })
       .build()
 
