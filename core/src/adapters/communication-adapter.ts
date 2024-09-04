@@ -9,6 +9,9 @@ export const sendNotificationToContact = async (
   message: string
 ) => {
   try {
+    if (!recipientContact.emailAddress)
+      throw new Error('Recipient has no email address')
+
     const axiosOptions = {
       method: 'POST',
       data: {

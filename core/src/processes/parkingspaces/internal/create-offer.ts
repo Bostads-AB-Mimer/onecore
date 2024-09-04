@@ -87,6 +87,9 @@ export const createOfferForInternalParkingSpace = async (
       logger.debug(log)
 
       try {
+        if (!contact.emailAddress)
+          throw new Error('Recipient has no email address')
+
         await communicationAdapter.sendParkingSpaceOfferEmail({
           to: contact.emailAddress,
           subject: 'Erbjudande om intern bilplats',
