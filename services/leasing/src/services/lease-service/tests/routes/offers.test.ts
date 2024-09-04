@@ -139,10 +139,10 @@ describe('offers', () => {
         `/offers/${offer.id}/applicants/${applicant.contactCode}/`
       )
       expect(res.status).toBe(200)
-      expect(res.body.data).toBeDefined()
-      expect(res.body.data.id).toEqual(offer.id)
-      expect(res.body.data.listingId).toEqual(offer.listingId)
-      expect(res.body.data.offeredApplicant.contactCode).toEqual(
+      expect(res.body.content).toBeDefined()
+      expect(res.body.content.id).toEqual(offer.id)
+      expect(res.body.content.listingId).toEqual(offer.listingId)
+      expect(res.body.content.offeredApplicant.contactCode).toEqual(
         offer.offeredApplicant.contactCode
       )
     })
