@@ -689,6 +689,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/applicants/validate-rental-rules/property/:contactCode/:rentalObjectCode',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       const res = await leasingAdapter.validatePropertyRentalRules(
         ctx.params.contactCode,
         ctx.params.rentalObjectCode
@@ -697,29 +698,31 @@ export const routes = (router: KoaRouter) => {
       if (!res.ok) {
         if (res.err.tag === 'not-tenant-in-the-property') {
           ctx.status = 403
-          ctx.body = { data: res.err.data }
+          ctx.body = { reason: res.err.data, ...metadata }
           return
         }
 
         if (res.err.tag === 'not-found') {
           ctx.status = 404
-          ctx.body = { data: res.err.data }
+          ctx.body = { reason: res.err.data, ...metadata }
           return
         }
 
         if (res.err.tag === 'not-a-parking-space') {
           ctx.status = 400
-          ctx.body = { data: res.err.data }
+          ctx.body = { reason: res.err.data, ...metadata }
           return
         }
 
         ctx.status = 500
+        ctx.body = { error: 'An internal server error occured.', ...metadata }
         return
       }
 
       ctx.status = 200
       ctx.body = {
-        data: res.data,
+        content: res.data,
+        ...metadata,
       }
     }
   )
@@ -798,6 +801,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/applicants/validate-rental-rules/residential-area/:contactCode/:districtCode',
     async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
       const res = await leasingAdapter.validateResidentialAreaRentalRules(
         ctx.params.contactCode,
         ctx.params.districtCode
@@ -806,23 +810,25 @@ export const routes = (router: KoaRouter) => {
       if (!res.ok) {
         if (res.err.tag === 'no-housing-contract-in-the-area') {
           ctx.status = 403
-          ctx.body = { data: res.err.data }
+          ctx.body = { reason: res.err.data, ...metadata }
           return
         }
 
         if (res.err.tag === 'not-found') {
           ctx.status = 404
-          ctx.body = { data: res.err.data }
+          ctx.body = { reason: res.err.data, ...metadata }
           return
         }
 
         ctx.status = 500
+        ctx.body = { error: 'An internal server error occured.', ...metadata }
         return
       }
 
       ctx.status = 200
       ctx.body = {
-        data: res.data,
+        content: res.data,
+        ...metadata,
       }
     }
   )

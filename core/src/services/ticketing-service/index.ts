@@ -578,6 +578,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         if (!laundryRoom) {
+          console.log('No laundry room found for rental property')
           ctx.status = 404
           ctx.body = {
             reason: 'No laundry room found for rental property',
