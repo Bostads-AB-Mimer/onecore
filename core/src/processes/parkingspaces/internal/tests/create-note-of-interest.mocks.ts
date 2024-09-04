@@ -76,7 +76,7 @@ export const mockedLeases: Lease[] = [
       },
       futureRents: undefined,
     },
-    status: LeaseStatus.Active,
+    status: LeaseStatus.Current,
     tenantContactIds: ['P12345'],
     tenants: undefined,
     terminationDate: undefined,
