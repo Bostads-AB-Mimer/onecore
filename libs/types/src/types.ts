@@ -22,7 +22,7 @@ interface Contact {
   birthDate: Date
   address: Address | undefined
   phoneNumbers: PhoneNumber[] | undefined
-  emailAddress: string
+  emailAddress?: string
   isTenant: boolean
 }
 
