@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.0...v1.26.1) (2024-09-04)
+
+
+### Features
+
+* 1465 Lease status ([#86](https://github.com/Bostads-AB-Mimer/onecore-types/issues/86)) ([b5c4814](https://github.com/Bostads-AB-Mimer/onecore-types/commit/b5c481463174ad65ee59d08614952a38ca1fda79))
+
 ## [1.26.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.25.1...v1.26.0) (2024-09-02)
 
 
