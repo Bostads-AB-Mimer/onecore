@@ -99,7 +99,7 @@ const transformTicket = (ticket: OdooGetTicket) => {
     ContactCode: ticket.contact_code,
     Description:
       spaceCode && equipmentCode
-        ? `${spaceCode}, ${equipmentCode}: `
+        ? `${spaceCode}, ${equipmentCode}: ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`
         : ticket.name +
           ` ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
     DetailsCaption:
@@ -153,7 +153,6 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
     domain,
     fields
   )
-
   return tickets.map(transformTicket)
 }
 
