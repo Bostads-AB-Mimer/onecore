@@ -117,8 +117,8 @@ describe('ticketing-service index', () => {
     })
 
     it('should handle phoneNumber case', async () => {
-      const getContactForPhoneNumberSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getContactForPhoneNumber')
+      const getContactByPhoneNumberSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByPhoneNumber')
         .mockResolvedValue(contactMock)
       const getLeaseSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLease')
@@ -133,7 +133,7 @@ describe('ticketing-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getContactForPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
+      expect(getContactByPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
       expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
       expect(res.body.content).toBeDefined()

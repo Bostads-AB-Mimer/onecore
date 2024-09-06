@@ -407,7 +407,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/phoneNumber/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await leasingAdapter.getContactForPhoneNumber(
+    const responseData = await leasingAdapter.getContactByPhoneNumber(
       ctx.params.pnr
     )
 

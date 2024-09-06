@@ -149,7 +149,7 @@ const getTenantByContactCode = async (
   }
 }
 
-const getContactForPhoneNumber = async (
+const getContactByPhoneNumber = async (
   phoneNumber: string
 ): Promise<Contact | undefined> => {
   try {
@@ -611,7 +611,7 @@ export {
   getLeasesForPropertyId,
   getContactForPnr,
   getContact,
-  getContactForPhoneNumber,
+  getContactByPhoneNumber,
   createLease,
   getCreditInformation,
   getInternalCreditInformation,
