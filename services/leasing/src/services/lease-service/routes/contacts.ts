@@ -5,7 +5,7 @@ import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
-  getContactForPhoneNumber,
+  getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { logger } from 'onecore-utilities'
 import {
@@ -267,10 +267,11 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getContactForPhoneNumber(
-      ctx.params.phoneNumber
-      //ctx.query.includeTerminatedLeases /TODO: Implement this?
+    const responseData = await getContactByPhoneNumber(
+      ctx.params.phoneNumber,
+      ctx.query.includeTerminatedLeases
     )
+
     ctx.status = 200
     ctx.body = {
       content: responseData,
