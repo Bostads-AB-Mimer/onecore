@@ -518,6 +518,7 @@ export {
   getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
+  getContactByPhoneNumber,
   getContactForPhoneNumber,
   isLeaseActive,
   getResidentialAreaByRentalPropertyId,
