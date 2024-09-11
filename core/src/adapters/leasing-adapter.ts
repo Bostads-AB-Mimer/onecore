@@ -1,5 +1,6 @@
 import { loggedAxios as axios, logger } from 'onecore-utilities'
-
+import { HttpStatusCode } from 'axios'
+import dayjs from 'dayjs'
 import {
   ConsumerReport,
   Contact,
@@ -16,11 +17,11 @@ import {
   OfferWithRentalObjectCode,
   DetailedOffer,
   Tenant,
+  InternalParkingSpaceSyncSuccessResponse,
 } from 'onecore-types'
+
 import config from '../common/config'
-import dayjs from 'dayjs'
 import { AdapterResult } from './types'
-import { HttpStatusCode } from 'axios'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -605,6 +606,23 @@ const validatePropertyRentalRules = async (
   }
 }
 
+const syncInternalParkingSpacesFromXpand = async () => {
+  try {
+    const res = await axios.post<{
+      content: InternalParkingSpaceSyncSuccessResponse
+    }>(`${tenantsLeasesServiceUrl}/listings/sync-internal-from-xpand`)
+
+    if (res.status !== 200) {
+      return { ok: false, err: 'unknown' } as const
+    }
+
+    return { ok: true, data: res.data.content } as const
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncInternalParkingSpacesFromXpand')
+    return { ok: false, err: 'unknown' } as const
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -638,4 +656,5 @@ export {
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getTenantByContactCode,
+  syncInternalParkingSpacesFromXpand,
 }

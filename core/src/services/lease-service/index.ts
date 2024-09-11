@@ -7,6 +7,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
 import {
@@ -684,6 +685,36 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 500
     ctx.body = { error: result.error, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /listings/sync-internal-from-xpand:
+   *   post:
+   *     summary: Sync internal parking spaces from xpand to onecores database
+   *     tags:
+   *       - Lease service
+   *     description:
+   *     responses:
+   *       '200':
+   *         description: Request ok.
+   *       '500':
+   *         description: Internal server error. Failed to sync internal parking spaces.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.syncInternalParkingSpacesFromXpand()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**
