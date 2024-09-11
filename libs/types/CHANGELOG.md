@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.2...v1.27.0) (2024-09-11)
+
+
+### Features
+
+* MIM-15: Add response type for internal parking space sync ([#92](https://github.com/Bostads-AB-Mimer/onecore-types/issues/92)) ([27434f7](https://github.com/Bostads-AB-Mimer/onecore-types/commit/27434f76827043a27418b04637cdd4cd71a01b23))
+
 ## [1.26.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.1...v1.26.2) (2024-09-04)
 
 
