@@ -22,8 +22,15 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 
+import {
+  acceptOffer,
+  denyOffer,
+  expireOffer,
+} from '../../../processes/parkingspaces/internal'
+
 import { Lease, ConsumerReport } from 'onecore-types'
 import * as factory from '../../../../test/factories'
+import { ProcessStatus } from '../../../common/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -255,6 +262,66 @@ describe('lease-service', () => {
       expect(res.status).toBe(404)
       expect(getContactByContactCodeSpy).toHaveBeenCalled()
     })
+  })
+
+  describe('GET /offers/:offerId/accept', () => {
+    it('responds with successful processStatus', async () => {
+      const internalParkingSpaceProcesses = { acceptOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
+
+      jest
+        .spyOn(internalParkingSpaceProcesses, 'acceptOffer')
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.successful,
+          httpStatus: 202,
+          data: null,
+        })
+
+      const result = await request(app.callback()).get('/offers/123/accept')
+
+      expect(result.status).toBe(202)
+      expect(result.body.message).toBe('Offer accepted successfully')
+    })
+    it.todo('accept offer returns 500 on error')
+  })
+
+  describe('GET /offers/:offerId/deny', () => {
+    it('responds with successful processStatus', async () => {
+      const internalParkingSpaceProcesses = { denyOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
+
+      jest
+        .spyOn(internalParkingSpaceProcesses, 'denyOffer')
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.successful,
+          httpStatus: 202,
+          data: null,
+        })
+
+      const result = await request(app.callback()).get('/offers/123/deny')
+
+      expect(result.status).toBe(202)
+      expect(result.body.message).toBe('Offer denied successfully')
+    })
+    it.todo('deny offer returns 500 on error')
+  })
+
+  describe('GET /offers/:offerId/expire', () => {
+    it('responds with successful processStatus', async () => {
+      const internalParkingSpaceProcesses = { expireOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
+
+      jest
+        .spyOn(internalParkingSpaceProcesses, 'expireOffer')
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.successful,
+          httpStatus: 202,
+          data: null,
+        })
+
+      const result = await request(app.callback()).get('/offers/123/expire')
+
+      expect(result.status).toBe(202)
+      expect(result.body.message).toBe('Offer expired successfully')
+    })
+    it.todo('expire offer returns 500 on error')
   })
 
   describe('GET /cas/getConsumerReport/:pnr', () => {

@@ -9,7 +9,12 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
-import { createOfferForInternalParkingSpace } from '../../processes/parkingspaces/internal'
+import {
+  createOfferForInternalParkingSpace,
+  acceptOffer,
+  denyOffer,
+  expireOffer,
+} from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -565,6 +570,120 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { error: result.error, ...metadata }
 
     // Step 6: Communicate error to dev team and customer service
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/accept:
+   *   get:
+   *     summary: Accept an offer
+   *     tags:
+   *       - Lease service
+   *     description: Accepts an offer for the contact of the contactCode provided
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the offer to accept
+   *     responses:
+   *       '202':
+   *         description: Offer accepted successful.
+   *       '500':
+   *         description: Internal server error. Failed to accept the offer.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/offers/:offerId/accept', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await acceptOffer(ctx.params.offerId)
+
+    if (result.processStatus === ProcessStatus.successful) {
+      logger.info(result)
+      ctx.status = 202
+      ctx.body = { message: 'Offer accepted successfully', ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = { error: result.error, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/deny:
+   *   get:
+   *     summary: Deny an offer
+   *     tags:
+   *       - Lease service
+   *     description: Denies an offer
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the offer to deny
+   *     responses:
+   *       '202':
+   *         description: Offer denied successful.
+   *       '500':
+   *         description: Internal server error. Failed to deny the offer.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/offers/:offerId/deny', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await denyOffer(ctx.params.offerId)
+
+    if (result.processStatus === ProcessStatus.successful) {
+      logger.info(result)
+      ctx.status = 202
+      ctx.body = { message: 'Offer denied successfully', ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = { error: result.error, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/expire:
+   *   get:
+   *     summary: Expire an offer
+   *     tags:
+   *       - Lease service
+   *     description: Expires an offer
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the offer to expire
+   *     responses:
+   *       '202':
+   *         description: Offer expired successful.
+   *       '500':
+   *         description: Internal server error. Failed to expire the offer.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/offers/:offerId/expire', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await expireOffer(ctx.params.offerId)
+
+    if (result.processStatus === ProcessStatus.successful) {
+      logger.info(result)
+      ctx.status = 202
+      ctx.body = { message: 'Offer expired successfully', ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = { error: result.error, ...metadata }
   })
 
   /**
