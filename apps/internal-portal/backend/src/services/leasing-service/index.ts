@@ -183,6 +183,23 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.post('(.*)/listings/:listingId/offers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+    const result = await coreAdapter.createOffer(params)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
   router.post('(.*)/listings/sync-internal-from-xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await coreAdapter.syncInternalParkingSpacesFromXpand()

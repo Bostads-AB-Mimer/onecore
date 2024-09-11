@@ -165,6 +165,22 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
   }
 }
 
+const createOffer = async (params: {
+  listingId: string
+}): Promise<AdapterResult<unknown, unknown>> => {
+  try {
+    const response = await getFromCore<any>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings/${params.listingId}/offers`,
+      data: params,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    return { ok: false, err }
+  }
+}
+
 const syncInternalParkingSpacesFromXpand = async (): Promise<
   AdapterResult<InternalParkingSpaceSyncSuccessResponse, 'unknown'>
 > => {
@@ -192,4 +208,5 @@ export {
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
   syncInternalParkingSpacesFromXpand,
+  createOffer,
 }
