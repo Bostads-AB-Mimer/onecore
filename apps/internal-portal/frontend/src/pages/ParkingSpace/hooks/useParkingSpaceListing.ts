@@ -28,7 +28,6 @@ export const useParkingSpaceListing = (params: Params) =>
           }
         )
         .then((res) => res.data.content),
-
     retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
         return false

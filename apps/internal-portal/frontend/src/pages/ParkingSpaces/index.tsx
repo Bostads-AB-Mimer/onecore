@@ -9,6 +9,7 @@ import { DataGridTable, SearchBar } from '../../components'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
+import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
 
 const sharedProps = {
   editable: false,
@@ -115,16 +116,19 @@ const ParkingSpaces = () => {
     <>
       <Box
         display="flex"
-        justifyContent="space-between"
         alignItems="flex-end"
+        justifyContent="space-between"
         paddingBottom="2rem"
       >
         <Typography variant="h1">Bilplatser</Typography>
-        <SearchBar
-          onChange={onSearch}
-          disabled={parkingSpaces.isLoading}
-          placeholder="Sök kundnummer, personnummer..."
-        />
+        <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
+          <SyncInternalParkingSpaces />
+          <SearchBar
+            onChange={onSearch}
+            disabled={parkingSpaces.isLoading}
+            placeholder="Sök kundnummer, personnummer..."
+          />
+        </Box>
       </Box>
       {parkingSpaces.error && 'Error'}
       <DataGridTable
