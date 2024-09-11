@@ -1,8 +1,10 @@
+import { OfferStatus } from 'onecore-types'
+import assert from 'node:assert'
+
 import { db, migrate, teardown } from '../../adapters/db'
 import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from './../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
-import { OfferStatus } from 'onecore-types'
 
 jest.mock('onecore-utilities', () => {
   return {
@@ -37,8 +39,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       const insertedOffer = await offerAdapter.create({
@@ -51,7 +54,7 @@ describe('offer-adapter', () => {
             nationalRegistrationNumber: applicant.nationalRegistrationNumber,
           }),
         ],
-        listingId: listing.id,
+        listingId: listing.data.id,
         applicantId: applicant.id,
       })
 
@@ -66,6 +69,7 @@ describe('offer-adapter', () => {
         factory.listing.build({ rentalObjectCode: '1' })
       )
 
+      assert(listing.ok)
       await expect(
         offerAdapter.create({
           expiresAt: new Date(),
@@ -77,7 +81,7 @@ describe('offer-adapter', () => {
               nationalRegistrationNumber: 'I_DO_NOT_EXIST',
             }),
           ],
-          listingId: listing.id,
+          listingId: listing.data.id,
           applicantId: -1,
         })
       ).rejects.toThrow('Applicant not found when creating offer')
@@ -89,8 +93,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       await offerAdapter.create({
@@ -103,7 +108,7 @@ describe('offer-adapter', () => {
             nationalRegistrationNumber: applicant.nationalRegistrationNumber,
           }),
         ],
-        listingId: listing.id,
+        listingId: listing.data.id,
         applicantId: applicant.id,
       })
 
@@ -120,8 +125,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       await offerAdapter.create({
@@ -134,7 +140,7 @@ describe('offer-adapter', () => {
             nationalRegistrationNumber: applicant.nationalRegistrationNumber,
           }),
         ],
-        listingId: listing.id,
+        listingId: listing.data.id,
         applicantId: applicant.id,
       })
 
@@ -151,8 +157,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       const offer = await offerAdapter.create({
@@ -165,7 +172,7 @@ describe('offer-adapter', () => {
             nationalRegistrationNumber: applicant.nationalRegistrationNumber,
           }),
         ],
-        listingId: listing.id,
+        listingId: listing.data.id,
         applicantId: applicant.id,
       })
 
@@ -184,8 +191,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       const offersFromDb = await offerAdapter.getOfferByContactCodeAndOfferId(
@@ -199,8 +207,9 @@ describe('offer-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       const offer = await offerAdapter.create({
@@ -213,7 +222,7 @@ describe('offer-adapter', () => {
             nationalRegistrationNumber: applicant.nationalRegistrationNumber,
           }),
         ],
-        listingId: listing.id,
+        listingId: listing.data.id,
         applicantId: applicant.id,
       })
 
@@ -225,15 +234,3 @@ describe('offer-adapter', () => {
     })
   })
 })
-
-async function createListingAndApplicant() {
-  const listing = await listingAdapter.createListing(
-    factory.listing.build({ rentalObjectCode: '1' })
-  )
-
-  const applicant = await listingAdapter.createApplication(
-    factory.applicant.build({ listingId: listing.id })
-  )
-
-  return [listing, applicant]
-}

@@ -2,7 +2,6 @@ import {
   OfferWithRentalObjectCode,
   Offer,
   Applicant,
-  OfferStatus,
   DetailedOffer,
 } from 'onecore-types'
 

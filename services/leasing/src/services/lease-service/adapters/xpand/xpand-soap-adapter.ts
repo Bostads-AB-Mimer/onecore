@@ -206,7 +206,9 @@ const addApplicantToToWaitingList = async (
   }
 }
 
-const healthCheck = async () => {
+async function getPublishedParkingSpaces(): Promise<
+  AdapterResult<any[], 'not-found'>
+> {
   const headers = getHeaders()
 
   const xml = `
@@ -239,6 +241,34 @@ const healthCheck = async () => {
     parser.parse(body)['Envelope']['Body']['PublishedRentalObjectResult08352']
 
   if (!parsedResponse['PublishedRentalObjects08352']) {
+    return { ok: false, err: 'not-found' }
+  }
+
+  return {
+    ok: true,
+    data: parsedResponse['PublishedRentalObjects08352'][
+      'PublishedRentalObjectDataContract08352'
+    ],
+  }
+}
+
+async function getPublishedInternalParkingSpaces(): Promise<
+  AdapterResult<any[], 'not-found'>
+> {
+  const result = await getPublishedParkingSpaces()
+  if (!result.ok) {
+    return { ok: false, err: result.err }
+  }
+
+  return {
+    ok: true,
+    data: result.data.filter((v) => v.WaitingListType === 'Bilplats (intern)'),
+  }
+}
+
+const healthCheck = async () => {
+  const result = await getPublishedParkingSpaces()
+  if (!result.ok) {
     throw createHttpError(404, 'Published Parking Spaces not found')
   }
 }
@@ -255,4 +285,10 @@ function getHeaders() {
   }
 }
 
-export { createLease, getWaitingList, addApplicantToToWaitingList, healthCheck }
+export {
+  createLease,
+  getWaitingList,
+  addApplicantToToWaitingList,
+  healthCheck,
+  getPublishedInternalParkingSpaces,
+}

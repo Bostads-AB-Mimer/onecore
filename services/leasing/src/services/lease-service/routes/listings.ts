@@ -1,21 +1,17 @@
 import KoaRouter from '@koa/router'
-import { ApplicantStatus, DetailedApplicant, Listing } from 'onecore-types'
 import {
-  applicationExists,
-  createApplication,
-  createListing,
-  getAllListingsWithApplicants,
-  getListingById,
-  getListingByRentalObjectCode,
-} from '../adapters/listing-adapter'
+  ApplicantStatus,
+  DetailedApplicant,
+  InternalParkingSpaceSyncSuccessResponse,
+  Listing,
+} from 'onecore-types'
 import { z } from 'zod'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
+
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
-import {
-  addPriorityToApplicantsBasedOnRentalRules,
-  getDetailedApplicantInformation,
-  sortApplicantsBasedOnRentalRules,
-} from '../priority-list-service'
+import * as priorityListService from '../priority-list-service'
+import * as syncParkingSpacesFromXpandService from '../sync-internal-parking-space-listings-from-xpand'
+import * as listingAdapter from '../adapters/listing-adapter'
 
 /**
  * @swagger
@@ -58,7 +54,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingData = <Listing>ctx.request.body
-      const existingListing = await getListingByRentalObjectCode(
+      const existingListing = await listingAdapter.getListingByRentalObjectCode(
         listingData.rentalObjectCode
       )
       if (
@@ -73,7 +69,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const listing = await createListing(listingData)
+      const listing = await listingAdapter.createListing(listingData)
 
       ctx.status = 201 // HTTP status code for Created
       ctx.body = { content: listing, ...metadata }
@@ -190,7 +186,7 @@ export const routes = (router: KoaRouter) => {
       try {
         const applicantData = ctx.request.body
 
-        const exists = await applicationExists(
+        const exists = await listingAdapter.applicationExists(
           applicantData.contactCode,
           applicantData.listingId
         )
@@ -205,7 +201,8 @@ export const routes = (router: KoaRouter) => {
         }
 
         //todo: createApplication does not actually return any data
-        const applicationId = await createApplication(applicantData)
+        const applicationId =
+          await listingAdapter.createApplication(applicantData)
         ctx.status = 201 // HTTP status code for Created
         ctx.body = { content: applicationId, ...metadata }
       } catch (error) {
@@ -265,7 +262,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingId = ctx.params.listingId
-      const listing = await getListingById(listingId)
+      const listing = await listingAdapter.getListingById(listingId)
       if (listing == undefined) {
         ctx.status = 404
         ctx.body = { reason: 'Listing not found', ...metadata }
@@ -332,7 +329,8 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const rentaLObjectCode = ctx.params.rentalObjectCode
-      const listing = await getListingByRentalObjectCode(rentaLObjectCode)
+      const listing =
+        await listingAdapter.getListingByRentalObjectCode(rentaLObjectCode)
       if (listing == undefined) {
         ctx.status = 404
         ctx.body = { reason: 'Listing not found', ...metadata }
@@ -405,7 +403,8 @@ export const routes = (router: KoaRouter) => {
   router.get('/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const listingsWithApplicants = await getAllListingsWithApplicants()
+      const listingsWithApplicants =
+        await listingAdapter.getAllListingsWithApplicants()
       ctx.status = 200
       ctx.body = { content: listingsWithApplicants, ...metadata }
     } catch (error) {
@@ -415,6 +414,59 @@ export const routes = (router: KoaRouter) => {
         error: 'An error occurred while fetching listings with applicants.',
         ...metadata,
       }
+    }
+  })
+
+  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result =
+      await syncParkingSpacesFromXpandService.syncInternalParkingSpaces()
+
+    if (!result.ok) {
+      logger.error(
+        'Error when syncing internal parking spaces from Xpand SOAP API'
+      )
+
+      ctx.status = 500
+      ctx.body = { err: 'Internal server error', ...metadata }
+      return
+    }
+
+    logger.info('Finished syncing listings from Xpand SOAP API')
+    if (result.data.insertions.failed.length) {
+      logger.info(
+        result.data.insertions.failed.map((v) => ({
+          rentalObjectCode: v.listing.rentalObjectCode,
+          status: v.listing.status,
+          err: v.err,
+        })),
+        'Failed to insert the following listings when syncing from Xpand SOAP API:'
+      )
+    }
+
+    const mapToResponseData = (
+      data: (typeof result)['data']
+    ): InternalParkingSpaceSyncSuccessResponse => ({
+      invalid: result.data.invalid,
+      insertions: {
+        inserted: data.insertions.inserted.map((v) => ({
+          id: v.id,
+          rentalObjectCode: v.rentalObjectCode,
+        })),
+        failed: data.insertions.failed.map((v) => ({
+          rentalObjectCode: v.listing.rentalObjectCode,
+          err:
+            v.err === 'conflict-active-listing'
+              ? 'active-listing-exists'
+              : v.err,
+        })),
+      },
+    })
+
+    ctx.status = 200
+    ctx.body = {
+      content: mapToResponseData(result.data),
+      ...metadata,
     }
   })
 
@@ -471,7 +523,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingId = ctx.params.listingId
-      const listing = await getListingById(listingId)
+      const listing = await listingAdapter.getListingById(listingId)
 
       if (!listing) {
         ctx.status = 404
@@ -487,7 +539,7 @@ export const routes = (router: KoaRouter) => {
       if (listing.applicants) {
         for (const applicant of listing.applicants) {
           const detailedApplicant =
-            await getDetailedApplicantInformation(applicant)
+            await priorityListService.getDetailedApplicantInformation(applicant)
 
           if (!detailedApplicant.ok)
             throw new Error('Err when getting detailed applicant information')
@@ -495,14 +547,17 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-      const applicantsWithPriority = addPriorityToApplicantsBasedOnRentalRules(
-        listing,
-        applicants
-      )
+      const applicantsWithPriority =
+        priorityListService.addPriorityToApplicantsBasedOnRentalRules(
+          listing,
+          applicants
+        )
 
       ctx.status = 200
       ctx.body = {
-        content: sortApplicantsBasedOnRentalRules(applicantsWithPriority),
+        content: priorityListService.sortApplicantsBasedOnRentalRules(
+          applicantsWithPriority
+        ),
         ...metadata,
       }
     } catch (error: unknown) {

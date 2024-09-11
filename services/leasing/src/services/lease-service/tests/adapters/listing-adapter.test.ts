@@ -2,6 +2,7 @@ import { db, migrate, teardown } from '../../adapters/db'
 import * as listingAdapter from '../../adapters/listing-adapter'
 import * as factory from './../factories'
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
+import assert from 'node:assert'
 
 jest.mock('onecore-utilities', () => {
   return {
@@ -38,11 +39,13 @@ describe('listing-adapter', () => {
       const listing2 = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '2' })
       )
+      assert(listing1.ok)
+      assert(listing2.ok)
       await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing1.id })
+        factory.applicant.build({ listingId: listing1.data.id })
       )
       await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing2.id })
+        factory.applicant.build({ listingId: listing2.data.id })
       )
       const [fst, snd] = await listingAdapter.getAllListingsWithApplicants()
       expect(fst.applicants).toHaveLength(1)
@@ -58,10 +61,51 @@ describe('listing-adapter', () => {
       const insertedListing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
-      expect(insertedListing).toBeDefined()
+      assert(insertedListing.ok)
       const listingFromDatabase = await db('listing').first()
       expect(listingFromDatabase).toBeDefined()
-      expect(listingFromDatabase.Id).toEqual(insertedListing.id)
+      expect(listingFromDatabase.Id).toEqual(insertedListing.data.id)
+    })
+
+    it('fails on duplicate combination of ListingStatus.Active and RentalObjectCode', async () => {
+      await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
+      )
+
+      const insertionResult = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
+      )
+
+      expect(insertionResult).toEqual({
+        ok: false,
+        err: 'conflict-active-listing',
+      })
+    })
+
+    it('allows duplicate combination of other Listing statuses and RentalObjectCode', async () => {
+      await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
+      )
+
+      const insertionResult = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Expired,
+        })
+      )
+
+      expect(insertionResult).toMatchObject({
+        ok: true,
+      })
     })
   })
 
@@ -70,14 +114,14 @@ describe('listing-adapter', () => {
       const insertedListing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
-      expect(insertedListing).toBeDefined()
+      assert(insertedListing.ok)
       const listingFromDatabase =
         await listingAdapter.getListingByRentalObjectCode(
-          insertedListing.rentalObjectCode
+          insertedListing.data.rentalObjectCode
         )
       expect(listingFromDatabase?.rentalObjectCode).toBeDefined()
       expect(listingFromDatabase?.rentalObjectCode).toEqual(
-        insertedListing.rentalObjectCode
+        insertedListing.data.rentalObjectCode
       )
     })
   })
@@ -88,11 +132,12 @@ describe('listing-adapter', () => {
         factory.listing.build({ rentalObjectCode: '1' })
       )
       expect(insertedListing).toBeDefined()
+      assert(insertedListing.ok)
       const listingFromDatabase = await listingAdapter.getListingById(
-        insertedListing.id.toString()
+        insertedListing.data.id.toString()
       )
       expect(listingFromDatabase?.id).toBeDefined()
-      expect(listingFromDatabase?.id).toEqual(insertedListing.id)
+      expect(listingFromDatabase?.id).toEqual(insertedListing.data.id)
     })
   })
 
@@ -102,8 +147,9 @@ describe('listing-adapter', () => {
         factory.listing.build({ rentalObjectCode: '1' })
       )
 
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
       const applicantFromDatabase = await listingAdapter.getApplicantById(
         insertedApplicant.id
@@ -118,8 +164,9 @@ describe('listing-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
       expect(insertedApplicant).toBeDefined()
       const applicantFromDatabase = await db('applicant').first()
@@ -133,9 +180,10 @@ describe('listing-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
         factory.applicant.build({
-          listingId: listing.id,
+          listingId: listing.data.id,
           status: ApplicantStatus.Active,
         })
       )
@@ -158,8 +206,9 @@ describe('listing-adapter', () => {
         factory.listing.build({ rentalObjectCode: '1' })
       )
 
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
       const applicantFromDatabase =
         await listingAdapter.getApplicantsByContactCode(
@@ -190,14 +239,15 @@ describe('listing-adapter', () => {
         factory.listing.build({ rentalObjectCode: '1' })
       )
 
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
 
       const applicantFromDatabase =
         await listingAdapter.getApplicantByContactCodeAndListingId(
           insertedApplicant.contactCode,
-          listing.id
+          listing.data.id
         )
       expect(applicantFromDatabase).toBeDefined()
       expect(applicantFromDatabase?.id).toEqual(insertedApplicant.id)
@@ -222,14 +272,14 @@ describe('listing-adapter', () => {
       const listing = await listingAdapter.createListing(
         factory.listing.build({ rentalObjectCode: '1' })
       )
+      assert(listing.ok)
       const insertedApplicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing.id })
+        factory.applicant.build({ listingId: listing.data.id })
       )
-      expect(insertedApplicant).toBeDefined()
 
       const applicantExists = await listingAdapter.applicationExists(
         insertedApplicant.contactCode,
-        listing.id
+        listing.data.id
       )
 
       expect(applicantExists).toBe(true)
@@ -268,12 +318,13 @@ describe('listing-adapter', () => {
         })
       )
 
+      assert(expiredListing.ok)
       const expiredListings = await listingAdapter.getExpiredListings()
       expect(expiredListings).toBeDefined()
       expect(expiredListings).toHaveLength(1)
-      expect(expiredListings[0].Id).toEqual(expiredListing.id)
+      expect(expiredListings[0].Id).toEqual(expiredListing.data.id)
       expect(expiredListings[0].RentalObjectCode).toEqual(
-        expiredListing.rentalObjectCode
+        expiredListing.data.rentalObjectCode
       )
     })
   })
@@ -288,18 +339,20 @@ describe('listing-adapter', () => {
         factory.listing.build()
       )
 
+      assert(listing1.ok)
+      assert(listing2.ok)
       await listingAdapter.createListing(factory.listing.build({}))
 
       const updateCount = await listingAdapter.updateListingStatuses(
-        [listing1.id, listing2.id],
+        [listing1.data.id, listing2.data.id],
         ListingStatus.Expired
       )
       expect(updateCount).toEqual(2)
       const listing1FromDatabase = await listingAdapter.getListingById(
-        listing1.id.toString()
+        listing1.data.id.toString()
       )
       const listing2FromDatabase = await listingAdapter.getListingById(
-        listing2.id.toString()
+        listing2.data.id.toString()
       )
       expect(listing1FromDatabase?.status).toEqual(ListingStatus.Expired)
       expect(listing2FromDatabase?.status).toEqual(ListingStatus.Expired)

@@ -7,7 +7,8 @@ import {
 } from 'onecore-types'
 
 import { db } from './db'
-import { DbApplicant, DbListing } from './types'
+import { AdapterResult, DbApplicant, DbListing } from './types'
+import { RequestError } from 'tedious'
 
 function transformFromDbListing(row: DbListing): Listing {
   return {
@@ -45,29 +46,56 @@ function transformDbApplicant(row: DbApplicant): Applicant {
   }
 }
 
-const createListing = async (listingData: Listing) => {
-  const insertedRow = await db<DbListing>('Listing')
-    .insert({
-      RentalObjectCode: listingData.rentalObjectCode,
-      Address: listingData.address,
-      DistrictCaption: listingData.districtCaption,
-      DistrictCode: listingData.districtCode,
-      BlockCaption: listingData.blockCaption,
-      BlockCode: listingData.blockCode,
-      MonthlyRent: listingData.monthlyRent,
-      ObjectTypeCaption: listingData.objectTypeCaption,
-      ObjectTypeCode: listingData.objectTypeCode,
-      RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
-      RentalObjectTypeCode: listingData.rentalObjectTypeCode,
-      PublishedFrom: listingData.publishedFrom,
-      PublishedTo: listingData.publishedTo,
-      VacantFrom: listingData.vacantFrom,
-      Status: listingData.status,
-      WaitingListType: listingData.waitingListType,
-    })
-    .returning('*')
+const createListing = async (
+  listingData: Omit<Listing, 'id'>
+): Promise<AdapterResult<Listing, 'conflict-active-listing' | 'unknown'>> => {
+  try {
+    const insertedRow = await db<DbListing>('Listing')
+      .insert({
+        RentalObjectCode: listingData.rentalObjectCode,
+        Address: listingData.address,
+        DistrictCaption: listingData.districtCaption,
+        DistrictCode: listingData.districtCode,
+        BlockCaption: listingData.blockCaption,
+        BlockCode: listingData.blockCode,
+        MonthlyRent: listingData.monthlyRent,
+        ObjectTypeCaption: listingData.objectTypeCaption,
+        ObjectTypeCode: listingData.objectTypeCode,
+        RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
+        RentalObjectTypeCode: listingData.rentalObjectTypeCode,
+        PublishedFrom: listingData.publishedFrom,
+        PublishedTo: listingData.publishedTo,
+        VacantFrom: listingData.vacantFrom,
+        Status: listingData.status,
+        WaitingListType: listingData.waitingListType,
+      })
+      .returning('*')
 
-  return transformFromDbListing(insertedRow[0])
+    return { ok: true, data: transformFromDbListing(insertedRow[0]) }
+  } catch (err) {
+    if (err instanceof RequestError) {
+      if (err.message.includes('unique_rental_object_code_status')) {
+        logger.info(
+          {
+            RentalObjectCode: listingData.rentalObjectCode,
+            Status: listingData.status,
+          },
+          'listingAdapter.createListing - can not insert duplicate active listing'
+        )
+        return { ok: false, err: 'conflict-active-listing' }
+      }
+
+      logger.error(
+        {
+          RentalObjectCode: listingData.rentalObjectCode,
+          err,
+        },
+        'listingAdapter.createListing'
+      )
+    }
+
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 /**
