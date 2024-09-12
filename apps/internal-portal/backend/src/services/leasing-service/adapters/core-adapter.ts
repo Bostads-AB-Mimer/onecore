@@ -198,6 +198,29 @@ const syncInternalParkingSpacesFromXpand = async (): Promise<
   }
 }
 
+const deleteListing = async (
+  listingId: number
+): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
+  try {
+    await getFromCore<{
+      content: InternalParkingSpaceSyncSuccessResponse
+    }>({
+      method: 'delete',
+      url: `${coreBaseUrl}/listings/${listingId}`,
+    })
+
+    return { ok: true, data: null }
+  } catch (err) {
+    if (err instanceof AxiosError) {
+      if (err.status === 409) {
+        return { ok: false, err: 'conflict' }
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getListingsWithApplicants,
   getListingWithApplicants,
@@ -209,4 +232,5 @@ export {
   validateResidentialAreaRentalRules,
   syncInternalParkingSpacesFromXpand,
   createOffer,
+  deleteListing,
 }

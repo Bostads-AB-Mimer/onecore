@@ -215,4 +215,22 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: result.err, ...metadata }
     }
   })
+
+  router.delete('(.*)/listings/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await coreAdapter.deleteListing(Number(ctx.params.listingId))
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+      }
+      return
+    } else {
+      ctx.status = result.err === 'conflict' ? 409 : 500
+      ctx.body = {
+        ...metadata,
+      }
+    }
+  })
 }
