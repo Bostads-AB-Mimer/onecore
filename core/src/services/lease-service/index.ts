@@ -1055,6 +1055,59 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /listings/{listingId}:
+   *   delete:
+   *     summary: Delete a Listing by ID
+   *     description: Deletes a listing by it's ID.
+   *     tags:
+   *       - Listings
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to delete.
+   *     responses:
+   *       '200':
+   *         description: Successfully deleted listing.
+   *       '409':
+   *         description: Conflict.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.delete('(.*)/listings/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.deleteListing(
+      Number(ctx.params.listingId)
+    )
+
+    if (!result.ok) {
+      if (result.err.tag === 'conflict') {
+        ctx.status = 409
+        ctx.body = { reason: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
+  })
+
+  /**
+   * @swagger
    * /applicants/{contactCode}/{listingId}:
    *   get:
    *     summary: Get applicant by contact code and listing ID
