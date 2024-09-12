@@ -1,15 +1,17 @@
-import { Box, IconButton, Stack, Typography } from '@mui/material'
+import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
-import type { GridColDef } from '@mui/x-data-grid'
+import { GridActionsCellItem, type GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
-import { Listing } from 'onecore-types'
+import { Listing, ListingStatus } from 'onecore-types'
 import { Link } from 'react-router-dom'
+import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 
 import { DataGridTable, SearchBar } from '../../components'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
 import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
+import { DeleteListing } from './components/DeleteListing'
 
 const sharedProps = {
   editable: false,
@@ -79,15 +81,25 @@ const ParkingSpaces = () => {
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
     },
     {
-      field: 'action-add',
-      headerName: '',
-      sortable: false,
-      filterable: false,
+      field: 'actions',
+      type: 'actions',
       flex: 1,
-      disableColumnMenu: true,
-      renderCell: (v) => (
-        <CreateApplicantForListing disabled={false} listing={v.row} />
-      ),
+      minWidth: 250,
+      cellClassName: 'actions',
+      getActions: ({ row }) => [
+        <DeleteListing
+          key={0}
+          address={row.address}
+          rentalObjectCode={row.rentalObjectCode}
+          disabled={row.status === ListingStatus.Expired}
+          id={row.id}
+        />,
+        <CreateApplicantForListing
+          key={1}
+          disabled={row.status === ListingStatus.Expired}
+          listing={row}
+        />,
+      ],
     },
     {
       field: 'action-link',

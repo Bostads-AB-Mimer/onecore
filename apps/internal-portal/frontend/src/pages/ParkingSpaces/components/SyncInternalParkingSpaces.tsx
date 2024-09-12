@@ -34,7 +34,7 @@ export const SyncInternalParkingSpaces = () => {
         </Box>
       </Button>
       <Dialog onClose={onCloseModal} open={open} maxWidth="sm" fullWidth>
-        <Box paddingTop="1rem">
+        <Box paddingTop="0.5rem">
           <Box display="flex">
             <DialogTitle variant="h1" fontSize={24} textAlign="left">
               Synka interna bilplatser från Xpand

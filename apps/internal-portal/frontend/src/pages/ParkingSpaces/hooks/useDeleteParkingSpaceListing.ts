@@ -3,22 +3,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-type Params = { listingId: string; applicantId: number }
+type Params = { listingId: number }
 
-export const useRemoveParkingSpaceListing = () => {
+export const useDeleteParkingSpaceListing = () => {
   const queryClient = useQueryClient()
   return useMutation<unknown, AxiosError, Params>({
     mutationFn: (params: Params) =>
-      axios.delete<unknown>(`${backendUrl}/applicant/${params.applicantId}`, {
+      axios.delete<unknown>(`${backendUrl}/listings/${params.listingId}`, {
         headers: {
           Accept: 'application/json',
           'Access-Control-Allow-Credentials': true,
         },
         withCredentials: true,
       }),
-    onSuccess: (_, params) =>
+    onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ['parkingSpaceListing', params.listingId],
+        queryKey: ['parkingSpaceListings'],
       }),
   })
 }

@@ -106,6 +106,7 @@ export const CreateApplicantForListing = (props: Props) => {
     <>
       <Button
         disabled={props.disabled}
+        size="small"
         variant="dark"
         onClick={() => setOpen(true)}
       >
@@ -119,11 +120,17 @@ export const CreateApplicantForListing = (props: Props) => {
           Ny anmälan
         </Box>
       </Button>
-      <Dialog onClose={onCloseModal} open={open} maxWidth="sm" fullWidth>
+      <Dialog
+        onClose={onCloseModal}
+        open={open}
+        maxWidth="sm"
+        fullWidth
+        TransitionProps={{ exit: false }}
+      >
         {createApplicant.error ? (
           <CreateApplicantError reset={createApplicant.reset} />
         ) : (
-          <Box paddingTop="1rem">
+          <Box paddingTop="0.5rem">
             <Box display="flex">
               <DialogTitle variant="h1" fontSize={24} textAlign="left">
                 Ny intresseanmälan, {props.listing.address}

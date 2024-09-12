@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 
-import { useRemoveParkingSpaceListing } from '../hooks/useRemoveParkingSpaceListing'
+import { useRemoveApplicantFromListing } from '../hooks/useRemoveApplicantFromListing'
 
 export interface Props {
   applicantId: number
@@ -21,7 +21,7 @@ export interface Props {
 }
 
 export const RemoveApplicantFromListing = (props: Props) => {
-  const removeListing = useRemoveParkingSpaceListing()
+  const removeListing = useRemoveApplicantFromListing()
   const [open, setOpen] = useState(false)
 
   const onRemove = () =>
