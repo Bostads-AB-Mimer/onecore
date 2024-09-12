@@ -262,7 +262,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingId = ctx.params.listingId
-      const listing = await listingAdapter.getListingById(listingId)
+      const listing = await listingAdapter.getListingById(Number(listingId))
       if (listing == undefined) {
         ctx.status = 404
         ctx.body = { reason: 'Listing not found', ...metadata }
@@ -523,7 +523,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingId = ctx.params.listingId
-      const listing = await listingAdapter.getListingById(listingId)
+      const listing = await listingAdapter.getListingById(Number(listingId))
 
       if (!listing) {
         ctx.status = 404
@@ -571,5 +571,57 @@ export const routes = (router: KoaRouter) => {
         }
       }
     }
+  })
+
+  /**
+   * @swagger
+   * /listings/{listingId}:
+   *   delete:
+   *     summary: Delete a Listing by ID
+   *     description: Deletes a listing by it's ID.
+   *     tags:
+   *       - Listings
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to delete.
+   *     responses:
+   *       '200':
+   *         description: Successfully deleted listing.
+   *       '409':
+   *         description: Conflict.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.delete('(.*)/listings/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await listingAdapter.deleteListing(
+      Number(ctx.params.listingId)
+    )
+
+    if (!result.ok) {
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = { reason: 'Could not delete listing.', ...metadata }
+        return
+      }
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
   })
 }

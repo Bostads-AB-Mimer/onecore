@@ -1,21 +1,8 @@
-import { db, migrate, teardown } from '../../adapters/db'
-import * as listingAdapter from '../../adapters/listing-adapter'
-import * as factory from './../factories'
+import { db, migrate, teardown } from '../../../adapters/db'
+import * as listingAdapter from '../../../adapters/listing-adapter'
+import * as factory from './../../factories'
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
 import assert from 'node:assert'
-
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-  }
-})
 
 beforeAll(async () => {
   await migrate()
@@ -134,7 +121,7 @@ describe('listing-adapter', () => {
       expect(insertedListing).toBeDefined()
       assert(insertedListing.ok)
       const listingFromDatabase = await listingAdapter.getListingById(
-        insertedListing.data.id.toString()
+        insertedListing.data.id
       )
       expect(listingFromDatabase?.id).toBeDefined()
       expect(listingFromDatabase?.id).toEqual(insertedListing.data.id)
@@ -349,10 +336,10 @@ describe('listing-adapter', () => {
       )
       expect(updateCount).toEqual(2)
       const listing1FromDatabase = await listingAdapter.getListingById(
-        listing1.data.id.toString()
+        listing1.data.id
       )
       const listing2FromDatabase = await listingAdapter.getListingById(
-        listing2.data.id.toString()
+        listing2.data.id
       )
       expect(listing1FromDatabase?.status).toEqual(ListingStatus.Expired)
       expect(listing2FromDatabase?.status).toEqual(ListingStatus.Expired)
