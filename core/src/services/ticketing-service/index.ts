@@ -1,6 +1,5 @@
 import KoaRouter from '@koa/router'
 import {
-  createLease,
   getContact,
   getContactByPhoneNumber,
   getLease,
@@ -11,12 +10,7 @@ import {
   getMaintenanceUnitsForRentalProperty,
   getRentalPropertyInfo,
 } from '../../adapters/property-management-adapter'
-import {
-  ApartmentInfo,
-  CommercialSpaceInfo,
-  Lease,
-  RentalPropertyInfo,
-} from 'onecore-types'
+import { Lease, RentalPropertyInfo } from 'onecore-types'
 import {
   createLeaseRecord,
   createMaintenanceUnitRecord,
