@@ -27,11 +27,12 @@ import {
   mockedLeases,
   mockedWaitingList,
 } from './create-note-of-interest.mocks'
-import { HttpStatusCode, InternalAxiosRequestConfig } from 'axios'
+import { HttpStatusCode } from 'axios'
 import { mockedDetailedApplicants } from '../../../../adapters/tests/leasing-adapter.mocks'
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
 import * as factory from '../../../../../test/factories'
 import * as processUtils from '../../utils'
+import { ListingFactory } from '../../../../../test/factories/listing'
 
 const createAxiosResponse = (status: number, data: any): AxiosResponse => {
   return {
@@ -53,6 +54,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     propertyManagementAdapter,
     'getPublishedParkingSpace'
   )
+  const sharedListing = ListingFactory.build()
 
   const getContactSpy = jest
     .spyOn(leasingAdapter, 'getContact')
@@ -73,11 +75,14 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
   const getApplicantByContactCodeAndListingIdSpy = jest
     .spyOn(leasingAdapter, 'getApplicantByContactCodeAndListingId')
-    .mockResolvedValue(mockedApplicant)
+    .mockResolvedValue({ content: mockedApplicant })
 
   const getListingByRentalObjectCodeSpy = jest
     .spyOn(leasingAdapter, 'getListingByRentalObjectCode')
-    .mockResolvedValue(createAxiosResponse(HttpStatusCode.Ok, null))
+    .mockResolvedValue({
+      ok: true,
+      data: sharedListing,
+    })
   const createNewListingSpy = jest.spyOn(leasingAdapter, 'createNewListing')
 
   const validatePropertyRentalRules = jest
@@ -96,12 +101,14 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
   const validateRentalRules = jest.spyOn(processUtils, 'validateRentalRules')
 
-  jest
-    .spyOn(leasingAdapter, 'getListingByRentalObjectCode')
-    .mockResolvedValue(createAxiosResponse(HttpStatusCode.Ok, null))
-  jest
-    .spyOn(leasingAdapter, 'createNewListing')
-    .mockResolvedValue(createAxiosResponse(HttpStatusCode.Created, null))
+  jest.spyOn(leasingAdapter, 'getListingByRentalObjectCode').mockResolvedValue({
+    ok: true,
+    data: sharedListing,
+  })
+  jest.spyOn(leasingAdapter, 'createNewListing').mockResolvedValue({
+    ok: true,
+    data: sharedListing,
+  })
 
   jest
     .spyOn(leasingAdapter, 'setApplicantStatusActive')
@@ -354,11 +361,8 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: HttpStatusCode.NotFound,
-      data: {},
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
+      ok: false,
+      err: 'not-found',
     })
 
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -395,15 +399,13 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getInternalCreditInformationSpy.mockResolvedValue(true)
     getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
-    createNewListingSpy.mockResolvedValue(
-      createAxiosResponse(HttpStatusCode.Created, [])
-    )
+    createNewListingSpy.mockResolvedValue({
+      ok: true,
+      data: sharedListing,
+    })
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: HttpStatusCode.NotFound,
-      data: {},
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
+      ok: true,
+      data: sharedListing,
     })
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
       status: 404,
@@ -418,10 +420,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     expect(applyForListingSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         applicationType: 'Additional',
-        contactCode: 'P12345',
+        contactCode: mockedApplicant.contactCode,
         id: 0,
-        listingId: undefined,
-        name: 'Foo Bar',
+        listingId: sharedListing.id,
         status: 1,
       })
     )
@@ -437,24 +438,20 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       createAxiosResponse(HttpStatusCode.NotFound, null)
     )
     applyForListingSpy.mockResolvedValue({
-      status: HttpStatusCode.Created,
+      ok: true,
+      data: mockedApplicant,
     } as any)
     addApplicantToWaitingListSpy.mockResolvedValue(
       createAxiosResponse(HttpStatusCode.Created, null)
     )
 
-    createNewListingSpy.mockResolvedValue(
-      createAxiosResponse(
-        axios.HttpStatusCode.Created,
-        mockedDetailedApplicants
-      )
-    )
+    createNewListingSpy.mockResolvedValue({
+      ok: true,
+      data: sharedListing,
+    })
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: axios.HttpStatusCode.NotFound,
-      data: {},
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
+      ok: false,
+      err: 'not-found',
     })
 
     const response =
@@ -477,21 +474,17 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
     getWaitingListSpy.mockResolvedValue(mockedWaitingList)
-    createNewListingSpy.mockResolvedValue(
-      createAxiosResponse(
-        HttpStatusCode.Created,
-        factory.listing.build({ status: ListingStatus.Active })
-      )
-    )
+    createNewListingSpy.mockResolvedValue({
+      ok: true,
+      data: factory.listing.build({ status: ListingStatus.Active }),
+    })
     applyForListingSpy.mockResolvedValue({
-      status: HttpStatusCode.Conflict,
+      ok: false,
+      err: 'conflict',
     } as any)
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: HttpStatusCode.NotFound,
+      ok: true,
       data: factory.listing.build({ status: ListingStatus.Active }),
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
     })
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
       status: 404,
@@ -503,6 +496,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
         'bar',
         'Additional'
       )
+    console.log(response)
     expect(response.processStatus).toBe(ProcessStatus.successful)
     expect(response.response.message).toBe(
       'Applicant bar already has application for foo'
@@ -519,16 +513,15 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       status: HttpStatusCode.Ok,
     } as any)
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: HttpStatusCode.Ok,
-      data: {},
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
+      ok: true,
+      data: sharedListing,
     })
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
       status: HttpStatusCode.Ok,
       data: {
-        status: ApplicantStatus.WithdrawnByUser,
+        content: {
+          status: ApplicantStatus.WithdrawnByUser,
+        },
       },
     })
 
@@ -552,19 +545,19 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getInternalCreditInformationSpy.mockResolvedValue(true)
     getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({
-      status: HttpStatusCode.Ok,
-    } as any)
+      ok: false,
+      err: 'conflict',
+    })
     getListingByRentalObjectCodeSpy.mockResolvedValue({
-      status: HttpStatusCode.Ok,
-      data: {},
-      statusText: '',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
+      ok: true,
+      data: sharedListing,
     })
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue({
       status: HttpStatusCode.Ok,
       data: {
-        status: ApplicantStatus.Active,
+        content: {
+          status: ApplicantStatus.Active,
+        },
       },
     })
 

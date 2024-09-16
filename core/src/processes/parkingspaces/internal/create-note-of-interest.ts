@@ -175,29 +175,32 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     )
 
     //step 4.b Add parking space listing to onecore-leases database
-    let listing = await getListingByRentalObjectCode(parkingSpaceId)
-    if (listing?.status == HttpStatusCode.Ok) {
+    //todo: refactor get and create listing to new func ->
+    //todo: should return the listing regardless of if it exists previously or is being created
+    let listingAdapterResult =
+      await getListingByRentalObjectCode(parkingSpaceId)
+    if (listingAdapterResult?.ok) {
       log.push(
-        `Annons med id ${listing?.data.id} existerar sedan tidigare i onecore-leasing`
+        `Annons med id ${listingAdapterResult.data?.id} existerar sedan tidigare i onecore-leasing`
       )
     }
 
-    if (listing?.status == HttpStatusCode.NotFound) {
+    if (!listingAdapterResult.ok && listingAdapterResult?.err == 'not-found') {
       log.push(`Annons existerar inte i onecore-leasing, skapar annons`)
       const createListingResult = await createNewListing(parkingSpace)
-      if (createListingResult?.status == HttpStatusCode.Created) {
+      if (createListingResult.ok) {
         log.push(`Annons skapad i onecore-leasing`)
-        listing = createListingResult
+        listingAdapterResult = createListingResult
       }
     }
 
     //step 4.c Add applicant to onecore-leasing database
     //todo: fix schema for listingId in leasing, null should not be allowed
     //todo: or add a request type with only required fields
-    if (listing?.data != undefined) {
+    if (listingAdapterResult.ok && listingAdapterResult?.data != undefined) {
       const applicantResponse = await getApplicantByContactCodeAndListingId(
         contactCode,
-        listing.data.id
+        listingAdapterResult.data.id.toString()
       )
 
       //create new applicant if applicant does not exist
@@ -205,13 +208,14 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         const applicantRequestBody = createApplicantRequestBody(
           applicantContact,
           applicationType,
-          listing.data
+          listingAdapterResult.data
         )
+
+        log.push(`Sökande existerar inte, skapar sökande.`)
 
         const applyForListingResult =
           await applyForListing(applicantRequestBody)
-
-        if (applyForListingResult?.status == HttpStatusCode.Created) {
+        if (applyForListingResult.ok) {
           log.push(`Sökande skapad i onecore-leasing. Process avslutad.`)
           logger.debug(log)
           return {
@@ -224,7 +228,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
           }
         }
 
-        if (applyForListingResult?.status == HttpStatusCode.Conflict) {
+        if (applyForListingResult.err == 'conflict') {
           log.push(
             `Sökande existerar redan i onecore-leasing. Process avslutad`
           )
@@ -241,8 +245,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       }
 
       //if applicant has previously applied and withdrawn application, allow for subsequent application
-      else if (applicantResponse.data) {
-        const applicantStatus = applicantResponse.data.status
+      else if (applicantResponse.data.content) {
+        const applicantStatus = applicantResponse.data.content.status
         const activeApplication = applicantStatus == ApplicantStatus.Active
         const applicationWithDrawnByUser =
           applicantStatus == ApplicantStatus.WithdrawnByUser
@@ -269,8 +273,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
           )
 
           await setApplicantStatusActive(
-            applicantResponse.data.id,
-            applicantResponse.data.contactCode
+            applicantResponse.data.content.id,
+            applicantResponse.data.content.contactCode
           )
 
           logger.debug(log)
@@ -287,7 +291,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     }
 
     logger.error(
-      listing,
+      listingAdapterResult,
       'Create not of interest for internal parking space failed due to unknown error'
     )
     return makeProcessError('internal-error', 500, {

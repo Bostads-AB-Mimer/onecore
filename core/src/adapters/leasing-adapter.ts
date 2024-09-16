@@ -252,29 +252,47 @@ const addApplicantToWaitingList = async (
   )
 }
 
-const createNewListing = async (listingData: Listing) => {
+const createNewListing = async (
+  listingData: Listing
+): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/listings`,
       listingData
     )
-    return response.data.content
+
+    if (response.status === HttpStatusCode.Conflict) {
+      return { ok: false, err: 'conflict' }
+    }
+
+    if (response.status === HttpStatusCode.Created) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
   } catch (error) {
     logger.error(error, 'Error creating new listing:')
-    return undefined
+    return { ok: false, err: 'unknown' }
   }
 }
 
-const applyForListing = async (applicantData: Omit<Applicant, 'id'>) => {
+const applyForListing = async (
+  applicantData: Omit<Applicant, 'id'>
+): Promise<AdapterResult<Applicant, 'conflict' | 'unknown'>> => {
   try {
-    const response = await axios.post(
+    const res = await axios.post(
       `${tenantsLeasesServiceUrl}/listings/apply`,
       applicantData
     )
-    return response.data.content
+
+    if (res.status === HttpStatusCode.Conflict) {
+      return { ok: false, err: 'conflict' }
+    }
+
+    return { ok: true, data: res.data.content }
   } catch (error) {
     logger.error(error, 'Error applying for listing:', error)
-    return undefined
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -292,16 +310,22 @@ const getListingByListingId = async (
   }
 }
 
-const getListingByRentalObjectCode = async (rentalObjectCode: string) => {
+const getListingByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<Listing | undefined, 'not-found' | 'unknown'>> => {
   try {
-    const response = await axios.get(
+    const res = await axios.get(
       `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
     )
 
-    return response.data.content
+    if (res.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: res.data.content }
   } catch (error) {
     logger.error(error, 'Error fetching listing by rental object code:', error)
-    return undefined
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -366,7 +390,7 @@ const getApplicantByContactCodeAndListingId = async (
 ): Promise<any | undefined> => {
   try {
     return await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}}`
+      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}`
     )
   } catch (error) {
     logger.error(
