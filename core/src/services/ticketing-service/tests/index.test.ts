@@ -196,6 +196,22 @@ describe('ticketing-service index', () => {
         .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
         .mockResolvedValue([leaseMockData])
 
+      const createLeaseRecordSpy = jest
+        .spyOn(odooAdapter, 'createLeaseRecord')
+        .mockResolvedValue(1)
+
+      const createRentalPropertyRecordSpy = jest
+        .spyOn(odooAdapter, 'createRentalPropertyRecord')
+        .mockResolvedValue(1)
+
+      const createTenantRecordSpy = jest
+        .spyOn(odooAdapter, 'createTenantRecord')
+        .mockResolvedValue(1)
+
+      const createMaintenanceUnitRecordSpy = jest
+        .spyOn(odooAdapter, 'createMaintenanceUnitRecord')
+        .mockResolvedValue(1)
+
       const createTicketSpy = jest
         .spyOn(odooAdapter, 'createTicket')
         .mockResolvedValue(Promise.resolve(13))
@@ -209,6 +225,10 @@ describe('ticketing-service index', () => {
       expect(getRentalPropertyInfoSpy).toHaveBeenCalled()
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalled()
       expect(getMaintenanceTeamIdSpy).toHaveBeenCalled()
+      expect(createLeaseRecordSpy).toHaveBeenCalled()
+      expect(createRentalPropertyRecordSpy).toHaveBeenCalled()
+      expect(createTenantRecordSpy).toHaveBeenCalled()
+      expect(createMaintenanceUnitRecordSpy).toHaveBeenCalled()
     })
   })
 
