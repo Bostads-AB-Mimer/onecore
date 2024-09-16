@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  createLease,
   getContact,
   getContactByPhoneNumber,
   getLease,
@@ -17,6 +18,10 @@ import {
   RentalPropertyInfo,
 } from 'onecore-types'
 import {
+  createLeaseRecord,
+  createMaintenanceUnitRecord,
+  createRentalPropertyRecord,
+  createTenantRecord,
   createTicket,
   getMaintenanceTeamId,
   getTicketByContactCode,
@@ -590,9 +595,25 @@ export const routes = (router: KoaRouter) => {
         const type = 'Tvättstuga'
         const address = laundryRoom.caption.replace('TVÄTTSTUGA ', '')
 
+        const newRentalPropertyRecord = await createRentalPropertyRecord(
+          propertyInfo,
+          address
+        )
+        const newLeaseRecord = await createLeaseRecord(
+          propertyInfoWithLeases.leases[0]
+        )
+        const newTenantRecord = await createTenantRecord(tenants[0])
+        const newMaintenanceUnitRecord = await createMaintenanceUnitRecord(
+          laundryRoom,
+          ticket.MaintenanceUnitCode,
+          ticket.MaintenanceUnitCaption
+        )
+
         const ticketId = await createTicket({
-          contact_code: ctx.params.contactCode,
-          rental_property_id: RentalObjectCode,
+          rental_property_id: newRentalPropertyRecord.toString(),
+          lease_id: newLeaseRecord.toString(),
+          tenant_id: newTenantRecord.toString(),
+          maintenance_unit_id: newMaintenanceUnitRecord.toString(),
           hearing_impaired: AccessOptions.Type === 1,
           phone_number: AccessOptions.PhoneNumber || tenants[0].phoneNumber[0],
           call_between: AccessOptions.CallBetween,
@@ -604,27 +625,9 @@ export const routes = (router: KoaRouter) => {
           name:
             'Felanmäld tvättstuga - ' +
             transformEquipmentCode(ticket.PartOfBuildingCode),
-          email_address: AccessOptions.Email || tenants[0].emailAddress,
-          building_code: (
-            propertyInfoWithLeases.property as
-              | ApartmentInfo
-              | CommercialSpaceInfo
-          ).buildingCode,
-          building: (
-            propertyInfoWithLeases.property as
-              | ApartmentInfo
-              | CommercialSpaceInfo
-          ).building,
-          estate_code: laundryRoom.estateCode,
-          estate: laundryRoom.estateCode + ' ' + laundryRoom.estate,
-          code: laundryRoom.code,
+          master_key: AccessOptions.MasterKey,
           space_caption: type,
           maintenance_team_id: maintenanceTeamId,
-          tenant_id: tenants[0].firstName + ' ' + tenants[0].lastName,
-          national_registration_number: tenants[0].nationalRegistrationNumber,
-          address: address,
-          maintenance_unit_code: ticket.MaintenanceUnitCode,
-          maintenance_unit_caption: ticket.MaintenanceUnitCaption,
         })
 
         ctx.status = 200
