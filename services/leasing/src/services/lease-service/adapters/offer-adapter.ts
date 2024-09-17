@@ -6,7 +6,7 @@ import {
 } from 'onecore-types'
 
 import { db } from './db'
-import { DbApplicant, DbDetailedOffer, DbOffer } from './types'
+import { AdapterResult, DbApplicant, DbDetailedOffer, DbOffer } from './types'
 
 import * as dbUtils from './utils'
 import { logger } from 'onecore-utilities'
@@ -174,6 +174,81 @@ export async function getOfferByContactCodeAndOfferId(
     }),
     rentalObjectCode: RentalObjectCode,
     vacantFrom: VacantFrom,
+  }
+}
+
+export async function getOfferByOfferId(
+  offerId: number
+): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> {
+  try {
+    const row = await db
+      .select(
+        'offer.Id',
+        'offer.SentAt',
+        'offer.ExpiresAt',
+        'offer.AnsweredAt',
+        'offer.Status',
+        'offer.ListingId',
+        'offer.ApplicantId',
+        'offer.CreatedAt',
+        'listing.RentalObjectCode',
+        'listing.VacantFrom',
+        'applicant.Id as ApplicantApplicantId',
+        'applicant.Name as ApplicantName',
+        'applicant.NationalRegistrationNumber as ApplicantNationalRegistrationNumber',
+        'applicant.ContactCode as ApplicantContactCode',
+        'applicant.ApplicationDate as ApplicantApplicationDate',
+        'applicant.ApplicationType as ApplicantApplicationType',
+        'applicant.Status as ApplicantStatus',
+        'applicant.ListingId as ApplicantListingId'
+      )
+      .from('offer')
+      .innerJoin('listing', 'listing.Id', 'offer.ListingId')
+      .innerJoin('applicant', 'applicant.Id', 'offer.ApplicantId')
+      .where('offer.Id', offerId)
+      .first()
+
+    if (row == undefined) {
+      logger.info(
+        { offerId },
+        'Getting offer from leasing DB complete - offer not found'
+      )
+      return { ok: false, err: 'not-found' }
+    }
+    const {
+      ApplicantApplicantId,
+      ApplicantName,
+      ApplicantNationalRegistrationNumber,
+      ApplicantApplicationDate,
+      ApplicantApplicationType,
+      ApplicantContactCode,
+      ApplicantStatus,
+      ApplicantListingId,
+      RentalObjectCode,
+      VacantFrom,
+      ...offer
+    } = row
+
+    return {
+      ok: true,
+      data: {
+        ...transformToDetailedOfferFromDbOffer(offer, {
+          ApplicationDate: ApplicantApplicationDate,
+          ContactCode: ApplicantContactCode,
+          Id: ApplicantApplicantId,
+          ListingId: ApplicantListingId,
+          Name: ApplicantName,
+          NationalRegistrationNumber: ApplicantNationalRegistrationNumber,
+          Status: ApplicantStatus,
+          ApplicationType: ApplicantApplicationType,
+        }),
+        rentalObjectCode: RentalObjectCode,
+        vacantFrom: VacantFrom,
+      },
+    }
+  } catch (error) {
+    logger.error(error, 'Error getting waiting list using Xpand SOAP API')
+    return { ok: false, err: 'unknown' }
   }
 }
 

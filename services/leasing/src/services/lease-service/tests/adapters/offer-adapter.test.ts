@@ -233,4 +233,43 @@ describe('offer-adapter', () => {
       expect(offersFromDb).toBeUndefined()
     })
   })
+
+  describe(offerAdapter.getOfferByOfferId, () => {
+    // it('gets an offer by id', async () => {
+    //   const listing = await listingAdapter.createListing(
+    //     factory.listing.build({ rentalObjectCode: '1' })
+    //   )
+    //   const applicant = await listingAdapter.createApplication(
+    //     factory.applicant.build({ listingId: listing.id })
+    //   )
+
+    //   const offer = await offerAdapter.create({
+    //     expiresAt: new Date(),
+    //     status: OfferStatus.Active,
+    //     selectedApplicants: [
+    //       factory.detailedApplicant.build({
+    //         id: applicant.id,
+    //         contactCode: applicant.contactCode,
+    //         nationalRegistrationNumber: applicant.nationalRegistrationNumber,
+    //       }),
+    //     ],
+    //     listingId: listing.id,
+    //     applicantId: applicant.id,
+    //   })
+
+    //   const offersFromDb = await offerAdapter.getOfferByOfferId(offer.id)
+
+    //   expect(offersFromDb).toBeDefined()
+    //   expect(offersFromDb?.id).toEqual(offer.id)
+    //   expect(offersFromDb?.offeredApplicant.contactCode).toEqual(
+    //     applicant.contactCode + '1sdasdasd'
+    //   )
+    //   expect('').toBe('this test should fail...')
+    // })
+
+    it('returns empty object if offer does not exist', async () => {
+      const offersFromDb = await offerAdapter.getOfferByOfferId(123456)
+      expect(offersFromDb).toBeUndefined()
+    })
+  })
 })

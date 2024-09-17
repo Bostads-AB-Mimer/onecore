@@ -91,6 +91,27 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  router.get('(.*)/offers/:offerId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const offer = await offerAdapter.getOfferByOfferId(
+        parseInt(ctx.params.offerId)
+      )
+      if (!offer) {
+        ctx.status = HttpStatusCode.NotFound
+        ctx.body = { error: 'Offer not found', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: offer, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error getting offer: ')
+      ctx.status = 500
+      ctx.body = { error: 'Error getting offer', ...metadata }
+    }
+  })
+
   //todo: rewrite url to offers/applicant/:contactCode
   /**
    * @swagger
