@@ -235,41 +235,45 @@ describe('offer-adapter', () => {
   })
 
   describe(offerAdapter.getOfferByOfferId, () => {
-    // it('gets an offer by id', async () => {
-    //   const listing = await listingAdapter.createListing(
-    //     factory.listing.build({ rentalObjectCode: '1' })
-    //   )
-    //   const applicant = await listingAdapter.createApplication(
-    //     factory.applicant.build({ listingId: listing.id })
-    //   )
+    it('gets an offer by id', async () => {
+      const listingRes = await listingAdapter.createListing(
+        factory.listing.build({ rentalObjectCode: '1' })
+      )
+      if (!listingRes.ok) fail('Setup failed. Listing could not be completed')
 
-    //   const offer = await offerAdapter.create({
-    //     expiresAt: new Date(),
-    //     status: OfferStatus.Active,
-    //     selectedApplicants: [
-    //       factory.detailedApplicant.build({
-    //         id: applicant.id,
-    //         contactCode: applicant.contactCode,
-    //         nationalRegistrationNumber: applicant.nationalRegistrationNumber,
-    //       }),
-    //     ],
-    //     listingId: listing.id,
-    //     applicantId: applicant.id,
-    //   })
+      const applicant = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listingRes.data.id })
+      )
 
-    //   const offersFromDb = await offerAdapter.getOfferByOfferId(offer.id)
+      const offer = await offerAdapter.create({
+        expiresAt: new Date(),
+        status: OfferStatus.Active,
+        selectedApplicants: [
+          factory.detailedApplicant.build({
+            id: applicant.id,
+            contactCode: applicant.contactCode,
+            nationalRegistrationNumber: applicant.nationalRegistrationNumber,
+          }),
+        ],
+        listingId: listingRes.data.id,
+        applicantId: applicant.id,
+      })
 
-    //   expect(offersFromDb).toBeDefined()
-    //   expect(offersFromDb?.id).toEqual(offer.id)
-    //   expect(offersFromDb?.offeredApplicant.contactCode).toEqual(
-    //     applicant.contactCode + '1sdasdasd'
-    //   )
-    //   expect('').toBe('this test should fail...')
-    // })
+      const res = await offerAdapter.getOfferByOfferId(offer.id)
+
+      expect(res.ok).toBeTruthy()
+      if (res.ok) {
+        expect(res.data.id).toEqual(offer.id)
+        expect(res.data.offeredApplicant.contactCode).toEqual(
+          applicant.contactCode
+        )
+      }
+    })
 
     it('returns empty object if offer does not exist', async () => {
-      const offersFromDb = await offerAdapter.getOfferByOfferId(123456)
-      expect(offersFromDb).toBeUndefined()
+      const res = await offerAdapter.getOfferByOfferId(123456)
+      expect(res.ok).toBeFalsy()
+      if (!res.ok) expect(res.err).toBe('not-found')
     })
   })
 })
