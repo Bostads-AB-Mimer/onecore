@@ -67,6 +67,7 @@ const equipmentCodes: Record<string, string> = {
   TT: 'Torktumlare',
   TS: 'Torkskåp',
   MA: 'Mangel',
+  TÅ: 'Torkskåp',
 }
 
 const transformSpaceCode = (space_code: string) => {
