@@ -103,13 +103,13 @@ const validatePropertyRentalRules = async (
 > => {
   try {
     const result = await getFromCore<{
-      data: { applicationType: 'Replace' | 'Additional' }
+      content: { applicationType: 'Replace' | 'Additional' }
     }>({
       method: 'get',
       url: `${coreBaseUrl}/applicants/validate-rental-rules/property/${contactCode}/${rentalObjectCode}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data }
+    return { ok: true, data: result.content }
   } catch (err) {
     if (err instanceof AxiosError && err.response?.status === 403) {
       return { ok: false, err: 'no-contract-in-area-or-property' }
@@ -130,13 +130,13 @@ const validateResidentialAreaRentalRules = async (
 > => {
   try {
     const result = await getFromCore<{
-      data: { applicationType: 'Replace' | 'Additional' }
+      content: { applicationType: 'Replace' | 'Additional' }
     }>({
       method: 'get',
       url: `${coreBaseUrl}/applicants/validate-rental-rules/residential-area/${contactCode}/${districtCode}`,
     }).then((res) => res.data)
 
-    return { ok: true, data: result.data }
+    return { ok: true, data: result.content }
   } catch (err) {
     if (err instanceof AxiosError && err.response?.status === 403) {
       return { ok: false, err: 'no-contract-in-area-or-property' }
