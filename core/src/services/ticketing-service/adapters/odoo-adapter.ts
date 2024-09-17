@@ -1,5 +1,12 @@
 import Odoo from 'odoo-await'
 import Config from '../../../common/config'
+import {
+  ApartmentInfo,
+  Lease,
+  MaintenanceUnitInfo,
+  RentalPropertyInfo,
+  Tenant,
+} from 'onecore-types'
 
 export interface OdooGetTicket {
   uuid: string
@@ -19,10 +26,11 @@ export interface OdooGetTicket {
   stage_id: [number, string]
 }
 
-// TODO: Add a type for the ticket in onecore-types
 export interface OdooPostTicket {
-  contact_code: string
   rental_property_id: string
+  lease_id: string
+  maintenance_unit_id: string
+  tenant_id: string
   hearing_impaired: boolean
   phone_number: string
   call_between: string
@@ -32,19 +40,9 @@ export interface OdooPostTicket {
   description: string
   images: OdooPostTicketImage[]
   name: string
-  email_address: string
-  building_code: string
-  building: string
-  estate_code: string
-  estate: string
-  code: string
   space_caption: string
   maintenance_team_id: number
-  tenant_id: string
-  national_registration_number: string
-  address: string
-  maintenance_unit_code: string
-  maintenance_unit_caption: string
+  master_key: boolean
 }
 
 interface OdooPostTicketImage {
@@ -111,7 +109,7 @@ const transformTicket = (ticket: OdooGetTicket) => {
     LastChange: ticket.write_date || ticket.create_date,
     Priority: ticket.priority || '',
     Registered: ticket.create_date,
-    RentalObjectCode: ticket.rental_property_id,
+    RentalObjectCode: ticket.rental_property_id[1],
     Status: ticket.stage_id[1],
     UseMasterKey: true,
     WorkOrderRows: [
@@ -156,6 +154,80 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   return tickets.map(transformTicket)
 }
 
+const createRentalPropertyRecord = async (
+  propertyInfo: RentalPropertyInfo,
+  address: string
+) => {
+  await odoo.connect()
+  const apartmentProperty = propertyInfo.property as ApartmentInfo
+  const rentalPropertyRecord = odoo.create('maintenance.rental.property', {
+    name: propertyInfo.id,
+    rental_property_id: propertyInfo.id,
+    property_type: propertyInfo.type,
+    address: address,
+    code: apartmentProperty.code,
+    area: apartmentProperty.area,
+    entrance: apartmentProperty.entrance,
+    floor: apartmentProperty.floor,
+    has_elevator: apartmentProperty.hasElevator,
+    wash_space: apartmentProperty.washSpace,
+    estate_code: apartmentProperty.estateCode,
+    estate: apartmentProperty.estate,
+    building_code: apartmentProperty.buildingCode,
+    building: apartmentProperty.building,
+  })
+
+  return rentalPropertyRecord
+}
+
+const createLeaseRecord = async (lease: Lease) => {
+  await odoo.connect()
+  const leaseRecord = odoo.create('maintenance.lease', {
+    name: lease.leaseId,
+    lease_id: lease.leaseId,
+    lease_number: lease.leaseNumber,
+    lease_type: lease.type,
+    lease_start_date: lease.leaseStartDate ? lease.leaseStartDate : false,
+    lease_end_date: lease.leaseEndDate ? lease.leaseEndDate : false,
+    contract_date: lease.contractDate ? lease.contractDate : false,
+    approval_date: lease.approvalDate ? lease.approvalDate : false,
+  })
+
+  return leaseRecord
+}
+
+const createTenantRecord = async (tenant: Tenant) => {
+  await odoo.connect()
+  const tenantRecord = odoo.create('maintenance.tenant', {
+    name: tenant.firstName + ' ' + tenant.lastName,
+    contact_code: tenant.contactCode,
+    contact_key: tenant.contactKey,
+    national_registration_number: tenant.nationalRegistrationNumber,
+    email_address: tenant.emailAddress,
+    phone_number: tenant.phoneNumbers ? tenant.phoneNumbers[0].phoneNumber : '',
+    is_tenant: true,
+  })
+
+  return tenantRecord
+}
+
+const createMaintenanceUnitRecord = async (
+  maintenanceUnit: MaintenanceUnitInfo,
+  code: string,
+  caption: string
+) => {
+  await odoo.connect()
+  const maintenanceUnitRecord = odoo.create('maintenance.maintenance.unit', {
+    name: caption,
+    caption: caption,
+    type: maintenanceUnit.type,
+    code: code,
+    estate_code: maintenanceUnit.estateCode,
+  })
+
+  return maintenanceUnitRecord
+}
+
 const createTicket = async (ticket: OdooPostTicket): Promise<number> => {
   await odoo.connect()
   return await odoo.create('maintenance.request', ticket)
@@ -179,6 +251,10 @@ const healthCheck = async () => {
 
 export {
   createTicket,
+  createRentalPropertyRecord,
+  createLeaseRecord,
+  createTenantRecord,
+  createMaintenanceUnitRecord,
   getTicketByContactCode,
   getMaintenanceTeamId,
   transformEquipmentCode,
