@@ -146,5 +146,39 @@ describe('offers', () => {
         offer.offeredApplicant.contactCode
       )
     })
+
+    describe('GET /offers/:offerId', () => {
+      it('should return an offer in the correct format', async () => {
+        const applicant = factory.detailedApplicant.build()
+        const offer = factory.detailedOffer.build({
+          offeredApplicant: applicant,
+        })
+
+        jest
+          .spyOn(offerAdapter, 'getOfferByOfferId')
+          .mockResolvedValueOnce({ ok: true, data: offer })
+
+        const res = await request(app.callback()).get(`/offers/${offer.id}`)
+
+        expect(res.status).toBe(200)
+        expect(res.body.content).toBeDefined()
+        expect(res.body.content.id).toEqual(offer.id)
+        expect(res.body.content.listingId).toEqual(offer.listingId)
+        expect(res.body.content.offeredApplicant.contactCode).toEqual(
+          offer.offeredApplicant.contactCode
+        )
+      })
+
+      it('should return an error if not found', async () => {
+        jest
+          .spyOn(offerAdapter, 'getOfferByOfferId')
+          .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+        const res = await request(app.callback()).get(`/offers/123`)
+
+        expect(res.status).toBe(404)
+        expect(res.body.data).toBeUndefined()
+      })
+    })
   })
 })

@@ -94,17 +94,17 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/offers/:offerId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const offer = await offerAdapter.getOfferByOfferId(
+      const res = await offerAdapter.getOfferByOfferId(
         parseInt(ctx.params.offerId)
       )
-      if (!offer) {
+      if (!res.ok) {
         ctx.status = HttpStatusCode.NotFound
         ctx.body = { error: 'Offer not found', ...metadata }
         return
       }
 
       ctx.status = 200
-      ctx.body = { content: offer, ...metadata }
+      ctx.body = { content: res.data, ...metadata }
     } catch (err) {
       logger.error(err, 'Error getting offer: ')
       ctx.status = 500
