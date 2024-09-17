@@ -24,6 +24,8 @@ import {
   mockedProblematicInvoices,
   mockedWaitingList,
 } from './leasing-adapter.mocks'
+import * as factory from '../../../test/factories'
+import { OfferStatus } from 'onecore-types'
 
 describe('leasing-adapter', () => {
   describe(leasingAdapter.getInternalCreditInformation, () => {
@@ -123,6 +125,44 @@ describe('leasing-adapter', () => {
       })
 
       expect(result).toEqual({ id: 1 })
+    })
+  })
+
+  describe(leasingAdapter.getOfferByOfferId, () => {
+    it('shoukd try to get offer', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/offers/123')
+        .reply(200, {
+          content: factory.detailedOffer.build({
+            id: 123,
+            status: OfferStatus.Active,
+            listingId: 456,
+          }),
+        })
+
+      const res = await leasingAdapter.getOfferByOfferId(123)
+
+      expect(res.ok).toBe(true)
+      if (res.ok) {
+        expect(res.data.listingId).toBe(456)
+        expect(res.data.status).toBe(OfferStatus.Active)
+        expect(res.data.id).toBe(123)
+      }
+    })
+    it('should return 404 on not found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/offers/123')
+        .reply(404, {
+          content: {
+            ok: false,
+            err: 'not-found',
+          },
+        })
+
+      const res = await leasingAdapter.getOfferByOfferId(123)
+
+      expect(res.ok).toBe(false)
+      if (!res.ok) expect(res.err).toBe('not-found')
     })
   })
 

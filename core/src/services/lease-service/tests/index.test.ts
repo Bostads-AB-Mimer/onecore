@@ -21,12 +21,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
-
-import {
-  acceptOffer,
-  denyOffer,
-  expireOffer,
-} from '../../../processes/parkingspaces/internal'
+import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
 
 import { Lease, ConsumerReport } from 'onecore-types'
 import * as factory from '../../../../test/factories'
@@ -266,62 +261,83 @@ describe('lease-service', () => {
 
   describe('GET /offers/:offerId/accept', () => {
     it('responds with successful processStatus', async () => {
-      const internalParkingSpaceProcesses = { acceptOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
-
-      jest
-        .spyOn(internalParkingSpaceProcesses, 'acceptOffer')
-        .mockResolvedValueOnce({
-          processStatus: ProcessStatus.successful,
-          httpStatus: 202,
-          data: null,
-        })
+      jest.spyOn(replyToOffer, 'acceptOffer').mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
 
       const result = await request(app.callback()).get('/offers/123/accept')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer accepted successfully')
     })
-    it.todo('accept offer returns 500 on error')
+    it('accept offer returns 500 on error', async () => {
+      jest.spyOn(replyToOffer, 'acceptOffer').mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        httpStatus: 404,
+        error: 'no-offer',
+      })
+
+      const result = await request(app.callback()).get('/offers/123/accept')
+
+      expect(result.status).toBe(500)
+      expect(result.body.error).toBe('no-offer')
+    })
   })
 
   describe('GET /offers/:offerId/deny', () => {
     it('responds with successful processStatus', async () => {
-      const internalParkingSpaceProcesses = { denyOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
-
-      jest
-        .spyOn(internalParkingSpaceProcesses, 'denyOffer')
-        .mockResolvedValueOnce({
-          processStatus: ProcessStatus.successful,
-          httpStatus: 202,
-          data: null,
-        })
+      jest.spyOn(replyToOffer, 'denyOffer').mockResolvedValueOnce({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
 
       const result = await request(app.callback()).get('/offers/123/deny')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer denied successfully')
     })
-    it.todo('deny offer returns 500 on error')
+    it('deny offer returns 500 on error', async () => {
+      jest.spyOn(replyToOffer, 'denyOffer').mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        httpStatus: 404,
+        error: 'no-offer',
+      })
+
+      const result = await request(app.callback()).get('/offers/123/deny')
+
+      expect(result.status).toBe(500)
+      expect(result.body.error).toBe('no-offer')
+    })
   })
 
   describe('GET /offers/:offerId/expire', () => {
     it('responds with successful processStatus', async () => {
-      const internalParkingSpaceProcesses = { expireOffer } //jest spyOn workaround: https://github.com/aelbore/esbuild-jest/issues/26
-
-      jest
-        .spyOn(internalParkingSpaceProcesses, 'expireOffer')
-        .mockResolvedValueOnce({
-          processStatus: ProcessStatus.successful,
-          httpStatus: 202,
-          data: null,
-        })
+      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValueOnce({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
 
       const result = await request(app.callback()).get('/offers/123/expire')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer expired successfully')
     })
-    it.todo('expire offer returns 500 on error')
+    it('expire offer returns 500 on error', async () => {
+      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        httpStatus: 404,
+        error: 'no-offer',
+      })
+
+      const result = await request(app.callback()).get('/offers/123/expire')
+
+      expect(result.status).toBe(500)
+      expect(result.body.error).toBe('no-offer')
+    })
   })
 
   describe('GET /cas/getConsumerReport/:pnr', () => {

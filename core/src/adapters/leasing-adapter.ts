@@ -489,6 +489,22 @@ const createOffer = async (params: CreateOfferParams): Promise<Offer> => {
   }
 }
 
+const getOfferByOfferId = async (
+  offerId: number
+): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> => {
+  try {
+    const res = await axios(`${tenantsLeasesServiceUrl}/offers/${offerId}`)
+
+    if (res.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: res.data.content }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getOfferByOfferId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const updateApplicantStatus = async (params: {
   contactCode: string
   applicantId: number
@@ -700,6 +716,7 @@ export {
   createOffer,
   updateApplicantStatus,
   getOffersForContact,
+  getOfferByOfferId,
   getContactsDataBySearchQuery,
   getContactByContactCode,
   getOfferByContactCodeAndOfferId,

@@ -4,13 +4,13 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Check that the Applicant is Still Eligable for Contract)
+A[Start] -->B(Later: Check that the Applicant is Still Eligable for Contract)
 B --> C(Later:Perform Credit Check)
-C --> D{Is the Applicant Eligable for Contract?}
-D --> |No| P(Set Applicant Status to Rejected)
-P --> Q(Update Offer Status to Closed)
-Q --> R(Notify Applicant)
-R --> S(Initiate Create Offer Process)
+C --> D{Later:Is the Applicant Eligable for Contract?}
+D --> |Later:No| P(Later:Set Applicant Status to Rejected)
+P --> Q(Later:Update Offer Status to Closed)
+Q --> R(Later:Notify Applicant)
+R --> S(Later:Initiate Create Offer Process)
 S --> O
 D --> |Yes| E(Create Contract)
 E --> F(Reset Waiting Parking Space Waiting List)
@@ -28,4 +28,29 @@ M --> O(End)
 
 ## Sequence Diagram
 
-TODO
+In progress
+
+```mermaid
+sequenceDiagram
+    participant System as System
+    actor User as User
+    participant Core as Core
+    participant Leasing as Leasing
+    participant Property Mgmt as Property Management
+    participant Communication as Communication
+    participant OneCore DB as OneCore Database
+    participant XPand DB as XPand SOAP Database
+    participant XPand SOAP as XPand SOAP Service
+
+    User ->> Core: Accept Offer
+    Core ->>Leasing: Get Offer
+        Leasing ->>OneCore DB: Get Offer
+        OneCore DB --> Leasing: Offer
+        Leasing -->> Core: Offer
+
+    Core ->>Leasing: Get Listing
+        Leasing ->>OneCore DB: Get Listing
+        OneCore DB --> Leasing: Listing
+        Leasing -->> Core: Listing
+
+```

@@ -598,7 +598,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/accept', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await acceptOffer(ctx.params.offerId)
+    const result = await acceptOffer(parseInt(ctx.params.offerId))
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
@@ -636,7 +636,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/deny', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await denyOffer(ctx.params.offerId)
+    const result = await denyOffer(parseInt(ctx.params.offerId))
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
@@ -674,7 +674,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/expire', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await expireOffer(ctx.params.offerId)
+    const result = await expireOffer(parseInt(ctx.params.offerId))
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
