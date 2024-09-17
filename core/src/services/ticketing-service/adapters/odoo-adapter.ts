@@ -212,20 +212,20 @@ const createTenantRecord = async (tenant: Tenant) => {
 }
 
 const createMaintenanceUnitRecord = async (
-  maintananceUnit: MaintenanceUnitInfo,
+  maintenanceUnit: MaintenanceUnitInfo,
   code: string,
   caption: string
 ) => {
   await odoo.connect()
-  const maintananceUnitRecord = odoo.create('maintenance.maintenance.unit', {
+  const maintenanceUnitRecord = odoo.create('maintenance.maintenance.unit', {
     name: caption,
     caption: caption,
-    type: maintananceUnit.type,
+    type: maintenanceUnit.type,
     code: code,
-    estate_code: maintananceUnit.estateCode,
+    estate_code: maintenanceUnit.estateCode,
   })
 
-  return maintananceUnitRecord
+  return maintenanceUnitRecord
 }
 
 const createTicket = async (ticket: OdooPostTicket): Promise<number> => {
