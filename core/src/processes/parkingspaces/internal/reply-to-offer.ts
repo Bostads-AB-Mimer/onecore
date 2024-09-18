@@ -1,7 +1,5 @@
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import * as utils from '../../../utils'
-import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { logger } from 'onecore-utilities'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
@@ -10,6 +8,7 @@ type ReplyToOfferError =
   | 'no-offer'
   | 'no-contact'
   | 'no-listing'
+  | 'close-offer'
   | 'send-email'
   | 'unknown'
 
@@ -33,7 +32,7 @@ export const acceptOffer = async (
     )
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
+        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
       })
     }
 
@@ -46,6 +45,13 @@ export const acceptOffer = async (
     //     message: `Applicant ${offer.offeredApplicant.contactCode} could not be retrieved.`,
     //   })
     // }
+
+    const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
+    if (!closeOffer.ok) {
+      return makeProcessError('close-offer', 500, {
+        message: `Something went wrong when closing the offer.`,
+      })
+    }
 
     return {
       processStatus: ProcessStatus.successful,
@@ -73,11 +79,11 @@ export const denyOffer = async (
 
     //Get listing
     const listing = await propertyManagementAdapter.getPublishedParkingSpace(
-      offer.listingId.toString()
+      offer.rentalObjectCode
     )
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
+        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
       })
     }
 
@@ -111,7 +117,7 @@ export const expireOffer = async (
     )
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
+        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
       })
     }
 
