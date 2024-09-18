@@ -1,19 +1,3 @@
-import { DetailedOfferFactory } from '../factories/offer'
-
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
@@ -23,7 +7,7 @@ import { OfferStatus } from 'onecore-types'
 import { routes } from '../../routes/offers'
 import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from '../factories'
-import { detailedOffer } from '../factories'
+import * as offerService from '../../accept-offer'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -31,6 +15,7 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+beforeEach(jest.restoreAllMocks)
 describe('offers', () => {
   describe('POST /offer', () => {
     it('responds with 400 if request params are missing', async () => {
@@ -82,6 +67,7 @@ describe('offers', () => {
       expect(res.body.content.expiresAt).toEqual(expected.expiresAt)
     })
   })
+
   describe('GET /contacts/:contactCode/offers', () => {
     it('responds with 404 if offers not found for contact code', async () => {
       jest.spyOn(offerAdapter, 'getOffersForContact').mockResolvedValueOnce([])
@@ -179,6 +165,59 @@ describe('offers', () => {
         expect(res.status).toBe(404)
         expect(res.body.data).toBeUndefined()
       })
+    })
+  })
+
+  describe('PUT /offers/:offerId/close-by-accept', () => {
+    it('responds with 404 if offer not found', async () => {
+      const getOfferSpy = jest
+        .spyOn(offerAdapter, 'getOfferByOfferId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      const res = await request(app.callback()).put(
+        '/offers/NON_EXISTING_OFFER/close-by-accept'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getOfferSpy).toHaveBeenCalledTimes(1)
+      expect(res.body.data).toBeUndefined()
+    })
+
+    it('responds with 500 if error when updating', async () => {
+      const getOfferSpy = jest
+        .spyOn(offerAdapter, 'getOfferByOfferId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.detailedOffer.build(),
+        })
+
+      const acceptOfferSpy = jest
+        .spyOn(offerService, 'acceptOffer')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).put('/offers/1/close-by-accept')
+
+      expect(getOfferSpy).toHaveBeenCalledTimes(1)
+      expect(acceptOfferSpy).toHaveBeenCalledTimes(1)
+      expect(res.status).toBe(500)
+    })
+
+    it('responds with 200 if successful', async () => {
+      const getOfferSpy = jest
+        .spyOn(offerAdapter, 'getOfferByOfferId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.detailedOffer.build(),
+        })
+
+      const acceptOfferSpy = jest
+        .spyOn(offerService, 'acceptOffer')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).put('/offers/1/close-by-accept')
+
+      expect(getOfferSpy).toHaveBeenCalledTimes(1)
+      expect(acceptOfferSpy).toHaveBeenCalledTimes(1)
+      expect(res.status).toBe(200)
     })
   })
 })

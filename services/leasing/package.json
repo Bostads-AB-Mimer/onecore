@@ -19,7 +19,7 @@
     "seed": "knex seed:run --env dev",
     "script:expire-listings": "node scripts/expire-listings.js",
     "ts:watch": "tsc --watch --noEmit",
-    "test:ci": "jest --silent",
+    "test:ci": "NODE_ENV=test-ci jest --silent",
     "ts:ci": "tsc --noEmit"
   },
   "author": "",

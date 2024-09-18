@@ -1,15 +1,12 @@
 import KoaRouter from '@koa/router'
 import { OfferStatus } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { HttpStatusCode } from 'axios'
 import { z } from 'zod'
 
 import * as offerAdapter from './../adapters/offer-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import {
-  getOfferByContactCodeAndOfferId,
-  getOffersForContact,
-} from './../adapters/offer-adapter'
-import { HttpStatusCode } from 'axios'
+import * as offerService from '../accept-offer'
 
 /**
  * @swagger
@@ -140,7 +137,9 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/contacts/:contactCode/offers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getOffersForContact(ctx.params.contactCode)
+    const responseData = await offerAdapter.getOffersForContact(
+      ctx.params.contactCode
+    )
     if (!responseData.length) {
       ctx.status = HttpStatusCode.NotFound
       ctx.body = { error: 'No offers found', ...metadata }
@@ -185,7 +184,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('/offers/:offerId/applicants/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getOfferByContactCodeAndOfferId(
+    const responseData = await offerAdapter.getOfferByContactCodeAndOfferId(
       ctx.params.contactCode,
       parseInt(ctx.params.offerId)
     )
@@ -199,5 +198,65 @@ export const routes = (router: KoaRouter) => {
       content: responseData,
       ...metadata,
     }
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/close-by-accept:
+   *   get:
+   *     summary: Closes offer and updates applicant and listing statuses
+   *     description: When offer is accepted, this route closes the offer and
+   *     updates applicant and listing status to the correct values.
+   *     tags: [Offer]
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the offer.
+   *     responses:
+   *       200:
+   *         description: Details of the specified offer.
+   *       404:
+   *         description: Offer not found for the specified offer ID.
+   */
+  router.put('/offers/:offerId/close-by-accept', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const offer = await offerAdapter.getOfferByOfferId(
+      Number(ctx.params.offerId)
+    )
+
+    if (!offer.ok) {
+      if (offer.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Offer not found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+
+    const result = await offerService.acceptOffer({
+      listingId: offer.data.listingId,
+      applicantId: offer.data.offeredApplicant.id,
+      offerId: offer.data.id,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
+    return
   })
 }

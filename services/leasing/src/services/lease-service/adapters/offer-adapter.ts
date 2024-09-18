@@ -3,13 +3,15 @@ import {
   Offer,
   Applicant,
   DetailedOffer,
+  OfferStatus,
 } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+import { Knex } from 'knex'
 
 import { db } from './db'
 import { AdapterResult, DbApplicant, DbDetailedOffer, DbOffer } from './types'
 
 import * as dbUtils from './utils'
-import { logger } from 'onecore-utilities'
 
 type CreateOfferParams = Omit<
   Offer,
@@ -248,6 +250,30 @@ export async function getOfferByOfferId(
     }
   } catch (error) {
     logger.error(error, 'Error getting waiting list using Xpand SOAP API')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateOfferStatus(
+  params: {
+    offerId: number
+    status: OfferStatus
+  },
+  // TODO: What to put as type parameters to knex?
+  dbConnection: Knex = db
+): Promise<AdapterResult<null, 'no-update' | 'unknown'>> {
+  try {
+    // TODO: OfferStatus is stored as a string in the db. I think it should be
+    // an integer to correspond to our enum.
+    const query = await dbConnection('offer')
+      .update({ Status: params.status })
+      .where({ Id: params.offerId })
+
+    if (query === 0) {
+      return { ok: false, err: 'no-update' }
+    }
+    return { ok: true, data: null }
+  } catch (err) {
     return { ok: false, err: 'unknown' }
   }
 }

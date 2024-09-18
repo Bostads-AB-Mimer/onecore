@@ -9,6 +9,7 @@ import {
 import { db } from './db'
 import { AdapterResult, DbApplicant, DbListing } from './types'
 import { RequestError } from 'tedious'
+import { Knex } from 'knex'
 
 function transformFromDbListing(row: DbListing): Listing {
   return {
@@ -235,15 +236,19 @@ const createApplication = async (applicationData: Omit<Applicant, 'id'>) => {
  */
 const updateApplicantStatus = async (
   applicantId: number,
-  status: ApplicantStatus
+  status: ApplicantStatus,
+  dbConnection: Knex<any, unknown[]> = db
 ) => {
   try {
-    const updateCount = await db('applicant').where('Id', applicantId).update({
-      Status: status,
-    })
+    const updateCount = await dbConnection('applicant')
+      .where('Id', applicantId)
+      .update({
+        Status: status,
+      })
 
     return updateCount > 0
   } catch (error) {
+    console.log('Error updating applicant status')
     logger.error(error, 'Error updating applicant status')
     throw error
   }
@@ -363,9 +368,10 @@ const getExpiredListings = async () => {
 
 const updateListingStatuses = async (
   listingIds: number[],
-  status: ListingStatus
+  status: ListingStatus,
+  dbConnection: Knex<any, unknown[]> = db
 ) => {
-  const updateCount = await db('listing')
+  const updateCount = await dbConnection('listing')
     .whereIn('Id', listingIds)
     .update({ Status: status })
 
