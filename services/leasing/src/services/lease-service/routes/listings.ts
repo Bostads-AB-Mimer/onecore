@@ -12,6 +12,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
 import * as syncParkingSpacesFromXpandService from '../sync-internal-parking-space-listings-from-xpand'
 import * as listingAdapter from '../adapters/listing-adapter'
+import { getTenant } from '../get-tenant'
 
 /**
  * @swagger
@@ -538,12 +539,23 @@ export const routes = (router: KoaRouter) => {
 
       if (listing.applicants) {
         for (const applicant of listing.applicants) {
-          const detailedApplicant =
-            await priorityListService.getDetailedApplicantInformation(applicant)
+          const tenant = await getTenant({
+            contactCode: applicant.contactCode,
+          })
 
-          if (!detailedApplicant.ok)
+          if (!tenant.ok)
             throw new Error('Err when getting detailed applicant information')
-          applicants.push(detailedApplicant.data)
+
+          applicants.push({
+            ...applicant,
+            contactCode: tenant.data.contactCode,
+            nationalRegistrationNumber: tenant.data.nationalRegistrationNumber,
+            queuePoints: tenant.data.queuePoints,
+            address: tenant.data.address,
+            currentHousingContract: tenant.data.currentHousingContract,
+            upcomingHousingContract: tenant.data.upcomingHousingContract,
+            parkingSpaceContracts: tenant.data.parkingSpaceContracts,
+          })
         }
       }
 

@@ -1,9 +1,7 @@
 import request from 'supertest'
-import { Factory } from 'fishery'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Tenant } from 'onecore-types'
 
 import * as factory from '../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
@@ -11,47 +9,12 @@ import * as estateCodeAdapter from '../../adapters/xpand/estate-code-adapter'
 import * as getTenantService from '../../get-tenant'
 import { leaseTypes } from '../../../../constants/leaseTypes'
 import { routes } from '../../routes/applicants'
-import { LeaseFactory } from '../factories/lease'
 
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use(router.routes())
-
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
-const TenantFactory = Factory.define<Tenant>(() => ({
-  address: undefined,
-  birthDate: new Date(),
-  contactCode: '123',
-  contactKey: '123',
-  emailAddress: 'foo@example.com',
-  firstName: 'foo',
-  fullName: 'foo bar',
-  isTenant: true,
-  lastName: 'bar',
-  nationalRegistrationNumber: 'foo bar',
-  queuePoints: 0,
-  phoneNumbers: undefined,
-  leaseIds: undefined,
-  currentHousingContract: undefined,
-  parkingSpaceContracts: undefined,
-  upcomingHousingContract: undefined,
-  housingContracts: [LeaseFactory.build()],
-}))
 
 beforeEach(jest.restoreAllMocks)
 describe('GET /applicants/:contactCode/:listingId', () => {
@@ -134,7 +97,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
         }
       })
 
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: undefined,
       upcomingHousingContract: undefined,
     })
@@ -167,7 +130,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
 
     const currentHousingContractRentalObjectCode =
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
@@ -211,7 +174,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
     const parkingSpaceRentalObjectCode = 'PARKING_SPACE_RENTAL_OBJECT_CODE'
 
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
@@ -269,7 +232,7 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     const currentHousingContractRentalObjectCode =
       'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
     const parkingSpaceRentalObjectCode = 'PARKING_SPACE_RENTAL_OBJECT_CODE'
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: factory.lease.build({
         rentalPropertyId: currentHousingContractRentalObjectCode,
       }),
@@ -348,7 +311,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       })
       .build()
 
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: undefined,
       upcomingHousingContract: undefined,
     })
@@ -380,7 +343,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       })
       .build()
 
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: factory.lease.build({
         residentialArea: { code: 'OXB' },
       }),
@@ -415,7 +378,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       })
       .build()
 
-    const tenant = TenantFactory.build({
+    const tenant = factory.tenant.build({
       currentHousingContract: factory.lease.build({
         residentialArea: { code: 'OXB' },
       }),

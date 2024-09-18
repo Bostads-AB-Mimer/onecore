@@ -6,7 +6,6 @@
 
 import { logger } from 'onecore-utilities'
 import {
-  Applicant,
   DetailedApplicant,
   Lease,
   Listing,
@@ -15,136 +14,12 @@ import {
   WaitingList,
 } from 'onecore-types'
 
-import { getWaitingList } from './adapters/xpand/xpand-soap-adapter'
 import { leaseTypes } from '../../constants/leaseTypes'
-import {
-  getContactByContactCode,
-  getLeasesForContactCode,
-  getResidentialAreaByRentalPropertyId,
-} from './adapters/xpand/tenant-lease-adapter'
-import { AdapterResult } from './adapters/types'
 
-type GetDetailedApplicantError =
-  | 'get-contact'
-  | 'contact-not-found'
-  | 'contact-not-tenant'
-  | 'get-waiting-lists'
-  | 'waiting-list-internal-parking-space-not-found'
-  | 'get-contact-leases'
-  | 'contact-leases-not-found'
-  | 'get-residential-area'
-  | 'housing-contracts-not-found'
 import {
   isHousingContractsOfApplicantInSameAreaAsListing,
   isListingInAreaWithSpecificRentalRules,
 } from './residential-area-rental-rules-validator'
-
-const getDetailedApplicantInformation = async (
-  applicant: Applicant
-): Promise<AdapterResult<DetailedApplicant, GetDetailedApplicantError>> => {
-  const contact = await getContactByContactCode(applicant.contactCode, 'false')
-
-  if (!contact.ok) {
-    return { ok: false, err: 'get-contact' }
-  }
-
-  if (!contact.data) {
-    return { ok: false, err: 'contact-not-found' }
-  }
-
-  const waitingList = await getWaitingList(
-    contact.data.nationalRegistrationNumber
-  )
-
-  if (!waitingList.ok) {
-    return { ok: false, err: 'get-waiting-lists' }
-  }
-
-  const waitingListForInternalParkingSpace =
-    parseWaitingListForInternalParkingSpace(waitingList.data)
-
-  if (!waitingListForInternalParkingSpace) {
-    return {
-      ok: false,
-      err: 'waiting-list-internal-parking-space-not-found',
-    }
-  }
-
-  const leases = await getLeasesForContactCode(
-    contact.data.contactCode,
-    'true', //this filter does not consider upcoming leases
-    undefined //do not include contacts
-  )
-  
-  if (!leases.ok) {
-    return {
-      ok: false,
-      err: 'get-contact-leases',
-    }
-  }
-
-  if (!leases.data.length) {
-    return {
-      ok: false,
-      err: 'contact-leases-not-found',
-    }
-  }
-
-  const activeAndUpcomingLeases = leases.data.filter(isLeaseActiveOrUpcoming)
-
-  const leasesWithResidentialArea = await Promise.all(
-    activeAndUpcomingLeases.map(async (lease) => {
-      const residentialArea = await getResidentialAreaByRentalPropertyId(
-        lease.rentalPropertyId
-      )
-
-      if (!residentialArea.ok) {
-        throw new Error('Err getting residential area')
-      }
-
-      return {
-        ...lease,
-        residentialArea: residentialArea.data,
-      }
-    })
-  )
-    .then((data) => ({ ok: true, data }) as const)
-    .catch((err) => ({ ok: false, err }) as const)
-
-  if (!leasesWithResidentialArea.ok) {
-    return { ok: false, err: 'get-residential-area' }
-  }
-
-  const housingContracts = parseLeasesForHousingContracts(
-    leasesWithResidentialArea.data
-  )
-
-  if (!housingContracts) {
-    return { ok: false, err: 'housing-contracts-not-found' }
-  }
-
-  const [currentHousingContract, upcomingHousingContract] = housingContracts
-
-  if (!currentHousingContract && !upcomingHousingContract) {
-    return { ok: false, err: 'housing-contracts-not-found' }
-  }
-
-  const parkingSpaceContracts = parseLeasesForParkingSpaces(
-    leasesWithResidentialArea.data
-  )
-
-  return {
-    ok: true,
-    data: {
-      ...applicant,
-      queuePoints: waitingListForInternalParkingSpace.queuePoints,
-      address: contact.data.address,
-      currentHousingContract,
-      upcomingHousingContract,
-      parkingSpaceContracts,
-    },
-  }
-}
 
 const addPriorityToApplicantsBasedOnRentalRules = (
   listing: Listing,
@@ -402,7 +277,6 @@ const parseLeasesForParkingSpaces = (
 }
 
 export {
-  getDetailedApplicantInformation,
   addPriorityToApplicantsBasedOnRentalRules,
   sortApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,

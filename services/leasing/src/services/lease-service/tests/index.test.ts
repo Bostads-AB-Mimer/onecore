@@ -1,17 +1,3 @@
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
@@ -22,9 +8,9 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as listingAdapter from '../adapters/listing-adapter'
-import * as priorityListService from '../priority-list-service'
 import { leaseTypes } from '../../../constants/leaseTypes'
 import * as factory from './factories'
+import * as getTenantService from '../get-tenant'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -288,16 +274,19 @@ describe('lease-service', () => {
       expect(getListingSpy).toHaveBeenCalled()
       expect(res.status).toBe(404)
     })
+
     it('responds with 200 on success', async () => {
       const listingId = 1337
       const applicant1 = factory.applicant.build({
         listingId: listingId,
         nationalRegistrationNumber: '194808075577',
       })
+
       const applicant2 = factory.applicant.build({
         listingId: listingId,
         nationalRegistrationNumber: '198001011234',
       })
+
       const listing = factory.listing.build({
         id: listingId,
         publishedFrom: new Date(),
@@ -306,39 +295,19 @@ describe('lease-service', () => {
         applicants: [applicant1, applicant2],
       })
 
-      const detailedApplicant = factory.detailedApplicant.build({
-        id: applicant1.id,
-        listingId: listingId,
-        contactCode: applicant1.contactCode,
-        queuePoints: 1337,
-        currentHousingContract: {
-          leaseId: '306-001-01-0101/07',
-          leaseNumber: '07',
-          rentalPropertyId: '306-001-01-0101',
-          type: leaseTypes.housingContract,
-          leaseStartDate: new Date(),
-          contractDate: new Date(),
-          approvalDate: new Date(),
-          residentialArea: {
-            code: 'PET',
-            caption: 'Pettersberg',
-          },
-        },
-      })
-
       const getListingSpy = jest
         .spyOn(listingAdapter, 'getListingById')
         .mockResolvedValueOnce(listing)
 
-      const priorityListServiceSpy = jest
-        .spyOn(priorityListService, 'getDetailedApplicantInformation')
-        .mockResolvedValue({ ok: true, data: detailedApplicant as any })
+      const getTenantSpy = jest
+        .spyOn(getTenantService, 'getTenant')
+        .mockResolvedValue({ ok: true, data: factory.tenant.build() })
 
       const res = await request(app.callback()).get(
         '/listing/1337/applicants/details'
       )
       expect(getListingSpy).toHaveBeenCalled()
-      expect(priorityListServiceSpy).toHaveBeenCalled()
+      expect(getTenantSpy).toHaveBeenCalled()
       expect(res.status).toBe(200)
       expect(res.body).toBeDefined()
     })

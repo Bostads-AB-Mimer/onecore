@@ -15,7 +15,6 @@ import { Contact, Lease, LeaseStatus, WaitingList } from 'onecore-types'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
-  getDetailedApplicantInformation,
   isLeaseActiveOrUpcoming,
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
@@ -105,75 +104,6 @@ const mockedApplicantFromXpand: Contact = {
   emailAddress: 'redacted',
   isTenant: true,
 }
-
-describe('getDetailedApplicantInformation', () => {
-  it('should return error result if contact not found from contact query', async () => {
-    const getContactByContactCodeSpy = jest
-      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValueOnce({ ok: true, data: null })
-
-    const applicant = factory.applicant.build()
-
-    const result = await getDetailedApplicantInformation(applicant)
-    expect(result).toEqual({ ok: false, err: 'contact-not-found' })
-    expect(getContactByContactCodeSpy).toHaveBeenCalled()
-  })
-
-  it('should return error result if waiting list not found for contact', async () => {
-    const tenantLeaseAdapterSpy = jest
-      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValueOnce({ ok: true, data: mockedApplicantFromXpand })
-
-    const getWaitingListSpy = jest
-      .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValueOnce({ ok: true, data: [] })
-
-    const applicant = factory.applicant.build()
-
-    const result = await getDetailedApplicantInformation(applicant)
-    expect(result).toEqual({
-      ok: false,
-      err: 'waiting-list-internal-parking-space-not-found',
-    })
-
-    expect(tenantLeaseAdapterSpy).toHaveBeenCalled()
-    expect(getWaitingListSpy).toHaveBeenCalled()
-  })
-
-  it('should throw error if leases not found for contact', async () => {
-    const getContactByContactCodeSpy = jest
-      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-      .mockResolvedValueOnce({ ok: true, data: mockedApplicantFromXpand })
-
-    const getWaitingListSpy = jest
-      .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: mockedWaitingListWithInteralParkingSpace,
-      })
-
-    const getLeasesForContactCodeSpy = jest
-      .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-      .mockResolvedValueOnce({ ok: true, data: [] })
-
-    const applicant = factory.applicant.build({
-      contactCode: contactCodeForApplicantInxpand,
-    })
-    const result = await getDetailedApplicantInformation(applicant)
-    expect(result).toEqual({
-      ok: false,
-      err: 'contact-leases-not-found',
-    })
-
-    expect(getContactByContactCodeSpy).toHaveBeenCalled()
-    expect(getWaitingListSpy).toHaveBeenCalled()
-    expect(getLeasesForContactCodeSpy).toHaveBeenCalled()
-  })
-
-  it('should return applicant with expected data on success', async () => {
-    //todo: write test when return type interface is defined
-  })
-})
 
 describe('parseWaitingList', () => {
   it('should return waitingList for internal parking space', async () => {
