@@ -282,15 +282,21 @@ export const routes = (router: KoaRouter) => {
         }
 
         const applicantUpdated = await updateApplicantStatus(Number(id), status)
-        if (applicantUpdated) {
-          ctx.status = 200
-          ctx.body = {
-            message: 'Applicant status updated successfully',
-            ...metadata,
+        if (!applicantUpdated.ok) {
+          if (applicantUpdated.err === 'no-update') {
+            ctx.status = 404
+            ctx.body = { reason: 'Applicant not found', ...metadata }
+            return
+          } else {
+            ctx.status = 500
+            ctx.body = { ...metadata, error: 'Error updating applicant' }
+            return
           }
-        } else {
-          ctx.status = 404
-          ctx.body = { reason: 'Applicant not found', ...metadata }
+        }
+        ctx.status = 200
+        ctx.body = {
+          message: 'Applicant status updated successfully',
+          ...metadata,
         }
       } catch (error) {
         logger.error(error, 'Error updating applicant status')
