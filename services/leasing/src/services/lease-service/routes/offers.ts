@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 import * as offerAdapter from './../adapters/offer-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import * as offerService from '../accept-offer'
+import * as offerService from '../offer-service'
 
 /**
  * @swagger
@@ -203,7 +203,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /offers/{offerId}/close-by-accept:
-   *   get:
+   *   put:
    *     summary: Closes offer and updates applicant and listing statuses
    *     description:
    *       When offer is accepted, this route closes the offer and
@@ -244,6 +244,66 @@ export const routes = (router: KoaRouter) => {
 
     const result = await offerService.acceptOffer({
       listingId: offer.data.listingId,
+      applicantId: offer.data.offeredApplicant.id,
+      offerId: offer.data.id,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
+    return
+  })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/deny:
+   *   put:
+   *     summary: Denies an offer and updates applicant and offer statuses
+   *     description: Denies an offer by its offer ID and updates the applicant and offer.
+   *     tags: [Offer]
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The unique ID of the offer to be denied.
+   *     responses:
+   *       200:
+   *         description: Offer successfully denied.
+   *       404:
+   *         description: Offer not found for the specified offer ID.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.put('/offers/:offerId/deny', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const offer = await offerAdapter.getOfferByOfferId(
+      Number(ctx.params.offerId)
+    )
+
+    if (!offer.ok) {
+      if (offer.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Offer not found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+
+    const result = await offerService.denyOffer({
       applicantId: offer.data.offeredApplicant.id,
       offerId: offer.data.id,
     })

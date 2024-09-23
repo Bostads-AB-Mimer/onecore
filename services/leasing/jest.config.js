@@ -11,7 +11,7 @@ module.exports = {
       ? [
           '<rootDir>/src/services/lease-service/tests/adapters/',
           '<rootDir>/src/services/lease-service/tests/sync-internal-parking-space-listings-from-xpand.test.ts',
-          '<rootDir>/src/services/lease-service/tests/accept-offer.test.ts',
+          '<rootDir>/src/services/lease-service/tests/offer-service.test.ts',
         ]
       : []
   ),

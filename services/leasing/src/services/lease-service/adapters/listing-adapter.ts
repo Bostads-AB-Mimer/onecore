@@ -227,30 +227,24 @@ const createApplication = async (applicationData: Omit<Applicant, 'id'>) => {
   return transformDbApplicant(insertedRow[0])
 }
 
-/**
- * Updates the status of an existing applicant using the ApplicantStatus enum.
- *
- * @param {number} applicantId - The ID of the applicant to update.
- * @param {ApplicantStatus} status - The new status to set for the applicant.
- * @returns {Promise<boolean>} - Returns true if the update was successful, false otherwise.
- */
 const updateApplicantStatus = async (
   applicantId: number,
   status: ApplicantStatus,
   dbConnection: Knex<any, unknown[]> = db
-) => {
+): Promise<AdapterResult<null, 'no-update' | 'unknown'>> => {
   try {
-    const updateCount = await dbConnection('applicant')
+    const query = await dbConnection('applicant')
       .where('Id', applicantId)
       .update({
         Status: status,
       })
+    if (!query) {
+      return { ok: false, err: 'no-update' }
+    }
 
-    return updateCount > 0
+    return { ok: true, data: null }
   } catch (error) {
-    console.log('Error updating applicant status')
-    logger.error(error, 'Error updating applicant status')
-    throw error
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -370,12 +364,20 @@ const updateListingStatuses = async (
   listingIds: number[],
   status: ListingStatus,
   dbConnection: Knex<any, unknown[]> = db
-) => {
-  const updateCount = await dbConnection('listing')
-    .whereIn('Id', listingIds)
-    .update({ Status: status })
+): Promise<AdapterResult<null, 'no-update' | 'unknown'>> => {
+  try {
+    const query = await dbConnection('listing')
+      .whereIn('Id', listingIds)
+      .update({ Status: status })
 
-  return updateCount
+    if (!query) {
+      return { ok: false, err: 'no-update' }
+    }
+    return { ok: true, data: null }
+  } catch (err) {
+    logger.error(err, 'listingAdapter.updateListingStatuses')
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 const deleteListing = async (

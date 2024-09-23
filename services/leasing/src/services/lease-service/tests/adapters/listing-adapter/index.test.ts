@@ -179,7 +179,7 @@ describe('listing-adapter', () => {
         insertedApplicant.id,
         ApplicantStatus.OfferAccepted
       )
-      expect(result).toBe(true)
+      expect(result.ok).toBe(true)
       const updatedApplicant = await listingAdapter.getApplicantById(
         insertedApplicant.id
       )
@@ -330,11 +330,11 @@ describe('listing-adapter', () => {
       assert(listing2.ok)
       await listingAdapter.createListing(factory.listing.build({}))
 
-      const updateCount = await listingAdapter.updateListingStatuses(
+      const result = await listingAdapter.updateListingStatuses(
         [listing1.data.id, listing2.data.id],
         ListingStatus.Expired
       )
-      expect(updateCount).toEqual(2)
+      expect(result.ok).toEqual(true)
       const listing1FromDatabase = await listingAdapter.getListingById(
         listing1.data.id
       )

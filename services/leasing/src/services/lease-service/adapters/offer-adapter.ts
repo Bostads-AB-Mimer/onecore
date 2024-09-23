@@ -269,7 +269,7 @@ export async function updateOfferStatus(
       .update({ Status: params.status })
       .where({ Id: params.offerId })
 
-    if (query === 0) {
+    if (!query) {
       return { ok: false, err: 'no-update' }
     }
     return { ok: true, data: null }
