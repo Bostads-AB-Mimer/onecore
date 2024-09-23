@@ -205,8 +205,9 @@ export const routes = (router: KoaRouter) => {
    * /offers/{offerId}/close-by-accept:
    *   get:
    *     summary: Closes offer and updates applicant and listing statuses
-   *     description: When offer is accepted, this route closes the offer and
-   *     updates applicant and listing status to the correct values.
+   *     description:
+   *       When offer is accepted, this route closes the offer and
+   *       updates applicant and listing status to the correct values.
    *     tags: [Offer]
    *     parameters:
    *       - in: path
@@ -221,6 +222,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Offer not found for the specified offer ID.
    */
+
   router.put('/offers/:offerId/close-by-accept', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
