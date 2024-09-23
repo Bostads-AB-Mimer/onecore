@@ -391,15 +391,16 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/maintenanceUnitsByContactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const contact = await getContact(ctx.params.contactCode)
-      if (!contact) {
+      const contactResult = await getContact(ctx.params.contactCode)
+      if (!contactResult.ok) {
         ctx.status = 404
         ctx.body = { reason: 'Contact not found', ...metadata }
         logger.info('Contact not found')
         return
       }
+
       const leases = await getLeasesForPnr(
-        contact.nationalRegistrationNumber,
+        contactResult.data.nationalRegistrationNumber,
         'false',
         'false'
       )

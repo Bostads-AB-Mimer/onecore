@@ -53,11 +53,13 @@ export const createOfferForInternalParkingSpace = async (
 
     // TODO: Maybe we want to make a credit check here?
 
-    const contact = await leasingAdapter.getContact(applicant.contactCode)
-    if (!contact) {
+    const getContact = await leasingAdapter.getContact(applicant.contactCode)
+    if (!getContact.ok) {
       logger.error('Could not find contact')
       return makeProcessError('get-contact', 500)
     }
+
+    const contact = getContact.data
 
     try {
       await leasingAdapter.updateApplicantStatus({

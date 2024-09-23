@@ -105,14 +105,25 @@ const getContactsDataBySearchQuery = async (
   }
 }
 
-const getContact = async (contactId: string): Promise<Contact | undefined> => {
+const getContact = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> => {
   try {
-    const contactResponse = await axios(
-      tenantsLeasesServiceUrl + '/contact/contactCode/' + contactId
+    const res = await axios<{ content?: Contact }>(
+      tenantsLeasesServiceUrl + '/contact/contactCode/' + contactCode
     )
-    return contactResponse.data.content
+
+    if (res.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (res.status === 200 && res.data.content) {
+      return { ok: true, data: res.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
   } catch (error) {
-    return undefined
+    return { ok: false, err: 'unknown' }
   }
 }
 

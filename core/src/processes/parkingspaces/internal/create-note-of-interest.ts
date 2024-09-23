@@ -80,13 +80,14 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     }
 
     // Step 2. Get information about applicant and contracts
-    const applicantContact = await getContact(contactCode)
-    if (!applicantContact) {
+    const getApplicantContact = await getContact(contactCode)
+    if (!getApplicantContact.ok) {
       return makeProcessError('applicant-not-found', 404, {
         message: `Applicant ${contactCode} could not be retrieved.`,
       })
     }
 
+    const applicantContact = getApplicantContact.data
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesForPnr(
       applicantContact.nationalRegistrationNumber,

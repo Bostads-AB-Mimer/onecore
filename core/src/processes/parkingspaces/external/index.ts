@@ -74,9 +74,9 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     // Step 2. Get information about applicant and contracts
-    const applicantContact = await getContact(contactId)
+    const applicantResult = await getContact(contactId)
 
-    if (!applicantContact) {
+    if (!applicantResult.ok) {
       return {
         processStatus: ProcessStatus.failed,
         error: 'applicant-not-found',
@@ -86,6 +86,8 @@ export const createLeaseForExternalParkingSpace = async (
         },
       }
     }
+
+    const applicantContact = applicantResult.data
 
     // Step 2.a Check for address
     if (

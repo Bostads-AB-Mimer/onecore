@@ -6,6 +6,7 @@ import {
   OfferWithRentalObjectCode,
 } from 'onecore-types'
 import { DetailedApplicantFactory } from './detailed-applicant'
+
 export const OfferFactory = Factory.define<Offer>(({ sequence }) => {
   const applicant = DetailedApplicantFactory.build()
   return {

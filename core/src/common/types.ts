@@ -17,4 +17,6 @@ export interface ProcessError<E = any> {
   response?: any
 }
 
-export type ProcessResult<T, E> = ProcessSuccess<T> | ProcessError<E>
+export type ProcessResult<T = any, E = any> =
+  | ProcessSuccess<T>
+  | ProcessError<E>
