@@ -1,18 +1,18 @@
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
+import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { logger } from 'onecore-utilities'
-import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import { OfferStatus, OfferWithRentalObjectCode } from 'onecore-types'
 import { AdapterResult } from '../../../adapters/types'
 
 type ReplyToOfferError =
   | 'no-offer'
-  | 'no-contact'
   | 'no-listing'
   | 'close-offer'
   | 'get-other-offers'
   | 'send-email'
+  | 'create-lease-failed'
   | 'unknown'
 
 export const acceptOffer = async (
@@ -29,55 +29,110 @@ export const acceptOffer = async (
     }
     const offer = res.data
 
+    const log: string[] = [
+      `Tackat ja till intern bilplats`,
+      `Tidpunkt för ja tack: ${new Date()
+        .toISOString()
+        .substring(0, 16)
+        .replace('T', ' ')}`,
+      `Sökande ${offer.offeredApplicant.contactCode} har tackat ja till bilplats ${offer.rentalObjectCode} och erbjudande ${offerId}`,
+    ]
+
     //Get listing
-    const listing = await propertyManagementAdapter.getPublishedParkingSpace(
-      offer.rentalObjectCode
+    const listing = await leasingAdapter.getListingByListingId(
+      offer.listingId.toString()
     )
+
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
+        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
       })
     }
 
-    const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
+    //Create lease
+    let lease: any
+    try {
+      lease = await leasingAdapter.createLease(
+        listing.rentalObjectCode,
+        offer.offeredApplicant.contactCode,
+        listing.vacantFrom.toISOString(),
+        '001'
+      )
 
+      log.push(`Kontrakt skapat: ${lease.LeaseId}`)
+      log.push(
+        'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
+      )
+    } catch (err) {
+      logger.error(err, 'Create Lease failed')
+      return makeProcessError('create-lease-failed', 500, {
+        message: `Create Lease for ${offerId} failed.`,
+      })
+    }
+
+    //Reset internal waiting list
+    const internalWaitingListResult = await leasingAdapter.resetWaitingList(
+      offer.offeredApplicant.nationalRegistrationNumber,
+      offer.offeredApplicant.contactCode,
+      'Bilplats (intern)'
+    )
+    if (!internalWaitingListResult.ok) {
+      log.push(
+        'Kunde inte återställa köpoäng för interna bilplatser: ' +
+          internalWaitingListResult.err
+      )
+    }
+
+    //Reset external waiting list
+    const externalWaitingListResult = await leasingAdapter.resetWaitingList(
+      offer.offeredApplicant.nationalRegistrationNumber,
+      offer.offeredApplicant.contactCode,
+      'Bilplats (extern)'
+    )
+    if (!externalWaitingListResult.ok) {
+      log.push(
+        'Kunde inte återställa köpoäng för externa bilplatser: ' +
+          externalWaitingListResult.err
+      )
+    }
+
+    //Deny other offers for this contact
+    const otherOffers = await getContactOtherActiveOffers({
+      contactCode: offer.offeredApplicant.contactCode,
+      excludeOfferId: offer.id,
+    })
+    if (!otherOffers.ok) {
+      return makeProcessError('get-other-offers', 500, {
+        message: `Other offers for ${offer.offeredApplicant.contactCode} could not be retrieved.`,
+      })
+    }
+    const denyOtherOffers = await Promise.all(
+      otherOffers.data.map((o) => denyOffer(o.id))
+    )
+    const failedDenyOtherOffers = denyOtherOffers.filter(
+      (o) => o.processStatus === ProcessStatus.failed
+    )
+    if (failedDenyOtherOffers.length > 0) {
+      // TODO: Add failed deny other offers to log
+    }
+
+    //Close offer
+    const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
     if (!closeOffer.ok) {
       return makeProcessError('close-offer', 500, {
         message: `Something went wrong when closing the offer.`,
       })
     }
 
-    const contact = await leasingAdapter.getContact(
-      offer.offeredApplicant.contactCode
-    )
-
-    if (!contact.ok) {
-      return makeProcessError('no-contact', 404, {
-        message: `Contact ${offer.offeredApplicant.contactCode} could not be retrieved.`,
-      })
-    }
-
-    const otherOffers = await getContactOtherActiveOffers({
-      contactCode: contact.data.contactCode,
-      excludeOfferId: offer.id,
-    })
-
-    if (!otherOffers.ok) {
-      return makeProcessError('get-other-offers', 500, {
-        message: `Other offers for ${offer.offeredApplicant.contactCode} could not be retrieved.`,
-      })
-    }
-
-    const denyOtherOffers = await Promise.all(
-      otherOffers.data.map((o) => denyOffer(o.id))
-    )
-
-    const failedDenyOtherOffers = denyOtherOffers.filter(
-      (o) => o.processStatus === ProcessStatus.failed
-    )
-
-    if (failedDenyOtherOffers.length > 0) {
-      // TODO: Add failed deny other offers to log
+    try {
+      //send notification to the leasing team
+      await communicationAdapter.sendNotificationToRole(
+        'leasing',
+        'Bilplats tilldelad och kontrakt skapat för intern bilplats',
+        log.join('\n')
+      )
+    } catch (error) {
+      logger.error(error, 'Send Notification to leasing failed')
     }
 
     return {
@@ -86,6 +141,7 @@ export const acceptOffer = async (
       data: null,
     }
   } catch (err) {
+    logger.error(err, 'Accept offer of parking space uncaught error')
     return makeProcessError('unknown', 500)
   }
 }
@@ -105,12 +161,12 @@ export const denyOffer = async (
     const offer = res.data
 
     //Get listing
-    const listing = await propertyManagementAdapter.getPublishedParkingSpace(
-      offer.rentalObjectCode
+    const listing = await leasingAdapter.getListingByListingId(
+      offer.listingId.toString()
     )
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
+        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
       })
     }
 
@@ -139,12 +195,12 @@ export const expireOffer = async (
     const offer = res.data
 
     //Get listing
-    const listing = await propertyManagementAdapter.getPublishedParkingSpace(
+    const listing = await leasingAdapter.getListingByListingId(
       offer.listingId.toString()
     )
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
-        message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
+        message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
       })
     }
 

@@ -110,6 +110,52 @@ describe('leasing-adapter', () => {
     })
   })
 
+  describe(leasingAdapter.resetWaitingList, () => {
+    it('should reset waiting list for applicant', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post(/contact\/waitingList/)
+        .reply(200)
+
+      const result = await leasingAdapter.resetWaitingList(
+        '´196709226789',
+        'P123456',
+        'Bilplats (intern)'
+      )
+
+      expect(result.ok).toEqual(true)
+    })
+
+    it('should return not-in-waiting-list when applicant not in waiting list', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post(/contact\/waitingList/)
+        .reply(404)
+
+      const result = await leasingAdapter.resetWaitingList(
+        '´196709226789',
+        'P123456',
+        'Bilplats (intern)'
+      )
+
+      expect(result.ok).toEqual(false)
+      if (!result.ok) expect(result.err).toBe('not-in-waiting-list')
+    })
+
+    it('should return unknown on unknown error from leasing', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post(/contact\/waitingList/)
+        .reply(500)
+
+      const result = await leasingAdapter.resetWaitingList(
+        '´196709226789',
+        'P123456',
+        'Bilplats (intern)'
+      )
+
+      expect(result.ok).toEqual(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+  })
+
   describe(leasingAdapter.createOffer, () => {
     it('should try to create an offer', async () => {
       nock(config.tenantsLeasesService.url)

@@ -1,20 +1,57 @@
-import { OfferStatus } from 'onecore-types'
+import axios from 'axios'
+jest.mock('onecore-utilities', () => {
+  return {
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+      debug: () => {
+        return
+      },
+    },
+    loggedAxios: axios,
+    axiosTypes: axios,
+  }
+})
 
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
-import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
+// import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
+import * as communicationAdapter from '../../../../adapters/communication-adapter'
+
+import { OfferStatus } from 'onecore-types'
+
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as processes from '../reply-to-offer'
 import * as factory from '../../../../../test/factories'
 
 describe('replyToOffer', () => {
+  // Mock out all top level functions, such as get, put, delete and post:
+  jest.mock('axios')
+
   const getOfferByIdSpy = jest.spyOn(leasingAdapter, 'getOfferByOfferId')
-  const getPublishedParkingSpaceSpy = jest.spyOn(
-    propertyManagementAdapter,
-    'getPublishedParkingSpace'
+  const getListingByListingIdSpy = jest.spyOn(
+    leasingAdapter,
+    'getListingByListingId'
   )
-  const getContactSpy = jest.spyOn(leasingAdapter, 'getContact')
+  const createLeaseSpy = jest.spyOn(leasingAdapter, 'createLease')
+  const getOffersForContactSpy = jest.spyOn(
+    leasingAdapter,
+    'getOffersForContact'
+  )
+  const resetWaitingListSpy = jest.spyOn(leasingAdapter, 'resetWaitingList')
+
+  const sendNotificationToRoleSpy = jest.spyOn(
+    communicationAdapter,
+    'sendNotificationToRole'
+  )
 
   beforeEach(jest.resetAllMocks)
+  // afterEach(createLeaseSpy.mockClear)
+  // afterEach(createLeaseSpy.mockReset)
+
   describe('acceptOffer', () => {
     it('returns a process error if no offer found', async () => {
       getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
@@ -37,7 +74,7 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(undefined)
+      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
       const result = await processes.acceptOffer(123)
 
@@ -57,8 +94,14 @@ describe('replyToOffer', () => {
         ok: true,
         data: factory.detailedOffer.build(),
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(factory.listing.build())
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
       closeOfferSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      getOffersForContactSpy.mockResolvedValue({
+        ok: true,
+        data: factory.offerWithRentalObjectCode.buildList(2),
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
       const result = await processes.acceptOffer(123)
 
@@ -72,37 +115,6 @@ describe('replyToOffer', () => {
       })
     })
 
-    it('returns a process error if getting contact fails', async () => {
-      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
-      const offer = factory.detailedOffer.build()
-      getOfferByIdSpy.mockResolvedValueOnce({
-        ok: true,
-        data: offer,
-      })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(factory.listing.build())
-      closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
-
-      getContactSpy.mockResolvedValueOnce({
-        ok: false,
-        err: 'unknown',
-      })
-
-      jest
-        .spyOn(leasingAdapter, 'getOffersForContact')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
-
-      const result = await processes.acceptOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: 'no-contact',
-        httpStatus: 404,
-        response: {
-          message: `Contact ${offer.offeredApplicant.contactCode} could not be retrieved.`,
-        },
-      })
-    })
-
     it('returns a process error if getting other active offers for contact fails', async () => {
       const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
       const offer = factory.detailedOffer.build()
@@ -110,18 +122,13 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(factory.listing.build())
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
-
-      const contact = factory.contact.build()
-      getContactSpy.mockResolvedValueOnce({
-        ok: true,
-        data: contact,
-      })
-
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
       jest
         .spyOn(leasingAdapter, 'getOffersForContact')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
       const result = await processes.acceptOffer(123)
 
@@ -135,6 +142,101 @@ describe('replyToOffer', () => {
       })
     })
 
+    it('returns success if reset waiting lists fails', async () => {
+      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+      closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.offerWithRentalObjectCode.buildList(2, {
+          id: offer.id + 1,
+          status: OfferStatus.Active,
+          offeredApplicant: {
+            id: offer.offeredApplicant.id,
+          },
+        }),
+      })
+      resetWaitingListSpy.mockResolvedValue({
+        ok: false,
+        err: 'not-in-waiting-list',
+      })
+
+      const result = await processes.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+    })
+
+    it('returns a process error if create lease fails', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      createLeaseSpy.mockImplementation(() => {
+        throw new Error('Lease not created')
+      })
+
+      const result = await processes.acceptOffer(offer.id)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.failed,
+        error: 'create-lease-failed',
+        httpStatus: 500,
+        response: {
+          message: `Create Lease for ${offer.id} failed.`,
+        },
+      })
+    })
+
+    it('returns success even if sendNotificationToRole fails', async () => {
+      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+      closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.offerWithRentalObjectCode.buildList(2, {
+          id: offer.id + 1,
+          status: OfferStatus.Active,
+          offeredApplicant: {
+            id: offer.offeredApplicant.id,
+          },
+        }),
+      })
+      resetWaitingListSpy.mockResolvedValue({
+        ok: true,
+        data: undefined,
+      })
+      sendNotificationToRoleSpy.mockImplementation(() => {
+        throw new Error('Email not sent')
+      })
+
+      const result = await processes.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+    })
+
     it('calls denyOffer with remaining offers if exists', async () => {
       const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
       const offer = factory.detailedOffer.build()
@@ -142,14 +244,9 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(factory.listing.build())
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
-
-      const contact = factory.contact.build()
-      getContactSpy.mockResolvedValueOnce({
-        ok: true,
-        data: contact,
-      })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
 
       jest.spyOn(leasingAdapter, 'getOffersForContact').mockResolvedValueOnce({
         ok: true,
@@ -161,6 +258,7 @@ describe('replyToOffer', () => {
           },
         }),
       })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
       const denyOfferSpy = jest
         .spyOn(processes, 'denyOffer')
@@ -170,6 +268,7 @@ describe('replyToOffer', () => {
 
       const result = await processes.acceptOffer(123)
 
+      console.log('result', result)
       expect(result).toMatchObject({
         processStatus: ProcessStatus.successful,
       })
@@ -201,7 +300,7 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(undefined)
+      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
       const result = await processes.denyOffer(123)
 
@@ -210,7 +309,7 @@ describe('replyToOffer', () => {
         error: 'no-listing',
         httpStatus: 404,
         response: {
-          message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
+          message: `The parking space ${offer.listingId} does not exist or is no longer available.`,
         },
       })
     })
@@ -238,7 +337,7 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getPublishedParkingSpaceSpy.mockResolvedValueOnce(undefined)
+      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
       const result = await processes.expireOffer(123)
 
@@ -247,7 +346,7 @@ describe('replyToOffer', () => {
         error: 'no-listing',
         httpStatus: 404,
         response: {
-          message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
+          message: `The parking space ${offer.listingId} does not exist or is no longer available.`,
         },
       })
     })

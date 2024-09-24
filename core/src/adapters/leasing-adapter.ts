@@ -263,6 +263,40 @@ const addApplicantToWaitingList = async (
   )
 }
 
+const resetWaitingList = async (
+  nationalRegistrationNumber: string,
+  contactCode: string,
+  waitingListTypeCaption: string
+): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: {
+        contactCode: contactCode,
+        waitingListTypeCaption: waitingListTypeCaption,
+      },
+    }
+    const res = await axios(
+      tenantsLeasesServiceUrl +
+        '/contact/waitingList/' +
+        nationalRegistrationNumber +
+        '/reset',
+      axiosOptions
+    )
+
+    if (res.status == 200) return { ok: true, data: undefined }
+    else if (res.status == 404) return { ok: false, err: 'not-in-waiting-list' }
+
+    return { ok: false, err: 'unknown' }
+  } catch (error: unknown) {
+    logger.error(
+      error,
+      'Error resetting waiting list for applicant ' + contactCode
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const createNewListing = async (
   listingData: Listing
 ): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
@@ -730,6 +764,7 @@ export {
   getInternalCreditInformation,
   getWaitingList,
   addApplicantToWaitingList,
+  resetWaitingList,
   createNewListing,
   getListingByListingId,
   getListingByRentalObjectCode,

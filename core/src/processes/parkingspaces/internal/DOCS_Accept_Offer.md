@@ -21,7 +21,7 @@ I --> J
 J --> |Yes| K(Later:End Contract To Be Replaced)
 J --> |No| L(Close Offer Round)
 K --> L
-L --> M(Notify all Losing or Not Eligible Applicants by email)
+L --> M(Later: Notify all Losing or Not Eligible Applicants by email)
 M --> O(End)
 
 ```
