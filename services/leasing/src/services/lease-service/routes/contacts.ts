@@ -11,6 +11,7 @@ import { logger } from 'onecore-utilities'
 import {
   addApplicantToToWaitingList,
   getWaitingList,
+  removeApplicantFromWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
 import { getTenant } from '../get-tenant'
 
@@ -406,6 +407,91 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (error: unknown) {
         logger.error(error, 'Error adding contact to waitingList')
+        ctx.status = 500
+
+        if (error instanceof Error) {
+          ctx.body = {
+            error: error.message,
+            ...metadata,
+          }
+        }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /contact/waitingList/{nationalRegistrationNumber}/reset:
+   *   post:
+   *     summary: Reset a waiting list for a contact in XPand
+   *     description: Resets a waiting list for a contact by national registration number.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: nationalRegistrationNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The national registration number (pnr) of the contact.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               contactCode:
+   *                 type: string
+   *                 description: The code of the contact whose waiting list should be reset.
+   *               waitingListTypeCaption:
+   *                 type: string
+   *                 description: The caption or type of the waiting list.
+   *     responses:
+   *       201:
+   *         description: Waiting list successfully reset for contact.
+   *       500:
+   *         description: Internal server error. Failed to reset waiting list for contact.
+   */
+  router.post(
+    '(.*)/contact/waitingList/:nationalRegistrationNumber/reset',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const request = <CreateWaitingListRequest>ctx.request.body
+      try {
+        //remove from waitinglist
+        const res = await removeApplicantFromWaitingList(
+          ctx.params.nationalRegistrationNumber,
+          request.contactCode,
+          request.waitingListTypeCaption
+        )
+
+        if (!res.ok) {
+          ctx.status = res.err == 'not-in-waiting-list' ? 404 : 500
+          ctx.body = {
+            error:
+              res.err == 'not-in-waiting-list'
+                ? 'Contact Not In Waiting List'
+                : 'Unknown error',
+          }
+          return
+        }
+
+        //add to waitinglist
+        await addApplicantToToWaitingList(
+          ctx.params.nationalRegistrationNumber,
+          request.contactCode,
+          request.waitingListTypeCaption
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            message: 'Waiting List time successfullt reset for applicant',
+          },
+          ...metadata,
+        }
+      } catch (error: unknown) {
+        logger.error(error, 'Error resetting waitingList for applicant')
         ctx.status = 500
 
         if (error instanceof Error) {
