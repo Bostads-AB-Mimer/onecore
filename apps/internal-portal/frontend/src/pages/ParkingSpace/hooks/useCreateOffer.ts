@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-type Params = { listingId: string }
+type Params = { listingId: number }
 
 export const useCreateOffer = () => {
   const queryClient = useQueryClient()

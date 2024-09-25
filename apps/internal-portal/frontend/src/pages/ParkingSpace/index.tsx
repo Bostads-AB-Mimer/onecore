@@ -15,18 +15,20 @@ import { useParkingSpaceListing } from './hooks/useParkingSpaceListing'
 
 const ParkingSpace = () => {
   const routeParams = useParams<'id'>()
+  if (!routeParams.id) return null
+  const listingId = Number.parseInt(routeParams.id)
 
   return (
     <>
       <PageGoBackTo to="/parkingspaces" text="Översikt lediga bilplatser" />
       <Suspense fallback={<ApplicantsLoading />}>
-        <ParkingSpaceTabs listingId={routeParams.id ?? ''} />
+        <ParkingSpaceTabs listingId={listingId} />
       </Suspense>
       <Typography paddingY="2rem" variant="h1">
         Objektsinformation
       </Typography>
       <Suspense fallback={<ParkingSpaceInfoLoading />}>
-        <ParkingSpaceInfo listingId={routeParams.id ?? ''} />
+        <ParkingSpaceInfo listingId={listingId} />
       </Suspense>
     </>
   )
@@ -57,7 +59,7 @@ const Tabs = styled(TabList)(() => ({
   },
 }))
 
-const ParkingSpaceTabs = (props: { listingId: string }) => {
+const ParkingSpaceTabs = (props: { listingId: number }) => {
   const [selectedTab, setSelectedTab] = useState('1')
   const { data } = useParkingSpaceListing({
     id: props.listingId,

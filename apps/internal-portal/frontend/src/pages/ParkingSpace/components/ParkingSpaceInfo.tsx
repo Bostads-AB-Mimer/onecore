@@ -4,7 +4,7 @@ import { ListingStatus } from 'onecore-types'
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { useCreateOffer } from '../hooks/useCreateOffer'
 
-export const ParkingSpaceInfo = (props: { listingId: string }) => {
+export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
     id: props.listingId,
   })
