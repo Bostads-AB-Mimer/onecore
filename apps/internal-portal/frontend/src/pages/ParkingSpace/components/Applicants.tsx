@@ -11,14 +11,50 @@ const sharedProps = {
   flex: 1,
 }
 
-export const Applicants = (props: { listingId: string }) => {
+export const Applicants = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
     id: props.listingId,
   })
 
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const columns = getColumns(
+    props.listingId,
+    parkingSpaceListing?.address ?? ''
+  )
 
-  const columns: GridColDef[] = [
+  return (
+    <>
+      <DataGridTable
+        columns={columns}
+        rows={parkingSpaceListing.applicants}
+        getRowId={(row) => row.id}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 5 } },
+        }}
+        slots={{
+          noRowsOverlay: () => (
+            <Stack
+              paddingTop="1rem"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Typography fontSize="14px">
+                Det finns inga sökande att visa...
+              </Typography>
+            </Stack>
+          ),
+        }}
+        pageSizeOptions={[5, 10, 25]}
+        rowHeight={72}
+        disableRowSelectionOnClick
+        autoHeight
+      />
+    </>
+  )
+}
+
+const getColumns = (listingId: number, address: string): Array<GridColDef> => {
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  return [
     {
       field: 'name',
       headerName: 'Namn',
@@ -92,49 +128,15 @@ export const Applicants = (props: { listingId: string }) => {
       renderCell: (v) => (
         <RemoveApplicantFromListing
           disabled={v.row.status !== ApplicantStatus.Active}
-          listingId={props.listingId}
+          listingId={listingId}
           applicantId={v.row.id}
           applicantName={v.row.name}
-          listingAddress={parkingSpaceListing.address}
+          listingAddress={address}
         />
       ),
     },
   ]
-
-  return (
-    <>
-      <Typography paddingBottom="2rem" variant="h1">
-        Intresseanmälningar {parkingSpaceListing.address}
-      </Typography>
-      <DataGridTable
-        columns={columns}
-        rows={parkingSpaceListing.applicants}
-        getRowId={(row) => row.id}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 5 } },
-        }}
-        slots={{
-          noRowsOverlay: () => (
-            <Stack
-              paddingTop="1rem"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Typography fontSize="14px">
-                Det finns inga sökande att visa...
-              </Typography>
-            </Stack>
-          ),
-        }}
-        pageSizeOptions={[5, 10, 25]}
-        rowHeight={72}
-        disableRowSelectionOnClick
-        autoHeight
-      />
-    </>
-  )
 }
-
 const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.Active]: 'Aktiv',
   [ApplicantStatus.Assigned]: 'Tilldelad',

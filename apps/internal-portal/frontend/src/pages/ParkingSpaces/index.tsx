@@ -1,10 +1,9 @@
-import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
+import { Box, IconButton, Stack, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
-import { GridActionsCellItem, type GridColDef } from '@mui/x-data-grid'
+import { type GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
 import { Listing, ListingStatus } from 'onecore-types'
 import { Link } from 'react-router-dom'
-import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 
 import { DataGridTable, SearchBar } from '../../components'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'

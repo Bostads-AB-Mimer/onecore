@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-type Params = { listingId: string; applicantId: number }
+type Params = { listingId: number; applicantId: number }
 
 export const useRemoveApplicantFromListing = () => {
   const queryClient = useQueryClient()

@@ -16,7 +16,7 @@ export interface Props {
   applicantId: number
   applicantName: string
   listingAddress: string
-  listingId: string
+  listingId: number
   disabled: boolean
 }
 
