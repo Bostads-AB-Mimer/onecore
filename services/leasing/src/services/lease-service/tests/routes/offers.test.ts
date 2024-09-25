@@ -273,4 +273,32 @@ describe('offers', () => {
       expect(res.status).toBe(200)
     })
   })
+
+  describe('GET /offers/listing-id/:listingId', () => {
+    it('should return a list of offers', async () => {
+      jest
+        .spyOn(offerAdapter, 'getOffersByListingId')
+        .mockResolvedValueOnce({ ok: true, data: [factory.offer.build()] })
+
+      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({
+        content: expect.arrayContaining([
+          expect.objectContaining({ id: expect.any(Number) }),
+        ]),
+      })
+    })
+
+    it('should respond with an error if get offers fails', async () => {
+      jest
+        .spyOn(offerAdapter, 'getOffersByListingId')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: expect.any(String) })
+    })
+  })
 })

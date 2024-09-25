@@ -278,6 +278,45 @@ export async function updateOfferStatus(
   }
 }
 
+export async function getOffersByListingId(
+  listingId: number,
+  dbConnection: Knex = db
+): Promise<AdapterResult<Array<Offer>, 'unknown'>> {
+  try {
+    const rows = await dbConnection
+      .select(
+        'offer.*',
+        dbConnection.raw(`
+          (
+            SELECT * FROM applicant
+            WHERE applicant.Id = offer.ApplicantId
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+          ) as offeredApplicant
+        `)
+      )
+      .from('offer')
+      .innerJoin('applicant', 'offer.ApplicantId', 'applicant.Id')
+      .where({
+        'offer.ListingId': listingId,
+      })
+
+    const mappedRows = rows
+      .map((row) => ({
+        ...row,
+        offeredApplicant: JSON.parse(row.offeredApplicant),
+      }))
+      .map((row) => transformToOfferFromDbOffer(row, row.offeredApplicant))
+
+    return {
+      ok: true,
+      data: mappedRows,
+    }
+  } catch (err) {
+    logger.error(err, 'Error getting offers by listing ID')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const transformToDetailedOfferFromDbOffer = (
   o: DbDetailedOffer,
   a: DbApplicant
