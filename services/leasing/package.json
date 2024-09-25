@@ -82,7 +82,7 @@
     "pino-pretty": "^11.1.0",
     "prettier": "^3.2.5",
     "randexp": "^0.5.3",
-    "strong-soap": "^4.0.0",
+    "strong-soap": "^4.1.4",
     "swagger-jsdoc": "^6.2.8",
     "tedious": "^18.2.4",
     "zod": "^3.23.8"
