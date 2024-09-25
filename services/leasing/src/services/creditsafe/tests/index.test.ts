@@ -1,17 +1,3 @@
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 import soapRequest from 'easy-soap-request'
 import { format } from '../../../helpers/personnummer'
 import { getCreditInformation } from '../adapters/creditsafe-adapter'

@@ -334,7 +334,7 @@ describe('lease-service', () => {
 
       const result = await request(app.callback()).post('/leases')
 
-      expect(xpandAdapterSpy).toHaveBeenCalled
+      expect(xpandAdapterSpy).toHaveBeenCalled()
 
       expect(result.body).toEqual({ error: 'Oh no' })
     })

@@ -1,4 +1,3 @@
-/* eslint-disable no-process-exit */
 import {
   getExpiredListings,
   updateListingStatuses,

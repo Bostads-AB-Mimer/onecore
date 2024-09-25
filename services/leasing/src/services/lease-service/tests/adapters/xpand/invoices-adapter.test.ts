@@ -2,19 +2,6 @@ import { InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 
 import * as invoiceAdapter from '../../../adapters/xpand/invoices-adapter'
 
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-  }
-})
-
 jest.mock('knex', () => () => ({
   select: jest.fn().mockReturnThis(),
   from: jest.fn().mockReturnThis(),

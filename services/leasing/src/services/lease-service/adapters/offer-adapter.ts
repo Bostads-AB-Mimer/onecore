@@ -273,7 +273,7 @@ export async function updateOfferStatus(
       return { ok: false, err: 'no-update' }
     }
     return { ok: true, data: null }
-  } catch (err) {
+  } catch (_err) {
     return { ok: false, err: 'unknown' }
   }
 }

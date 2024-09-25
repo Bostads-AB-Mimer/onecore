@@ -6,19 +6,6 @@ import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from './../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
 
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-  }
-})
-
 beforeAll(async () => {
   await migrate()
 })

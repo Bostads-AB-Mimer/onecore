@@ -1,17 +1,3 @@
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'

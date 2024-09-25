@@ -1,17 +1,4 @@
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-  }
-})
-
-import { Contact, Lease, LeaseStatus, WaitingList } from 'onecore-types'
+import { Lease, LeaseStatus, WaitingList } from 'onecore-types'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
@@ -21,8 +8,6 @@ import {
   parseWaitingListForInternalParkingSpace,
   sortApplicantsBasedOnRentalRules,
 } from '../priority-list-service'
-import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
-import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as factory from './factories'
 import { leaseTypes } from '../../../constants/leaseTypes'
 
@@ -65,45 +50,6 @@ const thirtyDaysInThePastDate = new Date()
 const thirtyDaysInTheFutureDate = new Date()
 thirtyDaysInThePastDate.setDate(currentDate.getDate() + 30)
 thirtyDaysInTheFutureDate.setDate(currentDate.getDate() + 30)
-
-const contactCodeForApplicantInxpand = 'P145241'
-
-const mockedApplicantFromXpand: Contact = {
-  contactCode: contactCodeForApplicantInxpand,
-  contactKey: '_5YI0VPRJ5GARYV',
-  firstName: 'Fiktiv',
-  lastName: 'Sökande',
-  fullName: 'Sökande Fiktiv',
-  leaseIds: [
-    '000-000-00-0001/03M2',
-    '209-004-02-0201/12M',
-    '105-001-17-0102/03M2',
-    '105-002-07-0202/10M2',
-    '306-001-01-0101/07',
-  ],
-  nationalRegistrationNumber: '198912157982',
-  birthDate: new Date('1989-12-15T00:00:00.000Z'),
-  address: {
-    number: '',
-    street: 'Fiktiggatan 1',
-    postalCode: '72222',
-    city: 'VÄSTERÅS',
-  },
-  phoneNumbers: [
-    {
-      phoneNumber: '0704657064',
-      type: 'mobil',
-      isMainNumber: true,
-    },
-    {
-      phoneNumber: '021-13333                     ',
-      type: 'telarbete      ',
-      isMainNumber: false,
-    },
-  ],
-  emailAddress: 'redacted',
-  isTenant: true,
-}
 
 describe('parseWaitingList', () => {
   it('should return waitingList for internal parking space', async () => {

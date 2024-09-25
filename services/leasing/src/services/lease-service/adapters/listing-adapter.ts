@@ -243,7 +243,7 @@ const updateApplicantStatus = async (
     }
 
     return { ok: true, data: null }
-  } catch (error) {
+  } catch (_error) {
     return { ok: false, err: 'unknown' }
   }
 }
