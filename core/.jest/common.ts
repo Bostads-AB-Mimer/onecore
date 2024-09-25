@@ -14,5 +14,6 @@ jest.mock('onecore-utilities', () => {
     },
     loggedAxios: axios,
     axiosTypes: axios,
+    generateRouteMetadata: jest.fn(),
   }
 })

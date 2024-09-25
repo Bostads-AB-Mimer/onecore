@@ -1,4 +1,4 @@
-/**
+/*
  * Self-contained service, ready to be extracted into a microservice if appropriate.
  *
  * All adapters such as database clients etc. should go into subfolders of the service,
@@ -267,6 +267,46 @@ export const routes = (router: KoaRouter) => {
       content: res.data,
       ...metadata,
     }
+  })
+
+  /**
+   * @swagger
+   * /offers/listing-id/{listingId}:
+   *   get:
+   *     summary: Get offers for a specific listing
+   *     description: Get all offers for a listing.
+   *     tags: [Offer]
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The unique ID of the listing.
+   *     responses:
+   *       200:
+   *         description: A list of offers.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/offers/listing-id/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getOffersByListingId(
+      Number.parseInt(ctx.params.listingId)
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**

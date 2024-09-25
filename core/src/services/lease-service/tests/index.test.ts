@@ -1,20 +1,3 @@
-import axios from 'axios'
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    loggedAxios: axios,
-    axiosTypes: axios,
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
@@ -435,6 +418,38 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getContactsDataBySearchQuery).toHaveBeenCalled()
       expect(res.body.content).toEqual(contacts)
+    })
+  })
+
+  describe('GET /offers/listing-id/:listingId', () => {
+    it('responds with 500 if adapter fails', async () => {
+      const getOffersByListingIdSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getOffersByListingId')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'unknown',
+        })
+
+      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+
+      expect(res.status).toBe(500)
+      expect(getOffersByListingIdSpy).toHaveBeenCalled()
+      expect(res.body).toMatchObject({ error: expect.any(String) })
+    })
+
+    it('returns a list of offers', async () => {
+      const getOffersByListingIdSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getOffersByListingId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.offer.buildList(1),
+        })
+
+      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+
+      expect(res.status).toBe(200)
+      expect(getOffersByListingIdSpy).toHaveBeenCalled()
+      expect(res.body).toMatchObject({ content: expect.any(Array) })
     })
   })
 })
