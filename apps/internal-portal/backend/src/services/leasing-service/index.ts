@@ -169,7 +169,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const params = ctx.request.body
     const result =
-      await coreAdapter.createNoteOfInterestForInternalParkingSpace(params)
+      await coreAdapter.createNoteOfInterestForInternalParkingSpace({
+        ...params,
+        applicationType: params.applicationType ?? 'Additional',
+      })
 
     if (result.ok) {
       ctx.status = 200
