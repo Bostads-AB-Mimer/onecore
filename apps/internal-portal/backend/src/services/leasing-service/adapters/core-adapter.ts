@@ -3,6 +3,7 @@ import {
   DetailedApplicant,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
+  Offer,
   Tenant,
 } from 'onecore-types'
 import { AxiosError } from 'axios'
@@ -32,7 +33,9 @@ const getListingsWithApplicants = async (): Promise<
 
 const getListingWithApplicants = async (
   listingId: string
-): Promise<Listing & { applicants: DetailedApplicant[] }> => {
+): Promise<
+  Listing & { applicants: Array<DetailedApplicant>; offers: Array<Offer> }
+> => {
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/listing/${listingId}`,
@@ -43,12 +46,22 @@ const getListingWithApplicants = async (
     url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
   }).then((res) => res.data.content)
 
-  const [listingResult, applicantsResult] = await Promise.all([
+  const offers: Promise<Array<Offer>> = getFromCore({
+    method: 'get',
+    url: `${coreBaseUrl}/offers/listing-id/${listingId}`,
+  }).then((res) => res.data.content)
+
+  const [listingResult, applicantsResult, offersResult] = await Promise.all([
     listing,
     applicants,
+    offers,
   ])
 
-  return { ...listingResult, applicants: applicantsResult || [] }
+  return {
+    ...listingResult,
+    applicants: applicantsResult || [],
+    offers: offersResult,
+  }
 }
 
 const removeApplicant = async (applicantId: string) => {
