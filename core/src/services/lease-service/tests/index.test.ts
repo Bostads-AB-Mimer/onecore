@@ -242,7 +242,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /offers/:offerId/accept', () => {
+  describe('POST /offers/:offerId/accept', () => {
     it('responds with successful processStatus', async () => {
       jest.spyOn(replyToOffer, 'acceptOffer').mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -250,7 +250,7 @@ describe('lease-service', () => {
         data: null,
       })
 
-      const result = await request(app.callback()).get('/offers/123/accept')
+      const result = await request(app.callback()).post('/offers/123/accept')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer accepted successfully')
@@ -262,14 +262,14 @@ describe('lease-service', () => {
         error: 'no-offer',
       })
 
-      const result = await request(app.callback()).get('/offers/123/accept')
+      const result = await request(app.callback()).post('/offers/123/accept')
 
       expect(result.status).toBe(500)
       expect(result.body.error).toBe('no-offer')
     })
   })
 
-  describe('GET /offers/:offerId/deny', () => {
+  describe('POST /offers/:offerId/deny', () => {
     it('responds with successful processStatus', async () => {
       jest.spyOn(replyToOffer, 'denyOffer').mockResolvedValueOnce({
         processStatus: ProcessStatus.successful,
@@ -277,7 +277,7 @@ describe('lease-service', () => {
         data: { listingId: 123 },
       })
 
-      const result = await request(app.callback()).get('/offers/123/deny')
+      const result = await request(app.callback()).post('/offers/123/deny')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer denied successfully')
@@ -289,7 +289,7 @@ describe('lease-service', () => {
         error: 'no-offer',
       })
 
-      const result = await request(app.callback()).get('/offers/123/deny')
+      const result = await request(app.callback()).post('/offers/123/deny')
 
       expect(result.status).toBe(500)
       expect(result.body.error).toBe('no-offer')

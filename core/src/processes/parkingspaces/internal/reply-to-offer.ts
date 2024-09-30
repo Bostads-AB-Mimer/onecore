@@ -29,6 +29,7 @@ export const acceptOffer = async (
         message: `The offer ${offerId} does not exist or could not be retrieved.`,
       })
     }
+
     const offer = res.data
 
     const log: string[] = [
