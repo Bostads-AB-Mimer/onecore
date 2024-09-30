@@ -274,7 +274,7 @@ describe('lease-service', () => {
       jest.spyOn(replyToOffer, 'denyOffer').mockResolvedValueOnce({
         processStatus: ProcessStatus.successful,
         httpStatus: 202,
-        data: null,
+        data: { listingId: 123 },
       })
 
       const result = await request(app.callback()).get('/offers/123/deny')

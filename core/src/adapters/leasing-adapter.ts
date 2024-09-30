@@ -342,7 +342,7 @@ const applyForListing = async (
 }
 
 const getListingByListingId = async (
-  listingId: string
+  listingId: number
 ): Promise<Listing | undefined> => {
   try {
     const result = await axios.get(
@@ -411,9 +411,7 @@ const getApplicantsAndListingByContactCode = async (
       contactCode
     )) as Applicant[]
     for (const applicant of applicantsResponse) {
-      const listingResponse = await getListingByListingId(
-        applicant.listingId.toString()
-      )
+      const listingResponse = await getListingByListingId(applicant.listingId)
       if (listingResponse) {
         applicantsAndListings.push({ applicant, listing: listingResponse })
       }
@@ -767,6 +765,24 @@ async function closeOfferByAccept(
   return { ok: false, err: 'unknown' }
 }
 
+async function closeOfferByDeny(
+  offerId: number
+): Promise<AdapterResult<null, 'offer-not-found' | 'unknown'>> {
+  const res = await axios.put(
+    `${tenantsLeasesServiceUrl}/offers/${offerId}/deny`
+  )
+
+  if (res.status === 200) {
+    return { ok: true, data: null }
+  }
+
+  if (res.status === 404) {
+    return { ok: false, err: 'offer-not-found' }
+  }
+
+  return { ok: false, err: 'unknown' }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -806,4 +822,5 @@ export {
   deleteListing,
   closeOfferByAccept,
   getOffersByListingId,
+  closeOfferByDeny,
 }

@@ -18,7 +18,7 @@ type CreateOfferError =
   | 'unknown'
 
 export const createOfferForInternalParkingSpace = async (
-  listingId: string
+  listingId: number
 ): Promise<ProcessResult<null, CreateOfferError>> => {
   const log: string[] = [
     `Skapa erbjudande för intern bilplats`,

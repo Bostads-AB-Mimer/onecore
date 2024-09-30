@@ -10,12 +10,7 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
-import {
-  createOfferForInternalParkingSpace,
-  acceptOffer,
-  denyOffer,
-  expireOffer,
-} from '../../processes/parkingspaces/internal'
+import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -529,7 +524,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/listing/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getListingByListingId(
-      ctx.params.id
+      Number.parseInt(ctx.params.id)
     )
 
     ctx.body = { content: responseData, ...metadata }
@@ -596,9 +591,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/listings/:listingId/offers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await createOfferForInternalParkingSpace(
-      ctx.params.listingId
-    )
+    const result =
+      await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
+        Number.parseInt(ctx.params.listingId)
+      )
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
@@ -638,7 +634,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/accept', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await acceptOffer(parseInt(ctx.params.offerId))
+    const result = await internalParkingSpaceProcesses.acceptOffer(
+      parseInt(ctx.params.offerId)
+    )
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)
@@ -676,17 +674,23 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/deny', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await denyOffer(parseInt(ctx.params.offerId))
+    const denyOffer = await internalParkingSpaceProcesses.denyOffer(
+      Number.parseInt(ctx.params.offerId)
+    )
 
-    if (result.processStatus === ProcessStatus.successful) {
-      logger.info(result)
-      ctx.status = 202
-      ctx.body = { message: 'Offer denied successfully', ...metadata }
+    if (denyOffer.processStatus !== ProcessStatus.successful) {
+      ctx.status = 500
+      ctx.body = { error: denyOffer.error, ...metadata }
       return
     }
 
-    ctx.status = 500
-    ctx.body = { error: result.error, ...metadata }
+    const _createOffer =
+      await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
+        denyOffer.data.listingId
+      )
+
+    ctx.status = 202
+    ctx.body = { message: 'Offer denied successfully', ...metadata }
   })
 
   /**
@@ -714,7 +718,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/offers/:offerId/expire', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await expireOffer(parseInt(ctx.params.offerId))
+    const result = await internalParkingSpaceProcesses.expireOffer(
+      parseInt(ctx.params.offerId)
+    )
 
     if (result.processStatus === ProcessStatus.successful) {
       logger.info(result)

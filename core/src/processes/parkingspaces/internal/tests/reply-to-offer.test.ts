@@ -1,22 +1,3 @@
-import axios from 'axios'
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-      debug: () => {
-        return
-      },
-    },
-    loggedAxios: axios,
-    axiosTypes: axios,
-  }
-})
-
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 // import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
@@ -24,7 +5,7 @@ import * as communicationAdapter from '../../../../adapters/communication-adapte
 import { OfferStatus } from 'onecore-types'
 
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
-import * as processes from '../reply-to-offer'
+import * as replyProcesses from '../reply-to-offer'
 import * as factory from '../../../../../test/factories'
 
 describe('replyToOffer', () => {
@@ -56,7 +37,7 @@ describe('replyToOffer', () => {
     it('returns a process error if no offer found', async () => {
       getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -76,7 +57,7 @@ describe('replyToOffer', () => {
       })
       getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -103,7 +84,7 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -130,7 +111,7 @@ describe('replyToOffer', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -167,7 +148,7 @@ describe('replyToOffer', () => {
         err: 'not-in-waiting-list',
       })
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.successful,
@@ -188,7 +169,7 @@ describe('replyToOffer', () => {
         throw new Error('Lease not created')
       })
 
-      const result = await processes.acceptOffer(offer.id)
+      const result = await replyProcesses.acceptOffer(offer.id)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -228,7 +209,7 @@ describe('replyToOffer', () => {
         throw new Error('Email not sent')
       })
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.successful,
@@ -261,14 +242,13 @@ describe('replyToOffer', () => {
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
       const denyOfferSpy = jest
-        .spyOn(processes, 'denyOffer')
+        .spyOn(replyProcesses, 'denyOffer')
         .mockResolvedValueOnce({
           processStatus: ProcessStatus.successful,
         } as ProcessResult)
 
-      const result = await processes.acceptOffer(123)
+      const result = await replyProcesses.acceptOffer(123)
 
-      console.log('result', result)
       expect(result).toMatchObject({
         processStatus: ProcessStatus.successful,
       })
@@ -282,7 +262,7 @@ describe('replyToOffer', () => {
     it('returns a process error if no offer found', async () => {
       getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
-      const result = await processes.denyOffer(123)
+      const result = await replyProcesses.denyOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -302,7 +282,7 @@ describe('replyToOffer', () => {
       })
       getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
-      const result = await processes.denyOffer(123)
+      const result = await replyProcesses.denyOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -319,7 +299,7 @@ describe('replyToOffer', () => {
     it('returns a process error if no offer found', async () => {
       getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
-      const result = await processes.expireOffer(123)
+      const result = await replyProcesses.expireOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
@@ -339,7 +319,7 @@ describe('replyToOffer', () => {
       })
       getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
-      const result = await processes.expireOffer(123)
+      const result = await replyProcesses.expireOffer(123)
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,

@@ -1,9 +1,11 @@
+import { OfferStatus, OfferWithRentalObjectCode } from 'onecore-types'
+import { logger } from 'onecore-utilities'
+
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
-import { logger } from 'onecore-utilities'
-import { OfferStatus, OfferWithRentalObjectCode } from 'onecore-types'
+import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import { AdapterResult } from '../../../adapters/types'
 
 type ReplyToOfferError =
@@ -39,9 +41,7 @@ export const acceptOffer = async (
     ]
 
     //Get listing
-    const listing = await leasingAdapter.getListingByListingId(
-      offer.listingId.toString()
-    )
+    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
 
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
@@ -148,7 +148,7 @@ export const acceptOffer = async (
 
 export const denyOffer = async (
   offerId: number
-): Promise<ProcessResult<null, ReplyToOfferError>> => {
+): Promise<ProcessResult<{ listingId: number }, ReplyToOfferError>> => {
   try {
     //Get offer
     const res = await leasingAdapter.getOfferByOfferId(offerId)
@@ -161,19 +161,25 @@ export const denyOffer = async (
     const offer = res.data
 
     //Get listing
-    const listing = await leasingAdapter.getListingByListingId(
-      offer.listingId.toString()
-    )
+    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
         message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,
       })
     }
 
+    const closeOffer = await leasingAdapter.closeOfferByDeny(offer.id)
+
+    if (!closeOffer.ok) {
+      return makeProcessError('close-offer', 500, {
+        message: `Something went wrong when closing the offer.`,
+      })
+    }
+
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 202,
-      data: null,
+      data: { listingId: listing.id },
     }
   } catch (err) {
     return makeProcessError('unknown', 500)
@@ -195,9 +201,7 @@ export const expireOffer = async (
     const offer = res.data
 
     //Get listing
-    const listing = await leasingAdapter.getListingByListingId(
-      offer.listingId.toString()
-    )
+    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
     if (!listing || !listing.districtCode) {
       return makeProcessError('no-listing', 404, {
         message: `The parking space ${offer.listingId.toString()} does not exist or is no longer available.`,

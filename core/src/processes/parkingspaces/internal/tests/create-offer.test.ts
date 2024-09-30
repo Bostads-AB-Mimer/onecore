@@ -16,7 +16,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValueOnce(undefined)
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -32,7 +32,7 @@ describe('createOfferForInternalParkingSpace', () => {
         factory.listing.build({ status: ListingStatus.Active })
       )
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -51,7 +51,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByIdWithDetailedApplicants')
       .mockResolvedValueOnce([])
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -101,7 +101,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce(factory.offer.build())
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(leasingAdapter.updateApplicantStatus).toHaveBeenCalledWith({
       applicantId: 432,
@@ -133,7 +133,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getContact')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -158,7 +158,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockRejectedValueOnce(null)
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -184,7 +184,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .mockResolvedValueOnce(null)
     jest.spyOn(leasingAdapter, 'createOffer').mockRejectedValueOnce(null)
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
@@ -217,7 +217,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce(factory.offer.build())
 
-    const result = await createOfferForInternalParkingSpace('123')
+    const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
       processStatus: ProcessStatus.successful,
