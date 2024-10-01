@@ -67,6 +67,8 @@ export const routes = (router: KoaRouter) => {
    *                 data:
    *                   type: object
    *                   description: The created offer
+   *       409:
+   *         description: Conflict - An active offer already exists for this listing.
    *       500:
    *         description: Internal server error
    */
@@ -76,10 +78,41 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const offer = await offerAdapter.create(ctx.request.body)
+        const existingOffers = await offerAdapter.getOffersByListingId(
+          ctx.request.body.listingId
+        )
 
+        if (!existingOffers.ok) {
+          ctx.status = 500
+          ctx.body = { error: 'Error getting existing offers', ...metadata }
+          return
+        }
+
+        //create initial offers if no previous offers exist
+        if (!existingOffers.data.length) {
+          const offer = await offerAdapter.create(ctx.request.body)
+          ctx.status = 201
+          ctx.body = { content: offer, ...metadata }
+          return
+        }
+
+        //check if any of the existing offers are still active
+        if (existingOffers.data.some((o) => o.status === OfferStatus.Active)) {
+          ctx.status = 409
+          ctx.body = {
+            reason: 'Cannot create new offer when an active offer exists',
+            ...metadata,
+          }
+          return
+        }
+
+        //create new offer if no active offers exist
+        const offer = await offerAdapter.create(ctx.request.body)
         ctx.status = 201
         ctx.body = { content: offer, ...metadata }
+        logger.info(
+          `offer # ${existingOffers.data.length + 1} created for listing ${offer.listingId}`
+        )
       } catch (err) {
         logger.error(err, 'Error creating offer: ')
         ctx.status = 500
