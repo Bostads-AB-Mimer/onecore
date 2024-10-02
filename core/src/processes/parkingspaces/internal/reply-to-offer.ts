@@ -20,6 +20,13 @@ type ReplyToOfferError =
 export const acceptOffer = async (
   offerId: number
 ): Promise<ProcessResult<null, ReplyToOfferError>> => {
+  const log: string[] = [
+    `Tackat ja till erbjudande ${offerId}`,
+    `Tidpunkt för ja tack: ${new Date()
+      .toISOString()
+      .substring(0, 16)
+      .replace('T', ' ')}`,
+  ]
   try {
     //Get offer
     const res = await leasingAdapter.getOfferByOfferId(offerId)
@@ -32,14 +39,9 @@ export const acceptOffer = async (
 
     const offer = res.data
 
-    const log: string[] = [
-      `Tackat ja till intern bilplats`,
-      `Tidpunkt för ja tack: ${new Date()
-        .toISOString()
-        .substring(0, 16)
-        .replace('T', ' ')}`,
-      `Sökande ${offer.offeredApplicant.contactCode} har tackat ja till bilplats ${offer.rentalObjectCode} och erbjudande ${offerId}`,
-    ]
+    log.push(
+      `Sökande ${offer.offeredApplicant.contactCode} har tackat ja till bilplats ${offer.rentalObjectCode}`
+    )
 
     //Get listing
     const listing = await leasingAdapter.getListingByListingId(offer.listingId)
@@ -56,7 +58,9 @@ export const acceptOffer = async (
       lease = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
-        listing.vacantFrom.toISOString(),
+        listing.vacantFrom != undefined
+          ? new Date(listing.vacantFrom).toISOString() // fix: vacantFrom is really a string...
+          : new Date().toISOString(),
         '001'
       )
 
@@ -114,7 +118,10 @@ export const acceptOffer = async (
       (o) => o.processStatus === ProcessStatus.failed
     )
     if (failedDenyOtherOffers.length > 0) {
-      // TODO: Add failed deny other offers to log
+      log.push(
+        'Kunde inte neka följande andra erbjudanden för kunden: ' +
+          failedDenyOtherOffers.join(', ')
+      )
     }
 
     //Close offer
@@ -133,6 +140,7 @@ export const acceptOffer = async (
         log.join('\n')
       )
     } catch (error) {
+      console.log('log', log)
       logger.error(error, 'Send Notification to leasing failed')
     }
 
