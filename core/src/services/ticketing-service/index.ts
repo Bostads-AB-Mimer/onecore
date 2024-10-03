@@ -110,11 +110,13 @@ export const routes = (router: KoaRouter) => {
             undefined,
             'true'
           )
-          const propertyInfoWithLeases: RentalPropertyInfoWithLeases = {
-            ...propertyInfo,
-            leases: leases,
+          if (propertyInfo) {
+            const propertyInfoWithLeases: RentalPropertyInfoWithLeases = {
+              ...propertyInfo,
+              leases: leases,
+            }
+            responseData.push(propertyInfoWithLeases)
           }
-          responseData.push(propertyInfoWithLeases)
           break
         }
         case 'leaseId': {
