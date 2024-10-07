@@ -254,12 +254,35 @@ interface Offer {
   sentAt: Date | null
   expiresAt: Date
   answeredAt: Date | null
-  selectedApplicants: Array<DetailedApplicant>
   status: OfferStatus
   listingId: number
   offeredApplicant: Applicant
   createdAt: Date
 }
+
+interface OfferWithOfferApplicants extends Offer {
+  selectedApplicants: Array<OfferApplicant>
+}
+
+interface OfferApplicant {
+  id: number
+  listingId: number
+  offerId: number
+  applicantId: number
+  status: ApplicantStatus
+  applicationType: 'Replace' | 'Additional'
+  queuePoints: number
+  address: string
+  hasParkingSpace: boolean
+  housingLeaseStatus: LeaseStatus
+  priority: number
+  sortOrder: number
+  createdAt: Date
+
+  applicationDate: Date
+  name: string
+}
+
 interface ApplicantWithListing {
   applicant: Applicant
   listing: Listing
@@ -352,6 +375,8 @@ export type {
   Applicant,
   ApplicantWithListing,
   Offer,
+  OfferApplicant,
+  OfferWithOfferApplicants,
   RentalPropertyInfo,
   ApartmentInfo,
   CommercialSpaceInfo,
