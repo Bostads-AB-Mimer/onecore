@@ -55,7 +55,7 @@ export const denyOffer = async (params: {
     await db.transaction(async (trx) => {
       await updateApplicant(
         params.applicantId,
-        ApplicantStatus.WithdrawnByUser,
+        ApplicantStatus.OfferDeclined,
         trx
       )
       await updateOffer(params.offerId, OfferStatus.Declined, trx)
