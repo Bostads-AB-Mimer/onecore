@@ -3,7 +3,7 @@ import {
   DetailedApplicant,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
-  Offer,
+  OfferWithOfferApplicants,
   Tenant,
 } from 'onecore-types'
 import { AxiosError } from 'axios'
@@ -34,7 +34,10 @@ const getListingsWithApplicants = async (): Promise<
 const getListingWithApplicants = async (
   listingId: string
 ): Promise<
-  Listing & { applicants: Array<DetailedApplicant>; offers: Array<Offer> }
+  Listing & {
+    applicants: Array<DetailedApplicant>
+    offers: Array<OfferWithOfferApplicants>
+  }
 > => {
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
@@ -46,7 +49,7 @@ const getListingWithApplicants = async (
     url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
   }).then((res) => res.data.content)
 
-  const offers: Promise<Array<Offer>> = getFromCore({
+  const offers: Promise<Array<OfferWithOfferApplicants>> = getFromCore({
     method: 'get',
     url: `${coreBaseUrl}/offers/listing-id/${listingId}`,
   }).then((res) => res.data.content)
