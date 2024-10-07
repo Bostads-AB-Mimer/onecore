@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.27.0...v1.28.0) (2024-10-07)
+
+
+### Features
+
+* add new offer types ([#94](https://github.com/Bostads-AB-Mimer/onecore-types/issues/94)) ([643aa4c](https://github.com/Bostads-AB-Mimer/onecore-types/commit/643aa4cf2fd2616eed38eaf10ef25f165cee3d2e))
+
 ## [1.27.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.26.2...v1.27.0) (2024-09-11)
 
 
