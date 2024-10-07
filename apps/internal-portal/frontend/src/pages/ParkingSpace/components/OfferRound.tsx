@@ -1,17 +1,17 @@
 import { Chip } from '@mui/material'
 import type { GridColDef } from '@mui/x-data-grid'
-import { ApplicantStatus, DetailedApplicant } from 'onecore-types'
+import { ApplicantStatus, OfferApplicant } from 'onecore-types'
 
 import { DataGridTable } from '../../../components'
 
 export const OfferRound = (props: {
   numRound: number
-  applicants: Array<DetailedApplicant>
+  applicants: Array<OfferApplicant>
 }) => {
   return (
     <>
       <DataGridTable
-        columns={columns}
+        columns={columns as any}
         rows={props.applicants}
         getRowId={(row) => row.id}
         initialState={{
@@ -32,7 +32,7 @@ const sharedProps = {
 }
 
 const dateFormatter = new Intl.DateTimeFormat('sv-SE')
-const columns: GridColDef[] = [
+const columns: GridColDef<OfferApplicant>[] = [
   {
     field: 'name',
     headerName: 'Namn',
@@ -48,7 +48,7 @@ const columns: GridColDef[] = [
   {
     field: 'address',
     headerName: 'Boende/Adress',
-    valueGetter: (v) => v.row.address.street,
+    valueGetter: (v) => v.row.address,
     ...sharedProps,
     flex: 1.25,
   },
@@ -67,9 +67,9 @@ const columns: GridColDef[] = [
     valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
   },
   {
-    field: 'parkingSpaceContracts',
+    field: 'hasParkingSpace',
     headerName: 'Har bilplats',
-    valueFormatter: (v) => (v.value.length ? 'Ja' : 'Nej'),
+    valueFormatter: (v) => (v.value ? 'Ja' : 'Nej'),
     ...sharedProps,
     flex: 0.75,
   },
@@ -83,9 +83,8 @@ const columns: GridColDef[] = [
     field: 'applicationType',
     headerName: 'Ärende',
     renderCell: (v) => {
-      const hasParkingSpace = Boolean(v.row.parkingSpaceContracts?.length)
       if (v.value === 'Additional')
-        return hasParkingSpace ? 'Hyra flera' : 'Hyra en'
+        return v.row.hasParkingSpace ? 'Hyra flera' : 'Hyra en'
       else return 'Byte'
     },
     ...sharedProps,
