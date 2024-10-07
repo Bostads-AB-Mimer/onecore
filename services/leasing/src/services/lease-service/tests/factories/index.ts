@@ -8,3 +8,4 @@ export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from '.
 export { DetailedOfferFactory as detailedOffer } from './offer'
 export { SoapInternalParkingSpaceFactory as soapInternalParkingSpace } from './soap-parking-space'
 export { TenantFactory as tenant } from './tenant'
+export { OfferApplicantFactory as offerApplicant } from './offer-applicant'

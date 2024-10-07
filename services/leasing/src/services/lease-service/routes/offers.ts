@@ -7,6 +7,7 @@ import { z } from 'zod'
 import * as offerAdapter from './../adapters/offer-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as offerService from '../offer-service'
+import { db } from '../adapters/db'
 
 /**
  * @swagger
@@ -18,7 +19,7 @@ export const routes = (router: KoaRouter) => {
   const createOfferRequestParams = z.object({
     expiresAt: z.coerce.date(),
     status: z.nativeEnum(OfferStatus),
-    selectedApplicants: z.any().array(),
+    selectedApplicants: z.any().array().min(1),
     listingId: z.coerce.number(),
     applicantId: z.number(),
   })
@@ -78,9 +79,13 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const existingOffers = await offerAdapter.getOffersByListingId(
-          ctx.request.body.listingId
-        )
+        // TODO: Maye offer adapter can handle this logic. Checking existing
+        // offers etc.
+        const existingOffers =
+          await offerAdapter.getOffersWithOfferApplicantsByListingId(
+            db,
+            ctx.request.body.listingId
+          )
 
         if (!existingOffers.ok) {
           ctx.status = 500
@@ -90,9 +95,14 @@ export const routes = (router: KoaRouter) => {
 
         //create initial offers if no previous offers exist
         if (!existingOffers.data.length) {
-          const offer = await offerAdapter.create(ctx.request.body)
+          const offer = await offerAdapter.create(db, ctx.request.body)
+          if (!offer.ok) {
+            ctx.status = 500
+            ctx.body = { error: 'Internal server error', ...metadata }
+            return
+          }
           ctx.status = 201
-          ctx.body = { content: offer, ...metadata }
+          ctx.body = { content: offer.data, ...metadata }
           return
         }
 
@@ -107,12 +117,16 @@ export const routes = (router: KoaRouter) => {
         }
 
         //create new offer if no active offers exist
-        const offer = await offerAdapter.create(ctx.request.body)
-        ctx.status = 201
-        ctx.body = { content: offer, ...metadata }
-        logger.info(
-          `offer # ${existingOffers.data.length + 1} created for listing ${offer.listingId}`
-        )
+        const offer = await offerAdapter.create(db, ctx.request.body)
+        if (offer.ok) {
+          ctx.status = 201
+          ctx.body = { content: offer.data, ...metadata }
+          logger.info(
+            `offer # ${existingOffers.data.length + 1} created for listing ${ctx.request.body.listingId}`
+          )
+        }
+
+        //todo: error handling from adapter
       } catch (err) {
         logger.error(err, 'Error creating offer: ')
         ctx.status = 500
@@ -339,6 +353,7 @@ export const routes = (router: KoaRouter) => {
     const result = await offerService.denyOffer({
       applicantId: offer.data.offeredApplicant.id,
       offerId: offer.data.id,
+      listingId: offer.data.listingId,
     })
 
     if (!result.ok) {
@@ -381,7 +396,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/offers/listing-id/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await offerAdapter.getOffersByListingId(
+    const result = await offerAdapter.getOffersWithOfferApplicantsByListingId(
+      db,
       Number.parseInt(ctx.params.listingId)
     )
 

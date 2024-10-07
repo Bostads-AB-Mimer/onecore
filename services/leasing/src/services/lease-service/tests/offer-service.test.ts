@@ -7,15 +7,20 @@ import * as offerAdapter from '../adapters/offer-adapter'
 import { db, migrate, teardown } from '../adapters/db'
 import * as service from '../offer-service'
 
-beforeAll(migrate)
+beforeAll(async () => {
+  await migrate()
+})
 
 beforeEach(async () => {
+  await db('offer_applicant').del()
   await db('offer').del()
   await db('applicant').del()
   await db('listing').del()
 })
 
-afterAll(teardown)
+afterAll(async () => {
+  await teardown()
+})
 
 afterEach(jest.restoreAllMocks)
 
@@ -35,18 +40,22 @@ describe('acceptOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
+
+    assert(offer.ok)
 
     const res = await service.acceptOffer({
       applicantId: applicant.id,
       listingId: listing.data.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
     })
 
     expect(updateListingStatusSpy).toHaveBeenCalled()
@@ -67,11 +76,13 @@ describe('acceptOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
 
@@ -79,10 +90,13 @@ describe('acceptOffer', () => {
       ok: false,
       err: 'unknown',
     })
+
+    assert(offer.ok)
+
     const res = await service.acceptOffer({
       applicantId: applicant.id,
       listingId: listing.data.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
     })
 
     expect(updateApplicantStatusSpy).toHaveBeenCalled()
@@ -102,19 +116,24 @@ describe('acceptOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
 
     updateOfferSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    assert(offer.ok)
+
     const res = await service.acceptOffer({
       applicantId: applicant.id,
       listingId: listing.data.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
     })
 
     expect(updateOfferSpy).toHaveBeenCalled()
@@ -146,18 +165,22 @@ describe('acceptOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
+
+    assert(offer.ok)
 
     const res = await service.acceptOffer({
       applicantId: applicant.id,
       listingId: listing.data.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
     })
 
     expect(updateListingStatusSpy).toHaveBeenCalled()
@@ -165,15 +188,61 @@ describe('acceptOffer', () => {
     expect(updateOfferSpy).toHaveBeenCalled()
     expect(res).toEqual({ ok: true, data: null })
 
+    assert(offer.ok)
+
     const updatedListing = await listingAdapter.getListingById(listing.data.id)
     const updatedApplicant = await listingAdapter.getApplicantById(applicant.id)
-    const updatedOffer = await offerAdapter.getOfferByOfferId(offer.id)
+    const updatedOffer = await offerAdapter.getOfferByOfferId(offer.data.id)
     assert(updatedOffer.ok)
 
     expect(updatedListing?.status).toBe(ListingStatus.Assigned)
     expect(updatedApplicant?.status).toBe(ApplicantStatus.OfferAccepted)
     // TODO: Offer status is incorrectly a string because of db column type!!
     expect(Number(updatedOffer.data.status)).toBe(OfferStatus.Accepted)
+  })
+
+  it('updates offer applicant', async () => {
+    const listing = await listingAdapter.createListing(
+      factory.listing.build({ status: ListingStatus.Expired })
+    )
+    assert(listing.ok)
+    const applicant = await listingAdapter.createApplication(
+      factory.applicant.build({ listingId: listing.data.id })
+    )
+
+    const initialApplicantStatus = ApplicantStatus.Active
+    const offeredApplicant = factory.offerApplicant.build({
+      status: initialApplicantStatus,
+      applicantId: applicant.id,
+    })
+    const offer = await offerAdapter.create(db, {
+      status: OfferStatus.Active,
+      listingId: listing.data.id,
+      applicantId: applicant.id,
+      selectedApplicants: [offeredApplicant],
+      expiresAt: new Date(),
+    })
+
+    assert(offer.ok)
+
+    const [offerApplicantInDbBeforeAccept] = await db('offer_applicant')
+
+    expect(offerApplicantInDbBeforeAccept.applicantStatus).toEqual(
+      initialApplicantStatus
+    )
+
+    const res = await service.acceptOffer({
+      applicantId: applicant.id,
+      listingId: listing.data.id,
+      offerId: offer.data.id,
+    })
+
+    expect(res.ok).toBe(true)
+    const [offerApplicantInDbAfterAccept] = await db('offer_applicant')
+
+    expect(offerApplicantInDbAfterAccept.applicantStatus).toEqual(
+      ApplicantStatus.OfferAccepted
+    )
   })
 })
 
@@ -191,17 +260,21 @@ describe('denyOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
+    assert(offer.ok)
 
     const res = await service.denyOffer({
       applicantId: applicant.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
+      listingId: listing.data.id,
     })
 
     expect(updateOfferStatusSpy).toHaveBeenCalled()
@@ -219,18 +292,22 @@ describe('denyOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
 
+    assert(offer.ok)
     updateOfferStatusSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
     const res = await service.denyOffer({
       applicantId: applicant.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
+      listingId: listing.data.id,
     })
 
     expect(updateOfferStatusSpy).toHaveBeenCalled()
@@ -257,17 +334,22 @@ describe('denyOffer', () => {
       factory.applicant.build({ listingId: listing.data.id })
     )
 
-    const offer = await offerAdapter.create({
+    const offer = await offerAdapter.create(db, {
       status: OfferStatus.Active,
       listingId: listing.data.id,
       applicantId: applicant.id,
-      selectedApplicants: [],
+      selectedApplicants: [
+        factory.offerApplicant.build({ applicantId: applicant.id }),
+      ],
       expiresAt: new Date(),
     })
 
+    assert(offer.ok)
+
     const res = await service.denyOffer({
       applicantId: applicant.id,
-      offerId: offer.id,
+      offerId: offer.data.id,
+      listingId: listing.data.id,
     })
 
     expect(updateApplicantStatusSpy).toHaveBeenCalled()
@@ -275,11 +357,54 @@ describe('denyOffer', () => {
     expect(res).toEqual({ ok: true, data: null })
 
     const updatedApplicant = await listingAdapter.getApplicantById(applicant.id)
-    const updatedOffer = await offerAdapter.getOfferByOfferId(offer.id)
+    const updatedOffer = await offerAdapter.getOfferByOfferId(offer.data.id)
     assert(updatedOffer.ok)
 
-    expect(updatedApplicant?.status).toBe(ApplicantStatus.WithdrawnByUser)
-    // TODO: Offer status is incorrectly a string because of db column type!!
-    expect(Number(updatedOffer.data.status)).toBe(OfferStatus.Declined)
+    expect(updatedApplicant?.status).toBe(ApplicantStatus.OfferDeclined)
+    expect(updatedOffer.data.status).toBe(OfferStatus.Declined)
+  })
+
+  it('updates offer applicant', async () => {
+    const listing = await listingAdapter.createListing(
+      factory.listing.build({ status: ListingStatus.Expired })
+    )
+    assert(listing.ok)
+    const applicant = await listingAdapter.createApplication(
+      factory.applicant.build({ listingId: listing.data.id })
+    )
+
+    const initialApplicantStatus = ApplicantStatus.Active
+    const offeredApplicant = factory.offerApplicant.build({
+      status: initialApplicantStatus,
+      applicantId: applicant.id,
+    })
+    const offer = await offerAdapter.create(db, {
+      status: OfferStatus.Active,
+      listingId: listing.data.id,
+      applicantId: applicant.id,
+      selectedApplicants: [offeredApplicant],
+      expiresAt: new Date(),
+    })
+
+    assert(offer.ok)
+
+    const [offerApplicantInDbBeforeAccept] = await db('offer_applicant')
+
+    expect(offerApplicantInDbBeforeAccept.applicantStatus).toEqual(
+      initialApplicantStatus
+    )
+
+    const res = await service.denyOffer({
+      applicantId: applicant.id,
+      listingId: listing.data.id,
+      offerId: offer.data.id,
+    })
+
+    expect(res.ok).toBe(true)
+    const [offerApplicantInDbAfterAccept] = await db('offer_applicant')
+
+    expect(offerApplicantInDbAfterAccept.applicantStatus).toEqual(
+      ApplicantStatus.OfferDeclined
+    )
   })
 })

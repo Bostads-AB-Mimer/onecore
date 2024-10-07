@@ -4,45 +4,132 @@ import {
   Applicant,
   DetailedOffer,
   OfferStatus,
+  ApplicantStatus,
+  OfferWithOfferApplicants,
+  CreateOfferParams,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { Knex } from 'knex'
 
 import { db } from './db'
-import { AdapterResult, DbApplicant, DbDetailedOffer, DbOffer } from './types'
+import {
+  AdapterResult,
+  DbApplicant,
+  DbDetailedOffer,
+  DbOffer,
+  DbOfferApplicant,
+} from './types'
 
 import * as dbUtils from './utils'
 
-type CreateOfferParams = Omit<
-  Offer,
-  'id' | 'sentAt' | 'answeredAt' | 'offeredApplicant' | 'createdAt'
-> & { applicantId: number }
+export async function create(
+  db: Knex,
+  params: CreateOfferParams
+): Promise<
+  AdapterResult<Offer, 'no-applicant' | 'no-offer-applicants' | 'unknown'>
+> {
+  try {
+    const applicant = await db<DbApplicant>('applicant')
+      .select('*')
+      .where('Id', params.applicantId)
+      .first()
 
-export async function create(params: CreateOfferParams) {
-  const { selectedApplicants, ...rest } = params
-  const values = {
-    ...rest,
-    selectionSnapshot: JSON.stringify(selectedApplicants),
+    if (!applicant) {
+      logger.error(
+        { applicantId: params.applicantId, listingId: params.listingId },
+        'Applicant not found when creating offer'
+      )
+      return { ok: false, err: 'no-applicant' }
+    }
+
+    if (!params.selectedApplicants.length) {
+      return { ok: false, err: 'no-offer-applicants' }
+    }
+
+    const offer = await db.transaction(async (trx) => {
+      const { selectedApplicants, ...offerParams } = params
+      const [offer] = await trx.raw<Array<DbOffer>>(
+        `INSERT INTO offer (
+          Status,
+          ExpiresAt,
+          ListingId,
+          ApplicantId
+        ) OUTPUT INSERTED.*
+        VALUES (?, ?, ?, ?) 
+        `,
+        [
+          offerParams.status,
+          offerParams.expiresAt,
+          offerParams.listingId,
+          offerParams.applicantId,
+        ]
+      )
+
+      const offerApplicantsValues = selectedApplicants.map((a, i) => [
+        offer.Id,
+        params.listingId,
+        a.applicantId,
+        a.status,
+        a.applicationType,
+        a.queuePoints,
+        a.address,
+        a.hasParkingSpace,
+        a.housingLeaseStatus,
+        a.priority,
+        i + 1,
+      ])
+
+      const placeholders = selectedApplicants
+        .map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .join(', ')
+
+      await trx.raw<Array<DbOfferApplicant>>(
+        `INSERT INTO offer_applicant (
+          offerId,
+          listingId,
+          applicantId,
+          applicantStatus,
+          applicantApplicationType,
+          applicantQueuePoints,
+          applicantAddress,
+          applicantHasParkingSpace,
+          applicantHousingLeaseStatus,
+          applicantPriority,
+          sortOrder
+        )
+        VALUES ${placeholders}`,
+        offerApplicantsValues.flat()
+      )
+
+      return offer
+    })
+
+    return {
+      ok: true,
+      data: {
+        id: offer.Id,
+        listingId: offer.ListingId,
+        status: offer.Status,
+        expiresAt: offer.ExpiresAt,
+        sentAt: offer.CreatedAt,
+        offeredApplicant: {
+          id: applicant.Id,
+          name: applicant.Name,
+          listingId: applicant.ListingId,
+          status: applicant.Status,
+          applicationType: applicant.ApplicationType ?? undefined,
+          applicationDate: applicant.ApplicationDate,
+          contactCode: applicant.ContactCode,
+          nationalRegistrationNumber: applicant.NationalRegistrationNumber,
+        },
+        createdAt: offer.CreatedAt,
+        answeredAt: offer.AnsweredAt,
+      },
+    }
+  } catch (err) {
+    logger.error(err, 'Error creating offer')
+    return { ok: false, err: 'unknown' }
   }
-
-  const applicant = await db<DbApplicant>('applicant')
-    .select('*')
-    .where('Id', params.applicantId)
-    .first()
-
-  if (!applicant) {
-    logger.error(
-      { applicantId: params.applicantId, listingId: params.listingId },
-      'Applicant not found when creating offer'
-    )
-    throw new Error('Applicant not found when creating offer')
-  }
-
-  const [offer] = await db<DbOffer>('offer')
-    .insert(dbUtils.camelToPascal(values))
-    .returning('*')
-
-  return transformToOfferFromDbOffer(offer, applicant)
 }
 
 type GetOffersForContactQueryResult = Array<
@@ -95,16 +182,23 @@ export async function getOffersForContact(
     } = row
 
     return {
-      ...transformToOfferFromDbOffer(offer, {
-        ApplicationDate: ApplicantApplicationDate,
-        ContactCode: ApplicantContactCode,
-        Id: ApplicantApplicantId,
-        ListingId: ApplicantListingId,
-        Name: ApplicantName,
-        NationalRegistrationNumber: ApplicantNationalRegistrationNumber,
-        Status: ApplicantStatus,
-        ApplicationType: ApplicantApplicationType,
-      }),
+      id: offer.Id,
+      sentAt: offer.SentAt,
+      expiresAt: offer.ExpiresAt,
+      answeredAt: offer.AnsweredAt,
+      status: offer.Status,
+      listingId: offer.ListingId,
+      createdAt: offer.CreatedAt,
+      offeredApplicant: {
+        applicationDate: ApplicantApplicationDate,
+        contactCode: ApplicantContactCode,
+        id: ApplicantApplicantId,
+        listingId: ApplicantListingId,
+        name: ApplicantName,
+        nationalRegistrationNumber: ApplicantNationalRegistrationNumber,
+        status: ApplicantStatus,
+        applicationType: ApplicantApplicationType ?? undefined,
+      },
       rentalObjectCode: RentalObjectCode,
     }
   })
@@ -249,7 +343,7 @@ export async function getOfferByOfferId(
       },
     }
   } catch (error) {
-    logger.error(error, 'Error getting waiting list using Xpand SOAP API')
+    logger.error(error, 'Error getting offer by offer id')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -259,12 +353,9 @@ export async function updateOfferStatus(
     offerId: number
     status: OfferStatus
   },
-  // TODO: What to put as type parameters to knex?
   dbConnection: Knex = db
 ): Promise<AdapterResult<null, 'no-update' | 'unknown'>> {
   try {
-    // TODO: OfferStatus is stored as a string in the db. I think it should be
-    // an integer to correspond to our enum.
     const query = await dbConnection('offer')
       .update({ Status: params.status })
       .where({ Id: params.offerId })
@@ -273,39 +364,80 @@ export async function updateOfferStatus(
       return { ok: false, err: 'no-update' }
     }
     return { ok: true, data: null }
-  } catch (_err) {
+  } catch (err) {
+    logger.error(err, 'Error updating offer status')
     return { ok: false, err: 'unknown' }
   }
 }
 
-export async function getOffersByListingId(
-  listingId: number,
-  dbConnection: Knex = db
-): Promise<AdapterResult<Array<Offer>, 'unknown'>> {
+export async function updateOfferApplicant(
+  db: Knex,
+  params: {
+    offerId: number
+    listingId: number
+    applicantId: number
+    applicantStatus: ApplicantStatus
+  }
+): Promise<AdapterResult<null, 'no-update' | 'unknown'>> {
   try {
-    const rows = await dbConnection
-      .select(
-        'offer.*',
-        dbConnection.raw(`
-          (
-            SELECT * FROM applicant
-            WHERE applicant.Id = offer.ApplicantId
-            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-          ) as offeredApplicant
-        `)
-      )
-      .from('offer')
-      .innerJoin('applicant', 'offer.ApplicantId', 'applicant.Id')
+    const query = await db('offer_applicant')
+      .update({ applicantStatus: params.applicantStatus })
       .where({
-        'offer.ListingId': listingId,
+        offerId: params.offerId,
+        listingId: params.listingId,
+        applicantId: params.applicantId,
       })
 
-    const mappedRows = rows
-      .map((row) => ({
-        ...row,
-        offeredApplicant: JSON.parse(row.offeredApplicant),
-      }))
-      .map((row) => transformToOfferFromDbOffer(row, row.offeredApplicant))
+    if (!query) {
+      return { ok: false, err: 'no-update' }
+    }
+
+    return { ok: true, data: null }
+  } catch (err) {
+    logger.error(err, 'Error updating offer applicant')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type OffersWithOfferApplicantsQueryResult = DbOffer & {
+  offerApplicants: string
+  offeredApplicant: string
+}
+
+export async function getOffersWithOfferApplicantsByListingId(
+  db: Knex,
+  listingId: number
+): Promise<AdapterResult<Array<OfferWithOfferApplicants>, 'unknown'>> {
+  try {
+    const rows = await db.raw<Array<OffersWithOfferApplicantsQueryResult>>(
+      `
+      SELECT DISTINCT
+        o.*,
+        (
+          SELECT a.*
+          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        ) AS offeredApplicant,
+        (
+          SELECT 
+            oa.*,
+            app.ApplicationDate AS applicantApplicationDate,
+            app.Name AS applicantName
+          FROM offer_applicant oa
+          INNER JOIN applicant app ON oa.applicantId = app.Id
+          WHERE oa.offerId = o.Id
+          ORDER BY oa.sortOrder ASC
+          FOR JSON PATH
+        ) AS offerApplicants
+      FROM offer o
+      INNER JOIN applicant a ON o.ApplicantId = a.Id
+      INNER JOIN offer_applicant oa ON o.Id = oa.offerId
+      WHERE o.ListingId = ?
+      ORDER BY o.CreatedAt ASC
+    `,
+      [listingId]
+    )
+
+    const mappedRows = rows.map(transformOfferWithOfferApplicantsQueryResult)
 
     return {
       ok: true,
@@ -317,6 +449,55 @@ export async function getOffersByListingId(
   }
 }
 
+const transformOfferWithOfferApplicantsQueryResult = (
+  result: OffersWithOfferApplicantsQueryResult
+): OfferWithOfferApplicants => {
+  const offeredApplicant = JSON.parse(result.offeredApplicant) as DbApplicant
+  const offerApplicants = (JSON.parse(result.offerApplicants) ?? []) as Array<
+    DbOfferApplicant & {
+      applicantName: string
+      applicantApplicationDate: string
+    }
+  >
+
+  return {
+    id: result.Id,
+    sentAt: result.SentAt,
+    expiresAt: result.ExpiresAt,
+    answeredAt: result.AnsweredAt,
+    status: result.Status,
+    listingId: result.ListingId,
+    createdAt: result.CreatedAt,
+    offeredApplicant: {
+      id: offeredApplicant.Id,
+      name: offeredApplicant.Name,
+      listingId: offeredApplicant.ListingId,
+      status: offeredApplicant.Status,
+      applicationType: offeredApplicant.ApplicationType ?? undefined,
+      applicationDate: new Date(offeredApplicant.ApplicationDate),
+      contactCode: offeredApplicant.ContactCode,
+      nationalRegistrationNumber: offeredApplicant.NationalRegistrationNumber,
+    },
+    selectedApplicants: offerApplicants.map((a) => ({
+      id: a.id,
+      listingId: a.listingId,
+      offerId: a.offerId,
+      applicantId: a.applicantId,
+      status: a.applicantStatus,
+      applicationType: a.applicantApplicationType,
+      queuePoints: a.applicantQueuePoints,
+      address: a.applicantAddress,
+      hasParkingSpace: a.applicantHasParkingSpace,
+      housingLeaseStatus: a.applicantHousingLeaseStatus,
+      priority: a.applicantPriority,
+      sortOrder: a.sortOrder,
+      createdAt: new Date(a.createdAt),
+      applicationDate: new Date(a.applicantApplicationDate),
+      name: a.applicantName,
+    })),
+  }
+}
+
 const transformToDetailedOfferFromDbOffer = (
   o: DbDetailedOffer,
   a: DbApplicant
@@ -324,23 +505,6 @@ const transformToDetailedOfferFromDbOffer = (
   const { applicantId: _applicantId, ...offer } = dbUtils.pascalToCamel(o)
   return {
     ...offer,
-    offeredApplicant: {
-      ...dbUtils.pascalToCamel(a),
-      applicationType: a.ApplicationType || undefined,
-    },
-  }
-}
-
-const transformToOfferFromDbOffer = (o: DbOffer, a: DbApplicant): Offer => {
-  const {
-    selectionSnapshot: selectedApplicants,
-    applicantId: _applicantId,
-    ...offer
-  } = dbUtils.pascalToCamel(o)
-
-  return {
-    ...offer,
-    selectedApplicants: JSON.parse(selectedApplicants),
     offeredApplicant: {
       ...dbUtils.pascalToCamel(a),
       applicationType: a.ApplicationType || undefined,

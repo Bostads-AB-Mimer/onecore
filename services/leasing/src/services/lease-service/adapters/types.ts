@@ -1,15 +1,35 @@
-import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
+import {
+  ApplicantStatus,
+  LeaseStatus,
+  ListingStatus,
+  OfferStatus,
+} from 'onecore-types'
 
 export type DbOffer = {
   Id: number
   SentAt: Date | null
   ExpiresAt: Date
   AnsweredAt: Date | null
-  SelectionSnapshot: string
   Status: OfferStatus
   ListingId: number
   ApplicantId: number
   CreatedAt: Date
+}
+
+export type DbOfferApplicant = {
+  id: number
+  listingId: number
+  offerId: number
+  applicantId: number
+  applicantStatus: ApplicantStatus
+  applicantApplicationType: 'Replace' | 'Additional'
+  applicantQueuePoints: number
+  applicantAddress: string
+  applicantHasParkingSpace: boolean
+  applicantHousingLeaseStatus: LeaseStatus
+  applicantPriority: number
+  sortOrder: number
+  createdAt: Date
 }
 
 export type DbDetailedOffer = {
