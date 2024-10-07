@@ -92,6 +92,9 @@ export const sendParkingSpaceOfferEmail = async (
       },
     }
 
+    if (process.env.NODE_ENV !== 'production')
+      parkingSpaceDetails.to = config.emailAddresses.tenantDefault
+
     const result = await axios(
       `${config.communicationService.url}/sendParkingSpaceOffer`,
       axiosOptions
