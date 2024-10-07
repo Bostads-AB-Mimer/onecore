@@ -1,19 +1,5 @@
-import axios, { HttpStatusCode } from 'axios'
-jest.mock('onecore-utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    loggedAxios: axios,
-    axiosTypes: axios,
-  }
-})
-
+import { HttpStatusCode } from 'axios'
+import assert from 'node:assert'
 import nock from 'nock'
 import config from '../../common/config'
 import * as leasingAdapter from '../leasing-adapter'
@@ -169,8 +155,9 @@ describe('leasing-adapter', () => {
         selectedApplicants: [],
         status: 1,
       })
+      assert(result.ok)
 
-      expect(result).toEqual({ id: 1 })
+      expect(result.data).toEqual({ id: 1 })
     })
   })
 

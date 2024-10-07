@@ -18,6 +18,10 @@ import {
   DetailedOffer,
   Tenant,
   InternalParkingSpaceSyncSuccessResponse,
+  LeaseStatus,
+  OfferStatus,
+  CreateOfferParams,
+  OfferWithOfferApplicants,
 } from 'onecore-types'
 
 import config from '../common/config'
@@ -513,22 +517,19 @@ const withdrawApplicantByUser = async (
   }
 }
 
-type CreateOfferParams = Omit<
-  Offer,
-  'id' | 'sentAt' | 'answeredAt' | 'offeredApplicant' | 'createdAt'
-> & { applicantId: number }
-
-const createOffer = async (params: CreateOfferParams): Promise<Offer> => {
+const createOffer = async (
+  params: CreateOfferParams
+): Promise<AdapterResult<Omit<Offer, 'selectedApplicants'>, 'unknown'>> => {
   try {
     const response = await axios.post<{ content: Offer }>(
       `${tenantsLeasesServiceUrl}/offer`,
       params
     )
 
-    return response.data.content
+    return { ok: true, data: response.data.content }
   } catch (err) {
     logger.error(err, 'Error creating offer:')
-    throw err
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -550,7 +551,7 @@ const getOfferByOfferId = async (
 
 const getOffersByListingId = async (
   listingId: number
-): Promise<AdapterResult<Array<Offer>, 'unknown'>> => {
+): Promise<AdapterResult<Array<OfferWithOfferApplicants>, 'unknown'>> => {
   try {
     const res = await axios(
       `${tenantsLeasesServiceUrl}/offers/listing-id/${listingId}`

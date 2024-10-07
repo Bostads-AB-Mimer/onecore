@@ -175,20 +175,11 @@ describe('lease-service', () => {
       const detailedApplicant1 = factory.detailedApplicant.build({
         contactCode: 'P174965',
       })
-      const detailedApplicant2 = factory.detailedApplicant.build()
-      const detailedApplicant3 = factory.detailedApplicant.build()
-
       const offer1 = factory.offerWithRentalObjectCode.build({
-        selectedApplicants: [
-          detailedApplicant1,
-          detailedApplicant2,
-          detailedApplicant3,
-        ],
         offeredApplicant: detailedApplicant1,
       })
 
       const offer2 = factory.offerWithRentalObjectCode.build({
-        selectedApplicants: [detailedApplicant1],
         offeredApplicant: detailedApplicant1,
       })
 
@@ -442,7 +433,7 @@ describe('lease-service', () => {
         .spyOn(tenantLeaseAdapter, 'getOffersByListingId')
         .mockResolvedValueOnce({
           ok: true,
-          data: factory.offer.buildList(1),
+          data: [],
         })
 
       const res = await request(app.callback()).get(`/offers/listing-id/1`)

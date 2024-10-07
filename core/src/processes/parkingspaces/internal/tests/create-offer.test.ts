@@ -99,7 +99,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .mockResolvedValueOnce(null)
     jest
       .spyOn(leasingAdapter, 'createOffer')
-      .mockResolvedValueOnce(factory.offer.build())
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
 
     const result = await createOfferForInternalParkingSpace(123)
 
@@ -182,7 +182,9 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
-    jest.spyOn(leasingAdapter, 'createOffer').mockRejectedValueOnce(null)
+    jest
+      .spyOn(leasingAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await createOfferForInternalParkingSpace(123)
 
@@ -215,7 +217,7 @@ describe('createOfferForInternalParkingSpace', () => {
 
     jest
       .spyOn(leasingAdapter, 'createOffer')
-      .mockResolvedValueOnce(factory.offer.build())
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
 
     const result = await createOfferForInternalParkingSpace(123)
 

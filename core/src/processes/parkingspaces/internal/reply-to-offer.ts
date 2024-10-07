@@ -5,11 +5,11 @@ import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
-import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import { AdapterResult } from '../../../adapters/types'
 
 type ReplyToOfferError =
   | 'no-offer'
+  | 'no-active-offer'
   | 'no-listing'
   | 'close-offer'
   | 'get-other-offers'
@@ -20,13 +20,6 @@ type ReplyToOfferError =
 export const acceptOffer = async (
   offerId: number
 ): Promise<ProcessResult<null, ReplyToOfferError>> => {
-  const log: string[] = [
-    `Tackat ja till erbjudande ${offerId}`,
-    `Tidpunkt för ja tack: ${new Date()
-      .toISOString()
-      .substring(0, 16)
-      .replace('T', ' ')}`,
-  ]
   try {
     //Get offer
     const res = await leasingAdapter.getOfferByOfferId(offerId)
@@ -39,9 +32,20 @@ export const acceptOffer = async (
 
     const offer = res.data
 
-    log.push(
-      `Sökande ${offer.offeredApplicant.contactCode} har tackat ja till bilplats ${offer.rentalObjectCode}`
-    )
+    if (offer.status != OfferStatus.Active) {
+      return makeProcessError('no-active-offer', 404, {
+        message: `The offer ${offerId} is not active.`,
+      })
+    }
+
+    const log: string[] = [
+      `Tackat ja till intern bilplats`,
+      `Tidpunkt för ja tack: ${new Date()
+        .toISOString()
+        .substring(0, 16)
+        .replace('T', ' ')}`,
+      `Sökande ${offer.offeredApplicant.contactCode} har tackat ja till bilplats ${offer.rentalObjectCode} och erbjudande ${offerId}`,
+    ]
 
     //Get listing
     const listing = await leasingAdapter.getListingByListingId(offer.listingId)

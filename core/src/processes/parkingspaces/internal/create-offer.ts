@@ -1,11 +1,18 @@
-import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
+import {
+  ApplicantStatus,
+  CreateOfferApplicantParams,
+  DetailedApplicant,
+  LeaseStatus,
+  ListingStatus,
+  OfferStatus,
+} from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
-import { logger } from 'onecore-utilities'
 
 type CreateOfferError =
   | 'no-listing'
@@ -41,15 +48,24 @@ export const createOfferForInternalParkingSpace = async (
       .getListingByIdWithDetailedApplicants(String(listing.id))
       .then((applicants) => {
         // filter out any applicants that has no priority. They are not eligible to rent the object of this listing
-        return applicants?.filter((detailedApplicant) => {
-          return detailedApplicant.priority != undefined
-        })
+        return applicants?.filter(
+          (
+            detailedApplicant
+          ): detailedApplicant is DetailedApplicant & { priority: number } => {
+            return detailedApplicant.priority != undefined
+          }
+        )
       })
 
-    if (!eligibleApplicants?.length)
+    const pickableApplicants = eligibleApplicants?.filter(
+      (a) => a.status === ApplicantStatus.Active
+    )
+    if (!pickableApplicants?.length) {
+      logger.error('No pickable applicants found, cannot create new offer')
       return makeProcessError('no-applicants', 500)
+    }
 
-    const [applicant] = eligibleApplicants
+    const [applicant, ...restApplicants] = pickableApplicants
 
     // TODO: Maybe we want to make a credit check here?
 
@@ -62,6 +78,8 @@ export const createOfferForInternalParkingSpace = async (
     const contact = getContact.data
 
     try {
+      // TODO: Maybe this should happen in leasing so we dont get inconsintent
+      // state if offer creation fails?
       await leasingAdapter.updateApplicantStatus({
         applicantId: applicant.id,
         contactCode: applicant.contactCode,
@@ -76,58 +94,84 @@ export const createOfferForInternalParkingSpace = async (
       return makeProcessError('update-applicant-status', 500)
     }
 
+    const updatedApplicant: DetailedApplicant & { priority: number } = {
+      ...applicant,
+      status: ApplicantStatus.Offered,
+    }
+    const offer = await leasingAdapter.createOffer({
+      applicantId: applicant.id,
+      expiresAt: utils.date.addBusinessDays(new Date(), 2),
+      listingId: listing.id,
+      status: OfferStatus.Active,
+      selectedApplicants: [updatedApplicant, ...restApplicants].map(
+        mapDetailedApplicantsToCreateOfferSelectedApplicants
+      ),
+    })
+
+    if (!offer.ok) {
+      logger.error(
+        offer.err,
+        'Error creating offer for internal parking space - could not create offer'
+      )
+
+      return makeProcessError('create-offer', 500)
+    }
+
+    log.push(`Created offer ${offer.data.id}`)
+    console.log(log)
+    logger.debug(log)
+
     try {
-      const offer = await leasingAdapter.createOffer({
-        applicantId: applicant.id,
-        expiresAt: utils.date.addBusinessDays(new Date(), 2),
-        listingId: listing.id,
-        selectedApplicants: eligibleApplicants,
-        status: OfferStatus.Active,
+      if (!contact.emailAddress)
+        throw new Error('Recipient has no email address')
+
+      await communicationAdapter.sendParkingSpaceOfferEmail({
+        to: contact.emailAddress,
+        subject: 'Erbjudande om intern bilplats',
+        text: 'Erbjudande om intern bilplats',
+        address: listing.address,
+        firstName: applicant.name,
+        availableFrom: new Date(listing.vacantFrom).toISOString(),
+        deadlineDate: new Date(offer.data.expiresAt).toISOString(),
+        rent: String(listing.monthlyRent),
+        type: listing.rentalObjectTypeCaption ?? '',
+        parkingSpaceId: listing.rentalObjectCode,
+        objectId: listing.id.toString(),
+        hasParkingSpace: false,
       })
-      log.push(`Created offer ${offer.id}`)
-      console.log(log)
-      logger.debug(log)
-
-      try {
-        if (!contact.emailAddress)
-          throw new Error('Recipient has no email address')
-
-        await communicationAdapter.sendParkingSpaceOfferEmail({
-          to: contact.emailAddress,
-          subject: 'Erbjudande om intern bilplats',
-          text: 'Erbjudande om intern bilplats',
-          address: listing.address,
-          firstName: applicant.name,
-          availableFrom: new Date(listing.vacantFrom).toISOString(),
-          deadlineDate: new Date(offer.expiresAt).toISOString(),
-          rent: String(listing.monthlyRent),
-          type: listing.rentalObjectTypeCaption ?? '',
-          parkingSpaceId: listing.rentalObjectCode,
-          objectId: listing.id.toString(),
-          hasParkingSpace: false,
-        })
-      } catch (_err) {
-        logger.error(
-          _err,
-          'Error creating offer for internal parking space - could not send email'
-        )
-        return makeProcessError('send-email', 500)
-      }
-      return {
-        processStatus: ProcessStatus.successful,
-        httpStatus: 200,
-        data: null,
-      }
     } catch (_err) {
       logger.error(
         _err,
-        'Error creating offer for internal parking space - could not create offer'
+        'Error creating offer for internal parking space - could not send email'
       )
-      return makeProcessError('create-offer', 500)
+      return makeProcessError('send-email', 500)
+    }
+    return {
+      processStatus: ProcessStatus.successful,
+      httpStatus: 200,
+      data: null,
     }
 
     // step 5 - notify winning applicant
   } catch (err) {
     return makeProcessError('unknown', 500)
+  }
+}
+
+function mapDetailedApplicantsToCreateOfferSelectedApplicants(
+  a: DetailedApplicant & { priority: number }
+): CreateOfferApplicantParams {
+  return {
+    listingId: a.listingId,
+    applicantId: a.id,
+    priority: a.priority,
+    status: a.status,
+    address: a.address ? `${a.address.street} ${a.address.city}` : '',
+    applicationType: a.applicationType
+      ? (a.applicationType as 'Replace' | 'Additional')
+      : 'Additional', //TODO: Fix this
+    queuePoints: a.queuePoints,
+    hasParkingSpace: Boolean(a.parkingSpaceContracts?.length), // TODO: We need to calculate the right value here
+    housingLeaseStatus: LeaseStatus.Current, //TODO: We need to calculate the right lease status
   }
 }

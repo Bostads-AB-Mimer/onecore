@@ -678,16 +678,17 @@ export const routes = (router: KoaRouter) => {
       Number.parseInt(ctx.params.offerId)
     )
 
+    console.log(denyOffer)
     if (denyOffer.processStatus !== ProcessStatus.successful) {
       ctx.status = 500
       ctx.body = { error: denyOffer.error, ...metadata }
       return
     }
 
-    const _createOffer =
-      await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
-        denyOffer.data.listingId
-      )
+    //do not await since the process is responsible to handle the new offer
+    internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
+      denyOffer.data.listingId
+    )
 
     ctx.status = 202
     ctx.body = { message: 'Offer denied successfully', ...metadata }
