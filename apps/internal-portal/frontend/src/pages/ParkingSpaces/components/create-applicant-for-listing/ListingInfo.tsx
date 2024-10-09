@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material'
 import { Listing } from 'onecore-types'
 
 export const ListingInfo = (props: { listing: Listing }) => {
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'currency',
     currency: 'SEK',

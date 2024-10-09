@@ -9,7 +9,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
     id: props.listingId,
   })
 
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'currency',
     currency: 'SEK',

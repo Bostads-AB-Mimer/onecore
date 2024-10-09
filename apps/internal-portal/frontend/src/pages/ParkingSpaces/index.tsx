@@ -20,7 +20,7 @@ const sharedProps = {
 const ParkingSpaces = () => {
   const parkingSpaces = useParkingSpaceListings()
   const [searchString, setSearchString] = useState<string>()
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'currency',
     currency: 'SEK',

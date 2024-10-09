@@ -53,7 +53,7 @@ export const Applicants = (props: { listingId: number }) => {
 }
 
 const getColumns = (listingId: number, address: string): Array<GridColDef> => {
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   return [
     {
       field: 'name',

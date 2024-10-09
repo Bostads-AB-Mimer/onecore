@@ -31,8 +31,8 @@ const sharedProps = {
   flex: 1,
 }
 
-const dateFormatter = new Intl.DateTimeFormat('sv-SE')
-const columns: GridColDef<OfferApplicant>[] = [
+const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
+const columns: GridColDef[] = [
   {
     field: 'name',
     headerName: 'Namn',
