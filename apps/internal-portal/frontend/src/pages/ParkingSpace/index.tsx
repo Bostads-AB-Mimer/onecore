@@ -74,7 +74,7 @@ const ParkingSpaceTabs = (props: { listingId: number }) => {
         Intresseanmälningar {data.address}
       </Typography>
       <Tabs onChange={handleChange}>
-        <Tab disableRipple label="Annons" value="1" />
+        <Tab disableRipple label="Alla sökande" value="1" />
         {data.offers.map((offer, i) => (
           <Tab
             key={offer.id}

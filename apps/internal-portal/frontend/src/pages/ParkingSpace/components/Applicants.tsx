@@ -1,6 +1,6 @@
 import { Chip, Stack, Typography } from '@mui/material'
 import type { GridColDef } from '@mui/x-data-grid'
-import { ApplicantStatus } from 'onecore-types'
+import { ApplicantStatus, LeaseStatus } from 'onecore-types'
 
 import { DataGridTable } from '../../../components'
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
@@ -69,18 +69,25 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
     },
     {
       field: 'address',
-      headerName: 'Boende/Adress',
+      headerName: 'Boendeadress',
       valueGetter: (v) => v.row.address.street,
       ...sharedProps,
       flex: 1.25,
     },
     {
-      field: 'status',
-      headerName: 'Status',
       ...sharedProps,
-      flex: 1.25,
-      valueFormatter: (v) => formatApplicantStatus(v.value),
+      field: 'upcomingHousingContract',
+      headerName: 'Status Boendekontrakt',
+      valueGetter: (v) => {
+        if (v.row.upcomingHousingContract)
+          return v.row.upcomingHousingContract.status
+        else if (v.row.currentHousingContract)
+          return v.row.currentHousingContract.status
+      },
+      valueFormatter: (v) => formatLeaseStatus(v.value),
       renderCell: (v) => <Chip label={v.formattedValue} />,
+      ...sharedProps,
+      flex: 1,
     },
     {
       field: 'applicationDate',
@@ -94,6 +101,14 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
       valueFormatter: (v) => (v.value.length ? 'Ja' : 'Nej'),
       ...sharedProps,
       flex: 0.75,
+    },
+    {
+      field: 'status',
+      headerName: 'Status ansökan',
+      ...sharedProps,
+      flex: 1.25,
+      valueFormatter: (v) => formatApplicantStatus(v.value),
+      renderCell: (v) => <Chip label={v.formattedValue} />,
     },
     {
       field: 'foo',
@@ -150,3 +165,12 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
 
 const formatApplicantStatus = (v: ApplicantStatus) =>
   applicantStatusFormatMap[v]
+
+const leaseStatusFormatMap: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
+}
+
+const formatLeaseStatus = (v: LeaseStatus) => leaseStatusFormatMap[v]

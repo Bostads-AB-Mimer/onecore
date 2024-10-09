@@ -1,6 +1,6 @@
 import { Chip } from '@mui/material'
 import type { GridColDef } from '@mui/x-data-grid'
-import { ApplicantStatus, OfferApplicant } from 'onecore-types'
+import { ApplicantStatus, LeaseStatus, OfferApplicant } from 'onecore-types'
 
 import { DataGridTable } from '../../../components'
 
@@ -47,18 +47,18 @@ const columns: GridColDef<OfferApplicant>[] = [
   },
   {
     field: 'address',
-    headerName: 'Boende/Adress',
+    headerName: 'Boendeadress',
     valueGetter: (v) => v.row.address,
     ...sharedProps,
     flex: 1.25,
   },
   {
-    field: 'status',
-    headerName: 'Status',
-    ...sharedProps,
-    flex: 1.25,
-    valueFormatter: (v) => formatApplicantStatus(v.value),
+    field: 'housingLeaseStatus',
+    headerName: 'Status Boendekontrakt',
+    valueFormatter: (v) => formatLeaseStatus(v.value),
     renderCell: (v) => <Chip label={v.formattedValue} />,
+    ...sharedProps,
+    flex: 1,
   },
   {
     field: 'applicationDate',
@@ -72,6 +72,14 @@ const columns: GridColDef<OfferApplicant>[] = [
     valueFormatter: (v) => (v.value ? 'Ja' : 'Nej'),
     ...sharedProps,
     flex: 0.75,
+  },
+  {
+    field: 'status',
+    headerName: 'Status ansökan',
+    ...sharedProps,
+    flex: 1.25,
+    valueFormatter: (v) => formatApplicantStatus(v.value),
+    renderCell: (v) => <Chip label={v.formattedValue} />,
   },
   {
     field: 'foo',
@@ -111,3 +119,12 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
 
 const formatApplicantStatus = (v: ApplicantStatus) =>
   applicantStatusFormatMap[v]
+
+const leaseStatusFormatMap: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Aktivt',
+  [LeaseStatus.Ended]: 'Avslutat',
+  [LeaseStatus.AboutToEnd]: 'Avslutande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+}
+
+const formatLeaseStatus = (v: LeaseStatus) => leaseStatusFormatMap[v]
