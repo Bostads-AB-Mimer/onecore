@@ -377,12 +377,11 @@ const getContactQuery = () => {
       'cmadr.adress3 as postalCode',
       'cmadr.adress4 as city',
       'cmeml.cmemlben as emailAddress',
-      'cmobj.keycmobj as keycmobj',
+      'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey'
     )
-    .innerJoin('cmobj', 'cmobj.keycmobj', 'cmctc.keycmobj')
-    .leftJoin('cmadr', 'cmadr.keycode', 'cmobj.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmobj.keycmobj')
+    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {

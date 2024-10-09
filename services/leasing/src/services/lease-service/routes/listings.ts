@@ -543,8 +543,11 @@ export const routes = (router: KoaRouter) => {
             contactCode: applicant.contactCode,
           })
 
-          if (!tenant.ok)
-            throw new Error('Err when getting detailed applicant information')
+          if (!tenant.ok) {
+            throw new Error(
+              'Err when getting detailed applicant information: ' + tenant.err
+            )
+          }
 
           applicants.push({
             ...applicant,
