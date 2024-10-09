@@ -10,10 +10,7 @@ import {
   updateApplicantStatus,
 } from '../adapters/listing-adapter'
 import { getEstateCodeFromXpandByRentalObjectCode } from '../adapters/xpand/estate-code-adapter'
-import {
-  doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules,
-  doesTenantHaveHousingContractInSamePropertyAsListing,
-} from '../property-rental-rules-validator'
+import * as propertyRentalRulesValidator from '../property-rental-rules-validator'
 import { getTenant } from '../get-tenant'
 import {
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
@@ -423,7 +420,7 @@ export const routes = (router: KoaRouter) => {
         }
 
         if (
-          !doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules(
+          !propertyRentalRulesValidator.parkingSpaceNeedsValidation(
             propertyInfo.estateCode
           )
         ) {
@@ -447,13 +444,26 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const subjectHasHousingContractInSamePropertyAsListing =
-          await doesTenantHaveHousingContractInSamePropertyAsListing(
-            contact.data,
+        const validatableLease =
+          contact.data.currentHousingContract ||
+          contact.data.upcomingHousingContract
+
+        if (!validatableLease) {
+          ctx.status = 403
+          ctx.body = {
+            reason: 'User is not a current or coming tenant in the property',
+            ...metadata,
+          }
+          return
+        }
+
+        const isRentableForTenant =
+          await propertyRentalRulesValidator.isParkingSpaceRentableForTenant(
+            validatableLease,
             propertyInfo.estateCode
           )
 
-        if (!subjectHasHousingContractInSamePropertyAsListing) {
+        if (!isRentableForTenant) {
           ctx.status = 403
           ctx.body = {
             reason: 'User is not a current or coming tenant in the property',

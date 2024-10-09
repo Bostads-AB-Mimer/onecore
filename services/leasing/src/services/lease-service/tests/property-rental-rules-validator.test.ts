@@ -1,24 +1,21 @@
-import {
-  doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules,
-  doesTenantHaveHousingContractInSamePropertyAsListing,
-} from '../property-rental-rules-validator'
+import * as propertyRentalRulesValidator from '../property-rental-rules-validator'
 import * as estateCodeAdapter from '../adapters/xpand/estate-code-adapter'
 import * as factory from './factories'
 
-describe('doesPropertyHaveSpecificRentalRules', () => {
-  it('shouldReturnFalseIfPropertyDoesNotHaveSpecificRentalRules', () => {
+describe(propertyRentalRulesValidator.parkingSpaceNeedsValidation, () => {
+  it('returns false if property does not have specific rental rules', () => {
     const estateCode = 'ESTATE_CODE_WITHOUT_SPECIFIC_RENTAL_RULES'
     const result =
-      doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules(estateCode)
+      propertyRentalRulesValidator.parkingSpaceNeedsValidation(estateCode)
 
     expect(result).toBe(false)
   })
 
-  it('shouldReturnTrueIfPropertyHaveSpecificRentalRules', () => {
+  it('returns true if property has specific rental rules', () => {
     const estateCode = '24104'
 
     const result =
-      doesPropertyBelongingToParkingSpaceHaveSpecificRentalRules(estateCode)
+      propertyRentalRulesValidator.parkingSpaceNeedsValidation(estateCode)
 
     expect(result).toBe(true)
   })
@@ -26,107 +23,77 @@ describe('doesPropertyHaveSpecificRentalRules', () => {
 
 const listingEstateCode = '24104'
 
-describe('doesUserHaveHousingContractInSamePropertyAsListing', () => {
-  it('should returns false if no housing contract', async () => {
-    const detailedApplicant = factory.detailedApplicant.build({
-      currentHousingContract: undefined,
-      upcomingHousingContract: undefined,
+describe(propertyRentalRulesValidator.isParkingSpaceRentableForTenant, () => {
+  it('returns false if housing contract is not same property as listing', async () => {
+    const housingContractRentalObjectCode = '123'
+
+    jest
+      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
+      .mockResolvedValueOnce({ estateCode: 'NOT_APPLICABLE', type: 'foo' })
+
+    const lease = factory.lease.build({
+      rentalPropertyId: housingContractRentalObjectCode,
     })
 
-    const result = await doesTenantHaveHousingContractInSamePropertyAsListing(
-      detailedApplicant,
-      listingEstateCode
-    )
+    const result =
+      await propertyRentalRulesValidator.isParkingSpaceRentableForTenant(
+        lease,
+        listingEstateCode
+      )
     expect(result).toBe(false)
   })
 
-  it('should return false if no current housing contract and upcoming housing contract in wrong property', async () => {
+  it('returns true if housing contract is same property as listing', async () => {
     const housingContractRentalObjectCode = '123'
 
     jest
       .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
       .mockResolvedValueOnce({
-        estateCode: 'NON_MATCHING_ESTATE_CODE',
         type: 'foo',
+        estateCode:
+          propertyRentalRulesValidator.PROPERTIES_WITH_SPECIFIC_RENTAL_RULES
+            .ISOLATORN_14,
       })
 
-    const detailedApplicant = factory.detailedApplicant.build({
-      currentHousingContract: undefined,
-      upcomingHousingContract: factory.lease.build({
-        rentalPropertyId: housingContractRentalObjectCode,
-      }),
+    const lease = factory.lease.build({
+      rentalPropertyId: housingContractRentalObjectCode,
     })
 
-    const result = await doesTenantHaveHousingContractInSamePropertyAsListing(
-      detailedApplicant,
-      listingEstateCode
-    )
-    expect(result).toBe(false)
-  })
+    const result =
+      await propertyRentalRulesValidator.isParkingSpaceRentableForTenant(
+        lease,
+        propertyRentalRulesValidator.PROPERTIES_WITH_SPECIFIC_RENTAL_RULES
+          .ISOLATORN_14
+      )
 
-  it('should return false if no upcoming housing contract and current housing contract in wrong property', async () => {
-    const housingContractRentalObjectCode = '123'
-
-    jest
-      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
-      .mockResolvedValueOnce({
-        estateCode: 'NON_MATCHING_ESTATE_CODE',
-        type: 'foo',
-      })
-
-    const detailedApplicant = factory.detailedApplicant.build({
-      currentHousingContract: factory.lease.build({
-        rentalPropertyId: housingContractRentalObjectCode,
-      }),
-      upcomingHousingContract: undefined,
-    })
-
-    const result = await doesTenantHaveHousingContractInSamePropertyAsListing(
-      detailedApplicant,
-      listingEstateCode
-    )
-    expect(result).toBe(false)
-  })
-
-  it('should return true if curent housing contract in same property', async () => {
-    const housingContractRentalObjectCode = '123'
-
-    jest
-      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
-      .mockResolvedValueOnce({ estateCode: '24104', type: 'foo' })
-
-    const detailedApplicant = factory.detailedApplicant.build({
-      currentHousingContract: factory.lease.build({
-        rentalPropertyId: housingContractRentalObjectCode,
-      }),
-      upcomingHousingContract: undefined,
-    })
-
-    const result = await doesTenantHaveHousingContractInSamePropertyAsListing(
-      detailedApplicant,
-      listingEstateCode
-    )
     expect(result).toBe(true)
   })
 
-  it('should return true if upcoming housing contract in same property', async () => {
-    const housingContractRentalObjectCode = '123'
+  describe('ROTORN', () => {
+    it('returns true if housing contract is one of ROTORN estate codes', async () => {
+      const housingContractRentalObjectCode = '123'
 
-    jest
-      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
-      .mockResolvedValueOnce({ estateCode: '24104', type: 'foo' })
+      jest
+        .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
+        .mockResolvedValueOnce({
+          type: 'foo',
+          estateCode:
+            propertyRentalRulesValidator.PROPERTIES_WITH_SPECIFIC_RENTAL_RULES
+              .ROTORN_13,
+        })
 
-    const detailedApplicant = factory.detailedApplicant.build({
-      currentHousingContract: undefined,
-      upcomingHousingContract: factory.lease.build({
+      const lease = factory.lease.build({
         rentalPropertyId: housingContractRentalObjectCode,
-      }),
-    })
+      })
 
-    const result = await doesTenantHaveHousingContractInSamePropertyAsListing(
-      detailedApplicant,
-      listingEstateCode
-    )
-    expect(result).toBe(true)
+      const result =
+        await propertyRentalRulesValidator.isParkingSpaceRentableForTenant(
+          lease,
+          propertyRentalRulesValidator.PROPERTIES_WITH_SPECIFIC_RENTAL_RULES
+            .ROTORN_14
+        )
+
+      expect(result).toBe(true)
+    })
   })
 })

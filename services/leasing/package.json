@@ -85,6 +85,7 @@
     "strong-soap": "^4.1.4",
     "swagger-jsdoc": "^6.2.8",
     "tedious": "^18.2.4",
+    "ts-pattern": "^5.4.0",
     "zod": "^3.23.8"
   }
 }
