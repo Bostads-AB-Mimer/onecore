@@ -348,16 +348,17 @@ export async function getOfferByOfferId(
   }
 }
 
-export async function updateOfferStatus(
+export async function updateOfferAnsweredStatus(
   params: {
     offerId: number
     status: OfferStatus
+    answeredAt: Date
   },
   dbConnection: Knex = db
 ): Promise<AdapterResult<null, 'no-update' | 'unknown'>> {
   try {
     const query = await dbConnection('offer')
-      .update({ Status: params.status })
+      .update({ Status: params.status, AnsweredAt: params.answeredAt })
       .where({ Id: params.offerId })
 
     if (!query) {

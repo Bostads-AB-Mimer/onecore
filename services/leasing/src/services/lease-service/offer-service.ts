@@ -28,7 +28,12 @@ export const acceptOffer = async (params: {
         params.applicantId,
         ApplicantStatus.OfferAccepted
       )
-      await updateOffer(trx, params.offerId, OfferStatus.Accepted)
+      await updateOfferAnsweredStatus(
+        trx,
+        params.offerId,
+        OfferStatus.Accepted,
+        new Date()
+      )
       await updateOfferApplicant(
         trx,
         params.offerId,
@@ -77,7 +82,14 @@ export const denyOffer = async (params: {
         params.applicantId,
         ApplicantStatus.OfferDeclined
       )
-      await updateOffer(trx, params.offerId, OfferStatus.Declined)
+
+      await updateOfferAnsweredStatus(
+        trx,
+        params.offerId,
+        OfferStatus.Declined,
+        new Date()
+      )
+
       await updateOfferApplicant(
         trx,
         params.offerId,
@@ -133,15 +145,17 @@ const updateApplicant = async (
   }
 }
 
-const updateOffer = async (
+const updateOfferAnsweredStatus = async (
   trx: Knex,
   offerId: number,
-  offerStatus: OfferStatus
+  offerStatus: OfferStatus,
+  answeredAt: Date
 ) => {
-  const updateOffer = await offerAdapter.updateOfferStatus(
+  const updateOffer = await offerAdapter.updateOfferAnsweredStatus(
     {
       offerId,
       status: offerStatus,
+      answeredAt: answeredAt,
     },
     trx
   )

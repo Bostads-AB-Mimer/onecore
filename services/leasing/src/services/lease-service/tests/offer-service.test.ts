@@ -107,7 +107,7 @@ describe('acceptOffer', () => {
   })
 
   it('rollbacks listing status change and applicant status change if update offer fails', async () => {
-    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferStatus')
+    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferAnsweredStatus')
     const listing = await listingAdapter.createListing(
       factory.listing.build({ status: ListingStatus.Expired })
     )
@@ -156,7 +156,7 @@ describe('acceptOffer', () => {
       'updateApplicantStatus'
     )
 
-    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferStatus')
+    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferAnsweredStatus')
     const listing = await listingAdapter.createListing(
       factory.listing.build({ status: ListingStatus.Expired })
     )
@@ -248,7 +248,10 @@ describe('acceptOffer', () => {
 
 describe('denyOffer', () => {
   it('returns gracefully if offer update fails', async () => {
-    const updateOfferStatusSpy = jest.spyOn(offerAdapter, 'updateOfferStatus')
+    const updateOfferStatusSpy = jest.spyOn(
+      offerAdapter,
+      'updateOfferAnsweredStatus'
+    )
 
     updateOfferStatusSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
@@ -282,7 +285,10 @@ describe('denyOffer', () => {
   })
 
   it('rollbacks applicant status change if update offer fails', async () => {
-    const updateOfferStatusSpy = jest.spyOn(offerAdapter, 'updateOfferStatus')
+    const updateOfferStatusSpy = jest.spyOn(
+      offerAdapter,
+      'updateOfferAnsweredStatus'
+    )
 
     const listing = await listingAdapter.createListing(
       factory.listing.build({ status: ListingStatus.Expired })
@@ -325,7 +331,7 @@ describe('denyOffer', () => {
       'updateApplicantStatus'
     )
 
-    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferStatus')
+    const updateOfferSpy = jest.spyOn(offerAdapter, 'updateOfferAnsweredStatus')
     const listing = await listingAdapter.createListing(
       factory.listing.build({ status: ListingStatus.Expired })
     )
