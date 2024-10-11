@@ -599,7 +599,10 @@ export const routes = (router: KoaRouter) => {
         const newLeaseRecord = await createLeaseRecord(
           propertyInfoWithLeases.leases[0]
         )
-        const newTenantRecord = await createTenantRecord(tenants[0])
+        const newTenantRecord = await createTenantRecord(
+          tenants[0],
+          AccessOptions.PhoneNumber
+        )
         const newMaintenanceUnitRecord = await createMaintenanceUnitRecord(
           laundryRoom,
           ticket.MaintenanceUnitCode,
