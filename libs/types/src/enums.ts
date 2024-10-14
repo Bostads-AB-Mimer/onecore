@@ -64,6 +64,7 @@ enum ApplicantStatus {
   Offered = 6,
   OfferAccepted = 7,
   OfferDeclined = 8,
+  OfferExpired = 9,
   //PendingReview = 6 // ?
   //Rejected = 7 // ?
 }

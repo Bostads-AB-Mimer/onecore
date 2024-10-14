@@ -18,11 +18,12 @@ This packages uses [Release Please](https://github.com/google-github-actions/rel
 
 To use a locally updated version of this package, the easiest way it to use npm link.
 
+Note: For this to work, this project and the project where it is used need to have the same versions of Node.
+
 1. Run `npm link` inside this folder
 2. In other projects using this package, run `npm link onecore-types`
 3. Make sure you run `npm run build` every time you make changes to this package.
 4. When done, unlink in the other projects with `npm unlink --no-save onecore-types`
-
 
 ## Relasing a new version
 
