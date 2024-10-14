@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.28.0...v1.29.0) (2024-10-14)
+
+
+### Features
+
+* Added OfferExpired to ApplicantStatus ([bd40bdc](https://github.com/Bostads-AB-Mimer/onecore-types/commit/bd40bdca213d4ac475ac5d30aa048d8380d08d35))
+
 ## [1.28.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.27.0...v1.28.0) (2024-10-07)
 
 
