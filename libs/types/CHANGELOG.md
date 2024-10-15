@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.0...v1.30.1) (2024-10-15)
+
+
+### Features
+
+* MIM-152 show nationalRegistrationNumber and contactCode for applicants ([#96](https://github.com/Bostads-AB-Mimer/onecore-types/issues/96)) ([e87a95f](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e87a95f4a72ff8e022a37103c508a9c6a6b655ce))
+
 ## [1.30.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.29.1...v1.30.0) (2024-10-15)
 
 
