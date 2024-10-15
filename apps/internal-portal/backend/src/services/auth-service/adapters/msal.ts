@@ -196,8 +196,8 @@ const handleRedirect = (options: AuthOptions = defaultOptions) => {
         ctx.request.body
       )
 
-      /*ctx.session.tokenCache = msalInstance.getTokenCache().serialize()
-      ctx.session.idToken = tokenResponse.idToken*/ // something in these two create an invalid cookie - fix!
+      //ctx.session.tokenCache = msalInstance.getTokenCache().serialize()
+      //ctx.session.idToken = tokenResponse.idToken // something in these two create an invalid cookie - fix!
       ctx.session.account = tokenResponse.account
       ctx.session.isAuthenticated = true
 
