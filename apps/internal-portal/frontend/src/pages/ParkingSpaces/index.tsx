@@ -147,7 +147,7 @@ const ParkingSpaces = () => {
           sorting: {
             sortModel: [{ field: 'queuePoints', sort: 'desc' }],
           },
-          pagination: { paginationModel: { pageSize: 5 } },
+          pagination: { paginationModel: { pageSize: 30 } },
         }}
         pageSizeOptions={[5, 10, 25]}
         slots={{
