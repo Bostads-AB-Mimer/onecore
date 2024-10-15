@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.29.0...v1.29.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* bump version to trigger build ([3d5f2f0](https://github.com/Bostads-AB-Mimer/onecore-types/commit/3d5f2f00e5d3d6532e6981c4a863ef8809c243d9))
+
 ## [1.29.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.28.0...v1.29.0) (2024-10-14)
 
 
