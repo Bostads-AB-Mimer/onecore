@@ -1,4 +1,4 @@
-import { Chip, Stack, Typography } from '@mui/material'
+import { Box, Chip, Stack, Typography } from '@mui/material'
 import type { GridColDef } from '@mui/x-data-grid'
 import { ApplicantStatus, LeaseStatus } from 'onecore-types'
 
@@ -58,6 +58,18 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
     {
       field: 'name',
       headerName: 'Namn',
+      ...sharedProps,
+      flex: 1.25,
+      renderCell: (params) => (
+        <Box style={{ display: 'flex', flexDirection: 'column' }}>
+          <Box>{params.row.name}</Box>{' '}
+          <Box>{params.row.nationalRegistrationNumber}</Box>
+        </Box>
+      ),
+    },
+    {
+      field: 'contactCode',
+      headerName: 'Kundnummer',
       ...sharedProps,
       flex: 1.25,
     },

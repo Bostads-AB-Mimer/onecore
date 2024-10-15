@@ -20,6 +20,28 @@ export const ContactInfo = (props: { tenant: Tenant | null }) => (
       flex="1"
       paddingTop="0.5rem"
     >
+      <Typography>Personnumer</Typography>
+      <Box>
+        <Typography>{props.tenant?.nationalRegistrationNumber}</Typography>
+      </Box>
+    </Box>
+    <Box
+      display="flex"
+      justifyContent="space-between"
+      flex="1"
+      paddingTop="0.5rem"
+    >
+      <Typography>Kundnummer</Typography>
+      <Box>
+        <Typography>{props.tenant?.contactCode}</Typography>
+      </Box>
+    </Box>
+    <Box
+      display="flex"
+      justifyContent="space-between"
+      flex="1"
+      paddingTop="0.5rem"
+    >
       <Typography>Adress</Typography>
       <Box>
         <Typography>
