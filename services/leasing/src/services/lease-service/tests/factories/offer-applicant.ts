@@ -16,7 +16,8 @@ export const OfferApplicantFactory = Factory.define<OfferApplicant>(
     housingLeaseStatus: LeaseStatus.Current,
     createdAt: new Date(),
     sortOrder: sequence,
-
+    nationalRegistrationNumber: '198103314681',
+    contactCode: 'P123456',
     applicationDate: new Date(),
     name: 'Test Testsson',
   })

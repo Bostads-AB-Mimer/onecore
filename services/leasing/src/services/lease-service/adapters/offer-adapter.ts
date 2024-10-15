@@ -422,7 +422,9 @@ export async function getOffersWithOfferApplicantsByListingId(
           SELECT 
             oa.*,
             app.ApplicationDate AS applicantApplicationDate,
-            app.Name AS applicantName
+            app.Name AS applicantName,
+            app.ContactCode AS applicantContactCode,
+            app.NationalRegistrationNumber AS applicantNationalRegistrationNumber
           FROM offer_applicant oa
           INNER JOIN applicant app ON oa.applicantId = app.Id
           WHERE oa.offerId = o.Id
@@ -495,6 +497,8 @@ const transformOfferWithOfferApplicantsQueryResult = (
       createdAt: new Date(a.createdAt),
       applicationDate: new Date(a.applicantApplicationDate),
       name: a.applicantName,
+      contactCode: a.applicantContactCode,
+      nationalRegistrationNumber: a.applicantNationalRegistrationNumber,
     })),
   }
 }

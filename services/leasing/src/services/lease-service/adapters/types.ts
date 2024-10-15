@@ -22,6 +22,8 @@ export type DbOfferApplicant = {
   offerId: number
   applicantId: number
   applicantStatus: ApplicantStatus
+  applicantContactCode: string
+  applicantNationalRegistrationNumber: string
   applicantApplicationType: 'Replace' | 'Additional'
   applicantQueuePoints: number
   applicantAddress: string

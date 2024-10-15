@@ -296,6 +296,7 @@ describe('offer-adapter', () => {
         selectedApplicants: [
           factory.offerApplicant.build({
             applicantId: applicant.id,
+            contactCode: applicant.contactCode,
           }),
         ],
         listingId: listingRes.data.id,
