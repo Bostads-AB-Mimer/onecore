@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.29.1...v1.30.0) (2024-10-15)
+
+
+### Features
+
+* add more values to CreateNoteOfInterestErrorCodes ([31139ac](https://github.com/Bostads-AB-Mimer/onecore-types/commit/31139ac5a1e95501b0c900fa82f716c9c5b5d927))
+
 ## [1.29.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.29.0...v1.29.1) (2024-10-15)
 
 
