@@ -269,6 +269,8 @@ interface OfferApplicant {
   listingId: number
   offerId: number
   applicantId: number
+  contactCode: string
+  nationalRegistrationNumber: string
   status: ApplicantStatus
   applicationType: 'Replace' | 'Additional'
   queuePoints: number
