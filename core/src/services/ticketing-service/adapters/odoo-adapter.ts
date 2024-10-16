@@ -88,6 +88,8 @@ const transformTicket = (ticket: OdooGetTicket) => {
   const equipmentCode = transformEquipmentCode(ticket.equipment_code)
   const description = removePTags(ticket.description)
 
+  const descriptionWithMoreInfo = `${description}\r\nHusdjur: ${ticket.pet ? 'Ja' : 'Nej'}${ticket.call_between ? `\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.` : ''}`
+
   return {
     AccessCaption: 'Huvudnyckel',
     Caption:
@@ -98,9 +100,8 @@ const transformTicket = (ticket: OdooGetTicket) => {
     ContactCode: ticket.contact_code,
     Description:
       spaceCode && equipmentCode
-        ? `${spaceCode}, ${equipmentCode}: ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`
-        : ticket.name +
-          ` ${description}\r\nHusdjur: ${ticket.pet}\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.`,
+        ? `${spaceCode}, ${equipmentCode}: ${descriptionWithMoreInfo}`
+        : ticket.name + ` ${descriptionWithMoreInfo}`,
     DetailsCaption:
       spaceCode && equipmentCode
         ? `${spaceCode}, ${equipmentCode}`
