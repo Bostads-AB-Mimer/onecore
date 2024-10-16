@@ -14,7 +14,7 @@ import {
   Stack,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { Lease, Listing } from 'onecore-types'
+import { CreateNoteOfInterestErrorCodes, Lease, Listing } from 'onecore-types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 import { GridColDef } from '@mui/x-data-grid'
@@ -32,6 +32,7 @@ import {
 } from '../../hooks/useTenantWithValidation'
 import { ContactInfo } from './ContactInfo'
 import { DataGridTable, Tab, Tabs } from '../../../../components'
+import { RequestError } from '../../../../types'
 
 export interface Props {
   listing: Listing
@@ -108,7 +109,7 @@ export const CreateApplicantForListing = (props: Props) => {
         {createNoteOfInterest.error ? (
           <CreateApplicantError
             reset={createNoteOfInterest.reset}
-            error={createNoteOfInterest.error.errorMessage}
+            error={createNoteOfInterest.error}
           />
         ) : (
           <Box paddingTop="0.5rem">
@@ -318,7 +319,10 @@ const Leases = (props: { leases: Lease[] }) => (
   />
 )
 
-const CreateApplicantError = (props: { reset: () => void; error: string }) => (
+const CreateApplicantError = (props: {
+  reset: () => void
+  error: RequestError<CreateNoteOfInterestErrorCodes>
+}) => (
   <Box
     padding="1rem"
     height="250px"
@@ -328,9 +332,9 @@ const CreateApplicantError = (props: { reset: () => void; error: string }) => (
     justifyContent="space-between"
   >
     <Typography textAlign="center" variant="h1">
-      Något gick fel...
+      {props.error.errorHeading}
     </Typography>
-    <Box>{props.error}</Box>
+    <Box>{props.error.errorMessage}</Box>
     <Box paddingTop="2rem">
       <Button variant="dark-outlined" onClick={props.reset}>
         Försök igen

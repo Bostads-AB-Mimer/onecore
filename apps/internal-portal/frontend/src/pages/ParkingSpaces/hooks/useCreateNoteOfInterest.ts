@@ -48,26 +48,26 @@ export const useCreateNoteOfInterest = (listingId: number) => {
       errorMessage: string
     }>
   ): RequestError<CreateNoteOfInterestErrorCodes> {
+    const defaultError = {
+      status: 500,
+      errorHeading: 'Något gick fel...',
+      errorCode: CreateNoteOfInterestErrorCodes.Unknown,
+      errorMessage: 'Försök igen eller kontakta support',
+    }
     if (!e.response?.data) {
-      return {
-        status: 500,
-        errorCode: CreateNoteOfInterestErrorCodes.Unknown,
-        errorMessage: 'Försök igen eller kontakta support',
-      }
+      return defaultError
     }
     switch (e.response.data?.error) {
       case CreateNoteOfInterestErrorCodes.InternalCreditCheckFailed:
         return {
           status: 400,
           errorCode: CreateNoteOfInterestErrorCodes.InternalCreditCheckFailed,
-          errorMessage: 'Kreditkontroll misslyckades',
+          errorHeading: 'Ej godkänd',
+          errorMessage:
+            'Kunden uppfyller inte kraven för en intern kreditkontroll. Kunden har en eller flera inkassofakturor de senaste 6 månaderna.',
         }
       default: {
-        return {
-          status: 500,
-          errorCode: CreateNoteOfInterestErrorCodes.Unknown,
-          errorMessage: 'Försök igen eller kontakta support',
-        }
+        return defaultError
       }
     }
   }
