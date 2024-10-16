@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.2...v1.30.3) (2024-10-16)
+
+
+### Features
+
+* More Error Codes ([#106](https://github.com/Bostads-AB-Mimer/onecore-types/issues/106)) ([0cd1a72](https://github.com/Bostads-AB-Mimer/onecore-types/commit/0cd1a72df4584deb7ca29470233ac52a20b5bfad))
+
 ## [1.30.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.1...v1.30.2) (2024-10-16)
 
 

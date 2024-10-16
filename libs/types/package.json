@@ -1,6 +1,6 @@
 {
   "name": "onecore-types",
-  "version": "1.30.2",
+  "version": "1.30.3",
   "description": "ONECore common types",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
