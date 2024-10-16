@@ -24,6 +24,15 @@ export const routes = (router: KoaRouter) => {
     applicantId: z.number(),
   })
 
+  router.put('(.*)/offers/handleexpired', async (ctx) => {
+    const affectedListingIds = await offerAdapter.handleExpiredOffers()
+    const metadata = generateRouteMetadata(ctx)
+
+    if (affectedListingIds.ok && affectedListingIds.data) {
+      ctx.body = { content: affectedListingIds.data, ...metadata }
+    }
+  })
+
   /**
    * @swagger
    * /offer:
