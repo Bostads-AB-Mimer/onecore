@@ -1,11 +1,9 @@
 enum ReplyToOfferErrorCodes {
+  NoOffer = 'no-offer',
+  NoActiveOffer = 'no-active-offer',
   NoListing = 'no-listing',
-  ListingNotExpired = 'listing-not-expired',
-  NoApplicants = 'no-applicants',
-  NoContact = 'no-contact',
-  UpdateApplicantStatusFailed = 'update-applicant-status-failed',
-  CreateOfferFailed = 'create-offer',
-  SendEmailFailed = 'send-email-failed',
+  CreateLeaseFailure = 'create-lease-failure',
+  CloseOfferFailure = 'close-offer-failure',
   Unknown = 'unknown',
 }
 
