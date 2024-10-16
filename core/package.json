@@ -12,7 +12,7 @@
     "test:watch": "TZ=UTC jest --watch",
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon -e ts,js --exec npm run start",
-    "script:handle-expired-offers": "node scripts/handle-expired-listings.js",
+    "script:handle-expired-offers": "node scripts/handle-expired-offers.js",
     "lint": "eslint -c .eslintrc src/",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "TZ=UTC jest --silent",
