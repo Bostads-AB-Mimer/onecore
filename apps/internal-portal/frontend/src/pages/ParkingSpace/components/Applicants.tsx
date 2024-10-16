@@ -164,6 +164,7 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
     },
   ]
 }
+
 const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.Active]: 'Aktiv',
   [ApplicantStatus.Assigned]: 'Tilldelad',
@@ -173,6 +174,7 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.Offered]: 'Erbjuden plats',
   [ApplicantStatus.OfferAccepted]: 'Erbjudande accepterat',
   [ApplicantStatus.OfferDeclined]: 'Erbjudande nekat',
+  [ApplicantStatus.OfferExpired]: 'Erbjudande utgånget',
 }
 
 const formatApplicantStatus = (v: ApplicantStatus) =>

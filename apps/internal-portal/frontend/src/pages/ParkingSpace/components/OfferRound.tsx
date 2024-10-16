@@ -127,6 +127,7 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.Offered]: 'Erbjuden plats',
   [ApplicantStatus.OfferAccepted]: 'Erbjudande accepterat',
   [ApplicantStatus.OfferDeclined]: 'Erbjudande nekat',
+  [ApplicantStatus.OfferExpired]: 'Erbjudande utgånget',
 }
 
 const formatApplicantStatus = (v: ApplicantStatus) =>
