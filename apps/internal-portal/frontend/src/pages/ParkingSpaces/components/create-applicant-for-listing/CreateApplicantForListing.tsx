@@ -20,9 +20,9 @@ import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 import { GridColDef } from '@mui/x-data-grid'
 
 import {
-  CreateApplicantRequestParams,
-  useCreateApplicantForListing,
-} from '../../hooks/useCreateApplicantForListing'
+  CreateNoteOfInterestRequestParams,
+  useCreateNoteOfInterest,
+} from '../../hooks/useCreateNoteOfInterest'
 import { SearchContact } from './SearchContact'
 import { ListingInfo } from './ListingInfo'
 import { ContactSearchData } from './types'
@@ -39,7 +39,7 @@ export interface Props {
 }
 
 export const CreateApplicantForListing = (props: Props) => {
-  const createApplicant = useCreateApplicantForListing(props.listing.id)
+  const createNoteOfInterest = useCreateNoteOfInterest(props.listing.id)
   const [open, setOpen] = useState(false)
   const [selectedContact, setSelectedContact] =
     useState<ContactSearchData | null>(null)
@@ -55,8 +55,8 @@ export const CreateApplicantForListing = (props: Props) => {
     props.listing.rentalObjectCode
   )
 
-  const onCreate = (params: CreateApplicantRequestParams) =>
-    createApplicant.mutate(params, {
+  const onCreate = (params: CreateNoteOfInterestRequestParams) =>
+    createNoteOfInterest.mutate(params, {
       onSuccess: () => {
         onCloseModal()
         toast('Intresseanmälan skapad', {
@@ -105,8 +105,11 @@ export const CreateApplicantForListing = (props: Props) => {
         fullWidth
         TransitionProps={{ exit: false }}
       >
-        {createApplicant.error ? (
-          <CreateApplicantError reset={createApplicant.reset} />
+        {createNoteOfInterest.error ? (
+          <CreateApplicantError
+            reset={createNoteOfInterest.reset}
+            error={createNoteOfInterest.error.errorMessage}
+          />
         ) : (
           <Box paddingTop="0.5rem">
             <Box display="flex">
@@ -215,7 +218,7 @@ export const CreateApplicantForListing = (props: Props) => {
                     disabled={
                       tenantQuery.data.validationResult === 'no-contract'
                     }
-                    loading={createApplicant.isPending}
+                    loading={createNoteOfInterest.isPending}
                     variant="dark"
                     onClick={() =>
                       onCreate({
@@ -315,7 +318,7 @@ const Leases = (props: { leases: Lease[] }) => (
   />
 )
 
-const CreateApplicantError = (props: { reset: () => void }) => (
+const CreateApplicantError = (props: { reset: () => void; error: string }) => (
   <Box
     padding="1rem"
     height="250px"
@@ -327,7 +330,7 @@ const CreateApplicantError = (props: { reset: () => void }) => (
     <Typography textAlign="center" variant="h1">
       Något gick fel...
     </Typography>
-    <Box>Försök igen eller kontakta support</Box>
+    <Box>{props.error}</Box>
     <Box paddingTop="2rem">
       <Button variant="dark-outlined" onClick={props.reset}>
         Försök igen
