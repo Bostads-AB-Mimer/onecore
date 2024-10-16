@@ -7,6 +7,7 @@ import {
 } from 'onecore-types'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { match, P } from 'ts-pattern'
 
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
@@ -360,9 +361,17 @@ export const routes = (router: KoaRouter) => {
    * /listings-with-applicants:
    *   get:
    *     summary: Get listings with applicants
-   *     description: Fetches all listings that have associated applicants.
+   *     description: Fetches all listings with their associated applicants.
    *     tags:
    *       - Listings
+   *     parameters:
+   *       - in: query
+   *         name: type
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [published, ready-for-offer, offered, historical]
+   *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
    *         description: Successfully retrieved listings with applicants.
@@ -403,19 +412,31 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    try {
-      const listingsWithApplicants =
-        await listingAdapter.getAllListingsWithApplicants()
-      ctx.status = 200
-      ctx.body = { content: listingsWithApplicants, ...metadata }
-    } catch (error) {
-      logger.error(error, 'Error fetching listings with applicants:')
-      ctx.status = 500 // Internal Server Error
+    const opts = match(ctx.query.type)
+      .with(
+        P.union('published', 'ready-for-offer', 'offered', 'historical'),
+        (type) => ({ by: { type } })
+      )
+      .otherwise(() => undefined)
+
+    const listingsWithApplicants =
+      await listingAdapter.getListingsWithApplicants(opts)
+
+    if (!listingsWithApplicants.ok) {
+      logger.error(
+        listingsWithApplicants.err,
+        'Error fetching listings with applicants:'
+      )
+      ctx.status = 500
       ctx.body = {
         error: 'An error occurred while fetching listings with applicants.',
         ...metadata,
       }
+      return
     }
+
+    ctx.status = 200
+    ctx.body = { content: listingsWithApplicants.data, ...metadata }
   })
 
   router.post('/listings/sync-internal-from-xpand', async (ctx) => {

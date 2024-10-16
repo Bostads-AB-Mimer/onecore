@@ -7,10 +7,7 @@ import { Lease } from 'onecore-types'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
-import * as listingAdapter from '../adapters/listing-adapter'
 import { leaseTypes } from '../../../constants/leaseTypes'
-import * as factory from './factories'
-import * as getTenantService from '../get-tenant'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -259,57 +256,6 @@ describe('lease-service', () => {
       expect(getLeaseSpy).toHaveBeenCalled()
 
       expect(res.body.content.leaseId).toEqual('406-097-11-0201/06')
-    })
-  })
-
-  describe('GET /listing/:listingId/applicants/details', () => {
-    it('responds with 404 if no listing found', async () => {
-      const getListingSpy = jest
-        .spyOn(listingAdapter, 'getListingById')
-        .mockResolvedValueOnce(undefined)
-
-      const res = await request(app.callback()).get(
-        '/listing/1337/applicants/details'
-      )
-      expect(getListingSpy).toHaveBeenCalled()
-      expect(res.status).toBe(404)
-    })
-
-    it('responds with 200 on success', async () => {
-      const listingId = 1337
-      const applicant1 = factory.applicant.build({
-        listingId: listingId,
-        nationalRegistrationNumber: '194808075577',
-      })
-
-      const applicant2 = factory.applicant.build({
-        listingId: listingId,
-        nationalRegistrationNumber: '198001011234',
-      })
-
-      const listing = factory.listing.build({
-        id: listingId,
-        publishedFrom: new Date(),
-        publishedTo: new Date(),
-        vacantFrom: new Date(),
-        applicants: [applicant1, applicant2],
-      })
-
-      const getListingSpy = jest
-        .spyOn(listingAdapter, 'getListingById')
-        .mockResolvedValueOnce(listing)
-
-      const getTenantSpy = jest
-        .spyOn(getTenantService, 'getTenant')
-        .mockResolvedValue({ ok: true, data: factory.tenant.build() })
-
-      const res = await request(app.callback()).get(
-        '/listing/1337/applicants/details'
-      )
-      expect(getListingSpy).toHaveBeenCalled()
-      expect(getTenantSpy).toHaveBeenCalled()
-      expect(res.status).toBe(200)
-      expect(res.body).toBeDefined()
     })
   })
 

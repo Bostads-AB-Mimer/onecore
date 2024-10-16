@@ -4,12 +4,14 @@ import {
   Listing,
   ApplicantStatus,
   ListingStatus,
+  GetListingsWithApplicantsFilterParams,
 } from 'onecore-types'
+import { RequestError } from 'tedious'
+import { Knex } from 'knex'
+import { match } from 'ts-pattern'
 
 import { db } from './db'
 import { AdapterResult, DbApplicant, DbListing } from './types'
-import { RequestError } from 'tedious'
-import { Knex } from 'knex'
 
 function transformFromDbListing(row: DbListing): Listing {
   return {
@@ -248,48 +250,88 @@ const updateApplicantStatus = async (
   }
 }
 
-const getAllListingsWithApplicants = async (): Promise<Array<Listing>> => {
-  const query = db
-    .from('listing AS l')
-    .select<Array<DbListing & { applicants: string | null }>>(
-      'l.*',
-      db.raw(`
-      (
-        SELECT a.*
-        FROM applicant a
-        WHERE a.ListingId = l.Id
-        FOR JSON PATH
-      ) as applicants
-    `)
+const getListingsWithApplicants = async (
+  opts?: GetListingsWithApplicantsFilterParams
+): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
+  try {
+    const whereClause = match(opts?.by)
+      .with({ type: 'published' }, () =>
+        db.raw('WHERE l.Status = ?', [ListingStatus.Active])
+      )
+      .with({ type: 'historical' }, () =>
+        db.raw('WHERE l.Status = ?', [ListingStatus.Assigned])
+      )
+      .with({ type: 'ready-for-offer' }, () =>
+        db.raw(
+          `WHERE l.Status = ? 
+          AND NOT EXISTS (
+            SELECT 1
+            FROM offer o
+            WHERE o.ListingId = l.Id
+          )`,
+          [ListingStatus.Expired]
+        )
+      )
+      .with({ type: 'offered' }, () =>
+        db.raw(
+          `WHERE l.Status = ? 
+          AND EXISTS (
+            SELECT 1
+            FROM offer o
+            WHERE o.ListingId = l.Id
+          )`,
+          [ListingStatus.Expired]
+        )
+      )
+      .otherwise(() => db.raw('WHERE 1=1'))
+
+    const listings = db.raw<Array<DbListing & { applicants: string | null }>>(
+      `
+        SELECT l.*,
+        (
+          SELECT a.*
+          FROM applicant a
+          WHERE a.ListingId = l.Id
+          FOR JSON PATH
+        ) as applicants
+        FROM listing l
+        ${whereClause}
+      `
     )
 
-  const parseApplicantsJson = (applicants: string | null) =>
-    applicants ? JSON.parse(applicants) : []
+    const parseApplicantsJson = (applicants: string | null) =>
+      applicants ? JSON.parse(applicants) : []
 
-  const parseApplicantsApplicationDate = (applicant: Applicant): Applicant => ({
-    ...applicant,
-    applicationDate: new Date(applicant.applicationDate),
-  })
-
-  const transformListing = (
-    row: DbListing & { applicants: Array<DbApplicant> }
-  ): Listing => ({
-    ...transformFromDbListing(row),
-    applicants: row.applicants
-      .map(transformDbApplicant)
-      .map(parseApplicantsApplicationDate),
-  })
-
-  const result = await query.then((rows) =>
-    rows.map((row) => {
-      return transformListing({
-        ...row,
-        applicants: parseApplicantsJson(row.applicants),
-      })
+    const parseApplicantsApplicationDate = (
+      applicant: Applicant
+    ): Applicant => ({
+      ...applicant,
+      applicationDate: new Date(applicant.applicationDate),
     })
-  )
 
-  return result
+    const transformListing = (
+      row: DbListing & { applicants: Array<DbApplicant> }
+    ): Listing => ({
+      ...transformFromDbListing(row),
+      applicants: row.applicants
+        .map(transformDbApplicant)
+        .map(parseApplicantsApplicationDate),
+    })
+
+    const result = await listings.then((rows) =>
+      rows.map((row) =>
+        transformListing({
+          ...row,
+          applicants: parseApplicantsJson(row.applicants),
+        })
+      )
+    )
+
+    return { ok: true, data: result }
+  } catch (err) {
+    logger.error(err, 'listingAdapter.getListingsWithApplicants')
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 /**
@@ -403,7 +445,7 @@ export {
   createApplication,
   getListingById,
   getListingByRentalObjectCode,
-  getAllListingsWithApplicants,
+  getListingsWithApplicants,
   getApplicantById,
   getApplicantsByContactCode,
   getApplicantByContactCodeAndListingId,

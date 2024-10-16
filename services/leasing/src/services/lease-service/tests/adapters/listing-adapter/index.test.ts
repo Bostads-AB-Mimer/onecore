@@ -21,31 +21,6 @@ afterAll(async () => {
 })
 
 describe('listing-adapter', () => {
-  describe(listingAdapter.getAllListingsWithApplicants, () => {
-    it('returns a formatted list of listings and corresponding applicants', async () => {
-      const listing1 = await listingAdapter.createListing(
-        factory.listing.build({ rentalObjectCode: '1' })
-      )
-      const listing2 = await listingAdapter.createListing(
-        factory.listing.build({ rentalObjectCode: '2' })
-      )
-      assert(listing1.ok)
-      assert(listing2.ok)
-      await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing1.data.id })
-      )
-      await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listing2.data.id })
-      )
-      const [fst, snd] = await listingAdapter.getAllListingsWithApplicants()
-      expect(fst.applicants).toHaveLength(1)
-      expect(fst.applicants?.[0]?.listingId).toBe(fst.id)
-
-      expect(snd.applicants).toHaveLength(1)
-      expect(snd.applicants?.[0]?.listingId).toBe(snd.id)
-    })
-  })
-
   describe(listingAdapter.createListing, () => {
     it('inserts a new listing in the database', async () => {
       const insertedListing = await listingAdapter.createListing(

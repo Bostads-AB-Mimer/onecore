@@ -49,10 +49,10 @@ describe(listingAdapter.deleteListing, () => {
     assert(listing_2.ok)
 
     const deletion = await listingAdapter.deleteListing(listing_1.data.id)
-    const remainingListings =
-      await listingAdapter.getAllListingsWithApplicants()
+    const remainingListings = await listingAdapter.getListingsWithApplicants()
+    assert(remainingListings.ok)
 
     expect(deletion).toMatchObject({ ok: true })
-    expect(remainingListings).toHaveLength(1)
+    expect(remainingListings.data).toHaveLength(1)
   })
 })
