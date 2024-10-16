@@ -443,4 +443,55 @@ describe('lease-service', () => {
       expect(res.body).toMatchObject({ content: expect.any(Array) })
     })
   })
+
+  describe('GET /listing-with-applicants', () => {
+    const getListingsWithApplicantsSpy = jest.spyOn(
+      tenantLeaseAdapter,
+      'getListingsWithApplicants'
+    )
+
+    beforeEach(jest.resetAllMocks)
+    it('responds with 500 if adapter fails', async () => {
+      getListingsWithApplicantsSpy.mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get(`/listings-with-applicants`)
+
+      expect(res.status).toBe(500)
+      expect(getListingsWithApplicantsSpy).toHaveBeenCalled()
+      expect(res.body).toMatchObject({ error: expect.any(String) })
+    })
+
+    it('responds with 200 and listings', async () => {
+      getListingsWithApplicantsSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+
+      const res = await request(app.callback()).get(`/listings-with-applicants`)
+
+      expect(res.status).toBe(200)
+      expect(getListingsWithApplicantsSpy).toHaveBeenCalled()
+      expect(res.body).toMatchObject({ content: expect.any(Array) })
+    })
+
+    it('passes along query params', async () => {
+      getListingsWithApplicantsSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+
+      const res = await request(app.callback()).get(
+        `/listings-with-applicants?type=published`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getListingsWithApplicantsSpy).toHaveBeenCalledWith(
+        'type=published'
+      )
+      expect(res.body).toMatchObject({ content: expect.any(Array) })
+    })
+  })
 })

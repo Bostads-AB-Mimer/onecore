@@ -18,8 +18,6 @@ import {
   DetailedOffer,
   Tenant,
   InternalParkingSpaceSyncSuccessResponse,
-  LeaseStatus,
-  OfferStatus,
   CreateOfferParams,
   OfferWithOfferApplicants,
 } from 'onecore-types'
@@ -378,12 +376,12 @@ const getListingByRentalObjectCode = async (
   }
 }
 
-const getListingsWithApplicants = async (): Promise<
-  AdapterResult<any[] | undefined, 'unknown'>
-> => {
+const getListingsWithApplicants = async (
+  querystring: string
+): Promise<AdapterResult<Listing[], 'unknown'>> => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings-with-applicants`
+      `${tenantsLeasesServiceUrl}/listings-with-applicants?${querystring}`
     )
     return { ok: true, data: response.data.content }
   } catch (error) {

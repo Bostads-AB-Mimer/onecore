@@ -538,6 +538,14 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Lease service
    *     description: Retrieves a list of listings along with their associated applicants.
+   *     parameters:
+   *       - in: query
+   *         name: type
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [published, ready-for-offer, offered, historical]
+   *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
    *         description: Successful response with listings and their applicants.
@@ -552,9 +560,12 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+
   router.get('/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.getListingsWithApplicants()
+    const result = await leasingAdapter.getListingsWithApplicants(
+      ctx.querystring
+    )
 
     if (!result.ok) {
       ctx.status = 500
