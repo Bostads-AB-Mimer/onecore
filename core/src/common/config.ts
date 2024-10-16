@@ -37,6 +37,7 @@ export interface Config {
   emailAddresses: {
     leasing: string
     tenantDefault: string
+    dev: string
   }
   health: {
     leasing: {

@@ -24,6 +24,8 @@ We utilize `koa2-swagger-ui` and `swagger-jsdoc` for documenting our API. Each e
 
 According to .env.template.
 
+`EMAIL_ADDRESSES__DEV`: E-mail address to the dev team. Used for logging process errors
+
 ## Documentation of processes in Core
 
 Each process (/processes) is documented through flowcharts and sequence diagrams to clearly demonstrate what the process does and which underlying services are used during the process. To create flowcharts and sequence diagrams, we're using Mermaid for markdown which makes adjustments and collaboration easy. Diagrams in Mermaid can be viewed on GitHub or with the help of a plugin, such as https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid for VSCode.

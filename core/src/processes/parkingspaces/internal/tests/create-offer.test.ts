@@ -1,4 +1,4 @@
-import { ListingStatus } from 'onecore-types'
+import { CreateOfferErrorCodes, ListingStatus } from 'onecore-types'
 
 import { createOfferForInternalParkingSpace } from '../create-offer'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
@@ -11,6 +11,10 @@ describe('createOfferForInternalParkingSpace', () => {
     jest.clearAllMocks()
   })
 
+  jest
+    .spyOn(communicationAdapter, 'sendNotificationToRole')
+    .mockResolvedValue(null)
+
   it('fails if there is no listing', async () => {
     jest
       .spyOn(leasingAdapter, 'getListingByListingId')
@@ -20,8 +24,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'no-listing',
+      error: CreateOfferErrorCodes.NoListing,
       httpStatus: 500,
+      response: {
+        errorCode: CreateOfferErrorCodes.NoListing,
+        message: 'Listing with id 123 not found',
+      },
     })
   })
 
@@ -36,8 +44,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'listing-not-expired',
+      error: CreateOfferErrorCodes.ListingNotExpired,
       httpStatus: 500,
+      response: {
+        message: 'Listing with id 123 not expired',
+        errorCode: CreateOfferErrorCodes.ListingNotExpired,
+      },
     })
   })
 
@@ -55,8 +67,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'no-applicants',
+      error: CreateOfferErrorCodes.NoApplicants,
       httpStatus: 500,
+      response: {
+        message: 'No eligible applicants found, cannot create new offer',
+        errorCode: CreateOfferErrorCodes.NoApplicants,
+      },
     })
   })
 
@@ -137,8 +153,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'get-contact',
+      error: CreateOfferErrorCodes.NoContact,
       httpStatus: 500,
+      response: {
+        message: 'Could not find contact P158773',
+        errorCode: CreateOfferErrorCodes.NoContact,
+      },
     })
   })
 
@@ -162,8 +182,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'update-applicant-status',
+      error: CreateOfferErrorCodes.UpdateApplicantStatusFailure,
       httpStatus: 500,
+      response: {
+        message: 'Update Applicant Status failed',
+        errorCode: CreateOfferErrorCodes.UpdateApplicantStatusFailure,
+      },
     })
   })
 
@@ -190,8 +214,12 @@ describe('createOfferForInternalParkingSpace', () => {
 
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
-      error: 'create-offer',
+      error: CreateOfferErrorCodes.CreateOfferFailure,
       httpStatus: 500,
+      response: {
+        message: 'Create Offer failed',
+        errorCode: CreateOfferErrorCodes.CreateOfferFailure,
+      },
     })
   })
 

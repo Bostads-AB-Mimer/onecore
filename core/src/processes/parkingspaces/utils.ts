@@ -9,7 +9,7 @@ export const makeProcessError = <E = any>(
   processStatus: ProcessStatus.failed,
   error,
   httpStatus,
-  response,
+  response: { ...response, errorCode: error },
 })
 
 type ValidationResult =

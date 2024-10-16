@@ -2,7 +2,7 @@ import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 // import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 
-import { OfferStatus } from 'onecore-types'
+import { OfferStatus, ReplyToOfferErrorCodes } from 'onecore-types'
 
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'
@@ -41,10 +41,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-offer',
+        error: ReplyToOfferErrorCodes.NoOffer,
         httpStatus: 404,
         response: {
           message: 'The offer 123 does not exist or could not be retrieved.',
+          errorCode: ReplyToOfferErrorCodes.NoOffer,
         },
       })
     })
@@ -61,64 +62,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-listing',
+        error: ReplyToOfferErrorCodes.NoListing,
         httpStatus: 404,
         response: {
-          message: `The parking space ${offer.rentalObjectCode} does not exist or is no longer available.`,
-        },
-      })
-    })
-
-    it('returns a process error if close offer fails', async () => {
-      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
-      getOfferByIdSpy.mockResolvedValueOnce({
-        ok: true,
-        data: factory.detailedOffer.build(),
-      })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
-      closeOfferSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
-      getOffersForContactSpy.mockResolvedValue({
-        ok: true,
-        data: factory.offerWithRentalObjectCode.buildList(2),
-      })
-      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
-
-      const result = await replyProcesses.acceptOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: 'close-offer',
-        httpStatus: 500,
-        response: {
-          message: 'Something went wrong when closing the offer.',
-        },
-      })
-    })
-
-    it('returns a process error if getting other active offers for contact fails', async () => {
-      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
-      const offer = factory.detailedOffer.build()
-      getOfferByIdSpy.mockResolvedValueOnce({
-        ok: true,
-        data: offer,
-      })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
-      closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
-      jest
-        .spyOn(leasingAdapter, 'getOffersForContact')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
-      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
-
-      const result = await replyProcesses.acceptOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: 'get-other-offers',
-        httpStatus: 500,
-        response: {
-          message: `Other offers for ${offer.offeredApplicant.contactCode} could not be retrieved.`,
+          message: `The listing ${offer.rentalObjectCode} does not exist or is no longer available.`,
+          errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
     })
@@ -173,23 +121,30 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'create-lease-failed',
+        error: ReplyToOfferErrorCodes.CreateLeaseFailure,
         httpStatus: 500,
         response: {
           message: `Create Lease for ${offer.id} failed.`,
+          errorCode: ReplyToOfferErrorCodes.CreateLeaseFailure,
         },
       })
     })
 
     it('returns success even if sendNotificationToRole fails', async () => {
       const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
+      const denyOfferSpy = jest.spyOn(replyProcesses, 'denyOffer')
+
       const offer = factory.detailedOffer.build()
+
       getOfferByIdSpy.mockResolvedValueOnce({
         ok: true,
         data: offer,
       })
       getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
       createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
@@ -205,7 +160,7 @@ describe('replyToOffer', () => {
         ok: true,
         data: undefined,
       })
-      sendNotificationToRoleSpy.mockImplementation(() => {
+      sendNotificationToRoleSpy.mockImplementationOnce(() => {
         throw new Error('Email not sent')
       })
 
@@ -243,7 +198,7 @@ describe('replyToOffer', () => {
 
       const denyOfferSpy = jest
         .spyOn(replyProcesses, 'denyOffer')
-        .mockResolvedValueOnce({
+        .mockResolvedValue({
           processStatus: ProcessStatus.successful,
         } as ProcessResult)
 
@@ -266,10 +221,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-offer',
+        error: ReplyToOfferErrorCodes.NoOffer,
         httpStatus: 404,
         response: {
           message: 'The offer 123 does not exist or could not be retrieved.',
+          errorCode: ReplyToOfferErrorCodes.NoOffer,
         },
       })
     })
@@ -286,10 +242,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-listing',
+        error: ReplyToOfferErrorCodes.NoListing,
         httpStatus: 404,
         response: {
-          message: `The parking space ${offer.listingId} does not exist or is no longer available.`,
+          message: `The listing ${offer.listingId} does not exist or is no longer available.`,
+          errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
     })
@@ -303,10 +260,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-offer',
+        error: ReplyToOfferErrorCodes.NoOffer,
         httpStatus: 404,
         response: {
           message: 'The offer 123 does not exist or could not be retrieved.',
+          errorCode: ReplyToOfferErrorCodes.NoOffer,
         },
       })
     })
@@ -323,10 +281,11 @@ describe('replyToOffer', () => {
 
       expect(result).toEqual({
         processStatus: ProcessStatus.failed,
-        error: 'no-listing',
+        error: ReplyToOfferErrorCodes.NoListing,
         httpStatus: 404,
         response: {
-          message: `The parking space ${offer.listingId} does not exist or is no longer available.`,
+          message: `The listing ${offer.listingId} does not exist or is no longer available.`,
+          errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
     })

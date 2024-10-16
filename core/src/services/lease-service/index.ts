@@ -689,7 +689,6 @@ export const routes = (router: KoaRouter) => {
       Number.parseInt(ctx.params.offerId)
     )
 
-    console.log(denyOffer)
     if (denyOffer.processStatus !== ProcessStatus.successful) {
       ctx.status = 500
       ctx.body = { error: denyOffer.error, ...metadata }

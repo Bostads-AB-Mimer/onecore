@@ -1,6 +1,7 @@
 import axios, { AxiosResponse, HttpStatusCode } from 'axios'
 import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
 import { ApplicantStatus, ListingStatus } from 'onecore-types'
@@ -108,6 +109,10 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     })
 
   const validateRentalRules = jest.spyOn(processUtils, 'validateRentalRules')
+
+  jest
+    .spyOn(communicationAdapter, 'sendNotificationToRole')
+    .mockResolvedValue({})
 
   jest.spyOn(leasingAdapter, 'getListingByRentalObjectCode').mockResolvedValue({
     ok: true,
@@ -235,7 +240,11 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       processStatus: ProcessStatus.failed,
       httpStatus: 400,
       error: 'not-allowed-to-rent-additional',
-      response: undefined,
+      response: {
+        message:
+          'Applicant bar is not eligible for renting due to Residential Area Rental Rules',
+        errorCode: 'not-allowed-to-rent-additional',
+      },
     })
   })
 
@@ -504,7 +513,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
         'bar',
         'Additional'
       )
-    console.log(response)
+
     expect(response.processStatus).toBe(ProcessStatus.successful)
     expect(response.response.message).toBe(
       'Applicant bar already has application for foo'
