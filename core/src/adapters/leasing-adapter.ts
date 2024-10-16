@@ -784,6 +784,18 @@ async function closeOfferByDeny(
   return { ok: false, err: 'unknown' }
 }
 
+const handleExpiredOffers = async (): Promise<
+  AdapterResult<null | number[], 'unknown'>
+> => {
+  const res = await axios.put(`${tenantsLeasesServiceUrl}/offers/handleexpired`)
+
+  if (res.status === 200) {
+    return { ok: true, data: res.data.content }
+  } else {
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getLease,
   getLeasesForPnr,
@@ -824,4 +836,5 @@ export {
   closeOfferByAccept,
   getOffersByListingId,
   closeOfferByDeny,
+  handleExpiredOffers,
 }
