@@ -1,5 +1,4 @@
 import KoaRouter from '@koa/router'
-
 import { generateRouteMetadata } from 'onecore-utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
@@ -7,7 +6,7 @@ import * as coreAdapter from './adapters/core-adapter'
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await coreAdapter.getListingsWithApplicants()
+    const result = await coreAdapter.getListingsWithApplicants(ctx.querystring)
     if (!result.ok) {
       ctx.status = 500
       ctx.body = { error: 'Unknown error', ...metadata }

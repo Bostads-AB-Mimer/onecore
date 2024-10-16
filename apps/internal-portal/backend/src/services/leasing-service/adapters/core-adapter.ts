@@ -15,11 +15,11 @@ const coreBaseUrl = Config.core.url
 
 type AdapterResult<T, E> = { ok: false; err: E } | { ok: true; data: T }
 
-const getListingsWithApplicants = async (): Promise<
-  AdapterResult<Array<unknown>, 'unknown'>
-> => {
+const getListingsWithApplicants = async (
+  querystring: string
+): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
   try {
-    const url = `${coreBaseUrl}/listings-with-applicants`
+    const url = `${coreBaseUrl}/listings-with-applicants?${querystring}`
     const listingsResponse = await getFromCore({
       method: 'get',
       url: url,
