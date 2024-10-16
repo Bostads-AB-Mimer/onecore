@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.1...v1.30.2) (2024-10-16)
+
+
+### Features
+
+* mim-144 Enhanced error logging for the processes ([#104](https://github.com/Bostads-AB-Mimer/onecore-types/issues/104)) ([84a214a](https://github.com/Bostads-AB-Mimer/onecore-types/commit/84a214a31d512f4f5bc84c0650c255994573815d))
+
 ## [1.30.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.0...v1.30.1) (2024-10-15)
 
 
