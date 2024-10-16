@@ -11,14 +11,12 @@ import {
   Radio,
   FormControlLabel,
   RadioGroup,
-  Tab as MuiTab,
   Stack,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { Lease, Listing } from 'onecore-types'
 import { toast } from 'react-toastify'
-import { LoadingButton, TabContext, TabList, TabPanel } from '@mui/lab'
-import { styled } from 'styled-components'
+import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 import { GridColDef } from '@mui/x-data-grid'
 
 import {
@@ -33,32 +31,12 @@ import {
   useTenantWithValidation,
 } from '../../hooks/useTenantWithValidation'
 import { ContactInfo } from './ContactInfo'
-import { DataGridTable } from '../../../../components'
+import { DataGridTable, Tab, Tabs } from '../../../../components'
 
 export interface Props {
   listing: Listing
   disabled: boolean
 }
-
-const Tab = styled(MuiTab)(() => ({
-  fontSize: 20,
-  textTransform: 'uppercase',
-  fontFamily: 'bisonBold',
-  fontWeight: 900,
-  letterSpacing: '-0.00833em',
-  color: 'rgba(0, 0, 0, 0.5)',
-  '&.Mui-selected': {
-    color: 'rgba(0, 0, 0, 0.87)',
-  },
-}))
-
-const Tabs = styled(TabList)(() => ({
-  '& .MuiTabs-indicator': {
-    width: '100%',
-    backgroundColor: 'black',
-    height: '3px',
-  },
-}))
 
 export const CreateApplicantForListing = (props: Props) => {
   const createApplicant = useCreateApplicantForListing(props.listing.id)
