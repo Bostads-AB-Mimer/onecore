@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.3...v1.31.0) (2024-10-16)
+
+
+### Features
+
+* add listings with applicants filter params ([#103](https://github.com/Bostads-AB-Mimer/onecore-types/issues/103)) ([ad994f6](https://github.com/Bostads-AB-Mimer/onecore-types/commit/ad994f641be73d9341413ac4762f45c387d2af2f))
+
 ## [1.30.3](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.2...v1.30.3) (2024-10-16)
 
 
