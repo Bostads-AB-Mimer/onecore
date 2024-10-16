@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from 'onecore-utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
+import { CreateNoteOfInterestErrorCodes } from 'onecore-types'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/listings-with-applicants', async (ctx) => {
@@ -180,7 +181,14 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } else {
-      ctx.status = 500
+      if (
+        !result.ok &&
+        result.err === CreateNoteOfInterestErrorCodes.InternalCreditCheckFailed
+      ) {
+        ctx.status = 400
+      } else {
+        ctx.status = 500
+      }
       ctx.body = { error: result.err, ...metadata }
     }
   })
