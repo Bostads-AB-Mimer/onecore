@@ -238,6 +238,29 @@ const createTicket = async (ticket: OdooPostTicket): Promise<number> => {
   return await odoo.create('maintenance.request', ticket)
 }
 
+const closeTicket = async (ticketId: string): Promise<boolean> => {
+  await odoo.connect()
+
+  const doneMaintenanceStages = await odoo.searchRead<{
+    id: number
+  }>(
+    'maintenance.stage',
+    [
+      ['done', '=', true],
+      ['name', '=', 'Avslutad'],
+    ],
+    ['id']
+  )
+
+  if (doneMaintenanceStages.length === 0) {
+    throw new Error('No done maintenance stages found')
+  }
+
+  return await odoo.update('maintenance.request', parseInt(ticketId), {
+    stage_id: doneMaintenanceStages[0].id,
+  })
+}
+
 const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
   await odoo.connect()
 
@@ -256,6 +279,7 @@ const healthCheck = async () => {
 
 export {
   createTicket,
+  closeTicket,
   createRentalPropertyRecord,
   createLeaseRecord,
   createTenantRecord,

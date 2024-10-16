@@ -20,6 +20,7 @@ import {
   getMaintenanceTeamId,
   getTicketByContactCode,
   transformEquipmentCode,
+  closeTicket,
 } from './adapters/odoo-adapter'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 
@@ -641,6 +642,37 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         error: 'Failed to create a new ticket',
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/closeTicket/:ticketId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { ticketId } = ctx.params
+
+    if (!ticketId) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'ticketId is missing from the request URL',
+        ...metadata,
+      }
+
+      return
+    }
+
+    const success = await closeTicket(ticketId)
+
+    if (success) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Ticket with ID ${ticketId} updated successfully`,
+        ...metadata,
+      }
+    } else {
+      ctx.status = 500
+      ctx.body = {
+        message: `Failed to update ticket with ID ${ticketId}`,
         ...metadata,
       }
     }
