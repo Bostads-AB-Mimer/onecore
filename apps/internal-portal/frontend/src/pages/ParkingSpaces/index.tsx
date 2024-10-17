@@ -224,12 +224,12 @@ const getColumns = (
           key={0}
           address={row.address}
           rentalObjectCode={row.rentalObjectCode}
-          disabled={row.status === ListingStatus.Expired}
+          disabled={row.status !== ListingStatus.Active}
           id={row.id}
         />,
         <CreateApplicantForListing
           key={1}
-          disabled={row.status === ListingStatus.Expired}
+          disabled={row.status !== ListingStatus.Active}
           listing={row}
         />,
       ],
