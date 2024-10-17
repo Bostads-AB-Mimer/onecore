@@ -623,7 +623,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /offers/{offerId}/accept:
-   *   get:
+   *   post:
    *     summary: Accept an offer
    *     tags:
    *       - Lease service
@@ -663,7 +663,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /offers/{offerId}/deny:
-   *   get:
+   *   post:
    *     summary: Deny an offer
    *     tags:
    *       - Lease service
