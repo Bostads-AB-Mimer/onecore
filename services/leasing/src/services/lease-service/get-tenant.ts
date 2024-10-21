@@ -25,7 +25,7 @@ export async function getTenant(params: { contactCode: string }) {
   const result = await fetchTenant(params)
   if (!result.ok) {
     logger.error(
-      result,
+      { errorCode: result.err },
       `Failed to fetch tenant by contact code: ${params.contactCode}`
     )
   }
