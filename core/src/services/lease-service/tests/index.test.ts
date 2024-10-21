@@ -256,7 +256,7 @@ describe('lease-service', () => {
 
       const result = await request(app.callback()).post('/offers/123/accept')
 
-      expect(result.status).toBe(500)
+      expect(result.status).toBe(404)
       expect(result.body.error).toBe('no-offer')
     })
   })
@@ -290,7 +290,7 @@ describe('lease-service', () => {
 
       const result = await request(app.callback()).post('/offers/123/deny')
 
-      expect(result.status).toBe(500)
+      expect(result.status).toBe(404)
       expect(result.body.error).toBe('no-offer')
     })
   })
