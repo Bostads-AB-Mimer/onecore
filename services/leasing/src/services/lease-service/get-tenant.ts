@@ -5,6 +5,7 @@ import * as estateCodeAdapter from './adapters/xpand/estate-code-adapter'
 import * as tenantLeaseAdapter from './adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from './adapters/xpand/xpand-soap-adapter'
 import * as priorityListService from './priority-list-service'
+import { logger } from 'onecore-utilities'
 
 type GetTenantError =
   | 'get-contact'
@@ -20,7 +21,19 @@ type GetTenantError =
 
 type NonEmptyArray<T> = [T, ...T[]]
 
-export async function getTenant(params: {
+export async function getTenant(params: { contactCode: string }) {
+  const result = await fetchTenant(params)
+  if (!result.ok) {
+    logger.error(
+      result,
+      `Failed to fetch tenant by contact code: ${params.contactCode}`
+    )
+  }
+
+  return result
+}
+
+async function fetchTenant(params: {
   contactCode: string
 }): Promise<AdapterResult<Tenant, GetTenantError>> {
   const contact = await tenantLeaseAdapter.getContactByContactCode(
