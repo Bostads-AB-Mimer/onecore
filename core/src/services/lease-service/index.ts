@@ -656,8 +656,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    ctx.status = result.httpStatus
-    ctx.body = { error: result.response, ...metadata }
+    ctx.status = 500
+    ctx.body = { error: result.error, ...metadata }
   })
 
   /**
@@ -690,8 +690,8 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (denyOffer.processStatus !== ProcessStatus.successful) {
-      ctx.status = denyOffer.httpStatus
-      ctx.body = { error: denyOffer.response, ...metadata }
+      ctx.status = 500
+      ctx.body = { error: denyOffer.error, ...metadata }
       return
     }
 
