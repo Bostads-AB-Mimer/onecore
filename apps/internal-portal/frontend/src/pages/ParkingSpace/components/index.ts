@@ -1,4 +1,4 @@
-export * from './RemoveApplicantFromListing'
+export * from './ApplicantActions'
 export * from './Applicants'
 export * from './ParkingSpaceInfo'
 export * from './ApplicantsLoading'
