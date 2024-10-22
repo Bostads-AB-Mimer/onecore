@@ -264,11 +264,17 @@ const getListingsWithApplicants = async (
       .with({ type: 'ready-for-offer' }, () =>
         db.raw(
           `WHERE l.Status = ? 
+          AND EXISTS (
+            SELECT 1
+            FROM applicant a
+            WHERE a.ListingId = l.Id
+          )
           AND NOT EXISTS (
             SELECT 1
             FROM offer o
             WHERE o.ListingId = l.Id
-          )`,
+          )
+          `,
           [ListingStatus.Expired]
         )
       )

@@ -93,7 +93,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
 
       assert(listingWithOffer.ok)
       const applicant = await listingAdapter.createApplication(
-        factory.applicant.build({ listingId: listingWithOffer.data.id })
+        factory.applicant.build({ listingId: listingWithoutOffer.data.id })
       )
 
       const expiredListingOffer = await offerAdapter.create(db, {
@@ -118,6 +118,40 @@ describe(listingAdapter.getListingsWithApplicants, () => {
 
       expect(listings.data).toEqual([
         expect.objectContaining({ id: listingWithoutOffer.data.id }),
+      ])
+    })
+
+    it('ready-for-offer listings has applicants', async () => {
+      const listingWithApplicants = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Expired,
+        })
+      )
+
+      assert(listingWithApplicants.ok)
+      const listingWithoutApplicants = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '2',
+          status: ListingStatus.Expired,
+        })
+      )
+
+      assert(listingWithoutApplicants.ok)
+      const applicant = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listingWithApplicants.data.id })
+      )
+
+      assert(applicant)
+
+      const listings = await listingAdapter.getListingsWithApplicants({
+        by: { type: 'ready-for-offer' },
+      })
+
+      assert(listings.ok)
+
+      expect(listings.data).toEqual([
+        expect.objectContaining({ id: listingWithApplicants.data.id }),
       ])
     })
 
