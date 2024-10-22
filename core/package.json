@@ -72,6 +72,7 @@
     "pino-elasticsearch": "^8.0.0",
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.0.0",
+    "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8"
   }
 }

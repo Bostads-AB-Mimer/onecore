@@ -21,6 +21,7 @@ import {
   getTicketByContactCode,
   transformEquipmentCode,
   closeTicket,
+  addMessageToTicket,
 } from './adapters/odoo-adapter'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 
@@ -651,7 +652,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { ticketId } = ctx.params
 
-    if (!ticketId) {
+    if (ticketId === undefined) {
       ctx.status = 400
       ctx.body = {
         reason: 'ticketId is missing from the request URL',
@@ -661,7 +662,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const success = await closeTicket(ticketId)
+    const success = await closeTicket(parseInt(ticketId))
 
     if (success) {
       ctx.status = 200
@@ -673,6 +674,50 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         message: `Failed to update ticket with ID ${ticketId}`,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/updateTicket/:ticketId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { ticketId } = ctx.params
+    const { message } = ctx.request.body
+
+    if (ticketId === undefined) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'ticketId is missing from the request URL',
+        ...metadata,
+      }
+
+      return
+    }
+
+    if (!message) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'message is missing from the request body',
+        ...metadata,
+      }
+
+      return
+    }
+
+    try {
+      await addMessageToTicket(parseInt(ticketId), { body: message })
+
+      ctx.status = 200
+      ctx.body = {
+        message: `Message added to ticket with ID ${ticketId}`,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error adding message to ticket')
+
+      ctx.status = 500
+      ctx.body = {
+        message: `Failed to add message to ticket with ID ${ticketId}`,
         ...metadata,
       }
     }

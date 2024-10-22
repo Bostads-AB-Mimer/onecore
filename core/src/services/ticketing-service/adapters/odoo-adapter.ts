@@ -1,4 +1,5 @@
 import Odoo from 'odoo-await'
+import striptags from 'striptags'
 import Config from '../../../common/config'
 import {
   ApartmentInfo,
@@ -49,6 +50,10 @@ interface OdooPostTicketImage {
   Filename: string
   ImageType: number
   Base64String: string
+}
+
+interface OdooAddMessage {
+  body: string
 }
 
 const odoo = new Odoo({
@@ -238,7 +243,7 @@ const createTicket = async (ticket: OdooPostTicket): Promise<number> => {
   return await odoo.create('maintenance.request', ticket)
 }
 
-const closeTicket = async (ticketId: string): Promise<boolean> => {
+const closeTicket = async (ticketId: number): Promise<boolean> => {
   await odoo.connect()
 
   const doneMaintenanceStages = await odoo.searchRead<{
@@ -256,8 +261,21 @@ const closeTicket = async (ticketId: string): Promise<boolean> => {
     throw new Error('No done maintenance stages found')
   }
 
-  return await odoo.update('maintenance.request', parseInt(ticketId), {
+  return await odoo.update('maintenance.request', ticketId, {
     stage_id: doneMaintenanceStages[0].id,
+  })
+}
+
+const addMessageToTicket = async (
+  ticketId: number,
+  message: OdooAddMessage
+): Promise<number> => {
+  await odoo.connect()
+  return await odoo.create('mail.message', {
+    res_id: ticketId,
+    model: 'maintenance.request',
+    body: striptags(message.body).replaceAll('\n', '<br>'),
+    message_type: 'notification',
   })
 }
 
@@ -280,6 +298,7 @@ const healthCheck = async () => {
 export {
   createTicket,
   closeTicket,
+  addMessageToTicket,
   createRentalPropertyRecord,
   createLeaseRecord,
   createTenantRecord,
