@@ -59,6 +59,8 @@ export const routes = (router: KoaRouter) => {
       const existingListing = await listingAdapter.getListingByRentalObjectCode(
         listingData.rentalObjectCode
       )
+      // TODO: Shouldn't we be able to add a listing with the same
+      // rentalObjectCode if the existing listing is not active?
       if (
         existingListing != null &&
         existingListing.rentalObjectCode === listingData.rentalObjectCode
@@ -73,10 +75,29 @@ export const routes = (router: KoaRouter) => {
 
       const listing = await listingAdapter.createListing(listingData)
 
-      ctx.status = 201 // HTTP status code for Created
-      ctx.body = { content: listing, ...metadata }
+      if (!listing.ok) {
+        if (listing.err === 'conflict-active-listing') {
+          ctx.status = 409
+          ctx.body = {
+            reason: 'Active listing already exists for this rentalObjectCode',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: 'Internal server error',
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = { content: listing.data, ...metadata }
     } catch (error) {
-      ctx.status = 500 // Internal Server Error
+      ctx.status = 500
 
       if (error instanceof Error) {
         ctx.body = { error: error.message, ...metadata }
