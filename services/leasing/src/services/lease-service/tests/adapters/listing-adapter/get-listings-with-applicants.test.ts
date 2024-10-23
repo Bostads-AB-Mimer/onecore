@@ -201,6 +201,66 @@ describe(listingAdapter.getListingsWithApplicants, () => {
       ])
     })
 
+    it('offered listings has active offer', async () => {
+      const listingWithExpiredOffer = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Expired,
+        })
+      )
+      assert(listingWithExpiredOffer.ok)
+
+      const listingWithActiveOffer = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '2',
+          status: ListingStatus.Expired,
+        })
+      )
+      assert(listingWithActiveOffer.ok)
+
+      const applicant = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listingWithActiveOffer.data.id })
+      )
+
+      const expiredOffer = await offerAdapter.create(db, {
+        applicantId: applicant.id,
+        expiresAt: new Date('1970-01-01'),
+        listingId: listingWithExpiredOffer.data.id,
+        status: OfferStatus.Expired,
+        selectedApplicants: [
+          factory.offerApplicant.build({
+            applicantId: applicant.id,
+            listingId: listingWithExpiredOffer.data.id,
+          }),
+        ],
+      })
+
+      const activeOffer = await offerAdapter.create(db, {
+        applicantId: applicant.id,
+        expiresAt: new Date(),
+        listingId: listingWithActiveOffer.data.id,
+        status: OfferStatus.Active,
+        selectedApplicants: [
+          factory.offerApplicant.build({
+            applicantId: applicant.id,
+            listingId: listingWithActiveOffer.data.id,
+          }),
+        ],
+      })
+
+      assert(expiredOffer.ok)
+      assert(activeOffer.ok)
+
+      const listings = await listingAdapter.getListingsWithApplicants({
+        by: { type: 'offered' },
+      })
+      assert(listings.ok)
+
+      expect(listings.data).toEqual([
+        expect.objectContaining({ id: listingWithActiveOffer.data.id }),
+      ])
+    })
+
     it('only gets historical listings', async () => {
       const activeListing = await listingAdapter.createListing(
         factory.listing.build({

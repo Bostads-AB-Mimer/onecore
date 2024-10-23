@@ -5,6 +5,7 @@ import {
   ApplicantStatus,
   ListingStatus,
   GetListingsWithApplicantsFilterParams,
+  OfferStatus,
 } from 'onecore-types'
 import { RequestError } from 'tedious'
 import { Knex } from 'knex'
@@ -285,8 +286,9 @@ const getListingsWithApplicants = async (
             SELECT 1
             FROM offer o
             WHERE o.ListingId = l.Id
+            AND o.Status = ?
           )`,
-          [ListingStatus.Expired]
+          [ListingStatus.Expired, OfferStatus.Active]
         )
       )
       .otherwise(() => db.raw('WHERE 1=1'))

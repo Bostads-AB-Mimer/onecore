@@ -8,7 +8,7 @@ import {
   OfferWithOfferApplicants,
   CreateOfferParams,
 } from 'onecore-types'
-import { loggedAxios, logger } from 'onecore-utilities'
+import { logger } from 'onecore-utilities'
 import { Knex } from 'knex'
 
 import { db } from './db'
@@ -448,6 +448,66 @@ export async function getOffersWithOfferApplicantsByListingId(
     }
   } catch (err) {
     logger.error(err, 'Error getting offers by listing ID')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getActiveOfferByListingId(
+  db: Knex,
+  listingId: number
+): Promise<AdapterResult<Offer | null, 'unknown'>> {
+  try {
+    const [row] = await db.raw<
+      Array<
+        | (DbOffer & {
+            offeredApplicant: string
+          })
+        | null
+      >
+    >(
+      `
+      SELECT TOP 1 o.*,
+      (
+        SELECT a.*
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      ) AS offeredApplicant
+      FROM offer o
+      INNER JOIN applicant a ON o.ApplicantId = a.Id
+      WHERE o.ListingId = ? AND o.Status = ?
+    `,
+      [listingId, OfferStatus.Active]
+    )
+
+    if (!row) {
+      return { ok: true, data: null }
+    }
+
+    const offeredApplicant = JSON.parse(row.offeredApplicant) as DbApplicant
+    return {
+      ok: true,
+      data: {
+        id: row.Id,
+        sentAt: row.SentAt,
+        expiresAt: row.ExpiresAt,
+        answeredAt: row.AnsweredAt,
+        status: row.Status,
+        listingId: row.ListingId,
+        createdAt: row.CreatedAt,
+        offeredApplicant: {
+          id: offeredApplicant.Id,
+          name: offeredApplicant.Name,
+          listingId: offeredApplicant.ListingId,
+          status: offeredApplicant.Status,
+          applicationType: offeredApplicant.ApplicationType ?? undefined,
+          applicationDate: new Date(offeredApplicant.ApplicationDate),
+          contactCode: offeredApplicant.ContactCode,
+          nationalRegistrationNumber:
+            offeredApplicant.NationalRegistrationNumber,
+        },
+      },
+    }
+  } catch (err) {
+    logger.error(err, 'offerAdapter.getActiveOfferByListingId')
     return { ok: false, err: 'unknown' }
   }
 }

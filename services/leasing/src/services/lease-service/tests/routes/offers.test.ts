@@ -360,4 +360,34 @@ describe('offers', () => {
       expect(res.body).toMatchObject({ error: expect.any(String) })
     })
   })
+
+  describe('GET /offers/listing-id/:listingId/active', () => {
+    it('responds with 404 if not found', async () => {
+      jest
+        .spyOn(offerAdapter, 'getActiveOfferByListingId')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).get(
+        `/offers/listing-id/1/active`
+      )
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  it('returns an active offer', async () => {
+    const tempOffer = factory.offer.build({ status: OfferStatus.Declined })
+    const offer = { ...tempOffer, selectedApplicants: [] }
+
+    jest
+      .spyOn(offerAdapter, 'getActiveOfferByListingId')
+      .mockResolvedValueOnce({ ok: true, data: offer })
+
+    const res = await request(app.callback()).get(`/offers/listing-id/1/active`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      content: expect.objectContaining({ id: expect.any(Number) }),
+    })
+  })
 })
