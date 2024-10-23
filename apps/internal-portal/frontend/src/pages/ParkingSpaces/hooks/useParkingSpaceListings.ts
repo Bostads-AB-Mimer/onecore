@@ -1,13 +1,19 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import { GetListingWithApplicantFilterByType, Listing } from 'onecore-types'
+import {
+  GetListingWithApplicantFilterByType,
+  Listing,
+  Offer,
+} from 'onecore-types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
+
+export type ListingWithOffer = Listing & { offer: Offer }
 
 export const useParkingSpaceListings = (
   type: GetListingWithApplicantFilterByType
 ) =>
-  useQuery<Array<Listing>, AxiosError>({
+  useQuery<Array<ListingWithOffer>, AxiosError>({
     queryKey: ['parkingSpaceListings', type],
     queryFn: () =>
       axios

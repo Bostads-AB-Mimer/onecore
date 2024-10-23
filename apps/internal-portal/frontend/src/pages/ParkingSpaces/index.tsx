@@ -11,7 +11,10 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { TabContext, TabPanel } from '@mui/lab'
 
 import { DataGridTable, SearchBar, Tab, Tabs } from '../../components'
-import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
+import {
+  ListingWithOffer,
+  useParkingSpaceListings,
+} from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
 import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
@@ -99,7 +102,7 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter)}
+              columns={getOfferedColumns(dateFormatter, numberFormatter)}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="offered"
@@ -141,7 +144,7 @@ const Listings = (props: {
         </Stack>
       ),
     }}
-    columns={props.columns}
+    columns={props.columns.concat(getActionColumns())}
     rows={props.rows}
     getRowId={(row) => row.id}
     loading={props.loading}
@@ -156,10 +159,66 @@ const sharedColumnProps = {
   flex: 1,
 }
 
+const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
+  return [
+    {
+      field: 'actions',
+      type: 'actions',
+      flex: 1,
+      minWidth: 250,
+      cellClassName: 'actions',
+      getActions: ({ row }) => [
+        <DeleteListing
+          key={0}
+          address={row.address}
+          rentalObjectCode={row.rentalObjectCode}
+          disabled={row.status !== ListingStatus.Active}
+          id={row.id}
+        />,
+        <CreateApplicantForListing
+          key={1}
+          disabled={row.status !== ListingStatus.Active}
+          listing={row}
+        />,
+      ],
+    },
+    {
+      field: 'action-link',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      flex: 0.5,
+      disableColumnMenu: true,
+      renderCell: (v) => (
+        <Link to={`/parkingspace/${v.id}`}>
+          <IconButton sx={{ color: 'black' }}>
+            <Chevron />
+          </IconButton>
+        </Link>
+      ),
+    },
+  ]
+}
+
+const getOfferedColumns = (
+  dateFormatter: Intl.DateTimeFormat,
+  numberFormatter: Intl.NumberFormat
+) =>
+  getColumns(dateFormatter, numberFormatter).concat([
+    {
+      field: 'offer.expiresAt',
+      headerName: 'Sista svarsdatum',
+      ...sharedColumnProps,
+      valueGetter: (v) => v.row.offer?.expiresAt,
+      valueFormatter: (v) =>
+        v.value ? dateFormatter.format(new Date(v.value)) : 'N/A',
+    },
+  ])
+
 const getColumns = (
   dateFormatter: Intl.DateTimeFormat,
   numberFormatter: Intl.NumberFormat
-): Array<GridColDef<Listing>> => {
+): Array<GridColDef<ListingWithOffer>> => {
   return [
     {
       field: 'address',
@@ -212,42 +271,6 @@ const getColumns = (
       headerName: 'Ledig FR.O.M',
       ...sharedColumnProps,
       valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
-    },
-    {
-      field: 'actions',
-      type: 'actions',
-      flex: 1,
-      minWidth: 250,
-      cellClassName: 'actions',
-      getActions: ({ row }) => [
-        <DeleteListing
-          key={0}
-          address={row.address}
-          rentalObjectCode={row.rentalObjectCode}
-          disabled={row.status !== ListingStatus.Active}
-          id={row.id}
-        />,
-        <CreateApplicantForListing
-          key={1}
-          disabled={row.status !== ListingStatus.Active}
-          listing={row}
-        />,
-      ],
-    },
-    {
-      field: 'action-link',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      flex: 0.5,
-      disableColumnMenu: true,
-      renderCell: (v) => (
-        <Link to={`/parkingspace/${v.id}`}>
-          <IconButton sx={{ color: 'black' }}>
-            <Chevron />
-          </IconButton>
-        </Link>
-      ),
     },
   ]
 }
