@@ -45,34 +45,14 @@ export const routes = (router: KoaRouter) => {
    *               items:
    *                 type: object
    *       409:
-   *         description: Conflict. Listing with the same rentalObjectCode already exists.
+   *         description: Conflict. Active listing with the same rentalObjectCode already exists.
    *       500:
    *         description: Internal server error. Failed to create listing.
    */
-  //todo: test cases to write:
-  //can add listing
-  //cannot add duplicate listing
   router.post('(.*)/listings', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingData = <Listing>ctx.request.body
-      const existingListing = await listingAdapter.getListingByRentalObjectCode(
-        listingData.rentalObjectCode
-      )
-      // TODO: Shouldn't we be able to add a listing with the same
-      // rentalObjectCode if the existing listing is not active?
-      if (
-        existingListing != null &&
-        existingListing.rentalObjectCode === listingData.rentalObjectCode
-      ) {
-        ctx.status = 409
-        ctx.body = {
-          error: 'Listing with the same rentalObjectCode already exists.',
-          ...metadata,
-        }
-        return
-      }
-
       const listing = await listingAdapter.createListing(listingData)
 
       if (!listing.ok) {

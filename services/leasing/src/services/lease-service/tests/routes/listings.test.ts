@@ -125,31 +125,21 @@ describe('GET /listings-with-applicants', () => {
 
 describe('POST /listings', () => {
   it('responds with 409 if active listing already exists', async () => {
-    const getListingSpy = jest
-      .spyOn(listingAdapter, 'getListingByRentalObjectCode')
-      .mockResolvedValueOnce(undefined)
-
     jest
       .spyOn(listingAdapter, 'createListing')
       .mockResolvedValueOnce({ ok: false, err: 'conflict-active-listing' })
 
     const res = await request(app.callback()).post('/listings')
 
-    expect(getListingSpy).toHaveBeenCalled()
     expect(res.status).toBe(409)
   })
 
   it('responds with 200 on success', async () => {
-    const getListingSpy = jest
-      .spyOn(listingAdapter, 'getListingByRentalObjectCode')
-      .mockResolvedValueOnce(undefined)
-
     jest
       .spyOn(listingAdapter, 'createListing')
       .mockResolvedValueOnce({ ok: true, data: factory.listing.build() })
 
     const res = await request(app.callback()).post('/listings')
-    expect(getListingSpy).toHaveBeenCalled()
     expect(res.status).toBe(201)
     expect(res.body).toEqual({
       content: expect.objectContaining({ id: expect.any(Number) }),
