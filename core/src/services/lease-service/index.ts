@@ -6,6 +6,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { GetActiveOfferByListingIdErrorCodes } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -301,6 +302,52 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /offers/listing-id/{listingId}:
+   *   get:
+   *     summary: Gets active offer for a specific listing
+   *     description: Get an offer for a listing.
+   *     tags: [Offer]
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The unique ID of the listing.
+   *     responses:
+   *       200:
+   *         description: The active offer.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/offers/listing-id/:listingId/active', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getActiveOfferByListingId(
+      Number.parseInt(ctx.params.listingId)
+    )
+
+    if (!result.ok) {
+      if (result.err === GetActiveOfferByListingIdErrorCodes.NotFound) {
+        ctx.status = result.statusCode ?? 404
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = result.statusCode ?? 200
     ctx.body = { content: result.data, ...metadata }
   })
 

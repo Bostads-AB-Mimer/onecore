@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from 'onecore-utilities'
-import { HttpStatusCode } from 'axios'
+import { AxiosError, HttpStatusCode } from 'axios'
 import dayjs from 'dayjs'
 import {
   ConsumerReport,
@@ -20,6 +20,7 @@ import {
   InternalParkingSpaceSyncSuccessResponse,
   CreateOfferParams,
   OfferWithOfferApplicants,
+  GetActiveOfferByListingIdErrorCodes,
 } from 'onecore-types'
 
 import config from '../common/config'
@@ -562,6 +563,41 @@ const getOffersByListingId = async (
   }
 }
 
+const getActiveOfferByListingId = async (
+  listingId: number
+): Promise<AdapterResult<Offer, GetActiveOfferByListingIdErrorCodes>> => {
+  try {
+    const res = await axios(
+      `${tenantsLeasesServiceUrl}/offers/listing-id/${listingId}/active`
+    )
+
+    if (!res.data.content) {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.NotFound,
+        statusCode: res.status,
+      }
+    }
+
+    return { ok: true, data: res.data.content, statusCode: res.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getActiveOfferByListingId')
+    if (err instanceof AxiosError) {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.Unknown,
+        statusCode: err.response?.status ?? 500,
+      }
+    } else {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.Unknown,
+        statusCode: 500,
+      }
+    }
+  }
+}
+
 const updateApplicantStatus = async (params: {
   contactCode: string
   applicantId: number
@@ -835,4 +871,5 @@ export {
   getOffersByListingId,
   closeOfferByDeny,
   handleExpiredOffers,
+  getActiveOfferByListingId,
 }

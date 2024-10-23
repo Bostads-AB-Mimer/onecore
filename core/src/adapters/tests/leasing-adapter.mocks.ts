@@ -1,9 +1,4 @@
-import {
-  Invoice,
-  InvoiceTransactionType,
-  PaymentStatus,
-  WaitingList,
-} from 'onecore-types'
+import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 
 const oneDayMs = 24 * 60 * 60 * 1000
 const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
