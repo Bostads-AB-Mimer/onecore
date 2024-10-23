@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.31.0...v1.32.0) (2024-10-23)
+
+
+### Features
+
+* add err types for get-active-offer-by-listing-id ([#109](https://github.com/Bostads-AB-Mimer/onecore-types/issues/109)) ([989fd34](https://github.com/Bostads-AB-Mimer/onecore-types/commit/989fd34e297f63a09e2ccb9c63543b3e4395068a))
+
 ## [1.31.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.30.3...v1.31.0) (2024-10-16)
 
 
