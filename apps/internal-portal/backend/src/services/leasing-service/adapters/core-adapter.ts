@@ -2,8 +2,10 @@ import {
   Contact,
   CreateNoteOfInterestErrorCodes,
   DetailedApplicant,
+  GetActiveOfferByListingIdErrorCodes,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
+  Offer,
   OfferWithOfferApplicants,
   ReplyToOfferErrorCodes,
   Tenant,
@@ -21,15 +23,32 @@ type AdapterResult<T, E> =
 
 const getListingsWithApplicants = async (
   querystring: string
-): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
+): Promise<
+  AdapterResult<Array<Listing | (Listing & { offer: Offer })>, 'unknown'>
+> => {
   try {
     const url = `${coreBaseUrl}/listings-with-applicants?${querystring}`
-    const listingsResponse = await getFromCore({
+    const listingsResponse = await getFromCore<{ content: Array<Listing> }>({
       method: 'get',
       url: url,
     })
 
-    return { ok: true, data: listingsResponse.data.content }
+    if (querystring !== 'type=offered') {
+      return { ok: true, data: listingsResponse.data.content }
+    }
+
+    const withOffers = await Promise.all(
+      listingsResponse.data.content.map(async (listing) => {
+        const offer = await getActiveOfferByListingId(listing.id)
+        if (!offer.ok) {
+          throw new Error('Failed to get offer')
+        }
+
+        return { ...listing, offer: offer.data }
+      })
+    )
+
+    return { ok: true, data: withOffers }
   } catch (err) {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
@@ -320,6 +339,41 @@ const denyOffer = async (
   }
 }
 
+const getActiveOfferByListingId = async (
+  listingId: number
+): Promise<AdapterResult<Offer, GetActiveOfferByListingIdErrorCodes>> => {
+  try {
+    const result = await getFromCore<{ content: Offer }>({
+      method: 'get',
+      url: `${coreBaseUrl}/offers/listing-id/${listingId}/active`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.content }
+  } catch (err) {
+    if (!(err instanceof AxiosError)) {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.Unknown,
+        statusCode: 500,
+      }
+    }
+
+    if (err.response?.status === 404) {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.NotFound,
+        statusCode: 404,
+      }
+    } else {
+      return {
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.Unknown,
+        statusCode: 500,
+      }
+    }
+  }
+}
+
 export {
   getListingsWithApplicants,
   getListingWithApplicants,
@@ -334,4 +388,5 @@ export {
   deleteListing,
   acceptOffer,
   denyOffer,
+  getActiveOfferByListingId,
 }

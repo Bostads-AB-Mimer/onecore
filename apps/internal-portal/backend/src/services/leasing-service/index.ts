@@ -8,8 +8,8 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await coreAdapter.getListingsWithApplicants(ctx.querystring)
     if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { error: 'Unknown error', ...metadata }
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 
