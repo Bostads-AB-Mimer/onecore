@@ -44,6 +44,7 @@ export interface OdooPostTicket {
   space_caption: string
   maintenance_team_id: number
   master_key: boolean
+  creation_origin: string
 }
 
 interface OdooPostTicketImage {

@@ -630,6 +630,7 @@ export const routes = (router: KoaRouter) => {
           master_key: AccessOptions.MasterKey,
           space_caption: type,
           maintenance_team_id: maintenanceTeamId,
+          creation_origin: 'mimer-nu',
         })
 
         ctx.status = 200
