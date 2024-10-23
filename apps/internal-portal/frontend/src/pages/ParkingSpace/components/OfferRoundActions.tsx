@@ -3,13 +3,13 @@ import { IconButton, Backdrop, Menu } from '@mui/material'
 import PopupState, { bindMenu, bindTrigger } from 'material-ui-popup-state'
 import { MoreHoriz } from '@mui/icons-material'
 import { toast } from 'react-toastify'
+import { ReplyToOfferErrorCodes } from 'onecore-types'
 
 import { useAcceptOffer } from '../hooks/useAcceptOffer'
 import { useDenyOffer } from '../hooks/useDenyOffer'
 import { ActionDialog } from './ActionDialog'
 import { PopupMenuItem } from './PopupMenuItem'
 import { RequestError } from '../../../types'
-import { ReplyToOfferErrorCodes } from 'onecore-types'
 
 export interface Props {
   offerId: number
