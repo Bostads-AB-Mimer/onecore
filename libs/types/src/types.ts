@@ -8,7 +8,6 @@ import {
   PaymentStatus,
   OfferStatus,
 } from './enums'
-import { DetailedApplicant } from './response-types'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
