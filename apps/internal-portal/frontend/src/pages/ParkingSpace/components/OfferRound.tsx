@@ -167,10 +167,10 @@ const formatApplicantStatus = (v: ApplicantStatus) =>
   applicantStatusFormatMap[v]
 
 const leaseStatusFormatMap: Record<LeaseStatus, string> = {
-  [LeaseStatus.Current]: 'Aktivt',
-  [LeaseStatus.Ended]: 'Avslutat',
-  [LeaseStatus.AboutToEnd]: 'Avslutande',
+  [LeaseStatus.Current]: 'Gällande',
   [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
 }
 
 const formatLeaseStatus = (v: LeaseStatus) => leaseStatusFormatMap[v]
