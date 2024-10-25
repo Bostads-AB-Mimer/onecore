@@ -196,7 +196,7 @@ const applicantStatusResponseMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.Offered]: 'Inväntar svar',
   [ApplicantStatus.OfferAccepted]: 'Ja',
   [ApplicantStatus.OfferDeclined]: 'Nej',
-  [ApplicantStatus.OfferExpired]: 'Nej',
+  [ApplicantStatus.OfferExpired]: 'Utgånget',
 }
 const formatApplicantStatusResponse = (v: ApplicantStatus) =>
   applicantStatusResponseMap[v] || ''
