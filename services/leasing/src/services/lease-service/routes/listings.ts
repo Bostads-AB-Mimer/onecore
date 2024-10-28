@@ -4,6 +4,8 @@ import {
   DetailedApplicant,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
+  ListingStatus,
+  UpdateListingStatusErrorCodes,
 } from 'onecore-types'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
@@ -618,7 +620,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: unknown) {
-      logger.error(error, 'Error getting applicants for waiting list')
+      logger.error(error, 'Error getting applicants for listing')
       ctx.status = 500
 
       if (error instanceof Error) {
@@ -681,4 +683,82 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { ...metadata }
   })
+
+  /**
+   * @swagger
+   * /listings/{listingId}/status:
+   *   put:
+   *     summary: Update a listings status by ID
+   *     description: Updates a listing status by it's ID.
+   *     tags:
+   *       - Listings
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to delete.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *       properties:
+   *         status:
+   *           type: number
+   *           description: The listing status.
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  const UpdateListingStatusRequestParamsSchema = z.object({
+    status: z.nativeEnum(ListingStatus),
+  })
+
+  router.put(
+    '(.*)/listings/:listingId/status',
+    parseRequestBody(UpdateListingStatusRequestParamsSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await listingAdapter.updateListingStatuses(
+        [Number(ctx.params.listingId)],
+        ctx.request.body.status
+      )
+
+      if (!result.ok) {
+        if (result.err === 'no-update') {
+          ctx.status = 404
+          ctx.body = {
+            error: UpdateListingStatusErrorCodes.NotFound,
+            ...metadata,
+          }
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: UpdateListingStatusErrorCodes.Unknown,
+            ...metadata,
+          }
+          return
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = { ...metadata }
+    }
+  )
 }
