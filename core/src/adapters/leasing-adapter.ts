@@ -391,6 +391,20 @@ const getListingsWithApplicants = async (
   }
 }
 
+const getExpiredListingsWithNoOffers = async (): Promise<
+  AdapterResult<Listing[], 'unknown'>
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/listings/readyforoffers`
+    )
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(error, 'Error fetching exired listings without offers:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getApplicantsByContactCode = async (
   contactCode: string
 ): Promise<any[] | undefined> => {
@@ -831,45 +845,46 @@ const handleExpiredOffers = async (): Promise<
 }
 
 export {
+  addApplicantToWaitingList,
+  applyForListing,
+  closeOfferByAccept,
+  closeOfferByDeny,
+  createLease,
+  createNewListing,
+  createOffer,
+  deleteListing,
+  getActiveOfferByListingId,
+  getApplicantByContactCodeAndListingId,
+  getApplicantsAndListingByContactCode,
+  getApplicantsByContactCode,
+  getContact,
+  getContactByContactCode,
+  getContactByPhoneNumber,
+  getContactForPnr,
+  getContactsDataBySearchQuery,
+  getCreditInformation,
+  getExpiredListingsWithNoOffers,
+  getInternalCreditInformation,
   getLease,
   getLeasesForPnr,
   getLeasesForPropertyId,
-  getContactForPnr,
-  getContact,
-  getContactByPhoneNumber,
-  createLease,
-  getCreditInformation,
-  getInternalCreditInformation,
-  getWaitingList,
-  addApplicantToWaitingList,
-  resetWaitingList,
-  createNewListing,
+  getListingByIdWithDetailedApplicants,
   getListingByListingId,
   getListingByRentalObjectCode,
-  applyForListing,
   getListingsWithApplicants,
-  getApplicantsByContactCode,
-  getApplicantsAndListingByContactCode,
-  getApplicantByContactCodeAndListingId,
-  getListingByIdWithDetailedApplicants,
+  getOfferByContactCodeAndOfferId,
+  getOfferByOfferId,
+  getOffersByListingId,
+  getOffersForContact,
+  getTenantByContactCode,
+  getWaitingList,
+  handleExpiredOffers,
+  resetWaitingList,
+  setApplicantStatusActive,
+  syncInternalParkingSpacesFromXpand,
+  updateApplicantStatus,
+  validatePropertyRentalRules,
+  validateResidentialAreaRentalRules,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
-  setApplicantStatusActive,
-  createOffer,
-  updateApplicantStatus,
-  getOffersForContact,
-  getOfferByOfferId,
-  getContactsDataBySearchQuery,
-  getContactByContactCode,
-  getOfferByContactCodeAndOfferId,
-  validateResidentialAreaRentalRules,
-  validatePropertyRentalRules,
-  getTenantByContactCode,
-  syncInternalParkingSpacesFromXpand,
-  deleteListing,
-  closeOfferByAccept,
-  getOffersByListingId,
-  closeOfferByDeny,
-  handleExpiredOffers,
-  getActiveOfferByListingId,
 }
