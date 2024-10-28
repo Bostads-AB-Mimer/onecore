@@ -1149,12 +1149,24 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/listing/:listingId/applicants/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData =
-      await leasingAdapter.getListingByIdWithDetailedApplicants(
-        ctx.params.listingId
-      )
+    const result = await leasingAdapter.getDetailedApplicantsByListingId(
+      Number(ctx.params.listingId)
+    )
 
-    ctx.body = { content: responseData, ...metadata }
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Listing not found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**

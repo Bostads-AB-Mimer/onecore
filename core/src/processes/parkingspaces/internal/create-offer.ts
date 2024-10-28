@@ -50,6 +50,7 @@ export const createOfferForInternalParkingSpace = async (
         `Listing with id ${listingId} not found`
       )
     }
+
     if (listing.status !== ListingStatus.Expired) {
       return endFailingProcess(
         log,
@@ -59,23 +60,23 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    const eligibleApplicants = await leasingAdapter
-      .getListingByIdWithDetailedApplicants(String(listing.id))
-      .then((applicants) => {
-        // filter out any applicants that has no priority. They are not eligible to rent the object of this listing
-        return applicants?.filter(
-          (
-            detailedApplicant
-          ): detailedApplicant is DetailedApplicant & { priority: number } => {
-            return (
-              detailedApplicant.priority != undefined &&
-              detailedApplicant.status === ApplicantStatus.Active
-            )
-          }
-        )
-      })
+    const eligibleApplicants = await getEligibleApplicants(listing.id)
 
-    if (!eligibleApplicants?.length) {
+    if (!eligibleApplicants.length) {
+      const updateListingStatus = await leasingAdapter.updateListingStatus(
+        listing.id,
+        ListingStatus.NoApplicants
+      )
+
+      if (!updateListingStatus.ok) {
+        return endFailingProcess(
+          log,
+          CreateOfferErrorCodes.UpdateListingStatusFailure,
+          500,
+          `Error updating listing status to NoApplicants`
+        )
+      }
+
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.NoApplicants,
@@ -85,8 +86,6 @@ export const createOfferForInternalParkingSpace = async (
     }
 
     const [applicant, ...restApplicants] = eligibleApplicants
-
-    // TODO: Maybe we want to make a credit check here?
 
     const getContact = await leasingAdapter.getContact(applicant.contactCode)
     if (!getContact.ok) {
@@ -197,6 +196,22 @@ export const createOfferForInternalParkingSpace = async (
       err
     )
   }
+}
+
+async function getEligibleApplicants(listingId: number) {
+  const applicants =
+    await leasingAdapter.getDetailedApplicantsByListingId(listingId)
+
+  if (!applicants.ok) {
+    throw new Error('Could not get detailed applicants')
+  }
+  // Filter out any applicants that has no priority and are not active
+  // as they are not eligible to rent the object of this listing
+  return applicants.data.filter(
+    (a): a is DetailedApplicant & { priority: number } => {
+      return a.priority != undefined && a.status === ApplicantStatus.Active
+    }
+  )
 }
 
 // Ends a process gracefully by debugging log, logging the error, sending the error to the dev team and return a process error with the error code and details

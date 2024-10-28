@@ -21,6 +21,8 @@ import {
   CreateOfferParams,
   OfferWithOfferApplicants,
   GetActiveOfferByListingIdErrorCodes,
+  ListingStatus,
+  UpdateListingStatusErrorCodes,
 } from 'onecore-types'
 
 import config from '../common/config'
@@ -461,22 +463,27 @@ const getApplicantByContactCodeAndListingId = async (
   }
 }
 
-// TODO: This function does not actually get the listing. Rename and describe function?
-const getListingByIdWithDetailedApplicants = async (
-  listingId: string
-): Promise<DetailedApplicant[] | undefined> => {
+const getDetailedApplicantsByListingId = async (
+  listingId: number
+): Promise<AdapterResult<DetailedApplicant[], 'unknown' | 'not-found'>> => {
   try {
     const response = await axios(
       `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
     )
-    return response.data.content
+
+    return { ok: true, data: response.data.content }
   } catch (error) {
-    logger.error(
-      error,
-      'Error fetching listing with detailed applicant data:',
-      error
-    )
-    return undefined
+    logger.error(error, 'Error fetching detailed applicant data by listing id')
+
+    if (!(error instanceof AxiosError)) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    if (error.response?.status === 404) {
+      return { ok: false, err: 'not-found' }
+    } else {
+      return { ok: false, err: 'unknown' }
+    }
   }
 }
 
@@ -796,6 +803,31 @@ const deleteListing = async (
   return { ok: false, err: { tag: 'unknown', data: res.data } }
 }
 
+async function updateListingStatus(
+  listingId: number,
+  status: ListingStatus
+): Promise<AdapterResult<null, UpdateListingStatusErrorCodes>> {
+  try {
+    const res = await axios.put(
+      `${tenantsLeasesServiceUrl}/listings/${listingId}/status`,
+      { status }
+    )
+
+    if (res.status !== 200) {
+      if (res.status === 404) {
+        return { ok: false, err: UpdateListingStatusErrorCodes.NotFound }
+      } else {
+        return { ok: false, err: UpdateListingStatusErrorCodes.Unknown }
+      }
+    }
+
+    return { ok: true, data: null }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.updateListingStatus')
+    return { ok: false, err: UpdateListingStatusErrorCodes.Unknown }
+  }
+}
+
 async function closeOfferByAccept(
   offerId: number
 ): Promise<AdapterResult<null, 'offer-not-found' | 'unknown'>> {
@@ -868,7 +900,7 @@ export {
   getLease,
   getLeasesForPnr,
   getLeasesForPropertyId,
-  getListingByIdWithDetailedApplicants,
+  getDetailedApplicantsByListingId,
   getListingByListingId,
   getListingByRentalObjectCode,
   getListingsWithApplicants,
@@ -883,6 +915,7 @@ export {
   setApplicantStatusActive,
   syncInternalParkingSpacesFromXpand,
   updateApplicantStatus,
+  updateListingStatus,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
   withdrawApplicantByManager,

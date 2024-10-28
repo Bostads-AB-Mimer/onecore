@@ -351,8 +351,8 @@ describe('lease-service', () => {
         factory.detailedApplicant.build(),
       ]
       const getListingByIdWithDetailedApplicantsSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getListingByIdWithDetailedApplicants')
-        .mockResolvedValue(detailedApplicants)
+        .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+        .mockResolvedValue({ ok: true, data: detailedApplicants })
 
       const res = await request(app.callback()).get(
         '/listing/1337/applicants/details'

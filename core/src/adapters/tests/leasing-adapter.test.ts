@@ -1,7 +1,7 @@
 import { HttpStatusCode } from 'axios'
 import assert from 'node:assert'
 import nock from 'nock'
-import { OfferStatus } from 'onecore-types'
+import { ListingStatus, OfferStatus } from 'onecore-types'
 
 import config from '../../common/config'
 import * as leasingAdapter from '../leasing-adapter'
@@ -68,19 +68,60 @@ describe('leasing-adapter', () => {
     })
   })
 
-  describe(leasingAdapter.getListingByIdWithDetailedApplicants, () => {
-    it('should return a listing with detailed applicants', async () => {
+  describe(leasingAdapter.getDetailedApplicantsByListingId, () => {
+    it('should return detailed applicants by listing id', async () => {
       const detailedApplicants = factory.detailedApplicant.buildList(1)
       nock(config.tenantsLeasesService.url)
         .get(/listing/)
         .reply(200, { content: detailedApplicants })
 
-      const result =
-        await leasingAdapter.getListingByIdWithDetailedApplicants('1337')
+      const result = await leasingAdapter.getDetailedApplicantsByListingId(1337)
+      assert(result.ok)
 
-      expect(result).toEqual([
+      expect(result.data).toEqual([
         expect.objectContaining({ id: detailedApplicants[0].id }),
       ])
+    })
+  })
+
+  describe(leasingAdapter.updateListingStatus, () => {
+    it('returns err if leasing responds with 404', async () => {
+      nock(config.tenantsLeasesService.url)
+        .put('/listings/123/status')
+        .reply(404)
+
+      const result = await leasingAdapter.updateListingStatus(
+        123,
+        ListingStatus.Expired
+      )
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns err if leasing responds with 500', async () => {
+      nock(config.tenantsLeasesService.url)
+        .put('/listings/123/status')
+        .reply(500)
+
+      const result = await leasingAdapter.updateListingStatus(
+        123,
+        ListingStatus.Expired
+      )
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns ok if leasing responds with 200', async () => {
+      nock(config.tenantsLeasesService.url)
+        .put('/listings/123/status')
+        .reply(200)
+
+      const result = await leasingAdapter.updateListingStatus(
+        123,
+        ListingStatus.Expired
+      )
+
+      expect(result).toEqual({ ok: true, data: null })
     })
   })
 
