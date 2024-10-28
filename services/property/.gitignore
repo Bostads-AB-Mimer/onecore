@@ -1,0 +1,10 @@
+build
+node_modules
+.env
+
+# OSX
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
