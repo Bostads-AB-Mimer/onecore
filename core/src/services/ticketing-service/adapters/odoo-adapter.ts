@@ -277,7 +277,7 @@ const addMessageToTicket = async (
     res_id: ticketId,
     model: 'maintenance.request',
     body: striptags(message.body).replaceAll('\n', '<br>'),
-    message_type: 'inbox',
+    message_type: 'comment',
   })
 }
 
