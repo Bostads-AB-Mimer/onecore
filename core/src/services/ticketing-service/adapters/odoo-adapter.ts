@@ -273,11 +273,22 @@ const addMessageToTicket = async (
   message: OdooAddMessage
 ): Promise<number> => {
   await odoo.connect()
+
+  // Make sure our message is a Note
+  const noteSubTypeId = await odoo.searchRead<{
+    id: number
+  }>('mail.message.subtype', ['name', '=', 'Note'], ['id'])
+
+  if (noteSubTypeId.length === 0) {
+    throw new Error('No note subtype found')
+  }
+
   return await odoo.create('mail.message', {
     res_id: ticketId,
     model: 'maintenance.request',
     body: striptags(message.body).replaceAll('\n', '<br>'),
-    message_type: 'comment',
+    message_type: 'notification',
+    subtype_id: noteSubTypeId[0].id,
   })
 }
 
