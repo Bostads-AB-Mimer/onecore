@@ -277,7 +277,7 @@ const addMessageToTicket = async (
   return await odoo.execute_kw('maintenance.request', 'message_post', [
     [ticketId],
     {
-      body: message.body,
+      body: striptags(message.body).replaceAll('\n', '<br>'),
       message_type: 'comment',
     },
   ])
