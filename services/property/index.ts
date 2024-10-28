@@ -1,11 +1,18 @@
-import express from 'express'
-const app = express()
-const port = 3000
+import Koa from 'koa';
+import Router from '@koa/router';
 
-app.get('/', async(req, res) => {
-    res.json("hello world")
-})
+const app = new Koa();
+const router = new Router();
+const port = 3000;
+
+router.get('/', async (ctx) => {
+    ctx.body = "hello world";
+});
+
+app
+    .use(router.routes())
+    .use(router.allowedMethods());
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+    console.log(`Example app listening at http://localhost:${port}`);
+});
