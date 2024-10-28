@@ -6,7 +6,6 @@ import { ListingStatus } from 'onecore-types'
 
 async function updateExpiredListings() {
   const expiredListings = await getExpiredListings()
-  console.log('Expired listings: ', expiredListings)
   if (expiredListings.length > 0) {
     const expiredListingsIds = expiredListings.map((l) => l.Id)
     console.log(`Found ${expiredListingsIds} expired listings`)

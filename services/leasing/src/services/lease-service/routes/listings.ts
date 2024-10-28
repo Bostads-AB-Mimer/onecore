@@ -440,6 +440,26 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: listingsWithApplicants.data, ...metadata }
   })
 
+  router.get('/listings/readyforoffers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const listings = await listingAdapter.getExpiredListingsWithNoOffers()
+
+    if (!listings.ok) {
+      ctx.status = 500
+      ctx.body = {
+        err: 'Could not retrieve listings ready for offers',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: listings.data,
+      ...metadata,
+    }
+  })
+
   router.post('/listings/sync-internal-from-xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result =
