@@ -12,8 +12,8 @@ model aigkk {
   keyaiobt  String @db.Char(15)
   keyaigkw  String @db.Char(15)
   timestamp String @db.Char(10)
-  aigkw     aigkw  @relation(fields: [keyaigkw], references: [keyaigkw], onDelete: Cascade, onUpdate: NoAction, map: "fkaigkkkeyaigkw ")
-  aiobt     aiobt  @relation(fields: [keyaiobt], references: [keyaiobt], onDelete: Cascade, onUpdate: NoAction, map: "fkaigkkkeyaiobt ")
+  aigkw     aigkw  @relation(fields: [keyaigkw], references: [keyaigkw], onDelete: NoAction, onUpdate: NoAction, map: "fkaigkkkeyaigkw ")
+  aiobt     aiobt  @relation(fields: [keyaiobt], references: [keyaiobt], onDelete: NoAction, onUpdate: NoAction, map: "fkaigkkkeyaiobt ")
 
   @@index([keyaigkw], map: "fkaigkkaigkw")
   @@index([keyaiobt], map: "fkaigkkaiobt")
@@ -1186,7 +1186,7 @@ model aokat {
   timestamp                    String  @db.Char(10)
   aokaa                        aokaa[]
   aopah                        aopah?  @relation(fields: [keyaopah], references: [keyaopah], onUpdate: NoAction, map: "fkaokatkeyaopah ")
-  aopri                        aopri?  @relation(fields: [keyaopri], references: [keyaopri], onUpdate: NoAction, map: "fkaokatkeyaopri ")
+  aopri                        aopri?  @relation(fields: [keyaopri], references: [keyaopri], onUpdate: NoAction, onDelete: NoAction, map: "fkaokatkeyaopri ")
   atway                        atway?  @relation(fields: [keyatway], references: [keyatway], onUpdate: NoAction, map: "fkaokatkeyatway")
   baret_aokat_keybaretTobaret  baret?  @relation("aokat_keybaretTobaret", fields: [keybaret], references: [keybaret], onUpdate: NoAction, map: "fkaokatkeybaret")
   baret_aokat_keybaret2Tobaret baret?  @relation("aokat_keybaret2Tobaret", fields: [keybaret2], references: [keybaret], onDelete: NoAction, onUpdate: NoAction, map: "fkaokatkeybaret2")
@@ -1628,8 +1628,8 @@ model aotyc {
   keyaotyp  String @db.Char(15)
   keyaokat  String @db.Char(15)
   timestamp String @db.Char(10)
-  aokat     aokat  @relation(fields: [keyaokat], references: [keyaokat], onDelete: Cascade, onUpdate: NoAction, map: "fkaotyckeyaokat")
-  aotyp     aotyp  @relation(fields: [keyaotyp], references: [keyaotyp], onDelete: Cascade, onUpdate: NoAction, map: "fkaotyckeyaotyp")
+  aokat     aokat  @relation(fields: [keyaokat], references: [keyaokat], onDelete: NoAction, onUpdate: NoAction, map: "fkaotyckeyaokat")
+  aotyp     aotyp  @relation(fields: [keyaotyp], references: [keyaotyp], onDelete: NoAction, onUpdate: NoAction, map: "fkaotyckeyaotyp")
 
   @@unique([keyaotyp, keyaokat], map: "akaotyc1")
   @@index([keyaokat], map: "fkaotycaokat")
@@ -5917,8 +5917,8 @@ model buchr {
   calcorder  Int       @default(0, map: "DF__buchr__calcorder__733612BF")
   timestamp  String    @db.Char(10)
   buinv      buinv?    @relation(fields: [keybuinv], references: [keybuinv], onDelete: NoAction, onUpdate: NoAction, map: "fkbuchrketbuinv ")
-  buchg      buchg     @relation(fields: [keybuchg], references: [keybuchg], onDelete: Cascade, onUpdate: NoAction, map: "fkbuchrkeybuchg ")
-  cmqry      cmqry?    @relation(fields: [keycmqry], references: [keycmqry], onUpdate: NoAction, map: "fkbuchrkeycmqry ")
+  buchg      buchg     @relation(fields: [keybuchg], references: [keybuchg], onDelete: NoAction, onUpdate: NoAction, map: "fkbuchrkeybuchg ")
+  cmqry      cmqry?    @relation(fields: [keycmqry], references: [keycmqry], onDelete: NoAction, onUpdate: NoAction, map: "fkbuchrkeycmqry ")
 
   @@index([keybuchg], map: "fkbuchrbuchg")
   @@index([keybuinv], map: "fkbuchrbuinv")
@@ -8801,8 +8801,8 @@ model cmrdc {
   visible    Int     @default(0, map: "DF__cmrdc__visible__30175151") @db.TinyInt
   formula    String? @db.VarChar(Max)
   timestamp  String  @db.Char(10)
-  cmqry      cmqry?  @relation(fields: [keycmqry], references: [keycmqry], onUpdate: NoAction, map: "fkcmrdckeycmqry ")
-  cmrdr      cmrdr   @relation(fields: [keycmrdr], references: [keycmrdr], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrdckeycmrdr ")
+  cmqry      cmqry?  @relation(fields: [keycmqry], references: [keycmqry], onDelete: NoAction, onUpdate: NoAction, map: "fkcmrdckeycmqry ")
+  cmrdr      cmrdr   @relation(fields: [keycmrdr], references: [keycmrdr], onDelete: NoAction, onUpdate: NoAction, map: "fkcmrdckeycmrdr ")
 
   @@index([keycmqry], map: "fkcmrdccmqry")
   @@index([keycmrdr], map: "fkcmrdccmrdr")
@@ -9726,8 +9726,8 @@ model cmunp {
   caption   String @db.VarChar(100)
   sortorder Int    @default(0, map: "DF__cmunp__sortorder__7DB02168") @db.SmallInt
   timestamp String @db.Char(10)
-  cmqry     cmqry  @relation(fields: [keycmqry], references: [keycmqry], onDelete: Cascade, onUpdate: NoAction, map: "fkcmunpkeycmqry ")
-  cmunf     cmunf  @relation(fields: [keycmunf], references: [keycmunf], onDelete: Cascade, onUpdate: NoAction, map: "fkcmunpkeycmunf")
+  cmqry     cmqry  @relation(fields: [keycmqry], references: [keycmqry], onDelete: NoAction, onUpdate: NoAction, map: "fkcmunpkeycmqry ")
+  cmunf     cmunf  @relation(fields: [keycmunf], references: [keycmunf], onDelete: NoAction, onUpdate: NoAction, map: "fkcmunpkeycmunf")
 
   @@index([keycmqry], map: "fkcmunpcmqry")
   @@index([keycmunf], map: "fkcmunpcmunf")
@@ -10231,10 +10231,10 @@ model crtsk {
   enddate                      DateTime? @db.Date
   endtime                      DateTime? @db.Time
   timestamp                    String    @db.Char(10)
-  cmctc_crtsk_keycmctcTocmctc  cmctc?    @relation("crtsk_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onUpdate: NoAction, map: "fkcrtskkeycmctc")
+  cmctc_crtsk_keycmctcTocmctc  cmctc?    @relation("crtsk_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkcrtskkeycmctc")
   cmctc_crtsk_keycmctc2Tocmctc cmctc?    @relation("crtsk_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkcrtskkeycmctc2")
   crcat                        crcat?    @relation(fields: [keycrcat], references: [keycrcat], onUpdate: NoAction, map: "fkcrtskkeycrcat ")
-  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, map: "fkcrtskkeyprprj")
+  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkcrtskkeyprprj")
 
   @@index([keycmctc], map: "fkcrtskcmctc")
   @@index([keycmctc2], map: "fkcrtskcmctc2")
@@ -11282,11 +11282,11 @@ model faprn {
   fadbhoverr Int     @db.TinyInt
   b2bexpkind Int     @default(0, map: "DF__faprn__b2bexpkin__76124D36") @db.TinyInt
   timestamp  String  @db.Char(10)
-  cmcmp      cmcmp?  @relation(fields: [keycmcmp], references: [keycmcmp], onDelete: Cascade, onUpdate: NoAction, map: "fkfaprnkeycmcmp ")
+  cmcmp      cmcmp?  @relation(fields: [keycmcmp], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkfaprnkeycmcmp ")
   cmmap      cmmap?  @relation(fields: [keycmmap], references: [keycmmap], onUpdate: NoAction, map: "fkfaprnkeycmmap")
   cmrpl      cmrpl?  @relation(fields: [keycmrpl], references: [keycmrpl], onUpdate: NoAction, map: "fkfaprnkeycmrpl ")
   krkrv      krkrv?  @relation(fields: [keykrkrv], references: [keykrkrv], onDelete: NoAction, onUpdate: NoAction, map: "fkfaprnkeykrkrv")
-  revrt      revrt?  @relation(fields: [keyrevrt], references: [keyrevrt], onDelete: Cascade, onUpdate: NoAction, map: "fkfaprnkeyrevrt ")
+  revrt      revrt?  @relation(fields: [keyrevrt], references: [keyrevrt], onDelete: NoAction, onUpdate: NoAction, map: "fkfaprnkeyrevrt ")
 
   @@index([keycmcmp], map: "fkfaprncmcmp")
   @@index([keycmdbm], map: "fkfaprncmdbm")
@@ -14590,8 +14590,8 @@ model ikbeh {
   hyobj                        hyobj?    @relation(fields: [keyhyobj], references: [keyhyobj], onUpdate: NoAction, map: "fkikbehkeyhyobj")
   iksbg                        iksbg?    @relation(fields: [keyiksbg], references: [keyiksbg], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyiksbg")
   ikslr                        ikslr?    @relation(fields: [keyikslr], references: [keyikslr], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyikslr ")
-  prppr                        prppr?    @relation(fields: [keyprppr], references: [keyprppr], onUpdate: NoAction, map: "fkikbehkeyprppr")
-  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, map: "fkikbehkeyprprj")
+  prppr                        prppr?    @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyprppr")
+  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyprprj")
   ikbep                        ikbep[]
   ikber                        ikber[]
   ikbok                        ikbok[]
@@ -14657,11 +14657,11 @@ model ikber {
   distrmodel  Int       @default(0, map: "DF__ikber__distrmode__0D94D10C") @db.TinyInt
   timestamp   String    @db.Char(10)
   cmart       cmart     @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkikberkeycmart")
-  cmobj       cmobj?    @relation(fields: [keycmobj], references: [keycmobj], onUpdate: NoAction, map: "fkikberkeycmobj ")
+  cmobj       cmobj?    @relation(fields: [keycmobj], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkikberkeycmobj ")
   ikbeh       ikbeh     @relation(fields: [keyikbeh], references: [keyikbeh], onDelete: Cascade, onUpdate: NoAction, map: "fkikberkeyikbeh ")
   ikber       ikber?    @relation("ikberToikber", fields: [keyikber2], references: [keyikber], onDelete: NoAction, onUpdate: NoAction, map: "fkikberkeyikber2 ")
   other_ikber ikber[]   @relation("ikberToikber")
-  imial       imial?    @relation(fields: [keyimial], references: [keyimial], onUpdate: NoAction, map: "fkikberkeyimial ")
+  imial       imial?    @relation(fields: [keyimial], references: [keyimial], onDelete: NoAction, onUpdate: NoAction, map: "fkikberkeyimial ")
   ikbok       ikbok[]
 
   @@index([keycmart], map: "fkikbercmart")
@@ -14703,9 +14703,9 @@ model ikbrk {
   factor    Decimal? @db.Decimal(5, 1)
   timestamp String   @db.Char(10)
   cmart     cmart    @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkikbrkkeycmart")
-  cmvat     cmvat?   @relation(fields: [keycmvat], references: [keycmvat], onUpdate: NoAction, map: "fkikbrkkeycmvat ")
+  cmvat     cmvat?   @relation(fields: [keycmvat], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkikbrkkeycmvat ")
   ikkak     ikkak?   @relation(fields: [keyikkak], references: [keyikkak], onUpdate: NoAction, map: "fkikbrkkeyikkak")
-  imial     imial?   @relation(fields: [keyimial], references: [keyimial], onUpdate: NoAction, map: "fkikbrkkeyimial ")
+  imial     imial?   @relation(fields: [keyimial], references: [keyimial], onDelete: NoAction, onUpdate: NoAction, map: "fkikbrkkeyimial ")
 
   @@index([keycmart], map: "fkikbrkcmart")
   @@index([keycmvat], map: "fkikbrkcmvat")
@@ -14906,11 +14906,11 @@ model ikund {
   amount    Decimal? @db.Decimal(9, 2)
   invest    Int      @default(0, map: "DF__ikund__invest__0C990AEA") @db.TinyInt
   timestamp String   @db.Char(10)
-  cmvat     cmvat?   @relation(fields: [keycmvat], references: [keycmvat], onUpdate: NoAction, map: "fkikundkeycmvat ")
-  ikktp     ikktp?   @relation(fields: [keyikktp], references: [keyikktp], onUpdate: NoAction, map: "fkikundkeyikktp ")
-  ikmal     ikmal?   @relation(fields: [keyikmal], references: [keyikmal], onUpdate: NoAction, map: "fkikundkeyikmal ")
+  cmvat     cmvat?   @relation(fields: [keycmvat], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkikundkeycmvat ")
+  ikktp     ikktp?   @relation(fields: [keyikktp], references: [keyikktp], onDelete: NoAction, onUpdate: NoAction, map: "fkikundkeyikktp ")
+  ikmal     ikmal?   @relation(fields: [keyikmal], references: [keyikmal], onDelete: NoAction, onUpdate: NoAction, map: "fkikundkeyikmal ")
   puagr     puagr?   @relation(fields: [keypuagr], references: [keypuagr], onUpdate: NoAction, map: "fkikundkeypuagr")
-  puatg     puatg    @relation(fields: [keypuatg], references: [keypuatg], onDelete: Cascade, onUpdate: NoAction, map: "fkikundkeypuatg ")
+  puatg     puatg    @relation(fields: [keypuatg], references: [keypuatg], onDelete: NoAction, onUpdate: NoAction, map: "fkikundkeypuatg ")
 
   @@index([keycmvat], map: "fkikundcmvat")
   @@index([keyikktp], map: "fkikundikktp")
@@ -16511,7 +16511,7 @@ model kramp {
   expdate                      DateTime @db.DateTime
   timestamp                    String   @db.Char(10)
   kramo                        kramo[]
-  cmcmp                        cmcmp    @relation(fields: [keycmcmp], references: [keycmcmp], onDelete: Cascade, onUpdate: NoAction, map: "fkkrampkeycmcmp")
+  cmcmp                        cmcmp    @relation(fields: [keycmcmp], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmcmp")
   cmctc_kramp_keycmctcTocmctc  cmctc    @relation("kramp_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkkrampkeycmctc")
   cmctc_kramp_keycmctc2Tocmctc cmctc?   @relation("kramp_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmctc2")
   revrt                        revrt?   @relation(fields: [keyrevrt], references: [keyrevrt], onUpdate: NoAction, map: "fkkrampkeyrevrt")
@@ -17295,14 +17295,14 @@ model lbbes {
   timestamp  String    @db.Char(10)
   lbanm      lbanm[]
   aotlt      aotlt?    @relation(fields: [keyaotlt], references: [keyaotlt], onUpdate: NoAction, map: "fklbbeskeyaotlt ")
-  bazav      bazav?    @relation(fields: [keybazav], references: [keybazav], onUpdate: NoAction, map: "fklbbeskeybazav ")
-  cmctc      cmctc?    @relation(fields: [keycmctc], references: [keycmctc], onUpdate: NoAction, map: "fklbbeskeycmctc")
+  bazav      bazav?    @relation(fields: [keybazav], references: [keybazav], onDelete: NoAction, onUpdate: NoAction, map: "fklbbeskeybazav ")
+  cmctc      cmctc?    @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fklbbeskeycmctc")
   cmobj      cmobj     @relation(fields: [keycmobj], references: [keycmobj], onUpdate: NoAction, map: "fklbbeskeycmobj")
   cmpbt      cmpbt?    @relation(fields: [keycmpbt], references: [keycmpbt], onUpdate: NoAction, map: "fklbbeskeycmpbt ")
-  cmrgr      cmrgr?    @relation(fields: [keycmrgr], references: [keycmrgr], onUpdate: NoAction, map: "fklbbeskeycmrgr")
-  hyobj      hyobj?    @relation(fields: [keyhyobj], references: [keyhyobj], onUpdate: NoAction, map: "fklbbeskeyhyobj")
+  cmrgr      cmrgr?    @relation(fields: [keycmrgr], references: [keycmrgr], onDelete: NoAction, onUpdate: NoAction, map: "fklbbeskeycmrgr")
+  hyobj      hyobj?    @relation(fields: [keyhyobj], references: [keyhyobj], onDelete: NoAction, onUpdate: NoAction, map: "fklbbeskeyhyobj")
   lbbka      lbbka     @relation(fields: [keylbbka], references: [keylbbka], onUpdate: NoAction, map: "fklbbeskeylbbka")
-  prprj      prprj?    @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, map: "fklbbeskeyprprj")
+  prprj      prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fklbbeskeyprprj")
 
   @@index([keyaotlt], map: "fklbbesaotlt")
   @@index([keybazav], map: "fklbbesbazav")
@@ -19089,9 +19089,9 @@ model pract {
   stoptime  DateTime? @db.DateTime
   timestamp String    @db.Char(10)
   cmart     cmart     @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkpractkeycmart")
-  cmctc     cmctc     @relation(fields: [keycmctc], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkpractkeycmctc")
-  prmtr     prmtr?    @relation(fields: [keyprmtr], references: [keyprmtr], onUpdate: NoAction, map: "fkpractkeyprmtr ")
-  prppr     prppr?    @relation(fields: [keyprppr], references: [keyprppr], onDelete: Cascade, onUpdate: NoAction, map: "fkpractkeyprppr ")
+  cmctc     cmctc     @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeycmctc")
+  prmtr     prmtr?    @relation(fields: [keyprmtr], references: [keyprmtr], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprmtr ")
+  prppr     prppr?    @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprppr ")
   prprj     prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprprj")
 
   @@index([keycmart], map: "fkpractcmart")
@@ -19140,8 +19140,8 @@ model prark {
   tdate      DateTime? @db.DateTime
   timestamp  String    @db.Char(10)
   cmart      cmart?    @relation(fields: [keycmart], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fkprarkkeycmart")
-  cmctc      cmctc?    @relation(fields: [keycmctc], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkprarkkeycmctc")
-  prprj      prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: Cascade, onUpdate: NoAction, map: "fkprarkkeyprprj")
+  cmctc      cmctc?    @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprarkkeycmctc")
+  prprj      prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkprarkkeyprprj")
 
   @@index([keycmart], map: "fkprarkcmart")
   @@index([keycmctc], map: "fkprarkcmctc")
@@ -19474,9 +19474,9 @@ model prpci {
   decided    Int      @default(0, map: "DF__prpci__decided__58698E20") @db.TinyInt
   timestamp  String   @db.Char(10)
   cmart      cmart    @relation(fields: [keycmart], references: [keycmart], onDelete: Cascade, onUpdate: NoAction, map: "fkprpcikeycmart")
-  cmctc      cmctc?   @relation(fields: [keycmctc], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkprpcikeycmctc")
-  prppr      prppr?   @relation(fields: [keyprppr], references: [keyprppr], onDelete: Cascade, onUpdate: NoAction, map: "fkprpcikeyprppr")
-  prprj      prprj?   @relation(fields: [keyprprj], references: [keyprprj], onDelete: Cascade, onUpdate: NoAction, map: "fkprpcikeyprprj")
+  cmctc      cmctc?   @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpcikeycmctc")
+  prppr      prppr?   @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkprpcikeyprppr")
+  prprj      prprj?   @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkprpcikeyprprj")
 
   @@index([keycmart], map: "fkprpcicmart")
   @@index([keycmctc], map: "fkprpcicmctc")
@@ -19536,8 +19536,8 @@ model prppo {
   keycmobj  String    @db.Char(15)
   delidate  DateTime? @db.Date
   timestamp String    @db.Char(10)
-  cmobj     cmobj     @relation(fields: [keycmobj], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkprppokeycmobj")
-  prppr     prppr     @relation(fields: [keyprppr], references: [keyprppr], onDelete: Cascade, onUpdate: NoAction, map: "fkprppokeyprppr")
+  cmobj     cmobj     @relation(fields: [keycmobj], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkprppokeycmobj")
+  prppr     prppr     @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkprppokeyprppr")
 
   @@unique([keyprppr, keycmobj], map: "akprppo")
   @@index([keycmobj], map: "fkprppocmobj")
@@ -19583,12 +19583,12 @@ model prppr {
   prppo                        prppo[]
   cmctc_prppr_keycmctcTocmctc  cmctc?    @relation("prppr_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc")
   cmctc_prppr_keycmctc2Tocmctc cmctc?    @relation("prppr_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc2")
-  cmctc_prppr_keycmctc3Tocmctc cmctc?    @relation("prppr_keycmctc3Tocmctc", fields: [keycmctc3], references: [keycmctc], onUpdate: NoAction, map: "fkprpprkeycmctc3")
+  cmctc_prppr_keycmctc3Tocmctc cmctc?    @relation("prppr_keycmctc3Tocmctc", fields: [keycmctc3], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc3")
   cmctc_prppr_keycmctc4Tocmctc cmctc?    @relation("prppr_keycmctc4Tocmctc", fields: [keycmctc4], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc4")
   cmobj                        cmobj?    @relation(fields: [keycmobj], references: [keycmobj], onUpdate: NoAction, map: "fkprpprkeycmobj ")
-  prclh                        prclh?    @relation(fields: [keyprclh], references: [keyprclh], onUpdate: NoAction, map: "fkprpprkeyprclh")
+  prclh                        prclh?    @relation(fields: [keyprclh], references: [keyprclh], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeyprclh")
   prppc                        prppc?    @relation(fields: [keyprppc], references: [keyprppc], onUpdate: NoAction, map: "fkprpprkeyprppc ")
-  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, map: "fkprpprkeyprprj")
+  prprj                        prprj?    @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeyprprj")
   prpro                        prpro[]
   prrel_prrel_keyprpprToprppr  prrel[]   @relation("prrel_keyprpprToprppr")
   prrel_prrel_keyprppr2Toprppr prrel[]   @relation("prrel_keyprppr2Toprppr")
@@ -19689,7 +19689,7 @@ model prprj {
   prpia                        prpia[]
   prppr                        prppr[]
   aopri                        aopri?    @relation(fields: [keyaopri], references: [keyaopri], onUpdate: NoAction, map: "fkprprjkeyaopri ")
-  atway                        atway?    @relation(fields: [keyatway], references: [keyatway], onUpdate: NoAction, map: "fkprprjkeyatway")
+  atway                        atway?    @relation(fields: [keyatway], references: [keyatway], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeyatway")
   cmcmp                        cmcmp     @relation(fields: [keycmcmp], references: [keycmcmp], onUpdate: NoAction, map: "fkprprjkeycmcmp ")
   cmctc_prprj_keycmctcTocmctc  cmctc     @relation("prprj_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc")
   cmctc_prprj_keycmctc2Tocmctc cmctc?    @relation("prprj_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc2")
@@ -19697,8 +19697,8 @@ model prprj {
   cmctc_prprj_keycmctc4Tocmctc cmctc?    @relation("prprj_keycmctc4Tocmctc", fields: [keycmctc4], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc4")
   cmctc_prprj_keycmctc5Tocmctc cmctc?    @relation("prprj_keycmctc5Tocmctc", fields: [keycmctc5], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc5")
   cmsom                        cmsom?    @relation(fields: [keycmsom], references: [keycmsom], onUpdate: NoAction, map: "fkprprjkeycmsom ")
-  prcat                        prcat?    @relation(fields: [keyprcat], references: [keyprcat], onUpdate: NoAction, map: "fkprprjkeyprcat ")
-  prclh                        prclh?    @relation(fields: [keyprclh], references: [keyprclh], onUpdate: NoAction, map: "fkprprjkeyprclh ")
+  prcat                        prcat?    @relation(fields: [keyprcat], references: [keyprcat], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeyprcat ")
+  prclh                        prclh?    @relation(fields: [keyprclh], references: [keyprclh], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeyprclh ")
   preta                        preta?    @relation(fields: [keypreta], references: [keypreta], onUpdate: NoAction, map: "fkprprjkeypreta ")
   pretb                        pretb?    @relation(fields: [keypretb], references: [keypretb], onUpdate: NoAction, map: "fkprprjkeypretb ")
   pretc                        pretc?    @relation(fields: [keypretc], references: [keypretc], onUpdate: NoAction, map: "fkprprjkeypretc ")
@@ -19736,9 +19736,9 @@ model prpro {
   keycmctc  String  @db.Char(15)
   keyprrol  String  @db.Char(15)
   timestamp String  @db.Char(10)
-  cmctc     cmctc   @relation(fields: [keycmctc], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkprprokeycmctc")
+  cmctc     cmctc   @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprokeycmctc")
   prppr     prppr?  @relation(fields: [keyprppr], references: [keyprppr], onUpdate: NoAction, map: "fkprprokeyprppr")
-  prprj     prprj   @relation(fields: [keyprprj], references: [keyprprj], onDelete: Cascade, onUpdate: NoAction, map: "fkprprokeyprprj")
+  prprj     prprj   @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkprprokeyprprj")
   prrol     prrol   @relation(fields: [keyprrol], references: [keyprrol], onDelete: Cascade, onUpdate: NoAction, map: "fkprprokeyprrol ")
 
   @@index([keycmctc], map: "fkprprocmctc")
@@ -19786,8 +19786,8 @@ model prtcc {
   keyprtyp  String @db.Char(15)
   keyprcat  String @db.Char(15)
   timestamp String @db.Char(10)
-  prcat     prcat  @relation(fields: [keyprcat], references: [keyprcat], onDelete: Cascade, onUpdate: NoAction, map: "fkprtcckeyprcat ")
-  prtyp     prtyp  @relation(fields: [keyprtyp], references: [keyprtyp], onDelete: Cascade, onUpdate: NoAction, map: "fkprtcckeyprtyp ")
+  prcat     prcat  @relation(fields: [keyprcat], references: [keyprcat], onDelete: NoAction, onUpdate: NoAction, map: "fkprtcckeyprcat ")
+  prtyp     prtyp  @relation(fields: [keyprtyp], references: [keyprtyp], onDelete: NoAction, onUpdate: NoAction, map: "fkprtcckeyprtyp ")
 
   @@unique([keyprtyp, keyprcat], map: "akprtcc")
 }
@@ -20247,10 +20247,10 @@ model puund {
   bazav      bazav[]
   hfunf      hfunf[]
   pusta      pusta[]
-  cmobj      cmobj     @relation(fields: [keycmobj], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkpuundkeycmobj")
+  cmobj      cmobj     @relation(fields: [keycmobj], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkpuundkeycmobj")
   cmvat      cmvat?    @relation(fields: [keycmvat], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkpuundkeycmvat ")
   hyobj      hyobj?    @relation(fields: [keyhyobj], references: [keyhyobj], onUpdate: NoAction, map: "fkpuundkeyhyobj")
-  prppr      prppr?    @relation(fields: [keyprppr], references: [keyprppr], onUpdate: NoAction, map: "fkpuundkeyprppr")
+  prppr      prppr?    @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkpuundkeyprppr")
   prprj      prprj?    @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, map: "fkpuundkeyprprj")
   puagr      puagr?    @relation(fields: [keypuagr], references: [keypuagr], onUpdate: NoAction, map: "fkpuundkeypuagr")
   puatg      puatg     @relation(fields: [keypuatg], references: [keypuatg], onUpdate: NoAction, map: "fkpuundkeypuatg ")
@@ -21385,8 +21385,8 @@ model skaok {
   keyaoupr  String   @db.Char(15)
   atgdate   DateTime @db.DateTime
   timestamp String   @db.Char(10)
-  aoupr     aoupr    @relation(fields: [keyaoupr], references: [keyaoupr], onDelete: Cascade, onUpdate: NoAction, map: "fkskaokkeyaoupr ")
-  skund     skund    @relation(fields: [keyskund], references: [keyskund], onDelete: Cascade, onUpdate: NoAction, map: "fkskaokkeyskund")
+  aoupr     aoupr    @relation(fields: [keyaoupr], references: [keyaoupr], onDelete: NoAction, onUpdate: NoAction, map: "fkskaokkeyaoupr ")
+  skund     skund    @relation(fields: [keyskund], references: [keyskund], onDelete: NoAction, onUpdate: NoAction, map: "fkskaokkeyskund")
 
   @@index([keyaoupr], map: "fkskaokaoupr")
   @@index([keyskund, atgdate], map: "inskaok1")
@@ -22011,8 +22011,8 @@ model staok {
   keyaoupr  String   @db.Char(15)
   atgdate   DateTime @db.DateTime
   timestamp String   @db.Char(10)
-  aoupr     aoupr    @relation(fields: [keyaoupr], references: [keyaoupr], onDelete: Cascade, onUpdate: NoAction, map: "fkstaokkeyaoupr")
-  stund     stund    @relation(fields: [keystund], references: [keystund], onDelete: Cascade, onUpdate: NoAction, map: "fkstaokkeystund")
+  aoupr     aoupr    @relation(fields: [keyaoupr], references: [keyaoupr], onDelete: NoAction, onUpdate: NoAction, map: "fkstaokkeyaoupr")
+  stund     stund    @relation(fields: [keystund], references: [keystund], onDelete: NoAction, onUpdate: NoAction, map: "fkstaokkeystund")
 
   @@index([keyaoupr], map: "fkstaokaoupr")
   @@index([keystund], map: "fkstaokstund")
@@ -22485,8 +22485,8 @@ model stund {
   skatg      skatg     @relation(fields: [keyskatg], references: [keyskatg], onUpdate: NoAction, map: "fkstundkeyskatg ")
   skyrk      skyrk?    @relation(fields: [keyskyrk], references: [keyskyrk], onUpdate: NoAction, map: "fkstundkeyskyrk ")
   stext      stext?    @relation(fields: [keystext], references: [keystext], onDelete: NoAction, onUpdate: NoAction, map: "fkstundkeystext ")
-  stfnh      stfnh?    @relation(fields: [keystfnh], references: [keystfnh], onUpdate: NoAction, map: "fkstundkeystfnh ")
-  stupd      stupd     @relation(fields: [keystupd], references: [keystupd], onDelete: Cascade, onUpdate: NoAction, map: "fkstundkeystupd ")
+  stfnh      stfnh?    @relation(fields: [keystfnh], references: [keystfnh], onDelete: NoAction, onUpdate: NoAction, map: "fkstundkeystfnh ")
+  stupd      stupd     @relation(fields: [keystupd], references: [keystupd], onDelete: NoAction, onUpdate: NoAction, map: "fkstundkeystupd ")
 
   @@index([keycmctc], map: "fkstundcmctc")
   @@index([keycmobj], map: "fkstundcmobj")
