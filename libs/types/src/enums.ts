@@ -51,8 +51,9 @@ enum PaymentStatus {
 enum ListingStatus {
   Active = 1, //Publicerad
   Assigned = 2,
-  Deleted = 3,
+  Closed = 3,
   Expired = 4,
+  NoApplicants = 5,
 }
 
 enum ApplicantStatus {
