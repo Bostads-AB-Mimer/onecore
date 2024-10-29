@@ -1,0 +1,30 @@
+model MaintenanceUnit {
+  @@map("bauhe")
+
+  maintenanceUnitId String @id(map: "pkbauhe") @map("keybauhe") @db.Char(15)
+  objectId String @unique(map: "akbauhe1") @map("keycmobj") @db.Char(15)
+  maintenanceUnitTypeId String? @map("keybauht") @db.Char(15) // TODO: Confirm if this name aligns with the naming conventions
+  commonAreaTypeId String? @map("keybacat") @db.Char(15)
+  mainFunctionId String? @map("keybarch") @db.Char(15)
+  subFunctionId String? @map("keybarcp") @db.Char(15)
+  roomSpecificationId String? @map("keybarcr") @db.Char(15)
+  areaClassId String? @map("keyvcacl") @db.Char(15)
+  maintenanceUnitCode String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  stairwell String? @map("uppgang") @db.VarChar(20)
+  usage Int @default(0, map: "DF__bauhe__usage__5550AA1D") @map("usage") @db.TinyInt
+  deleteMark Int @default(0, map: "DF__bauhe__deletemar__5644CE56") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Further clarify the usage for renaming
+
+  // Related models - using existing relations until new ones are confirmed
+  maintenanceUnitType bauht? @relation(fields: [maintenanceUnitTypeId], references: [keybauht], onUpdate: NoAction, map: "fkbauhekeybauht ")
+  relatedObject cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbauhekeycmobj ")
+
+  @@index([maintenanceUnitTypeId], map: "fkbauhebauht")
+  @@index([maintenanceUnitCode], map: "inbauhe_1A00UDL36")
+  @@index([name], map: "inbauhe_1A00UDL45")
+  @@index([fromDate], map: "inbauhe_1A00UDL5F")
+  @@index([toDate], map: "inbauhe_1A00UDL6O")
+}

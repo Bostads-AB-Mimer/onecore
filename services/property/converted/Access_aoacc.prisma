@@ -1,0 +1,14 @@
+model Access {
+  @@map("aoacc")
+  
+  id String @id(map: "pkaoacc") @map("keyaoacc") @db.Char(15)
+  accessOrderTypeId String @map("keyaotyp") @db.Char(15)
+  permissionGroupId String @map("keysygrp") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: reconsider usage of "timestamp" once more information is available
+
+  aotyp aotyp @relation(fields: [accessOrderTypeId], references: [keyaotyp], onDelete: Cascade, onUpdate: NoAction, map: "fkaoacckeyaotyp")
+  
+  @@unique([accessOrderTypeId, permissionGroupId], map: "akaoacc")
+  @@index([accessOrderTypeId], map: "fkaoaccaotyp")
+  @@index([permissionGroupId], map: "fkaoaccsygrp")
+}

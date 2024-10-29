@@ -1,0 +1,15 @@
+model InspectionCategoryPermission {
+  @@map("fbbkb")
+
+  inspectionCategoryPermissionId String @id(map: "pkfbbkb") @map("keyfbbkb") @db.Char(15)
+  permissionTypeId String @map("keyfbbeh") @db.Char(15)
+  inspectionCategoryId String @map("keyfbbka") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' requires a different naming convention or purpose
+
+  permissionType PermissionType @relation(fields: [permissionTypeId], references: [permissionTypeId], onUpdate: NoAction, map: "fkfbbkbkeyfbbeh")
+  // TODO: rename 'fbbka' to the new model name when available
+  fbbka fbbka @relation(fields: [inspectionCategoryId], references: [keyfbbka], onDelete: Cascade, onUpdate: NoAction, map: "fkfbbkbkeyfbbka")
+
+  @@unique([inspectionCategoryId, permissionTypeId], map: "akfbbkb")
+  @@index([permissionTypeId], map: "fkfbbkbfbbeh")
+}

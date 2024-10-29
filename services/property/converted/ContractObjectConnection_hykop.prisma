@@ -1,0 +1,19 @@
+model ContractObjectConnection {
+  @@map("hykop")
+
+  contractObjectConnectionId String @id(map: "pkhykop") @map("keyhykop") @db.Char(15)
+  rentalObjectId String @map("keycmobj") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15)
+  contractArea Decimal? @map("avtalsarea") @db.Decimal(14, 2)
+  heatingArea Decimal? @map("varmearea") @db.Decimal(14, 2)
+  commonArea Decimal? @map("gemarea") @db.Decimal(14, 2)
+  rentalArea Decimal? @map("rentarea") @db.Decimal(14, 2)
+  sortOrder Int @map("ordning") @db.SmallInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  hyobj hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhykopkeyhyobj")
+  
+  @@unique([rentalObjectId, contractId], map: "akhykop1")
+  @@index([rentalObjectId], map: "fkhykopcmobj")
+  @@index([contractId], map: "fkhykophyobj")
+}

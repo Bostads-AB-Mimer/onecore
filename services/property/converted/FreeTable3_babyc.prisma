@@ -1,0 +1,12 @@
+model FreeTable3 {
+  @@map("babyc")
+
+  id String @id(map: "pkbabyc") @map("keybabyc") @db.Char(15)
+  code String @unique(map: "akbabyc1") @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  babyg Building[] // TODO: change babyg to new model name when available
+  bafst Property[] // TODO: change bafst to new model name when available
+  bayta bayta[] // TODO: change bayta to new model name when available, possibly relating to tenant agreements or similar
+}

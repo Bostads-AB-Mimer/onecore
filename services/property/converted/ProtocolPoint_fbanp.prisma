@@ -1,0 +1,23 @@
+model ProtocolPoint {
+  @@map("fbanp")
+  
+  protocolPointId String @id(map: "pkfbanp") @map("keyfbanp") @db.Char(15)
+  parentProtocolPointId String? @map("keyfbanp2") @db.Char(15)
+  inspectionProtocolId String @map("keyfbbla") @db.Char(15)
+  protocolPointCode String @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(100)
+  description String? @map("descript") @db.VarChar(Max)
+  isHeadline Int @default(0, map: "DF__fbanp__rubrik__38AC9752") @map("rubrik") @db.TinyInt
+  remarkSeverity Int @default(0, map: "DF__fbanp__status__39A0BB8B") @map("status") @db.TinyInt
+  impactType Int @default(0, map: "DF__fbanp__statustyp__3A94DFC4") @map("statustype") @db.TinyInt
+  weightValue Int @default(0, map: "DF__fbanp__faultvalu__3B8903FD") @map("faultvalue")
+  printOrder Int @default(0, map: "DF__fbanp__printsort__3C7D2836") @map("printsort") @db.SmallInt
+  isStandardPoint Int @default(0, map: "DF__fbanp__standardp__3D714C6F") @map("standardp") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  
+  remarks Remark[] // TODO: Update relation model name when available
+  inspection fbbla @relation(fields: [keyfbbla], references: [keyfbbla], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanpkeyfbbla")
+  
+  @@index([parentProtocolPointId], map: "fkfbanpfbanp2")
+  @@index([inspectionProtocolId], map: "fkfbanpfbbla")
+}

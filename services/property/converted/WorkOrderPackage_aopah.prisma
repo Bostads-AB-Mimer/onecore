@@ -1,0 +1,11 @@
+model WorkOrderPackage {
+  @@map("aopah")
+  
+  workOrderPackageId String @id(map: "pkaopah") @map("keyaopah") @db.Char(15)
+  name String @unique(map: "akaopah1") @map("caption") @db.VarChar(60)
+  description String @map("descript") @db.VarChar(600)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  aokat aokat[] // TODO: change aokat to new model name when available
+  aopar aopar[] // TODO: change aopar to new model name when available
+}

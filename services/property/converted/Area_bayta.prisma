@@ -1,0 +1,32 @@
+model Area {
+  @@map("bayta")
+
+  areaId String @id(map: "pkbayta") @map("keybayta") @db.Char(15)
+  objectId String @unique(map: "akbayta1") @map("keycmobj") @db.Char(15)
+  areaTypeId String? @map("keybaytt") @db.Char(15)
+  freeTable1Id String? @map("keybabya") @db.Char(15)
+  freeTable2Id String? @map("keybabyb") @db.Char(15)
+  freeTable3Id String? @map("keybabyc") @db.Char(15)
+  districtId String? @map("keybanbh") @db.Char(15) // TODO: Determine appropriate naming based on additional domain knowledge
+  blockId String? @map("keybablo") @db.Char(15)    // TODO: Determine appropriate naming based on additional domain knowledge
+  areaCode String @map("code") @db.VarChar(30)
+  areaName String? @map("caption") @db.VarChar(30)
+  grade Int @default(0, map: "DF__bayta__grade__5DD84EB3") @map("grade") @db.TinyInt
+  yearOfConstruction Int? @map("buildyear") @db.SmallInt
+  deleteMark Int @default(0, map: "DF__bayta__deletemar__5ECC72EC") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Change 'timestamp' when knowing more about its usage
+
+  freeTable1 FreeTable1? @relation(fields: [keybabya], references: [keybabya], onUpdate: NoAction, map: "fkbaytakeybabya ")
+  freeTable2 FreeTable2? @relation(fields: [keybabyb], references: [keybabyb], onUpdate: NoAction, map: "fkbaytakeybabyb ")
+  freeTable3 FreeTable3? @relation(fields: [keybabyc], references: [keybabyc], onUpdate: NoAction, map: "fkbaytakeybabyc ")
+  areaType AreaType? @relation(fields: [keybaytt], references: [keybaytt], onUpdate: NoAction, map: "fkbaytakeybaytt")
+  object Object @relation(fields: [keycmobj], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbaytakeycmobj")
+
+  @@index([areaTypeId], map: "fkbaytabaytt")
+  @@index([fromDate], map: "inbayta_2M111X7XH")
+  @@index([toDate], map: "inbayta_2M111X7XZ")
+  @@index([areaCode], map: "inbayta_2M111X7YR")
+  @@index([areaName], map: "inbayta_2M111X7ZA")
+}

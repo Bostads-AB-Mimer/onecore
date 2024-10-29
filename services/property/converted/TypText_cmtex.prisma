@@ -1,0 +1,14 @@
+model TypText {
+  @@map("cmtex")
+
+  typTextId String @id(map: "pkcmtex") @map("keycmtex") @db.Char(15)
+  typTextTemplateId String @map("keycmtep") @db.Char(15)
+  code String @map("keycode") @db.Char(15)
+  text String @map("text") @db.VarChar(254)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Review usage of timestamp field
+  
+  cmtep cmtep @relation(fields: [typTextTemplateId], references: [keycmtep], onDelete: Cascade, onUpdate: NoAction, map: "fkcmtexkeycmtep ")
+
+  @@unique([code, typTextTemplateId], map: "incmtex_2LR0I2LGS")
+  @@index([typTextTemplateId], map: "fkcmtexcmtep")
+}

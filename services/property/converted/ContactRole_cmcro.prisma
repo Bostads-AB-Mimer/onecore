@@ -1,0 +1,16 @@
+model ContactRole {
+  @@map("cmcro")
+  
+  contactRoleId String @id(map: "pkcmcro") @map("keycmcro") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  roleId String @map("keycmrol") @db.Char(15)
+  active Int @default(1, map: "DF__cmcro__croused__21893AD8") @map("croused") @db.TinyInt
+  lastUsedDate DateTime? @map("lastused") @db.Date
+  timestamp String @map("timestamp") @db.Char(10) // TODO: assess further naming needs when more info is available
+
+  cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onUpdate: NoAction, map: "fkcmcrokeycmctc")
+  cmrol cmrol @relation(fields: [roleId], references: [keycmrol], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcrokeycmrol ")
+
+  @@unique([contactId, roleId], map: "akcmcro1")
+  @@index([roleId, contactId, active], map: "incmcro_2KX0OZPES")
+}

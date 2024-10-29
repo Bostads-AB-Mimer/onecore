@@ -1,0 +1,21 @@
+model Appointment {
+  @@map("aocap")
+
+  appointmentId String @id(map: "pkaocap") @map("keyaocap") @db.Char(15)
+  workOrderId String @map("keyaoupp") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  resourceGroupId String? @map("keycmrgr") @db.Char(15)
+  header String @map("caphead") @db.VarChar(250)
+  note String? @map("capnote") @db.VarChar(4000)
+  startTime DateTime @map("starttime") @db.DateTime
+  endTime DateTime @map("endtime") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  aoupp aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeyaoupp")
+  cmctc Contact? @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmctc")
+  cmrgr ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmrgr") // TODO: rename reference model name if ResourceGroup is revised
+
+  @@index([workOrderId], map: "fkaocapaoupp")
+  @@index([contactId], map: "fkaocapcmctc")
+  @@index([resourceGroupId], map: "fkaocapcmrgr")
+}

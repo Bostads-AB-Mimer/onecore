@@ -1,0 +1,23 @@
+model ResourcePlanning {
+  @@map("barek")
+
+  resourcePlanningId String @id(map: "pkbarek") @map("keybarek") @db.Char(15)
+  planningTypeId String @map("keybaret") @db.Char(15) // TODO: confirm if "Resursplaneringstyp" translates directly to "planningTypeId"
+  propertyObjectId String @map("keycmobj") @db.Char(15) // TODO: may need renaming based on domain
+  contactId String? @map("keycmctc") @db.Char(15)
+  resourceGroupId String? @map("keycmrgr") @db.Char(15)
+  fromDate DateTime? @map("fdate") @db.Date
+  toDate DateTime? @map("tdate") @db.Date
+  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' needs a different naming convention
+
+  baret baret @relation(fields: [planningTypeId], references: [keybaret], onUpdate: NoAction, map: "fkbarekkeybaret") 
+  cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmctc")
+  cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbarekkeycmobj")
+  cmrgr cmrgr? @relation(fields: [resourceGroupId], references: [keycmrgr], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmrgr")
+
+  @@unique([planningTypeId, propertyObjectId, contactId, resourceGroupId, fromDate, toDate], map: "akbarek1")
+  @@index([planningTypeId], map: "fkbarekbaret")
+  @@index([contactId], map: "fkbarekcmctc")
+  @@index([propertyObjectId], map: "fkbarekcmobj")
+  @@index([resourceGroupId], map: "fkbarekcmrgr")
+}

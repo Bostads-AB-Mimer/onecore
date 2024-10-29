@@ -1,0 +1,27 @@
+model Remark {
+  @@map("fbanm")
+  
+  remarkId String @id(map: "pkfbanm") @map("keyfbanm") @db.Char(15)
+  inspectionId String @map("keyfbbes") @db.Char(15)
+  protocolPointId String? @map("keyfbanp")  @db.Char(15) // TODO: Rename relation model when available
+  consequenceTypeId String? @map("keysceft") @db.Char(15) // TODO: Rename relation model when available
+  protocolPointCode String @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(100)
+  remarkNote String? @map("notering") @db.VarChar(Max)
+  remarkType Int @default(1, map: "DF__fbanm__status__6262D9FC") @map("status") @db.TinyInt
+  consequenceDegree Int @default(0, map: "DF__fbanm__effect__6356FE35") @map("effect") @db.TinyInt
+  consequenceType Int @default(0, map: "DF__fbanm__effecttyp__644B226E") @map("effecttype") @db.TinyInt
+  costAmount Float @default(0, map: "DF__fbanm__remcost__653F46A7") @map("remcost") @db.Money
+  actionDate DateTime? @map("atgdatum") @db.DateTime
+  recommendedCheckDate DateTime? @map("recchedate") @db.DateTime
+  latestFixDate DateTime? @map("lstfixdate") @db.DateTime
+  generatePlannedMaintenance Int @default(0, map: "DF__fbanm__generatep__66336AE0") @map("generatepu") @db.TinyInt
+  workOrderCreated Int @default(0, map: "DF__fbanm__aocreated__67278F19") @map("aocreated") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+  
+  protocolPoint fbanp? @relation(fields: [keyfbanp], references: [keyfbanp], onDelete: NoAction, onUpdate: NoAction, map: "fkfbanmkeyfbanp")
+  inspection fbbes @relation(fields: [keyfbbes], references: [keyfbbes], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanmkeyfbbes")
+  
+  @@index([protocolPointId], map: "fkfbanmfbanp")
+  @@index([inspectionId], map: "fkfbanmfbbes")
+}

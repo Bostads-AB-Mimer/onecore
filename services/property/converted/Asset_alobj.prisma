@@ -1,0 +1,60 @@
+model Asset {
+  @@map("alobj")
+
+  assetId String @id(map: "pkalobj") @map("keyalobj") @db.Char(15)
+  categoryId String? @map("keyalkat") @db.Char(15)
+  underTypeId String? @map("keyaltyp") @db.Char(15)
+  companyId String @map("keycmcmp") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  objectType Int @map("type") @db.TinyInt
+  assetCode String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(40)
+  assetStatus Int @map("objstatus") @db.TinyInt
+  investmentNumber String? @map("invcode") @db.Char(10)
+  historyMethod Int @map("histmethod") @db.TinyInt
+  depreciationPeriods Int @map("depperiods") @db.SmallInt
+  depreciationPercentage Decimal @default(0, map: "DF__alobj__prcnt__66DD7656") @map("prcnt") @db.Decimal(13, 10)
+  annualRate Decimal @default(0, map: "DF__alobj__annprcnt__67D19A8F") @map("annprcnt") @db.Decimal(13, 10)
+  calculationMethod Int @map("calcmethod") @db.TinyInt
+  backlog Int? @map("backlog")
+  correctionMethod Int @map("corrmethod") @db.TinyInt
+  capitalCostMethod Int @map("capcmethod") @db.TinyInt
+  closed Int @map("closed") @db.TinyInt
+  sold Int @map("sold") @db.TinyInt
+  theft Int @default(0, map: "DF__alobj__theft__68C5BEC8") @map("theft") @db.TinyInt
+  discarded Int @map("discarded") @db.TinyInt
+  changeDate DateTime? @map("changedate") @db.DateTime
+  guaranteeTo DateTime? @map("guarantyto") @db.DateTime
+  serviceAgreement String? @map("servsettlm") @db.VarChar(30)
+  theftId String? @map("theftid") @db.VarChar(30)
+  barCode String? @map("barcode") @db.VarChar(30)
+  extraInfo String? @map("extrainfo") @db.VarChar(150)
+  extraInfo2 String? @map("extrainfo2") @db.VarChar(150)
+  alternativeDepreciationPeriod Int? @map("altdepper") @db.SmallInt
+  alternativeChangeDate DateTime? @map("altchanged") @db.DateTime
+  noCalculationDepreciation Int @default(0, map: "DF__alobj__nocalcdep__69B9E301") @map("nocalcdepr") @db.TinyInt
+  fiscallyFullyDepreciated Int @default(0, map: "DF__alobj__fiscfulde__6AAE073A") @map("fiscfuldep") @db.TinyInt
+  fiscallyClosed Int @default(0, map: "DF__alobj__fiscclose__6BA22B73") @map("fiscclosed") @db.TinyInt
+  marketValue Float? @map("marketval") @db.Money
+  p1 String @map("p1") @db.Char(10)
+  p2 String @map("p2") @db.Char(10)
+  p3 String @map("p3") @db.Char(10)
+  p4 String @map("p4") @db.Char(10)
+  p5 String @map("p5") @db.Char(10)
+  p6 String @map("p6") @db.Char(10)
+  p7 String @map("p7") @db.Char(10)
+  p8 String @map("p8") @db.Char(10)
+  p9 String @map("p9") @db.Char(10)
+  p10 String @map("p10") @db.Char(10)
+  timestamp String @map("timestamp") @db.Char(10)
+
+  objectCategory ObjectCategory? @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "fkalobjkeyalkat")
+  underType UnderType? @relation(fields: [underTypeId], references: [id], map: "fkalobjkeyaltyp")
+  company Company @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, map: "fkalobjkeycmcmp")
+  contact Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fkalobjkeycmctc")
+
+  @@index([categoryId], map: "fkalobjalkat")
+  @@index([underTypeId], map: "fkalobjaltyp")
+  @@index([companyId], map: "fkalobjcmcmp")
+  @@index([contactId], map: "fkalobjcmctc")
+}

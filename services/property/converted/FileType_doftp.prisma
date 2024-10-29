@@ -1,0 +1,10 @@
+model FileType {
+  @@map("doftp")
+  
+  id String @id(map: "pkdoftp") @map("keydoftp") @db.Char(15)
+  fileType String @map("filtyp") @db.VarChar(30)
+  fileExtension String? @map("extension") @db.Char(4)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider changing timestamp later when its purpose is clearer
+
+  dorev dorev[] // TODO: Change dorev to new model name when available
+}

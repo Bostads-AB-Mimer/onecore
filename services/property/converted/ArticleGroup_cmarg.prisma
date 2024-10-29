@@ -1,0 +1,15 @@
+model ArticleGroup {
+  @@map("cmarg")
+
+  id String @id(map: "pkcmarg") @map("keycmarg") @db.Char(15)
+  moduleId String @map("keysymdl") @db.Char(15)
+  name String @map("caption") @db.VarChar(30)
+  additionEstimate Float @default(0, map: "DF__cmarg__addprcnt__356BD7E8") @map("addprcnt") @db.Money
+  additionEstimateSupplier Float @default(0, map: "DF__cmarg__addprcntl__365FFC21") @map("addprcntlr") @db.Money
+  systemStandardCode Int @default(0, map: "DF__cmarg__repabkod__3754205A") @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: understand more about its usage
+
+  cmart cmart[] // TODO: change cmart to new model name when available
+
+  @@index([moduleId], map: "fkcmargsymdl")
+}

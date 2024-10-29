@@ -1,0 +1,14 @@
+model ContactRelation {
+  @@map("cmctr")
+  id String @id(map: "pkcmctr") @map("keycmctr") @db.Char(15)
+  primaryObjectId String @map("keycmobj") @db.Char(15)
+  childObjectId String @map("keycmobj2") @db.Char(15)
+  contactPersonTypeId String? @map("keycmctt") @db.Char(15)
+  name String? @map("caption") @db.VarChar(150)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  cmobj cmobj @relation(fields: [primaryObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkcmctrkeycmobj")
+
+  @@index([primaryObjectId], map: "fkcmctrcmobj")
+  @@index([childObjectId], map: "fkcmctrcmobj2")
+}

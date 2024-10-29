@@ -1,0 +1,12 @@
+model FieldSearch {
+  @@map("batep")
+
+  fieldSearchId String @id(map: "pkbatep") @map("keybatep") @db.Char(15)
+  typTextTemplateId String @unique(map: "akbatep1") @map("keycmtep") @db.Char(15)
+  alias Int @unique(map: "akbatep2") @default(0, map: "DF__batep__fldalias__3D567088") @map("fldalias")
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Review if we can rename 'timestamp' field for more clarity in context
+
+  typTextTemplate TypTextTemplate @relation(fields: [typTextTemplateId], references: [typTextTemplateId], onDelete: Cascade, map: "fkbatepkeycmtep")
+
+  // TODO: Determine if additional fields require renaming upon further schema inspection
+}

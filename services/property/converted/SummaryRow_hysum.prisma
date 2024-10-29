@@ -1,0 +1,13 @@
+model SummaryRow {
+  @@map("hysum")
+  
+  summaryRowId String @id(map: "PK__hysum__4EA8A765") @map("keyhysum") @db.Char(15)
+  moduleId String? @map("keysymdl") @db.Char(15) // Based on previous note "keysymdl: Modul"
+  summaryDescription String? @map("hysumben") @db.Char(80) // Based on "Summarad"
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  cmart cmart[] // TODO: rename cmart to new model name when available
+  rentalRow hyrad[] // Already converted to RentalRow in previous example
+
+  @@index([moduleId], map: "fkhysumsymdl")
+}

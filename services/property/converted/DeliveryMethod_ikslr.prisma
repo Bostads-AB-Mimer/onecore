@@ -1,0 +1,10 @@
+model DeliveryMethod {
+  @@map("ikslr")
+
+  id String @id(map: "PK__ikslr__546180BB") @map("keyikslr") @db.Char(15)
+  name String @unique(map: "akikslr1") @map("caption") @db.Char(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  hyobj hyobj[] // TODO: change hyobj to new model name when available
+  ikbeh ikbeh[] // TODO: change ikbeh to new model name when available
+}

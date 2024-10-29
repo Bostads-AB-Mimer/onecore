@@ -1,0 +1,52 @@
+model Security {
+  @@map("hysec")
+  
+  securityId String @id(map: "pkhysec") @map("keyhysec") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15) // Based on the note about keyhyobj
+  securityTypeId String @map("keyhyset") @db.Char(15) // Based on the note about keyhyset
+  securityCategoryId String? @map("keyhyscy") @db.Char(15) // Based on the note about keyhyscy
+  contactId String? @map("keycmctc") @db.Char(15) // Assuming this is a foreign key to Contact
+  regulatedAmountId String @map("keyhying") @db.Char(15) // Based on the note about keyhying
+  securityCodingId String? @map("keyhysma") @db.Char(15) // Based on the note about keyhysma
+  claimPeriodLeaseId String? @map("keycmuni") @db.Char(15) // Based on period in the lease period
+  claimPeriodTerminatedId String? @map("keycmuni2") @db.Char(15) // Based on terminated contract period
+  claimPeriodCeasedId String? @map("keycmuni3") @db.Char(15) // Based on ceased contract period
+  amount Float? @map("amount") @db.Money
+  setAmount Float? @map("actamount") @db.Money // 'Set' is used for actamount
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime? @map("tdate") @db.DateTime
+  noticeMonth Int? @map("noticemon") @db.TinyInt // Assuming 'noticemon' refers to a month duration
+  noticeDate DateTime? @map("noticedate") @db.DateTime
+  account String? @map("account") @db.Char(20)
+  note String? @map("comment") @db.VarChar(500)
+  info String? @map("terms") @db.VarChar(200)
+  createdDate DateTime? @map("createdate") @db.Date
+  dueDate DateTime? @map("duedate") @db.Date
+  receivedDate DateTime? @map("recvddate") @db.Date
+  returnedDate DateTime? @map("returndate") @db.Date
+  validClaimPeriod Int? @map("nvalidper") @db.SmallInt
+  expiredClaimPeriod Int? @map("nexpper") @db.SmallInt
+  ceasedClaimPeriod Int? @map("nceasedper") @db.SmallInt
+  noticeOfClaim DateTime? @map("warnclaim") @db.Date
+  claimSignature String? @map("claimsign") @db.VarChar(80)
+  claimNote String? @map("claimcmmnt") @db.VarChar(500)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if a different naming is needed
+
+  // Relations
+  contact cmctc? @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkhyseckeycmctc")
+  // TODO: verify and update these model names once they are determined
+  cmuni_hysec_keycmuniTocmuni cmuni? @relation("hysec_keycmuniTocmuni", fields: [keycmuni], references: [keycmuni], onDelete: NoAction, onUpdate: NoAction, map: "fkhyseckeycmuni ")
+  cmuni_hysec_keycmuni2Tocmuni cmuni? @relation("hysec_keycmuni2Tocmuni", fields: [keycmuni2], references: [keycmuni], onDelete: NoAction, onUpdate: NoAction, map: "fkhyseckeycmuni2 ")
+  cmuni_hysec_keycmuni3Tocmuni cmuni? @relation("hysec_keycmuni3Tocmuni", fields: [keycmuni3], references: [keycmuni], onDelete: NoAction, onUpdate: NoAction, map: "fkhyseckeycmuni3 ")
+  regulatedAmountEntity hying @relation(fields: [keyhying], references: [keyhying], onUpdate: NoAction, map: "fkhyseckeyhying ") // Assuming hying is related to regulated amounts
+  contract hyobj @relation(fields: [keyhyobj], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhyseckeyhyobj")
+  securityType hyset @relation(fields: [keyhyset], references: [keyhyset], onUpdate: NoAction, map: "fkhyseckeyhyset ")
+
+  @@index([keycmctc], map: "fkhyseccmctc")
+  @@index([keycmuni], map: "fkhyseccmuni")
+  @@index([keycmuni2], map: "fkhyseccmuni2")
+  @@index([keycmuni3], map: "fkhyseccmuni3")
+  @@index([keyhying], map: "fkhysechying")
+  @@index([keyhyobj], map: "fkhysechyobj")
+  @@index([keyhyset], map: "fkhysechyset")
+}

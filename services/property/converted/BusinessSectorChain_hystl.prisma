@@ -1,0 +1,17 @@
+model BusinessSectorChain {
+  @@map("hystl")
+  id String @id(map: "pkhystl") @map("keyhystl") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15)
+  industryId String? @map("keycmtrd") @db.Char(15)
+  conceptId String? @map("keycmcpt") @db.Char(15)
+  contractName String? @map("storename") @db.VarChar(60)
+  plannedStartDate DateTime? @map("fdate") @db.Date // Assuming fdate is a start date, using Planned prefix because it's not clear if it's real or planned
+  plannedEndDate DateTime? @map("tdate") @db.Date // Assuming tdate is an end date, using Planned prefix because it's not clear if it's real or planned
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate usage and whether to change "timestamp"
+
+  hyobj hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhystlkeyhyobj")
+
+  @@index([contractId], map: "fkhystlhyobj")
+
+  // TODO: Rename relations and other references when new model names for related tables are determined.
+}

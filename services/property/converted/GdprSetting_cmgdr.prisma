@@ -1,0 +1,18 @@
+model GdprSetting {
+  @@map("cmgdr")
+
+  gdprSettingId String @id(map: "pkcmgdr") @map("keycmgdr") @db.Char(15)
+  processId String @unique(map: "akcmgdr") @map("keycmprc") @db.Char(15)
+  unitId String @map("keycmuni") @db.Char(15)
+  group Int @default(0, map: "DF__cmgdr__gdprgroup__52B68218") @map("gdprgroupd") @db.TinyInt
+  type Int @default(0, map: "DF__cmgdr__gdprtype__53AAA651") @map("gdprtype") @db.TinyInt
+  quantity Int @default(0, map: "DF__cmgdr__gdprqty__549ECA8A") @map("gdprqty") @db.SmallInt
+  order Int @default(0, map: "DF__cmgdr__gdprorder__5592EEC3") @map("gdprorder") @db.TinyInt
+
+  // TODO: change timestamp later when knowing more about its usage
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // Relations (TODOs for pending new model names)
+  cmprc cmprc @relation(fields: [processId], references: [keycmprc], onUpdate: NoAction, map: "fkcmgdrkeycmprc")
+  cmuni cmuni @relation(fields: [unitId], references: [keycmuni], onUpdate: NoAction, map: "fkcmgdrkeycmuni ")
+}

@@ -1,0 +1,59 @@
+model Order {
+  @@map("ikbeh")
+
+  orderId String @id(map: "pkikbeh") @map("keyikbeh") @db.Char(15)
+  transactionTypeId String? @map("keyrevrt") @db.Char(15)
+  supplierId String @map("keycmctc") @db.Char(15)
+  resourceId String @map("keycmctc2") @db.Char(15)
+  userId String @map("keysyusr") @db.Char(15)
+  purchaserId String? @map("keysyusr2") @db.Char(15)
+  locationId String @map("keycmobj") @db.Char(15)
+  contractId String? @map("keyhyobj") @db.Char(15)
+  projectId String? @map("keyprprj") @db.Char(15)
+  subProjectId String? @map("keyprppr") @db.Char(15)
+  categoryId String? @map("keycmtyp") @db.Char(15)
+  orderingMethodId String? @map("keyiksbg") @db.Char(15)
+  deliveryMethodId String? @map("keyikslr") @db.Char(15)
+  orderCode String @map("code") @db.VarChar(30)
+  orderNameCaption String? @map("caption") @db.VarChar(60)
+  registrationDate DateTime @map("regdate") @db.DateTime
+  signatureSignature String @map("signatur") @db.VarChar(80)
+  orderDate DateTime? @map("orderdate") @db.DateTime
+  purchaserSignature String? @map("signatur2") @db.VarChar(80)
+  plannedDeliveryDate DateTime? @map("estlevdate") @db.DateTime
+  totalAmount Float? @map("totprice") @db.Money
+  customerSatisfaction Int @default(0, map: "DF__ikbeh__degree__5ABD5828") @map("degree") @db.TinyInt
+  satisfactionNote String? @map("degreenote") @db.VarChar(60)
+  advanceDeliveryNotice String? @map("avilev") @db.VarChar(60)
+  plannedExpiryDate DateTime? @map("plexpdate") @db.DateTime
+  orderStatus Int @default(0, map: "DF__ikbeh__status__5BB17C61") @map("status") @db.TinyInt
+  invoiceCompleted Int @default(0, map: "DF__ikbeh__invcompl__5CA5A09A") @map("invcompl") @db.TinyInt
+  distributionModel Int @default(0, map: "DF__ikbeh__distrmode__5D99C4D3") @map("distrmodel")
+  orderTimestamp String @map("timestamp") @db.Char(10) // TODO: Determine usage for future renaming
+
+  // Relations
+  cmctc_ikbeh_keycmctcTocmctc cmctc @relation("ikbeh_keycmctcTocmctc", fields: [supplierId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc")
+  cmctc_ikbeh_keycmctc2Tocmctc cmctc @relation("ikbeh_keycmctc2Tocmctc", fields: [resourceId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc2")
+
+  // TODO: Determine the new model names and update these relations
+  hyobj hyobj? @relation(fields: [contractId], references: [keyhyobj], onUpdate: NoAction, map: "fkikbehkeyhyobj")
+  iksbg iksbg? @relation(fields: [orderingMethodId], references: [keyiksbg], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyiksbg")
+  ikslr ikslr? @relation(fields: [deliveryMethodId], references: [keyikslr], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyikslr ")
+  prppr prppr? @relation(fields: [subProjectId], references: [keyprppr], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprppr")
+  prprj prprj? @relation(fields: [projectId], references: [keyprprj], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprprj")
+
+  ikber ikber[]
+
+  @@index([supplierId], map: "fkikbehcmctc")
+  @@index([resourceId], map: "fkikbehcmctc2")
+  @@index([locationId], map: "fkikbehcmobj")
+  @@index([categoryId], map: "fkikbehcmtyp")
+  @@index([contractId], map: "fkikbehhyobj")
+  @@index([orderingMethodId], map: "fkikbehiksbg")
+  @@index([deliveryMethodId], map: "fkikbehikslr")
+  @@index([subProjectId], map: "fkikbehprppr")
+  @@index([projectId], map: "fkikbehprprj")
+  @@index([transactionTypeId], map: "fkikbehrevrt")
+  @@index([userId], map: "fkikbehsyusr")
+  @@index([purchaserId], map: "fkikbehsyusr2")
+}

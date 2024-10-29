@@ -1,0 +1,13 @@
+model Permission {
+  @@map("cmacc")
+
+  permissionId String @id(map: "pkcmacc") @map("keycmacc") @db.Char(15)
+  companyId String @map("keycmcmp") @db.Char(15)
+  userId String @map("keysyusr") @db.Char(15)
+  permissionTimestamp String @map("timestamp") @db.Char(10)
+
+  cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, onUpdate: NoAction, map: "fkcmacckeycmcmp")
+
+  @@unique([userId, companyId], map: "akcmacc")
+  @@index([companyId], map: "fkcmacccmcmp")
+}

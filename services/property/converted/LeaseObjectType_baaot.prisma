@@ -1,0 +1,15 @@
+model LeaseObjectType {
+  @@map("baaot")
+
+  leaseObjectTypeId String @id(map: "pkbaaot") @map("keybaaot") @db.Char(15)
+  actionComponentTypeId String? @map("keypuatt") @db.Char(15) // Since it references an action component type model 
+  leaseObjectTypeCode String @unique(map: "akbaaot") @map("code") @db.VarChar(15)
+  leaseObjectTypeName String? @map("caption") @db.VarChar(60)
+  isSystemStandard Int @default(0, map: "DF__baaot__issystem__1D88BF74") @map("issystem") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: Change 'puatt' relation to new model name when available
+  puatt puatt? @relation(fields: [actionComponentTypeId], references: [keypuatt], onUpdate: NoAction, map: "fkbaaotkeypuatt ")
+
+  @@index([actionComponentTypeId], map: "fkbaaotpuatt")
+}

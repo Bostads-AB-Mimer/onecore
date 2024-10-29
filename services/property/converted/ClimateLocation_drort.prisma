@@ -1,0 +1,23 @@
+model ClimateLocation {
+  @@map("drort")
+  climateLocationId String @id(map: "pkdrort") @map("keydrort") @db.Char(15)
+  code String @map("code") @db.Char(5)
+  name String @map("caption") @db.Char(30)
+
+  // Assuming 'type' relates to a predefined categorization.
+  type Int @default(1, map: "DF__drort__type__15950AB2") @map("type") @db.TinyInt
+
+  // 'ortactive' could indicate if the location is active, hence renamed as 'isActive'.
+  isActive Int @map("ortactive") @db.TinyInt
+
+  // 'ortdut' potentially refers to a specific duty or characteristic, more context needed for renaming.
+  ortdut Int @map("ortdut") @db.SmallInt
+
+  // 'sysrec' might denote if this location is a system recommendation, renamed for clarity.
+  isSystemRecommended Int @map("sysrec") @db.TinyInt
+
+  // Keeping the 'timestamp' for future validation since more context is needed.
+  timestamp String @map("timestamp") @db.Char(10)
+
+  drmpt drmpt[] // TODO: Rename drmpt to the new model name when its schema is known.
+}

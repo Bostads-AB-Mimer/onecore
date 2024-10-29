@@ -1,0 +1,36 @@
+model LinkedContact {
+  @@map("hyavk")
+
+  linkedContactId String @id(map: "pkhyavk") @map("keyhyavk") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15) // Renamed based on the domain reference "Kontrakt"
+  holdingPeriodId String? @map("keyhyinp") @db.Char(15)  // Renamed based on the domain reference "Innehavsperiod"
+  contactId String @map("keycmctc") @db.Char(15) // Maintaining relation with Contact model
+  additionalContactId String? @map("keycmctc2") @db.Char(15) // Used 'additional' prefix to differentiate
+  contractPersonTypeId String @map("keyhyakt") @db.Char(15) // Renamed to reflect "Typ av kontraktsperson"
+  share Decimal @map("andel") @db.Decimal(6, 3)
+  order Int? @map("ordning") @db.TinyInt 
+  startDate DateTime? @map("fdate") @db.DateTime // From date
+  endDate DateTime? @map("tdate") @db.DateTime // To date
+  approvedDate DateTime? @map("godkdat") @db.DateTime 
+  approvedSignature String? @map("godksign") @db.VarChar(80)
+  reminderSentDate DateTime? @map("notifydate") @db.DateTime
+  enrollmentDate DateTime? @map("enrollment") @db.DateTime
+  terminatedBy Int? @map("terminby") @db.TinyInt // "Uppsagt av"
+  ownedShareNumerator Int? @map("agdandelt") @db.SmallInt
+  ownedShareDenominator Int? @map("agdandeln") @db.SmallInt
+  declaredShareNumerator Int? @map("redandelt") @db.SmallInt
+  declaredShareDenominator Int? @map("redandeln") @db.SmallInt
+  signedDate DateTime? @map("signed") @db.DateTime
+  feePeriod Int @default(0, map: "DF__hyavk__feeperiod__65496848") @map("feeperiod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
+  
+  // TODO: Keep these until relationship models are renamed
+  hycmm hycmm[]
+  hyrad hyrad[]
+
+  @@index([contactId], map: "fkhyavkcmctc")
+  @@index([additionalContactId], map: "fkhyavkcmctc2")
+  @@index([contractPersonTypeId], map: "fkhyavkhyakt")
+  @@index([contractId], map: "fkhyavkhyobj")
+  @@index([contractId, contactId, contractPersonTypeId, order], map: "inhyavk_1QN1DW238")
+}

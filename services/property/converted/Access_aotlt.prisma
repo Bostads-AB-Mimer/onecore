@@ -1,0 +1,12 @@
+model Access {
+  @@map("aotlt")
+  
+  accessId String @id(map: "pkaotlt") @map("keyaotlt") @db.Char(15)
+  accessCaption String @unique(map: "akaotlt1") @map("caption") @db.VarChar(30)
+  isPublished Int @default(0, map: "DF__aotlt__publish__7424A43C") @map("publish") @db.TinyInt
+  // TODO: Determine appropriate naming for 'timestamp'
+  timestamp String @map("timestamp") @db.Char(10)
+
+  aoupp aoupp[] // TODO: change aoupp to the new model name when available
+  lbbes lbbes[] // TODO: change lbbes to the new model name when available
+}

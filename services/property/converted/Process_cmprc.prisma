@@ -1,0 +1,26 @@
+model Process {
+  @@map("cmprc")
+
+  processId String @id(map: "pkcmprc") @map("keycmprc") @db.Char(15)
+  moduleId String @map("keysymdl") @db.Char(15)
+  classId String? @map("keysycls") @db.Char(15)
+  nameId String @map("keysytxc") @db.Char(15)
+  descriptionId String? @map("keysytxc1") @db.Char(15)
+  imageClusterId String @map("keysyimc") @db.Char(15)
+  name String @map("caption") @db.VarChar(50)
+  processCode Int @default(0, map: "DF__cmprc__prcid__4751FDC5") @map("prcid") @db.SmallInt
+  alias String? @map("prcalias") @db.VarChar(50)
+
+  // TODO: change timestamp later when knowing more about its usage
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // Maintain old relation names with TODO for the conversion
+  cmbtr cmbtr[]
+  cmgdr cmgdr?
+
+  @@index([classId], map: "fkcmprcsycls")
+  @@index([imageClusterId], map: "fkcmprcsyimc")
+  @@index([moduleId], map: "fkcmprcsymdl")
+  @@index([nameId], map: "fkcmprcsytxc")
+  @@index([descriptionId], map: "fkcmprcsytxc1")
+}

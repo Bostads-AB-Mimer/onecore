@@ -1,0 +1,15 @@
+model WorkOrderCategoryLink {
+  @@map("aotyc")
+
+  workOrderCategoryLinkId String @id(map: "pkaotyc") @map("keyaotyc") @db.Char(15)
+  workOrderTypeId String @map("keyaotyp") @db.Char(15)
+  workOrderCategoryId String @map("keyaokat") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  workOrderCategory aokat @relation(fields: [workOrderCategoryId], references: [keyaokat], onDelete: NoAction, onUpdate: NoAction, map: "fkaotyckeyaokat")
+  workOrderType aotyp @relation(fields: [workOrderTypeId], references: [keyaotyp], onDelete: NoAction, onUpdate: NoAction, map: "fkaotyckeyaotyp")
+
+  @@unique([workOrderTypeId, workOrderCategoryId], map: "akaotyc1")
+  @@index([workOrderCategoryId], map: "fkaotycaokat")
+  @@index([workOrderTypeId], map: "fkaotycaotyp")
+}

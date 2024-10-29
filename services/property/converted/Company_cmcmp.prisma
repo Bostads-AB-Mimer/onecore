@@ -1,0 +1,91 @@
+model Company {
+  @@map("cmcmp")
+
+  companyId String @id(map: "pkcmcmp") @map("keycmcmp") @db.Char(15)
+  systemCompanyId String @map("keysycmp") @db.Char(15)
+  databaseId String @map("keydbdbs") @db.Char(15)
+  propertyObjectId String? @unique(map: "akcmcmpkeycmobj") @map("keycmobj") @db.Char(15) // TODO: May need renaming based on domain
+  regionId String? @map("keycmrgn") @db.Char(15)
+  serviceAreaId String? @map("keycmsom") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  collectedContact1Id String? @map("keycmctc2") @db.Char(15) // TODO: Verify use and relation
+  collectedContact2Id String? @map("keycmctc3") @db.Char(15) // TODO: Verify use and relation
+  articleForPledgeRegistrationFeeId String? @map("keycmart") @db.Char(15)
+  articleForTransferFeeId String? @map("keycmart2") @db.Char(15)
+  articleForSubletFeeId String? @map("keycmart3") @db.Char(15)
+  pathRouteId String? @map("keyatway") @db.Char(15)
+  code String @map("code") @db.VarChar(10)
+  name String @map("caption") @db.VarChar(60)
+  organizationNumber String? @map("orgnr") @db.VarChar(11)
+  phone String? @map("phone") @db.VarChar(30)
+  fax String? @map("fax") @db.VarChar(30)
+  vatNumber String? @map("vatid") @db.VarChar(30)
+  locationNumber String? @map("gln") @db.VarChar(13)
+  internalExternal Int @default(0, map: "DF__cmcmp__intern__13ECFB14") @map("intern") @db.TinyInt
+  legalName String? @map("jurben") @db.VarChar(60)
+  fTax Int @map("fskatt") @db.TinyInt
+  cooperativeHousingAssociation Int @default(0, map: "DF__cmcmp__brf__14E11F4D") @map("brf") @db.TinyInt
+  differentiatedAdditionalCapital Int @default(0, map: "DF__cmcmp__diffshare__15D54386") @map("diffshare") @db.TinyInt
+  rentAdministered Int @default(0, map: "DF__cmcmp__hyadm__16C967BF") @map("hyadm") @db.TinyInt
+  blocked Int @default(0, map: "DF__cmcmp__blocked__17BD8BF8") @map("blocked") @db.TinyInt
+  rentDaysPerMonth Int @default(0, map: "DF__cmcmp__rentdays__18B1B031") @map("rentdays") @db.TinyInt
+  planSubmissionDate DateTime? @map("planlssend") @db.DateTime
+  economicPlanApproved Int @default(0, map: "DF__cmcmp__planlsgod__19A5D46A") @map("planlsgodk") @db.TinyInt
+  planApprovalDate DateTime? @map("planlsdate") @db.DateTime
+  tenantAssociationFeeAmount Float? @map("hgfavgift") @db.Money
+  desiredAnnualInternalFundAllocation Float? @map("fondavs") @db.Money
+  vatObligationPercent Int @default(0, map: "DF__cmcmp__vatoblprc__1A99F8A3") @map("vatoblprct") @db.TinyInt
+  vatRegistered Int @default(0, map: "DF__cmcmp__vatliable__1B8E1CDC") @map("vatliable") @db.TinyInt
+  energyOptimization Int @default(0, map: "DF__cmcmp__energopt__1C824115") @map("energopt") @db.TinyInt
+  ownedCompany Int @default(0, map: "DF__cmcmp__owned__1D76654E") @map("owned") @db.TinyInt
+  interestInvoice Int @default(0, map: "DF__cmcmp__intinv__1E6A8987") @map("intinv") @db.TinyInt
+  errorReportAdministration Int @default(0, map: "DF__cmcmp__aoadm__1F5EADC0") @map("aoadm") @db.TinyInt
+  mediaBilling Int @default(0, map: "DF__cmcmp__drinv__2052D1F9") @map("drinv") @db.TinyInt
+  ownResponsibilityForInternalMaintenance Int @default(0, map: "DF__cmcmp__resintmai__2146F632") @map("resintmain") @db.TinyInt
+  valueYear Int? @map("valueyear") @db.SmallInt
+  disableQuantitiesBelowCompany Int @default(0, map: "DF__cmcmp__lockedqty__223B1A6B") @map("lockedqty") @db.TinyInt
+  mortgagingType Int @default(0, map: "DF__cmcmp__morttype__232F3EA4") @map("morttype") @db.TinyInt
+  mortgagingFeeAmount Float? @map("mortamount") @db.Money
+  transferFeeType Int @default(0, map: "DF__cmcmp__trantype__242362DD") @map("trantype") @db.TinyInt
+  transferFeeAmount Float? @map("tranamount") @db.Money
+  demandFeeAmount Float? @map("demandfee") @db.Money
+  sublettingType Int @default(0, map: "DF__cmcmp__sublettyp__25178716") @map("sublettype") @db.TinyInt
+  subletPercentage Decimal @default(0, map: "DF__cmcmp__subletpro__260BAB4F") @map("subletproc") @db.Decimal(7, 2)
+  subletFeeAmount Float @default(0, map: "DF__cmcmp__subletfee__26FFCF88") @map("subletfee") @db.Money
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
+
+  // Relations
+  asset alobj[] 
+  workOrder aoupp[]
+  permission cmacc[]
+  billingArticleForPledgeRegistration cmart? @relation("cmcmp_keycmartTocmart", fields: [keycmart], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmart")
+  billingArticleForTransfer cmart? @relation("cmcmp_keycmart2Tocmart", fields: [keycmart2], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmart2")
+  billingArticleForSublet cmart? @relation("cmcmp_keycmart3Tocmart", fields: [keycmart3], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmart3")
+  contact cmctc? @relation("cmcmp_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmctc")
+  creditHandler cmctc? @relation("cmcmp_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmctc2")
+  creditResponsible cmctc? @relation("cmcmp_keycmctc3Tocmctc", fields: [keycmctc3], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkcmcmpkeycmctc3")
+  propertyObject cmobj? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, map: "fkcmcmpkeycmobj") // TODO: Determine if propertyObjectId is the correct reference field
+  invoiceDetails faprn[]
+  rentalAdvices hyavi[]
+  rentalContracts hyobj_hyobj_keycmcmpTocmcmp[] @relation("hyobj_keycmcmpTocmcmp")
+  additionalRentalContracts hyobj_hyobj_keycmcmp2Tocmcmp[] @relation("hyobj_keycmcmp2Tocmcmp")
+  rentalRows hyrad[]
+  customerAgreements kramp[]
+  incomingPayments krfkh[]
+  relatedProjects prprj[]
+
+  // Indexes
+  @@index([keycmart], map: "fkcmcmpcmart")
+  @@index([keycmart2], map: "fkcmcmpcmart2")
+  @@index([keycmart3], map: "fkcmcmpcmart3")
+  @@index([keycmctc], map: "fkcmcmpcmctc")
+  @@index([keycmctc2], map: "fkcmcmpcmctc2")
+  @@index([keycmctc3], map: "fkcmcmpcmctc3")
+  @@index([propertyObjectId], map: "fkcmcmpcmobj") // TODO: Verify if this needs renaming
+  @@index([databaseId], map: "fkcmcmpdbdbs")
+  @@index([systemCompanyId], map: "fkcmcmpsycmp")
+  @@index([code], map: "incmcmp_2HK0JJ50M")
+  @@index([name], map: "incmcmp_2HK0JJ52U")
+  @@index([serviceAreaId, propertyObjectId, companyId, regionId], map: "incmcmp_2HK0JJ568")
+  @@index([code, companyId, name], map: "incmcmp_2HK0JJ58U")
+}

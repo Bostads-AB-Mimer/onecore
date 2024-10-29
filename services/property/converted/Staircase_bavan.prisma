@@ -1,0 +1,20 @@
+model Staircase {
+  @@map("bavan")
+  id String @id(map: "pkbavan") @map("keybavan") @db.Char(15)
+  objectID String @unique(map: "fkbavancmobj") @map("keycmobj") @db.Char(15) // TODO: change cmobj to new model name when available
+  code String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  floorPlan String? @map("vaningplan") @db.VarChar(30)
+  accessibleByElevator Int @default(6, map: "DF__bavan__hissatkom__11BCE763") @map("hissatkom") @db.TinyInt
+  deleteMark Int @default(0, map: "DF__bavan__deletemar__12B10B9C") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  cmobj cmobj @relation(fields: [objectID], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbavankeycmobj")
+
+  @@index([fromDate], map: "inbavan_1A00UMOLZ")
+  @@index([toDate], map: "inbavan_1A00UMONA")
+  @@index([code], map: "inbavan_1A00UMOO9")
+  @@index([name], map: "inbavan_1A00UMOPJ")
+}

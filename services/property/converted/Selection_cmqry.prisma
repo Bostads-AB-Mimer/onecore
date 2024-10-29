@@ -1,0 +1,23 @@
+model Selection {
+  @@map("cmqry")
+
+  selectionId String @id(map: "pkcmqry") @map("keycmqry") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15) // Mapping keysyusr to userId based on previous note of "Användare"
+  name String @map("caption") @db.VarChar(250) // Mapping caption to name
+  isInternal Int @default(0, map: "DF__cmqry__internal__6F3F55D2") @map("internal") @db.TinyInt // Mapping internal to isInternal
+  accessRead Int @default(0, map: "DF__cmqry__accr__70337A0B") @map("accr") @db.TinyInt // Mapping accr to accessRead
+  accessWrite Int @default(0, map: "DF__cmqry__accw__71279E44") @map("accw") @db.TinyInt // Mapping accw to accessWrite
+  query String @map("qryquery") @db.VarChar(Max)
+  description String? @map("qrymemo") @db.VarChar(Max) // Mapping qrymemo to description
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  bsend bsend[] // TODO: change bsend to new model name when available
+  batchProcessRow BatchProcessRow[] @relation("fkcmbtrkeycmqry")
+  selectionRow SelectionRow[] @relation("fkcmqrrkeycmqry")
+  cmrbr cmrbr[] // TODO: change cmrbr to new model name when available
+  reportColumn ReportColumn[] @relation("fkcmrdckeycmqry")
+  reportRow ReportRow[] @relation("fkcmrdrkeycmqry")
+  cmunf cmunf[] // TODO: change cmunf to new model name when available
+
+  @@index([userId], map: "fkcmqrysyusr")
+}

@@ -1,0 +1,37 @@
+model DigitalSignature {
+  @@map("hydis")
+  
+  digitalSignatureId String @id(map: "pkhydis") @map("keyhydis") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15) // TODO: check naming in context
+  reportId String @map("keycmrpt") @db.Char(15) // TODO: check naming in context
+  documentId String @map("keydorev") @db.Char(15) // TODO: check naming in context
+  contactId String? @map("keycmctc") @db.Char(15) // TODO: check naming in context
+  formId String? @map("keybsdef") @db.Char(15) // TODO: check naming in context
+  createdDate DateTime @map("created") @db.DateTime
+  type Int @default(1, map: "DF__hydis__dstype__1B440419") @map("dstype") @db.TinyInt
+  signatureGuid String? @map("dsguid") @db.UniqueIdentifier
+  signType Int @default(1, map: "DF__hydis__signtype__1C382852") @map("signtype") @db.TinyInt
+  signedDate DateTime? @map("signed") @db.DateTime
+  sentDate DateTime? @map("senddate") @db.DateTime
+  validToDate DateTime? @map("validto") @db.DateTime
+  cancelDate DateTime? @map("canceldate") @db.DateTime
+  externalDocumentId String? @map("extdocid") @db.VarChar(100)
+  recipientAddress String? @map("toaddress") @db.VarChar(80)
+  authenticationType String? @map("authtype") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: update timestamp when have more clarity
+
+  // Relations
+  bsdef bsdef? @relation(fields: [formId], references: [keybsdef], onDelete: NoAction, onUpdate: NoAction, map: "fkhydiskeybsdef")
+  cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeycmctc")
+  cmrpt cmrpt @relation(fields: [reportId], references: [keycmrpt], onUpdate: NoAction, map: "fkhydiskeycmrpt")
+  dorev dorev @relation(fields: [documentId], references: [keydorev], onUpdate: NoAction, map: "fkhydiskeydorev")
+  hyobj hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeyhyobj")
+
+  @@unique([contractId, documentId], map: "akhydis1")
+  @@index([formId], map: "fkhydisbsdef")
+  @@index([contactId], map: "fkhydiscmctc")
+  @@index([reportId], map: "fkhydiscmrpt")
+  @@index([documentId], map: "fkhydisdorev")
+  @@index([contractId], map: "fkhydishyobj")
+  @@index([externalDocumentId], map: "hydisextdocid")
+}

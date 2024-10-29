@@ -1,0 +1,15 @@
+model BuildingType {
+  @@map("babyt")
+  
+  buildingTypeId String @id(map: "pkbabyt") @map("keybabyt") @db.Char(15)
+  componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: revisit after more context on 'puatt'
+  buildingTypeCode String @unique(map: "akbabyt") @map("code") @db.VarChar(15)
+  buildingTypeName String? @map("caption") @db.VarChar(60)
+  isSystemStandard Int @default(0, map: "DF__babyt__issystem__2AE2BA92") @map("issystem") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: may need further clarification on 'timestamp'
+
+  babyg babyg[] // TODO: change babyg to new model name when available
+  puatt puatt? @relation(fields: [componentTypeActionId], references: [keypuatt], onUpdate: NoAction, map: "fkbabytkeypuatt ")
+
+  @@index([componentTypeActionId], map: "fkbabytpuatt")
+}

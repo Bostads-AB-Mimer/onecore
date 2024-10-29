@@ -1,0 +1,16 @@
+model ReportData {
+  @@map("cmrbh")
+  reportDataId String @id(map: "pkcmrbh") @map("keycmrbh") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15) // Maps to Användare (User)
+  name String @map("caption") @db.VarChar(80) // Maps to Benämning
+  dotNetSupportLevel Int @default(0, map: "DF__cmrbh__dotnet__5447774B") @map("dotnet") @db.TinyInt
+  isReadPermission Int @default(0, map: "DF__cmrbh__accr__553B9B84") @map("accr") @db.TinyInt // Maps to Läsa (Read)
+  isWritePermission Int @default(0, map: "DF__cmrbh__accw__562FBFBD") @map("accw") @db.TinyInt // Maps to Ändra (Edit)
+  isPublished Int @default(0, map: "DF__cmrbh__publish__5723E3F6") @map("publish") @db.TinyInt // Maps to Publicera (Publish)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Review usage of timestamp for potential renaming
+
+  cmbtr cmbtr[] // TODO: Rename cmbtr reference model when name is known
+  cmrbr cmrbr[] // TODO: Rename cmrbr reference model when name is known
+
+  @@index([userId], map: "fkcmrbhsyusr")
+}

@@ -1,0 +1,56 @@
+model Property {
+  @@map("bafst")
+
+  propertyId String @id(map: "pkbafst") @map("keybafst") @db.Char(15)
+  propertyObjectId String @unique(map: "fkbafstcmobj") @map("keycmobj") @db.Char(15)
+  freeTableKeyA String? @map("keybabya") @db.Char(15) // Mapping for 'Fritabellen 1'. Rename if domain clarification is obtained
+  freeTableKeyB String? @map("keybabyb") @db.Char(15) // Mapping for 'Fritabellen 2'. Rename if domain clarification is obtained
+  freeTableKeyC String? @map("keybabyc") @db.Char(15) // Mapping for 'Fritabellen 3'. Rename if domain clarification is obtained
+  valueAreaId String? @map("keybavom") @db.Char(15) // TODO: Once mapped, verify if 'Värdeområde' means value area
+  contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
+  legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
+  propertyCode String @map("code") @db.VarChar(30)
+  propertyDesignation String? @map("caption") @db.VarChar(60)
+  municipality String? @map("kommun") @db.VarChar(30)
+  tract String? @map("trakt") @db.VarChar(30)
+  block String? @map("block") @db.VarChar(30)
+  sector String? @map("sector") @db.VarChar(30)
+  propertyIndexNumber String? @map("indexno") @db.VarChar(30)
+  congregation String? @map("forsamling") @db.VarChar(60)
+  builtStatus Int @default(0, map: "DF__bafst__bebyggd__15F375CB") @map("bebyggd") @db.TinyInt
+  separateAssessmentUnit Int @default(0, map: "DF__bafst__egentaxen__16E79A04") @map("egentaxenh") @db.TinyInt
+  consolidationNumber String? @map("sammanfnr") @db.VarChar(30)
+  ownershipType String @default("E", map: "DF__bafst__egenfast__17DBBE3D") @map("egenfast") @db.Char(1)
+  registrationDate DateTime? @map("inskrdat") @db.Date
+  acquisitionDate DateTime? @map("fangesdat") @db.Date
+  isLeasehold Int @default(0, map: "DF__bafst__tomtratt__18CFE276") @map("tomtratt") @db.TinyInt
+  leaseholdTerminationDate DateTime? @map("tomtdoddat") @db.DateTime
+  area String? @map("omrade") @db.VarChar(30)
+  purpose String? @map("andamal") @db.Char(1) // Could mean 'Ändamål'
+  buildingType String? @map("bebyggtyp") @db.Char(2) // Could mean 'Bebyggelsetyp'
+  propertyTaxNumber String? @map("taxno") @db.VarChar(15)
+  mainPartAssessedValue Int @default(0, map: "DF__bafst__ammainpar__19C406AF") @map("ammainpart") @db.TinyInt
+  includeInAssessedValue Int @default(1, map: "DF__bafst__amcalcinc__1AB82AE8") @map("amcalcinc") @db.TinyInt
+  grading Int @default(0, map: "DF__bafst__grade__1BAC4F21") @map("grade") @db.TinyInt
+  deleteMark Int @default(0, map: "DF__bafst__deletemar__1CA0735A") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10)
+
+  babya babya? @relation(fields: [freeTableKeyA], references: [keybabya], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabya")
+  babyb babyb? @relation(fields: [freeTableKeyB], references: [keybabyb], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyb")
+  babyc babyc? @relation(fields: [freeTableKeyC], references: [keybabyc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyc")
+  cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
+  cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
+  cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbafstkeycmobj")
+
+  @@index([freeTableKeyA], map: "fkbafstbabya")
+  @@index([freeTableKeyB], map: "fkbafstbabyb")
+  @@index([freeTableKeyC], map: "fkbafstbabyc")
+  @@index([contactId], map: "fkbafstcmctc")
+  @@index([legalOwnerId], map: "fkbafstcmctc2")
+  @@index([fromDate], map: "inbafst_2KR0I5KYU")
+  @@index([toDate], map: "inbafst_2KR0I5KZP")
+  @@index([propertyCode], map: "inbafst_2KR0I5L0X")
+  @@index([propertyDesignation], map: "inbafst_2KR0I5L1V")
+}

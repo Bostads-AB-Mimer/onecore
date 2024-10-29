@@ -1,0 +1,15 @@
+model ConnectionPlacement {
+  @@map("aoplo")
+
+  id String @id(map: "pkaoplo") @map("keyaoplo") @db.Char(15)
+  placementId String @map("keyaopla") @db.Char(15)
+  objectTypeId String @map("keycmobt") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: rename these virtual fields when knowing the new model names
+  // aopla aopla @relation(fields: [keyaopla], references: [keyaopla], onDelete: Cascade, onUpdate: NoAction, map: "fkaoplokeyaopla ")
+  // cmobt cmobt @relation(fields: [keycmobt], references: [keycmobt], onDelete: Cascade, onUpdate: NoAction, map: "fkaoplokeycmobt ")
+
+  @@unique([placementId, objectTypeId], map: "akaoplo")
+  @@index([objectTypeId], map: "fkaoplocmobt")
+}

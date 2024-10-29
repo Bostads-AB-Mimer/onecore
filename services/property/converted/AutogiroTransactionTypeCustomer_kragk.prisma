@@ -1,0 +1,40 @@
+model AutogiroTransactionTypeCustomer {
+  @@map("kragk")
+
+  autogiroTransactionTypeCustomerId String @id(map: "pkkragk") @map("keykragk") @db.Char(15)
+  transactionTypeId String @map("keyrevrt") @db.Char(15)
+  debitCreditGiroId String? @map("keycmdbg") @db.Char(15) // TODO: Convert to new model name when available
+  customerId String @map("keykrknr") @db.Char(15)
+  contractId String? @map("keyhyobj") @db.Char(15) // TODO: Convert to new model name when available
+  mandateIdentification String? @map("mandateid") @db.VarChar(20)
+  bicCode String? @map("bic") @db.VarChar(11)
+  ibanCode String? @map("iban") @db.VarChar(34)
+  agNumber String? @map("agnumber") @db.VarChar(16)
+  agNumberLength Int? @map("aglength") @db.SmallInt
+  additionalInfo String? @map("aginfo") @db.Char(30)
+  agClearingNumber Decimal? @map("agclearing") @db.Decimal(5, 0)
+  agAccountNumber String? @map("agaccount") @db.Char(20)
+  autogiroYear Int? @map("agyear") @db.TinyInt
+  requestAutogiroPermit Int @default(0, map: "DF__kragk__reqpermit__417EBB9A") @map("reqpermit") @db.TinyInt
+  permitDate DateTime? @map("permitdate") @db.DateTime
+  requestAutogiroStop Int @default(0, map: "DF__kragk__reqstop__4272DFD3") @map("reqstop") @db.TinyInt
+  firstDirectDebitDate DateTime? @map("frstdate") @db.DateTime
+  stopDate DateTime? @map("stopdate") @db.DateTime
+  lastDirectDebitDate DateTime? @map("lastdate") @db.DateTime
+  fixedDebitDay Int? @map("agdayfixed") @db.TinyInt
+  fixedDebitDayNo Int? @map("agdayno") @db.TinyInt
+  alternativeFixedDebitDay Int? @map("agdaypass") @db.TinyInt
+  electronicDirectDebitId String? @map("aguniqueid") @db.Char(16)
+  directDebitCheck Int @default(0, map: "DF__kragk__agcheck__4367040C") @map("agcheck") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if "timestamp" is used for versioning or other purposes 
+
+  cmdbg cmdbg? @relation(fields: [debitCreditGiroId], references: [keycmdbg], onUpdate: NoAction, map: "fkkragkkeycmdbg")
+  hyobj hyobj? @relation(fields: [contractId], references: [keyhyobj], onUpdate: NoAction, map: "fkkragkkeyhyobj")
+  krknr krknr @relation(fields: [customerId], references: [keykrknr], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeykrknr")
+  revrt revrt @relation(fields: [transactionTypeId], references: [keyrevrt], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeyrevrt")
+
+  @@index([debitCreditGiroId], map: "fkkragkcmdbg")
+  @@index([contractId], map: "fkkragkhyobj")
+  @@index([customerId], map: "fkkragkkrknr")
+  @@index([transactionTypeId], map: "fkkragkrevrt")
+}

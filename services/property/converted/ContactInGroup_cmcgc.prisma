@@ -1,0 +1,15 @@
+model ContactInGroup {
+  @@map("cmcgc")
+
+  contactInGroupId String @id(map: "pkcmcgc") @map("keycmcgc") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  groupId String @map("keycmcgr") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Assess timestamp usage for potential renaming
+
+  // TODO: Update these field names once new model names have been established
+  cmcgr cmcgr @relation(fields: [groupId], references: [keycmcgr], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcgckeycmcgr ")
+  cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcgckeycmctc")
+
+  @@unique([contactId, groupId], map: "akcmcgc1")
+  @@index([groupId], map: "fkcmcgccmcgr")
+}

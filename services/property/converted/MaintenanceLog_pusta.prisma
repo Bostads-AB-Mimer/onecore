@@ -1,0 +1,35 @@
+model MaintenanceLog {
+  @@map("pusta")
+
+  maintenanceLogId String @id(map: "pkpusta") @map("keypusta") @db.Char(15)
+  plannedMaintenanceId String? @map("keypuund") @db.Char(15) // TODO: Update name when model is available
+  userId String? @map("keysyusr") @db.Char(15) // TODO: Update name when model is available
+  objectId String? @map("keycmobj") @db.Char(15) // TODO: Update name when model is available
+  actionId String? @map("keypuatg") @db.Char(15) // TODO: Update name when model is available
+  subProjectId String? @map("keyprppr") @db.Char(15) // Assuming 'Delprojekt' refers to 'subProjectId'
+  latestExecutionYear Int @default(0, map: "DF__pusta__senastutf__00925B61") @map("senastutf") @db.SmallInt
+  latestExecutionMonth Int? @map("senastutm") @db.TinyInt
+  originalLastExecutionYear Int @default(0, map: "DF__pusta__orgsenutf__01867F9A") @map("orgsenutf") @db.SmallInt
+  originalLastExecutionMonth Int? @map("orgsenutm") @db.TinyInt
+  action String @map("atgard") @db.VarChar(30)
+  description1 String? @map("text1") @db.VarChar(30)
+  description2 String? @map("text2") @db.VarChar(30)
+  plainText String? @map("klartext") @db.VarChar(30)
+  costAmount Int? @map("kostnad")
+  quantity Decimal? @map("mangd") @db.Decimal(9, 1)
+  isInvestment Int @default(0, map: "DF__pusta__invest__027AA3D3") @map("invest") @db.TinyInt
+  costFactor Decimal @default(1, map: "DF__pusta__costfacto__036EC80C") @map("costfactor") @db.Decimal(5, 4)
+  date DateTime? @map("fdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Clarify usage and rename if necessary
+
+  cmobj cmobj? @relation(fields: [objectId], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkpustakeycmobj")
+  prppr prppr? @relation(fields: [subProjectId], references: [keyprppr], onUpdate: NoAction, onDelete: NoAction, map: "fkpustakeyprppr")
+  puatg puatg? @relation(fields: [actionId], references: [keypuatg], onUpdate: NoAction, map: "fkpustakeypuatg ")
+  puund puund? @relation(fields: [plannedMaintenanceId], references: [keypuund], onUpdate: NoAction, onDelete: NoAction, map: "fkpustakeypuund ")
+  
+  @@index([objectId], map: "fkpustacmobj")
+  @@index([subProjectId], map: "fkpustaprppr")
+  @@index([actionId], map: "fkpustapuatg")
+  @@index([plannedMaintenanceId], map: "fkpustapuund")
+  @@index([userId], map: "fkpustasyusr")
+}

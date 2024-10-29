@@ -1,0 +1,10 @@
+model AdministrativeUnitType {
+  @@map("bafet")
+  id String @id(map: "pkbafet") @map("keybafet") @db.Char(15)
+  code String @unique(map: "akbafet") @map("code") @db.VarChar(15)
+  name String? @map("caption") @db.VarChar(60)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: change bafen to new model name when available
+  bafen bafen[] 
+}

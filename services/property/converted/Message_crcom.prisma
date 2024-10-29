@@ -1,0 +1,26 @@
+model Message {
+  @@map("crcom")
+
+  messageId String @id(map: "pkcrcom") @map("keycrcom") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15) // TODO: change contactId to new model name when available
+  messageIdReference String? @map("msgid") @db.VarChar(100) // TODO: make sure about the usage of msgidReference to rename it correctly
+  fromAddress String @map("fromadr") @db.VarChar(200)
+  toAddress String @map("toadr") @db.VarChar(4000)
+  ccAddress String? @map("ccadr") @db.VarChar(4000)
+  subject String @map("comsub") @db.VarChar(1000)
+  messageContent String @map("commessa") @db.VarChar(Max)
+  contactAlias String? @map("conalias") @db.VarChar(100)
+  logTime DateTime @map("logtime") @db.DateTime
+  messageType Int @default(0, map: "DF__crcom__messtype__4E57CA7F") @map("messtype") @db.TinyInt
+  readStatus Int @default(0, map: "DF__crcom__rstatus__4F4BEEB8") @map("rstatus") @db.TinyInt
+  processedStatus Int @default(0, map: "DF__crcom__hstatus__504012F1") @map("hstatus") @db.TinyInt
+  waitingForReplyStatus Int @default(0, map: "DF__crcom__wstatus__5134372A") @map("wstatus") @db.TinyInt
+  publishStatus Int @default(1, map: "DF__crcom__pubstatus__52285B63") @map("pubstatus") @db.TinyInt
+  feedbackStatus Int @default(1, map: "DF__crcom__isfeedbk__531C7F9C") @map("isfeedbk") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: check the usage of timestamp to rename it appropriately 
+
+  contact cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkcrcomkeycmctc")
+
+  @@index([messageIdReference], map: "crcommsgid")
+  @@index([contactId], map: "fkcrcomcmctc")
+}

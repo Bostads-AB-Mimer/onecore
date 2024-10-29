@@ -1,0 +1,33 @@
+model RentalRound {
+  @@map("hyuto")
+
+  rentalRoundId String @id(map: "pkhyuto") @map("keyhyuto") @db.Char(15)
+  propertyObjectId String @map("keycmobj") @db.Char(15) // Foreign key, need to identify the relevant table/model
+  contractId String? @map("keyhyobj") @db.Char(15) // Foreign key, need to identify the relevant table/model
+  alternateContractId String? @map("keyhyobj2") @db.Char(15) // Foreign key, need to identify the relevant table/model
+  contactId String? @map("keycmctc") @db.Char(15) // Foreign key, need to identify the relevant table/model
+  userId String? @map("keysyusr") @db.Char(15) // This likely maps to another table, need to determine which
+  completionStatus Int @default(0, map: "DF__hyuto__avslutad__1AB154C0") @map("avslutad") @db.TinyInt
+  displayType Int @default(1, map: "DF__hyuto__visatyp__1BA578F9") @map("visatyp") @db.TinyInt
+  startDate DateTime @map("fdate") @db.DateTime
+  endDate DateTime? @map("tdate") @db.DateTime
+  name String? @map("namn") @db.VarChar(30)
+  phone String? @map("telefon") @db.VarChar(30)
+  mobilePhone String? @map("mobiltel") @db.VarChar(30)
+  email String? @map("epost") @db.VarChar(50)
+  title String? @map("titel") @db.VarChar(30)
+  address String? @map("adress") @db.VarChar(200)
+  matchOnlyInterestDeclarations Int @default(0, map: "DF__hyuto__onlyint__1C999D32") @map("onlyint") @db.TinyInt
+  readyForRental Int @default(1, map: "DF__hyuto__hireready__1D8DC16B") @map("hireready") @db.TinyInt
+  viewingTime DateTime? @map("disptime") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if this requires a different naming convention
+
+  hydsp hydsp[] // TODO: change hydsp to new model name when available
+  hyobj hyobj[] // TODO: change hyobj to new model name when available
+
+  @@index([contactId], map: "fkhyutocmctc")
+  @@index([propertyObjectId], map: "fkhyutocmobj")
+  @@index([contractId], map: "fkhyutohyobj")
+  @@index([alternateContractId], map: "fkhyutohyobj2")
+  @@index([userId], map: "fkhyutosyusr")
+}

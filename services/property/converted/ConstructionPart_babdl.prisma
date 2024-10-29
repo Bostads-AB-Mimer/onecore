@@ -1,0 +1,25 @@
+model ConstructionPart {
+  @@map("babdl")
+
+  constructionPartId String @id(map: "pkbabdl") @map("keybabdl") @db.Char(15)
+  objectId String @unique(map: "akbaabdl1") @map("keycmobj") @db.Char(15)
+  constructionPartTypeId String? @map("keybabdt") @db.Char(15)
+  constructionPartCode String @map("code") @db.VarChar(30)
+  constructionPartName String? @map("caption") @db.VarChar(30)
+  constructionYear Int? @map("byggnadsar") @db.SmallInt
+  renovationYear Int? @map("ombyggar") @db.SmallInt
+  deleteMark Int @default(0, map: "DF__babdl__deletemar__0CF83246") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: rename these virtual fields when knowing the new model names
+  babdt babdt? @relation(fields: [constructionPartTypeId], references: [keybabdt], onUpdate: NoAction, map: "fkbabdlkeybabdt ")
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabdlkeycmobj")
+
+  @@index([constructionPartTypeId], map: "fkbabdlbabdt")
+  @@index([toDate], map: "inbabdl_1IF0H255F")
+  @@index([fromDate], map: "inbabdl_1IF0H256A")
+  @@index([constructionPartCode], map: "inbabdl_1IF0H2576")
+  @@index([constructionPartName], map: "inbabdl_1IF0H258D")
+}

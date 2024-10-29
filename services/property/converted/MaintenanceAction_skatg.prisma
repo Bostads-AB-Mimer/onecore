@@ -1,0 +1,60 @@
+model MaintenanceAction {
+  @@map("skatg")
+
+  actionId String @id(map: "pkskatg") @map("keyskatg") @db.Char(15)
+  subGroupId String @map("keyskgrp") @db.Char(15)
+  professionCategoryId String @map("keyskyrk") @db.Char(15)
+  ownActionGroupId String? @map("keyskegr") @db.Char(15)
+  unitId String? @map("keycmuni") @db.Char(15)
+  weekTemplateId String? @map("keyskdmv") @db.Char(15)
+  dayTemplateId String? @map("keyskdmd") @db.Char(15)
+  ownWeekTemplateId String? @map("keyskdmv2") @db.Char(15)
+  ownDayTemplateId String? @map("keyskdmd2") @db.Char(15)
+  mainGroupId String? @map("keyskafa") @db.Char(15)
+  actionGroupLevel1Id String? @map("keyskafb") @db.Char(15)
+  actionGroupLevel2Id String? @map("keyskafc") @db.Char(15)
+  priorityId String? @map("keyskpri") @db.Char(15)
+  action String @map("atgard") @db.Char(30)
+  description1 String? @map("text1") @db.Char(40)
+  description2 String? @map("text2") @db.Char(40)
+  clearText String? @map("klartext") @db.Char(40)
+  unitTime Decimal? @map("tidovriga") @db.Decimal(9, 3)
+  factor Decimal? @map("faktor") @db.Decimal(4, 2)
+  maxTimeSaved Decimal @default(0, map: "DF__skatg__timedec__260DF8D3") @map("timedec") @db.Decimal(4, 2)
+  materialCost Float? @map("mtrlpris") @db.Money
+  price Float? @map("pris") @db.Money
+  priority Int? @map("prioritet") @db.TinyInt
+  ownHours Decimal? @map("owntime") @db.Decimal(8, 2)
+  internallyBoughtHours Decimal? @map("boughttime") @db.Decimal(8, 2)
+  externalServices Float? @map("extservice") @db.Money
+  activeInPeriodicWork Int @default(1, map: "DF__skatg__skundused__27021D0C") @map("skundused") @db.TinyInt
+  activeInEstimation Int @default(1, map: "DF__skatg__skunkused__27F64145") @map("skunkused") @db.TinyInt
+  actionType Int @default(1, map: "DF__skatg__actiontyp__28EA657E") @map("actiontype") @db.TinyInt
+  systemStandard Int @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+  
+  cmuni cmuni? @relation(fields: [unitId], references: [keycmuni], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeycmuni ")
+  skafa skafa? @relation(fields: [mainGroupId], references: [keyskafa], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafa ")
+  skafb skafb? @relation(fields: [actionGroupLevel1Id], references: [keyskafb], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafb ")
+  skafc skafc? @relation(fields: [actionGroupLevel2Id], references: [keyskafc], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafc ")
+  skdmd_skatg_keyskdmdToskdmd skdmd? @relation("skatg_keyskdmdToskdmd", fields: [dayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd ")
+  skdmd_skatg_keyskdmd2Toskdmd skdmd? @relation("skatg_keyskdmd2Toskdmd", fields: [ownDayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd2 ")
+  skdmv_skatg_keyskdmvToskdmv skdmv? @relation("skatg_keyskdmvToskdmv", fields: [weekTemplateId], references: [keyskdmv], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmv ")
+  skdmv_skatg_keyskdmv2Toskdmv skdmv? @relation("skatg_keyskdmv2Toskdmv", fields: [ownWeekTemplateId], references: [keyskdmv], onUpdate: NoAction, map: "fkskatgkeyskdmv2 ")
+  skgrp skgrp @relation(fields: [subGroupId], references: [keyskgrp], onUpdate: NoAction, map: "fkskatgkeyskgrp ")
+  skyrk skyrk @relation(fields: [professionCategoryId], references: [keyskyrk], onUpdate: NoAction, map: "fkskatgkeyskyrk ")
+  
+  skpin skpin[]
+  skund skund[]
+
+  @@index([unitId], map: "fkskatgcmuni")
+  @@index([mainGroupId], map: "fkskatgskafa")
+  @@index([actionGroupLevel1Id], map: "fkskatgskafb")
+  @@index([actionGroupLevel2Id], map: "fkskatgskafc")
+  @@index([dayTemplateId], map: "fkskatgskdmd")
+  @@index([ownDayTemplateId], map: "fkskatgskdmd2")
+  @@index([weekTemplateId], map: "fkskatgskdmv")
+  @@index([ownWeekTemplateId], map: "fkskatgskdmv2")
+  @@index([subGroupId], map: "fkskatgskgrp")
+  @@index([professionCategoryId], map: "fkskatgskyrk")
+}

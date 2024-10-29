@@ -1,0 +1,16 @@
+model MaintenanceWorkOrderConnection {
+  @@map("skaok")
+
+  id String @id(map: "pkskaok") @map("keyskaok") @db.Char(15)
+  customerConnectionId String @map("keyskund") @db.Char(15)
+  workOrderRowId String @map("keyaoupr") @db.Char(15)
+  actionDate DateTime @map("atgdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Re-evaluate what this field represents later if additional context is received
+  
+  // Relations
+  aoupr aoupr @relation(fields: [workOrderRowId], references: [keyaoupr], onDelete: NoAction, onUpdate: NoAction, map: "fkskaokkeyaoupr")
+  skund skund @relation(fields: [customerConnectionId], references: [keyskund], onDelete: NoAction, onUpdate: NoAction, map: "fkskaokkeyskund")
+
+  @@index([workOrderRowId], map: "fkskaokaoupr")
+  @@index([customerConnectionId, actionDate], map: "inskaok1")
+}

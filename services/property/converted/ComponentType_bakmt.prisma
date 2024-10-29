@@ -1,0 +1,22 @@
+model ComponentType {
+  @@map("bakmt")
+
+  componentTypeId String @id(map: "pkbakmt") @map("keybakmt") @db.Char(15)
+  textTypeId String? @map("keycmtyp") @db.Char(15) // Relation to TextType model
+  actionTypeId String? @map("keypuatt") @db.Char(15) // Likely related to an action type
+  componentTypeCode String @unique(map: "akbakmt") @map("code") @db.VarChar(15)
+  name String? @map("caption") @db.VarChar(60)
+  systemStandard Int @default(0, map: "DF__bakmt__issystem__0FFEBC23") @map("issystem") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: reconsider timestamp later if more information becomes available
+
+  // TODO: rename bakmp to new model name when available
+  bakmp bakmp[] 
+  textType TextType? @relation(fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbakmtkeycmtyp ")
+  // TODO: rename puatt to new model name when available
+  actionType puatt? @relation(fields: [actionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbakmtkeypuatt ")
+  // TODO: rename tvpdg to new model name when available
+  tvpdg tvpdg[]
+
+  @@index([textTypeId], map: "fkbakmtcmtyp")
+  @@index([actionTypeId], map: "fkbakmtpuatt")
+}

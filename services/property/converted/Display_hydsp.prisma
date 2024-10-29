@@ -1,0 +1,20 @@
+model Display {
+  @@map("hydsp")
+
+  displayId String @id(map: "pkhydsp") @map("keyhydsp") @db.Char(15)
+  rentalRoundId String @map("keyhyuto") @db.Char(15)
+  displayTime DateTime? @map("disptime") @db.DateTime
+  displayedBy Int @default(0, map: "DF__hydsp__dispby__451C8FD8") @map("dispby") @db.TinyInt
+  name String? @map("name") @db.VarChar(100)
+  phone String? @map("phone") @db.VarChar(30)
+  mobilePhone String? @map("mobile") @db.VarChar(30)
+  email String? @map("email") @db.VarChar(80)
+  title String? @map("title") @db.VarChar(30)
+  address String? @map("address") @db.VarChar(200)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if this requires a different naming convention
+
+  bkerb bkerb[] // TODO: change bkerb to new model name when available
+  hyuto RentalRound @relation(fields: [rentalRoundId], references: [rentalRoundId], onDelete: Cascade, onUpdate: NoAction, map: "fkhydspkeyhyuto")
+
+  @@index([rentalRoundId], map: "fkhydsphyuto")
+}

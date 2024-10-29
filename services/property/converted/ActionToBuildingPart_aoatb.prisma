@@ -1,0 +1,14 @@
+model ActionToBuildingPart {
+  @@map("aoatb")
+  id String @id(map: "pkaoatb") @map("keyaoatb") @db.Char(15)
+  buildingPartId String @map("keyaobdl") @db.Char(15)
+  actionId String @map("keypuatg") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  aobdl aobdl @relation(fields: [buildingPartId], references: [keyaobdl], onDelete: Cascade, onUpdate: NoAction, map: "fkaoatbkeyaobdl")
+  puatg puatg @relation(fields: [actionId], references: [keypuatg], onDelete: Cascade, onUpdate: NoAction, map: "fkaoatbkeypuatg")
+
+  @@unique([buildingPartId, actionId], map: "akaoatb1")
+  @@index([buildingPartId], map: "fkaoatbaobdl")
+  @@index([actionId], map: "fkaoatbpuatg")
+}

@@ -1,0 +1,30 @@
+model TextType {
+  @@map("cmtyp")
+  
+  textTypeId String @id(map: "pkcmtyp") @map("keycmtyp") @db.Char(15) // This is the primary key, hence using Id suffix
+  parentTextTypeId String? @map("keycmtyp2") @db.Char(15) // This is related to the ‘keycmtyp2’ field, likely a parent-child relationship
+  name String @map("caption") @db.VarChar(60) // Utilizing naming convention for captions as name
+  sortOrder Int @default(0, map: "DF__cmtyp__sortorder__33C21956") @map("sortorder") @db.SmallInt
+  allowedText Int @default(0, map: "DF__cmtyp__txtallow__34B63D8F") @map("txtallow") @db.TinyInt
+  allowedSubLevels Int @default(0, map: "DF__cmtyp__sublvls__35AA61C8") @map("sublvls") @db.TinyInt
+  publish Int @default(1, map: "DF__cmtyp__publish__369E8601") @map("publish") @db.TinyInt
+  validModule String? @map("validmdl") @db.VarChar(80) // Naming with Module suffix indicating valid modules
+  hiddenType Int @default(0, map: "DF__cmtyp__hidetype__3792AA3A") @map("hidetype") @db.TinyInt
+  systemStandard Int @default(0, map: "DF__cmtyp__repab__3886CE73") @map("repab") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
+
+  // Commenting and keeping relations for backward pass
+  bakmt bakmt[] // TODO: rename bakmt once more information is available
+  basyt_basyt_keycmtypTocmtyp basyt[] @relation("basyt_keycmtypTocmtyp") // TODO: change basyt to new model name when available
+  basyt_basyt_keycmtyp2Tocmtyp basyt[] @relation("basyt_keycmtyp2Tocmtyp") // TODO: change basyt to new model name when available
+  cmtep TypTextTemplate[] // Using previously known conversion
+  cmvap MeasurementTypeLink[] // Using previously known conversion
+  dorev_dorev_keycmtypTocmtyp dorev[] @relation("dorev_keycmtypTocmtyp") // TODO: change dorev to new model name when available
+  dorev_dorev_keycmtyp2Tocmtyp dorev[] @relation("dorev_keycmtyp2Tocmtyp") // TODO: change dorev to new model name when available
+  fbbeh PermissionType[] // Using previously known conversion
+  fbbka fbbka[] // TODO: change fbbka to new model name when available
+  fbbla fbbla[] // TODO: change fbbla to new model name when available
+  fbreb InspectionRight[] // Using previously known conversion
+
+  @@index([parentTextTypeId], map: "fkcmtypcmtyp2")
+}

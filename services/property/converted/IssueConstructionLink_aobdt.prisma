@@ -1,0 +1,15 @@
+model IssueConstructionLink {
+  @@map("aobdt")
+
+  id String @id(map: "pkaobdt") @map("keyaobdt") @db.Char(15)
+  constructionPartId String @map("keyaobdl") @db.Char(15)
+  issueNoteId String @map("keylbant") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider renaming with specific context when it becomes clear
+
+  aobdl aobdl @relation(fields: [constructionPartId], references: [keyaobdl], onDelete: Cascade, onUpdate: NoAction, map: "fkaobdtkeyaobdl")
+  lbant lbant @relation(fields: [issueNoteId], references: [keylbant], onDelete: Cascade, onUpdate: NoAction, map: "fkaobdtkeylbant")
+
+  @@unique([constructionPartId, issueNoteId], map: "akaobdt1")
+  @@index([constructionPartId], map: "fkaobdtaobdl")
+  @@index([issueNoteId], map: "fkaobdtlbant")
+}

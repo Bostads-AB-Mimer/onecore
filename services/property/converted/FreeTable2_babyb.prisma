@@ -1,0 +1,12 @@
+model FreeTable2 {
+  @@map("babyb")
+  
+  freeTable2Id String @id(map: "pkbabyb") @map("keybabyb") @db.Char(15)
+  freeTable2Code String @unique(map: "akbabyb1") @map("code") @db.VarChar(10)
+  freeTable2Caption String? @map("caption") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  babyg babyg[] // TODO: change babyg to new model name when available
+  bafst bafst[] // TODO: change bafst to new model name when available
+  bayta bayta[] // TODO: change bayta to new model name when available
+}

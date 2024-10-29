@@ -1,0 +1,12 @@
+model Inspector {
+  @@map("fbres")
+
+  inspectorId String @id(map: "pkfbres") @map("keyfbres") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  inspectorCode String @unique(map: "akfbres") @map("code") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onUpdate: NoAction, map: "fkfbreskeycmctc")
+  
+  @@index([contactId], map: "fkfbrescmctc")
+}

@@ -1,0 +1,24 @@
+model RentalObject {
+  @@map("bahyr")
+
+  rentalObjectId String @id(map: "pkbahyr") @map("keybahyr") @db.Char(15)
+  objectId String @unique(map: "akbahyr1") @map("keycmobj") @db.Char(15)
+  rentalObjectTypeId String @map("keybahyt") @db.Char(15)
+  areaClassificationId String? @map("keyvcacl") @db.Char(15)
+  rentalObjectCode String @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(30)
+  entrance String? @map("uppgang") @db.VarChar(20)
+  deleteMark Int @default(0, map: "DF__bahyr__deletemar__39A88FA8") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  rentalObjectType RentalObjectType @relation(fields: [rentalObjectTypeId], references: [rentalObjectTypeId], onUpdate: NoAction, map: "fkbahyrkeybahyt ")
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj ")
+
+  @@index([rentalObjectTypeId], map: "fkbahyrbahyt")
+  @@index([rentalObjectCode], map: "inbahyr_2BR0U851E")
+  @@index([name], map: "inbahyr_2BR0U852A")
+  @@index([fromDate], map: "inbahyr_2BR0U853H")
+  @@index([toDate], map: "inbahyr_2BR0U854C")
+}

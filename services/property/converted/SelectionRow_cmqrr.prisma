@@ -1,0 +1,23 @@
+model SelectionRow {
+  @@map("cmqrr")
+  
+  selectionRowId String @id(map: "pkcmqrr") @map("keycmqrr") @db.Char(15)
+  selectionId String @map("keycmqry") @db.Char(15) // TODO: change corresponding model when available
+  function Int @map("qrrfunc")
+  tableName String @map("qrralias") @db.VarChar(30) // Mapping qrralias to tableName based on previous note of "Tabell"
+  fieldName String @map("qrrfield") @db.VarChar(50) // Mapping qrrfield to fieldName based on previous note of "Fält"
+  secondaryTableName String? @map("qrralias2") @db.VarChar(30) // Using tableName as previous consistent naming
+  secondaryFieldName String? @map("qrrfield2") @db.VarChar(50) // Using fieldName as previous consistent naming
+  orIndicator Int @default(0, map: "DF__cmqrr__qrror__750B9A1C") @map("qrror") @db.TinyInt
+  priority Int @default(0, map: "DF__cmqrr__qrrprio__75FFBE55") @map("qrrprio") @db.TinyInt
+  negateIndicator Int @default(0, map: "DF__cmqrr__qrrnot__76F3E28E") @map("qrrnot") @db.TinyInt
+  operand Int @default(1, map: "DF__cmqrr__qrroperan__77E806C7") @map("qrroperand")
+  caseSensitiveMatch Int @default(0, map: "DF__cmqrr__qrrcase__78DC2B00") @map("qrrcase") @db.TinyInt
+  soundexMatch Int @default(0, map: "DF__cmqrr__qrrsounde__79D04F39") @map("qrrsoundex") @db.TinyInt
+  value String? @map("qrrvalue") @db.VarChar(Max)
+  expression String? @map("qrrexpr") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+  
+  cmqry cmqry @relation(fields: [selectionId], references: [keycmqry], onDelete: Cascade, onUpdate: NoAction, map: "fkcmqrrkeycmqry ")
+  @@index([selectionId], map: "fkcmqrrcmqry")
+}

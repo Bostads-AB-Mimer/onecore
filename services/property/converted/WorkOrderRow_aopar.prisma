@@ -1,0 +1,31 @@
+model WorkOrderRow {
+  @@map("aopar")
+  
+  workOrderRowId String @id(map: "pkaopar") @map("keyaopar") @db.Char(15)
+  workOrderPackageId String @map("keyaopah") @db.Char(15)
+  locationId String? @map("keyaopla") @db.Char(15) // TODO: change to new model name when available
+  buildingPartId String? @map("keyaobdl") @db.Char(15) // TODO: change to new model name when available
+  detailId String? @map("keyaodet") @db.Char(15) // TODO: change to new model name when available
+  faultTypeId String? @map("keyaofel") @db.Char(15) // TODO: change to new model name when available
+  actionId String? @map("keyaoatg") @db.Char(15) // TODO: change to new model name when available
+  resourcePlanningTypeId String? @map("keybaret") @db.Char(15) // TODO: change to new model name when available
+  name String @map("caption") @db.VarChar(250)
+  sortOrder Int @default(0, map: "DF__aopar__printsort__12E04878") @map("printsort") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: clarify usage of timestamp later
+
+  aoatg aoatg? @relation(fields: [actionId], references: [keyaoatg], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaoatg ")
+  aobdl aobdl? @relation(fields: [buildingPartId], references: [keyaobdl], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaobdl ")
+  aodet aodet? @relation(fields: [detailId], references: [keyaodet], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaodet ")
+  aofel aofel? @relation(fields: [faultTypeId], references: [keyaofel], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaofel ")
+  aopah aopah @relation(fields: [workOrderPackageId], references: [keyaopah], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaopah ")
+  aopla aopla? @relation(fields: [locationId], references: [keyaopla], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaopla ")
+  baret baret? @relation(fields: [resourcePlanningTypeId], references: [keybaret], onUpdate: NoAction, map: "fkaoparkeybaret")
+
+  @@index([actionId], map: "fkaoparaoatg")
+  @@index([buildingPartId], map: "fkaoparaobdl")
+  @@index([detailId], map: "fkaoparaodet")
+  @@index([faultTypeId], map: "fkaoparaofel")
+  @@index([workOrderPackageId], map: "fkaoparaopah")
+  @@index([locationId], map: "fkaoparaopla")
+  @@index([resourcePlanningTypeId], map: "fkaoparbaret")
+}

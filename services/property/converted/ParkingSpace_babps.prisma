@@ -1,0 +1,30 @@
+model ParkingSpace {
+  @@map("babps")
+
+  id String @id(map: "pkbabps") @map("keybabps") @db.Char(15)
+  objectId String @unique(map: "akbabps1") @map("keycmobj") @db.Char(15)
+  parkingSpaceTypeId String @map("keybabpt") @db.Char(15)
+  areaClassId String? @map("keyvcacl") @db.Char(15)
+  code String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  wholeGarage Int @default(0, map: "DF__babps__heltgarag__1382E6C0") @map("heltgarage") @db.TinyInt
+  parkingNumber String? @map("platsnr") @db.VarChar(30)
+  warmGarage Int @default(0, map: "DF__babps__varmgarag__14770AF9") @map("varmgarage") @db.TinyInt
+  electricInt @default(0, map: "DF__babps__el__156B2F32") @map("el") @db.TinyInt
+  roofGarage Int @default(0, map: "DF__babps__takgarage__165F536B") @map("takgarage") @db.TinyInt
+  engineHeater Int @default(0, map: "DF__babps__motorvarm__175377A4") @map("motorvarm") @db.TinyInt
+  entrance String? @map("uppgang") @db.VarChar(20)
+  deleteMark Int @default(0, map: "DF__babps__deletemar__18479BDD") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  parkingSpaceType ParkingSpaceType @relation(fields: [parkingSpaceTypeId], references: [keybabpt], onUpdate: NoAction, map: "fkbabpskeybabpt ")
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabpskeycmobj ")
+
+  @@index([parkingSpaceTypeId], map: "fkbabpsbabpt")
+  @@index([fromDate], map: "inbabps_2BR0UA5PM")
+  @@index([toDate], map: "inbabps_2BR0UA5QI")
+  @@index([code], map: "inbabps_2BR0UA5RD")
+  @@index([name], map: "inbabps_2BR0UA5T7")
+}

@@ -1,0 +1,23 @@
+model BatchProcessRow {
+  @@map("cmbtr")
+
+  batchProcessRowId String @id(map: "pkcmbtr") @map("keycmbtr") @db.Char(15)
+  batchId String @map("keycmbth") @db.Char(15)
+  processId String? @map("keycmprc") @db.Char(15)
+  reportDataId String? @map("keycmrbh") @db.Char(15)
+  queryId String? @map("keycmqry") @db.Char(15)
+  order Int @map("btrorder") 
+  settings String? @map("settings") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Maintain old relation names with TODO for conversion
+  cmbth cmbth @relation(fields: [batchId], references: [keycmbth], onDelete: Cascade, onUpdate: NoAction, map: "fkcmbtrkeycmbth ")
+  cmprc Process? @relation(fields: [processId], references: [processId], onUpdate: NoAction, map: "fkcmbtrkeycmprc")
+  cmqry cmqry? @relation(fields: [queryId], references: [keycmqry], onUpdate: NoAction, map: "fkcmbtrkeycmqry ")
+  cmrbh ReportData? @relation(fields: [reportDataId], references: [reportDataId], onUpdate: NoAction, map: "fkcmbtrkeycmrbh")
+
+  @@index([batchId], map: "fkcmbtrcmbth")
+  @@index([processId], map: "fkcmbtrcmprc")
+  @@index([queryId], map: "fkcmbtrcmqry")
+  @@index([reportDataId], map: "fkcmbtrcmrbh")
+}

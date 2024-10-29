@@ -1,0 +1,13 @@
+model OrderingMethod {
+  @@map("iksbg")
+  
+  id String @id(map: "pkiksbg") @map("keyiksbg") @db.Char(15) // Beställningssätt
+  name String @unique(map: "akiksbg1") @map("caption") @db.VarChar(30) // Beställningssätt
+  isEmail Int @default(0, map: "DF__iksbg__email__1535F2D4") @map("email") @db.TinyInt // Skickas via epost
+  isPrinter Int @default(0, map: "DF__iksbg__printer__162A170D") @map("printer") @db.TinyInt // Skickas via skrivare
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate if timestamp should be more descriptive
+  
+  // Relations
+  hyobj hyobj[] // TODO: change hyobj to new model name when available
+  ikbeh ikbeh[] // TODO: change ikbeh to new model name when available
+}

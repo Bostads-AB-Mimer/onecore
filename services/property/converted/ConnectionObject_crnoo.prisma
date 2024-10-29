@@ -1,0 +1,13 @@
+model ConnectionObject {
+  @@map("crnoo")
+
+  connectionObjectId String @id(map: "pkcrnoo") @map("keycrnoo") @db.Char(15)
+  mailingId String @map("keycrnot") @db.Char(15)
+  objectId String @map("keycmobj") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: clarify the exact usage of "timestamp" for potential renaming
+
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkcrnookeycmobj")
+  crnot crnot @relation(fields: [mailingId], references: [keycrnot], onDelete: Cascade, onUpdate: NoAction, map: "fkcrnookeycrnot")
+
+  @@unique([objectId, mailingId], map: "akcrnoo")
+}

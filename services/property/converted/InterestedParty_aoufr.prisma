@@ -1,0 +1,15 @@
+model InterestedParty {
+  @@map("aoufr")
+
+  interestedPartyId String @id(map: "pkaoufr") @map("keyaoufr") @db.Char(15)
+  workOrderId String @map("keyaoupp") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  notificationMethod Int @default(0, map: "DF__aoufr__notkind__65B89C46") @map("notkind") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations; update these when new model names are determined
+  workOrder aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaoufrkeyaoupp") // TODO: update relation once aoupp is renamed
+  contact cmctc @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkaoufrkeycmctc") // Renamed based on context
+  @@index([workOrderId], map: "fkaoufraoupp")
+  @@index([contactId], map: "fkaoufrcmctc")
+}
