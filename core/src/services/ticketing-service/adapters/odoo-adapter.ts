@@ -279,6 +279,7 @@ const addMessageToTicket = async (
     {
       body: striptags(message.body).replaceAll('\n', '<br>'),
       message_type: 'comment',
+      body_is_html: true,
     },
   ])
 }
