@@ -617,7 +617,7 @@ export const routes = (router: KoaRouter) => {
           tenant_id: newTenantRecord.toString(),
           maintenance_unit_id: newMaintenanceUnitRecord.toString(),
           hearing_impaired: AccessOptions.Type === 1,
-          phone_number: AccessOptions.PhoneNumber || tenants[0].phoneNumber[0],
+          phone_number: AccessOptions.PhoneNumber || tenants[0].phoneNumbers[0],
           call_between: AccessOptions.CallBetween,
           pet: Pet,
           space_code: ticket.LocationCode,
