@@ -1,0 +1,22 @@
+model IntegrationSchema {
+  @@map("cmmap")
+
+  integrationSchemaId String @id(map: "pkcmmap") @map("keycmmap") @db.Char(15)
+  name String @map("caption") @db.VarChar(100)
+  structureId String @map("keycmdsi") @db.Char(15) // TODO: Confirm exact related model name for "cmdsi"
+  dataSourceId String @map("keybsend") @db.Char(15) // TODO: Confirm exact related model name for "bsend"
+  moduleId String @map("keysymdl") @db.Char(15) // TODO: Confirm exact module ID usage
+  inputType Int @map("nodekind") @db.TinyInt
+  settingsJson String? @map("jsonconfig") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider changing to DateTime if applicable
+
+  publishingRounds PublishingRound[]
+  otherSettings OtherSetting[]
+  exportImports ExportImport[]
+  dataSource bsend @relation(fields: [dataSourceId], references: [keybsend], onUpdate: NoAction, map: "fkcmmapkeybsend") // TODO: Rename model when new name is confirmed
+  structure cmdsi @relation(fields: [structureId], references: [keycmdsi], onUpdate: NoAction, map: "fkcmmapkeycmdsi") // TODO: Rename model when new name is confirmed
+  printSettings PrintSetting[]
+
+  @@index([dataSourceId], map: "fkcmmapbsend")
+  @@index([structureId], map: "fkcmmapcmdsi")
+}

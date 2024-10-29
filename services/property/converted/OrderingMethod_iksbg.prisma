@@ -8,6 +8,6 @@ model OrderingMethod {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate if timestamp should be more descriptive
   
   // Relations
-  hyobj hyobj[] // TODO: change hyobj to new model name when available
-  ikbeh ikbeh[] // TODO: change ikbeh to new model name when available
+  contract Contract[] @relation("fkhyobjkeyiksbg") // Changed from hyobj; previously referenced in Contract model
+  order Order[] @relation("fkikbehkeyiksbg") // Changed from ikbeh; previously referenced in Order model
 }

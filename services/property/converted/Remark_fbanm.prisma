@@ -3,8 +3,8 @@ model Remark {
   
   remarkId String @id(map: "pkfbanm") @map("keyfbanm") @db.Char(15)
   inspectionId String @map("keyfbbes") @db.Char(15)
-  protocolPointId String? @map("keyfbanp")  @db.Char(15) // TODO: Rename relation model when available
-  consequenceTypeId String? @map("keysceft") @db.Char(15) // TODO: Rename relation model when available
+  protocolPointId String? @map("keyfbanp") @db.Char(15)
+  consequenceTypeId String? @map("keysceft") @db.Char(15) // TODO: Verify this field when consequenceType model is available
   protocolPointCode String @map("code") @db.VarChar(10)
   name String? @map("caption") @db.VarChar(100)
   remarkNote String? @map("notering") @db.VarChar(Max)
@@ -19,9 +19,11 @@ model Remark {
   workOrderCreated Int @default(0, map: "DF__fbanm__aocreated__67278F19") @map("aocreated") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10)
   
-  protocolPoint fbanp? @relation(fields: [keyfbanp], references: [keyfbanp], onDelete: NoAction, onUpdate: NoAction, map: "fkfbanmkeyfbanp")
-  inspection fbbes @relation(fields: [keyfbbes], references: [keyfbbes], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanmkeyfbbes")
+  protocolPoint ProtocolPoint? @relation(fields: [protocolPointId], references: [protocolPointId], onDelete: NoAction, onUpdate: NoAction, map: "fkfbanmkeyfbanp")
+  inspection InspectionProtocol @relation(fields: [inspectionId], references: [inspectionProtocolId], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanmkeyfbbes")
   
   @@index([protocolPointId], map: "fkfbanmfbanp")
   @@index([inspectionId], map: "fkfbanmfbbes")
+  
+  // TODO: Change consequenceType relation model when available
 }

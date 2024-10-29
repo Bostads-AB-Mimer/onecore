@@ -18,9 +18,9 @@ model ReportRow {
   pageBreak         Int      @map("pagebreak") @default(0, map: "DF__cmrdr__pagebreak__054201E5") @db.TinyInt
   timestamp         String   @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  cmrdc             cmrdc[]  // TODO: change cmrdc to new model name when available
-  cmqry             cmqry?   @relation(fields: [selectionId], references: [keycmqry], onUpdate: NoAction, map: "fkcmrdrkeycmqry")
-  cmrdh             cmrdh     @relation(fields: [reportId], references: [keycmrdh], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrdrkeycmrdh")
+  reportColumn      ReportColumn[]  @relation("fkcmrdckeycmrdr") // Using new name from previous conversions
+  selection         Selection?      @relation(fields: [selectionId], references: [selectionId], onUpdate: NoAction, map: "fkcmrdrkeycmqry") // Using new name from previous conversions 
+  reportHeader      ReportHeader    @relation(fields: [reportId], references: [reportHeaderId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrdrkeycmrdh") // Assuming ReportHeader is the new name
 
   @@index([selectionId], map: "fkcmrdrcmqry")
   @@index([reportId], map: "fkcmrdrcmrdh")

@@ -1,0 +1,32 @@
+model LockSystem {
+  @@map("nysys")
+
+  lockSystemId String @id(map: "pknysys") @map("keynysys") @db.Char(15)
+  lockSystemTypeId String? @map("keynysyt") @db.Char(15) // Related to LockSystemType
+  propertyObjectId String? @map("keycmobj") @db.Char(15) // Related to PropertyObject
+  systemResponsibleId String? @map("keycmctc") @db.Char(15) // TODO: Check usage and update relation when new name is available
+  receiverId String? @map("keycmctc2") @db.Char(15) // TODO: Check usage and update relation when new name is available
+  supplierId String? @map("keycmctc3") @db.Char(15) // TODO: Check usage and update relation when new name is available
+  lockSystemCode String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  manufacturer String? @map("fabrikat") @db.VarChar(30)
+  receivedDate DateTime? @map("mottagdat") @db.Date
+  isActive Int @default(1, map: "DF__nysys__active__348700B3") @map("active") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  lockCylinderTypes CylinderType[] @relation("fknycylkeynycty") // Related to CylinderType model
+
+  // Relations to be updated with new model names when available
+  cmctc_nysys_keycmctcTocmctc cmctc? @relation("nysys_keycmctcTocmctc", fields: [systemResponsibleId], references: [keycmctc], onUpdate: NoAction, map: "fknysyskeycmctc")
+  cmctc_nysys_keycmctc2Tocmctc cmctc? @relation("nysys_keycmctc2Tocmctc", fields: [receiverId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fknysyskeycmctc2")
+  cmctc_nysys_keycmctc3Tocmctc cmctc? @relation("nysys_keycmctc3Tocmctc", fields: [supplierId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fknysyskeycmctc3")
+
+  location PropertyObject? @relation(fields: [propertyObjectId], references: [propertyObjectId], onUpdate: NoAction, map: "fknysyskeycmobj ")
+  lockSystemType LockSystemType? @relation(fields: [lockSystemTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fknysyskeynysyt ")
+
+  @@index([systemResponsibleId], map: "fknysyscmctc")
+  @@index([receiverId], map: "fknysyscmctc2")
+  @@index([supplierId], map: "fknysyscmctc3")
+  @@index([propertyObjectId], map: "fknysyscmobj")
+  @@index([lockSystemTypeId], map: "fknysysnysyt")
+}

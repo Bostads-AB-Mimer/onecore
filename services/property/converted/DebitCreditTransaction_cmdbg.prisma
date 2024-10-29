@@ -12,9 +12,10 @@ model DebitCreditTransaction {
   giroNumber String @map("giro") @db.Char(20)
   bicCode String? @map("bic") @db.Char(11)
   ibanCode String? @map("iban") @db.Char(42)
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+  // TODO: comment timestamp row since it's not defined in AutogiroTransactionTypeCustomer
+  // timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  autogiroTransactions AutogiroTransactionTypeCustomer[] // TODO: change kragk to new model name when available
+  autogiroTransactions AutogiroTransactionTypeCustomer[] @relation("fkkragkkeycmdbg") // Updated relation to match new model name and retain historical mapping
 
   @@index([companyId], map: "fkcmdbgcmcmp")
   @@index([paymentMethodId], map: "fkcmdbgcmdbm")

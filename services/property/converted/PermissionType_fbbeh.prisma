@@ -4,14 +4,14 @@ model PermissionType {
   permissionTypeId String @id(map: "pkfbbeh") @map("keyfbbeh") @db.Char(15)
   inspectionTypeId String @map("keycmtyp") @db.Char(15)
   name String @unique(map: "akfbbeh") @map("caption") @db.VarChar(30)
-  // Timestamp usage is unclear, keep original mapping for now
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
 
   // TODO: rename cmtyp and update relation to the new model name when known
-  cmtyp cmtyp @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbbehkeycmtyp")
+  // cmtyp cmtyp @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbbehkeycmtyp")
+  
   // Relations for fbbkb and fbreb, update names when possible
-  fbbkb fbbkb[] // TODO: change fbbkb to new model name when available
-  fbreb fbreb[] // TODO: change fbreb to new model name when available
+  inspectionCategoryPermissions InspectionCategoryPermission[] @relation("fkfbbkbkeyfbbeh") // Previously fbbkb, updated to known model name
+  inspectionRights InspectionRight[] @relation("fkfbrebkeyfbbeh") // Previously fbreb, updated to known model name
 
   @@index([inspectionTypeId], map: "fkfbbehcmtyp")
 }

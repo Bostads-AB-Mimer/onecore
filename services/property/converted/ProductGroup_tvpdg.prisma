@@ -15,12 +15,13 @@ model ProductGroup {
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later if its usage becomes clearer
 
   // Relations
-  workOrderCategory WorkOrderCategory? @relation(fields: [workOrderCategoryId], references: [keyaokat], onUpdate: NoAction, map: "fktvpdgkeyaokat")
-  componentType ComponentType? @relation(fields: [componentTypeId], references: [keybakmt], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeybakmt ")
+  workOrderCategory WorkOrderCategory? @relation(fields: [workOrderCategoryId], references: [workOrderCategoryId], onUpdate: NoAction, map: "fktvpdgkeyaokat")
+  componentType ComponentType? @relation(fields: [componentTypeId], references: [componentTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeybakmt ")
+  // TODO: uncomment and fix relations to cmart when conversion is complete
   // cmart_tvpdg_keycmartTocmart cmart? @relation("tvpdg_keycmartTocmart", fields: [rentArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart")
   // cmart_tvpdg_keycmart2Tocmart cmart? @relation("tvpdg_keycmart2Tocmart", fields: [agreementArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart2")
   // cmart_tvpdg_keycmart3Tocmart cmart? @relation("tvpdg_keycmart3Tocmart", fields: [invoiceArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart3")
-  productArea ProductArea @relation(fields: [productAreaId], references: [keytvpra], onUpdate: NoAction, map: "fktvpdgkeytvpra ")
+  productArea ProductArea @relation(fields: [productAreaId], references: [productAreaId], onUpdate: NoAction, map: "fktvpdgkeytvpra ")
 
   // TODO: rename tvprd to new model names when available
   tvprd_tvprd_keytvpdgTotvpdg tvprd[] @relation("tvprd_keytvpdgTotvpdg")

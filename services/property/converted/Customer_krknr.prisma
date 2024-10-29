@@ -61,9 +61,9 @@ model Customer {
   promissoryNoteDate DateTime? @map("gjeldbdate") @db.DateTime
   noPayment Int @default(0, map: "DF__krknr__nopayment__395E44B1") @map("nopayment") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if "timestamp" is used for versioning or other purposes
-  
-  kragk kragk[] // TODO: Convert to new model name when available
-  cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, map: "fkkrknrkeycmctc")
+
+  autogiroTransactionTypeCustomer AutogiroTransactionTypeCustomer[] // Previously kragk
+  // cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, map: "fkkrknrkeycmctc") // TODO: Commented out for future validation
 
   @@index([languageId], map: "fkkrknrsylng")
   @@index([interestInvoiceExcluded, contactId, customerId], map: "inkrknr_2LU0JR8PT")

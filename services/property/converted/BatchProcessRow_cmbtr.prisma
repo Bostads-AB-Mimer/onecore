@@ -10,11 +10,12 @@ model BatchProcessRow {
   settings String? @map("settings") @db.VarChar(Max)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  // Maintain old relation names with TODO for conversion
-  cmbth cmbth @relation(fields: [batchId], references: [keycmbth], onDelete: Cascade, onUpdate: NoAction, map: "fkcmbtrkeycmbth ")
-  cmprc Process? @relation(fields: [processId], references: [processId], onUpdate: NoAction, map: "fkcmbtrkeycmprc")
-  cmqry cmqry? @relation(fields: [queryId], references: [keycmqry], onUpdate: NoAction, map: "fkcmbtrkeycmqry ")
-  cmrbh ReportData? @relation(fields: [reportDataId], references: [reportDataId], onUpdate: NoAction, map: "fkcmbtrkeycmrbh")
+  // TODO: Commented out due to missing reference model "cmbth"
+  // cmbth cmbth @relation(fields: [batchId], references: [keycmbth], onDelete: Cascade, onUpdate: NoAction, map: "fkcmbtrkeycmbth ")
+
+  process Process? @relation(fields: [processId], references: [processId], onUpdate: NoAction, map: "fkcmbtrkeycmprc")
+  cmqry Selection? @relation(fields: [queryId], references: [selectionId], onUpdate: NoAction, map: "fkcmbtrkeycmqry ")
+  reportData ReportData? @relation(fields: [reportDataId], references: [reportDataId], onUpdate: NoAction, map: "fkcmbtrkeycmrbh")
 
   @@index([batchId], map: "fkcmbtrcmbth")
   @@index([processId], map: "fkcmbtrcmprc")

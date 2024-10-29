@@ -1,6 +1,6 @@
 model NotificationPerformed {
   @@map("hyavi")
-  
+
   notificationPerformedId String @id(map: "pkhyavi") @map("keyhyavi") @db.Char(15)
   moduleId String @map("keysymdl") @db.Char(15) // TODO: rename when new model name is known
   companyId String? @map("keycmcmp") @db.Char(15) // Linked to Company model
@@ -17,8 +17,8 @@ model NotificationPerformed {
 
   // Relations
   company Company? @relation(fields: [companyId], references: [companyId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyavikeycmcmp")
-  contractType AgreementForm? @relation(fields: [contractTypeId], references: [contractTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyavikeyhyobt")
-  
+  contractType AgreementForm? @relation(fields: [contractTypeId], references: [contractTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyavikeyhyobt") // Linked to AgreementForm model
+
   @@index([companyId], map: "fkhyavicmcmp")
   @@index([contractTypeId], map: "fkhyavihyobt")
   @@index([moduleId], map: "fkhyavisymdl")

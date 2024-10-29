@@ -69,25 +69,25 @@ model Project {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if timestamp needs a different naming convention
 
   // Virtual fields
-  aoupp aoupp[]
-  hyspt hyspt[]
-  ikbeh ikbeh[]
-  lbbes lbbes[]
-  pract pract[]
-  prmtr prmtr[]
-  prppr prppr[]
-  puund puund[]
+  workOrders WorkOrder[] // aoupp
+  rentalBlocks RentalBlock[] // hyspt
+  orders Order[] // ikbeh
+  apartmentInspections ApartmentInspection[] // lbbes
+  activityTimes ActivityTime[] // pract
+  projectTransactions ProjectTransaction[] // prmtr
+  subProjects SubProject[] // prppr
+  plannedMaintenances PlannedMaintenance[] // puund
 
   // Relations
-  aopri aopri? @relation(fields: [priorityId], references: [keyaopri], onUpdate: NoAction, map: "fkprprjkeyaopri ")
+  priority Priority? @relation(fields: [priorityId], references: [id], onUpdate: NoAction, map: "fkprprjkeyaopri ")
   companyClient cmcmp @relation(fields: [companyClientId], references: [keycmcmp], onUpdate: NoAction, map: "fkprprjkeycmcmp ")
-  clientContact cmctc_prprj_keycmctcTocmctc cmctc @relation("prprj_keycmctcTocmctc", fields: [clientContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc")
-  referenceContact cmctc_prprj_keycmctc2Tocmctc cmctc? @relation("prprj_keycmctc2Tocmctc", fields: [referenceContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc2")
-  responsibleContact cmctc_prprj_keycmctc3Tocmctc cmctc? @relation("prprj_keycmctc3Tocmctc", fields: [responsibleContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc3")
-  businessContact cmctc_prprj_keycmctc4Tocmctc cmctc? @relation("prprj_keycmctc4Tocmctc", fields: [businessContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc4")
-  internalClientContact cmctc_prprj_keycmctc5Tocmctc cmctc? @relation("prprj_keycmctc5Tocmctc", fields: [internalClientContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc5")
-  checklist prclh? @relation(fields: [checklistId], references: [keyprclh], onUpdate: NoAction, onDelete: NoAction, map: "fkprprjkeyprclh ")
-  transactionType prvrt @relation(fields: [projectTransactionTypeId], references: [keyprvrt], onUpdate: NoAction, map: "fkprprjkeyprvrt ")
+  clientContact Contact @relation("prprj_keycmctcTocmctc", fields: [clientContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc")
+  referenceContact Contact? @relation("prprj_keycmctc2Tocmctc", fields: [referenceContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc2")
+  responsibleContact Contact? @relation("prprj_keycmctc3Tocmctc", fields: [responsibleContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc3")
+  businessContact Contact? @relation("prprj_keycmctc4Tocmctc", fields: [businessContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc4")
+  internalClientContact Contact? @relation("prprj_keycmctc5Tocmctc", fields: [internalClientContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc5")
+  checklist Checklist? @relation(fields: [checklistId], references: [checklistId], onUpdate: NoAction, onDelete: NoAction, map: "fkprprjkeyprclh ")
+  transactionType TransactionType @relation(fields: [projectTransactionTypeId], references: [keyprvrt], onUpdate: NoAction, map: "fkprprjkeyprvrt ")
 
   // Indexes
   @@index([priorityId], map: "fkprprjaopri")

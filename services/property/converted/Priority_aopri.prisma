@@ -1,8 +1,8 @@
 model Priority {
   @@map("aopri")
-  
+
   id String @id(map: "pkaopri") @map("keyaopri") @db.Char(15)
-  resourcePlanningType String? @map("keybaret") @db.Char(15) // TODO: change baret to new model name when available
+  resourcePlanningTypeId String? @map("keybaret") @db.Char(15)
   code String @unique(map: "akaopri") @map("code") @db.VarChar(30)
   maxDueDays Int? @map("tidmax")
   timeUnit String? @map("tidregel") @db.Char(1)
@@ -11,13 +11,17 @@ model Priority {
   colorScheme Int @default(0, map: "DF__aopri__plancolor__2415C172") @map("plancolor") @db.TinyInt
   planPriority Int @default(0, map: "DF__aopri__planprio__2509E5AB") @map("planprio") @db.TinyInt
   printOrder Int @default(0, map: "DF__aopri__printsort__25FE09E4") @map("printsort") @db.SmallInt
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  // TODO: change these virtual fields when new model names are available
-  aokat aokat[] 
-  baret baret? @relation(fields: [resourcePlanningType], references: [keybaret], onUpdate: NoAction, map: "fkaoprikeybaret")
-  aoupp aoupp[]
-  prprj prprj[]
+  /// @TODO: Uncomment and verify the timestamp mapping if needed
+  /// timestamp String @map("timestamp") @db.Char(10)
 
-  @@index([resourcePlanningType], map: "fkaopribaret")
+  workOrderCategories WorkOrderCategory[] @relation("fkaokatkeyaopri")
+  resourcePlanningType ResourcePlanningType? @relation(fields: [resourcePlanningTypeId], references: [resourcePlanningTypeId], map: "fkaoprikeybaret")
+  
+  /// @TODO: Confirm relation name "workOrderRows" and verify the model to point to
+  workOrderRows WorkOrderRow[] 
+
+  projects Project[] @relation("fkprprjkeyaopri")
+
+  @@index([resourcePlanningTypeId], map: "fkaopribaret")
 }

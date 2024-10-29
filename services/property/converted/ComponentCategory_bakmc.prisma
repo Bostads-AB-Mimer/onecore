@@ -5,53 +5,6 @@ model ComponentCategory {
   name String @map("caption") @db.VarChar(60)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  bakmp Component[] // TODO: change bakmp to new model name when available
-}
-
-model Component {
-  @@map("bakmp")
-
-  id String @id(map: "pkbakmp") @map("keybakmp") @db.Char(15)
-  objectId String @unique(map: "fkbakmpcmobj") @map("keycmobj") @db.Char(15)
-  typeId String? @map("keybakmt") @db.Char(15)
-  categoryId String? @map("keybakmc") @db.Char(15)
-  systemSupplierId String? @map("keycmctc") @db.Char(15) 
-  ownerUserId String? @map("keycmctc2") @db.Char(15)
-  constructionPartId String? @map("keyaobdl") @db.Char(15)
-  itemId String? @map("keytvart") @db.Char(15)
-  priceCategoryId String? @map("keytvpca") @db.Char(15)
-  code String @map("code") @db.VarChar(30)
-  name String? @map("caption") @db.VarChar(60)
-  manufacturer String? @map("fabrikat") @db.VarChar(60)
-  typeDesignation String? @map("typbeteckn") @db.VarChar(60)
-  installationDate DateTime? @map("instdatum") @db.DateTime
-  warrantyEndDate DateTime? @map("tdatewarr") @db.DateTime
-  serves String? @map("betjanar") @db.VarChar(60)
-  faultReportingAdministration Int @default(1, map: "DF__bakmp__aoadm__5A029E25") @map("aoadm") @db.TinyInt
-  isArtInventory Int @default(0, map: "DF__bakmp__isai__5AF6C25E") @map("isai") @db.TinyInt
-  deleteMark Int @default(0, map: "DF__bakmp__deletemar__5BEAE697") @map("deletemark") @db.TinyInt
-  fromDate DateTime @map("fdate") @db.DateTime
-  toDate DateTime @map("tdate") @db.DateTime
-  timestamp String @map("timestamp") @db.Char(10)
-
-  // TODO: rename these virtual fields when knowing the new model names
-  // aobdl                        aobdl?    @relation(fields: [keyaobdl], references: [keyaobdl], onUpdate: NoAction, map: "fkbakmpkeyaobdl ")
-  // componentCategory           ComponentCategory? @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "fkbakmpkeybakmc ")
-  // type
-  // cmctc_bakmp_keycmctcTocmctc  cmctc?    @relation("bakmp_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbakmpkeycmctc")
-  // cmctc_bakmp_keycmctc2Tocmctc cmctc?    @relation("bakmp_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbakmpkeycmctc2")
-  // cmobj                        cmobj     @relation(fields: [keycmobj], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbakmpkeycmobj")
-  // tvart                        tvart?    @relation(fields: [keytvart], references: [keytvart], onUpdate: NoAction, map: "fkbakmpkeytvart ")
-  // tvpca                        tvpca?    @relation(fields: [keytvpca], references: [keytvpca], onUpdate: NoAction, map: "fkbakmpkeytvpca")
-
-  @@index([constructionPartId], map: "fkbakmpaobdl")
-  @@index([typeId], map: "fkbakmpbakmt")
-  @@index([systemSupplierId], map: "fkbakmpcmctc")
-  @@index([ownerUserId], map: "fkbakmpcmctc2")
-  @@index([itemId], map: "fkbakmptvart")
-  @@index([priceCategoryId], map: "fkbakmptvpca")
-  @@index([fromDate], map: "inbakmp_2KX0I3RLS")
-  @@index([toDate], map: "inbakmp_2KX0I3RMK")
-  @@index([code], map: "inbakmp_2KX0I3RN3")
-  @@index([name], map: "inbakmp_2KX0I3RNI")
+  // TODO: Check if 'components' field refers correctly to a valid model and relation
+  // components Component[] @relation(fields: [id], references: [categoryId])
 }

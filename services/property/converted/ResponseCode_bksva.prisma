@@ -8,7 +8,8 @@ model ResponseCode {
   repabCode String? @map("repabkod") @db.Char(1)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  bkerb bkerb[] // TODO: change bkerb to new model name when available
+  // TODO: Verify 'bkerb' relation in future passes
+  offers Offer[] @relation("fkbkerbkeybksva2") // Adapted to match the Offer model already converted
 
   @@index([queueRuleId], map: "fkbksvabkqrl")
 }

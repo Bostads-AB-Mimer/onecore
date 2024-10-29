@@ -8,9 +8,9 @@ model DocumentType {
   viewFlag Int @default(0, map: "DF__dotyp__viewer__3C007CA3") @map("viewer") @db.TinyInt // Assuming viewer is a flag indicating a set state
   timestamp String @map("timestamp") @db.Char(10) // TODO: Assess timestamp usage further and rename
 
-  bsdef bsdef[] // TODO: rename bsdef once more information is available
-  documents dorev[] // Presuming 'dorev' as Documents list maintaining relation name
+  formTemplates FormTemplate[] @relation("fkbsdefkeydotyp") // Converted bsdef to FormTemplate and added relation name
+  documents Document[] @relation("fkdorevkeydotyp") // Converted dorev to Document and added relation name
 
   @@index([categoryId], map: "fkdotypcmtyp")
-  @@index([templateId], map: "fkdotypdorev")
+  // @@index([templateId], map: "fkdotypdorev") // TODO: Commented out due to potential missing relation mapping
 }

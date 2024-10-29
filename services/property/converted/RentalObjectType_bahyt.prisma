@@ -9,9 +9,11 @@ model RentalObjectType {
   systemStandard Int @default(0, map: "DF__bahyt__issystem__3D016ACD") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  rentalContract bahyr[] // TODO: change bahyr to new model name when available
+  rentalContracts RentalObject[] // Updated from bahyr to RentalObject based on previous conversion
   // Define relation to action type
-  puatt puatt? @relation(fields: [actionTypeId], references: [keypuatt], onUpdate: NoAction, map: "fkbahytkeypuatt ")
+  // Commented out since it refers to a model missing in the provided conversion
+  // actionType ActionType? @relation(fields: [actionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbahytkeypuatt ")
 
+  // TODO: Uncomment and verify after confirming ActionType model
   @@index([actionTypeId], map: "fkbahytpuatt")
 }

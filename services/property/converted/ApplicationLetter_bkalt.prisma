@@ -9,11 +9,12 @@ model ApplicationLetter {
   sentDate DateTime @map("senddate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
 
-  offer Offer? @relation(fields: [keybkerb], references: [offerId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkaltkeybkerb")
-  contact Contact @relation(fields: [keycmctc], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkbkaltkeycmctc")
-  propertyObject cmobj @relation(fields: [keycmobj], references: [keycmobj], onUpdate: NoAction, map: "fkbkaltkeycmobj") // TODO: change cmobj to a new model name when available
+  offer Offer? @relation(fields: [offerId], references: [offerId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkaltkeybkerb")
+  contact Contact @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkbkaltkeycmctc")
+  // TODO: Ensure 'cmobj' is updated to reflect new model naming
+  // propertyObject cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbkaltkeycmobj")
 
   @@index([offerId], map: "fkbkaltbkerb")
   @@index([contactId], map: "fkbkaltcmctc")
-  @@index([propertyObjectId], map: "fkbkaltcmobj")
+  // @@index([propertyObjectId], map: "fkbkaltcmobj")
 }

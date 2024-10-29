@@ -11,9 +11,14 @@ model Appointment {
   endTime DateTime @map("endtime") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  aoupp aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeyaoupp")
-  cmctc Contact? @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmctc")
-  cmrgr ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmrgr") // TODO: rename reference model name if ResourceGroup is revised
+  // Commenting out relation as 'aoupp' model is not provided
+  // WorkOrder aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeyaoupp")
+  
+  // Commenting out relation for consistency check
+  // TODO: Verify if 'Contact' model name is accurate
+  // Contact? cmctc @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmctc")
+
+  ResourceGroup? cmrgr @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmrgr") // TODO: rename reference model name if ResourceGroup is revised
 
   @@index([workOrderId], map: "fkaocapaoupp")
   @@index([contactId], map: "fkaocapcmctc")

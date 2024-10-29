@@ -13,8 +13,9 @@ model Display {
   address String? @map("address") @db.VarChar(200)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if this requires a different naming convention
 
-  bkerb bkerb[] // TODO: change bkerb to new model name when available
-  hyuto RentalRound @relation(fields: [rentalRoundId], references: [rentalRoundId], onDelete: Cascade, onUpdate: NoAction, map: "fkhydspkeyhyuto")
+  offer Offer[] @relation("fkbkerbkeyhydsp") // Using the new model name Offer for bkerb
+  // TODO: Uncomment once RentalRound model is verified
+  // hyuto RentalRound @relation(fields: [rentalRoundId], references: [rentalRoundId], onDelete: Cascade, onUpdate: NoAction, map: "fkhydspkeyhyuto")
 
   @@index([rentalRoundId], map: "fkhydsphyuto")
 }

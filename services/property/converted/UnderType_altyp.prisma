@@ -6,5 +6,5 @@ model UnderType {
   isSystemStandard Int @default(0, map: "DF__altyp__repabkod__7F81B441") @map("repabkod") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  alobj alobj[] // TODO: change alobj to new model name when available
+  assets Asset[] @relation("fkalobjaltyp") // updated to use the new model name Asset instead of alobj
 }

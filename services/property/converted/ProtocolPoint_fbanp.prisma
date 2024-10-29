@@ -15,8 +15,11 @@ model ProtocolPoint {
   isStandardPoint Int @default(0, map: "DF__fbanp__standardp__3D714C6F") @map("standardp") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
   
-  remarks Remark[] // TODO: Update relation model name when available
-  inspection fbbla @relation(fields: [keyfbbla], references: [keyfbbla], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanpkeyfbbla")
+  // TODO: Verify 'Remark' model is defined
+  remarks Remark[] @relation("fkfbanmkeyfbanp")
+
+  // TODO: Verify 'inspection' relation is correct and `fbbla` model is defined
+  inspection fbbla @relation(fields: [inspectionProtocolId], references: [keyfbbla], onDelete: Cascade, onUpdate: NoAction, map: "fkfbanpkeyfbbla")
   
   @@index([parentProtocolPointId], map: "fkfbanpfbanp2")
   @@index([inspectionProtocolId], map: "fkfbanpfbbla")

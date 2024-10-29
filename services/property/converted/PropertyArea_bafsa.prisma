@@ -6,7 +6,8 @@ model PropertyArea {
   areaAmount Decimal @map("area") @db.Decimal(7, 1)
   timestamp String @map("timestamp") @db.Char(10) // TODO: reconsider the field usage depending on the context
 
-  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbafsakeycmobj") // TODO: replace cmobj with the new model name when available
+  // TODO: Replace cmobj with the new model name once we know what cmobj is called now
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbafsakeycmobj")
 
   @@unique([objectId, areaDate], map: "akbafsa1")
 }

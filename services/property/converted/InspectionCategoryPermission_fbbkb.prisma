@@ -7,8 +7,9 @@ model InspectionCategoryPermission {
   timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' requires a different naming convention or purpose
 
   permissionType PermissionType @relation(fields: [permissionTypeId], references: [permissionTypeId], onUpdate: NoAction, map: "fkfbbkbkeyfbbeh")
-  // TODO: rename 'fbbka' to the new model name when available
-  fbbka fbbka @relation(fields: [inspectionCategoryId], references: [keyfbbka], onDelete: Cascade, onUpdate: NoAction, map: "fkfbbkbkeyfbbka")
+  // TODO: rename 'fbbka' and verify correct model name as it's likely commented out due to refactoring phase requirement
+  // TODO: Verify if related model is properly renamed and mapped.
+  // fbbka fbbka @relation(fields: [inspectionCategoryId], references: [keyfbbka], onDelete: Cascade, onUpdate: NoAction, map: "fkfbbkbkeyfbbka")
 
   @@unique([inspectionCategoryId, permissionTypeId], map: "akfbbkb")
   @@index([permissionTypeId], map: "fkfbbkbfbbeh")

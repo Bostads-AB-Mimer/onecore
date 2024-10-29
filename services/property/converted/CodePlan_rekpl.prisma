@@ -1,0 +1,29 @@
+model CodePlan {
+  @@map("rekpl")
+
+  // Fields
+  codePlanId String @id(map: "pkrekpl") @map("keyrekpl") @db.Char(15)
+  codeGroupId String? @map("keyrekpg") @db.Char(15) // TODO: change when knowing more about keyrekpg use
+  objectId String? @map("keycmobj") @db.Char(15)
+  pathId String? @map("keyatway") @db.Char(15) // TODO: change when knowing more about keyatway use
+  accountingYear Int @map("year") @db.SmallInt
+  createdBy String? @map("keysyusr") @db.Char(15)
+  closedBy String? @map("keysyusr2") @db.Char(15)
+  partNumber Int @map("partno") @db.TinyInt
+  codePart String? @map("part") @db.Char(10)
+  name String? @map("name") @db.Char(40)
+  closed Int @map("closed") @db.TinyInt
+  closedDate DateTime? @map("closedate") @db.DateTime
+  plannedEndDate DateTime? @map("fromdate") @db.DateTime // Assuming fromdate is planned end date for closed period
+  realEndDate DateTime? @map("todate") @db.DateTime // Assuming todate is real end date for closed period
+  deductionPercentageVAT Decimal? @map("prcnt") @db.Decimal(13, 10)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  propertyObject PropertyObject? @relation(fields: [objectId], references: [propertyObjectId], onUpdate: NoAction, map: "fkrekplkeycmobj") 
+
+  @@unique([accountingYear, partNumber, codePart], map: "akrekpl1")
+  @@index([objectId], map: "fkrekplcmobj")
+  @@index([createdBy], map: "fkrekplsyusr")
+  @@index([closedBy], map: "fkrekplsyusr2")
+  @@index([partNumber, codePart, accountingYear, codePlanId, plannedEndDate, realEndDate], map: "inrekpl_uppdaterahuvudbok")
+}

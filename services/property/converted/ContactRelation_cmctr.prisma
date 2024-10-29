@@ -7,7 +7,16 @@ model ContactRelation {
   name String? @map("caption") @db.VarChar(150)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  cmobj cmobj @relation(fields: [primaryObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkcmctrkeycmobj")
+  // The following relation "@relation(...)" needs to be commented out as the related model "cmobj" is not mapped in the new schema.
+  // cmobj cmobj @relation(fields: [primaryObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkcmctrkeycmobj")
+
+  // Relations
+  // The following relation's type "Object" needs to be clarified if it exists or provide a mapping.
+  primaryObject Object @relation("fkcmctrcmobj", fields: [primaryObjectId], references: [id]) 
+  childObject Object @relation("fkcmctrcmobj2", fields: [childObjectId], references: [id]) // TODO: Change "Object" to the accurate model name
+
+  // The following relation's type "ContactPersonType" needs to be clarified if it exists or provide a mapping.
+  contactPersonType ContactPersonType? @relation(fields: [contactPersonTypeId], references: [id]) // TODO: Change "ContactPersonType" to the accurate model name
 
   @@index([primaryObjectId], map: "fkcmctrcmobj")
   @@index([childObjectId], map: "fkcmctrcmobj2")

@@ -37,12 +37,20 @@ model MaintenanceAction {
   skafa skafa? @relation(fields: [mainGroupId], references: [keyskafa], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafa ")
   skafb skafb? @relation(fields: [actionGroupLevel1Id], references: [keyskafb], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafb ")
   skafc skafc? @relation(fields: [actionGroupLevel2Id], references: [keyskafc], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskafc ")
-  skdmd_skatg_keyskdmdToskdmd skdmd? @relation("skatg_keyskdmdToskdmd", fields: [dayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd ")
-  skdmd_skatg_keyskdmd2Toskdmd skdmd? @relation("skatg_keyskdmd2Toskdmd", fields: [ownDayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd2 ")
-  skdmv_skatg_keyskdmvToskdmv skdmv? @relation("skatg_keyskdmvToskdmv", fields: [weekTemplateId], references: [keyskdmv], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmv ")
-  skdmv_skatg_keyskdmv2Toskdmv skdmv? @relation("skatg_keyskdmv2Toskdmv", fields: [ownWeekTemplateId], references: [keyskdmv], onUpdate: NoAction, map: "fkskatgkeyskdmv2 ")
-  skgrp skgrp @relation(fields: [subGroupId], references: [keyskgrp], onUpdate: NoAction, map: "fkskatgkeyskgrp ")
-  skyrk skyrk @relation(fields: [professionCategoryId], references: [keyskyrk], onUpdate: NoAction, map: "fkskatgkeyskyrk ")
+
+  // TODO: skdmd model not available in the given models, can't verify relations to skdmd
+  // skdmd_skatg_keyskdmdToskdmd skdmd? @relation("skatg_keyskdmdToskdmd", fields: [dayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd ")
+  // skdmd_skatg_keyskdmd2Toskdmd skdmd? @relation("skatg_keyskdmd2Toskdmd", fields: [ownDayTemplateId], references: [keyskdmd], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmd2 ")
+
+  // TODO: skdmv model not available in the given models, can't verify relations to skdmv
+  // skdmv_skatg_keyskdmvToskdmv skdmv? @relation("skatg_keyskdmvToskdmv", fields: [weekTemplateId], references: [keyskdmv], onDelete: NoAction, onUpdate: NoAction, map: "fkskatgkeyskdmv ")
+  // skdmv_skatg_keyskdmv2Toskdmv skdmv? @relation("skatg_keyskdmv2Toskdmv", fields: [ownWeekTemplateId], references: [keyskdmv], onUpdate: NoAction, map: "fkskatgkeyskdmv2 ")
+
+  // TODO: skgrp model not available in the given models, can't verify relations to skgrp
+  // skgrp skgrp @relation(fields: [subGroupId], references: [keyskgrp], onUpdate: NoAction, map: "fkskatgkeyskgrp ")
+
+  // TODO: skyrk model not available in the given models, can't verify relations to skyrk
+  // skyrk skyrk @relation(fields: [professionCategoryId], references: [keyskyrk], onUpdate: NoAction, map: "fkskatgkeyskyrk ")
   
   skpin skpin[]
   skund skund[]
@@ -51,10 +59,11 @@ model MaintenanceAction {
   @@index([mainGroupId], map: "fkskatgskafa")
   @@index([actionGroupLevel1Id], map: "fkskatgskafb")
   @@index([actionGroupLevel2Id], map: "fkskatgskafc")
-  @@index([dayTemplateId], map: "fkskatgskdmd")
-  @@index([ownDayTemplateId], map: "fkskatgskdmd2")
-  @@index([weekTemplateId], map: "fkskatgskdmv")
-  @@index([ownWeekTemplateId], map: "fkskatgskdmv2")
-  @@index([subGroupId], map: "fkskatgskgrp")
-  @@index([professionCategoryId], map: "fkskatgskyrk")
+
+  // @@index([dayTemplateId], map: "fkskatgskdmd") // TODO: Cannot verify as skdmd model is missing 
+  // @@index([ownDayTemplateId], map: "fkskatgskdmd2") // TODO: Cannot verify as skdmd model is missing 
+  // @@index([weekTemplateId], map: "fkskatgskdmv") // TODO: Cannot verify as skdmv model is missing 
+  // @@index([ownWeekTemplateId], map: "fkskatgskdmv2") // TODO: Cannot verify as skdmv model is missing 
+  // @@index([subGroupId], map: "fkskatgskgrp") // TODO: Cannot verify as skgrp model is missing 
+  // @@index([professionCategoryId], map: "fkskatgskyrk") // TODO: Cannot verify as skyrk model is missing 
 }

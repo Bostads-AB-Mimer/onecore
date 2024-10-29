@@ -6,7 +6,8 @@ model FreeTable1 {
   name String? @map("caption") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  babyg babyg[] // TODO: change babyg to new model name when available
-  bafst bafst[] // TODO: change bafst to new model name when available
-  bayta bayta[] // TODO: change bayta to new model name when available
+  // NOTE: Commented out relations that are causing inconsistency due to non-existing models or fields
+  // building Building[] // @relation(fields: [id], references: [freeTable1Id], map: "fkbabygkeybabya")
+  // property Property[] // @relation(fields: [id], references: [freeTableKeyA], map: "fkbafstkeybabya")
+  area Area[] @relation(fields: [id], references: [freeTable1Id], map: "fkbaytakeybabya")
 }

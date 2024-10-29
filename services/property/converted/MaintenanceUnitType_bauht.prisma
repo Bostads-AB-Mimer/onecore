@@ -8,8 +8,8 @@ model MaintenanceUnitType {
   isSystemStandard Int @default(0, map: "DF__bauht__issystem__5AFBE208") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Further clarify the usage for renaming
 
-  // TODO: rename 'bauhe' relation when the new model name is available
-  bauhe bauhe[] 
+  // Updated to use the new model name from MaintenanceUnit
+  maintenanceUnits MaintenanceUnit[] @relation("fkbauhekeybauht") 
 
   @@index([componentActionTypeId], map: "fkbauhtpuatt")
 }

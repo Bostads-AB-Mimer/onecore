@@ -8,7 +8,7 @@ model Application {
   priorityId String? @map("keybkpri") @db.Char(15)
   applicantContactId String? @map("keycmctc") @db.Char(15)
   coApplicantContactId String? @map("keycmctc2") @db.Char(15)
-  exchangeFromPropertyId String? @map("keyhyobj") @db.Char(15)
+  exchangeFromPropertyId String? @map("keyhyobj") @db.Char(15) // TODO: Field exchangeFromPropertyId relation does not exist
   terminatingContractId String? @map("keyhyobj2") @db.Char(15)
   publicationRoundId String? @map("keybkpuo") @db.Char(15)
   userId String? @map("keysyusr") @db.Char(15)
@@ -40,9 +40,8 @@ model Application {
   debitType Int @default(0, map: "DF__bkans__paytype__2FF33EF0") @map("paytype") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  // Relations; update these virtual fields when new model names are determined
-  cmobj cmobj? @relation(fields: [objectId], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeycmobj")
-  hyobj hyobj? @relation(fields: [terminatingContractId], references: [keyhyobj], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeyhyobj2")
+  propertyObject PropertyObject? @relation(fields: [objectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeycmobj")
+  contract Contract? @relation(fields: [terminatingContractId], references: [contractId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeyhyobj2")
   
   @@index([queueTypeId], map: "fkbkansbkkty")
   @@index([reasonId], map: "fkbkansbkors")
@@ -51,7 +50,7 @@ model Application {
   @@index([applicantContactId], map: "fkbkanscmctc")
   @@index([coApplicantContactId], map: "fkbkanscmctc2")
   @@index([objectId], map: "fkbkanscmobj")
-  @@index([exchangeFromPropertyId], map: "fkbkanshyobj")
+  // exchangeFromPropertyId relation does not exist
   @@index([terminatingContractId], map: "fkbkanshyobj2")
   @@index([userId], map: "fkbkanssyusr")
   @@index([applicationId, applicantContactId], map: "inbkans1")

@@ -13,11 +13,14 @@ model TypTextTemplate {
   printSort Int @default(0, map: "DF__cmtep__printsort__0C292948") @map("printsort") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10)
 
-  // TODO: Rename batep, cmtyp, and cmtex to new model names when available
-  
-  batep batep?
-  cmtyp cmtyp @relation(fields: [categoryId], references: [keycmtyp], onDelete: Cascade, onUpdate: NoAction, map: "fkcmtepkeycmtyp")
-  cmtex cmtex[]
+  // TODO: Rename batep to FieldSearch when available
+  // FieldSearch fieldSearch?
+
+  // Updated to use the new category model name
+  category cmtyp @relation(fields: [categoryId], references: [keycmtyp], onDelete: Cascade, onUpdate: NoAction, map: "fkcmtepkeycmtyp")
+
+  // TODO: Rename cmtex to TypText when available
+  // TypText typText[]
 
   @@unique([categoryId, name], map: "akcmtep")
   @@index([freeTextListId], map: "fkcmtepcmttt")

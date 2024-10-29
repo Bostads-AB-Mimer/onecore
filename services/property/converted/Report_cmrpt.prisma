@@ -2,7 +2,7 @@ model Report {
   @@map("cmrpt")
 
   reportId String @id(map: "pkcmrpt") @map("keycmrpt") @db.Char(15)
-  classId String? @map("keysycls") @db.Char(15)  // TODO: Verify context or new name when available
+  classId String? @map("keysycls") @db.Char(15) // TODO: Verify context or new name when available
   textClusterId2 String? @map("keysytxc2") @db.Char(15) // TODO: Verify context or new name when available
   textClusterId String? @map("keysytxc") @db.Char(15) // TODO: Verify context or new name when available
   imageClusterId String @map("keysyimc") @db.Char(15) // TODO: Converting to English equivalent context
@@ -16,13 +16,14 @@ model Report {
   rowTemplate Int @default(0, map: "DF__cmrpt__rptrsh__0D89B388") @map("rptrsh") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Revisit when more context is known
 
-  bsdef bsdef[] // TODO: Rename bsdef to new model name if different
-  cmrbr cmrbr[] // TODO: Rename cmrbr to new model name if different
-  cmrpe cmrpe[] // TODO: Rename cmrpe to new model name if different
-  hydis hydis[] // DigitalSignature model
-  @@index([classId], map: "fkcmrptsycls")
-  @@index([imageClusterId], map: "fkcmrptsyimc")
-  @@index([textClusterId], map: "fkcmrptsytxc")
-  @@index([textClusterId2], map: "fkcmrptsytxc2")
-  @@index([userId], map: "fkcmrptsyusr")
+  formTemplates FormTemplate[] @relation("fkbsdefkeycmrpt")
+  reportBatchRows ReportBatchRow[]
+  logEvents LogEvent[]
+  digitalSignatures DigitalSignature[]
+  //@TODO: Fix or remove index if nothing to index
+  @@index([classId], map: "fkcmrptsycls") 
+  @@index([imageClusterId], map: "fkcmrptsyimc") 
+  @@index([textClusterId], map: "fkcmrptsytxc") 
+  @@index([textClusterId2], map: "fkcmrptsytxc2") 
+  @@index([userId], map: "fkcmrptsyusr") 
 }

@@ -8,7 +8,8 @@ model AreaType {
   isSystemStandard Int @default(0, map: "DF__baytt__issystem__6855DD26") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Change 'timestamp' when knowing more about its usage 
 
-  bayta bayta[] // TODO: Change bayta to new model name when available
+  // TODO: Uncomment this relation when 'Area' schema is confirmed.
+  // areas Area[] @relation("fkbaytakeybaytt") // Changed from bayta to Area based on prior conversions
 
   @@index([componentTypeActionId], map: "fkbayttpuatt")
 }

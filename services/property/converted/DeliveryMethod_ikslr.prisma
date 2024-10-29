@@ -5,6 +5,6 @@ model DeliveryMethod {
   name String @unique(map: "akikslr1") @map("caption") @db.Char(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  hyobj hyobj[] // TODO: change hyobj to new model name when available
-  ikbeh ikbeh[] // TODO: change ikbeh to new model name when available
+  contracts Contract[] @relation("hyobj_keyikslr") // Ensure consistency with renamed Contract model
+  orders Order[] @relation("ikbeh_keyikslr") // Ensure consistency with renamed Order model
 }

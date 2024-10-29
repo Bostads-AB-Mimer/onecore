@@ -1,6 +1,7 @@
 model ContractObjectConnection {
   @@map("hykop")
 
+  // Fields
   contractObjectConnectionId String @id(map: "pkhykop") @map("keyhykop") @db.Char(15)
   rentalObjectId String @map("keycmobj") @db.Char(15)
   contractId String @map("keyhyobj") @db.Char(15)
@@ -11,8 +12,10 @@ model ContractObjectConnection {
   sortOrder Int @map("ordning") @db.SmallInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  hyobj hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhykopkeyhyobj")
-  
+  // Commented out for potential renaming
+  // rentalObject rentalObject @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhykopkeyhyobj")
+  // TODO: Change "rentalObject" once the correct model name is known
+
   @@unique([rentalObjectId, contractId], map: "akhykop1")
   @@index([rentalObjectId], map: "fkhykopcmobj")
   @@index([contractId], map: "fkhykophyobj")

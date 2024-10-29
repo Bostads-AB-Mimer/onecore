@@ -6,8 +6,8 @@ model Subtype {
   name String @map("caption") @db.VarChar(60)
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later when knowing more about its usage
   
-  bsdef bsdef[] // TODO: change bsdef to new model name when available
-  dorev dorev[] // TODO: change dorev to new model name when available
+  formTemplates FormTemplate[] @relation("fkbsdefdosty") // Changed bsdef to FormTemplate
+  documents Document[] @relation("fkdorevdosty") // Changed dorev to Document
   
   @@unique([documentTypeId, name], map: "akdosty1")
   @@index([documentTypeId], map: "fkdostydotyp")

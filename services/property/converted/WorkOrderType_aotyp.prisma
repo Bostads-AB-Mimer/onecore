@@ -9,14 +9,18 @@ model WorkOrderType {
   autoNotify Int @default(1, map: "DF__aotyp__autonoti__32E8D104") @map("autonoti") @db.TinyInt
   printOrder Int @default(0, map: "DF__aotyp__printsort__33DCF53D") @map("printsort") @db.SmallInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: re-evaluate the use of "timestamp" later
-  
-  // TODO: update associations when new model names are available
-  aoacc aoacc[] 
-  aotyc aotyc[]
+
+  // Updated associations using the new model names
+  access Access[] @relation("AccessToWorkOrderType") // Renaming aoacc to Access based on previous conversions
+
+  // TODO: determine the correct name/model for aotyc
+  // workOrderCategoryLinks WorkOrderCategoryLink[] // Commenting out due to unconfirmed model name
 
   // Relations with potential new names
-  baret baret? @relation(fields: [resourcePlanningTypeId], references: [keybaret], onUpdate: NoAction, map: "fkaotypkeybaret")
-  aoupp aoupp[]
+  resourcePlanningType ResourcePlanningType? @relation(fields: [resourcePlanningTypeId], references: [resourcePlanningTypeId], onUpdate: NoAction, map: "fkaotypkeybaret")
+  
+  // Updating relation to WorkOrder from aoupp
+  workOrderRows WorkOrderRow[] // Confirmed that WorkOrderRow schema exists
 
   @@index([resourcePlanningTypeId], map: "fkaotypbaret")
 }

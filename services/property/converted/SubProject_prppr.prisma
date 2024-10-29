@@ -2,22 +2,22 @@ model SubProject {
   @@map("prppr")
 
   subProjectId String @id(map: "pkprppr") @map("keyprppr") @db.Char(15)
-  projectId String? @map("keyprprj") @db.Char(15) // Assuming 'Projekt' refers to 'projectId'
-  waitingForId String? @map("keyprppr2") @db.Char(15) // Assuming 'Väntar på' refers to 'waitingForId'
-  subProjectCategoryId String? @map("keyprppc") @db.Char(15) // Assuming 'Delprojektskategori' refers to 'subProjectCategoryId'
-  checklistId String? @map("keyprclh") @db.Char(15) // Assuming 'Checklista' refers to 'checklistId'
-  payerId String? @map("keycmctc") @db.Char(15) // Assuming 'Betalare' refers to 'payerId'
-  referenceId String? @map("keycmctc2") @db.Char(15) // Assuming 'Er referens' refers to 'referenceId'
-  responsibleId String? @map("keycmctc3") @db.Char(15) // Assuming 'Ansvarig' refers to 'responsibleId'
-  businessResponsibleId String? @map("keycmctc4") @db.Char(15) // Assuming 'Affärsansvarig' refers to 'businessResponsibleId'
-  locationId String? @map("keycmobj") @db.Char(15) // Assuming 'Location' refers to 'locationId'
-  userId String? @map("keysyusr") @db.Char(15) // Assuming 'Användare' refers to 'userId'
+  projectId String? @map("keyprprj") @db.Char(15)
+  waitingForId String? @map("keyprppr2") @db.Char(15)
+  subProjectCategoryId String? @map("keyprppc") @db.Char(15)
+  checklistId String? @map("keyprclh") @db.Char(15)
+  payerId String? @map("keycmctc") @db.Char(15)
+  referenceId String? @map("keycmctc2") @db.Char(15)
+  responsibleId String? @map("keycmctc3") @db.Char(15)
+  businessResponsibleId String? @map("keycmctc4") @db.Char(15)
+  locationId String? @map("keycmobj") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15)
   subProjectCode String @map("code") @db.VarChar(30)
   subProjectName String? @map("caption") @db.VarChar(60)
   fromDate DateTime? @map("fdate") @db.DateTime
   plannedEndDate DateTime? @map("preltdate") @db.DateTime
   endDate DateTime? @map("tdate") @db.DateTime
-  notificationDate DateTime? @map("repodate") @db.DateTime // Assuming 'Anmälningsdatum' translates to 'notificationDate'
+  notificationDate DateTime? @map("repodate") @db.DateTime
   closedDate DateTime? @map("closedate") @db.DateTime
   closureSignature String? @map("closesign") @db.VarChar(80)
   status Int @default(0, map: "DF__prppr__status__3195856F") @map("status") @db.TinyInt
@@ -32,31 +32,30 @@ model SubProject {
   reverseVATDuty Int @default(0, map: "DF__prppr__revvatdut__3471F21A") @map("revvatduty") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10)
 
-  relatedWorkOrders aoupp[]
-  relatedOrders ikbeh[]
-  relatedPractitioners pract[]
-  relatedPremises prmtr[]
+  relatedWorkOrders WorkOrderRow[]
+  relatedOrders Order[]
+  relatedPractitioners ActivityTime[]
+  relatedPremises ProjectTransaction[]
 
-  // Relations with contact model
-  payer cmctc? @relation("prppr_keycmctcTocmctc", fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc")
-  reference cmctc? @relation("prppr_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc2")
-  responsible cmctc? @relation("prppr_keycmctc3Tocmctc", fields: [keycmctc3], references: [keycmctc], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeycmctc3")
-  businessResponsible cmctc? @relation("prppr_keycmctc4Tocmctc", fields: [keycmctc4], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc4")
+  // TODO: Add model definitions for 'cmctc' as they are not available in provided schema
+  // payer cmctc? @relation("prppr_keycmctcTocmctc", fields: [payerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc")
+  // reference cmctc? @relation("prppr_keycmctc2Tocmctc", fields: [referenceId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc2")
+  // responsible cmctc? @relation("prppr_keycmctc3Tocmctc", fields: [responsibleId], references: [keycmctc], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeycmctc3")
+  // businessResponsible cmctc? @relation("prppr_keycmctc4Tocmctc", fields: [businessResponsibleId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprpprkeycmctc4")
 
-  // Relations with other models that are not yet updated
-  location cmobj? @relation(fields: [keycmobj], references: [keycmobj], onUpdate: NoAction, map: "fkprpprkeycmobj ")
-  checklist prclh? @relation(fields: [keyprclh], references: [keyprclh], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeyprclh")
-  project prprj? @relation(fields: [keyprprj], references: [keyprprj], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeyprprj")
-  // Relations that need more information
-  relatedTasks pusta[]
-  relatedUnits puund[]
+  location PropertyObject? @relation(fields: [locationId], references: [propertyObjectId], onUpdate: NoAction, map: "fkprpprkeycmobj ")
+  checklist Checklist? @relation(fields: [checklistId], references: [checklistId], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeyprclh")
+  project Project? @relation(fields: [projectId], references: [projectId], onUpdate: NoAction, onDelete: NoAction, map: "fkprpprkeyprprj")
 
-  @@index([keycmctc], map: "fkprpprcmctc")
-  @@index([keycmctc2], map: "fkprpprcmctc2")
-  @@index([keycmctc3], map: "fkprpprcmctc3")
-  @@index([keycmctc4], map: "fkprpprcmctc4")
-  @@index([keycmobj], map: "fkprpprcmobj")
-  @@index([keyprclh], map: "fkprpprprclh")
+  relatedTasks MaintenanceLog[]
+  relatedUnits PlannedMaintenance[]
+
+  @@index([payerId], map: "fkprpprcmctc")
+  @@index([referenceId], map: "fkprpprcmctc2")
+  @@index([responsibleId], map: "fkprpprcmctc3")
+  @@index([businessResponsibleId], map: "fkprpprcmctc4")
+  @@index([locationId], map: "fkprpprcmobj")
+  @@index([checklistId], map: "fkprpprprclh")
   @@index([waitingForId], map: "fkprpprprppr2")
   @@index([projectId], map: "fkprpprprprj")
   @@index([userId], map: "fkprpprsyusr")

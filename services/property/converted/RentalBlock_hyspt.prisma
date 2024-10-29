@@ -1,0 +1,23 @@
+model RentalBlock {
+  @@map("hyspt")
+
+  // Fields
+  rentalBlockId String @id(map: "pkhyspt") @map("keyhyspt") @db.Char(15)
+  objectId String @map("keycmobj") @db.Char(15)
+  blockReasonId String? @map("keyhyspa") @db.Char(15)
+  projectId String? @map("keyprprj") @db.Char(15)
+  plannedStartDate DateTime @map("fdate") @db.DateTime
+  plannedEndDate DateTime? @map("tdate") @db.DateTime
+  newRentAmount Float? @map("amount") @db.Money
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhysptkeycmobj ")
+  blockReason BlockReason? @relation(fields: [blockReasonId], references: [blockReasonId], onDelete: NoAction, onUpdate: NoAction, map: "fkhysptkeyhyspa ")
+  project Project? @relation(fields: [projectId], references: [projectId], onDelete: NoAction, onUpdate: NoAction, map: "fkhysptkeyprprj ")
+
+  // Indexes
+  @@index([objectId], map: "fkhysptcmobj")
+  @@index([blockReasonId], map: "fkhyspthyspa")
+  @@index([projectId], map: "fkhysptprprj")
+}

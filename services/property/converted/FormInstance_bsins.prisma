@@ -1,0 +1,28 @@
+model FormInstance {
+  @@map("bsins")
+  
+  // Fields
+  id String @id(map: "pkbsins") @map("keybsins") @db.Char(15)
+  formTemplateId String @map("keybsdef") @db.Char(15)
+  databaseTableId String? @map("keydbtbl") @db.Char(15)
+  connectionCodeId String? @map("keycode") @db.Char(15)
+  templateId String? @map("keybsins2") @db.Char(15)
+  templateType Int @map("instpl") @db.TinyInt
+  templateName String? @map("tplname") @db.VarChar(60)
+  formDate DateTime? @map("printdate") @db.DateTime
+  attachment String? @map("enclosure") @db.Char(5)
+  archivedDate DateTime? @map("archived") @db.DateTime
+  status Int @default(0, map: "DF__bsins__formstatu__0CAA02B3") @map("formstatus") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  bsdef bsdef @relation(fields: [formTemplateId], references: [keybsdef], onUpdate: NoAction, map: "fkbsinskeybsdef")
+
+  // Indexes
+  @@index([formTemplateId], map: "fkbsinsbsdef")
+  @@index([templateId], map: "fkbsinsbsins2")
+  @@index([connectionCodeId], map: "fkbsinscode")
+  @@index([databaseTableId], map: "fkbsinsdbtbl")
+  @@index([id, templateType], map: "inbsins_16Z0SWJMY")
+  @@index([formTemplateId, templateType], map: "inbsins1")
+}

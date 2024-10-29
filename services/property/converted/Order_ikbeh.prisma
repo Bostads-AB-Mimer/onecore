@@ -32,17 +32,17 @@ model Order {
   orderTimestamp String @map("timestamp") @db.Char(10) // TODO: Determine usage for future renaming
 
   // Relations
-  cmctc_ikbeh_keycmctcTocmctc cmctc @relation("ikbeh_keycmctcTocmctc", fields: [supplierId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc")
-  cmctc_ikbeh_keycmctc2Tocmctc cmctc @relation("ikbeh_keycmctc2Tocmctc", fields: [resourceId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc2")
+  // TODO: Verify existence of the cmctc model and keycmctc field
+  // cmctc_ikbeh_keycmctcTocmctc cmctc @relation("ikbeh_keycmctcTocmctc", fields: [supplierId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc")
+  // TODO: Verify existence of the cmctc model and keycmctc field
+  // cmctc_ikbeh_keycmctc2Tocmctc cmctc @relation("ikbeh_keycmctc2Tocmctc", fields: [resourceId], references: [keycmctc], onUpdate: NoAction, map: "fkikbehkeycmctc2")
+  contract Contract? @relation(fields: [contractId], references: [contractId], onUpdate: NoAction, map: "fkikbehkeyhyobj")
+  orderingMethod OrderingMethod? @relation(fields: [orderingMethodId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyiksbg")
+  deliveryMethod DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyikslr")
+  subProject SubProject? @relation(fields: [subProjectId], references: [subProjectId], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprppr")
+  project Project? @relation(fields: [projectId], references: [projectId], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprprj")
 
-  // TODO: Determine the new model names and update these relations
-  hyobj hyobj? @relation(fields: [contractId], references: [keyhyobj], onUpdate: NoAction, map: "fkikbehkeyhyobj")
-  iksbg iksbg? @relation(fields: [orderingMethodId], references: [keyiksbg], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyiksbg")
-  ikslr ikslr? @relation(fields: [deliveryMethodId], references: [keyikslr], onDelete: NoAction, onUpdate: NoAction, map: "fkikbehkeyikslr ")
-  prppr prppr? @relation(fields: [subProjectId], references: [keyprppr], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprppr")
-  prprj prprj? @relation(fields: [projectId], references: [keyprprj], onUpdate: NoAction, onDelete: NoAction, map: "fkikbehkeyprprj")
-
-  ikber ikber[]
+  orderRow OrderRow[]
 
   @@index([supplierId], map: "fkikbehcmctc")
   @@index([resourceId], map: "fkikbehcmctc2")

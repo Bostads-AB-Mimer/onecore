@@ -1,13 +1,17 @@
 model CaseNumber {
   @@map("hycmm")
 
+  // Fields
   caseNumberId String @id(map: "pkhycmm") @map("keyhycmm") @db.Char(15)
   linkedContactId String @map("keyhyavk") @db.Char(15)
   name String @map("caption") @db.VarChar(40)
   note String? @map("note") @db.VarChar(200)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  linkedContact LinkedContact @relation(fields: [linkedContactId], references: [linkedContactId], onDelete: Cascade, onUpdate: NoAction, map: "fkhycmmkeyhyavk ")
+  // Relations
+  // TODO: Verify if LinkedContact is the correct model name
+  // comment out if LinkedContact model is not present
+  // linkedContact LinkedContact @relation(fields: [linkedContactId], references: [linkedContactId], onDelete: Cascade, onUpdate: NoAction, map: "fkhycmmkeyhyavk ")
 
   @@index([linkedContactId], map: "fkhycmmhyavk")
 }

@@ -1,0 +1,25 @@
+model InspectionApproval {
+  @@map("fbgod")
+
+  // Fields
+  inspectionApprovalId String @id(map: "pkfbgod") @map("keyfbgod") @db.Char(15)
+  objectId String @map("keycmobj") @db.Char(15)
+  inspectionCategoryId String @map("keyfbbka") @db.Char(15)
+  approvedUntilDate DateTime? @map("godktomdat") @db.DateTime
+  plannedStartDate DateTime? @map("startdate") @db.DateTime
+  realEndDate DateTime? @map("enddate") @db.DateTime
+  technicalStatus Decimal? @map("statustech") @db.Decimal(3, 2)
+  climateStatus Decimal? @map("statusclim") @db.Decimal(3, 2)
+  functionalityStatus Decimal? @map("statusfunc") @db.Decimal(3, 2)
+  totalPoint Decimal? @map("totpint") @db.Decimal(7, 2)
+  totalWeightedPoint Decimal? @map("totpinttw") @db.Decimal(7, 2)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkfbgodkeycmobj ")
+  fbbka InspectionCategory @relation(fields: [inspectionCategoryId], references: [inspectionCategoryId], onDelete: Cascade, onUpdate: NoAction, map: "fkfbgodkeyfbbka")
+
+  @@unique([objectId, inspectionCategoryId], map: "akfbgod1")
+  @@index([objectId], map: "fkfbgodcmobj")
+  @@index([inspectionCategoryId], map: "fkfbgodfbbka")
+}

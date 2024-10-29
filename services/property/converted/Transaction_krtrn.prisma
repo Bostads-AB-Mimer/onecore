@@ -24,7 +24,8 @@ model Transaction {
   transactionNoteLocked Int @default(0, map: "DF__krtrn__tranidloc__44AE64B4") @map("tranidlock") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if timestamp should be uniquely identified
 
-  kragl AutogiroTransaction[] @relation // TODO: Verify if this is the appropriate mapping for AutogiroTransaction
+  // TODO: Ensure the relation name aligns with context; rename if needed
+  kragl AutogiroTransaction[] @relation
 
   @@index([companyId], map: "fkkrtrncmcmp")
   @@index([contactId], map: "fkkrtrncmctc")

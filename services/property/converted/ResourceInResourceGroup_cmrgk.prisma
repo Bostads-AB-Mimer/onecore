@@ -9,9 +9,12 @@ model ResourceInResourceGroup {
   timestamp String @map("timestamp") @db.Char(10) // TODO: confirm new name for 'timestamp' field if needed
 
   // Relations
-  cmctc cmctc @relation(fields: [resourceId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmctc") // TODO: rename 'cmctc' relation when new name is available
-  cmrgr cmrgr @relation(fields: [resourceGroupId], references: [keycmrgr], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmrgr") // TODO: rename 'cmrgr' relation when new name is available
-
+  // TODO: Check Resource model reference
+  // Resource @relation(fields: [resourceId], references: [resourceId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmctc")
+  
+  // TODO: Check ResourceGroup model reference
+  // ResourceGroup @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmrgr")
+  
   @@unique([resourceGroupId, resourceId, fromDate, toDate], map: "akcmrgk")
   @@index([resourceId], map: "fkcmrgkcmctc")
 }

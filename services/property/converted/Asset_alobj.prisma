@@ -5,7 +5,8 @@ model Asset {
   categoryId String? @map("keyalkat") @db.Char(15)
   underTypeId String? @map("keyaltyp") @db.Char(15)
   companyId String @map("keycmcmp") @db.Char(15)
-  contactId String? @map("keycmctc") @db.Char(15)
+  // TODO: Verify existence of the company model or keycmcmp field; comment out this relation temporarily
+  // contactId String? @map("keycmctc") @db.Char(15)
   objectType Int @map("type") @db.TinyInt
   assetCode String @map("code") @db.VarChar(30)
   name String? @map("caption") @db.VarChar(40)
@@ -50,11 +51,15 @@ model Asset {
 
   objectCategory ObjectCategory? @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "fkalobjkeyalkat")
   underType UnderType? @relation(fields: [underTypeId], references: [id], map: "fkalobjkeyaltyp")
-  company Company @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, map: "fkalobjkeycmcmp")
-  contact Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fkalobjkeycmctc")
+  // TODO: Ensure Company model exists or the related field keycmcmp is updated accordingly
+  // company Company @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, map: "fkalobjkeycmcmp")
+  // Commenting out the relation field temporarily until related issues are resolved
+  // contact Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fkalobjkeycmctc")
 
   @@index([categoryId], map: "fkalobjalkat")
   @@index([underTypeId], map: "fkalobjaltyp")
-  @@index([companyId], map: "fkalobjcmcmp")
-  @@index([contactId], map: "fkalobjcmctc")
+  // TODO: Ensure companyId field and respective company relation; if not valid keep indexing plan in mind
+  // @@index([companyId], map: "fkalobjcmcmp")
+  // TODO: Ensure contactId field and respective contact relation; if not valid keep indexing plan in mind
+  // @@index([contactId], map: "fkalobjcmctc")
 }

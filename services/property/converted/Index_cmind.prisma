@@ -1,0 +1,13 @@
+model Index {
+  @@map("cmind")
+
+  indexId String @id(map: "PK__cmind__558AAF1E") @map("keycmind") @db.Char(15)
+  indexCode String @map("cmindkod") @db.Char(30)
+  indexDescription String @map("cmindben") @db.Char(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: determine suitable renaming of timestamp field later
+
+  contractPrices ContractPrice[] @relation("avark")
+  rentalObjectInformations RentalObjectInformation[] @relation("hyinf")
+  regulatedAmounts RegulatedAmount[] @relation("hying")
+  rentalRows RentalRow[] @relation("hyrad")
+}

@@ -17,9 +17,10 @@ model Signatory {
   authorizedView Int @map("authview") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onUpdate: NoAction, map: "fkdodsskeycmctc")
-  dodse dodse @relation(fields: [digitalSignatureId], references: [keydodse], onUpdate: NoAction, map: "fkdodsskeydodse")
-  
+  contact Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fkdodsskeycmctc")
+  // TODO: Change dodse model name once identified
+  digitalSignature dodse @relation(fields: [digitalSignatureId], references: [digitalSignatureId], onUpdate: NoAction, map: "fkdodsskeydodse")
+
   @@index([digitalSignatureId], map: "ix_akdodsskeydodse")
   @@index([contactId], map: "ix_dodsskeycmctc")
 }

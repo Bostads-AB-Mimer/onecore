@@ -26,11 +26,11 @@ model MeasurementPoint {
   referenceYear Int? @map("refyear") @db.SmallInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp format later if more information is available
 
-  cmctc cmctc? @relation(fields: [resourceId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeycmctc")
-  cmobj cmobj @relation(fields: [propertyId], references: [keycmobj], onUpdate: NoAction, map: "fkdrmptkeycmobj")
+  cmctc Contact? @relation(fields: [resourceId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeycmctc")
+  property Property @relation(fields: [propertyId], references: [propertyObjectId], onUpdate: NoAction, map: "fkdrmptkeycmobj") // TODO: Update model name when schema becomes available
   drmts drmts @relation(fields: [measurementTypeId], references: [keydrmts], onUpdate: NoAction, map: "fkdrmptkeydrmts")
-  dromr dromr? @relation(fields: [networkAreaId], references: [keydromr], onDelete: Cascade, onUpdate: NoAction, map: "fkdrmptkeydromr")
-  drort drort? @relation(fields: [climateLocationId], references: [keydrort], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeydrort")
+  dromr NetworkArea? @relation(fields: [networkAreaId], references: [networkAreaId], onDelete: Cascade, onUpdate: NoAction, map: "fkdrmptkeydromr")
+  drort ClimateLocation? @relation(fields: [climateLocationId], references: [climateLocationId], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeydrort")
 
   @@index([resourceId], map: "fkdrmptcmctc")
   @@index([propertyId], map: "fkdrmptcmobj")

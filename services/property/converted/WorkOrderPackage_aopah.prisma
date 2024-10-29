@@ -6,6 +6,6 @@ model WorkOrderPackage {
   description String @map("descript") @db.VarChar(600)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  aokat aokat[] // TODO: change aokat to new model name when available
-  aopar aopar[] // TODO: change aopar to new model name when available
+  workOrderCategories WorkOrderCategory[] @relation("fkaokatkeyaopah") // Updated to new model name for 'aokat'
+  workOrderRows WorkOrderRow[] @relation("fkaoparkeyaopah") // Updated to new model name for 'aopar'
 }

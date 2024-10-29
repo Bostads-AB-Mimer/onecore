@@ -1,0 +1,24 @@
+model ResourcePlanningType {
+  @@map("baret")
+
+  resourcePlanningTypeId String @id(map: "pkbaret") @map("keybaret") @db.Char(15)
+  name String @unique(map: "akbaret1") @map("caption") @db.VarChar(60)
+  uniqueControl Int @default(1, map: "DF__baret__onlyonce__71EB1F7F") @map("onlyonce") @db.TinyInt
+  isPublished Int @default(1, map: "DF__baret__publish__72DF43B8") @map("publish") @db.TinyInt
+  sortingOrder Int @default(0, map: "DF__baret__retsort__73D367F1") @map("retsort") @db.SmallInt
+  systemStandard Int @default(0, map: "DF__baret__repabkod__74C78C2A") @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Field Relations
+  workOrderCategories WorkOrderCategory[] @relation("aokat_keybaretTobaret") // aokat
+  alternateWorkOrderCategories aokat[] @relation("aokat_keybaret2Tobaret")  // TODO: update 'aokat' when new model names are available
+  workOrderRows WorkOrderRow[] @relation("fkaoparkeybaret") // aopar
+  priorities Priority[] @relation("fkaoprikeybaret") // aopri
+  workOrderTypes WorkOrderType[] @relation("fkaotypkeybaret") // aotyp 
+  resourcePlannings ResourcePlanning[] @relation("fkbarekbaret") // barek
+  resourceGroups ResourceGroup[] @relation("fkcmrgrbaret") // cmrgr
+  inspectionCategories InspectionCategory[] @relation("fklbbkabaret") // lbbka
+  mainGroups MainGroup[] @relation("fkskgrpbaret") // skgrp 
+
+  // TODO: For all unchanged fields in the model, once confirmed renaming occurs, update accordingly
+}

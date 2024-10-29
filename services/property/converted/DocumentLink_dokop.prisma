@@ -1,6 +1,7 @@
 model DocumentLink {
   @@map("dokop")
 
+  // Fields
   documentLinkId String @id(map: "pkdokop") @map("keydokop") @db.Char(15)
   documentId String @map("keydorev") @db.Char(15)
   linkedTo String @map("keycode") @db.Char(15)
@@ -9,8 +10,9 @@ model DocumentLink {
   isPublished Int @default(0, map: "DF__dokop__publish__5D9E24DF") @map("publish") @db.TinyInt
   sortOrder Int @default(0, map: "DF__dokop__sortorder__5E924918") @map("sortorder")
   appendixLabel String? @map("labeling") @db.VarChar(30)
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
+  // Relations
   dorev dorev @relation(fields: [documentId], references: [keydorev], onDelete: Cascade, map: "fkdokopkeydorev") // TODO: change dorev to new model name when available
 
   @@unique([documentId, linkedTo, connectionType], map: "akdokop")

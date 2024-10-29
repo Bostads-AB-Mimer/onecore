@@ -99,85 +99,84 @@ model Contact {
   deleteMark Int @default(0, map: "DF__cmctc__deletemar__38F29945") @map("deletemark") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
 
-  // Relations; update these virtual fields when new model names are determined
-  // TODO: update related model names when they become available
-  alobj alobj[]
-  aocap aocap[]
+  // Relations
+  asset alobj[]
+  appointment aocap[]
   aorml_aorml_keycmctcTocmctc aorml[] @relation("aorml_keycmctcTocmctc")
   aorml_aorml_keycmctc6Tocmctc aorml[] @relation("aorml_keycmctc6Tocmctc")
-  aoufr aoufr[]
-  aoupp_aoupp_keycmctcTocmctc aoupp[] @relation("aoupp_keycmctcTocmctc")
-  aoupp_aoupp_keycmctc2Tocmctc aoupp[] @relation("aoupp_keycmctc2Tocmctc")
-  aoupp_aoupp_keycmctc3Tocmctc aoupp[] @relation("aoupp_keycmctc3Tocmctc")
-  aoupp_aoupp_keycmctc4Tocmctc aoupp[] @relation("aoupp_keycmctc4Tocmctc")
-  aoupp_aoupp_keycmctc5Tocmctc aoupp[] @relation("aoupp_keycmctc5Tocmctc")
-  aoupp_aoupp_keycmctc6Tocmctc aoupp[] @relation("aoupp_keycmctc6Tocmctc")
-  aoupp_aoupp_keycmctc7Tocmctc aoupp[] @relation("aoupp_keycmctc7Tocmctc")
-  bafen_bafen_keycmctcTocmctc bafen[] @relation("bafen_keycmctcTocmctc")
-  bafen_bafen_keycmctc2Tocmctc bafen[] @relation("bafen_keycmctc2Tocmctc")
-  bafst_bafst_keycmctcTocmctc bafst[] @relation("bafst_keycmctcTocmctc")
-  bafst_bafst_keycmctc2Tocmctc bafst[] @relation("bafst_keycmctc2Tocmctc")
-  bakmp_bakmp_keycmctcTocmctc bakmp[] @relation("bakmp_keycmctcTocmctc")
-  bakmp_bakmp_keycmctc2Tocmctc bakmp[] @relation("bakmp_keycmctc2Tocmctc")
-  barek barek[]
+  interestedParties InterestedParty[] @relation("aoufr") // Based on default mapping and context
+  workOrders aoupp[] @relation("aoupp_keycmctcTocmctc")
+  subWorkOrders aoupp[] @relation("aoupp_keycmctc2Tocmctc")
+  additionalSubWorkOrders aoupp[] @relation("aoupp_keycmctc3Tocmctc")
+  workOrderResources aoupp[] @relation("aoupp_keycmctc4Tocmctc")
+  workOrderExtras aoupp[] @relation("aoupp_keycmctc5Tocmctc")
+  additionalWorkOrderExtras aoupp[] @relation("aoupp_keycmctc6Tocmctc")
+  extendedWorkOrders aoupp[] @relation("aoupp_keycmctc7Tocmctc")
+  financialEntries bafen[] @relation("bafen_keycmctcTocmctc")
+  additionalFinancialEntries bafen[] @relation("bafen_keycmctc2Tocmctc")
+  fastEntries bafst[] @relation("bafst_keycmctcTocmctc")
+  additionalFastEntries bafst[] @relation("bafst_keycmctc2Tocmctc")
+  companyContacts bakmp[] @relation("bakmp_keycmctcTocmctc")
+  additionalCompanyContacts bakmp[] @relation("bakmp_keycmctc2Tocmctc")
+  resourcePlannings ResourcePlanning[]
   basys_basys_keycmctcTocmctc basys[] @relation("basys_keycmctcTocmctc")
   basys_basys_keycmctc2Tocmctc basys[] @relation("basys_keycmctc2Tocmctc")
-  bkalt bkalt[]
-  cmcgc cmcgc[]
-  cmcmp_cmcmp_keycmctcTocmctc cmcmp[] @relation("cmcmp_keycmctcTocmctc")
-  cmcmp_cmcmp_keycmctc2Tocmctc cmcmp[] @relation("cmcmp_keycmctc2Tocmctc")
-  cmcmp_cmcmp_keycmctc3Tocmctc cmcmp[] @relation("cmcmp_keycmctc3Tocmctc")
-  cmcro cmcro[]
-  cmctk cmctk @relation(fields: [contactCategoryId], references: [keycmctk], onUpdate: NoAction, map: "fkcmctckeycmctk")
-  cmcuh cmcuh? @relation(fields: [currencyId], references: [keycmcuh], onDelete: NoAction, onUpdate: NoAction, map: "fkcmctckeycmcuh")
-  lrpmt lrpmt @relation(fields: [paymentMethodId], references: [keylrpmt], onUpdate: NoAction, map: "fkcmctckeylrpmt")
-  cmlpi cmlpi[]
-  cmres cmres[]
-  cmrgk cmrgk[]
-  crcom crcom[]
-  dodss dodss[]
-  dorev_dorev_keycmctcTocmctc dorev[] @relation("dorev_keycmctcTocmctc")
-  dorev_dorev_keycmctc2Tocmctc dorev[] @relation("dorev_keycmctc2Tocmctc")
-  drmpt drmpt[]
-  fbbes fbbes[]
-  fbbpk fbbpk[]
-  fbreb fbreb[]
-  fbres fbres[]
-  hydis hydis[]
-  hysec hysec[]
-  ikbeh_ikbeh_keycmctcTocmctc ikbeh[] @relation("ikbeh_keycmctcTocmctc")
-  ikbeh_ikbeh_keycmctc2Tocmctc ikbeh[] @relation("ikbeh_keycmctc2Tocmctc")
-  kragl kragl[]
-  kramp_kramp_keycmctcTocmctc kramp[] @relation("kramp_keycmctcTocmctc")
-  kramp_kramp_keycmctc2Tocmctc kramp[] @relation("kramp_keycmctc2Tocmctc")
-  krfkh_Krfkh_keycmctc2Tocmctc krfkh[] @relation("krfkh_keycmctc2Tocmctc")
-  krfkh_krfkh_keycmctc3Tocmctc krfkh[] @relation("krfkh_keycmctc3Tocmctc")
-  krfkh_krfkh_keycmctc4Tocmctc krfkh[] @relation("krfkh_keycmctc4Tocmctc")
-  krfkh_krfkh_keycmctc5Tocmctc krfkh[] @relation("krfkh_keycmctc5Tocmctc")
-  customer krknr? @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrknrkeycmctc") // Modified relation name according to context
-  apartmentInspections lbbes[] @relation("ApartmentInspection_inspectorIdToContact_relation") // Modified relation name according to context
-  mmctc_mmctc_keycmctcTocmctc mmctc? @relation("mmctc_keycmctcTocmctc")
-  mmctc_mmctc_keycmctc2Tocmctc mmctc[] @relation("mmctc_keycmctc2Tocmctc")
-  mmctc_mmctc_keycmctc3Tocmctc mmctc[] @relation("mmctc_keycmctc3Tocmctc")
-  nysys_nysys_keycmctcTocmctc nysys[] @relation("nysys_keycmctcTocmctc")
-  nysys_nysys_keycmctc2Tocmctc nysys[] @relation("nysys_keycmctc2Tocmctc")
-  nysys_nysys_keycmctc3Tocmctc nysys[] @relation("nysys_keycmctc3Tocmctc")
-  pract pract[]
+  applicationLetters ApplicationLetter[]
+  groupContacts cmcgc[]
+  companyRepresentatives cmcmp[] @relation("cmcmp_keycmctcTocmctc")
+  alternateCompanyRepresentatives cmcmp[] @relation("cmcmp_keycmctc2Tocmctc")
+  thirdPartyCompanyRepresentatives cmcmp[] @relation("cmcmp_keycmctc3Tocmctc")
+  contactRoles cmcro[]
+  contactCategory cmctk @relation(fields: [contactCategoryId], references: [keycmctk], onUpdate: NoAction, map: "fkcmctckeycmctk")
+  currency cmcuh? @relation(fields: [currencyId], references: [keycmcuh], onDelete: NoAction, onUpdate: NoAction, map: "fkcmctckeycmcuh")
+  paymentMethod lrpmt @relation(fields: [paymentMethodId], references: [keylrpmt], onUpdate: NoAction, map: "fkcmctckeylrpmt")
+  logProtectedIdentities cmlpi[]
+  resourceAssignments Resource[] @relation("cmres")
+  resourceGroupConnections cmrgk[]
+  messages Message[]
+  signatories Signatory[]
+  documentVersions dorev[] @relation("dorev_keycmctcTocmctc")
+  ampDocumentVersions dorev[] @relation("dorev_keycmctc2Tocmctc")
+  measurementPoints MeasurementPoint[]
+  inspections Inspection[]
+  inspectionProtocols InspectionProtocol[]
+  inspectionRights InspectionRight[]
+  inspectors Inspector[]
+  digitalSignatures DigitalSignature[]
+  securities Security[]
+  procurementHandlers ikbeh[] @relation("ikbeh_keycmctcTocmctc")
+  additionalProcurementHandlers ikbeh[] @relation("ikbeh_keycmctc2Tocmctc")
+  autogiroTransactions AutogiroTransaction[]
+  paymentSchedules kramp[] @relation("kramp_keycmctcTocmctc")
+  additionalPaymentSchedules kramp[] @relation("kramp_keycmctc2Tocmctc")
+  invoices krfkh[] @relation("krfkh_keycmctc2Tocmctc")
+  invoiceReminders krfkh[] @relation("krfkh_keycmctc3Tocmctc")
+  invoiceExemptions krfkh[] @relation("krfkh_keycmctc4Tocmctc")
+  invoiceDisputes krfkh[] @relation("krfkh_keycmctc5Tocmctc")
+  customer Customer? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkkrknrkeycmctc")
+  apartmentInspections ApartmentInspection[] @relation("apartmentInspections_inspectorIdToContact_relation")
+  groupMemberships mmctc? @relation("mmctc_keycmctcTocmctc")
+  additionalGroupMemberships mmctc[] @relation("mmctc_keycmctc2Tocmctc")
+  additionalGroupMemberships3 mmctc[] @relation("mmctc_keycmctc3Tocmctc")
+  newSysConnections nysys[] @relation("nysys_keycmctcTocmctc")
+  additionalNewSysConnections nysys[] @relation("nysys_keycmctc2Tocmctc")
+  additionalNewSysConnections3 nysys[] @relation("nysys_keycmctc3Tocmctc")
+  activityTimes ActivityTime[]
   prmtr_prmtr_keycmctcTocmctc prmtr[] @relation("prmtr_keycmctcTocmctc")
   prmtr_prmtr_keycmctc2Tocmctc prmtr[] @relation("prmtr_keycmctc2Tocmctc")
-  prppr_prppr_keycmctcTocmctc prppr[] @relation("prppr_keycmctcTocmctc")
-  prppr_prppr_keycmctc2Tocmctc prppr[] @relation("prppr_keycmctc2Tocmctc")
-  prppr_prppr_keycmctc3Tocmctc prppr[] @relation("prppr_keycmctc3Tocmctc")
-  prppr_prppr_keycmctc4Tocmctc prppr[] @relation("prppr_keycmctc4Tocmctc")
-  prprj_prprj_keycmctcTocmctc prprj[] @relation("prprj_keycmctcTocmctc")
-  prprj_prprj_keycmctc2Tocmctc prprj[] @relation("prprj_keycmctc2Tocmctc")
-  prprj_prprj_keycmctc3Tocmctc prprj[] @relation("prprj_keycmctc3Tocmctc")
-  prprj_prprj_keycmctc4Tocmctc prprj[] @relation("prprj_keycmctc4Tocmctc")
-  prprj_prprj_keycmctc5Tocmctc prprj[] @relation("prprj_keycmctc5Tocmctc")
-  puprd puprd[]
-  skund skund[]
-  tvprd tvprd[]
-  tvsta tvsta[]
+  subProjects prppr[] @relation("prppr_keycmctcTocmctc")
+  additionalSubProjects prppr[] @relation("prppr_keycmctc2Tocmctc")
+  additionalSubProjectLinks prppr[] @relation("prppr_keycmctc3Tocmctc")
+  furtherSubProjectLinks prppr[] @relation("prppr_keycmctc4Tocmctc")
+  projects prprj[] @relation("prprj_keycmctcTocmctc")
+  additionalProjects prprj[] @relation("prprj_keycmctc2Tocmctc")
+  additionalProjectLinks prprj[] @relation("prprj_keycmctc3Tocmctc")
+  furtherProjectLinks prprj[] @relation("prprj_keycmctc4Tocmctc")
+  furtherProjectLinks5 prprj[] @relation("prprj_keycmctc5Tocmctc")
+  product puprd[]
+  periodicWorks PeriodicWork[]
+  tvProducts Product[]
+  productHistories ProductHistory[]
 
   @@index([allowedVersionId], map: "fkcmctcaover2")
   @@index([keycmctc2], map: "fkcmctccmctc2")

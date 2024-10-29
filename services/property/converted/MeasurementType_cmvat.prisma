@@ -9,19 +9,26 @@ model MeasurementType {
   systemStandard Int @default(0, map: "DF__cmvat__repabkod__21836D8A") @map("repabkod") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate the usage of timestamp later
 
-  avark avark[] // TODO: Rename avark when available
-  cmart_cmart_keycmvatTocmvat cmart[] @relation("cmart_keycmvatTocmvat") // TODO: Rename cmart when available
-  cmart_cmart_keycmvat2Tocmvat cmart[] @relation("cmart_keycmvat2Tocmvat") // TODO: Rename cmart when available
-  cmvap cmvap[] // TODO: Rename cmvap when available
-  hyinf_hyinf_keycmvatTocmvat hyinf[] @relation("hyinf_keycmvatTocmvat") // TODO: Rename hyinf when available
-  hyinf_hyinf_keycmvat2Tocmvat hyinf[] @relation("hyinf_keycmvat2Tocmvat") // TODO: Rename hyinf when available
-  hyinf_hyinf_keycmvat3Tocmvat hyinf[] @relation("hyinf_keycmvat3Tocmvat") // TODO: Rename hyinf when available
-  hyinf_hyinf_keycmvat4Tocmvat hyinf[] @relation("hyinf_keycmvat4Tocmvat") // TODO: Rename hyinf when available
-  puatg_puatg_keycmvatTocmvat puatg[] @relation("puatg_keycmvatTocmvat") // TODO: Rename puatg when available
-  puatg_puatg_keycmvat2Tocmvat puatg[] @relation("puatg_keycmvat2Tocmvat") // TODO: Rename puatg when available
-  puund puund[] // TODO: Rename puund when available
-  skpin skpin[] // TODO: Rename skpin when available
-  skund skund[] // TODO: Rename skund when available
+  contractPrices ContractPrice[] @relation("fkavarkkeycmvat")
+  measurementTypeLinks MeasurementTypeLink[] @relation("fkcmvapkeycmvat")
+  plannedMaintenances PlannedMaintenance[] @relation("fkpuundkeycmvat")
+  maintenancePackageContents MaintenancePackageContent[] @relation("fkskpinkeycmvat")
+  periodicWorks PeriodicWork[] @relation("fkskundkeycmvat")
+
+  // Relations that require further renaming
+  // TODO: Rename cmart when available
+  // cmart_cmart_keycmvatTocmvat cmart[] @relation("cmart_keycmvatTocmvat")
+  // cmart_cmart_keycmvat2Tocmvat cmart[] @relation("cmart_keycmvat2Tocmvat")
+  
+  // TODO: Rename hyinf when available
+  // hyinf_hyinf_keycmvatTocmvat hyinf[] @relation("hyinf_keycmvatTocmvat")
+  // hyinf_hyinf_keycmvat2Tocmvat hyinf[] @relation("hyinf_keycmvat2Tocmvat")
+  // hyinf_hyinf_keycmvat3Tocmvat hyinf[] @relation("hyinf_keycmvat3Tocmvat")
+  // hyinf_hyinf_keycmvat4Tocmvat hyinf[] @relation("hyinf_keycmvat4Tocmvat")
+
+  // TODO: Rename puatg when available
+  // puatg_puatg_keycmvatTocmvat puatg[] @relation("puatg_keycmvatTocmvat")
+  // puatg_puatg_keycmvat2Tocmvat puatg[] @relation("puatg_keycmvat2Tocmvat")
 
   @@index([unitId], map: "fkcmvatcmuni")
   @@index([name], map: "incmvat1")

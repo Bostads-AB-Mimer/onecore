@@ -1,0 +1,34 @@
+model RegulatedAmount {
+  @@map("hying")
+  
+  regulatedAmountId String @id(map: "pkhying") @map("keyhying") @db.Char(15)
+  indexClauseId String? @map("keyhyink") @db.Char(15) // Previously hyink
+  indexId String? @map("keycmind") @db.Char(15) // Previously cmind, refer to Index model
+  indexValueId String? @map("keycminv") @db.Char(15) // Previously cminv, usually IndexValue
+  indexValueId2 String? @map("keycminv2") @db.Char(15) // Another instance of cminv, named IndexValue
+  indexValueId3 String? @map("keycminv3") @db.Char(15) // Third instance of cminv, named IndexValue
+  baseAmount Decimal @default(0, map: "DF__hying__baseamoun__6FEF5F8C") @map("baseamount") @db.Decimal(15, 2)
+  actualAmount Decimal? @map("actamount") @db.Decimal(15, 2)
+  changeType Int @default(0, map: "DF__hying__regtype__70E383C5") @map("regtype") @db.TinyInt
+  indexShare Decimal @default(0, map: "DF__hying__indexshar__71D7A7FE") @map("indexshare") @db.Decimal(7, 4)
+  interval Int @default(1, map: "DF__hying__interval__72CBCC37") @map("interval") @db.SmallInt
+  sendNotice Int @default(0, map: "DF__hying__sendnotic__73BFF070") @map("sendnotice") @db.TinyInt
+  noticeDays Int @default(0, map: "DF__hying__noticeday__74B414A9") @map("noticedays") @db.SmallInt
+  changeMonths Int @default(1, map: "DF__hying__chngmnths__75A838E2") @map("chngmnths") @db.SmallInt
+  changeDayInMonth Int @default(1, map: "DF__hying__chngdimnt__769C5D1B") @map("chngdimnth") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if a different naming is needed
+
+  // Relations
+  index Index? @relation(fields: [keycmind], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyingkeycmind")
+  indexValue_hying_keycminvTocminv IndexValue? @relation("hying_keycminvTocminv", fields: [keycminv], references: [indexValueId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyingkeycminv")
+  indexValue_hying_keycminv2Tocminv IndexValue? @relation("hying_keycminv2Tocminv", fields: [keycminv2], references: [indexValueId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyingkeycminv2")
+  indexValue_hying_keycminv3Tocminv IndexValue? @relation("hying_keycminv3Tocminv", fields: [keycminv3], references: [indexValueId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyingkeycminv3")
+  indexClause IndexClause? @relation(fields: [keyhyink], references: [indexClauseId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyingkeyhyink")
+  hysec Security[] @map("hysec") // TODO: update Security model name in relation if necessary when it is known
+  
+  @@index([indexId], map: "fkhyingcmind")
+  @@index([indexValueId], map: "fkhyingcminv")
+  @@index([indexValueId2], map: "fkhyingcminv2")
+  @@index([indexValueId3], map: "fkhyingcminv3")
+  @@index([indexClauseId], map: "fkhyinghyink")
+}

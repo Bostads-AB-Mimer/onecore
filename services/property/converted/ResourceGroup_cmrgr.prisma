@@ -10,14 +10,14 @@ model ResourceGroup {
   includedInPlanboard Int @default(0, map: "DF__cmrgr__incplanbr__0BEEFF74") @map("incplanbrd") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' needs a different naming convention
 
-  aocap aocap[]
-  aorml aorml[]
-  aoupp aoupp[]
-  barek barek[]
-  cmrgk cmrgk[]
-  baret baret? @relation(fields: [planningTypeId], references: [keybaret], onUpdate: NoAction, map: "fkcmrgrkeybaret") // TODO: rename 'baret' relation when new name is available
-  lbbes lbbes[] // TODO: rename 'lbbes' relation when new name is available
-  skund skund[] // TODO: rename 'skund' relation when new name is available
+  appointments Appointment[] @relation("fkaocapkeycmrgr") // aocap
+  reminderTransactions ReminderTransaction[] @relation("fkaormlkeycmrgr") // aorml
+  workOrders WorkOrderRow[] @relation("fkaouppkeycmrgr") // aoupp
+  resourcePlannings ResourcePlanning[] @relation("fkbarekkeycmrgr") // barek
+  resourceInResourceGroups ResourceInResourceGroup[] @relation("fkcmrgkkeycmrgr") // cmrgk
+  resourcePlanningType ResourcePlanningType? @relation("fkcmrgrkeybaret") // baret
+  apartmentInspections ApartmentInspection[] @relation("fklbbeskeycmrgr") // lbbes
+  periodicWorks PeriodicWork[] @relation("fkskundkeycmrgr") // skund
   
   @@index([planningTypeId], map: "fkcmrgrbaret")
 }

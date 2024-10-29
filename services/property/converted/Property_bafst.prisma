@@ -7,8 +7,8 @@ model Property {
   freeTableKeyB String? @map("keybabyb") @db.Char(15) // Mapping for 'Fritabellen 2'. Rename if domain clarification is obtained
   freeTableKeyC String? @map("keybabyc") @db.Char(15) // Mapping for 'Fritabellen 3'. Rename if domain clarification is obtained
   valueAreaId String? @map("keybavom") @db.Char(15) // TODO: Once mapped, verify if 'Värdeområde' means value area
-  contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
-  legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
+  //contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
+  //legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
   propertyCode String @map("code") @db.VarChar(30)
   propertyDesignation String? @map("caption") @db.VarChar(60)
   municipality String? @map("kommun") @db.VarChar(30)
@@ -37,18 +37,18 @@ model Property {
   toDate DateTime @map("tdate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10)
 
-  babya babya? @relation(fields: [freeTableKeyA], references: [keybabya], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabya")
-  babyb babyb? @relation(fields: [freeTableKeyB], references: [keybabyb], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyb")
-  babyc babyc? @relation(fields: [freeTableKeyC], references: [keybabyc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyc")
-  cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
-  cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
-  cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbafstkeycmobj")
+  freeTable1 FreeTable1? @relation(fields: [freeTableKeyA], references: [keybabya], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabya")
+  freeTable2 FreeTable2? @relation(fields: [freeTableKeyB], references: [keybabyb], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyb")
+  freeTable3 FreeTable3? @relation(fields: [freeTableKeyC], references: [keybabyc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyc")
+  //cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
+  //cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
+  //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbafstkeycmobj")
 
   @@index([freeTableKeyA], map: "fkbafstbabya")
   @@index([freeTableKeyB], map: "fkbafstbabyb")
   @@index([freeTableKeyC], map: "fkbafstbabyc")
-  @@index([contactId], map: "fkbafstcmctc")
-  @@index([legalOwnerId], map: "fkbafstcmctc2")
+  //@@index([contactId], map: "fkbafstcmctc")
+  //@@index([legalOwnerId], map: "fkbafstcmctc2")
   @@index([fromDate], map: "inbafst_2KR0I5KYU")
   @@index([toDate], map: "inbafst_2KR0I5KZP")
   @@index([propertyCode], map: "inbafst_2KR0I5L0X")

@@ -1,0 +1,60 @@
+model MaintenanceAction {
+  @@map("puatg")
+
+  maintenanceActionId String @id(map: "pkpuatg") @map("keypuatg") @db.Char(15)
+  componentTypeActionId String? @map("keypuatt") @db.Char(15) // Previously mapped as puatt
+  workTypeId String? @map("keypumtt") @db.Char(15) // WorkType relation not known yet
+  articleId String? @map("keycmart") @db.Char(15) // Mapped to Article
+  unitId String? @map("keycmuni") @db.Char(15) // Mapped to Unit
+  measurementTypeId String? @map("keycmvat") @db.Char(15) // Mapped to MeasurementType
+  secondaryMeasurementTypeId String? @map("keycmvat2") @db.Char(15) // Alias for measurementTypeId
+  actionGroupId String? @map("keypuagr") @db.Char(15) // Previously mapped as puagr
+  actionCode String @unique(map: "akpuatg") @map("atgard") @db.Char(10)
+  description1 String? @map("text1") @db.VarChar(30)
+  description2 String? @map("text2") @db.VarChar(30)
+  plainText String? @map("klartext") @db.VarChar(30)
+  costFactor Decimal? @map("kostnfakt") @db.Decimal(6, 2)
+  materialPriceAmount Float? @map("mtrlpris") @db.Money
+  priceAmount Float? @map("pris") @db.Money
+  intervalYears Int? @map("intervall") @db.TinyInt
+  isInvestment Int @default(0, map: "DF__puatg__invest__74CBA2FA") @map("invest") @db.TinyInt
+  maintenanceType Int @default(0, map: "DF__puatg__mainttype__75BFC733") @map("mainttype") @db.TinyInt
+  customIntervalYears Int? @map("egetinterv") @db.TinyInt
+  timeGroundwork Decimal? @map("tidmark") @db.Decimal(8, 2)
+  timeWoodwork Decimal? @map("tidtra") @db.Decimal(8, 2)
+  timeConcrete Decimal? @map("tidbetong") @db.Decimal(8, 2)
+  timePainting Decimal? @map("tidmaln") @db.Decimal(8, 2)
+  timeSheetwork Decimal? @map("tidplat") @db.Decimal(8, 2)
+  timeFloorwork Decimal? @map("tidgolv") @db.Decimal(8, 2)
+  timePipework Decimal? @map("tidror") @db.Decimal(8, 2)
+  timeVentilation Decimal? @map("tidvent") @db.Decimal(8, 2)
+  timeElectrical Decimal? @map("tidel") @db.Decimal(8, 2)
+  timeElevatorwork Decimal? @map("tidhiss") @db.Decimal(8, 2)
+  timeOther Decimal? @map("tidovr") @db.Decimal(8, 2)
+  timeKitchenwork Decimal? @map("tidkok") @db.Decimal(8, 2)
+  priority Int? @map("prioritet") @db.TinyInt
+  compensationTimeForVLUActions Int? @map("vluaterbet") @db.TinyInt // VLU context not clear, preserving original
+  minQuantity Int? @map("minqty") @db.SmallInt
+  maxQuantity Int? @map("maxqty") @db.SmallInt
+  incomeChangeAmount Float? @map("incchange") @db.Money
+  isFavorite Int @default(0, map: "DF__puatg__favorit__76B3EB6C") @map("favorit") @db.TinyInt
+  systemStandardCode Int @default(0, map: "DF__puatg__repabkod__77A80FA5") @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // Mapping kept for consistency
+
+  actionToBuildingParts ActionToBuildingPart[] // Uses previously renamed model name
+  article Article? @relation(fields: [articleId], references: [articleId], onUpdate: NoAction, map: "fkpuatgkeycmart") // Based on previous Article conversion
+  unit Unit? @relation(fields: [unitId], references: [unitId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuatgkeycmuni") // Based on previous Unit conversion
+  measurementType MeasurementType? @relation("puatg_keycmvatTocmvat", fields: [measurementTypeId], references: [measurementTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuatgkeycmvat")
+  secondaryMeasurementType MeasurementType? @relation("puatg_keycmvat2Tocmvat", fields: [secondaryMeasurementTypeId], references: [measurementTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuatgkeycmvat2")
+  maintenanceActionGroup MaintenanceActionGroup? @relation(fields: [actionGroupId], references: [maintenanceActionGroupId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuatgkeypuagr") // Based on previous MaintenanceActionGroup conversion
+  actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkpuatgkeypuatt") // Based on previous ActionType conversion
+  maintenanceLogs MaintenanceLog[] // Uses previously renamed model name
+  plannedMaintenances PlannedMaintenance[] // Uses previously renamed model name
+
+  @@index([articleId], map: "fkpuatgcmart")
+  @@index([unitId], map: "fkpuatgcmuni")
+  @@index([measurementTypeId], map: "fkpuatgcmvat")
+  @@index([secondaryMeasurementTypeId], map: "fkpuatgcmvat2")
+  @@index([actionGroupId], map: "fkpuatgpuagr")
+  @@index([componentTypeActionId], map: "fkpuatgpuatt")
+}

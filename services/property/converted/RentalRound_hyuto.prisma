@@ -2,11 +2,11 @@ model RentalRound {
   @@map("hyuto")
 
   rentalRoundId String @id(map: "pkhyuto") @map("keyhyuto") @db.Char(15)
-  propertyObjectId String @map("keycmobj") @db.Char(15) // Foreign key, need to identify the relevant table/model
-  contractId String? @map("keyhyobj") @db.Char(15) // Foreign key, need to identify the relevant table/model
-  alternateContractId String? @map("keyhyobj2") @db.Char(15) // Foreign key, need to identify the relevant table/model
-  contactId String? @map("keycmctc") @db.Char(15) // Foreign key, need to identify the relevant table/model
-  userId String? @map("keysyusr") @db.Char(15) // This likely maps to another table, need to determine which
+  propertyObjectId String @map("keycmobj") @db.Char(15) // TODO: Identify correct table/model for this foreign key
+  contractId String? @map("keyhyobj") @db.Char(15) // Foreign key, referencing Contract
+  alternateContractId String? @map("keyhyobj2") @db.Char(15) // Foreign key, referencing Contract
+  contactId String? @map("keycmctc") @db.Char(15) // TODO: Identify correct table/model for this foreign key
+  userId String? @map("keysyusr") @db.Char(15) // TODO: Identify correct table/model for this foreign key
   completionStatus Int @default(0, map: "DF__hyuto__avslutad__1AB154C0") @map("avslutad") @db.TinyInt
   displayType Int @default(1, map: "DF__hyuto__visatyp__1BA578F9") @map("visatyp") @db.TinyInt
   startDate DateTime @map("fdate") @db.DateTime
@@ -22,8 +22,8 @@ model RentalRound {
   viewingTime DateTime? @map("disptime") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if this requires a different naming convention
 
-  hydsp hydsp[] // TODO: change hydsp to new model name when available
-  hyobj hyobj[] // TODO: change hyobj to new model name when available
+  displays Display[] @relation("fkhydspkeyhyuto")
+  contracts Contract[] @relation("fkhyutohyobj")
 
   @@index([contactId], map: "fkhyutocmctc")
   @@index([propertyObjectId], map: "fkhyutocmobj")

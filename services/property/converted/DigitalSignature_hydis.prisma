@@ -1,12 +1,12 @@
 model DigitalSignature {
   @@map("hydis")
-  
+
   digitalSignatureId String @id(map: "pkhydis") @map("keyhydis") @db.Char(15)
   contractId String @map("keyhyobj") @db.Char(15) // TODO: check naming in context
   reportId String @map("keycmrpt") @db.Char(15) // TODO: check naming in context
   documentId String @map("keydorev") @db.Char(15) // TODO: check naming in context
-  contactId String? @map("keycmctc") @db.Char(15) // TODO: check naming in context
-  formId String? @map("keybsdef") @db.Char(15) // TODO: check naming in context
+  contactId String? @map("keycmctc") @db.Char(15) // Check if this change is consistent
+  formId String? @map("keybsdef") @db.Char(15) // Check if bsdef maps to formId 
   createdDate DateTime @map("created") @db.DateTime
   type Int @default(1, map: "DF__hydis__dstype__1B440419") @map("dstype") @db.TinyInt
   signatureGuid String? @map("dsguid") @db.UniqueIdentifier
@@ -21,17 +21,21 @@ model DigitalSignature {
   timestamp String @map("timestamp") @db.Char(10) // TODO: update timestamp when have more clarity
 
   // Relations
-  bsdef bsdef? @relation(fields: [formId], references: [keybsdef], onDelete: NoAction, onUpdate: NoAction, map: "fkhydiskeybsdef")
-  cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeycmctc")
-  cmrpt cmrpt @relation(fields: [reportId], references: [keycmrpt], onUpdate: NoAction, map: "fkhydiskeycmrpt")
-  dorev dorev @relation(fields: [documentId], references: [keydorev], onUpdate: NoAction, map: "fkhydiskeydorev")
-  hyobj hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeyhyobj")
+  form FormTemplate? @relation(fields: [formId], references: [formTemplateId], onDelete: NoAction, onUpdate: NoAction, map: "fkhydiskeybsdef")
+  contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeycmctc")
+  // TODO: Change cmrpt and dorev once the models are converted and their names are available
+  // cmrpt cmrpt @relation(fields: [reportId], references: [keycmrpt], onUpdate: NoAction, map: "fkhydiskeycmrpt")
+  // dorev dorev @relation(fields: [documentId], references: [keydorev], onUpdate: NoAction, map: "fkhydiskeydorev")
+  // contract hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhydiskeyhyobj")
 
   @@unique([contractId, documentId], map: "akhydis1")
   @@index([formId], map: "fkhydisbsdef")
   @@index([contactId], map: "fkhydiscmctc")
-  @@index([reportId], map: "fkhydiscmrpt")
-  @@index([documentId], map: "fkhydisdorev")
-  @@index([contractId], map: "fkhydishyobj")
+  // TODO: Index checking for cmrpt needs conversion completion
+  // @@index([reportId], map: "fkhydiscmrpt")
+  // TODO: Index checking for dorev needs conversion completion
+  // @@index([documentId], map: "fkhydisdorev")
+  // TODO: Index checking for hyobj needs conversion completion
+  // @@index([contractId], map: "fkhydishyobj")
   @@index([externalDocumentId], map: "hydisextdocid")
 }

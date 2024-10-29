@@ -8,9 +8,9 @@ model Offer {
   lettingRoundId String @map("keybkero") @db.Char(15)
   applicantId String? @map("keycmctc") @db.Char(15) // TODO: change when new model names are available
   coApplicantId String? @map("keycmctc2") @db.Char(15) // TODO: change when new model names are available
-  contractId String? @map("keyhyobj") @db.Char(15) // TODO: change when new model names are available
+  // contractId String? @map("keyhyobj") @db.Char(15) // TODO: change when new model names are available
   displayId String? @map("keyhydsp") @db.Char(15) // TODO: change when new model names are available
-  responseReasonId String? @map("keybkrrn") @db.Char(15) // TODO: change when new model names are available
+  // responseReasonId String? @map("keybkrrn") @db.Char(15) // TODO: change when new model names are available
   offerCode String @map("bkerbkod") @db.VarChar(30)
   printDate DateTime? @map("utskrivdat") @db.DateTime
   printDestination Int @default(0, map: "DF__bkerb__utskrdest__4FB6030C") @map("utskrdest") @db.TinyInt
@@ -24,9 +24,9 @@ model Offer {
   queuePoints Decimal? @map("quepoints") @db.Decimal(28, 0)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  bkalt bkalt[] // TODO: change bkalt to new model names when available
-  responseCode ResponseCode? @relation(fields: [keybksva2], references: [responseCodeId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkerbkeybksva2")
-  display Display? @relation(fields: [keyhydsp], references: [displayId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkerbkeyhydsp")
+  applicationLetter ApplicationLetter[] @relation("fkbkaltkeybkerb")
+  responseCode ResponseCode? @relation(fields: [originalResponseCodeId], references: [responseCodeId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkerbkeybksva2")
+  display Display? @relation(fields: [displayId], references: [displayId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkerbkeyhydsp")
 
   @@index([applicationId], map: "fkbkerbbkans")
   @@index([lettingRoundId], map: "fkbkerbbkero")

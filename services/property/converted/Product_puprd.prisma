@@ -1,0 +1,20 @@
+model Product {
+  @@map("puprd")
+
+  productId String @id(map: "pkpuprd") @map("keypuprd") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  productCode String @map("code") @db.VarChar(30)
+  productName String @map("caption") @db.VarChar(30)
+  supplierArticleNumber String? @map("suppartno") @db.VarChar(30)
+  fromDate DateTime? @map("fdate") @db.DateTime
+  toDate DateTime? @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // Relations
+  contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuprdkeycmctc")
+  productRelated ProductLink[] @relation("puprk_keypuprdTopuprd") // Updated to use new model name ProductLink and corrected relation name
+
+  @@index([contactId], map: "fkpuprdcmctc")
+
+  // TODO: Remove TODO if cmctc is verified as Contact
+}

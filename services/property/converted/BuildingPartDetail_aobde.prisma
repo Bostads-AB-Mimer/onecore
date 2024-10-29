@@ -1,0 +1,18 @@
+model BuildingPartDetail {
+  @@map("aobde")
+  
+  buildingPartDetailId String @id(map: "pkaobde") @map("keyaobde") @db.Char(15)
+  buildingPartId String @map("keyaobdl") @db.Char(15)
+  detailId String @map("keyaodet") @db.Char(15)
+  timestamp String @db.Char(10) // TODO: Analyze usage for possible renaming
+
+  // TODO: change aobdl to new model name when available
+  aobdl aobdl @relation(fields: [buildingPartId], references: [keyaobdl], onDelete: Cascade, map: "fkaobdekeyaobdl")
+  
+  // TODO: change aodet to new model name when available
+  aodet aodet @relation(fields: [detailId], references: [keyaodet], onDelete: Cascade, map: "fkaobdekeyaodet")
+  
+  @@unique([buildingPartId, detailId], map: "akaobde1")
+  @@index([buildingPartId], map: "fkaobdeaobdl")
+  @@index([detailId], map: "fkaobdeaodet")
+}

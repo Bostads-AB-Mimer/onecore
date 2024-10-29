@@ -8,7 +8,9 @@ model Municipality {
   alternativeName String? @map("caption2") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  bafen bafen[] // TODO: change bafen to new model name when available
+  administrativeUnits AdministrativeUnit[] @relation("fkbafenkeybamun") // Changed bafen to AdministrativeUnit based on previous schema
+
+  // TODO: Verify County model and countyId mapping, to ensure consistency across relations
   county County? @relation(fields: [countyId], references: [countyId], onDelete: NoAction, onUpdate: NoAction, map: "fkbamunkeybacty")
 
   @@index([countyId], map: "fkbamunbacty")

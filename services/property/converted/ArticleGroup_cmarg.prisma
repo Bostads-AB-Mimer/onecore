@@ -9,7 +9,8 @@ model ArticleGroup {
   systemStandardCode Int @default(0, map: "DF__cmarg__repabkod__3754205A") @map("repabkod") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: understand more about its usage
 
-  cmart cmart[] // TODO: change cmart to new model name when available
+  // TODO: Confirm that the @relation fields and references are correctly defined
+  // articles Article[] //@relation(fields: [id], references: [articleGroupId], map: "fkcmartkeycmarg")
 
   @@index([moduleId], map: "fkcmargsymdl")
 }

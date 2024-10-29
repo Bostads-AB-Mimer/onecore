@@ -1,5 +1,7 @@
 model Product {
   @@map("tvprd")
+  
+  // Fields
   productId String @id(map: "pktvprd") @map("keytvprd") @db.Char(15)
   rentArticleId String? @map("keycmart") @db.Char(15)
   agreementItemId String? @map("keycmart2") @db.Char(15)
@@ -23,24 +25,27 @@ model Product {
   includeInRenovationRent Int @default(0, map: "DF__tvprd__inrenoren__40AA92F2") @map("inrenorent") @db.TinyInt
   published Int @default(0, map: "DF__tvprd__publish__419EB72B") @map("publish") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later if its usage becomes clearer
-  
+
   // Relations; update these virtual fields when new model names are determined
-  // TODO: rename these virtual fields when knowing the new model names
-  tvart tvart[]
-  tvpin_tvpin_keytvprdTotvprd tvpin[] @relation("tvpin_keytvprdTotvprd")
-  tvpin_tvpin_keytvprd2Totvprd tvpin[] @relation("tvpin_keytvprd2Totvprd")
+  item Item[] @relation("tvart", fields: [productId], references: [productId], onUpdate: NoAction) // Assuming tvart is renamed to Item
+  contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmctc") // Assuming cmctc refers to Contact
+  collection Collection? @relation(fields: [collectionId], references: [collectionId], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeytvcln") // Assuming tvcln refers to Collection
+
+  // TODO: Update relation names when related model names become available
+  //tvpin_tvpin_keytvprdTotvprd tvpin[] @relation("tvpin_keytvprdTotvprd")
+  //tvpin_tvpin_keytvprd2Totvprd tvpin[] @relation("tvpin_keytvprd2Totvprd")
+  //tvpdg_tvprd_keytvpdgTotvpdg tvpdg @relation("tvprd_keytvpdgTotvpdg", fields: [productGroupId], references: [keytvpdg], onUpdate: NoAction, map: "fktvprdkeytvpdg")
+  //tvpdg_tvprd_keytvpdg2Totvpdg tvpdg? @relation("tvprd_keytvpdg2Totvpdg", fields: [secondaryProductGroupId], references: [keytvpdg], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeytvpdg2")
+  productLocations ProductLocation[] @relation("tvprl", fields: [productId], references: [productId], onUpdate: NoAction) // Assuming tvprl is renamed to ProductLocation
+  productOptionStandards ProductOptionStandard[] @relation("tvpro", fields: [productId], references: [productId], onUpdate: NoAction) // Assuming tvpro is renamed to ProductOptionStandard
+  productHistories ProductHistory[] @relation("tvsta", fields: [productId], references: [productId], onUpdate: NoAction) // Assuming tvsta is renamed to ProductHistory
+
   cmart_tvprd_keycmartTocmart cmart? @relation("tvprd_keycmartTocmart", fields: [rentArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmart")
   cmart_tvprd_keycmart2Tocmart cmart? @relation("tvprd_keycmart2Tocmart", fields: [agreementItemId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmart2")
   cmart_tvprd_keycmart3Tocmart cmart? @relation("tvprd_keycmart3Tocmart", fields: [invoiceArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmart3")
   cmart_tvprd_keycmart4Tocmart cmart? @relation("tvprd_keycmart4Tocmart", fields: [projectItemId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmart4")
-  cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeycmctc")
-  tvcln tvcln? @relation(fields: [collectionId], references: [keytvcln], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeytvcln")
-  tvpdg_tvprd_keytvpdgTotvpdg tvpdg @relation("tvprd_keytvpdgTotvpdg", fields: [productGroupId], references: [keytvpdg], onUpdate: NoAction, map: "fktvprdkeytvpdg")
-  tvpdg_tvprd_keytvpdg2Totvpdg tvpdg? @relation("tvprd_keytvpdg2Totvpdg", fields: [secondaryProductGroupId], references: [keytvpdg], onDelete: NoAction, onUpdate: NoAction, map: "fktvprdkeytvpdg2")
-  tvprl tvprl[]
-  tvpro tvpro[]
-  tvsta tvsta[]
-
+  
+  // Indexes
   @@index([rentArticleId], map: "fktvprdcmart")
   @@index([agreementItemId], map: "fktvprdcmart2")
   @@index([invoiceArticleId], map: "fktvprdcmart3")

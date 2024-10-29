@@ -1,0 +1,54 @@
+model RecordSpecificCoding {
+  @@map("repsk")
+  
+  recordSpecificCodingId String @id(map: "pkrepsk") @map("keyrepsk") @db.Char(15)
+  
+  // Existing model field with unknown destination or relation model
+  // TODO: Change keyrekpg to more appropriate name if known
+  keyrekpg String? @map("keyrekpg") @db.Char(15)
+  
+  accountingYear Int @map("year") @db.SmallInt
+
+  // Existing model field with unknown destination or relation model
+  // TODO: Change keyrepsr to more appropriate name if known
+  keyrepsr String? @map("keyrepsr") @db.Char(15)
+  
+  // Related to existing CodeType model from forward pass
+  codeTypeId String? @map("keyrekpy") @db.Char(15)
+  
+  // Existing model field with unknown destination or relation model
+  // TODO: Change keyrektk to more appropriate name if known
+  keyrektk String @map("keyrektk") @db.Char(15)
+  
+  // Existing model field with unknown purpose
+  // TODO: Change keydbtbl to more appropriate name if known
+  keydbtbl String @map("keydbtbl") @db.Char(15)
+  
+  // Existing model field with unknown purpose
+  // TODO: Change keycode to more appropriate name if known
+  keycode String @map("keycode") @db.Char(15)
+
+  // Values possibly for calculations/constants, undecided renaming until more context
+  p1 String @map("p1") @db.VarChar(10)
+  p2 String @map("p2") @db.VarChar(10)
+  p3 String @map("p3") @db.VarChar(10)
+  p4 String @map("p4") @db.VarChar(10)
+  p5 String @map("p5") @db.VarChar(10)
+  p6 String @map("p6") @db.VarChar(10)
+  p7 String @map("p7") @db.VarChar(10)
+  p8 String @map("p8") @db.VarChar(10)
+  p9 String @map("p9") @db.VarChar(10)
+  p10 String @map("p10") @db.VarChar(10)
+  
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  rektk rektk @relation(fields: [keyrektk], references: [keyrektk], onUpdate: NoAction, map: "fkrepskkeyrektk ")
+
+  @@unique([keyrepsr, keyrektk, keydbtbl, keycode, accountingYear], map: "akrepsk")
+  @@index([keycode], map: "fkrepskcode")
+  @@index([keydbtbl], map: "fkrepskdbtbl")
+  @@index([codeTypeId], map: "fkrepskrekpy")
+  @@index([keyrektk], map: "fkrepskrektk")
+  @@index([keyrepsr], map: "fkrepskrepsr")
+  @@index([keycode, keyrektk, keyrepsr, accountingYear, keydbtbl], map: "inrepsk_2120SI6GA")
+}

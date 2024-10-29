@@ -6,7 +6,10 @@ model FreeTable3 {
   name String? @map("caption") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  babyg Building[] // TODO: change babyg to new model name when available
-  bafst Property[] // TODO: change bafst to new model name when available
-  bayta bayta[] // TODO: change bayta to new model name when available, possibly relating to tenant agreements or similar
+  buildings Building[] @relation("fkbabygkeybabyc") // Changed from babyg to buildings
+  properties Property[] @relation("fkbafstkeybabyc") // Changed from bafst to properties
+
+  // TODO: Verify relation name and integrity constraint
+  // TODO: Commented out due to inconsistency in old schema
+  // areas Area[] @relation("fkbabygbayta") // Changed from bayta to areas
 }

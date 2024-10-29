@@ -8,8 +8,11 @@ model ContactRole {
   lastUsedDate DateTime? @map("lastused") @db.Date
   timestamp String @map("timestamp") @db.Char(10) // TODO: assess further naming needs when more info is available
 
-  cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onUpdate: NoAction, map: "fkcmcrokeycmctc")
-  cmrol cmrol @relation(fields: [roleId], references: [keycmrol], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcrokeycmrol ")
+  // TODO: Change this to the new model name once we know what cmctc is called now
+  // cmctc cmctc @relation(fields: [contactId], references: [keycmctc], onUpdate: NoAction, map: "fkcmcrokeycmctc") 
+
+  // TODO: Change this to the new model name once we know what cmrol is called now
+  // cmrol cmrol @relation(fields: [roleId], references: [keycmrol], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcrokeycmrol ") 
 
   @@unique([contactId, roleId], map: "akcmcro1")
   @@index([roleId, contactId, active], map: "incmcro_2KX0OZPES")

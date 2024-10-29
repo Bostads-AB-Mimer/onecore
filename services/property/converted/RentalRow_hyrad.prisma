@@ -48,23 +48,28 @@ model RentalRow {
   noticeDate DateTime? @map("noticedate") @db.DateTime // Based on the naming convention
   timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
 
-  hyfra hyfra[] // TODO: rename hyfra to new model name when available
-  rentalArticle cmart @relation(fields: [rentalArticleId], references: [keycmart], onUpdate: NoAction, map: "fkhyradkeycmart")
-  cmcmp cmcmp? @relation(fields: [deviatingCompanyId], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmcmp")
-  indexSerie cmind? @relation(fields: [indexSerieId], references: [keycmind], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmind")
-  baseIndex cminv? @relation("hyrad_keycminvTocminv", fields: [baseIndexId], references: [keycminv], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv")
-  currentIndex cminv? @relation("hyrad_keycminv2Tocminv", fields: [currentIndexId], references: [keycminv], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv2")
-  firstIndexChange cminv? @relation("hyrad_keycminv3Tocminv", fields: [firstIndexChangeId], references: [keycminv], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv3")
-  allocationToComplete cmobj? @relation("hyrad_keycmobjTocmobj", fields: [allocationToCompleteId], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmobj")
-  object cmobj? @relation("hyrad_keycmobj2Tocmobj", fields: [objectId], references: [keycmobj], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmobj2")
-  unit cmuni @relation(fields: [unitId], references: [keycmuni], onUpdate: NoAction, map: "fkhyradkeycmuni")
-  readingFrom drval? @relation("hyrad_keydrvalTodrval", fields: [readingFromId], references: [keydrval], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeydrval")
-  readingTo drval? @relation("hyrad_keydrval2Todrval", fields: [readingToId], references: [keydrval], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeydrval2")
-  linkedContact hyavk? @relation(fields: [linkedContactId], references: [keyhyavk], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhyavk")
-  indexClause hyink? @relation(fields: [indexClauseId], references: [keyhyink], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhyink")
-  contract hyobj @relation(fields: [contractId], references: [keyhyobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhyradkeyhyobj")
-  summaryRow hysum? @relation(fields: [summaryRowId], references: [keyhysum], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhysum")
-  vlutf vlutf[] // TODO: rename vlutf to new model name when available
+  allocationRentalRows AllocationRentalRow[] @relation("fkhyfrakeyhyrad")
+  rentalArticle RentalArticle @relation(fields: [rentalArticleId], references: [rentalArticleId], onUpdate: NoAction, map: "fkhyradkeycmart")
+
+  // Commenting out undefined models or fields from previous conversions
+  // TODO: Uncomment once models are defined
+  /*
+  deviatingCompany DeviatingCompany? @relation(fields: [deviatingCompanyId], references: [companyId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmcmp")
+  indexSerie IndexSerie? @relation(fields: [indexSerieId], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmind")
+  baseIndex BaseIndex? @relation("hyrad_keycminvTocminv", fields: [baseIndexId], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv")
+  currentIndex CurrentIndex? @relation("hyrad_keycminv2Tocminv", fields: [currentIndexId], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv2")
+  firstIndexChange FirstIndexChange? @relation("hyrad_keycminv3Tocminv", fields: [firstIndexChangeId], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycminv3")
+  allocationToComplete AllocationToComplete? @relation("hyrad_keycmobjTocmobj", fields: [allocationToCompleteId], references: [objectId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmobj")
+  object LinkedObject? @relation("hyrad_keycmobj2Tocmobj", fields: [objectId], references: [objectId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeycmobj2")
+  unit Unit @relation(fields: [unitId], references: [unitId], onUpdate: NoAction, map: "fkhyradkeycmuni")
+  readingFrom ReadingFrom? @relation("hyrad_keydrvalTodrval", fields: [readingFromId], references: [readingId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeydrval")
+  readingTo ReadingTo? @relation("hyrad_keydrval2Todrval", fields: [readingToId], references: [readingId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeydrval2")
+  linkedContact LinkedContact? @relation(fields: [linkedContactId], references: [linkedContactId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhyavk")
+  indexClause IndexClause? @relation(fields: [indexClauseId], references: [indexClauseId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhyink")
+  */
+  contract Contract @relation(fields: [contractId], references: [contractId], onDelete: Cascade, onUpdate: NoAction, map: "fkhyradkeyhyobj")
+  summaryRow SummaryRow? @relation(fields: [summaryRowId], references: [summaryRowId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyradkeyhysum")
+  actionRentalRows ActionRentalRow[] @relation("fkvlutfkeyhyrad") // Updated relation with a known name
 
   @@index([rentalArticleId], map: "fkhyradcmart")
   @@index([indexSerieId], map: "fkhyradcmind")

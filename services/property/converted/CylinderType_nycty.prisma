@@ -1,0 +1,19 @@
+model CylinderType {
+  @@map("nycty")
+
+  cylinderTypeId String @id(map: "pknycty") @map("keynycty") @db.Char(15)
+  orderClassId String? @map("keynybks") @db.Char(15) // TODO: Change nybks to the new model name when available
+  lockSystemId String @map("keynysys") @db.Char(15) // TODO: Change nysys to the new model name when available
+  cylinderCode String @map("code") @db.VarChar(30)
+  description String? @map("caption") @db.VarChar(60)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate the use of timestamp later
+
+  // Relationships using new model names
+  orderClass OrderClass? @relation(fields: [orderClassId], references: [orderClassId], onUpdate: NoAction, map: "fknyntykeynybks ")
+  lockSystem LockSystem @relation(fields: [lockSystemId], references: [lockSystemId], onUpdate: NoAction, map: "fknyntykeynysys ")
+  lockCylinders LockCylinder[] @relation("fknycylkeynycty")
+  keyMappings KeyMapping[] @relation("fknykopkeynycty")
+
+  @@index([orderClassId], map: "fknyctynybks")
+  @@index([lockSystemId], map: "fknyctynysys")
+}

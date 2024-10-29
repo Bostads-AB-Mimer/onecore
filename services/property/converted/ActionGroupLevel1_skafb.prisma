@@ -1,0 +1,16 @@
+model ActionGroupLevel1 {
+  @@map("skafb")
+
+  id String @id(map: "pkskafb") @map("keyskafb") @db.Char(15)
+  mainGroupId String @map("keyskafa") @db.Char(15)
+  code String @map("code") @db.VarChar(10)
+  name String @map("caption") @db.VarChar(120)
+  systemStandard Int @default(0, map: "DF__skafb__repabkod__0AE27215") @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  workOrders WorkOrder[] @relation("fkskafbaoupp") // aoupp aligns with new related model WorkOrderRow
+  projectTransactions ProjectTransaction[] // Referring to ProjectTransaction, previously prmtr
+  maintenanceActions MaintenanceAction[] @relation("fkskafbska") // Existing relation to skatg (MaintenanceAction)
+
+  @@index([mainGroupId], map: "fkskafbskafa")
+}

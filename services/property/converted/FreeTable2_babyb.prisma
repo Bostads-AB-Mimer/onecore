@@ -6,7 +6,9 @@ model FreeTable2 {
   freeTable2Caption String? @map("caption") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  babyg babyg[] // TODO: change babyg to new model name when available
-  bafst bafst[] // TODO: change bafst to new model name when available
-  bayta bayta[] // TODO: change bayta to new model name when available
+  // TODO: Verify relations if needed
+  // Commented out relations to potentially missing or incorrectly configured models.
+  Building Building[] // @relation("fkbabygkeybabyb") 
+  Property Property[] // @relation("fkbafstkeybabyb") 
+  Area Area[] // @relation("fkbaytakeybabyb")
 }

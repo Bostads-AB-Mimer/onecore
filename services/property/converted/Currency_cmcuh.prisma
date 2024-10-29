@@ -1,0 +1,13 @@
+model Currency {
+  @@map("cmcuh")
+
+  currencyId String @id(map: "PK__cmcuh__033D368C") @map("keycmcuh") @db.Char(15)
+  currencyCode String? @map("code") @db.Char(4)
+  currencyName String? @map("name") @db.Char(30)
+  issuingCountry String? @map("region") @db.Char(2)
+  decimalCount Int? @map("decimals") @db.SmallInt
+  currencyTimestamp String @map("timestamp") @db.Char(10) // TODO: reconsider timestamp based on its role
+
+  contact Contact[] // Changed from cmctc to Contact based on previous conversion
+  ledgerRow LedgerRow[] // Changed from revrr to LedgerRow based on previous conversion
+}

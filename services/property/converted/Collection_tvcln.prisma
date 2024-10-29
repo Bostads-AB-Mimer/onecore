@@ -5,5 +5,5 @@ model Collection {
   sortOrder Int @default(0, map: "DF__tvcln__sortorder__6E9DC858") @map("sortorder") @db.SmallInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later when knowing more about its usage 
 
-  tvprd tvprd[] // TODO: change tvprd to new model name when available
+  product Product[] @relation("tvprdtvcln") // TODO: Verify that this relation matches corresponding collectionId in Product model if necessary
 }

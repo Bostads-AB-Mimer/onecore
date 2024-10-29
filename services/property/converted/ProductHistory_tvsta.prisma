@@ -1,0 +1,22 @@
+model ProductHistory {
+  @@map("tvsta")
+
+  // Fields
+  productHistoryId String @id(map: "pktvsta") @map("keytvsta") @db.Char(15)
+  productId String @map("keytvprd") @db.Char(15)
+  objectId String? @map("keycmobj") @db.Char(15) // TODO: confirm if this is intended as some specific type of object
+  contactId String? @map("keycmctc") @db.Char(15)
+  performedDate DateTime? @map("fdate") @db.Date
+  inUseUntilDate DateTime? @map("tdate") @db.Date
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change if usage becomes clearer
+
+  // Relations
+  cmctc Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fktvstakeycmctc")
+  cmobj PropertyObject? @relation(fields: [objectId], references: [propertyObjectId], onUpdate: NoAction, map: "fktvstakeycmobj") // Assuming cmobj refers to 'PropertyObject'
+  product Product @relation(fields: [productId], references: [productHistoryId], onUpdate: NoAction, map: "fktvstakeytvprd")
+
+  // Indexes
+  @@index([contactId], map: "fktvstacmctc")
+  @@index([objectId], map: "fktvstacmobj")
+  @@index([productId], map: "fktvstatvprd")
+}

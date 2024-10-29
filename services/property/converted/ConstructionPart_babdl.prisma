@@ -13,9 +13,9 @@ model ConstructionPart {
   toDate DateTime @map("tdate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  // TODO: rename these virtual fields when knowing the new model names
-  babdt babdt? @relation(fields: [constructionPartTypeId], references: [keybabdt], onUpdate: NoAction, map: "fkbabdlkeybabdt ")
-  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabdlkeycmobj")
+  constructionPartType ConstructionPartType? @relation(fields: [constructionPartTypeId], references: [constructionPartTypeId], onUpdate: NoAction, map: "fkbabdlkeybabdt")
+  // TODO: realEstateObject is commented out, ensure new model exists
+  // realEstateObject RealEstateObject @relation(fields: [objectId], references: [objectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbabdlkeycmobj")
 
   @@index([constructionPartTypeId], map: "fkbabdlbabdt")
   @@index([toDate], map: "inbabdl_1IF0H255F")

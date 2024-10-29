@@ -1,0 +1,28 @@
+model ActivityTime {
+  @@map("pract")
+
+  activityTimeId String @id(map: "pkpract") @map("keypract") @db.Char(15)
+  projectId String? @map("keyprprj") @db.Char(15) // Refers to Project
+  subProjectId String? @map("keyprppr") @db.Char(15) // Refers to SubProject
+  resourceId String @map("keycmctc") @db.Char(15) // Renamed based on Contact
+  articleId String @map("keycmart") @db.Char(15) // Refers to Article
+  projectTransactionId String? @map("keyprmtr") @db.Char(15) // Refers to ProjectTransaction
+  debit Int @default(0, map: "DF__pract__debit__256C5A9D") @map("debit") @db.TinyInt
+  startTime DateTime @map("starttime") @db.DateTime
+  stopTime DateTime? @map("stoptime") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm purpose for timestamp in future passes
+
+  // Relations
+  article Article @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkpractkeycmart")
+  resource Contact @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeycmctc")
+  projectTransaction ProjectTransaction? @relation(fields: [keyprmtr], references: [keyprmtr], onUpdate: NoAction, onDelete: NoAction, map: "fkpractkeyprmtr")
+  subProject SubProject? @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprppr")
+  project Project? @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprprj")
+
+  // Indexes
+  @@index([keycmart], map: "fkpractcmart")
+  @@index([keycmctc], map: "fkpractcmctc")
+  @@index([keyprmtr], map: "fkpractprmtr")
+  @@index([keyprppr], map: "fkpractprppr")
+  @@index([keyprprj], map: "fkpractprprj")
+}

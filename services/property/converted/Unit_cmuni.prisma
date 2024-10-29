@@ -8,25 +8,26 @@ model Unit {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations (TODOs for pending new model names)
-  cmart_cmart_keycmuniTocmuni cmart[] @relation("cmart_keycmuniTocmuni")
-  cmart_cmart_keycmuni2Tocmuni cmart[] @relation("cmart_keycmuni2Tocmuni")
-  cmgdr cmgdr[] // TODO: change cmgdr to new model name when available
-  fbbka_fbbka_keycmuniTocmuni fbbka[] @relation("fbbka_keycmuniTocmuni")
-  fbbka_fbbka_keycmuni2Tocmuni fbbka[] @relation("fbbka_keycmuni2Tocmuni")
-  hybev_hybev_keycmuniTocmuni hybev[] @relation("hybev_keycmuniTocmuni")
-  hybev_hybev_keycmuni2Tocmuni hybev[] @relation("hybev_keycmuni2Tocmuni")
-  hyobj_hyobj_keycmuniTocmuni hyobj[] @relation("hyobj_keycmuniTocmuni")
-  hyobj_hyobj_keycmuni2Tocmuni hyobj[] @relation("hyobj_keycmuni2Tocmuni")
-  hyobj_hyobj_keycmuni3Tocmuni hyobj[] @relation("hyobj_keycmuni3Tocmuni")
-  hyrad hyrad[] // Already converted to RentalRow in previous example
-  hysec_hysec_keycmuniTocmuni hysec[] @relation("hysec_keycmuniTocmuni")
-  hysec_hysec_keycmuni2Tocmuni hysec[] @relation("hysec_keycmuni2Tocmuni")
-  hysec_hysec_keycmuni3Tocmuni hysec[] @relation("hysec_keycmuni3Tocmuni")
-  lbplr lbplr[] // TODO: change lbplr to new model name when available
-  puatg puatg[] // TODO: change puatg to new model name when available
-  revrr revrr[] // TODO: change revrr to new model name when available
-  skatg skatg[] // Already converted to MaintenanceAction in previous example
-  tvpca tvpca[] // TODO: change tvpca to new model name when available
+  cmart cmart[] @relation("cmart_keycmuniTocmuni")
+  cmart cmart[] @relation("cmart_keycmuni2Tocmuni")
+  gdprSetting GdprSetting[] // Updated from cmgdr
+  fbbka fbbka[] @relation("fbbka_keycmuniTocmuni")
+  fbbka fbbka[] @relation("fbbka_keycmuni2Tocmuni")
+  hybev hybev[] @relation("hybev_keycmuniTocmuni")
+  hybev hybev[] @relation("hybev_keycmuni2Tocmuni")
+  hyobj hyobj[] @relation("hyobj_keycmuniTocmuni")
+  hyobj hyobj[] @relation("hyobj_keycmuni2Tocmuni")
+  hyobj hyobj[] @relation("hyobj_keycmuni3Tocmuni")
+  rentalRow RentalRow[] // Previously hyrad
+  hysec hysec[] @relation("hysec_keycmuniTocmuni")
+  hysec hysec[] @relation("hysec_keycmuni2Tocmuni")
+  hysec hysec[] @relation("hysec_keycmuni3Tocmuni")
+  priceListRow PriceListRow[] // Updated from lbplr
+  maintenanceAction MaintenanceAction[] // Previously puatg
+  ledgerRow LedgerRow[] // Updated from revrr
+  // TODO: Need clarification on other maintenanceAction relation
+  // maintenanceAction MaintenanceAction[] @relation("skatg_keycmuniToskdmv")
+  priceCategory PriceCategory[] // Updated from tvpca
 
   @@index([textClusterId], map: "fkcmunisytxc")
 }

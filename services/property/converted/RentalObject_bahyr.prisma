@@ -1,6 +1,7 @@
 model RentalObject {
   @@map("bahyr")
 
+  // Fields
   rentalObjectId String @id(map: "pkbahyr") @map("keybahyr") @db.Char(15)
   objectId String @unique(map: "akbahyr1") @map("keycmobj") @db.Char(15)
   rentalObjectTypeId String @map("keybahyt") @db.Char(15)
@@ -13,8 +14,9 @@ model RentalObject {
   toDate DateTime @map("tdate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
+  // Relations
   rentalObjectType RentalObjectType @relation(fields: [rentalObjectTypeId], references: [rentalObjectTypeId], onUpdate: NoAction, map: "fkbahyrkeybahyt ")
-  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj ")
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj ") // TODO: Change cmobj when we find the new model name
 
   @@index([rentalObjectTypeId], map: "fkbahyrbahyt")
   @@index([rentalObjectCode], map: "inbahyr_2BR0U851E")

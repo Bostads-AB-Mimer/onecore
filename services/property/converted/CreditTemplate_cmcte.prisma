@@ -1,0 +1,17 @@
+model CreditTemplate {
+  @@map("cmcte")
+  
+  templateId String @id(map: "PK__cmcte__75592B89") @map("keycmcte") @db.Char(15)
+  contactCategoryId String @map("keycmctk") @db.Char(15)
+  templateCode String @map("code") @db.Char(50)
+  templateName String @map("caption") @db.Char(30)
+  isDefault Int @default(0, map: "DF__cmcte__ctedefaul__764D4FC2") @map("ctedefault") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+  
+  // Related model hyinf - keep the old name as relation names cannot be changed in the schema
+  hyinf hyinf[]
+  
+  @@unique([contactCategoryId, templateName], map: "akcmcte1")
+  @@unique([contactCategoryId, templateCode], map: "akcmcte2")
+  @@index([contactCategoryId], map: "fkcmctecmctk")
+}

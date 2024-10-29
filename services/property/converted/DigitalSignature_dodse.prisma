@@ -10,9 +10,10 @@ model DigitalSignature {
   canceledDate DateTime? @map("canceldate") @db.DateTime
   externalDocumentId String? @map("exdocid") @db.VarChar(100)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
-  
+
   dorev dorev @relation(fields: [documentId], references: [keydorev], onDelete: Cascade, onUpdate: NoAction, map: "fkdodsekeydorev")
-  dodss dodss[] // TODO: change dodss to new model name when available
+  // TODO: Temporary comment, needs verification of 'dorev' relation mapping
+  signatories Signatory[] @relation("fkdodsskeydodse") // changed from dodss to Signatory
 
   @@index([documentId], map: "ix_dodsekeydorev")
   @@index([userId], map: "ix_dodsekeysyusr")

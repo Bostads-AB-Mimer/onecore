@@ -1,0 +1,101 @@
+model Invoice {
+  @@map("krfkh")
+
+  invoiceId String @id(map: "pkkrfkh") @map("keykrfkh") @db.Char(15)
+  companyId String @map("keycmcmp") @db.Char(15)
+  transactionTypeId String @map("keyrevrt") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  careOfAddressId String? @map("keycmctc2") @db.Char(15) // TODO: Confirm usage and relation naming
+  referenceId String? @map("keycmctc3") @db.Char(15) // TODO: Confirm usage and relation naming
+  invoiceRecipientId String? @map("keycmctc4") @db.Char(15) 
+  internalSupplierId String? @map("keycmctc5") @db.Char(15) 
+  exportId String? @map("keycmeid") @db.Char(15)
+  routeId String? @map("keyatway") @db.Char(15)
+  createdBy String @map("keysyusr") @db.Char(15)
+  paymentMethodId String? @map("keycmdbm") @db.Char(15)
+  debitId String? @map("debitid") @db.VarChar(10)
+  invoiceNumber String? @map("invoice") @db.VarChar(25)
+  type Int @map("type") @db.TinyInt
+  debitStatus Int @map("debstatus") @db.TinyInt
+  printStatus Int @map("prnstatus") @db.TinyInt
+  paymentStatus Int @map("paystatus") @db.TinyInt
+  restrictionStatus Int @map("resstatus") @db.TinyInt
+  logStatus Int @map("logstatus") @db.TinyInt
+  lossStatus Int @default(0, map: "DF__krfkh__losstatus__13389BC9") @map("losstatus") @db.TinyInt
+  errorStatus Int @map("errstatus") @db.TinyInt
+  isBundled Int @map("bundle") @db.TinyInt
+  reference String? @map("reference") @db.VarChar(30)
+  yourReference String? @map("yreference") @db.VarChar(30)
+  ocr String? @map("ocr") @db.VarChar(25)
+  ocrQuantity Int @map("ocrqty") @db.TinyInt
+  invoiceAmount Float @map("amount") @db.Money
+  feeAmount Float @map("fee") @db.Money
+  reductionAmount Float @map("reduction") @db.Money
+  additionalAmount Float @default(0, map: "DF__krfkh__addamount__142CC002") @map("addamount") @db.Money
+  claimAmount Float @map("claim") @db.Money
+  residualAmount Float @default(0, map: "DF__krfkh__rest__1520E43B") @map("rest") @db.Money
+  housingAllowanceAmount Float @default(0, map: "DF__krfkh__houseallo__16150874") @map("houseallow") @db.Money
+  depositAmount Float @default(0, map: "DF__krfkh__deposit__17092CAD") @map("deposit") @db.Money
+  vatAmount Float @map("vat") @db.Money
+  interestAmount Float @map("interest") @db.Money
+  roundOffAmount Float @map("roundoff") @db.Money
+  finalAmount Float @default(0, map: "DF__krfkh__famount__17FD50E6") @map("famount") @db.Money
+  finalVat Float @default(0, map: "DF__krfkh__fvat__18F1751F") @map("fvat") @db.Money
+  billingPeriod Int? @map("period")
+  fromDate DateTime? @map("fromdate") @db.DateTime
+  toDate DateTime? @map("todate") @db.DateTime
+  invoiceDate DateTime? @map("invdate") @db.DateTime
+  expiryDate DateTime? @map("expdate") @db.DateTime
+  rescheduledDate DateTime? @map("resdate") @db.DateTime
+  accruedInterestDate DateTime? @map("acrintdate") @db.DateTime
+  updatedBy String? @map("keysyusr2") @db.Char(15)
+  isBlocked Int @map("blocked") @db.TinyInt
+  blockPayment Int @default(0, map: "DF__krfkh__blockpaym__19E59958") @map("blockpaym") @db.TinyInt
+  stopDemand Int @default(0, map: "DF__krfkh__demandsto__1AD9BD91") @map("demandstop") @db.TinyInt
+  noInterestInvoice Int @default(0, map: "DF__krfkh__notintinv__1BCDE1CA") @map("notintinv") @db.TinyInt
+  reverseVatDuty Int @default(0, map: "DF__krfkh__revvatdut__1CC20603") @map("revvatduty") @db.TinyInt
+  amortizationPlan Int @default(0, map: "DF__krfkh__amort__1DB62A3C") @map("amort") @db.SmallInt
+  eInvoice Int @default(0, map: "DF__krfkh__ef__1EAA4E75") @map("ef") @db.TinyInt
+  autoDebit Int @default(0, map: "DF__krfkh__ag__1F9E72AE") @map("ag") @db.TinyInt
+  autoDebitStatus Int @default(0, map: "DF__krfkh__agstatus__209296E7") @map("agstatus") @db.TinyInt
+  paymentDeposited Int @default(0, map: "DF__krfkh__paydepo__2186BB20") @map("paydepo") @db.TinyInt
+  recalledDebtCollection Int @default(0, map: "DF__krfkh__recalledc__227ADF59") @map("recalledcf") @db.TinyInt
+  deductionDate DateTime? @map("deductdate") @db.DateTime
+  sortCode String? @map("sorkod") @db.VarChar(10)
+  printSort String? @map("printsort") @db.VarChar(50)
+  invoiceFormula String? @map("invformula") @db.VarChar(40)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine usage and potential renaming
+
+  autogiroTransactions AutogiroTransaction[] // Note: Relation naming to be confirmed when handled
+  billingTypeConnections BillingTypeConnection[] // TODO: rename reference when model is confirmed
+
+  company Company @relation(fields: [keycmcmp], references: [keycmcmp], onUpdate: NoAction, map: "fkkrfkhkeycmcmp ")
+  contact cmctc? @relation("krfkh_keycmctc2Tocmctc", fields: [keycmctc2], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrfkhkeycmctc2")
+  contactReference cmctc? @relation("krfkh_keycmctc3Tocmctc", fields: [keycmctc3], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrfkhkeycmctc3")
+  invoiceRecipient cmctc? @relation("krfkh_keycmctc4Tocmctc", fields: [keycmctc4], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrfkhkeycmctc4")
+  internalSupplier cmctc? @relation("krfkh_keycmctc5Tocmctc", fields: [keycmctc5], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrfkhkeycmctc5")
+  billingPaymentMethod BillingPaymentMethod? @relation(fields: [keycmdbm], references: [keycmdbm], onDelete: NoAction, onUpdate: NoAction, map: "fkkrfkhkeycmdbm ")
+  exportImport ExportImport? @relation(fields: [keycmeid], references: [keycmeid], onUpdate: NoAction, map: "fkkrfkhkeycmeid ")
+  transactionType TransactionType @relation(fields: [keyrevrt], references: [keyrevrt], onUpdate: NoAction, map: "fkkrfkhkeyrevrt ")
+
+  @@index([companyId], map: "fkkrfkhcmcmp")
+  @@index([contactId], map: "fkkrfkhcmctc")
+  @@index([careOfAddressId], map: "fkkrfkhcmctc2")
+  @@index([referenceId], map: "fkkrfkhcmctc3")
+  @@index([invoiceRecipientId], map: "fkkrfkhcmctc4")
+  @@index([internalSupplierId], map: "fkkrfkhcmctc5")
+  @@index([exportId], map: "fkkrfkhcmeid")
+  @@index([transactionTypeId], map: "fkkrfkhrevrt")
+  @@index([createdBy], map: "fkkrfkhsyusr")
+  @@index([updatedBy], map: "fkkrfkhsyusr2")
+  @@index([invoiceNumber, ocr, debitStatus, logStatus, type, isBlocked, paymentStatus, invoiceId, contactId, transactionTypeId], map: "inkrfkh_2LU0NSK7Y")
+  @@index([autoDebitStatus, debitStatus, isBlocked, autoDebit], map: "inkrfkh_2LU0NSKCR")
+  @@index([invoiceId, transactionTypeId, toDate, debitStatus, fromDate], map: "inkrfkh_2LU0NSKFZ")
+  @@index([debitStatus, companyId, invoiceId, isBlocked, logStatus, type, transactionTypeId], map: "inkrfkh_2LU0NSKJI")
+  @@index([reference], map: "inkrfkh_2LU0NSKNI")
+  @@index([ocr, invoiceNumber], map: "inkrfkh_2LU0NSKUM")
+  @@index([fromDate], map: "inkrfkh_2LU0NSKX9")
+  @@index([toDate], map: "inkrfkh_2LU0NSKZU")
+  @@index([debitStatus, paymentStatus, isBlocked, type], map: "inkrfkh_2LU0NSL33")
+  @@index([companyId, isBlocked, logStatus, type], map: "inkrfkh_3500ZY9AR")
+}

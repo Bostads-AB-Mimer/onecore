@@ -6,8 +6,10 @@ model Permission {
   userId String @map("keysyusr") @db.Char(15)
   permissionTimestamp String @map("timestamp") @db.Char(10)
 
-  cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, onUpdate: NoAction, map: "fkcmacckeycmcmp")
+  // TODO: Verify the existence of the referenced model and field
+  // cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: Cascade, onUpdate: NoAction, map: "fkcmacckeycmcmp")
 
+  // TODO: Verify the relation index, and update accordingly if the model or field mapping changes
   @@unique([userId, companyId], map: "akcmacc")
   @@index([companyId], map: "fkcmacccmcmp")
 }

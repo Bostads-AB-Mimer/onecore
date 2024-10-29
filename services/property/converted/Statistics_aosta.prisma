@@ -2,25 +2,26 @@ model Statistics {
   @@map("aosta")
 
   statisticId String @id(map: "pkaosta") @map("keyaosta") @db.Char(15)
-  workOrderId String @map("keyaoupp") @db.Char(15) // Use "WorkOrder" from previous conversion
-  placementId String? @map("keyaopla") @db.Char(15) // TODO: Confirm what 'aopla' translates to in English
-  buildingPartId String? @map("keyaobdl") @db.Char(15) // Assuming 'Byggdel' translates to 'buildingPartId'
-  detailId String? @map("keyaodet") @db.Char(15) // Assuming 'Detalj' translates to 'detailId'
-  errorTypeId String? @map("keyaofel") @db.Char(15) // Assuming 'Feltyp' translates to 'errorTypeId'
-  actionId String? @map("keyaoatg") @db.Char(15) // Assuming 'Åtgärd' translates to 'actionId'
+  workOrderId String @map("keyaoupp") @db.Char(15)
+  placementId String? @map("keyaopla") @db.Char(15)
+  buildingPartId String? @map("keyaobdl") @db.Char(15)
+  detailId String? @map("keyaodet") @db.Char(15)
+  errorTypeId String? @map("keyaofel") @db.Char(15)
+  actionId String? @map("keyaoatg") @db.Char(15)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  action aoatg? @relation(fields: [actionId], references: [keyaoatg], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaoatg ") // Assuming aoatg is "action"
-  buildingPart aobdl? @relation(fields: [buildingPartId], references: [keyaobdl], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaobdl ") // Assuming aobdl is "buildingPart"
-  detail aodet? @relation(fields: [detailId], references: [keyaodet], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaodet ") // Assuming aodet is "detail"
-  errorType aofel? @relation(fields: [errorTypeId], references: [keyaofel], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaofel ") // Assuming aofel is "errorType"
-  placement aopla? @relation(fields: [placementId], references: [keyaopla], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaopla ") // TODO: Verify what 'aopla' translates to
-  workOrder aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaostakeyaoupp") // Assuming aoupp directly corresponds to "WorkOrder"
+  action Action? @relation(fields: [actionId], references: [actionId], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaoatg ") 
+  buildingPart BuildingPart? @relation(fields: [buildingPartId], references: [buildingPartId], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaobdl ") 
+  detail Detail? @relation(fields: [detailId], references: [detailId], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaodet ") 
+  errorType FaultType? @relation(fields: [errorTypeId], references: [faultTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaofel ")
+  placement Placement? @relation(fields: [placementId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkaostakeyaopla ") 
+  // TODO: Update workOrder model when it is available
+  // workOrder aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaostakeyaoupp")
 
   @@index([actionId], map: "fkaostaaoatg")
   @@index([buildingPartId], map: "fkaostaaobdl")
   @@index([detailId], map: "fkaostaaodet")
   @@index([errorTypeId], map: "fkaostaaofel")
   @@index([placementId], map: "fkaostaaopla")
-  @@index([workOrderId], map: "fkaostaaoupp")
+  // @@index([workOrderId], map: "fkaostaaoupp") // TODO: Update index when workOrder model is defined
 }

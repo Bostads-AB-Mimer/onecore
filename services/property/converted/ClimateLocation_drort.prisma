@@ -16,8 +16,10 @@ model ClimateLocation {
   // 'sysrec' might denote if this location is a system recommendation, renamed for clarity.
   isSystemRecommended Int @map("sysrec") @db.TinyInt
 
-  // Keeping the 'timestamp' for future validation since more context is needed.
-  timestamp String @map("timestamp") @db.Char(10)
+  // Commenting out the 'timestamp' to avoid inconsistencies if not properly handled later.
+  // TODO: Review the usage of 'timestamp' in context with the schema.
+  // timestamp String @map("timestamp") @db.Char(10)
 
-  drmpt drmpt[] // TODO: Rename drmpt to the new model name when its schema is known.
+  // TODO: Rename drmpt to the new model name when its schema is known.
+  measurementPoints MeasurementPoint[] @relation("fkdrmptkeydrort")
 }

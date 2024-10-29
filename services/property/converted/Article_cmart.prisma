@@ -3,42 +3,37 @@ model Article {
 
   // Field Mappings
   articleId String @id(map: "pkcmart") @map("keycmart") @db.Char(15)
-  moduleId String @map("keysymdl") @db.Char(15) // Based on previous conversion "keysymdl: Modul"
-  articleTypeId String? @map("keycmtyp") @db.Char(15) // Based on previous note "keycmtyp: Artikeltyp"
-  subTypeId String? @map("keycmtyp2") @db.Char(15) // Based on previous note "keycmtyp2: Undertyp"
-  unitId String @map("keycmuni") @db.Char(15) // Renamed following unitId pattern
-  secondaryUnitId String? @map("keycmuni2") @db.Char(15) // Renamed following secondary unitId pattern
-  articleGroupId String? @map("keycmarg") @db.Char(15) // Based on previous note "keycmarg: Artikelgrupp"
-  serviceFundId String? @map("keycmsfd") @db.Char(15) // Based on previous note "keycmsfd: Servicefond"
-  baseRentMeasurementTypeId String? @map("keycmvat") @db.Char(15) // Based on previous note "keycmvat: Areaenhet grundhyra"
-  contractRowMeasurementTypeId String? @map("keycmvat2") @db.Char(15) // Based on previous note "keycmvat2: Areaenhet hyresrad kontrakt"
-  summaryRowId String? @map("keyhysum") @db.Char(15) // Based on previous note "keyhysum: Summarad"
-  contributionGroupId String? @map("keyhysgp") @db.Char(15) // Based on previous note "keyhysgp: Bidragsgrupp"
-  relatedArticleId String? @map("keycmart2") @db.Char(15) // Based on the pattern and notes
+  moduleId String @map("keysymdl") @db.Char(15)
+  articleTypeId String? @map("keycmtyp") @db.Char(15)
+  subTypeId String? @map("keycmtyp2") @db.Char(15)
+  unitId String @map("keycmuni") @db.Char(15)
+  secondaryUnitId String? @map("keycmuni2") @db.Char(15)
+  articleGroupId String? @map("keycmarg") @db.Char(15)
+  serviceFundId String? @map("keycmsfd") @db.Char(15)
+  baseRentMeasurementTypeId String? @map("keycmvat") @db.Char(15)
+  contractRowMeasurementTypeId String? @map("keycmvat2") @db.Char(15)
+  summaryRowId String? @map("keyhysum") @db.Char(15)
+  contributionGroupId String? @map("keyhysgp") @db.Char(15)
+  relatedArticleId String? @map("keycmart2") @db.Char(15)
   code String @map("code") @db.VarChar(20)
   name String? @map("caption") @db.VarChar(70)
   isActive Int @map("artused") @db.TinyInt
-  // Prices
   priceAmount Float @map("price") @db.Money
   internalPriceAmount Float? @map("priceint") @db.Money
   purchasePriceAmount Float? @map("pricebuy") @db.Money
-  // References
-  storageLocation String? @map("reference1") @db.VarChar(30) // Based on previous note "reference1: Lagerplats"
-  alternateReference1 String? @map("reference2") @db.VarChar(30) // Based on previous note
-  alternateReference2 String? @map("reference3") @db.VarChar(30) // Based on previous note
+  storageLocation String? @map("reference1") @db.VarChar(30)
+  alternateReference1 String? @map("reference2") @db.VarChar(30)
+  alternateReference2 String? @map("reference3") @db.VarChar(30)
   aviText String? @map("avitext") @db.VarChar(80)
-  // Toggles
-  rentDeduction Int? @map("hybortfall") @db.TinyInt // Renamed based on previous note "hybortfall: Hyresbortfall"
-  rentalAreaUnit String? @map("areahyra") @db.Char(1) // Based on previous note "areahyra: Areaenhet hyra"
-  regulationMethod String? @map("reglmetod") @db.Char(1) // Based on previous note "reglmetod: Reglering"
-  printGroup String? @map("utskrgrupp") @db.Char(4) // Based on previous note "utskrgrupp: Utskriftsgrupp"
-  duration Int? @map("varaktig") @db.SmallInt // Based on previous note "varaktig: Varaktighet"
-  includeInContractRent Int? @map("kontsumma") @db.TinyInt // Based on previous note "kontsumma: Ingår i kontraktshyra"
-  absence Int? @map("absence") @db.TinyInt // Based on previous note "absence: Frånvaro"
-  // Usage
-  generalArticle Int? @map("regular") @db.TinyInt // Based on previous note "regular: Allmän artikel"
-  applicationArea Int @map("artusage") @db.TinyInt // Based on previous note "artusage: Användningsområde"
-  // Defaults
+  rentDeduction Int? @map("hybortfall") @db.TinyInt
+  rentalAreaUnit String? @map("areahyra") @db.Char(1)
+  regulationMethod String? @map("reglmetod") @db.Char(1)
+  printGroup String? @map("utskrgrupp") @db.Char(4)
+  duration Int? @map("varaktig") @db.SmallInt
+  includeInContractRent Int? @map("kontsumma") @db.TinyInt
+  absence Int? @map("absence") @db.TinyInt
+  generalArticle Int? @map("regular") @db.TinyInt
+  applicationArea Int @map("artusage") @db.TinyInt
   includeInAssessedValue Int @map("amcalcinc") @db.TinyInt
   externalInternal Int @map("prinvextin") @db.TinyInt
   debitLockedForEditing Int @map("debitlock") @db.TinyInt
@@ -48,42 +43,48 @@ model Article {
   administrationFeePercentage Decimal? @map("pdfeeprcnt") @db.Decimal(4, 2)
   export Int @map("artexport") @db.TinyInt
   priority Int @map("priority") @db.TinyInt
-  standardCode Int @map("repabkod") @db.TinyInt // Based on previous note "repabkod: Standard"
-  deviationTolerance Int? @map("devtoleran") // Based on previous note "devtoleran: Deviation tolerance, %"
-  timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later if its usage becomes clearer
+  standardCode Int @map("repabkod") @db.TinyInt
+  deviationTolerance Int? @map("devtoleran")
+  timestamp String @map("timestamp") @db.Char(10)
 
-  // Relations; update these to the new model names upon further analysis
-  contractPrice avark[] // TODO: rename avark once the new model name is decided
-  articleGroup cmarg? @relation(fields: [articleGroupId], references: [keycmarg], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmarg")
-  linkedArticle cmart? @relation("cmartTocmart", fields: [relatedArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmart2")
-  other_articles cmart[] @relation("cmartTocmart") // TODO: rename cmart once the new model name is decided
-  primaryUnit cmuni @relation("cmart_keycmuniTocmuni", fields: [unitId], references: [keycmuni], onUpdate: NoAction, map: "fkcmartkeycmuni")
-  secondaryUnit cmuni? @relation("cmart_keycmuni2Tocmuni", fields: [secondaryUnitId], references: [keycmuni], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmuni2")
-  baseRentMeasurementType cmvat? @relation("cmart_keycmvatTocmvat", fields: [baseRentMeasurementTypeId], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmvat")
-  contractRowMeasurementType cmvat? @relation("cmart_keycmvat2Tocmvat", fields: [contractRowMeasurementTypeId], references: [keycmvat], onUpdate: NoAction, map: "fkcmartkeycmvat2")
-  summaryRow hysum? @relation(fields: [summaryRowId], references: [keyhysum], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeyhysum")
-  cmcmp_cmcmp_keycmartTocmart cmcmp[] @relation("cmcmp_keycmartTocmart") // TODO: rename cmcmp once the new model name is decided
-  cmcmp_cmcmp_keycmart2Tocmart cmcmp[] @relation("cmcmp_keycmart2Tocmart") // TODO: rename cmcmp once the new model name is decided
-  cmcmp_cmcmp_keycmart3Tocmart cmcmp[] @relation("cmcmp_keycmart3Tocmart") // TODO: rename cmcmp once the new model name is decided
-  allocationRentalRow hyfra[] // Already converted to AllocationRentalRow in previous example
-  contract hyobj[] // TODO: rename hyobj once the new model name is decided
-  alternateContract hyobj[] @relation("hyobj_keycmart2Tocmart") // TODO: rename hyobj once the new model name is decided
-  rentalRow hyrad[] // Already converted to RentalRow in previous example
-  ikber ikber[] // TODO: rename ikber once the new model name is decided
-  lbanm lbanm[] // TODO: rename lbanm once the new model name is decided
-  lbplr lbplr[] // TODO: rename lbplr once the new model name is decided
-  pddrl pddrl[] // TODO: rename pddrl once the new model name is decided
-  pract pract[] // TODO: rename pract once the new model name is decided
-  prmtr prmtr[] // TODO: rename prmtr once the new model name is decided
-  puagr puagr[] // TODO: rename puagr once the new model name is decided
-  puatg puatg[] // TODO: rename puatg once the new model name is decided
-  tvpdg_tvpdg_keycmartTocmart tvpdg[] @relation("tvpdg_keycmartTocmart") // TODO: rename tvpdg once the new model name is decided
-  tvpdg_tvpdg_keycmart2Tocmart tvpdg[] @relation("tvpdg_keycmart2Tocmart") // TODO: rename tvpdg once the new model name is decided
-  tvpdg_tvpdg_keycmart3Tocmart tvpdg[] @relation("tvpdg_keycmart3Tocmart") // TODO: rename tvpdg once the new model name is decided
-  tvprd_tvprd_keycmartTocmart tvprd[] @relation("tvprd_keycmartTocmart") // TODO: rename tvprd once the new model name is decided
-  tvprd_tvprd_keycmart2Tocmart tvprd[] @relation("tvprd_keycmart2Tocmart") // TODO: rename tvprd once the new model name is decided
-  tvprd_tvprd_keycmart3Tocmart tvprd[] @relation("tvprd_keycmart3Tocmart") // TODO: rename tvprd once the new model name is decided
-  tvprd_tvprd_keycmart4Tocmart tvprd[] @relation("tvprd_keycmart4Tocmart") // TODO: rename tvprd once the new model name is decided
+  // Relations
+  contractPrice ContractPrice[] @relation("fkavarkkeycmart")
+  articleGroup ArticleGroup? @relation(fields: [articleGroupId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmarg")
+  linkedArticle Article? @relation("cmartTocmart", fields: [relatedArticleId], references: [articleId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmart2")
+  other_articles Article[] @relation("cmartTocmart")
+
+  // Commented out pending resolution
+  // primaryUnit Unit @relation("cmart_keycmuniTocmuni", fields: [unitId], references: [id], onUpdate: NoAction, map: "fkcmartkeycmuni")
+  // secondaryUnit Unit? @relation("cmart_keycmuni2Tocmuni", fields: [secondaryUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmuni2")
+  // baseRentMeasurementType MeasurementType? @relation("cmart_keycmvatTocmvat", fields: [baseRentMeasurementTypeId], references: [measurementTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmvat")
+  // contractRowMeasurementType MeasurementType? @relation("cmart_keycmvat2Tocmvat", fields: [contractRowMeasurementTypeId], references: [measurementTypeId], onUpdate: NoAction, map: "fkcmartkeycmvat2")
+  summaryRow SummaryRow? @relation(fields: [summaryRowId], references: [summaryRowId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeyhysum")
+  cmcmp_cmcmp_keycmartTocmart cmcmp[] @relation("cmcmp_keycmartTocmart")
+  cmcmp_cmcmp_keycmart2Tocmart cmcmp[] @relation("cmcmp_keycmart2Tocmart")
+  cmcmp_cmcmp_keycmart3Tocmart cmcmp[] @relation("cmcmp_keycmart3Tocmart")
+  allocationRentalRow AllocationRentalRow[]
+
+  // Commented out pending resolution
+  // contract Contract[] @relation("fkavarkkeyhyobj")
+  // alternateContract Contract[] @relation("hyobj_keycmart2Tocmart")
+  rentalRow RentalRow[]
+  orderRow OrderRow[]
+  inspectionRemark InspectionRemark[]
+  priceListRow PriceListRow[]
+  vacancyDistribution VacancyDistribution[]
+  activityTime ActivityTime[]
+  projectTransaction ProjectTransaction[]
+  maintenanceActionGroup MaintenanceActionGroup[]
+  maintenanceAction MaintenanceAction[]
+
+  // Commented out pending resolution
+  // tvpdg tvpdg[] @relation("tvpdg_keycmartTocmart")
+  // tvpdg tvpdg2 tvpdg[] @relation("tvpdg_keycmart2Tocmart")
+  // tvpdg tvpdg3 tvpdg[] @relation("tvpdg_keycmart3Tocmart")
+  // tvprd tvprd[] @relation("tvprd_keycmartTocmart")
+  // tvprd tvprd2 tvprd[] @relation("tvprd_keycmart2Tocmart")
+  // tvprd tvprd3 tvprd[] @relation("tvprd_keycmart3Tocmart")
+  // tvprd tvprd4 tvprd[] @relation("tvprd_keycmart4Tocmart")
 
   // Indexes
   @@index([articleGroupId], map: "fkcmartcmarg")

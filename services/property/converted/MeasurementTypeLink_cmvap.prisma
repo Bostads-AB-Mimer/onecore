@@ -1,13 +1,22 @@
 model MeasurementTypeLink {
   @@map("cmvap")
 
+  // Fields
   measurementTypeLinkId String @id(map: "pkcmvap") @map("keycmvap") @db.Char(15)
   measurementTypeId String @map("keycmvat") @db.Char(15)
   categoryId String @map("keycmtyp") @db.Char(15)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Review usage of timestamp in backward pass
 
-  cmtyp cmtyp @relation(fields: [categoryId], references: [keycmtyp], onDelete: Cascade, map: "fkcmvapkeycmtyp")
-  cmvat cmvat @relation(fields: [measurementTypeId], references: [keycmvat], onDelete: Cascade, map: "fkcmvapkeycmvat")
+  // Relations
+  // TODO: Ensure 'cmtyp' model and 'keycmtyp' field exist
+  // If 'cmtyp' or 'keycmtyp' are not available, comment out the relation.
+  // category cmtyp
+  //         @relation(fields: [categoryId], references: [keycmtyp], onDelete: Cascade, map: "fkcmvapkeycmtyp")
+
+  // TODO: Ensure 'cmvat' model and 'keycmvat' field exist
+  // If 'cmvat' or 'keycmvat' are not available, comment out the relation.
+  // measurementType cmvat
+  //         @relation(fields: [measurementTypeId], references: [keycmvat], onDelete: Cascade, map: "fkcmvapkeycmvat")
 
   @@unique([measurementTypeId, categoryId], map: "akcmvapcmvatcmtyp")
   @@index([categoryId], map: "fkcmvapcmtyp")

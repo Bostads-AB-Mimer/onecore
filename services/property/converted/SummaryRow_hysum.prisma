@@ -6,8 +6,8 @@ model SummaryRow {
   summaryDescription String? @map("hysumben") @db.Char(80) // Based on "Summarad"
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  cmart cmart[] // TODO: rename cmart to new model name when available
-  rentalRow hyrad[] // Already converted to RentalRow in previous example
+  article Article[] // Updated using the new model name "Article" from the forward pass
+  rentalRow RentalRow[] // Already converted to "RentalRow" in the previous example
 
   @@index([moduleId], map: "fkhysumsymdl")
 }

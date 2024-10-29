@@ -14,9 +14,9 @@ model Process {
   // TODO: change timestamp later when knowing more about its usage
   timestamp String @map("timestamp") @db.Char(10)
 
-  // Maintain old relation names with TODO for the conversion
-  cmbtr cmbtr[]
-  cmgdr cmgdr?
+  // Update relation names to reflect new model names
+  batchProcessRows BatchProcessRow[] @relation("fkcmbtrkeycmprc")
+  gdprSetting GdprSetting? @relation("fkcmgdrkeycmprc")
 
   @@index([classId], map: "fkcmprcsycls")
   @@index([imageClusterId], map: "fkcmprcsyimc")

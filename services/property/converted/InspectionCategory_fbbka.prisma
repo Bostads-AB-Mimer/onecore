@@ -16,13 +16,13 @@ model InspectionCategory {
   active Int @default(1, map: "DF__fbbka__bkaactive__533AC4AF") @map("bkaactive") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  fbbes fbbes[] // TODO: change fbbes to new model name when available
-  cmtyp InspectionType @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbbkakeycmtyp")
-  cmuni_fbbka_keycmuniTocmuni Unit @relation("fbbka_keycmuniTocmuni", fields: [unitId], references: [unitId], onUpdate: NoAction, map: "fkfbbkakeycmuni ")
-  cmuni_fbbka_keycmuni2Tocmuni Unit? @relation("fbbka_keycmuni2Tocmuni", fields: [unitReInspectionIntervalId], references: [unitId], onDelete: NoAction, onUpdate: NoAction, map: "fkfbbkakeycmuni2 ")
-  fbbla fbbla? @relation(fields: [standardProtocolId], references: [standardProtocolId], onUpdate: NoAction, map: "fkfbbkakeyfbbla")
-  fbbkb InspectionCategoryPermission[] // Updated model relationship reference
-  fbgod fbgod[] // TODO: change fbgod to new model name when available
+  inspections Inspection[] @relation("fbbes") // Changed the relation to use the new model name
+  inspectionType InspectionType @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbbkakeycmtyp")
+  unit Unit @relation("fbbka_keycmuniTocmuni", fields: [unitId], references: [unitId], onUpdate: NoAction, map: "fkfbbkakeycmuni ")
+  unitReInspectionInterval Unit? @relation("fbbka_keycmuni2Tocmuni", fields: [unitReInspectionIntervalId], references: [unitId], onDelete: NoAction, onUpdate: NoAction, map: "fkfbbkakeycmuni2 ")
+  inspectionProtocolTemplate InspectionProtocolTemplate? @relation(fields: [standardProtocolId], references: [standardProtocolId], onUpdate: NoAction, map: "fkfbbkakeyfbbla")
+  inspectionCategoryPermissions InspectionCategoryPermission[] @relation("fbbkb") // Updated model relationship reference
+  inspectionApprovals InspectionApproval[] @relation("fbgod")// Updated the relation to use the new model name
 
   @@index([inspectionTypeId], map: "fkfbbkacmtyp")
   @@index([unitId], map: "fkfbbkacmuni")

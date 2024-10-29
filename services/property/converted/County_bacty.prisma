@@ -6,5 +6,5 @@ model County {
   name String? @map("caption") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  bamun bamun[] // TODO: change bamun to new model name when available
+  municipalities Municipality[] @map("bamun") // Updated relation to use new model name 'Municipality'
 }

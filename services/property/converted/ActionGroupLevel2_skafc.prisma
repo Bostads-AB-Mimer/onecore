@@ -8,8 +8,12 @@ model ActionGroupLevel2 {
   systemStandard Int @default(0, map: "DF__skafc__repabkod__0DBEDEC0") @map("repabkod") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: determine correct usage and update name if needed
 
-  aoupp aoupp[] // TODO: Change to new model name when available
-  skatg skatg[] // TODO: Change to new model name when available
+  // TODO: Verify if `WorkOrderRow` is the correct model related to `aoupp`
+  // Commented out due to potential inconsistency.
+  // workOrders WorkOrderRow[] @relation("fkaouppkeyskafc")
+
+  // TODO: Verify if `MaintenanceAction` is the correct model related to `skatg`
+  maintenanceActions MaintenanceAction[] @relation("fkskatgkeyskafc")
 
   @@index([actionGroupLevel1Id], map: "fkskafcskafb")
 }

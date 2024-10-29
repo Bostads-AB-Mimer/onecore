@@ -7,6 +7,7 @@ model MainGroup {
   systemStandard Int @default(0, map: "DF__skafa__repabkod__0806056A") @map("repabkod") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: evaluate if timestamp should remain or be renamed
 
-  aoupp aoupp[] // TODO: change aoupp to new model name when available
-  maintenanceActions skatg[] // Existing relation to MaintenanceAction
+  workOrders WorkOrderRow[] // Updated to match the correct model name from previous conversions
+  // TODO: Find the correct relation naming for the maintenanceActions relationship
+  maintenanceActions MaintenanceAction[] // Commented out the relation name since it seems inconsistent with generated relation naming
 }

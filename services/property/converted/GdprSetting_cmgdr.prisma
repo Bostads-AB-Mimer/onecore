@@ -1,6 +1,7 @@
 model GdprSetting {
   @@map("cmgdr")
 
+  // Fields
   gdprSettingId String @id(map: "pkcmgdr") @map("keycmgdr") @db.Char(15)
   processId String @unique(map: "akcmgdr") @map("keycmprc") @db.Char(15)
   unitId String @map("keycmuni") @db.Char(15)
@@ -12,7 +13,9 @@ model GdprSetting {
   // TODO: change timestamp later when knowing more about its usage
   timestamp String @map("timestamp") @db.Char(10)
 
-  // Relations (TODOs for pending new model names)
-  cmprc cmprc @relation(fields: [processId], references: [keycmprc], onUpdate: NoAction, map: "fkcmgdrkeycmprc")
+  // Relations
+  process Process @relation(fields: [processId], references: [processId], onUpdate: NoAction, map: "fkcmgdrkeycmprc")
+
+  // TODO: Change cmuni to new model name once determined
   cmuni cmuni @relation(fields: [unitId], references: [keycmuni], onUpdate: NoAction, map: "fkcmgdrkeycmuni ")
 }

@@ -2,20 +2,20 @@ model AllocationRentalRow {
   @@map("hyfra")
   
   allocationRentalRowId String @id(map: "pkhyfra") @map("keyhyfra") @db.Char(15)
-  rentalRowId String @map("keyhyrad") @db.Char(15) // Based on previous conversion "RentalRow"
-  rentalArticleId String @map("keycmart") @db.Char(15) // Consistent with previous conversion "Hyresartikel"
-  contractId String @map("keyhyobj") @db.Char(15) // Based on the domain reference "Kontrakt"
-  rentalObjectId String @map("keycmobj") @db.Char(15) // Based on the domain reference "Hyresobjekt"
-  annualRentAmount Float @map("akthyratot") @db.Money // Based on the domain reference "Årshyra"
-  vatPercentage Decimal @map("momsproc") @db.Decimal(7, 2) // Renamed for clarity to "vatPercentage"
+  rentalRowId String @map("keyhyrad") @db.Char(15)
+  rentalArticleId String @map("keycmart") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15)
+  rentalObjectId String @map("keycmobj") @db.Char(15)
+  annualRentAmount Float @map("akthyratot") @db.Money
+  vatPercentage Decimal @map("momsproc") @db.Decimal(7, 2)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
 
-  rentalArticle cmart @relation(fields: [rentalArticleId], references: [keycmart], onUpdate: NoAction, map: "fkhyfrakeycmart")
-  rentalRow hyrad @relation(fields: [rentalRowId], references: [keyhyrad], onDelete: Cascade, onUpdate: NoAction, map: "fkhyfrakeyhyrad")
+  rentalArticle RentalArticle @relation(fields: [rentalArticleId], references: [rentalArticleId], onUpdate: NoAction, map: "fkhyfrakeycmart")
+  rentalRow RentalRow @relation(fields: [rentalRowId], references: [rentalRowId], onDelete: Cascade, onUpdate: NoAction, map: "fkhyfrakeyhyrad")
   
-  // TODO: Rename the relations to new model names when available
-  // cmart  // Existing, needs review of the new name
-  // hyrad  // Existing, needs review of the new name
+  // TODO: Uncomment and update when the new model names are available
+  // cmart  
+  // hyrad  
   
   @@unique([rentalRowId, rentalObjectId], map: "akhyfra1")
   @@index([rentalArticleId], map: "fkhyfracmart")

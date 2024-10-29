@@ -7,11 +7,10 @@ model InspectionRight {
   permissionTypeId String @map("keyfbbeh") @db.Char(15)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
 
-  // Relations; update these virtual fields when new model names are determined
-  // Pending new names for models
-  cmctc cmctc @relation(fields: [inspectorId], references: [keycmctc], onUpdate: NoAction, map: "fkfbrebkeycmctc")
-  cmtyp cmtyp @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbrebkeycmtyp")
-  fbbeh fbbeh @relation(fields: [permissionTypeId], references: [keyfbbeh], onUpdate: NoAction, map: "fkfbrebkeyfbbeh")
+  // Relations
+  inspector cmctc @relation(fields: [inspectorId], references: [keycmctc], onUpdate: NoAction, map: "fkfbrebkeycmctc") // TODO: Change 'cmctc' to the new model name when available
+  inspectionType cmtyp @relation(fields: [inspectionTypeId], references: [keycmtyp], onUpdate: NoAction, map: "fkfbrebkeycmtyp") // TODO: Change 'cmtyp' to the new model name when available
+  permissionType fbbeh @relation(fields: [permissionTypeId], references: [keyfbbeh], onUpdate: NoAction, map: "fkfbrebkeyfbbeh") // TODO: Change 'fbbeh' to the new model name when available
 
   @@index([inspectorId], map: "fkfbrebcmctc")
   @@index([inspectionTypeId], map: "fkfbrebcmtyp")

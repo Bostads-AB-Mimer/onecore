@@ -1,6 +1,7 @@
 model ParkingSpace {
   @@map("babps")
 
+  // Fields
   id String @id(map: "pkbabps") @map("keybabps") @db.Char(15)
   objectId String @unique(map: "akbabps1") @map("keycmobj") @db.Char(15)
   parkingSpaceTypeId String @map("keybabpt") @db.Char(15)
@@ -19,9 +20,12 @@ model ParkingSpace {
   toDate DateTime @map("tdate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
+  // Relations
   parkingSpaceType ParkingSpaceType @relation(fields: [parkingSpaceTypeId], references: [keybabpt], onUpdate: NoAction, map: "fkbabpskeybabpt ")
-  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabpskeycmobj ")
+  // TODO: Commenting this relation until the model 'cmobj' is defined somewhere
+  // cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabpskeycmobj ")
 
+  // Indexes
   @@index([parkingSpaceTypeId], map: "fkbabpsbabpt")
   @@index([fromDate], map: "inbabps_2BR0UA5PM")
   @@index([toDate], map: "inbabps_2BR0UA5QI")

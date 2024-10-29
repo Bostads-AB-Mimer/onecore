@@ -5,5 +5,5 @@ model NetworkArea {
   name String @map("caption") @db.Char(30) // Reason: "Benämning" often refers to a name or title
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp format field later if more information is available
 
-  drmpt drmpt[] // TODO: rename drmpt to new model name when available
+  measurementPoints MeasurementPoint[] @relation("fkdrmptkeydromr") // Update drmpt[] to use the new model name MeasurementPoint
 }

@@ -1,21 +1,26 @@
 model ReminderTransaction {
   @@map("aorml")
 
+  // Fields
   reminderTransactionId String @id(map: "pkaorml") @map("keyaorml") @db.Char(15)
-  workOrderId String @map("keyaoupp") @db.Char(15) // Assuming 'Arbetsorder' translates to 'workOrder'
+  workOrderId String @map("keyaoupp") @db.Char(15) // Work Order mapping confirmed
   userId String? @map("keysyusr") @db.Char(15)
-  resourceGroupId String? @map("keycmrgr") @db.Char(15) // Assuming 'Resursgrupp' translates to 'resourceGroup'
-  resourceContactId String? @map("keycmctc") @db.Char(15) // Assuming association with Contact model
-  handlerContactId String? @map("keycmctc6") @db.Char(15) // Assuming this is another Contact related field
+  resourceGroupId String? @map("keycmrgr") @db.Char(15) // Resource Group mapping confirmed
+  resourceContactId String? @map("keycmctc") @db.Char(15) // Presumed association with Contact model
+  handlerContactId String? @map("keycmctc6") @db.Char(15) // Presumed association with Contact model
   sendDateTime DateTime @map("sendtime") @db.DateTime
   status Int @default(0, map: "DF__aorml__uppstatus__2164DF3B") @map("uppstatus") @db.TinyInt
   messageType Int @default(0, map: "DF__aorml__msgtype__22590374") @map("msgtype") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs renaming based on its domain use
 
-  workOrder aoupp @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeyaoupp")
-  contact_aorml_keycmctcTocmctc cmctc? @relation("aorml_keycmctcTocmctc", fields: [resourceContactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeycmctc")
-  contact_aorml_keycmctc6Tocmctc cmctc? @relation("aorml_keycmctc6Tocmctc", fields: [handlerContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkaormlkeycmctc6")
-  resourceGroup cmrgr? @relation(fields: [resourceGroupId], references: [keycmrgr], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeycmrgr")
+  // Relations
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [keyaoupp], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeyaoupp")
+
+  // TODO: Verify the availability of the cmctc model 
+  // contact_aorml_keycmctcTocmctc cmctc? @relation("aorml_keycmctcTocmctc", fields: [resourceContactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeycmctc")
+  // contact_aorml_keycmctc6Tocmctc cmctc? @relation("aorml_keycmctc6Tocmctc", fields: [handlerContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkaormlkeycmctc6")
+
+  resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [keycmrgr], onDelete: Cascade, onUpdate: NoAction, map: "fkaormlkeycmrgr")
 
   @@index([workOrderId], map: "fkaormlaoupp")
   @@index([resourceContactId], map: "fkaormlcmctc")

@@ -1,0 +1,24 @@
+model BuildingPart {
+  @@map("aobdl")
+  
+  buildingPartId String @id(map: "pkaobdl") @map("keyaobdl") @db.Char(15)
+  code String @unique(map: "akaobdl1") @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(70)
+  usedInWorkOrder Int @default(1, map: "DF__aobdl__useao__254A7EB8") @map("useao") @db.TinyInt
+  usedInApartmentInspection Int @default(1, map: "DF__aobdl__uselb__263EA2F1") @map("uselb") @db.TinyInt
+  publishStatus Int @default(0, map: "DF__aobdl__publish__2732C72A") @map("publish") @db.TinyInt
+  isActive Int @default(1, map: "DF__aobdl__isactive__2826EB63") @map("isactive") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Analyze usage for possible renaming
+
+  actionsToBuildingPart ActionToBuildingPart[] @relation(mappedBy: "relatedBuildingPart")
+  buildingPartDetails BuildingPartDetail[] @relation(mappedBy: "aobdl") // TODO: Update relation name once new detail model name is confirmed
+  issueConstructionLinks IssueConstructionLink[] @relation(mappedBy: "aobdl") // TODO: Update relation name once new issueNote model name is confirmed
+  workOrderRows WorkOrderRow[] @relation(mappedBy: "buildingPart")
+  buildingPartLocations BuildingPartLocation[] @relation(mappedBy: "aobdl") // TODO: Update relation name once new model location name is confirmed
+  statistics Statistics[] @relation(mappedBy: "buildingPart")
+  workOrderRows WorkOrderRow[] @relation(mappedBy: "buildingPart")
+  components Component[] @relation(mappedBy: "constructionPartId")
+  inspectionRemarks InspectionRemark[] @relation(mappedBy: "buildingPart")
+
+  // The references for each relation might need to be updated if they change after other models conversion
+}

@@ -1,0 +1,35 @@
+model System {
+  @@map("basys")
+
+  // Fields
+  systemId String @id(map: "pkbasys") @map("keybasys") @db.Char(15)
+  propertyObjectId String @unique(map: "akbasys1") @map("keycmobj") @db.Char(15)
+  systemTypeId String? @map("keybasyt") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  systemSupplierId String? @map("keycmctc2") @db.Char(15)
+  systemCode String @map("code") @db.VarChar(30)
+  systemName String? @map("caption") @db.VarChar(60)
+  subType String? @map("undertyp") @db.VarChar(60)
+  servesSystem String? @map("betjanar") @db.VarChar(60)
+  businessArea String? @map("verksamhet") @db.VarChar(60)
+  installationDate DateTime? @map("instdatum") @db.DateTime
+  deleteMark Int @default(0, map: "DF__basys__deletemar__6E0996D2") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm its usage for a better naming
+
+  // Relations
+  systemType SystemType? @relation(fields: [systemTypeId], references: [systemTypeId], onUpdate: NoAction, map: "fkbasyskeybasyt")
+  contact cmctc? @relation("basys_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc")
+  systemSupplier cmctc? @relation("basys_keycmctc2Tocmctc", fields: [systemSupplierId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc2")
+  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbasyskeycmobj")
+
+  // Indexes
+  @@index([systemTypeId], map: "fkbasysbasyt")
+  @@index([contactId], map: "fkbasyscmctc")
+  @@index([systemSupplierId], map: "fkbasyscmctc2")
+  @@index([fromDate], map: "inbasys_1C80HDM3H")
+  @@index([toDate], map: "inbasys_1C80HDM3Z")
+  @@index([systemCode], map: "inbasys_1C80HDM4S")
+  @@index([systemName], map: "inbasys_1C80HDM5A")
+}

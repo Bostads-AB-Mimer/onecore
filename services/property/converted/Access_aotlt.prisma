@@ -7,6 +7,8 @@ model Access {
   // TODO: Determine appropriate naming for 'timestamp'
   timestamp String @map("timestamp") @db.Char(10)
 
-  aoupp aoupp[] // TODO: change aoupp to the new model name when available
-  lbbes lbbes[] // TODO: change lbbes to the new model name when available
+  // TODO: Review potential missing WorkOrderRow model or relation inconsistency
+  // workOrderRows WorkOrderRow[] @relation("aoupp") 
+
+  apartmentInspections ApartmentInspection[] @relation("lbbes") // Updated from lbbes to use new model name ApartmentInspection
 }

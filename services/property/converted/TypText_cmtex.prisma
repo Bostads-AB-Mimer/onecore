@@ -1,14 +1,19 @@
 model TypText {
   @@map("cmtex")
 
+  // Fields
   typTextId String @id(map: "pkcmtex") @map("keycmtex") @db.Char(15)
   typTextTemplateId String @map("keycmtep") @db.Char(15)
   code String @map("keycode") @db.Char(15)
   text String @map("text") @db.VarChar(254)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Review usage of timestamp field
-  
-  cmtep cmtep @relation(fields: [typTextTemplateId], references: [keycmtep], onDelete: Cascade, onUpdate: NoAction, map: "fkcmtexkeycmtep ")
+
+  // Relations
+  // TODO: Verify and update cmtep model name once it is renamed in backward pass. Comment the relation if cmtep is not available.
+  // cmtep cmtep @relation(fields: [typTextTemplateId], references: [keycmtep], onDelete: Cascade, onUpdate: NoAction, map: "fkcmtexkeycmtep ")
 
   @@unique([code, typTextTemplateId], map: "incmtex_2LR0I2LGS")
   @@index([typTextTemplateId], map: "fkcmtexcmtep")
 }
+
+// TODO: Ensure matching field and model names for all references outside TypText

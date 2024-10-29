@@ -1,11 +1,12 @@
 model AutogiroTransactionTypeCustomer {
   @@map("kragk")
 
+  // Fields
   autogiroTransactionTypeCustomerId String @id(map: "pkkragk") @map("keykragk") @db.Char(15)
   transactionTypeId String @map("keyrevrt") @db.Char(15)
-  debitCreditGiroId String? @map("keycmdbg") @db.Char(15) // TODO: Convert to new model name when available
+  // debitCreditGiroId String? @map("keycmdbg") @db.Char(15) // TODO: Convert to new model name when available
   customerId String @map("keykrknr") @db.Char(15)
-  contractId String? @map("keyhyobj") @db.Char(15) // TODO: Convert to new model name when available
+  // contractId String? @map("keyhyobj") @db.Char(15) // TODO: Convert to new model name when available
   mandateIdentification String? @map("mandateid") @db.VarChar(20)
   bicCode String? @map("bic") @db.VarChar(11)
   ibanCode String? @map("iban") @db.VarChar(34)
@@ -28,11 +29,14 @@ model AutogiroTransactionTypeCustomer {
   directDebitCheck Int @default(0, map: "DF__kragk__agcheck__4367040C") @map("agcheck") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if "timestamp" is used for versioning or other purposes 
 
-  cmdbg cmdbg? @relation(fields: [debitCreditGiroId], references: [keycmdbg], onUpdate: NoAction, map: "fkkragkkeycmdbg")
-  hyobj hyobj? @relation(fields: [contractId], references: [keyhyobj], onUpdate: NoAction, map: "fkkragkkeyhyobj")
-  krknr krknr @relation(fields: [customerId], references: [keykrknr], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeykrknr")
-  revrt revrt @relation(fields: [transactionTypeId], references: [keyrevrt], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeyrevrt")
+  // Relations
+  // TODO: Update references when new model names are determined
+  // cmdbg cmdbg? @relation(fields: [debitCreditGiroId], references: [keycmdbg], onUpdate: NoAction, map: "fkkragkkeycmdbg")
+  // hyobj hyobj? @relation(fields: [contractId], references: [keyhyobj], onUpdate: NoAction, map: "fkkragkkeyhyobj")
+  // krknr krknr @relation(fields: [customerId], references: [keykrknr], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeykrknr")
+  // revrt revrt @relation(fields: [transactionTypeId], references: [keyrevrt], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeyrevrt")
 
+  // Indexes
   @@index([debitCreditGiroId], map: "fkkragkcmdbg")
   @@index([contractId], map: "fkkragkhyobj")
   @@index([customerId], map: "fkkragkkrknr")

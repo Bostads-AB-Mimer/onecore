@@ -15,13 +15,17 @@ model PropertyType {
   isSystemStandard Int @default(0, map: "DF__balot__issystem__4B4F8A24") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider renaming timestamp field when knowing more about its usage
 
-  balok balok[] // TODO: rename balok to new model name when available
-  statisticsGroupScb balot_keyballsTostatisticsGroupScb? @relation("balot_keyballsToballs", fields: [statisticsGroupScbId], references: [keyballs], onUpdate: NoAction, map: "fkbalotkeyballs")
-  statisticsGroup2 balot_keyballs2StatisticsGroup2 balls? @relation("balot_keyballs2Toballs", fields: [statisticsGroup2Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs2")
-  statisticsGroup3 balot_keyballs3StatisticsGroup3 balls? @relation("balot_keyballs3Toballs", fields: [statisticsGroup3Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs3")
-  statisticsGroup4 balot_keyballs4StatisticsGroup4 balls? @relation("balot_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs4")
-  checklist lbpro? @relation(fields: [checklistId], references: [keylbpro], onUpdate: NoAction, map: "fkbalotkeylbpro")
-  componentTypeAction puatt? @relation(fields: [componentTypeActionId], references: [keypuatt], onUpdate: NoAction, map: "fkbalotkeypuatt")
+  location Location[] @relation("fkbalokkeybalot") // Changed the relation from balok
+  // TODO: Commented out as StatisticsGroupScb is not defined
+  // statisticsGroupScb StatisticsGroupScb? @relation("balot_keyballsToballs", fields: [statisticsGroupScbId], references: [keyballs], onUpdate: NoAction, map: "fkbalotkeyballs")
+  // TODO: Commented out as StatisticsGroup2 is not defined
+  // statisticsGroup2 StatisticsGroup2? @relation("balot_keyballs2Toballs", fields: [statisticsGroup2Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs2")
+  // TODO: Commented out as StatisticsGroup3 is not defined
+  // statisticsGroup3 StatisticsGroup3? @relation("balot_keyballs3Toballs", fields: [statisticsGroup3Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs3")
+  // TODO: Commented out as StatisticsGroup4 is not defined
+  // statisticsGroup4 StatisticsGroup4? @relation("balot_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs4")
+  checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalotkeylbpro")
+  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalotkeypuatt")
 
   @@index([statisticsGroupScbId], map: "fkbalotballs")
   @@index([statisticsGroup2Id], map: "fkbalotballs2")

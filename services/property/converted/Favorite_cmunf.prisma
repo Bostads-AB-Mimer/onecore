@@ -29,7 +29,7 @@ model Favorite {
   cmunc_cmunc_keycmunfTocmunf cmunc[] @relation("cmunc_keycmunfTocmunf")
   cmunc_cmunc_keycmunf2Tocmunf cmunc[] @relation("cmunc_keycmunf2Tocmunf")
   // TODO: Change cmqry to new model name when available
-  cmqry cmqry? @relation(fields: [selectionId], references: [keycmqry], onUpdate: NoAction, map: "fkcmunfkeycmqry ")
+  selection Selection? @relation(fields: [selectionId], references: [selectionId], onUpdate: NoAction, map: "fkcmunfkeycmqry ")
   // TODO: Change cmung to new model name when available
   cmung cmung @relation(fields: [groupId], references: [keycmung], onDelete: Cascade, onUpdate: NoAction, map: "fkcmunfkeycmung ")
 

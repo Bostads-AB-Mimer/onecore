@@ -10,7 +10,7 @@ model ReportColumn {
   title           String?  @map("caption") @db.VarChar(50)
   sortOrder       Int      @map("sortorder") @default(0, map: "DF__cmrdc__sortorder__28762F89")
   decimalCount    Int      @map("decimals") @default(0, map: "DF__cmrdc__decimals__296A53C2") @db.TinyInt
-  thousandSeparator Int   @map("digitgroup") @default(0, map: "DF__cmrdc__digitgrou__2A5E77FB") @db.TinyInt
+  thousandSeparator Int    @map("digitgroup") @default(0, map: "DF__cmrdc__digitgrou__2A5E77FB") @db.TinyInt
   backgroundColor Int      @map("bcolor") @default(0, map: "DF__cmrdc__bcolor__2B529C34")
   foregroundColor Int      @map("fcolor") @default(0, map: "DF__cmrdc__fcolor__2C46C06D")
   textAlignment   Int      @map("textalign") @default(0, map: "DF__cmrdc__textalign__2D3AE4A6")
@@ -21,8 +21,8 @@ model ReportColumn {
   formula         String?  @map("formula") @db.VarChar(Max)
   timestamp       String   @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
 
-  cmqry           cmqry?   @relation(fields: [selectionId], references: [keycmqry], onUpdate: NoAction, onDelete: NoAction, map: "fkcmrdckeycmqry")
-  cmrdr           cmrdr    @relation(fields: [reportRowId], references: [keycmrdr], onDelete: NoAction, onUpdate: NoAction, map: "fkcmrdckeycmrdr")
+  selection      Selection? @relation(fields: [selectionId], references: [selectionId], onUpdate: NoAction, onDelete: NoAction, map: "fkcmrdckeycmqry")
+  reportRow      ReportRow  @relation(fields: [reportRowId], references: [reportRowId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmrdckeycmrdr")
 
   @@index([selectionId], map: "fkcmrdccmqry")
   @@index([reportRowId], map: "fkcmrdccmrdr")

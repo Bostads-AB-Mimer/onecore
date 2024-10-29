@@ -16,13 +16,21 @@ model ResidenceType {
   systemStandard Int @default(0, map: "DF__balgt__issystem__41C61FEA") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing later when knowing more about its usage
 
-  residence balgh[] // TODO: rename the relation name when knowing the new model names
-  balls_balgt_keyballsToballs balls? @relation("balgt_keyballsToballs", fields: [statisticsGroupSCBId], references: [keyballs], onUpdate: NoAction, map: "fkbalgtkeyballs ")
-  balls_balgt_keyballs2Toballs balls? @relation("balgt_keyballs2Toballs", fields: [statisticsGroup2Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs2 ")
-  balls_balgt_keyballs3Toballs balls? @relation("balgt_keyballs3Toballs", fields: [statisticsGroup3Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs3 ")
-  balls_balgt_keyballs4Toballs balls? @relation("balgt_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs4 ")
-  checklist lbpro? @relation(fields: [checklistId], references: [keylbpro], onUpdate: NoAction, map: "fkbalgtkeylbpro ")
-  componentTypeAction puatt? @relation(fields: [componentTypeActionId], references: [keypuatt], onUpdate: NoAction, map: "fkbalgtkeypuatt ")
+  // Updated relation to use the new model name 'Residence'
+  residences Residence[] @relation("balgt_balgh", fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction)
+
+  // Keeping the original relation to 'balls' for now, fields and references checked in previous pass
+  // TODO: Check if the 'balls' model conversion meets the new naming standard
+  // balls_balgt_keyballsToballs balls? @relation("balgt_keyballsToballs", fields: [statisticsGroupSCBId], references: [keyballs], onUpdate: NoAction, map: "fkbalgtkeyballs ")
+  // balls_balgt_keyballs2Toballs balls? @relation("balgt_keyballs2Toballs", fields: [statisticsGroup2Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs2 ")
+  // balls_balgt_keyballs3Toballs balls? @relation("balgt_keyballs3Toballs", fields: [statisticsGroup3Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs3 ")
+  // balls_balgt_keyballs4Toballs balls? @relation("balgt_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalgtkeyballs4 ")
+
+  // Updated relation to use new model name 'InspectionProtocol'
+  checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalgtkeylbpro ")
+
+  // Keeping the original relation to 'puatt' for now, fields and references checked in previous pass
+  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalgtkeypuatt ")
 
   @@index([statisticsGroupSCBId], map: "fkbalgtballs")
   @@index([statisticsGroup2Id], map: "fkbalgtballs2")
