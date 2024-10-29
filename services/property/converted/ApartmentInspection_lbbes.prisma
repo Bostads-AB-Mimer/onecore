@@ -41,11 +41,11 @@ model ApartmentInspection {
   plannedAccess Access? @relation(fields: [plannedAccessId], references: [accessId], onUpdate: NoAction, map: "fklbbeskeyaotlt")
   inspector Contact? @relation(fields: [inspectorId], references: [contactId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeycmctc")
   // TODO: Confirm mapping for 'propertyObjectId' if 'cmobj' is correct in the new schema context
-  cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fklbbeskeycmobj") 
+  //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fklbbeskeycmobj") 
   resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeycmrgr")
   contract Contract? @relation(fields: [contractId], references: [contractId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeyhyobj")
   // TODO: Confirm relation mapping for 'inspectionCategoryId'
-  inspectionCategory lbbka @relation(fields: [inspectionCategoryId], references: [keylbbka], onUpdate: NoAction, map: "fklbbeskeylbbka")
+  //inspectionCategory lbbka @relation(fields: [inspectionCategoryId], references: [keylbbka], onUpdate: NoAction, map: "fklbbeskeylbbka")
   project Project? @relation(fields: [projectId], references: [projectId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeyprprj")
 
   @@index([plannedAccessId], map: "fklbbesaotlt")

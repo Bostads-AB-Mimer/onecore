@@ -8,7 +8,7 @@ model BuildingType {
   isSystemStandard Int @default(0, map: "DF__babyt__issystem__2AE2BA92") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10)
 
-  buildings Building[] @relation("fkbabygkeybabyt") // Updated to the new model name 'Building'
+  buildings Building[] //@relation("fkbabygkeybabyt") // Updated to the new model name 'Building'
   // TODO: Verify the correct references for 'actionTypeId'. Ensure that 'actionTypeId' exists in ActionType model and is mapped properly.
   // actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabytkeypuatt") // Updated to the new model name 'ActionType'
 

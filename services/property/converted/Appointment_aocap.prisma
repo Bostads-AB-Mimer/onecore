@@ -18,7 +18,7 @@ model Appointment {
   // TODO: Verify if 'Contact' model name is accurate
   // Contact? cmctc @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmctc")
 
-  ResourceGroup? cmrgr @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmrgr") // TODO: rename reference model name if ResourceGroup is revised
+  //ResourceGroup? cmrgr @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkaocapkeycmrgr") // TODO: rename reference model name if ResourceGroup is revised
 
   @@index([workOrderId], map: "fkaocapaoupp")
   @@index([contactId], map: "fkaocapcmctc")

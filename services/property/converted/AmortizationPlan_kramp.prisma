@@ -24,9 +24,9 @@ model AmortizationPlan {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Clarify usage and naming of timestamp
 
   // Relations
-  cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmcmp")
-  cmctc_kramp_keycmctcTocmctc cmctc @relation("kramp_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkkrampkeycmctc")
-  cmctc_kramp_keycmctc2Tocmctc cmctc? @relation("kramp_keycmctc2Tocmctc", fields: [invoiceRecipientId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmctc2")
+  //cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmcmp")
+  //cmctc_kramp_keycmctcTocmctc cmctc @relation("kramp_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkkrampkeycmctc")
+  //cmctc_kramp_keycmctc2Tocmctc cmctc? @relation("kramp_keycmctc2Tocmctc", fields: [invoiceRecipientId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmctc2")
   transactionType TransactionType? @relation(fields: [transactionTypeId], references: [transactionTypeId], onUpdate: NoAction, onDelete: NoAction, map: "fkkrampkeyrevrt")
 
   @@index([companyId], map: "fkkrampcmcmp")

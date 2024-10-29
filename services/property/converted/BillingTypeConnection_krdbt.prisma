@@ -6,8 +6,8 @@ model BillingTypeConnection {
   invoiceId String @map("keykrfkh") @db.Char(15)
   timestamp String @map("timestamp") @db.Char(10) // TODO: evaluate the need for renaming timestamp
 
-  billingType BillingType @relation(fields: [billingTypeId], references: [billingTypeId], onUpdate: NoAction, map: "fkkrdbtkeyfadbt ")
-  krfkh krfkh @relation(fields: [invoiceId], references: [keykrfkh], onDelete: Cascade, onUpdate: NoAction, map: "fkkrdbtkeykrfkh") // TODO: rename krfkh when the new model name is known
+  //billingType BillingType @relation(fields: [billingTypeId], references: [billingTypeId], onUpdate: NoAction, map: "fkkrdbtkeyfadbt ")
+  //krfkh krfkh @relation(fields: [invoiceId], references: [keykrfkh], onDelete: Cascade, onUpdate: NoAction, map: "fkkrdbtkeykrfkh") // TODO: rename krfkh when the new model name is known
 
   @@index([billingTypeId], map: "fkkrdbtfadbt")
   @@index([invoiceId], map: "fkkrdbtkrfkh")

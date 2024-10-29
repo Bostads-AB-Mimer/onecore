@@ -20,11 +20,11 @@ model Area {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Change 'timestamp' when knowing more about its usage
 
   // Relations
-  freeTable1 FreeTable1? @relation(fields: [freeTable1Id], references: [keybabya], onUpdate: NoAction, map: "fkbaytakeybabya ")
-  freeTable2 FreeTable2? @relation(fields: [freeTable2Id], references: [keybabyb], onUpdate: NoAction, map: "fkbaytakeybabyb ")
-  freeTable3 FreeTable3? @relation(fields: [freeTable3Id], references: [keybabyc], onUpdate: NoAction, map: "fkbaytakeybabyc ")
-  areaType AreaType? @relation(fields: [areaTypeId], references: [keybaytt], onUpdate: NoAction, map: "fkbaytakeybaytt")
-  // object Object @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbaytakeycmobj") // TODO: Revisit when Object model is defined
+  // freeTable1 FreeTable1? @relation(fields: [freeTable1Id], references: [keybabya], onUpdate: NoAction, map: "fkbaytakeybabya ")
+  // freeTable2 FreeTable2? @relation(fields: [freeTable2Id], references: [keybabyb], onUpdate: NoAction, map: "fkbaytakeybabyb ")
+  // freeTable3 FreeTable3? @relation(fields: [freeTable3Id], references: [keybabyc], onUpdate: NoAction, map: "fkbaytakeybabyc ")
+  // areaType AreaType? @relation(fields: [areaTypeId], references: [keybaytt], onUpdate: NoAction, map: "fkbaytakeybaytt")
+  // // object Object @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbaytakeycmobj") // TODO: Revisit when Object model is defined
   
   @@index([areaTypeId], map: "fkbaytabaytt")
   @@index([fromDate], map: "inbayta_2M111X7XH")

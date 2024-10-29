@@ -13,16 +13,16 @@ model ActivityTime {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm purpose for timestamp in future passes
 
   // Relations
-  article Article @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkpractkeycmart")
-  resource Contact @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeycmctc")
-  projectTransaction ProjectTransaction? @relation(fields: [keyprmtr], references: [keyprmtr], onUpdate: NoAction, onDelete: NoAction, map: "fkpractkeyprmtr")
-  subProject SubProject? @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprppr")
-  project Project? @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprprj")
+  //article Article @relation(fields: [keycmart], references: [keycmart], onUpdate: NoAction, map: "fkpractkeycmart")
+  //resource Contact @relation(fields: [keycmctc], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeycmctc")
+  //projectTransaction ProjectTransaction? @relation(fields: [keyprmtr], references: [keyprmtr], onUpdate: NoAction, onDelete: NoAction, map: "fkpractkeyprmtr")
+  //subProject SubProject? @relation(fields: [keyprppr], references: [keyprppr], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprppr")
+  //project Project? @relation(fields: [keyprprj], references: [keyprprj], onDelete: NoAction, onUpdate: NoAction, map: "fkpractkeyprprj")
 
   // Indexes
-  @@index([keycmart], map: "fkpractcmart")
-  @@index([keycmctc], map: "fkpractcmctc")
-  @@index([keyprmtr], map: "fkpractprmtr")
-  @@index([keyprppr], map: "fkpractprppr")
-  @@index([keyprprj], map: "fkpractprprj")
+  @@index([articleId], map: "fkpractcmart")
+  @@index([resourceId], map: "fkpractcmctc")
+  @@index([projectTransactionId], map: "fkpractprmtr")
+  @@index([subProjectId], map: "fkpractprppr")
+  @@index([projectId], map: "fkpractprprj")
 }

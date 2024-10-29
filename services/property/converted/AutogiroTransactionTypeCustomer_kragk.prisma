@@ -37,8 +37,8 @@ model AutogiroTransactionTypeCustomer {
   // revrt revrt @relation(fields: [transactionTypeId], references: [keyrevrt], onDelete: Cascade, onUpdate: NoAction, map: "fkkragkkeyrevrt")
 
   // Indexes
-  @@index([debitCreditGiroId], map: "fkkragkcmdbg")
-  @@index([contractId], map: "fkkragkhyobj")
+  //@@index([debitCreditGiroId], map: "fkkragkcmdbg")
+  //@@index([contractId], map: "fkkragkhyobj")
   @@index([customerId], map: "fkkragkkrknr")
   @@index([transactionTypeId], map: "fkkragkrevrt")
 }

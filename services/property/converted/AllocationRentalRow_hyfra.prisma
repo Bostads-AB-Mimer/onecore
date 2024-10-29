@@ -10,7 +10,7 @@ model AllocationRentalRow {
   vatPercentage Decimal @map("momsproc") @db.Decimal(7, 2)
   timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
 
-  rentalArticle RentalArticle @relation(fields: [rentalArticleId], references: [rentalArticleId], onUpdate: NoAction, map: "fkhyfrakeycmart")
+  //rentalArticle RentalArticle @relation(fields: [rentalArticleId], references: [rentalArticleId], onUpdate: NoAction, map: "fkhyfrakeycmart")
   rentalRow RentalRow @relation(fields: [rentalRowId], references: [rentalRowId], onDelete: Cascade, onUpdate: NoAction, map: "fkhyfrakeyhyrad")
   
   // TODO: Uncomment and update when the new model names are available

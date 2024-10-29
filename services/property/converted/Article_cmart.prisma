@@ -59,9 +59,9 @@ model Article {
   // baseRentMeasurementType MeasurementType? @relation("cmart_keycmvatTocmvat", fields: [baseRentMeasurementTypeId], references: [measurementTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmvat")
   // contractRowMeasurementType MeasurementType? @relation("cmart_keycmvat2Tocmvat", fields: [contractRowMeasurementTypeId], references: [measurementTypeId], onUpdate: NoAction, map: "fkcmartkeycmvat2")
   summaryRow SummaryRow? @relation(fields: [summaryRowId], references: [summaryRowId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeyhysum")
-  cmcmp_cmcmp_keycmartTocmart cmcmp[] @relation("cmcmp_keycmartTocmart")
-  cmcmp_cmcmp_keycmart2Tocmart cmcmp[] @relation("cmcmp_keycmart2Tocmart")
-  cmcmp_cmcmp_keycmart3Tocmart cmcmp[] @relation("cmcmp_keycmart3Tocmart")
+  // cmcmp_cmcmp_keycmartTocmart cmcmp[] @relation("cmcmp_keycmartTocmart")
+  // cmcmp_cmcmp_keycmart2Tocmart cmcmp[] @relation("cmcmp_keycmart2Tocmart")
+  // cmcmp_cmcmp_keycmart3Tocmart cmcmp[] @relation("cmcmp_keycmart3Tocmart")
   allocationRentalRow AllocationRentalRow[]
 
   // Commented out pending resolution
