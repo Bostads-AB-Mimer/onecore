@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.34.0...v1.34.1) (2024-10-30)
+
+
+### Features
+
+* uth-38 Get Waiting Lists from xpand-DB ([#115](https://github.com/Bostads-AB-Mimer/onecore-types/issues/115)) ([d648330](https://github.com/Bostads-AB-Mimer/onecore-types/commit/d6483306418265440c28856ceec11425620d048b))
+
 ## [1.34.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.33.0...v1.34.0) (2024-10-30)
 
 
