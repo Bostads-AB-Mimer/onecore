@@ -2,9 +2,11 @@ import Koa, { DefaultContext, DefaultState } from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import cors from '@koa/cors'
+import session from 'koa-session'
+import { logger, loggerMiddlewares } from 'onecore-utilities'
+
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
-import session from 'koa-session'
 
 const app = new Koa()
 
@@ -28,15 +30,12 @@ const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
   sameSite: undefined,
 }
 
-// TODO (17-05-2024): Uncomment this after internal testing by David
 app.use(session(CONFIG, app))
 
 app.use(async (ctx, next) => {
   if (ctx.request.path.match('(.*)/auth/')) {
     return next()
   } else {
-    // TODO (17-05-2024): Uncomment this after internal testing by David
-
     if (!ctx.session?.isAuthenticated) {
       ctx.status = 401
     } else {
@@ -48,12 +47,16 @@ app.use(async (ctx, next) => {
 app.use(cors({ credentials: true }))
 
 app.on('error', (err) => {
-  console.error(err)
+  logger.error(err)
 })
 
 app.use(bodyParser())
 
 const publicRouter = new KoaRouter()
+
+// Log the start and completion of all incoming requests
+app.use(loggerMiddlewares.pre)
+app.use(loggerMiddlewares.post)
 
 authRoutes(publicRouter)
 app.use(publicRouter.routes())
