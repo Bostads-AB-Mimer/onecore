@@ -53,11 +53,11 @@ describe('listing-adapter', () => {
       })
     })
 
-    it('allows duplicate combination of other Listing statuses and RentalObjectCode', async () => {
+    it('allows duplicate combination of closed Listing statuses and RentalObjectCode', async () => {
       await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '1',
-          status: ListingStatus.Active,
+          status: ListingStatus.Closed,
         })
       )
 
