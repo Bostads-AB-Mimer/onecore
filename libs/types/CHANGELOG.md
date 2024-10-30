@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.33.0...v1.34.0) (2024-10-30)
+
+
+### Features
+
+* MIM-172: Re-publish listings ([#113](https://github.com/Bostads-AB-Mimer/onecore-types/issues/113)) ([9bed2e9](https://github.com/Bostads-AB-Mimer/onecore-types/commit/9bed2e92979bdcfa6f41d9bf8c47d169f2a6d7cc))
+
 ## [1.33.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.32.0...v1.33.0) (2024-10-28)
 
 
