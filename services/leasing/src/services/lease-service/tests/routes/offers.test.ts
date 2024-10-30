@@ -390,4 +390,36 @@ describe('offers', () => {
       content: expect.objectContaining({ id: expect.any(Number) }),
     })
   })
+
+  describe('PUT /offers/:offerId/sent-at', () => {
+    it('responds with 400 if missing request params', async () => {
+      const res = await request(app.callback()).put(`/offers/1/sent-at`)
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 404 if not found', async () => {
+      jest
+        .spyOn(offerAdapter, 'updateOfferSentAt')
+        .mockResolvedValueOnce({ ok: false, err: 'no-update' })
+
+      const res = await request(app.callback())
+        .put(`/offers/1/sent-at`)
+        .send({ sentAt: new Date() })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 200 if ok', async () => {
+      jest
+        .spyOn(offerAdapter, 'updateOfferSentAt')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put(`/offers/1/sent-at`)
+        .send({ sentAt: new Date() })
+
+      expect(res.status).toBe(200)
+    })
+  })
 })

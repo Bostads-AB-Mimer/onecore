@@ -472,4 +472,68 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
+
+  /**
+   * @swagger
+   * /offers/{offerId}/sent-at:
+   *   put:
+   *     summary: Update offer sent at date
+   *     description: Updates offer sent at date.
+   *     tags: [Offer]
+   *     parameters:
+   *       - in: path
+   *         name: offerId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The unique ID of the offer to be updated.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               sentAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The date the offer was sent.
+   *     responses:
+   *       200:
+   *         description: Offer successfully updated.
+   *       404:
+   *         description: Offer not found for the specified offer ID.
+   *       500:
+   *         description: Internal server error.
+   */
+  const updateOfferSentAtRequestParams = z.object({ sentAt: z.coerce.date() })
+  router.put(
+    '/offers/:offerId/sent-at',
+    parseRequestBody(updateOfferSentAtRequestParams),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const update = await offerAdapter.updateOfferSentAt(
+        db,
+        Number(ctx.params.offerId),
+        ctx.request.body.sentAt
+      )
+
+      if (!update.ok) {
+        if (update.err === 'no-update') {
+          ctx.status = 404
+          ctx.body = { reason: 'Offer not found', ...metadata }
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = { ...metadata }
+      return
+    }
+  )
 }

@@ -555,6 +555,31 @@ export const handleExpiredOffers = async (): Promise<
   }
 }
 
+export async function updateOfferSentAt(
+  db: Knex,
+  offerId: number,
+  sentAt: Date
+): Promise<AdapterResult<null, 'no-update' | 'unknown'>> {
+  try {
+    const update = await db('offer')
+      .update({ SentAt: sentAt })
+      .where('Id', offerId)
+
+    if (!update) {
+      logger.info(
+        { offerId },
+        'offerAdapter.updateOfferSentAt -- No offer updated'
+      )
+      return { ok: false, err: 'no-update' }
+    }
+
+    return { ok: true, data: null }
+  } catch (err) {
+    logger.error(err, 'offerAdapter.updateOfferSentAt')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const transformOfferWithOfferApplicantsQueryResult = (
   result: OffersWithOfferApplicantsQueryResult
 ): OfferWithOfferApplicants => {

@@ -437,4 +437,43 @@ describe('offer-adapter', () => {
       ])
     })
   })
+
+  describe(offerAdapter.updateOfferSentAt, () => {
+    it('returns err if there was no update', async () => {
+      const res = await offerAdapter.updateOfferSentAt(db, 1, new Date())
+      expect(res).toEqual({ ok: false, err: 'no-update' })
+    })
+
+    it('updates sent at', async () => {
+      const listing = await listingAdapter.createListing(
+        factory.listing.build({ rentalObjectCode: '1' })
+      )
+      assert(listing.ok)
+      const applicant = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listing.data.id })
+      )
+
+      const offer = await offerAdapter.create(db, {
+        selectedApplicants: factory.offerApplicant.buildList(1, {
+          applicantId: applicant.id,
+        }),
+        applicantId: applicant.id,
+        expiresAt: new Date(),
+        listingId: listing.data.id,
+        status: OfferStatus.Active,
+      })
+
+      assert(offer.ok)
+
+      const res = await offerAdapter.updateOfferSentAt(
+        db,
+        offer.data.id,
+        new Date()
+      )
+      expect(res).toEqual({ ok: true, data: null })
+      const updatedOffer = await offerAdapter.getOfferByOfferId(offer.data.id)
+      assert(updatedOffer.ok)
+      expect(updatedOffer.data.sentAt).not.toBeNull()
+    })
+  })
 })
