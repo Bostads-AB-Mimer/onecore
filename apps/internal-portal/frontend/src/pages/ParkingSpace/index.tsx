@@ -101,7 +101,8 @@ const ParkingSpaceTabs = (props: { listingId: number }) => {
 const listingFormatMap: Record<ListingStatus, string> = {
   [ListingStatus.Active]: 'Publicerad',
   [ListingStatus.Assigned]: 'Tilldelad',
-  [ListingStatus.Deleted]: 'Borttagen',
+  [ListingStatus.Closed]: 'Stängd',
+  [ListingStatus.NoApplicants]: 'Inga sökande',
   [ListingStatus.Expired]: 'Klar för erbjudande',
 }
 
