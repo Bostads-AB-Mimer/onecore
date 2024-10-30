@@ -166,10 +166,24 @@ export const createOfferForInternalParkingSpace = async (
         objectId: listing.id.toString(),
         hasParkingSpace: false,
       })
-    } catch (_err) {
+      const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
+        offer.data.id,
+        new Date()
+      )
+
+      if (updateOfferSentAt.ok) {
+        log.push(`Updated sent at for offer ${offer.data.id}`)
+      } else {
+        sendNotificationToRole(
+          'dev',
+          `Uppdatera erbjudande - uppdatera SentAt misslyckades - ${updateOfferSentAt.err}`,
+          log.join('\n')
+        )
+      }
+    } catch (err) {
       sendNotificationToRole(
         'leasing',
-        `Skapa erbjudande - skicka bekräftelse till kund misslyckades - ${_err}`,
+        `Skapa erbjudande - skicka bekräftelse till kund misslyckades - ${err}`,
         log.join('\n')
       )
       return endFailingProcess(
@@ -177,7 +191,7 @@ export const createOfferForInternalParkingSpace = async (
         CreateOfferErrorCodes.SendEmailFailure,
         500,
         `Send Parking Space Offer Email failed`,
-        _err
+        err
       )
     }
     return {
@@ -185,8 +199,6 @@ export const createOfferForInternalParkingSpace = async (
       httpStatus: 200,
       data: null,
     }
-
-    // step 5 - notify winning applicant
   } catch (err) {
     return endFailingProcess(
       log,

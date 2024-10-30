@@ -13,6 +13,7 @@ import { ProcessStatus } from '../../../../common/types'
 describe('createOfferForInternalParkingSpace', () => {
   afterEach(() => {
     jest.clearAllMocks()
+    jest.resetAllMocks()
   })
 
   jest
@@ -295,6 +296,10 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
 
+    const updateOfferSentAtSpy = jest
+      .spyOn(leasingAdapter, 'updateOfferSentAt')
+      .mockResolvedValue({ ok: true, data: null })
+
     const result = await createOfferForInternalParkingSpace(123)
 
     expect(result).toEqual({
@@ -302,5 +307,7 @@ describe('createOfferForInternalParkingSpace', () => {
       data: null,
       httpStatus: 200,
     })
+
+    expect(updateOfferSentAtSpy).toHaveBeenCalledTimes(1)
   })
 })

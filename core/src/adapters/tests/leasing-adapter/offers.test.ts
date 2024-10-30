@@ -78,3 +78,33 @@ describe(leasingAdapter.getOffersForContact, () => {
     expect(result.data).toEqual([expect.objectContaining({ id: offer.id })])
   })
 })
+
+describe(leasingAdapter.updateOfferSentAt, () => {
+  it('returns err if leasing responds with 400', async () => {
+    nock(config.tenantsLeasesService.url).put('/offers/1/sent-at').reply(400)
+
+    const result = await leasingAdapter.updateOfferSentAt(1, new Date())
+    expect(result).toEqual({ ok: false, err: 'bad-params' })
+  })
+
+  it('returns err if leasing responds with 404', async () => {
+    nock(config.tenantsLeasesService.url).put('/offers/1/sent-at').reply(404)
+
+    const result = await leasingAdapter.updateOfferSentAt(1, new Date())
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns err if leasing responds with 500', async () => {
+    nock(config.tenantsLeasesService.url).put('/offers/1/sent-at').reply(500)
+
+    const result = await leasingAdapter.updateOfferSentAt(1, new Date())
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns ok if leasing responds with 200', async () => {
+    nock(config.tenantsLeasesService.url).put('/offers/1/sent-at').reply(200)
+
+    const result = await leasingAdapter.updateOfferSentAt(1, new Date())
+    expect(result).toEqual({ ok: true, data: null })
+  })
+})

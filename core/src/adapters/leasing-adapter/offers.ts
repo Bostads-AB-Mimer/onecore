@@ -184,6 +184,35 @@ const handleExpiredOffers = async (): Promise<
   }
 }
 
+async function updateOfferSentAt(
+  offerId: number,
+  sentAt: Date
+): Promise<AdapterResult<null, 'bad-params' | 'not-found' | 'unknown'>> {
+  try {
+    const res = await axios.put(
+      `${tenantsLeasesServiceUrl}/offers/${offerId}/sent-at`,
+      { sentAt }
+    )
+
+    if (res.status === 200) {
+      return { ok: true, data: null }
+    }
+
+    if (res.status === 400) {
+      return { ok: false, err: 'bad-params' }
+    }
+
+    if (res.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'leasing-adapter.offers.updateOfferSentAt')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   createOffer,
   getOfferByOfferId,
@@ -194,4 +223,5 @@ export {
   closeOfferByAccept,
   closeOfferByDeny,
   handleExpiredOffers,
+  updateOfferSentAt,
 }
