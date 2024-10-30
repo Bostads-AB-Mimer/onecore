@@ -7,6 +7,7 @@ import {
   ParkingSpaceType,
   PaymentStatus,
   OfferStatus,
+  WaitingListType,
 } from './enums'
 
 interface Contact {
@@ -23,6 +24,7 @@ interface Contact {
   phoneNumbers: PhoneNumber[] | undefined
   emailAddress?: string
   isTenant: boolean
+  parkingSpaceWaitingList?: WaitingList
 }
 
 type NonEmptyArray<T> = [T, ...T[]]
@@ -31,7 +33,6 @@ type NonEmptyArray<T> = [T, ...T[]]
 // In that way it's different than a Contact, which, by how the type looks, we
 // don't know if it's actually a tenant.
 export type Tenant = Omit<Contact, 'leases' | 'isTenant'> & {
-  queuePoints: number
   currentHousingContract?: Lease
   upcomingHousingContract?: Lease
   parkingSpaceContracts?: Lease[]
@@ -205,15 +206,10 @@ interface Invoice {
   daysSinceLastDebitDate?: number
 }
 
-//maps to response from GetWaitingListTimes in xpand soap service
 interface WaitingList {
-  applicantCaption: string
-  contactCode: string
-  contractFromApartment: Date
+  queueTime: Date
   queuePoints: number
-  queuePointsSocialConnection: number
-  waitingListFrom: Date
-  waitingListTypeCaption: string
+  type: WaitingListType
 }
 
 interface Listing {

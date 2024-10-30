@@ -77,6 +77,10 @@ enum OfferStatus {
   Expired = 4,
 }
 
+enum WaitingListType {
+  ParkingSpace = 1,
+}
+
 export {
   LeaseStatus,
   ParkingSpaceType,
@@ -86,4 +90,5 @@ export {
   ListingStatus,
   ApplicantStatus,
   OfferStatus,
+  WaitingListType,
 }
