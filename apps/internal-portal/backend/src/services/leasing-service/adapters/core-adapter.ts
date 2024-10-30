@@ -5,6 +5,7 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
+  ListingStatus,
   Offer,
   OfferWithOfferApplicants,
   ReplyToOfferErrorCodes,
@@ -283,6 +284,22 @@ const deleteListing = async (
   }
 }
 
+const closeListing = async (
+  listingId: number
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'put',
+      url: `${coreBaseUrl}/listings/${listingId}/status`,
+      data: { status: ListingStatus.Closed },
+    })
+
+    return { ok: true, data: null }
+  } catch (err) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 const acceptOffer = async (
   offerId: string
 ): Promise<AdapterResult<Array<Listing>, ReplyToOfferErrorCodes>> => {
@@ -386,6 +403,7 @@ export {
   syncInternalParkingSpacesFromXpand,
   createOffer,
   deleteListing,
+  closeListing,
   acceptOffer,
   denyOffer,
   getActiveOfferByListingId,

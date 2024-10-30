@@ -236,6 +236,24 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.put('(.*)/listings/:listingId/close', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await coreAdapter.closeListing(Number(ctx.params.listingId))
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+      }
+      return
+    } else {
+      ctx.status = 500
+      ctx.body = {
+        ...metadata,
+      }
+    }
+  })
+
   router.post('(.*)/offers/:offerId/accept', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['q'])
 
