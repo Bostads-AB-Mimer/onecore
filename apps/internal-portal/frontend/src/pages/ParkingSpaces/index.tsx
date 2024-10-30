@@ -1,5 +1,5 @@
 import { Box, IconButton, Stack, Typography } from '@mui/material'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
 import {
@@ -25,12 +25,7 @@ const ParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
   const [searchParams, setSearchParams] = useSearchParams({ type: 'published' })
 
-  const currentTypeSearchParam =
-    (searchParams.get('type') as GetListingWithApplicantFilterByType) ??
-    'published'
-
-  const [selectedTab, setSelectedTab] =
-    useState<GetListingWithApplicantFilterByType>(currentTypeSearchParam)
+  const currentTypeSearchParam = getTab(searchParams.get('type'))
 
   const parkingSpaces = useParkingSpaceListings(currentTypeSearchParam)
 
@@ -45,7 +40,6 @@ const ParkingSpaces = () => {
     tab: GetListingWithApplicantFilterByType
   ) => {
     setSearchParams({ type: tab })
-    setSelectedTab(tab)
   }
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
@@ -73,7 +67,7 @@ const ParkingSpaces = () => {
         </Box>
       </Box>
       {parkingSpaces.error && 'Error'}
-      <TabContext value={selectedTab}>
+      <TabContext value={currentTypeSearchParam}>
         <Tabs onChange={handleTabChange}>
           <Tab disableRipple label="Publicerade" value="published" />
           <Tab
@@ -345,6 +339,25 @@ const filterListings = (
 
     return containsContactCode || containsNationalRegistrationNumber
   })
+}
+
+const tabMap: Record<
+  GetListingWithApplicantFilterByType,
+  GetListingWithApplicantFilterByType
+> = {
+  'ready-for-offer': 'ready-for-offer',
+  published: 'published',
+  offered: 'offered',
+  historical: 'historical',
+}
+
+const getTab = (v: string | null): GetListingWithApplicantFilterByType => {
+  if (!v) return 'published'
+  if (v in tabMap) {
+    return v as GetListingWithApplicantFilterByType
+  } else {
+    return 'published'
+  }
 }
 
 export default ParkingSpaces
