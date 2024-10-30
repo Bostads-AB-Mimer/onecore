@@ -1,4 +1,10 @@
-import { Box, Autocomplete, TextField, MenuItem } from '@mui/material'
+import {
+  Box,
+  Autocomplete,
+  TextField,
+  MenuItem,
+  Typography,
+} from '@mui/material'
 import { useState, useMemo, useCallback } from 'react'
 
 import * as utils from '../../../../utils'
@@ -24,6 +30,16 @@ export const SearchContact = (props: {
     },
     [onSetSearchString]
   )
+
+  if (contactsQuery.error) {
+    return (
+      <Box paddingTop="1rem">
+        <Typography color="error">
+          Något gick fel. Försök igen eller kontakta support
+        </Typography>
+      </Box>
+    )
+  }
 
   return (
     <Box paddingTop="1rem">

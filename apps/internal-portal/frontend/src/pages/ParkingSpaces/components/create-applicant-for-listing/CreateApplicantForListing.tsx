@@ -33,6 +33,7 @@ import {
 import { ContactInfo } from './ContactInfo'
 import { DataGridTable, Tab, Tabs } from '../../../../components'
 import { RequestError } from '../../../../types'
+import { ContactInfoLoading } from './ContactInfoLoading'
 
 export interface Props {
   listing: Listing
@@ -154,7 +155,15 @@ export const CreateApplicantForListing = (props: Props) => {
                       onSelect={setSelectedContact}
                       contact={selectedContact}
                     />
-                    <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                    {!tenantQuery.isLoading && (
+                      <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                    )}
+                    {tenantQuery.isLoading && <ContactInfoLoading />}
+                    {tenantQuery.error && (
+                      <Typography color="error">
+                        Något gick fel. Kontakta support.
+                      </Typography>
+                    )}
                     <Box>
                       <Divider />
                     </Box>
@@ -205,7 +214,6 @@ export const CreateApplicantForListing = (props: Props) => {
                     </Box>
                   </Box>
                 )}
-
               <Box
                 paddingTop="2rem"
                 display="flex"
