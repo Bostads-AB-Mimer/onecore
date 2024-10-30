@@ -6,6 +6,7 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
+import { WaitingListType } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -48,7 +49,7 @@ describe('GET /contacts/search', () => {
     })
   })
 
-  describe('POST /contact/waitingList/:nationalRegistrationNumber/reset', () => {
+  describe('POST /contacts/:nationalRegistrationNumber/waitingLists/reset', () => {
     it('responds with 200 and a message upon success', async () => {
       jest
         .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')
@@ -58,10 +59,10 @@ describe('GET /contacts/search', () => {
         .mockResolvedValue()
 
       const res = await request(app.callback())
-        .post('/contact/waitingList/1234567890/reset')
+        .post('/contacts/1234567890/waitingLists/reset')
         .send({
           contactCode: '123',
-          waitingListTypeCaption: 'Bilplatser (intern)',
+          waitingListType: WaitingListType.ParkingSpace,
         })
 
       expect(res.status).toBe(200)
@@ -81,10 +82,10 @@ describe('GET /contacts/search', () => {
         .mockResolvedValue()
 
       const res = await request(app.callback())
-        .post('/contact/waitingList/1234567890/reset')
+        .post('/contacts/1234567890/waitingLists/reset')
         .send({
           contactCode: '123',
-          waitingListTypeCaption: 'Bilplatser (intern)',
+          waitingListType: WaitingListType.ParkingSpace,
         })
 
       expect(res.status).toBe(404)
@@ -102,10 +103,10 @@ describe('GET /contacts/search', () => {
         .mockResolvedValue()
 
       const res = await request(app.callback())
-        .post('/contact/waitingList/1234567890/reset')
+        .post('/contacts/1234567890/waitingLists/reset')
         .send({
           contactCode: '123',
-          waitingListTypeCaption: 'Bilplatser (intern)',
+          waitingListType: WaitingListType.ParkingSpace,
         })
 
       expect(res.status).toBe(500)
@@ -125,10 +126,10 @@ describe('GET /contacts/search', () => {
         })
 
       const res = await request(app.callback())
-        .post('/contact/waitingList/1234567890/reset')
+        .post('/contacts/1234567890/waitingLists/reset')
         .send({
           contactCode: '123',
-          waitingListTypeCaption: 'Bilplatser (intern)',
+          waitingListType: WaitingListType.ParkingSpace,
         })
 
       expect(res.status).toBe(500)

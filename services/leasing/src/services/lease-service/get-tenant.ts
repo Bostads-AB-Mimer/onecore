@@ -11,8 +11,6 @@ type GetTenantError =
   | 'get-contact'
   | 'contact-not-found'
   | 'contact-not-tenant'
-  | 'get-waiting-lists'
-  | 'waiting-list-internal-parking-space-not-found'
   | 'get-contact-leases'
   | 'contact-leases-not-found'
   | 'get-residential-area'
@@ -50,26 +48,6 @@ async function fetchTenant(params: {
 
   if (contact.data.isTenant !== true) {
     return { ok: false, err: 'contact-not-tenant' }
-  }
-
-  const waitingList = await xpandSoapAdapter.getWaitingList(
-    contact.data.nationalRegistrationNumber
-  )
-
-  if (!waitingList.ok) {
-    return { ok: false, err: 'get-waiting-lists' }
-  }
-
-  const waitingListForInternalParkingSpace =
-    priorityListService.parseWaitingListForInternalParkingSpace(
-      waitingList.data
-    )
-
-  if (!waitingListForInternalParkingSpace) {
-    return {
-      ok: false,
-      err: 'waiting-list-internal-parking-space-not-found',
-    }
   }
 
   const leases = await tenantLeaseAdapter.getLeasesForContactCode(
@@ -158,7 +136,6 @@ async function fetchTenant(params: {
     ok: true,
     data: {
       ...contact.data,
-      queuePoints: waitingListForInternalParkingSpace.queuePoints,
       address: contact.data.address,
       currentHousingContract,
       upcomingHousingContract,

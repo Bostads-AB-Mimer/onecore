@@ -10,10 +10,10 @@ import {
 import { logger } from 'onecore-utilities'
 import {
   addApplicantToToWaitingList,
-  getWaitingList,
   removeApplicantFromWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
 import { getTenant } from '../get-tenant'
+import { WaitingListType } from 'onecore-types'
 
 /**
  * @swagger
@@ -280,84 +280,14 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /**
-   * @swagger
-   * /contact/waitingList/{nationalRegistrationNumber}:
-   *   get:
-   *     summary: Get waiting list from xpand for contact
-   *     description: Retrieve waiting list information for a contact by national registration number.
-   *     tags: [Contacts]
-   *     parameters:
-   *       - in: path
-   *         name: nationalRegistrationNumber
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The national registration number (pnr) of the contact.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved waiting list information.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 data:
-   *                   type: object
-   *                   description: The waiting list data.
-   *       500:
-   *         description: Internal server error. Failed to retrieve waiting list information.
-   */
-  router.get(
-    '(.*)/contact/waitingList/:nationalRegistrationNumber',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      try {
-        const result = await getWaitingList(
-          ctx.params.nationalRegistrationNumber
-        )
-
-        if (!result.ok) {
-          ctx.status = 500
-          ctx.body = { error: result.err, ...metadata }
-          return
-        }
-
-        if (!result.data) {
-          ctx.status = 400
-          ctx.body = { reason: 'Not found', ...metadata }
-          return
-        }
-        ctx.status = 200
-        ctx.body = {
-          content: result.data,
-          ...metadata,
-        }
-      } catch (error: unknown) {
-        logger.error(
-          error,
-          'Error getting waiting lists for contact by national identity number'
-        )
-        ctx.status = 500
-
-        if (error instanceof Error) {
-          ctx.body = {
-            error: error.message,
-            ...metadata,
-          }
-        }
-      }
-    }
-  )
-
   interface CreateWaitingListRequest {
     contactCode: string
-    waitingListTypeCaption: string
+    waitingListType: WaitingListType
   }
 
   /**
    * @swagger
-   * /contact/waitingList/{nationalRegistrationNumber}:
+   * /contacts/{nationalRegistrationNumber}/waitingLists:
    *   post:
    *     summary: Add contact to waiting list in xpand
    *     description: Add a contact to a waiting list by national registration number.
@@ -379,9 +309,9 @@ export const routes = (router: KoaRouter) => {
    *               contactCode:
    *                 type: string
    *                 description: The code of the contact to be added to the waiting list.
-   *               waitingListTypeCaption:
-   *                 type: string
-   *                 description: The caption or type of the waiting list.
+   *               waitingListType:
+   *                 type: WaitingListType
+   *                 description: The type of the waiting list.
    *     responses:
    *       201:
    *         description: Contact successfully added to the waiting list.
@@ -389,7 +319,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to add contact to the waiting list.
    */
   router.post(
-    '(.*)/contact/waitingList/:nationalRegistrationNumber',
+    '(.*)/contacts/:nationalRegistrationNumber/waitingLists',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const request = <CreateWaitingListRequest>ctx.request.body
@@ -397,7 +327,7 @@ export const routes = (router: KoaRouter) => {
         await addApplicantToToWaitingList(
           ctx.params.nationalRegistrationNumber,
           request.contactCode,
-          request.waitingListTypeCaption
+          request.waitingListType
         )
 
         ctx.status = 201
@@ -421,7 +351,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contact/waitingList/{nationalRegistrationNumber}/reset:
+   * /contacts/{nationalRegistrationNumber}/waitingLists/reset:
    *   post:
    *     summary: Reset a waiting list for a contact in XPand
    *     description: Resets a waiting list for a contact by national registration number.
@@ -443,9 +373,9 @@ export const routes = (router: KoaRouter) => {
    *               contactCode:
    *                 type: string
    *                 description: The code of the contact whose waiting list should be reset.
-   *               waitingListTypeCaption:
-   *                 type: string
-   *                 description: The caption or type of the waiting list.
+   *               waitingListType:
+   *                 type: WaitingListType
+   *                 description: The type of the waiting list.
    *     responses:
    *       201:
    *         description: Waiting list successfully reset for contact.
@@ -453,7 +383,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to reset waiting list for contact.
    */
   router.post(
-    '(.*)/contact/waitingList/:nationalRegistrationNumber/reset',
+    '(.*)/contacts/:nationalRegistrationNumber/waitingLists/reset',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const request = <CreateWaitingListRequest>ctx.request.body
@@ -462,7 +392,7 @@ export const routes = (router: KoaRouter) => {
         const res = await removeApplicantFromWaitingList(
           ctx.params.nationalRegistrationNumber,
           request.contactCode,
-          request.waitingListTypeCaption
+          request.waitingListType
         )
 
         if (!res.ok) {
@@ -480,7 +410,7 @@ export const routes = (router: KoaRouter) => {
         await addApplicantToToWaitingList(
           ctx.params.nationalRegistrationNumber,
           request.contactCode,
-          request.waitingListTypeCaption
+          request.waitingListType as WaitingListType
         )
 
         ctx.status = 200

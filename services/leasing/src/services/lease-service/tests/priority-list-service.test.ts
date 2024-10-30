@@ -1,48 +1,14 @@
-import { Lease, LeaseStatus, WaitingList } from 'onecore-types'
+import { Lease, LeaseStatus } from 'onecore-types'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
   isLeaseActiveOrUpcoming,
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
-  parseWaitingListForInternalParkingSpace,
   sortApplicantsBasedOnRentalRules,
 } from '../priority-list-service'
 import * as factory from './factories'
 import { leaseTypes } from '../../../constants/leaseTypes'
-
-const mockedWaitingListWithInteralParkingSpace: WaitingList[] = [
-  {
-    applicantCaption: 'Foo Bar',
-    contactCode: 'P12345',
-    contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-    queuePoints: 45,
-    queuePointsSocialConnection: 0,
-    waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-    waitingListTypeCaption: 'Bostad',
-  },
-  {
-    applicantCaption: 'Foo Bar',
-    contactCode: 'P12345',
-    contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-    queuePoints: 45,
-    queuePointsSocialConnection: 0,
-    waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-    waitingListTypeCaption: 'Bilplats (intern)',
-  },
-]
-
-const mockedWaitingListWithoutInternalParkingSpace: WaitingList[] = [
-  {
-    applicantCaption: 'Foo Bar',
-    contactCode: 'P12345',
-    contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-    queuePoints: 45,
-    queuePointsSocialConnection: 0,
-    waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-    waitingListTypeCaption: 'Bostad',
-  },
-]
 
 //dynamic dates for active and upcoming contracts
 const currentDate = new Date()
@@ -50,24 +16,6 @@ const thirtyDaysInThePastDate = new Date()
 const thirtyDaysInTheFutureDate = new Date()
 thirtyDaysInThePastDate.setDate(currentDate.getDate() + 30)
 thirtyDaysInTheFutureDate.setDate(currentDate.getDate() + 30)
-
-describe('parseWaitingList', () => {
-  it('should return waitingList for internal parking space', async () => {
-    const result = parseWaitingListForInternalParkingSpace(
-      mockedWaitingListWithInteralParkingSpace
-    )
-
-    expect(result).toBeDefined()
-    expect(result).toEqual(mockedWaitingListWithInteralParkingSpace[1])
-  })
-
-  it('should return undefined for waitingList without internal parking space', async () => {
-    const result = parseWaitingListForInternalParkingSpace(
-      mockedWaitingListWithoutInternalParkingSpace
-    )
-    expect(result).toBeUndefined()
-  })
-})
 
 describe('parseLeasesForHousingContract', () => {
   it('should return 1 housing contract if only 1 active housing contract', async () => {

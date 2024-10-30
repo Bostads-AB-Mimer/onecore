@@ -5,14 +5,7 @@
  */
 
 import { logger } from 'onecore-utilities'
-import {
-  DetailedApplicant,
-  Lease,
-  Listing,
-  ParkingSpaceApplicationCategory,
-  parkingSpaceApplicationCategoryTranslation,
-  WaitingList,
-} from 'onecore-types'
+import { DetailedApplicant, Lease, Listing } from 'onecore-types'
 
 import { leaseTypes } from '../../constants/leaseTypes'
 
@@ -190,21 +183,6 @@ const isLeaseActiveOrUpcoming = (lease: Lease): boolean => {
   )
 }
 
-const parseWaitingListForInternalParkingSpace = (
-  waitingLists: WaitingList[]
-): WaitingList | undefined => {
-  for (const waitingList of waitingLists) {
-    if (
-      parkingSpaceApplicationCategoryTranslation[
-        waitingList.waitingListTypeCaption
-      ] == ParkingSpaceApplicationCategory.internal
-    ) {
-      return waitingList
-    }
-  }
-  return undefined
-}
-
 //this function is based on xpand rules that there can be max 1 current active contract and 1 upcoming contract
 const parseLeasesForHousingContracts = (
   leases: Lease[]
@@ -280,7 +258,6 @@ export {
   addPriorityToApplicantsBasedOnRentalRules,
   sortApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
-  parseWaitingListForInternalParkingSpace,
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
   isLeaseActiveOrUpcoming,

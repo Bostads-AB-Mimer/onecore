@@ -603,7 +603,9 @@ export const routes = (router: KoaRouter) => {
             ...applicant,
             contactCode: tenant.data.contactCode,
             nationalRegistrationNumber: tenant.data.nationalRegistrationNumber,
-            queuePoints: tenant.data.queuePoints,
+            queuePoints: tenant.data.parkingSpaceWaitingList
+              ? tenant.data.parkingSpaceWaitingList.queuePoints
+              : 0,
             address: tenant.data.address,
             currentHousingContract: tenant.data.currentHousingContract,
             upcomingHousingContract: tenant.data.upcomingHousingContract,

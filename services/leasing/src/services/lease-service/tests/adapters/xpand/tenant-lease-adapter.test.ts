@@ -1,3 +1,4 @@
+import { WaitingListType } from 'onecore-types'
 import * as tenantLeaseAdapter from '../../../adapters/xpand/tenant-lease-adapter'
 
 jest.mock('knex', () => () => ({
@@ -25,6 +26,8 @@ jest.mock('knex', () => () => ({
           emailAddress: 'noreply@mimer.nu  ',
           keycmobj: '12345',
           contactKey: '_ADBAEC',
+          queueName: 'Bilplats (intern)',
+          queueTime: new Date('2024-10-17T00:00:00.000Z'),
         },
       ])
     )
@@ -75,6 +78,11 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         ],
         emailAddress: 'redacted',
         isTenant: false,
+        parkingSpaceWaitingList: {
+          queuePoints: 13,
+          queueTime: new Date('2024-10-17T00:00:00.000Z'),
+          type: WaitingListType.ParkingSpace,
+        },
       },
     })
   })

@@ -5,7 +5,6 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
-import { WaitingList } from 'onecore-types'
 import { HttpStatusCode } from 'axios'
 
 const app = new Koa()
@@ -14,61 +13,14 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-const mockedWaitingList: WaitingList[] = [
-  {
-    applicantCaption: 'Foo Bar',
-    contactCode: 'P12345',
-    contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-    queuePoints: 45,
-    queuePointsSocialConnection: 0,
-    waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-    waitingListTypeCaption: 'Bostad',
-  },
-  {
-    applicantCaption: 'Foo Bar',
-    contactCode: 'P12345',
-    contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-    queuePoints: 45,
-    queuePointsSocialConnection: 0,
-    waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-    waitingListTypeCaption: 'Bilplats (intern)',
-  },
-]
-describe('GET contact/waitingList', () => {
-  it('should return success', async () => {
-    const xpandAdapterSpy = jest
-      .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockResolvedValue({ ok: true, data: mockedWaitingList })
-
-    const result = await request(app.callback()).get('/contact/waitingList/123')
-
-    expect(xpandAdapterSpy).toHaveBeenCalled()
-    expect(result.status).toEqual(200)
-  })
-
-  it('handles errors', async () => {
-    const xpandAdapterSpy = jest
-      .spyOn(xpandSoapAdapter, 'getWaitingList')
-      .mockImplementation(() => {
-        throw new Error('Oh no')
-      })
-
-    const result = await request(app.callback()).get('/contact/waitingList/123')
-
-    expect(xpandAdapterSpy).toHaveBeenCalled()
-    expect(result.status).toEqual(HttpStatusCode.InternalServerError)
-    expect(result.body).toEqual({ error: 'Oh no' })
-  })
-})
-
-describe('POST contact/waitingList', () => {
+describe('POST contacts/1234567890/waitingList', () => {
   it('should return success', async () => {
     const xpandAdapterSpy = jest
       .spyOn(xpandSoapAdapter, 'addApplicantToToWaitingList')
       .mockResolvedValue()
 
     const result = await request(app.callback()).post(
-      '/contact/waitingList/123'
+      '/contacts/1234567890/waitingLists'
     )
 
     expect(xpandAdapterSpy).toHaveBeenCalled()
@@ -83,7 +35,7 @@ describe('POST contact/waitingList', () => {
       })
 
     const result = await request(app.callback()).post(
-      '/contact/waitingList/123'
+      '/contacts/1234567890/waitingLists'
     )
 
     expect(xpandAdapterSpy).toHaveBeenCalled()

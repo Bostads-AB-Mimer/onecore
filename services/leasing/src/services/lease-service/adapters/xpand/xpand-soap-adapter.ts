@@ -3,9 +3,9 @@ import { XMLParser } from 'fast-xml-parser'
 import createHttpError from 'http-errors'
 
 import Config from '../../../../common/config'
-import { WaitingList } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { AdapterResult } from '../types'
+import { WaitingListType } from 'onecore-types'
 
 const createLease = async (
   fromDate: Date,
@@ -85,71 +85,34 @@ const createLease = async (
   }
 }
 
-const getWaitingList = async (
-  nationalRegistrationNumber: string
-): Promise<AdapterResult<Array<WaitingList>, 'not-found'>> => {
-  const headers = getHeaders()
-
-  const xml = `
-   <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ser="http://incit.xpand.eu/service/" xmlns:inc="http://incit.xpand.eu/">
-   <soap:Header xmlns:wsa='http://www.w3.org/2005/08/addressing'><wsa:Action>http://incit.xpand.eu/service/GetWaitingListTimes/GetWaitingListTimes</wsa:Action><wsa:To>${Config.xpandSoap.url}</wsa:To></soap:Header>
-   <soap:Body>
-      <ser:GetDataByContactRequest>
-         <inc:CivicNumber>${nationalRegistrationNumber}</inc:CivicNumber><!--add as param:-->
-         <inc:CompanyCode>001</inc:CompanyCode>
-         <inc:MessageCulture>${Config.xpandSoap.messageCulture}</inc:MessageCulture>
-      </ser:GetDataByContactRequest>
-   </soap:Body>
-</soap:Envelope>`
-
-  const { response } = await soapRequest({
-    url: Config.xpandSoap.url,
-    headers: headers,
-    xml: xml,
-  })
-  const { body } = response
-
-  const options = {
-    ignoreAttributes: false,
-    ignoreNameSpace: false,
-    removeNSPrefix: true,
+const addApplicantToToWaitingList = async (
+  nationalRegistrationNumber: string,
+  contactCode: string,
+  waitingListType: WaitingListType.ParkingSpace
+) => {
+  if (waitingListType == WaitingListType.ParkingSpace) {
+    await addToWaitingList(
+      nationalRegistrationNumber,
+      contactCode,
+      'Bilplats (intern)'
+    )
+    await addToWaitingList(
+      nationalRegistrationNumber,
+      contactCode,
+      'Bilplats (extern)'
+    )
+    return
   }
-
-  const parser = new XMLParser(options)
-
-  const parsedResponse =
-    parser.parse(body)['Envelope']['Body']['GetWaitingListTimeResult']
-
-  if (!parsedResponse['WaitingListTimes']) {
-    return { ok: false, err: 'not-found' }
-  } else {
-    try {
-      const waitingList: WaitingList[] = []
-
-      for (const item of parsedResponse['WaitingListTimes'][
-        'WaitingListTimeDataContract'
-      ]) {
-        const newItem: WaitingList = {
-          applicantCaption: item.ApplicantCaption,
-          contactCode: item.ApplicantCode,
-          contractFromApartment: new Date(item.ContractFromApartment),
-          queuePoints: item.QueuePoints,
-          queuePointsSocialConnection: item.QueuePointsSocialConnection,
-          waitingListFrom: new Date(item.WaitingListFrom),
-          waitingListTypeCaption: item.WaitingListTypeCaption,
-        }
-
-        waitingList.push(newItem)
-      }
-      return { ok: true, data: waitingList }
-    } catch (e) {
-      logger.error(e, 'Error getting waiting list using Xpand SOAP API')
-      throw createHttpError(500, 'Unknown error when parsing body')
-    }
-  }
+  logger.error(
+    `Add to Waiting list type ${waitingListType} not implemented yet`
+  )
+  throw createHttpError(
+    500,
+    `Add to Waiting list type ${waitingListType} not implemented yet`
+  )
 }
 
-const addApplicantToToWaitingList = async (
+const addToWaitingList = async (
   nationalRegistrationNumber: string,
   contactCode: string,
   waitingListTypeCaption: string
@@ -207,6 +170,31 @@ const addApplicantToToWaitingList = async (
 }
 
 const removeApplicantFromWaitingList = async (
+  nationalRegistrationNumber: string,
+  contactCode: string,
+  waitingListType: WaitingListType
+): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
+  if (waitingListType == WaitingListType.ParkingSpace) {
+    await removeFromWaitingList(
+      nationalRegistrationNumber,
+      contactCode,
+      'Bilplats (intern)'
+    )
+    return await removeFromWaitingList(
+      nationalRegistrationNumber,
+      contactCode,
+      'Bilplats (extern)'
+    )
+  }
+  logger.error(
+    `Remove from Waiting list type ${waitingListType} not implemented yet`
+  )
+  throw createHttpError(
+    500,
+    `Remove from Waiting list type ${waitingListType} not implemented yet`
+  )
+}
+const removeFromWaitingList = async (
   nationalRegistrationNumber: string,
   contactCode: string,
   waitingListTypeCaption: string
@@ -345,7 +333,6 @@ function getHeaders() {
 
 export {
   createLease,
-  getWaitingList,
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
   healthCheck,
