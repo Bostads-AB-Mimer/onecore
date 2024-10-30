@@ -45,11 +45,11 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
     const toField = JSON.stringify({
       to: email.to,
       placeholders: {
-        adress: email.address,
+        address: email.address,
         firstName: email.firstName,
-        availableFrom: email.availableFrom,
-        deadlineDate: email.deadlineDate,
-        rent: email.rent,
+        availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+        deadlineDate: dateFormatter.format(new Date(email.availableFrom)),
+        rent: formatToSwedishCurrency(email.rent),
         type: email.type,
         parkingSpaceId: email.parkingSpaceId,
         objectId: email.objectId,
@@ -74,6 +74,20 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
     throw error;
   }
 };
+
+const formatToSwedishCurrency = (numberStr: string) => {
+  const number = parseFloat(numberStr);
+
+  const formattedNumber = new Intl.NumberFormat('sv-SE', {
+    //render max 2 decimals if there are decimals, otherwise render 0 decimals
+    minimumFractionDigits: number % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: number % 1 === 0 ? 0 : 2,
+  }).format(number);
+
+  return formattedNumber + ' kr';
+}
+
+const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
 
 export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
   try {
