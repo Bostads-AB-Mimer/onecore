@@ -288,5 +288,34 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         expect.objectContaining({ id: historicalListing.data.id }),
       ])
     })
+
+    it('only gets needs-republish listings', async () => {
+      const activeListing = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
+      )
+
+      assert(activeListing.ok)
+      const needsRepublishListing = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '2',
+          status: ListingStatus.NoApplicants,
+        })
+      )
+
+      assert(needsRepublishListing.ok)
+
+      const listings = await listingAdapter.getListingsWithApplicants({
+        by: { type: 'needs-republish' },
+      })
+
+      assert(listings.ok)
+
+      expect(listings.data).toEqual([
+        expect.objectContaining({ id: needsRepublishListing.data.id }),
+      ])
+    })
   })
 })

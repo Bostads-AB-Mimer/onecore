@@ -291,6 +291,9 @@ const getListingsWithApplicants = async (
           [ListingStatus.Expired, OfferStatus.Active]
         )
       )
+      .with({ type: 'needs-republish' }, () =>
+        db.raw(`WHERE l.Status = ?`, [ListingStatus.NoApplicants])
+      )
       .otherwise(() => db.raw('WHERE 1=1'))
 
     const listings = db.raw<Array<DbListing & { applicants: string | null }>>(

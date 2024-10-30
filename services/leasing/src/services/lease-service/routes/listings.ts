@@ -373,7 +373,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [published, ready-for-offer, offered, historical]
+   *           enum: [published, ready-for-offer, offered, historical, needs-republish]
    *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
@@ -417,7 +417,13 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const opts = match(ctx.query.type)
       .with(
-        P.union('published', 'ready-for-offer', 'offered', 'historical'),
+        P.union(
+          'published',
+          'ready-for-offer',
+          'offered',
+          'historical',
+          'needs-republish'
+        ),
         (type) => ({ by: { type } })
       )
       .otherwise(() => undefined)
