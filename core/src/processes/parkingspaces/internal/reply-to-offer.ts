@@ -1,5 +1,5 @@
 import {
-  CreateOfferErrorCodes,
+  ListingStatus,
   OfferStatus,
   OfferWithRentalObjectCode,
   ReplyToOfferErrorCodes,
@@ -148,6 +148,16 @@ export const acceptOffer = async (
       logger.error(closeOffer.err)
     }
 
+    const closeListing = await leasingAdapter.updateListingStatus(
+      listing.id,
+      ListingStatus.Closed
+    )
+
+    if (!closeListing.ok) {
+      log.push(`Something went wrong when closing the listing ${listing.id}.`)
+      logger.error(closeListing.err)
+    }
+
     try {
       //send notification to the leasing team with the log with any failures
       await communicationAdapter.sendNotificationToRole(
@@ -161,6 +171,11 @@ export const acceptOffer = async (
     }
 
     logger.debug(log)
+    communicationAdapter.sendNotificationToRole(
+      'dev',
+      `Accept offer - summary`,
+      log.join('\n')
+    )
 
     return {
       processStatus: ProcessStatus.successful,

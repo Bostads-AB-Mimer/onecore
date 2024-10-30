@@ -1,5 +1,4 @@
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
-// import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 
 import { OfferStatus, ReplyToOfferErrorCodes } from 'onecore-types'
@@ -30,8 +29,6 @@ describe('replyToOffer', () => {
   )
 
   beforeEach(jest.resetAllMocks)
-  // afterEach(createLeaseSpy.mockClear)
-  // afterEach(createLeaseSpy.mockReset)
 
   describe('acceptOffer', () => {
     it('returns a process error if no offer found', async () => {
@@ -209,6 +206,43 @@ describe('replyToOffer', () => {
       })
 
       expect(denyOfferSpy).toHaveBeenCalledTimes(2)
+      denyOfferSpy.mockRestore()
+    })
+
+    it('closes accepted offers listing', async () => {
+      const closeOfferSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+      closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+
+      jest.spyOn(leasingAdapter, 'getOffersForContact').mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+
+      const denyOfferSpy = jest
+        .spyOn(replyProcesses, 'denyOffer')
+        .mockResolvedValue({
+          processStatus: ProcessStatus.successful,
+        } as ProcessResult)
+
+      const updateListingStatusSpy = jest
+        .spyOn(leasingAdapter, 'updateListingStatus')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toMatchObject({
+        processStatus: ProcessStatus.successful,
+      })
+
+      expect(updateListingStatusSpy).toHaveBeenCalledTimes(1)
       denyOfferSpy.mockRestore()
     })
   })
