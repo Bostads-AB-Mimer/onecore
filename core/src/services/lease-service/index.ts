@@ -1224,6 +1224,64 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /listings/{listingId}/status:
+   *   put:
+   *     summary: Update a listings status by ID
+   *     description: Updates a listing status by it's ID.
+   *     tags:
+   *       - Listings
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to delete.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *       properties:
+   *         status:
+   *           type: number
+   *           description: The listing status.
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.put('(.*)/listings/:listingId/status', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.updateListingStatus(
+      Number(ctx.params.listingId),
+      ctx.request.body.status
+    )
+
+    if (!result.ok) {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { ...metadata, error: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
+  })
+
+  /**
+   * @swagger
    * /applicants/{contactCode}/{listingId}:
    *   get:
    *     summary: Get applicant by contact code and listing ID

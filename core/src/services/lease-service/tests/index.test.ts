@@ -12,6 +12,8 @@ import {
   ConsumerReport,
   ReplyToOfferErrorCodes,
   GetActiveOfferByListingIdErrorCodes,
+  ListingStatus,
+  UpdateListingStatusErrorCodes,
 } from 'onecore-types'
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
@@ -21,6 +23,7 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+beforeEach(jest.clearAllMocks)
 describe('lease-service', () => {
   let leaseMock: Lease, consumerReportMock: ConsumerReport
 
@@ -558,6 +561,55 @@ describe('lease-service', () => {
       expect(res.body).toMatchObject({
         content: expect.objectContaining({ id: expect.any(Number) }),
       })
+    })
+  })
+
+  describe('PUT /listings/:listingId/status', () => {
+    it('responds with 400 if leasing responds with 400', async () => {
+      const updateListingStatus = jest
+        .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: UpdateListingStatusErrorCodes.BadRequest,
+          statusCode: 400,
+        })
+
+      const res = await request(app.callback())
+        .put('/listings/1/status')
+        .send({ status: 'foo' })
+
+      expect(res.status).toBe(400)
+      expect(updateListingStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('responds with 404 if listing was not found', async () => {
+      const updateListingStatus = jest
+        .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: UpdateListingStatusErrorCodes.NotFound,
+          statusCode: 404,
+        })
+
+      const res = await request(app.callback())
+        .put('/listings/1/status')
+        .send({ status: ListingStatus.Expired })
+
+      expect(res.status).toBe(404)
+      expect(updateListingStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('responds with 200 on success', async () => {
+      const updateListingStatus = jest
+        .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put('/listings/1/status')
+        .send({ status: ListingStatus.Expired })
+
+      expect(res.status).toBe(200)
+      expect(updateListingStatus).toHaveBeenCalledTimes(1)
     })
   })
 })

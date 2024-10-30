@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from 'onecore-utilities'
-import { AxiosError, HttpStatusCode } from 'axios'
+import { AxiosError } from 'axios'
 import dayjs from 'dayjs'
 import {
   ConsumerReport,
@@ -8,25 +8,16 @@ import {
   InvoiceTransactionType,
   Lease,
   WaitingList,
-  Listing,
   Applicant,
   ApplicantStatus,
   ApplicantWithListing,
-  Offer,
   DetailedApplicant,
-  OfferWithRentalObjectCode,
-  DetailedOffer,
   Tenant,
-  InternalParkingSpaceSyncSuccessResponse,
-  CreateOfferParams,
-  OfferWithOfferApplicants,
-  GetActiveOfferByListingIdErrorCodes,
-  ListingStatus,
-  UpdateListingStatusErrorCodes,
 } from 'onecore-types'
 
-import config from '../common/config'
-import { AdapterResult } from './types'
+import { AdapterResult } from './../types'
+import config from '../../common/config'
+import { getListingByListingId } from './listings'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -302,111 +293,6 @@ const resetWaitingList = async (
   }
 }
 
-const createNewListing = async (
-  listingData: Listing
-): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
-  try {
-    const response = await axios.post(
-      `${tenantsLeasesServiceUrl}/listings`,
-      listingData
-    )
-
-    if (response.status === HttpStatusCode.Conflict) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    if (response.status === HttpStatusCode.Created) {
-      return { ok: true, data: response.data.content }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (error) {
-    logger.error(error, 'Error creating new listing:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const applyForListing = async (
-  applicantData: Omit<Applicant, 'id'>
-): Promise<AdapterResult<Applicant, 'conflict' | 'unknown'>> => {
-  try {
-    const res = await axios.post(
-      `${tenantsLeasesServiceUrl}/listings/apply`,
-      applicantData
-    )
-
-    if (res.status === HttpStatusCode.Conflict) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    return { ok: true, data: res.data.content }
-  } catch (error) {
-    logger.error(error, 'Error applying for listing:', error)
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getListingByListingId = async (
-  listingId: number
-): Promise<Listing | undefined> => {
-  try {
-    const result = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/by-id/${listingId}`
-    )
-    return result.data.content
-  } catch (error) {
-    logger.error(error, 'Error fetching listing by rental object code')
-    return undefined
-  }
-}
-
-const getListingByRentalObjectCode = async (
-  rentalObjectCode: string
-): Promise<AdapterResult<Listing | undefined, 'not-found' | 'unknown'>> => {
-  try {
-    const res = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
-    )
-
-    if (res.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: true, data: res.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching listing by rental object code:', error)
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getListingsWithApplicants = async (
-  querystring: string
-): Promise<AdapterResult<Listing[], 'unknown'>> => {
-  try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings-with-applicants?${querystring}`
-    )
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching listings with applicants:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getExpiredListingsWithNoOffers = async (): Promise<
-  AdapterResult<Listing[], 'unknown'>
-> => {
-  try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/readyforoffers`
-    )
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching exired listings without offers:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 const getApplicantsByContactCode = async (
   contactCode: string
 ): Promise<any[] | undefined> => {
@@ -537,88 +423,6 @@ const withdrawApplicantByUser = async (
   }
 }
 
-const createOffer = async (
-  params: CreateOfferParams
-): Promise<AdapterResult<Omit<Offer, 'selectedApplicants'>, 'unknown'>> => {
-  try {
-    const response = await axios.post<{ content: Offer }>(
-      `${tenantsLeasesServiceUrl}/offer`,
-      params
-    )
-
-    return { ok: true, data: response.data.content }
-  } catch (err) {
-    logger.error(err, 'Error creating offer:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getOfferByOfferId = async (
-  offerId: number
-): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> => {
-  try {
-    const res = await axios(`${tenantsLeasesServiceUrl}/offers/${offerId}`)
-
-    if (res.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'not-found' }
-    }
-    return { ok: true, data: res.data.content }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getOfferByOfferId')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getOffersByListingId = async (
-  listingId: number
-): Promise<AdapterResult<Array<OfferWithOfferApplicants>, 'unknown'>> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/offers/listing-id/${listingId}`
-    )
-
-    return { ok: true, data: res.data.content }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getOffersByListingId')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getActiveOfferByListingId = async (
-  listingId: number
-): Promise<AdapterResult<Offer, GetActiveOfferByListingIdErrorCodes>> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/offers/listing-id/${listingId}/active`
-    )
-
-    if (!res.data.content) {
-      return {
-        ok: false,
-        err: GetActiveOfferByListingIdErrorCodes.NotFound,
-        statusCode: res.status,
-      }
-    }
-
-    return { ok: true, data: res.data.content, statusCode: res.status }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getActiveOfferByListingId')
-    if (err instanceof AxiosError) {
-      return {
-        ok: false,
-        err: GetActiveOfferByListingIdErrorCodes.Unknown,
-        statusCode: err.response?.status ?? 500,
-      }
-    } else {
-      return {
-        ok: false,
-        err: GetActiveOfferByListingIdErrorCodes.Unknown,
-        statusCode: 500,
-      }
-    }
-  }
-}
-
 const updateApplicantStatus = async (params: {
   contactCode: string
   applicantId: number
@@ -633,46 +437,6 @@ const updateApplicantStatus = async (params: {
   } catch (err) {
     logger.error(err, 'Error updating applicant status')
     throw err
-  }
-}
-
-const getOffersForContact = async (
-  contactCode: string
-): Promise<
-  AdapterResult<OfferWithRentalObjectCode[], 'not-found' | 'unknown'>
-> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/offers`
-    )
-
-    if (res.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: true, data: res.data.content }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getOffersForContact')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getOfferByContactCodeAndOfferId = async (
-  contactCode: string,
-  offerId: string
-): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/offers/${offerId}/applicants/${contactCode}`
-    )
-
-    if (res.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'not-found' }
-    }
-    return { ok: true, data: res.data.content }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getOffersForContact')
-    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -760,132 +524,9 @@ const validatePropertyRentalRules = async (
   }
 }
 
-const syncInternalParkingSpacesFromXpand = async () => {
-  try {
-    const res = await axios.post<{
-      content: InternalParkingSpaceSyncSuccessResponse
-    }>(`${tenantsLeasesServiceUrl}/listings/sync-internal-from-xpand`)
-
-    if (res.status !== 200) {
-      return { ok: false, err: 'unknown' } as const
-    }
-
-    return { ok: true, data: res.data.content } as const
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.syncInternalParkingSpacesFromXpand')
-    return { ok: false, err: 'unknown' } as const
-  }
-}
-
-const deleteListing = async (
-  listingId: number
-): Promise<
-  AdapterResult<
-    null,
-    {
-      tag: 'conflict' | 'unknown'
-      data: unknown
-    }
-  >
-> => {
-  const res = await axios.delete(
-    `${tenantsLeasesServiceUrl}/listings/${listingId}`
-  )
-
-  if (res.status === 200) {
-    return { ok: true, data: null }
-  }
-
-  if (res.status === 409) {
-    return { ok: false, err: { tag: 'conflict', data: res.data } }
-  }
-
-  return { ok: false, err: { tag: 'unknown', data: res.data } }
-}
-
-async function updateListingStatus(
-  listingId: number,
-  status: ListingStatus
-): Promise<AdapterResult<null, UpdateListingStatusErrorCodes>> {
-  try {
-    const res = await axios.put(
-      `${tenantsLeasesServiceUrl}/listings/${listingId}/status`,
-      { status }
-    )
-
-    if (res.status !== 200) {
-      if (res.status === 404) {
-        return { ok: false, err: UpdateListingStatusErrorCodes.NotFound }
-      } else {
-        return { ok: false, err: UpdateListingStatusErrorCodes.Unknown }
-      }
-    }
-
-    return { ok: true, data: null }
-  } catch (err) {
-    logger.error({ err }, 'leasingAdapter.updateListingStatus')
-    return { ok: false, err: UpdateListingStatusErrorCodes.Unknown }
-  }
-}
-
-async function closeOfferByAccept(
-  offerId: number
-): Promise<AdapterResult<null, 'offer-not-found' | 'unknown'>> {
-  const res = await axios.put(
-    `${tenantsLeasesServiceUrl}/offers/${offerId}/close-by-accept`
-  )
-
-  if (res.status === 200) {
-    return { ok: true, data: null }
-  }
-
-  if (res.status === 404) {
-    return { ok: false, err: 'offer-not-found' }
-  }
-
-  return { ok: false, err: 'unknown' }
-}
-
-async function closeOfferByDeny(
-  offerId: number
-): Promise<AdapterResult<null, 'offer-not-found' | 'unknown'>> {
-  const res = await axios.put(
-    `${tenantsLeasesServiceUrl}/offers/${offerId}/deny`
-  )
-
-  if (res.status === 200) {
-    return { ok: true, data: null }
-  }
-
-  if (res.status === 404) {
-    return { ok: false, err: 'offer-not-found' }
-  }
-
-  return { ok: false, err: 'unknown' }
-}
-
-const handleExpiredOffers = async (): Promise<
-  AdapterResult<null | number[], 'unknown'>
-> => {
-  const res = await axios.put(`${tenantsLeasesServiceUrl}/offers/handleexpired`)
-
-  if (res.status === 200) {
-    return { ok: true, data: res.data.content }
-  } else {
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 export {
   addApplicantToWaitingList,
-  applyForListing,
-  closeOfferByAccept,
-  closeOfferByDeny,
   createLease,
-  createNewListing,
-  createOffer,
-  deleteListing,
-  getActiveOfferByListingId,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,
@@ -895,29 +536,42 @@ export {
   getContactForPnr,
   getContactsDataBySearchQuery,
   getCreditInformation,
-  getExpiredListingsWithNoOffers,
   getInternalCreditInformation,
   getLease,
   getLeasesForPnr,
   getLeasesForPropertyId,
   getDetailedApplicantsByListingId,
-  getListingByListingId,
-  getListingByRentalObjectCode,
-  getListingsWithApplicants,
-  getOfferByContactCodeAndOfferId,
-  getOfferByOfferId,
-  getOffersByListingId,
-  getOffersForContact,
   getTenantByContactCode,
   getWaitingList,
-  handleExpiredOffers,
   resetWaitingList,
   setApplicantStatusActive,
-  syncInternalParkingSpacesFromXpand,
   updateApplicantStatus,
-  updateListingStatus,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
 }
+
+export {
+  applyForListing,
+  createNewListing,
+  deleteListing,
+  getListingByListingId,
+  getListingByRentalObjectCode,
+  getListingsWithApplicants,
+  syncInternalParkingSpacesFromXpand,
+  updateListingStatus,
+  getExpiredListingsWithNoOffers,
+} from './listings'
+
+export {
+  closeOfferByAccept,
+  closeOfferByDeny,
+  createOffer,
+  getActiveOfferByListingId,
+  getOfferByContactCodeAndOfferId,
+  getOfferByOfferId,
+  getOffersByListingId,
+  getOffersForContact,
+  handleExpiredOffers,
+} from './offers'

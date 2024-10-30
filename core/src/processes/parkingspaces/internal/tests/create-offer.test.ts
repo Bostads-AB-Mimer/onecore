@@ -94,12 +94,10 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
       .mockResolvedValueOnce({ ok: true, data: [] })
 
-    jest
-      .spyOn(leasingAdapter, 'updateListingStatus')
-      .mockResolvedValueOnce({
-        ok: false,
-        err: UpdateListingStatusErrorCodes.NotFound,
-      })
+    jest.spyOn(leasingAdapter, 'updateListingStatus').mockResolvedValueOnce({
+      ok: false,
+      err: UpdateListingStatusErrorCodes.NotFound,
+    })
 
     const result = await createOfferForInternalParkingSpace(123)
 
