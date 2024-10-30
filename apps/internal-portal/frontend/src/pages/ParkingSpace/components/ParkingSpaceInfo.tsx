@@ -21,6 +21,11 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
     createOffer.mutate(props, {})
   }
 
+  const getMapImageUrl = (rentalObjectCodes: string) => {
+    const identifier = rentalObjectCodes.slice(0, 7)
+    return `https://pub.mimer.nu/bofaktablad/mediabank/byggnad/${identifier}_1.jpg`
+  }
+
   const renderStartOfferProcessButton = (listingStatus: ListingStatus) => {
     if (listingStatus == ListingStatus.Expired) {
       return (
@@ -43,8 +48,20 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" gap="4rem">
-        <Box flex="0.5" paddingX="1rem">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '4rem',
+          height: '21rem',
+          '@media (max-width: 62.5rem)': {
+            flexDirection: 'column',
+            gap: '2rem',
+            height: 'auto',
+          },
+        }}
+      >
+        <Box flex="0.25" paddingX="1rem" sx={{ minWidth: '400px' }}>
           <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Bilplats</Typography>
             <Box>
@@ -115,7 +132,30 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             </Box>
           </Box>
         </Box>
-        <Box border="1px solid black" flex="1" />
+        <Box
+          flex="1"
+          sx={{
+            width: '100%',
+            cursor: 'pointer',
+          }}
+          onClick={() =>
+            window.open(
+              getMapImageUrl(parkingSpaceListing.rentalObjectCode),
+              '_blank'
+            )
+          }
+        >
+          <Box
+            component="img"
+            src={getMapImageUrl(parkingSpaceListing.rentalObjectCode)}
+            alt="parking space map image"
+            sx={{
+              objectFit: 'contain',
+              maxWidth: '100%',
+              maxHeight: '100%',
+            }}
+          />
+        </Box>
       </Box>
       {renderStartOfferProcessButton(parkingSpaceListing.status)}
     </Box>
