@@ -8,7 +8,7 @@ import {
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-export type ListingWithOffer = Listing & { offer: Offer }
+export type ListingWithOffer = Listing & { offer: Offer | null }
 
 export const useParkingSpaceListings = (
   type: GetListingWithApplicantFilterByType

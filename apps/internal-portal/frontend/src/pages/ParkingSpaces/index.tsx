@@ -19,6 +19,7 @@ import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
 import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
 import { DeleteListing } from './components/DeleteListing'
+import { CloseListing } from './components/CloseListing'
 
 const ParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
@@ -82,11 +83,18 @@ const ParkingSpaces = () => {
           />
           <Tab disableRipple label="Erbjudna" value="offered" />
           <Tab disableRipple label="Historik" value="historical" />
+          <Tab
+            disableRipple
+            label="Behov av publicering"
+            value="needs-republish"
+          />
         </Tabs>
         <Box paddingTop="1rem">
           <TabPanel value="published" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter)}
+              columns={getColumns(dateFormatter, numberFormatter).concat(
+                getActionColumns()
+              )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="published"
@@ -94,7 +102,9 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="ready-for-offer" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter)}
+              columns={getColumns(dateFormatter, numberFormatter).concat(
+                getActionColumns()
+              )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="ready-for-offer"
@@ -102,7 +112,9 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
-              columns={getOfferedColumns(dateFormatter, numberFormatter)}
+              columns={getOfferedColumns(dateFormatter, numberFormatter).concat(
+                getActionColumns()
+              )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="offered"
@@ -110,10 +122,22 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter)}
+              columns={getColumns(dateFormatter, numberFormatter).concat(
+                getActionColumns()
+              )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="historical"
+            />
+          </TabPanel>
+          <TabPanel value="needs-republish" sx={{ padding: 0 }}>
+            <Listings
+              columns={getColumns(dateFormatter, numberFormatter).concat(
+                getRepublishActionColumns()
+              )}
+              rows={filterListings(parkingSpaces.data ?? [], searchString)}
+              loading={parkingSpaces.status === 'pending'}
+              key="needs-republish"
             />
           </TabPanel>
         </Box>
@@ -144,7 +168,7 @@ const Listings = (props: {
         </Stack>
       ),
     }}
-    columns={props.columns.concat(getActionColumns())}
+    columns={props.columns}
     rows={props.rows}
     getRowId={(row) => row.id}
     loading={props.loading}
@@ -181,6 +205,34 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
           listing={row}
         />,
       ],
+    },
+    {
+      field: 'action-link',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      flex: 0.5,
+      disableColumnMenu: true,
+      renderCell: (v) => (
+        <Link to={`/parkingspace/${v.id}`}>
+          <IconButton sx={{ color: 'black' }}>
+            <Chevron />
+          </IconButton>
+        </Link>
+      ),
+    },
+  ]
+}
+
+const getRepublishActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
+  return [
+    {
+      field: 'actions',
+      type: 'actions',
+      flex: 1,
+      minWidth: 250,
+      cellClassName: 'actions',
+      getActions: ({ row }) => [<CloseListing key={0} listingId={row.id} />],
     },
     {
       field: 'action-link',

@@ -8,8 +8,9 @@ import {
   IconButton,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import { LoadingButton } from '@mui/lab'
 
-interface ReplyDialogProps {
+interface ActionDialogProps {
   open: boolean
   onClose: () => void
   onConfirm: () => void
@@ -17,6 +18,7 @@ interface ReplyDialogProps {
   content: string
   submitButtonText: string
   isPending: boolean
+  error?: JSX.Element
 }
 
 export const ActionDialog = ({
@@ -27,10 +29,11 @@ export const ActionDialog = ({
   content,
   submitButtonText,
   isPending,
-}: ReplyDialogProps) => {
+  error,
+}: ActionDialogProps) => {
   return (
     <Dialog onClose={onClose} open={open} maxWidth="xs">
-      <Box padding="1rem">
+      <Box>
         <Box display="flex">
           <DialogTitle variant="h2" textAlign="left">
             {title}
@@ -51,6 +54,7 @@ export const ActionDialog = ({
           <Typography textAlign="center" paddingTop="1rem" paddingBottom="2rem">
             {content}
           </Typography>
+          {error && error}
           <Box
             display="flex"
             gap="6rem"
@@ -64,9 +68,13 @@ export const ActionDialog = ({
             >
               Avbryt
             </Button>
-            <Button variant="dark" onClick={onConfirm} disabled={isPending}>
+            <LoadingButton
+              variant="dark"
+              onClick={onConfirm}
+              loading={isPending}
+            >
               {submitButtonText}
-            </Button>
+            </LoadingButton>
           </Box>
         </DialogContent>
       </Box>
