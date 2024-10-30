@@ -41,7 +41,7 @@ const ParkingSpaceTabs = (props: { listingId: number }) => {
   })
 
   const [selectedTab, setSelectedTab] = useState(() => {
-    if (data.offers) {
+    if (data.offers && data.offers.length > 0) {
       return String(data.offers[data.offers.length - 1].id)
     }
     return '1'
