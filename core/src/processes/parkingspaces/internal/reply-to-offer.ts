@@ -3,6 +3,7 @@ import {
   OfferStatus,
   OfferWithRentalObjectCode,
   ReplyToOfferErrorCodes,
+  WaitingListType,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
@@ -102,32 +103,17 @@ export const acceptOffer = async (
       )
     }
 
-    //Reset internal waiting list
-    const internalWaitingListResult = await leasingAdapter.resetWaitingList(
+    //Reset waiting list
+    const waitingListResult = await leasingAdapter.resetWaitingList(
       offer.offeredApplicant.nationalRegistrationNumber,
       offer.offeredApplicant.contactCode,
-      'Bilplats (intern)'
+      WaitingListType.ParkingSpace
     )
-    if (!internalWaitingListResult.ok) {
+    if (!waitingListResult.ok) {
       log.push(
-        'Kunde inte återställa köpoäng för interna bilplatser: ' +
-          internalWaitingListResult.err
+        'Kunde inte återställa köpoäng för bilplatser: ' + waitingListResult.err
       )
-      logger.error(internalWaitingListResult.err)
-    }
-
-    //Reset external waiting list
-    const externalWaitingListResult = await leasingAdapter.resetWaitingList(
-      offer.offeredApplicant.nationalRegistrationNumber,
-      offer.offeredApplicant.contactCode,
-      'Bilplats (extern)'
-    )
-    if (!externalWaitingListResult.ok) {
-      log.push(
-        'Kunde inte återställa köpoäng för externa bilplatser: ' +
-          externalWaitingListResult.err
-      )
-      logger.error(externalWaitingListResult.err)
+      logger.error(waitingListResult.err)
     }
 
     //Deny other offers for this contact

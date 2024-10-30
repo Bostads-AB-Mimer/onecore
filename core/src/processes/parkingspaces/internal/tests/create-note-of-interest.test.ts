@@ -4,7 +4,7 @@ import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
-import { ApplicantStatus, ListingStatus } from 'onecore-types'
+import { ApplicantStatus, ListingStatus, WaitingListType } from 'onecore-types'
 import * as factory from '../../../../../test/factories'
 import * as processUtils from '../../utils'
 import { ListingFactory } from '../../../../../test/factories/listing'
@@ -35,6 +35,11 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   const mockedContact = factory.contact.build({
     contactCode: 'P12345',
     nationalRegistrationNumber: '1212121212',
+    parkingSpaceWaitingList: {
+      queuePoints: 5,
+      queueTime: new Date(),
+      type: WaitingListType.ParkingSpace,
+    },
   })
   const mockedApplicant = factory.applicant.build({
     contactCode: mockedContact.contactCode,
@@ -50,21 +55,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     applicants: undefined,
   })
 
-  const mockedWaitingList = [
-    factory.waitingList.build({
-      waitingListTypeCaption: 'Bostad',
-      contactCode: mockedContact.contactCode,
-    }),
-    factory.waitingList.build({
-      waitingListTypeCaption: 'Bilplats (intern)',
-      contactCode: mockedContact.contactCode,
-    }),
-    factory.waitingList.build({
-      waitingListTypeCaption: 'Bilplats (extern)',
-      contactCode: mockedContact.contactCode,
-    }),
-  ]
-
   const getContactSpy = jest
     .spyOn(leasingAdapter, 'getContact')
     .mockResolvedValue({ ok: true, data: mockedContact })
@@ -74,9 +64,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   const getInternalCreditInformationSpy = jest
     .spyOn(leasingAdapter, 'getInternalCreditInformation')
     .mockResolvedValue(true)
-  const getWaitingListSpy = jest
-    .spyOn(leasingAdapter, 'getWaitingList')
-    .mockResolvedValue(mockedWaitingList)
   const applyForListingSpy = jest.spyOn(leasingAdapter, 'applyForListing')
   const addApplicantToWaitingListSpy = jest
     .spyOn(leasingAdapter, 'addApplicantToWaitingList')
@@ -280,22 +267,17 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     expect(result.httpStatus).toBe(400)
   })
 
-  it('adds applicant to internal waiting list if not in it already', async () => {
-    getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
+  it('adds applicant to waiting list if not in it already', async () => {
+    getContactSpy.mockResolvedValue({
+      ok: true,
+      data: factory.contact.build({
+        contactCode: mockedContact.contactCode,
+        nationalRegistrationNumber: mockedContact.nationalRegistrationNumber,
+      }),
+    })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue([
-      {
-        applicantCaption: 'Foo Bar',
-        contactCode: 'P12345',
-        contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-        queuePoints: 45,
-        queuePointsSocialConnection: 0,
-        waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-        waitingListTypeCaption: 'Bostad',
-      },
-    ])
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     addApplicantToWaitingListSpy.mockResolvedValue({} as any)
 
@@ -308,56 +290,20 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     expect(addApplicantToWaitingListSpy).toHaveBeenCalledWith(
       '1212121212',
       'P12345',
-      'Bilplats (intern)'
-    )
-  })
-
-  it('adds applicant to external waiting list if not in it already', async () => {
-    getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
-    getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
-    getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue([
-      {
-        applicantCaption: 'Foo Bar',
-        contactCode: 'P12345',
-        contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-        queuePoints: 45,
-        queuePointsSocialConnection: 0,
-        waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-        waitingListTypeCaption: 'Bostad',
-      },
-      {
-        applicantCaption: 'Foo Bar',
-        contactCode: 'P12345',
-        contractFromApartment: new Date('2024-02-29T23:00:00.000Z'),
-        queuePoints: 45,
-        queuePointsSocialConnection: 0,
-        waitingListFrom: new Date('2024-01-31T23:00:00.000Z'),
-        waitingListTypeCaption: 'Bilplats (intern)',
-      },
-    ])
-    applyForListingSpy.mockResolvedValue({ status: 201 } as any)
-    addApplicantToWaitingListSpy.mockResolvedValue({} as any)
-
-    await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
-      'foo',
-      'bar',
-      'Additional'
-    )
-
-    expect(addApplicantToWaitingListSpy).toHaveBeenCalledWith(
-      '1212121212',
-      'P12345',
-      'Bilplats (extern)'
+      WaitingListType.ParkingSpace
     )
   })
 
   it('gets existing listing if applicant passes validation', async () => {
-    getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
+    getContactSpy.mockResolvedValue({
+      ok: true,
+      data: factory.contact.build({
+        contactCode: mockedContact.contactCode,
+        nationalRegistrationNumber: mockedContact.nationalRegistrationNumber,
+      }),
+    })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     getInternalCreditInformationSpy.mockResolvedValue(true)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
 
@@ -375,7 +321,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     getListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: false,
@@ -414,7 +359,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     createNewListingSpy.mockResolvedValue({
       ok: true,
@@ -450,7 +394,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue(
       createAxiosResponse(HttpStatusCode.NotFound, null)
     )
@@ -490,7 +433,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     createNewListingSpy.mockResolvedValue({
       ok: true,
       data: factory.listing.build({ status: ListingStatus.Active }),
@@ -525,7 +467,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({
       status: HttpStatusCode.Ok,
     } as any)
@@ -560,7 +501,6 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
-    getWaitingListSpy.mockResolvedValue(mockedWaitingList)
     applyForListingSpy.mockResolvedValue({
       ok: false,
       err: 'conflict',

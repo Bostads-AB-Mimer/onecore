@@ -10,6 +10,7 @@ import {
   mockedProblematicInvoices,
 } from './mocks'
 import * as factory from '../../../../test/factories'
+import { WaitingListType } from 'onecore-types'
 
 describe('leasing-adapter', () => {
   describe(leasingAdapter.getInternalCreditInformation, () => {
@@ -47,26 +48,6 @@ describe('leasing-adapter', () => {
     })
   })
 
-  describe(leasingAdapter.getWaitingList, () => {
-    it('should return waiting list', async () => {
-      const waitingList = factory.waitingList.build()
-      nock(config.tenantsLeasesService.url)
-        .get(/contact\/waitingList\//)
-        .reply(200, { content: [waitingList] })
-
-      const result = await leasingAdapter.getWaitingList('P123456')
-
-      expect(result).toEqual([
-        {
-          ...waitingList,
-          contractFromApartment:
-            waitingList.contractFromApartment.toISOString(),
-          waitingListFrom: waitingList.waitingListFrom.toISOString(),
-        },
-      ])
-    })
-  })
-
   describe(leasingAdapter.getDetailedApplicantsByListingId, () => {
     it('should return detailed applicants by listing id', async () => {
       const detailedApplicants = factory.detailedApplicant.buildList(1)
@@ -86,13 +67,13 @@ describe('leasing-adapter', () => {
   describe(leasingAdapter.addApplicantToWaitingList, () => {
     it('should add applicant to waiting list', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contact\/waitingList/)
+        .post(/contacts\/196709226789\/waitingLists/)
         .reply(201)
 
       const result = await leasingAdapter.addApplicantToWaitingList(
-        '´196709226789',
+        '196709226789',
         'P123456',
-        'Bilplats (intern)'
+        WaitingListType.ParkingSpace
       )
 
       expect(result.status).toEqual(HttpStatusCode.Created)
@@ -102,13 +83,13 @@ describe('leasing-adapter', () => {
   describe(leasingAdapter.resetWaitingList, () => {
     it('should reset waiting list for applicant', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contact\/waitingList/)
+        .post(/contacts\/196709226789\/waitingLists/)
         .reply(200)
 
       const result = await leasingAdapter.resetWaitingList(
-        '´196709226789',
+        '196709226789',
         'P123456',
-        'Bilplats (intern)'
+        WaitingListType.ParkingSpace
       )
 
       expect(result.ok).toEqual(true)
@@ -116,13 +97,13 @@ describe('leasing-adapter', () => {
 
     it('should return not-in-waiting-list when applicant not in waiting list', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contact\/waitingList/)
+        .post(/contacts\/196709226789\/waitingLists/)
         .reply(404)
 
       const result = await leasingAdapter.resetWaitingList(
-        '´196709226789',
+        '196709226789',
         'P123456',
-        'Bilplats (intern)'
+        WaitingListType.ParkingSpace
       )
 
       expect(result.ok).toEqual(false)
@@ -131,13 +112,13 @@ describe('leasing-adapter', () => {
 
     it('should return unknown on unknown error from leasing', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contact\/waitingList/)
+        .post(/contacts\/196709226789\/waitingLists/)
         .reply(500)
 
       const result = await leasingAdapter.resetWaitingList(
-        '´196709226789',
+        '196709226789',
         'P123456',
-        'Bilplats (intern)'
+        WaitingListType.ParkingSpace
       )
 
       expect(result.ok).toEqual(false)

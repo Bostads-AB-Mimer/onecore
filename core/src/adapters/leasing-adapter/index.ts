@@ -7,7 +7,7 @@ import {
   Invoice,
   InvoiceTransactionType,
   Lease,
-  WaitingList,
+  WaitingListType,
   Applicant,
   ApplicantStatus,
   ApplicantWithListing,
@@ -228,33 +228,21 @@ const getInternalCreditInformation = async (
   return !hasDebtCollection
 }
 
-const getWaitingList = async (
-  nationalRegistrationNumber: string
-): Promise<WaitingList[]> => {
-  const response = await axios(
-    tenantsLeasesServiceUrl +
-      '/contact/waitingList/' +
-      nationalRegistrationNumber
-  )
-  return response.data.content
-}
-
 const addApplicantToWaitingList = async (
   nationalRegistrationNumber: string,
   contactCode: string,
-  waitingListTypeCaption: string
+  waitingListType: WaitingListType
 ) => {
   const axiosOptions = {
     method: 'POST',
     data: {
       contactCode: contactCode,
-      waitingListTypeCaption: waitingListTypeCaption,
+      waitingListType: waitingListType,
     },
   }
   return await axios(
     tenantsLeasesServiceUrl +
-      '/contact/waitingList/' +
-      nationalRegistrationNumber,
+      `/contacts/${nationalRegistrationNumber}/waitingLists`,
     axiosOptions
   )
 }
@@ -262,21 +250,19 @@ const addApplicantToWaitingList = async (
 const resetWaitingList = async (
   nationalRegistrationNumber: string,
   contactCode: string,
-  waitingListTypeCaption: string
+  waitingListType: WaitingListType
 ): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
   try {
     const axiosOptions = {
       method: 'POST',
       data: {
         contactCode: contactCode,
-        waitingListTypeCaption: waitingListTypeCaption,
+        waitingListType: waitingListType,
       },
     }
     const res = await axios(
       tenantsLeasesServiceUrl +
-        '/contact/waitingList/' +
-        nationalRegistrationNumber +
-        '/reset',
+        `/contacts/${nationalRegistrationNumber}/waitingLists/reset`,
       axiosOptions
     )
 
@@ -542,7 +528,6 @@ export {
   getLeasesForPropertyId,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
-  getWaitingList,
   resetWaitingList,
   setApplicantStatusActive,
   updateApplicantStatus,

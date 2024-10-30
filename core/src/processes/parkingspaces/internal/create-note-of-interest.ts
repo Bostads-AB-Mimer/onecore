@@ -7,13 +7,13 @@ import {
   Contact,
   Listing,
   CreateNoteOfInterestErrorCodes,
+  WaitingListType,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
 import {
   getContact,
   getLeasesForPnr,
-  getWaitingList,
   addApplicantToWaitingList,
   getListingByRentalObjectCode,
   createNewListing,
@@ -162,36 +162,24 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         }
       )
     }
-
     //step 3.b Check if applicant is in queue for parking spaces, if not add to queue
-    const waitingList = await getWaitingList(
-      applicantContact.nationalRegistrationNumber
-    )
-
-    const waitingListStatus = evaluateWaitingListStatus(waitingList)
-    const shouldAddApplicantToWaitingList =
-      waitingListStatus.shouldAddApplicantToWaitingList
-    const isInWaitingListForInternalParking =
-      waitingListStatus.isInWaitingListForInternalParking
-    const isInWaitingListForExternalParking =
-      waitingListStatus.isInWaitingListForExternalParking
-
-    //xpand handles internal and external waiting list synonymously
-    //a user should therefore always be placed in both waiting list
-    if (shouldAddApplicantToWaitingList) {
-      await handleWaitingList(
-        isInWaitingListForInternalParking,
-        'intern',
-        applicantContact,
-        log
+    if (!applicantContact.parkingSpaceWaitingList) {
+      log.push(`Sökande saknas i kö för parkeringsplats.`)
+      const result = await addApplicantToWaitingList(
+        applicantContact.nationalRegistrationNumber,
+        applicantContact.contactCode,
+        WaitingListType.ParkingSpace
       )
+      if (result.status == HttpStatusCode.Created) {
+        log.push(`Sökande placerad i kö för parkeringsplats`)
+      } else {
+        logger.error(
+          result,
+          `Could not add applicant to parking space waiting list`
+        )
 
-      await handleWaitingList(
-        isInWaitingListForExternalParking,
-        'extern',
-        applicantContact,
-        log
-      )
+        throw Error(result.statusText)
+      }
     }
 
     log.push(
@@ -332,20 +320,22 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       log,
       CreateNoteOfInterestErrorCodes.InternalError,
       500,
-      'Create not of interest for internal parking space failed due to unknown error'
+      'Create note of interest for internal parking space failed due to unknown error 1'
     )
   } catch (error: any) {
+    console.log('unknown error', error)
     const errorMessage =
       error instanceof Error
-        ? 'Create not of interest for internal parking space failed: ' +
+        ? 'Create note of interest for internal parking space failed: ' +
           error.message
-        : 'Create not of interest for internal parking space failed: ' + error
+        : 'Create note of interest for internal parking space failed: ' + error
 
     return endFailingProcess(
       log,
       CreateNoteOfInterestErrorCodes.InternalError,
       500,
-      errorMessage
+      errorMessage,
+      error
     )
   }
 }
@@ -389,58 +379,4 @@ const createApplicantRequestBody = (
     listingId: listing.id, //null should not be allowed
   }
   return applicantRequestBody
-}
-
-const evaluateWaitingListStatus = (waitingList: any) => {
-  let shouldAddApplicantToWaitingList = false
-  let isInWaitingListForInternalParking = false
-  let isInWaitingListForExternalParking = false
-
-  if (waitingList.length > 0) {
-    isInWaitingListForInternalParking = waitingList.some(
-      (o: any) => o.waitingListTypeCaption === 'Bilplats (intern)'
-    )
-    isInWaitingListForExternalParking = waitingList.some(
-      (o: any) => o.waitingListTypeCaption === 'Bilplats (extern)'
-    )
-    if (
-      !isInWaitingListForInternalParking ||
-      !isInWaitingListForExternalParking
-    ) {
-      shouldAddApplicantToWaitingList = true
-    }
-  } else {
-    shouldAddApplicantToWaitingList = true
-  }
-
-  return {
-    shouldAddApplicantToWaitingList,
-    isInWaitingListForInternalParking,
-    isInWaitingListForExternalParking,
-  }
-}
-const handleWaitingList = async (
-  isInWaitingList: boolean,
-  parkingType: string,
-  applicantContact: Contact,
-  log: any[]
-) => {
-  if (!isInWaitingList) {
-    log.push(`Sökande saknas i kö för ${parkingType} parkeringsplats.`)
-    const result = await addApplicantToWaitingList(
-      applicantContact.nationalRegistrationNumber,
-      applicantContact.contactCode,
-      `Bilplats (${parkingType})`
-    )
-    if (result.status == HttpStatusCode.Created) {
-      log.push(`Sökande placerad i kö för ${parkingType} parkeringsplats`)
-    } else {
-      logger.error(
-        result,
-        `Could not add applicant to ${parkingType} waiting list`
-      )
-
-      throw Error(result.statusText)
-    }
-  }
 }
