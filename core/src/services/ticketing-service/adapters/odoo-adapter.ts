@@ -94,10 +94,13 @@ const transformTicket = (ticket: OdooGetTicket) => {
   const equipmentCode = transformEquipmentCode(ticket.equipment_code)
   const description = removePTags(ticket.description)
 
-  const descriptionWithMoreInfo = `${description}\r\nHusdjur: ${ticket.pet ? 'Ja' : 'Nej'}${ticket.call_between ? `\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.` : ''}`
+  const isCommonSpace = Object.keys(spaceCodes).includes(ticket.space_code)
+
+  const descriptionWithMoreInfo = `${description}${isCommonSpace ? '' : `\r\n Husdjur: ${ticket.pet ? 'Ja' : 'Nej'}`}
+  ${ticket.call_between ? `\r\n Kund nås enklast mellan ${ticket.call_between} \r\n på telefonnummer: ${ticket.phone_number}.` : ''}`
 
   return {
-    AccessCaption: 'Huvudnyckel',
+    AccessCaption: isCommonSpace ? 'Gemensamt utrymme' : 'Huvudnyckel',
     Caption:
       spaceCode && equipmentCode
         ? `WEBB: ${spaceCode}, ${equipmentCode}`
