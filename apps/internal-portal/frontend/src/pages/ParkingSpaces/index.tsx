@@ -1,5 +1,5 @@
 import { Box, IconButton, Stack, Typography } from '@mui/material'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { type GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
 import {
@@ -349,6 +349,7 @@ const tabMap: Record<
   published: 'published',
   offered: 'offered',
   historical: 'historical',
+  'needs-republish': 'needs-republish',
 }
 
 const getTab = (v: string | null): GetListingWithApplicantFilterByType => {
