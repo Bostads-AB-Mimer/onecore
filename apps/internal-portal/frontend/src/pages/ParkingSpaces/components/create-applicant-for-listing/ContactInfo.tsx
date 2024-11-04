@@ -49,7 +49,11 @@ export const ContactInfo = (props: { tenant: Tenant | null }) => (
     />
     <ContactInfoRow
       label="Köpoäng"
-      value={<Typography>{props.tenant?.queuePoints}</Typography>}
+      value={
+        <Typography>
+          {props.tenant?.parkingSpaceWaitingList?.queuePoints}
+        </Typography>
+      }
     />
   </Box>
 )
