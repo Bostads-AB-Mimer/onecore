@@ -48,7 +48,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
         address: email.address,
         firstName: email.firstName,
         availableFrom: dateFormatter.format(new Date(email.availableFrom)),
-        deadlineDate: dateFormatter.format(new Date(email.availableFrom)),
+        deadlineDate: dateFormatter.format(new Date(email.deadlineDate)),
         rent: formatToSwedishCurrency(email.rent),
         type: email.type,
         parkingSpaceId: email.parkingSpaceId,
