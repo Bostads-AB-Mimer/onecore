@@ -17,7 +17,7 @@ model ResidenceType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing later when knowing more about its usage
 
   // Updated relation to use the new model name 'Residence'
-  residences Residence[] @relation("balgt_balgh", fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction)
+  residences Residence[] //@relation("balgt_balgh", fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction)
 
   // Keeping the original relation to 'balls' for now, fields and references checked in previous pass
   // TODO: Check if the 'balls' model conversion meets the new naming standard

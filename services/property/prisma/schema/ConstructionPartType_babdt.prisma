@@ -10,7 +10,7 @@ model ConstructionPartType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations
-  constructionParts ConstructionPart[] @relation("fkbabdtkeybabdl")
+  constructionParts ConstructionPart[]
   // TODO: Confirm existence of 'puatt' model in future passes
   // puatt puatt? @relation(fields: [componentTypeActionId], references: [keypuatt], onUpdate: NoAction, map: "fkbabdtkeypuatt")
 

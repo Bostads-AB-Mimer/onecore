@@ -8,7 +8,7 @@ model FreeTable2 {
 
   // TODO: Verify relations if needed
   // Commented out relations to potentially missing or incorrectly configured models.
-  Building Building[] // @relation("fkbabygkeybabyb") 
-  Property Property[] // @relation("fkbafstkeybabyb") 
-  Area Area[] // @relation("fkbaytakeybabyb")
+  //Building Building[] // @relation("fkbabygkeybabyb") 
+  //Property Property[] // @relation("fkbafstkeybabyb") 
+  //Area Area[] // @relation("fkbaytakeybabyb")
 }

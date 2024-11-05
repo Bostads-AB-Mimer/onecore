@@ -11,7 +11,7 @@ model RoomType {
   allowSmallRoomsInValuation Int @default(0, map: "DF__barut__ignorewws__038EC39D") @map("ignorewwsv") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
   
-  room Room[] @relation("fkbarumbarut")
+  room Room[] //@relation("fkbarumbarut")
   //actionType ActionType? @relation(fields: [componentActionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbarutkeypuatt")
 
   @@index([componentActionTypeId], map: "fkbarutpuatt")

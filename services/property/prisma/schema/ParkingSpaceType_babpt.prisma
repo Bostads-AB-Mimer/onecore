@@ -10,7 +10,7 @@ model ParkingSpaceType {
   isSystemStandard Int @default(0, map: "DF__babpt__issystem__271229AE") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  parkingSpaces ParkingSpace[] @relation("fkbabpskeybabpt") // Changed babps to ParkingSpace
+  parkingSpaces ParkingSpace[] //@relation("fkbabpskeybabpt") // Changed babps to ParkingSpace
 
   //actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabptkeypuatt") // Changed puatt to ActionType
 

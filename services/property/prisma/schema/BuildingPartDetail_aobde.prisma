@@ -7,7 +7,7 @@ model BuildingPartDetail {
   timestamp String @db.Char(10) // TODO: Analyze usage for possible renaming
 
   // TODO: change aobdl to new model name when available
-  //aobdl aobdl @relation(fields: [buildingPartId], references: [keyaobdl], onDelete: Cascade, map: "fkaobdekeyaobdl")
+  buildingPart BuildingPart @relation(fields: [buildingPartId], references: [buildingPartId], onDelete: Cascade, map: "fkaobdekeyaobdl")
   
   // TODO: change aodet to new model name when available
   //aodet aodet @relation(fields: [detailId], references: [keyaodet], onDelete: Cascade, map: "fkaobdekeyaodet")

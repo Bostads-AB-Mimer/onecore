@@ -13,6 +13,7 @@ model ResourcePlanning {
 
   // Relations
   // baret // TODO: Relation is missing or model does not exist
+  resourcePlanningType ResourcePlanningType @relation(fields: [planningTypeId], references: [resourcePlanningTypeId], onUpdate: NoAction, map: "fkbarekbaret")
   //contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmctc")
   // cmobj // TODO: Relation is missing or model does not exist
   //resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmrgr")

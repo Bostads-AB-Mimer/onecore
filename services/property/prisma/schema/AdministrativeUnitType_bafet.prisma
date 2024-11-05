@@ -9,5 +9,5 @@ model AdministrativeUnitType {
 
   // Relations
   // TODO: Verify that the relation name matches the defined relation in AdministrativeUnit when models are fully gathered
-  administrativeUnits AdministrativeUnit[] @relation("fkbafenkeybafet")
+  administrativeUnits AdministrativeUnit[]
 }

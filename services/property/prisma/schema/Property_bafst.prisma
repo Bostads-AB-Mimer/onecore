@@ -43,6 +43,7 @@ model Property {
   //cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
   //cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
   //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbafstkeycmobj")
+  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmobj")
 
   @@index([freeTableKeyA], map: "fkbafstbabya")
   @@index([freeTableKeyB], map: "fkbafstbabyb")

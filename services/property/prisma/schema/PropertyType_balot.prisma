@@ -15,7 +15,7 @@ model PropertyType {
   isSystemStandard Int @default(0, map: "DF__balot__issystem__4B4F8A24") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider renaming timestamp field when knowing more about its usage
 
-  location Location[] @relation("fkbalokkeybalot") // Changed the relation from balok
+  location Location[] //@relation("fkbalokkeybalot") // Changed the relation from balok
   // TODO: Commented out as StatisticsGroupScb is not defined
   // statisticsGroupScb StatisticsGroupScb? @relation("balot_keyballsToballs", fields: [statisticsGroupScbId], references: [keyballs], onUpdate: NoAction, map: "fkbalotkeyballs")
   // TODO: Commented out as StatisticsGroup2 is not defined

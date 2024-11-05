@@ -15,7 +15,7 @@ model ResourcePlanningType {
   //workOrderRows WorkOrderRow[] @relation("fkaoparkeybaret") // aopar
   //priorities Priority[] @relation("fkaoprikeybaret") // aopri
   //workOrderTypes WorkOrderType[] @relation("fkaotypkeybaret") // aotyp 
-  resourcePlannings ResourcePlanning[] @relation("fkbarekbaret") // barek
+  resourcePlannings ResourcePlanning[] //@relation("fkbarekbaret") // barek
   //resourceGroups ResourceGroup[] @relation("fkcmrgrbaret") // cmrgr
   //inspectionCategories InspectionCategory[] @relation("fklbbkabaret") // lbbka
   //mainGroups MainGroup[] @relation("fkskgrpbaret") // skgrp 

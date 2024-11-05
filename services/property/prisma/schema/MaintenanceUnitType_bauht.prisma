@@ -9,7 +9,7 @@ model MaintenanceUnitType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Further clarify the usage for renaming
 
   // Updated to use the new model name from MaintenanceUnit
-  maintenanceUnits MaintenanceUnit[] @relation("fkbauhekeybauht") 
+  maintenanceUnits MaintenanceUnit[] //@relation("fkbauhekeybauht") 
 
   @@index([componentActionTypeId], map: "fkbauhtpuatt")
 }

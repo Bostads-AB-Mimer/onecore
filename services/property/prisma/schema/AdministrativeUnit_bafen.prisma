@@ -41,6 +41,8 @@ model AdministrativeUnit {
   //contactOwner cmctc? @relation("bafen_keycmctcTocmctc", fields: [ownerContactId], references: [keycmctc], onUpdate: NoAction, map: "fkbafenkeycmctc")
   //contactAdministrator cmctc? @relation("bafen_keycmctc2Tocmctc", fields: [administratorContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafenkeycmctc2")
   //propertyObject cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbafenkeycmobj ")
+  propertyObject PropertyObject? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafenkeycmobj ")
+
 
   @@index([municipalityId], map: "fkbafenbamun")
   @@index([ownerContactId], map: "fkbafencmctc")

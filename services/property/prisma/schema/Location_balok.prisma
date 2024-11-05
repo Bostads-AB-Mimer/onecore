@@ -24,7 +24,7 @@ model Location {
   timestamp String @map("timestamp") @db.Char(10)
 
   propertyType PropertyType @relation(fields: [typeCodeId], references: [propertyTypeId], onUpdate: NoAction, map: "fkbalokkeybalot")
-  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbalokkeycmobj")
+  //propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbalokkeycmobj")
   //inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalokkeylbpro")
   
   // TODO: Consider renaming the remaining models when more information is available

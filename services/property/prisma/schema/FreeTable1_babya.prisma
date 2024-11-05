@@ -9,5 +9,5 @@ model FreeTable1 {
   // NOTE: Commented out relations that are causing inconsistency due to non-existing models or fields
   // building Building[] // @relation(fields: [id], references: [freeTable1Id], map: "fkbabygkeybabya")
   // property Property[] // @relation(fields: [id], references: [freeTableKeyA], map: "fkbafstkeybabya")
-  area Area[] @relation(fields: [id], references: [freeTable1Id], map: "fkbaytakeybabya")
+  //area Area[] @relation(fields: [id], references: [freeTable1Id], map: "fkbaytakeybabya")
 }

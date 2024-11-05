@@ -29,9 +29,9 @@ model Room {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   //aopla Placement? @relation(fields: [inspectAsId], references: [id], onUpdate: NoAction, map: "fkbarumkeyaopla")
-  barut RoomType? @relation(fields: [roomTypeId], references: [roomTypeId], onUpdate: NoAction, map: "fkbarumkeybarut")
+  roomType RoomType? @relation(fields: [roomTypeId], references: [roomTypeId], onUpdate: NoAction, map: "fkbarumkeybarut")
   //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbarumkeycmobj") // TODO: Consider renaming `cmobj` to match converted `PropertyObject`
-  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbarumkeycmobj")
+  //propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbarumkeycmobj")
 
   @@index([inspectAsId], map: "fkbarumaopla")
   @@index([roomTypeId], map: "fkbarumbarut")

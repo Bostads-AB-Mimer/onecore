@@ -8,7 +8,7 @@ model Municipality {
   alternativeName String? @map("caption2") @db.VarChar(30)
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  administrativeUnits AdministrativeUnit[] @relation("fkbafenkeybamun") // Changed bafen to AdministrativeUnit based on previous schema
+  administrativeUnits AdministrativeUnit[]
 
   // TODO: Verify County model and countyId mapping, to ensure consistency across relations
   county County? @relation(fields: [countyId], references: [countyId], onDelete: NoAction, onUpdate: NoAction, map: "fkbamunkeybacty")

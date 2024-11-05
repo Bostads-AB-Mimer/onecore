@@ -6,5 +6,5 @@ model ComponentCategory {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // TODO: Check if 'components' field refers correctly to a valid model and relation
-  // components Component[] @relation(fields: [id], references: [categoryId])
+  components Component[]
 }

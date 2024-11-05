@@ -48,9 +48,13 @@ model Building {
   // TODO: Uncomment and verify naming for these relations when original schema is available
   // buildingMemoryClassification bacls? @relation(fields: [buildingMemoryClassificationId], references: [keybacls], onUpdate: NoAction, map: "fkbabygkeybacls ")
   
-  //heatingSystem Heating? @relation(fields: [heatingId], references: [keybahea], onUpdate: NoAction, map: "fkbabygkeybahea ")
+  heatingSystem Heating? @relation(fields: [heatingId], references: [heatingId], onUpdate: NoAction, map: "fkbabygkeybahea ")
   //district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
   //object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+
+  buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
+
 
   // TODO: Uncomment and verify naming for these indexes when original schema is available
   // @@index([buildingMemoryClassificationId], map: "fkbabygbacls")
