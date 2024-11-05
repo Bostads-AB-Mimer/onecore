@@ -5,6 +5,7 @@ import { OfferStatus, ReplyToOfferErrorCodes } from 'onecore-types'
 
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'
+import * as createOfferProcesses from '../create-offer'
 import * as factory from '../../../../../test/factories'
 
 describe('replyToOffer', () => {
@@ -283,6 +284,37 @@ describe('replyToOffer', () => {
           errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
+    })
+
+    it('tries to create new offer', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+
+      jest
+        .spyOn(leasingAdapter, 'closeOfferByDeny')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const createOffer = jest
+        .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
+        .mockResolvedValueOnce({
+          data: null,
+          processStatus: ProcessStatus.successful,
+          httpStatus: 200,
+        })
+
+      const result = await replyProcesses.denyOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: { listingId: expect.any(Number) },
+      })
+      expect(createOffer).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -16,6 +16,7 @@ import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { AdapterResult } from '../../../adapters/types'
+import { createOfferForInternalParkingSpace } from './create-offer'
 
 type ReplyToOfferError =
   | ReplyToOfferErrorCodes.NoOffer
@@ -238,6 +239,18 @@ export const denyOffer = async (
         ReplyToOfferErrorCodes.CloseOfferFailure,
         500,
         `Something went wrong when denying the offer ${offer.id}`
+      )
+    }
+
+    log.push('Creating new offer for this listing...')
+    const createOffer = await createOfferForInternalParkingSpace(
+      offer.listingId
+    )
+
+    if (createOffer.processStatus === ProcessStatus.failed) {
+      logger.info(createOffer, 'Could not create new offer for this listing.')
+      log.push(
+        `Could not create new offer for this listing: ${createOffer.error}`
       )
     }
 

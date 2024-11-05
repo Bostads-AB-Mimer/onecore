@@ -742,11 +742,6 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    //do not await since the process is responsible to handle the new offer
-    internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
-      denyOffer.data.listingId
-    )
-
     ctx.status = 202
     ctx.body = { message: 'Offer denied successfully', ...metadata }
   })

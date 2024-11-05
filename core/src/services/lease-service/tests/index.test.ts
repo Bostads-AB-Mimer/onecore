@@ -275,19 +275,13 @@ describe('lease-service', () => {
         httpStatus: 202,
         data: { listingId: 123 },
       })
-      jest
-        .spyOn(offerProcess, 'createOfferForInternalParkingSpace')
-        .mockResolvedValue({
-          processStatus: ProcessStatus.successful,
-          data: null,
-          httpStatus: 200,
-        })
 
       const result = await request(app.callback()).post('/offers/123/deny')
 
       expect(result.status).toBe(202)
       expect(result.body.message).toBe('Offer denied successfully')
     })
+
     it('deny offer returns 500 on error', async () => {
       jest.spyOn(replyToOffer, 'denyOffer').mockResolvedValue({
         processStatus: ProcessStatus.failed,

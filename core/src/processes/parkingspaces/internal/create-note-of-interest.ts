@@ -323,7 +323,6 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       'Create note of interest for internal parking space failed due to unknown error 1'
     )
   } catch (error: any) {
-    console.log('unknown error', error)
     const errorMessage =
       error instanceof Error
         ? 'Create note of interest for internal parking space failed: ' +
