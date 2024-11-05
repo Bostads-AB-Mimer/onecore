@@ -5,6 +5,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { getPropertyById } from '../../adapters/property-adapter'
 
 /**
  * @swagger
@@ -47,7 +48,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/properties/:id/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties/:id/', metadata)
-    const response = await ctx.services.properties.getProperty(ctx.params.id)
-    ctx.body = { content: response.data, ...metadata }
+    const response = await getPropertyById(ctx.params.id)
+    ctx.body = { content: response, ...metadata }
   })
 }
