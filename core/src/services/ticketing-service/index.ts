@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import {
   getContact,
+  getContactByContactCode,
   getContactByPhoneNumber,
   getLease,
   getLeasesForPnr,
@@ -156,6 +157,25 @@ export const routes = (router: KoaRouter) => {
               undefined,
               'true'
             )
+            if (leases) {
+              for (const lease of leases) {
+                const propertyInfoWithLease =
+                  await getRentalPropertyInfoWithLeases(lease)
+                responseData.push(propertyInfoWithLease)
+              }
+            }
+          }
+          break
+        }
+        case 'contactCode': {
+          const contactResult = await getContactByContactCode(ctx.params.number)
+          if (contactResult.ok) {
+            const leases = await getLeasesForPnr(
+              contactResult.data.nationalRegistrationNumber,
+              undefined,
+              'true'
+            )
+
             if (leases) {
               for (const lease of leases) {
                 const propertyInfoWithLease =

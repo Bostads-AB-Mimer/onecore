@@ -138,6 +138,29 @@ describe('ticketing-service index', () => {
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
       expect(res.body.content).toBeDefined()
     })
+
+    it('should handle contactCode case', async () => {
+      const getContactByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: contactMock })
+      const getLeaseSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue(leaseMock)
+
+      const getRentalPropertyInfoSpy = jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
+        .mockResolvedValue(rentalPropertyInfoMock)
+
+      const res = await request(app.callback()).get(
+        '/propertyInfo/P965339?typeOfNumber=contactCode'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getContactByContactCodeSpy).toHaveBeenCalledWith('P965339')
+      expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
+      expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('705-022-04-0201')
+      expect(res.body.content).toBeDefined()
+    })
   })
 
   describe('GET /ticketsByContactCode/:code', () => {
