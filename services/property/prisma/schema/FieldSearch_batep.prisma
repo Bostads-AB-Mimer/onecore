@@ -8,7 +8,7 @@ model FieldSearch {
   timestamp String @map("timestamp") @db.Char(10) // TODO: Review if we can rename 'timestamp' field for more clarity in context
 
   // Relations
-  typTextTemplate TypTextTemplate @relation(fields: [typTextTemplateId], references: [typTextTemplateId], onDelete: Cascade, map: "fkbatepkeycmtep")
+  //typTextTemplate TypTextTemplate @relation(fields: [typTextTemplateId], references: [typTextTemplateId], onDelete: Cascade, map: "fkbatepkeycmtep")
 
   // TODO: Determine if additional fields require renaming upon further schema inspection
 }

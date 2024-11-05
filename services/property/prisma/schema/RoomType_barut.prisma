@@ -12,7 +12,7 @@ model RoomType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
   
   room Room[] @relation("fkbarumbarut")
-  actionType ActionType? @relation(fields: [componentActionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbarutkeypuatt")
+  //actionType ActionType? @relation(fields: [componentActionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbarutkeypuatt")
 
   @@index([componentActionTypeId], map: "fkbarutpuatt")
 }

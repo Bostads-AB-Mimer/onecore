@@ -24,8 +24,8 @@ model PropertyType {
   // statisticsGroup3 StatisticsGroup3? @relation("balot_keyballs3Toballs", fields: [statisticsGroup3Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs3")
   // TODO: Commented out as StatisticsGroup4 is not defined
   // statisticsGroup4 StatisticsGroup4? @relation("balot_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs4")
-  checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalotkeylbpro")
-  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalotkeypuatt")
+  //checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalotkeylbpro")
+  //componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalotkeypuatt")
 
   @@index([statisticsGroupScbId], map: "fkbalotballs")
   @@index([statisticsGroup2Id], map: "fkbalotballs2")

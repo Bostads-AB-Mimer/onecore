@@ -20,7 +20,7 @@ model MaintenanceUnit {
 
   // Related models
   maintenanceUnitType MaintenanceUnitType? @relation(fields: [maintenanceUnitTypeId], references: [maintenanceUnitTypeId], onUpdate: NoAction, map: "fkbauhekeybauht ")
-  relatedObject RelatedObject @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbauhekeycmobj ") // TODO: Model needs verification
+  //relatedObject RelatedObject @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbauhekeycmobj ") // TODO: Model needs verification
 
   @@index([maintenanceUnitTypeId], map: "fkbauhebauht")
   @@index([maintenanceUnitCode], map: "inbauhe_1A00UDL36")

@@ -11,7 +11,7 @@ model ParkingSpace {
   wholeGarage Int @default(0, map: "DF__babps__heltgarag__1382E6C0") @map("heltgarage") @db.TinyInt
   parkingNumber String? @map("platsnr") @db.VarChar(30)
   warmGarage Int @default(0, map: "DF__babps__varmgarag__14770AF9") @map("varmgarage") @db.TinyInt
-  electricInt @default(0, map: "DF__babps__el__156B2F32") @map("el") @db.TinyInt
+  //electricInt @default(0, map: "DF__babps__el__156B2F32") @map("el") @db.TinyInt
   roofGarage Int @default(0, map: "DF__babps__takgarage__165F536B") @map("takgarage") @db.TinyInt
   engineHeater Int @default(0, map: "DF__babps__motorvarm__175377A4") @map("motorvarm") @db.TinyInt
   entrance String? @map("uppgang") @db.VarChar(20)
@@ -21,7 +21,7 @@ model ParkingSpace {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations
-  parkingSpaceType ParkingSpaceType @relation(fields: [parkingSpaceTypeId], references: [keybabpt], onUpdate: NoAction, map: "fkbabpskeybabpt ")
+  parkingSpaceType ParkingSpaceType @relation(fields: [parkingSpaceTypeId], references: [id], onUpdate: NoAction, map: "fkbabpskeybabpt ")
   // TODO: Commenting this relation until the model 'cmobj' is defined somewhere
   // cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabpskeycmobj ")
 

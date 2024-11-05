@@ -16,7 +16,7 @@ model RentalObject {
 
   // Relations
   rentalObjectType RentalObjectType @relation(fields: [rentalObjectTypeId], references: [rentalObjectTypeId], onUpdate: NoAction, map: "fkbahyrkeybahyt ")
-  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj ") // TODO: Change cmobj when we find the new model name
+  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj")
 
   @@index([rentalObjectTypeId], map: "fkbahyrbahyt")
   @@index([rentalObjectCode], map: "inbahyr_2BR0U851E")

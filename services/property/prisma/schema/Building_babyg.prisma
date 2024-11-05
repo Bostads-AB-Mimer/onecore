@@ -1,0 +1,63 @@
+model Building {
+  @@map("babyg")
+  
+  buildingId String @id(map: "pkbabyg") @map("keybabyg") @db.Char(15)
+  objectId String @unique(map: "akbabyg1") @map("keycmobj") @db.Char(15)
+  buildingTypeId String? @map("keybabyt") @db.Char(15)
+  freeTable1Id String? @map("keybabya") @db.Char(15) // TODO: Verify correct naming
+  freeTable2Id String? @map("keybabyb") @db.Char(15) // TODO: Verify correct naming
+  freeTable3Id String? @map("keybabyc") @db.Char(15) // TODO: Verify correct naming
+
+  // TODO: Uncomment and verify naming for these fields when original schema is available
+  districtId String? @map("keybanbh") @db.Char(15)
+  blockId String? @map("keybablo") @db.Char(15)
+  // buildingMemoryClassificationId String? @map("keybacls") @db.Char(15)
+
+  heatingId String? @map("keybahea") @db.Char(15)
+  buildingCode String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(60)
+  description String? @map("beskrivn") @db.VarChar(60)
+  constructionYear Int? @map("byggnadsar") @db.SmallInt
+  renovationYear Int? @map("ombyggar") @db.SmallInt
+  valueYear Int? @map("valueyear") @db.SmallInt
+  heating String? @map("uppvarmn") @db.VarChar(20)
+  fireRating String? @map("brandklass") @db.VarChar(20)
+  insuranceClass String? @map("forsklass") @db.VarChar(20)
+  insuranceValue Int? @map("forsvarde")
+  lmhNumber String? @map("lmvhusnr") @db.VarChar(14)
+  assessmentYear Int? @map("assyear") @db.SmallInt
+  grade Int @default(0, map: "DF__babyg__grade__7EDC9D61") @map("grade") @db.TinyInt
+  socialPlan Int @default(0, map: "DF__babyg__socialpla__7FD0C19A") @map("socialplan") @db.TinyInt
+  socialPlanFrom DateTime? @map("socialfrom") @db.Date
+  socialPlanTo DateTime? @map("socialto") @db.Date
+  percentCommonArea Int? @map("sharecarea") @db.SmallInt
+  deleteMark Int @default(0, map: "DF__babyg__deletemar__00C4E5D3") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  lastContractStartDate DateTime? @map("hylaststrt") @db.DateTime
+  lastContractEndDate DateTime? @map("hylaststop") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations, keeping the old names for now with a TODO to change when new names are available
+  // block bablo? @relation(fields: [blockId], references: [keybablo], onUpdate: NoAction, map: "fkbabygkeybablo ")
+  // area FreeTable1? @relation(fields: [freeTable1Id], references: [keybabya], onUpdate: NoAction, map: "fkbabygkeybabya ")
+  // property FreeTable2? @relation(fields: [freeTable2Id], references: [keybabyb], onUpdate: NoAction, map: "fkbabygkeybabyb ")
+  // buildings FreeTable3? @relation(fields: [freeTable3Id], references: [keybabyc], onUpdate: NoAction, map: "fkbabygkeybabyc ")
+  // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [keybabyt], onUpdate: NoAction, map: "fkbabygkeybabyt ")
+  
+  // TODO: Uncomment and verify naming for these relations when original schema is available
+  // buildingMemoryClassification bacls? @relation(fields: [buildingMemoryClassificationId], references: [keybacls], onUpdate: NoAction, map: "fkbabygkeybacls ")
+  
+  //heatingSystem Heating? @relation(fields: [heatingId], references: [keybahea], onUpdate: NoAction, map: "fkbabygkeybahea ")
+  //district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
+  //object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+
+  // TODO: Uncomment and verify naming for these indexes when original schema is available
+  // @@index([buildingMemoryClassificationId], map: "fkbabygbacls")
+  @@index([heatingId], map: "fkbabygbahea")
+  @@index([districtId], map: "fkbabygbanbh")
+  @@index([toDate], map: "inbabyg_2M30NAG13")
+  @@index([fromDate], map: "inbabyg_2M30NAG1W")
+  @@index([name], map: "inbabyg_2M30NAG2R")
+  @@index([buildingCode], map: "inbabyg_2M30NAG42")
+}

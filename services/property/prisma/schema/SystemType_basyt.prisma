@@ -10,10 +10,10 @@ model SystemType {
   isSystemStandard Int @default(0, map: "DF__basyt__issystem__6232EF7C") @map("issystem") @db.TinyInt
   timestamp String @map("timestamp") @db.Char(10)
 
-  basys System[] // Updated from TODO, assuming System is the new name for basys
-  cmtyp_basyt_keycmtypTocmtyp TextType @relation("basyt_keycmtypTocmtyp", fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbasytkeycmtyp")
-  cmtyp_basyt_keycmtyp2Tocmtyp TextType? @relation("basyt_keycmtyp2Tocmtyp", fields: [inspectionTypeId], references: [textTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkbasytkeycmtyp2")
-  puatt ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbasytkeypuatt")
+  system System[] // Updated from TODO, assuming System is the new name for basys
+  //cmtyp_basyt_keycmtypTocmtyp TextType @relation("basyt_keycmtypTocmtyp", fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbasytkeycmtyp")
+  //cmtyp_basyt_keycmtyp2Tocmtyp TextType? @relation("basyt_keycmtyp2Tocmtyp", fields: [inspectionTypeId], references: [textTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkbasytkeycmtyp2")
+  //puatt ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbasytkeypuatt")
 
   @@index([textTypeId], map: "fkbasytcmtyp")
   @@index([inspectionTypeId], map: "fkbasytcmtyp2")

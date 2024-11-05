@@ -12,7 +12,7 @@ model ParkingSpaceType {
 
   parkingSpaces ParkingSpace[] @relation("fkbabpskeybabpt") // Changed babps to ParkingSpace
 
-  actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabptkeypuatt") // Changed puatt to ActionType
+  //actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabptkeypuatt") // Changed puatt to ActionType
 
   @@index([componentTypeActionId], map: "fkbabptpuatt")
 }

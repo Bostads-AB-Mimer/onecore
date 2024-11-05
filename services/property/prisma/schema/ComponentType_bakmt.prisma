@@ -11,9 +11,9 @@ model ComponentType {
 
   // Relations to other models with TODOs for future renaming when applicable
   component Component[] // Renamed bakmp to component based on prior change from "bakmp" to "Component"
-  textType TextType? @relation(fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbakmtkeycmtyp ") // Correctly reflecting the TextType model name
-  actionType ActionType? @relation(fields: [actionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbakmtkeypuatt ") // Changing puatt to ActionType
-  productGroup ProductGroup[] // Renamed tvpdg to productGroup based on prior change from "tvpdg" to "ProductGroup"
+  //textType TextType? @relation(fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbakmtkeycmtyp ") // Correctly reflecting the TextType model name
+  //actionType ActionType? @relation(fields: [actionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbakmtkeypuatt ") // Changing puatt to ActionType
+  //productGroup ProductGroup[] // Renamed tvpdg to productGroup based on prior change from "tvpdg" to "ProductGroup"
 
   @@index([textTypeId], map: "fkbakmtcmtyp")
   @@index([actionTypeId], map: "fkbakmtpuatt")

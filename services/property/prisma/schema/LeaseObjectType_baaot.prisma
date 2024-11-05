@@ -10,7 +10,7 @@ model LeaseObjectType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations
-  actionType ActionType? @relation(fields: [actionComponentTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbaaotkeypuatt")
+  //actionType ActionType? @relation(fields: [actionComponentTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbaaotkeypuatt")
 
   @@index([actionComponentTypeId], map: "fkbaaotpuatt")
 }

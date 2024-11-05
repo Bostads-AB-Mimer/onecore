@@ -38,8 +38,8 @@ model Residence {
   toDate DateTime @map("tdate") @db.DateTime
   timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later
 
-  residenceType balgt @relation(fields: [residenceTypeId], references: [keybalgt], onUpdate: NoAction, map: "fkbalghkeybalgt ")
-  relatedObject cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbalghkeycmobj ")
+  residenceType ResidenceType @relation(fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction, map: "fkbalghkeybalgt ")
+  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbalghkeycmobj")
   // TODO: Verify relation for checklistId as the InspectionProtocol model was provided but fields need to be verified
   // inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalghkeylbpro ")
 

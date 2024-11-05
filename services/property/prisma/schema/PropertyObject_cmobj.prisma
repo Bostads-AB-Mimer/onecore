@@ -1,0 +1,55 @@
+model PropertyObject {
+  @@map("cmobj")
+
+  propertyObjectId String @id(map: "pkcmobj") @map("keycmobj") @db.Char(15)
+  objectTypeId String @map("keycmobt") @db.Char(15)
+  barcode String? @map("bcode") @db.VarChar(500)
+  barcodeType Int @default(0, map: "DF__cmobj__bcodetype__6C76541B") @map("bcodetype") @db.TinyInt
+  condition Int @default(0, map: "DF__cmobj__objcond__6D6A7854") @map("objcond") @db.TinyInt
+  conditionInspectionDate DateTime? @map("objcondate") @db.DateTime
+  vatAdjustmentPrinciple Int @default(0, map: "DF__cmobj__sharekind__6E5E9C8D") @map("sharekind") @db.TinyInt
+  energyClass Int @default(0, map: "DF__cmobj__energycls__6F52C0C6") @map("energycls") @db.TinyInt
+  energyRegistered DateTime? @map("nrginfreg") @db.Date
+  energyReceived DateTime? @map("nrginfrec") @db.Date
+  energyIndex Decimal? @map("nrgindex") @db.Decimal(10, 2)
+  heatingNature Int @default(0, map: "DF__cmobj__heatingcl__7046E4FF") @map("heatingcls") @db.TinyInt
+  deleteMark Int @default(0, map: "DF__cmobj__deletemar__713B0938") @map("deletemark") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+
+  //workOrder WorkOrder[] @relation("PropertyObjectToWorkOrder")
+  constructionPart ConstructionPart? @relation("PropertyObjectToConstructionPart")
+  parkingSpace ParkingSpace? @relation("PropertyObjectToParkingSpace")
+  propertyStructure PropertyStructure? @relation("PropertyObjectToPropertyStructure")
+  building Building? @relation("PropertyObjectToBuilding")
+  administrativeUnit AdministrativeUnit? @relation("PropertyObjectToAdministrativeUnit")
+  propertyArea PropertyArea[] @relation("PropertyObjectToPropertyArea")
+  property Property? @relation("PropertyObjectToProperty")
+  rentalObject RentalObject? @relation("PropertyObjectToRentalObject")
+  //company Company? @relation("PropertyObjectToCompany")
+  //contactRelation ContactRelation[] @relation("PropertyObjectToContactRelation")
+  //objectType ObjectType @relation(fields: [objectTypeId], references: [keycmobt], onUpdate: NoAction, map: "fkcmobjkeycmobt ")
+  //connectionObject ConnectionObject[] @relation("PropertyObjectToConnectionObject")
+  //measurementPoint MeasurementPoint[] @relation("PropertyObjectToMeasurementPoint")
+  //inspection Inspection[] @relation("PropertyObjectToInspection")
+  //inspectionApproval InspectionApproval[] @relation("PropertyObjectToInspectionApproval")
+  //rentalObjectInformation RentalObjectInformation? @relation("PropertyObjectToRentalObjectInformation")
+  //subjectToVAT SubjectToVAT[] @relation("PropertyObjectToSubjectToVAT")
+  //rentalBlocks RentalBlock[] @relation("PropertyObjectToRentalBlock")
+  //orderRows OrderRow[] @relation("PropertyObjectToOrderRow")
+  //apartmentInspections ApartmentInspection[] @relation("PropertyObjectToApartmentInspection")
+  //lockCylinders LockCylinder[] @relation("PropertyObjectToLockCylinder")
+  //lockSystems LockSystem[] @relation("PropertyObjectToLockSystem")
+  //vacancyDistributions VacancyDistribution[] @relation("PropertyObjectToVacancyDistribution")
+  //subProjects SubProject[] @relation("PropertyObjectToSubProject")
+  //maintenanceLogs MaintenanceLog[] @relation("PropertyObjectToMaintenanceLog")
+  //plannedMaintenance PlannedMaintenance[] @relation("PropertyObjectToPlannedMaintenance")
+  //codePlans CodePlan[] @relation("PropertyObjectToCodePlan")
+  //periodicWorks PeriodicWork[] @relation("PropertyObjectToPeriodicWork")
+  //productLocations ProductLocation[] @relation("PropertyObjectToProductLocation")
+  //productOptionStandards ProductOptionStandard[] @relation("PropertyObjectToProductOptionStandard")
+  //cartRows CartRow[] @relation("PropertyObjectToCartRow")
+  //productHistories ProductHistory[] @relation("PropertyObjectToProductHistory")
+  //actionRentalRows ActionRentalRow[] @relation("PropertyObjectToActionRentalRow")
+
+  @@index([objectTypeId], map: "fkcmobjcmobt")
+}

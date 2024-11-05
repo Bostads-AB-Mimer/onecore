@@ -20,8 +20,8 @@ model System {
 
   // Relations
   systemType SystemType? @relation(fields: [systemTypeId], references: [systemTypeId], onUpdate: NoAction, map: "fkbasyskeybasyt")
-  contact cmctc? @relation("basys_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc")
-  systemSupplier cmctc? @relation("basys_keycmctc2Tocmctc", fields: [systemSupplierId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc2")
+  //contact cmctc? @relation("basys_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc")
+  //systemSupplier cmctc? @relation("basys_keycmctc2Tocmctc", fields: [systemSupplierId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc2")
   propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbasyskeycmobj")
 
   // Indexes

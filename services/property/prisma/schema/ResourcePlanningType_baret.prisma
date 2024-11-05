@@ -10,15 +10,15 @@ model ResourcePlanningType {
   timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Field Relations
-  workOrderCategories WorkOrderCategory[] @relation("aokat_keybaretTobaret") // aokat
-  alternateWorkOrderCategories aokat[] @relation("aokat_keybaret2Tobaret")  // TODO: update 'aokat' when new model names are available
-  workOrderRows WorkOrderRow[] @relation("fkaoparkeybaret") // aopar
-  priorities Priority[] @relation("fkaoprikeybaret") // aopri
-  workOrderTypes WorkOrderType[] @relation("fkaotypkeybaret") // aotyp 
+  //workOrderCategories WorkOrderCategory[] @relation("aokat_keybaretTobaret") // aokat
+  //alternateWorkOrderCategories aokat[] @relation("aokat_keybaret2Tobaret")  // TODO: update 'aokat' when new model names are available
+  //workOrderRows WorkOrderRow[] @relation("fkaoparkeybaret") // aopar
+  //priorities Priority[] @relation("fkaoprikeybaret") // aopri
+  //workOrderTypes WorkOrderType[] @relation("fkaotypkeybaret") // aotyp 
   resourcePlannings ResourcePlanning[] @relation("fkbarekbaret") // barek
-  resourceGroups ResourceGroup[] @relation("fkcmrgrbaret") // cmrgr
-  inspectionCategories InspectionCategory[] @relation("fklbbkabaret") // lbbka
-  mainGroups MainGroup[] @relation("fkskgrpbaret") // skgrp 
+  //resourceGroups ResourceGroup[] @relation("fkcmrgrbaret") // cmrgr
+  //inspectionCategories InspectionCategory[] @relation("fklbbkabaret") // lbbka
+  //mainGroups MainGroup[] @relation("fkskgrpbaret") // skgrp 
 
   // TODO: For all unchanged fields in the model, once confirmed renaming occurs, update accordingly
 }

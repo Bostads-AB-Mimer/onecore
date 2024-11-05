@@ -13,9 +13,9 @@ model ResourcePlanning {
 
   // Relations
   // baret // TODO: Relation is missing or model does not exist
-  contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmctc")
+  //contact Contact? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmctc")
   // cmobj // TODO: Relation is missing or model does not exist
-  resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmrgr")
+  //resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: NoAction, onUpdate: NoAction, map: "fkbarekkeycmrgr")
 
   @@unique([planningTypeId, propertyObjectId, contactId, resourceGroupId, fromDate, toDate], map: "akbarek1")
   @@index([planningTypeId], map: "fkbarekbaret")
