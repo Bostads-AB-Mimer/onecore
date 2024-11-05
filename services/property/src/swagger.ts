@@ -13,11 +13,5 @@ export const swaggerSpec = {
       version: '1.0.0',
     },
   },
-  apis: [
-    `${basePath}/services/auth-service/*.{ts,js}`,
-    `${basePath}/services/health-service/*.{ts,js}`,
-    `${basePath}/services/lease-service/*.{ts,js}`,
-    `${basePath}/services/property-management-service/*.{ts,js}`,
-    `${basePath}/services/ticketing-service/*.{ts,js}`,
-  ],
+  apis: [`${basePath}/services/properties/*.{ts,js}`],
 }

@@ -4,7 +4,7 @@
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
   "main": "index.ts",
   "scripts": {
-    "dev": "node --import tsx index.ts",
+    "dev": "node --import tsx --watch index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,6 +21,7 @@
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
     "@prisma/client": "^5.20.0",
+    "dotenv": "^16.4.5",
     "koa": "^2.15.3",
     "koa-body": "^6.0.1",
     "koa2-swagger-ui": "^5.10.0",

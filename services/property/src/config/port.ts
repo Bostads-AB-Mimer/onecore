@@ -1,5 +1,3 @@
 import 'dotenv/config'
 
-export default {
-  port: process.env.PORT || 5020,
-}
+export default process.env.PORT || 5020

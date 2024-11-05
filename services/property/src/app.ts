@@ -7,7 +7,7 @@ import api from './api'
 
 import { logger, loggerMiddlewares } from 'onecore-utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
+import { routes as swaggerRoutes } from './services/swagger'
 
 const app = new Koa()
 
@@ -34,7 +34,7 @@ app.use(loggerMiddlewares.post)
 
 const publicRouter = new KoaRouter()
 
-swagggerRoutes(publicRouter)
+swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 //app.use(jwt({ secret: config.auth.secret }))
