@@ -1,0 +1,17 @@
+model Municipality {
+  @@map("bamun")
+  
+  municipalityId String @id(map: "pkbamun") @map("keybamun") @db.Char(15)
+  countyId String? @map("keybacty") @db.Char(15)
+  code String @map("code") @db.VarChar(10)
+  name String @map("caption") @db.VarChar(30)
+  alternativeName String? @map("caption2") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  administrativeUnits AdministrativeUnit[]
+
+  // TODO: Verify County model and countyId mapping, to ensure consistency across relations
+  county County? @relation(fields: [countyId], references: [countyId], onDelete: NoAction, onUpdate: NoAction, map: "fkbamunkeybacty")
+
+  @@index([countyId], map: "fkbamunbacty")
+}

@@ -1,0 +1,22 @@
+model ReportLayout {
+  @@map("cmrpl")
+  
+  reportLayoutId String @id(map: "pkcmrpl") @map("keycmrpl") @db.Char(15)
+  reportLayoutId1 String? @map("keycmrpl1") @db.Char(15) // Secondary identifier for a report layout
+  textClusterId String? @map("keysytxc") @db.Char(15) // Mapping to a table associated with text clusters
+  fileName String @map("rplfile") @db.VarChar(200) // File name associated with the layout
+  name String @unique(map: "akcmrpl1") @map("rplname") @db.VarChar(100) // Name of the report layout
+  description String @map("caption") @db.VarChar(50) // Caption or description for the layout
+  layout String @map("rpllayout") @db.Text // Actual layout configuration or content
+  userDefined Int @default(0, map: "DF__cmrpl__userdef__6EF95AFF") @map("userdef") @db.TinyInt // If the layout is user-defined
+  kind Int @default(0, map: "DF__cmrpl__rplkind__6FED7F38") @map("rplkind") @db.TinyInt // The type or category of layout
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  formPages FormPage[] @relation(map: "fkbspgskeycmrpl") // Updated for relation to FormPage model
+  reportBatchRows ReportBatchRow[] @relation(map: "fkcmrbrkeycmrpl") // Updated for relation to ReportBatchRow model
+  printSettings PrintSetting[] @relation(map: "fkfaprnkeycmrpl") // Updated for relation to PrintSetting model
+
+  @@index([reportLayoutId1], map: "fkcmrplcmrpl1")
+  @@index([textClusterId], map: "fkcmrplsytxc")
+}

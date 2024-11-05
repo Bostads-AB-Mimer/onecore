@@ -1,0 +1,42 @@
+model Room {
+  @@map("barum")
+  
+  roomId String @id(map: "pkbarum") @map("keybarum") @db.Char(15)
+  propertyObjectId String @unique(map: "akbarum1") @map("keycmobj") @db.Char(15)
+  roomTypeId String? @map("keybarut") @db.Char(15) 
+  commonAreaTypeId String? @map("keybacat") @db.Char(15)
+  mainFunctionId String? @map("keybarch") @db.Char(15)
+  subFunctionId String? @map("keybarcp") @db.Char(15)
+  roomSpecificationId String? @map("keybarcr") @db.Char(15)
+  inspectAsId String? @map("keyaopla") @db.Char(15) 
+  orderTemplateId String? @map("keyikmal") @db.Char(15)
+  roomCode String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  sharedUse Int @default(0, map: "DF__barum__gemensam__77D2F82E") @map("gemensam") @db.TinyInt
+  sortingOrder Int @default(0, map: "DF__barum__bessort__78C71C67") @map("bessort") @db.TinyInt
+  allowPeriodicWorks Int @default(1, map: "DF__barum__skstatus__79BB40A0") @map("skstatus") @db.TinyInt
+  spaceType Int @default(1, map: "DF__barum__roomtype__7AAF64D9") @map("roomtype") @db.TinyInt
+  hasToilet Int @default(0, map: "DF__barum__toilet__7BA38912") @map("toilet") @db.TinyInt
+  isHeated Int @default(2, map: "DF__barum__heating__7C97AD4B") @map("heating") @db.TinyInt
+  hasThermostatValve Int @default(0, map: "DF__barum__thermosta__7D8BD184") @map("thermostat") @db.TinyInt
+  orientation Int @default(0, map: "DF__barum__direction__7E7FF5BD") @map("direction") @db.TinyInt
+  installationDate DateTime? @map("instdate") @db.Date
+  deleteMark Int @default(0, map: "DF__barum__deletemar__7F7419F6") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  availableFrom DateTime? @map("availfrom") @db.Time
+  availableTo DateTime? @map("availto") @db.Time
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  //aopla Placement? @relation(fields: [inspectAsId], references: [id], onUpdate: NoAction, map: "fkbarumkeyaopla")
+  roomType RoomType? @relation(fields: [roomTypeId], references: [roomTypeId], onUpdate: NoAction, map: "fkbarumkeybarut")
+  //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbarumkeycmobj") // TODO: Consider renaming `cmobj` to match converted `PropertyObject`
+  //propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbarumkeycmobj")
+
+  @@index([inspectAsId], map: "fkbarumaopla")
+  @@index([roomTypeId], map: "fkbarumbarut")
+  @@index([fromDate], map: "inbarum_1W10H88YR")
+  @@index([toDate], map: "inbarum_1W10H88ZM")
+  @@index([roomCode], map: "inbarum_1W10H890J")
+  @@index([name], map: "inbarum_1W10H891T")
+}

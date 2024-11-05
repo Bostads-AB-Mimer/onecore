@@ -1,0 +1,14 @@
+model SubjectToVAT {
+  @@map("hyinv")
+  
+  subjectToVATId String @id(map: "pkhyinv") @map("keyhyinv") @db.Char(15)
+  objectId String @map("keycmobj") @db.Char(15)
+  startDate DateTime? @map("fdate") @db.Date
+  endDate DateTime? @map("tdate") @db.Date
+  vat Int @default(0, map: "DF__hyinv__vat__37D7A353") @map("vat") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm usage of timestamp to determine appropriate name
+  
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkhyinvkeycmobj") // TODO: Change this cmobj relation name to its new model name once verified
+  
+  @@index([objectId], map: "fkhyinvkeycmobj")
+}

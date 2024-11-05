@@ -1,0 +1,20 @@
+model BuildingPartLocation {
+  @@map("aopbd")
+
+  // Fields
+  id String @id(map: "pkaopbd") @map("keyaopbd") @db.Char(15)
+  locationId String @map("keyaopla") @db.Char(15)
+  buildingPartId String @map("keyaobdl") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  // TODO: Verify model `aobdl` exists and has the key field `keyaobdl`
+  buildingPart BuildingPart @relation(fields: [buildingPartId], references: [buildingPartId], onDelete: Cascade, onUpdate: NoAction, map: "fkaopbdkeyaobdl")
+  
+  // TODO: Verify model `aopla` exists and has the key field `keyaopla`
+  // aopla aopla @relation(fields: [locationId], references: [keyaopla], onDelete: Cascade, onUpdate: NoAction, map: "fkaopdbkeyaopla")
+
+  @@unique([buildingPartId, locationId], map: "akaopbd1")
+  @@index([buildingPartId], map: "fkaopbdaobdl")
+  @@index([locationId], map: "fkaopbdaopla")
+}

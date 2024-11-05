@@ -1,0 +1,37 @@
+model AmortizationPlan {
+  @@map("kramp")
+
+  amortizationPlanId String @id(map: "pkkramp") @map("keykramp") @db.Char(15)
+  companyId String @map("keycmcmp") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  invoiceRecipientId String? @map("keycmctc2") @db.Char(15) // TODO: Verify domain-specific name
+  transactionTypeId String? @map("keyrevrt") @db.Char(15)
+  userId String @map("keysyusr") @db.Char(15)
+  registrationDate DateTime @map("regdate") @db.DateTime
+  status Int @map("closed") @db.TinyInt // Assuming closed means status, not certain
+  directDebit Int @default(0, map: "DF__kramp__directdeb__09F769FE") @map("directdeb") @db.TinyInt
+  content Int @default(0, map: "DF__kramp__content__0AEB8E37") @map("content") @db.TinyInt // TODO: Confirm content purpose
+  periodicity Int @default(1, map: "DF__kramp__percity__0BDFB270") @map("percity") @db.TinyInt
+  calculationMethod Int @map("calcmethod") @db.SmallInt
+  amortizationMethod Int @map("invmethod") @db.SmallInt
+  periodCount Int @map("periods") @db.SmallInt
+  monthlyAmount Float @map("peramount") @db.Money
+  totalAmount Float @map("totamount") @db.Money
+  feeAmount Float @map("fee") @db.Money
+  interestAmount Float @map("interest") @db.Money
+  firstDueMonth Int @map("expmonth")
+  firstDueDate DateTime @map("expdate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Clarify usage and naming of timestamp
+
+  // Relations
+  //cmcmp cmcmp @relation(fields: [companyId], references: [keycmcmp], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmcmp")
+  //cmctc_kramp_keycmctcTocmctc cmctc @relation("kramp_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkkrampkeycmctc")
+  //cmctc_kramp_keycmctc2Tocmctc cmctc? @relation("kramp_keycmctc2Tocmctc", fields: [invoiceRecipientId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkkrampkeycmctc2")
+  transactionType TransactionType? @relation(fields: [transactionTypeId], references: [transactionTypeId], onUpdate: NoAction, onDelete: NoAction, map: "fkkrampkeyrevrt")
+
+  @@index([companyId], map: "fkkrampcmcmp")
+  @@index([contactId], map: "fkkrampcmctc")
+  @@index([invoiceRecipientId], map: "fkkrampcmctc2")
+  @@index([transactionTypeId], map: "fkkramprevrt")
+  @@index([userId], map: "fkkrampsyusr")
+}

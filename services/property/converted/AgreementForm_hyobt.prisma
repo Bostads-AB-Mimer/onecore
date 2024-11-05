@@ -1,0 +1,21 @@
+model AgreementForm {
+  @@map("hyobt")
+
+  // Fields
+  agreementFormId String @id(map: "PK__hyobt__5D6C935F") @map("keyhyobt") @db.Char(15)
+  moduleId String? @map("keysymdl") @db.Char(15) // TODO: rename when new model name is known
+  chargingTypeId String? @map("keyfadbt") @db.Char(15) // TODO: rename when new model name is known
+  name String @map("hyobtben") @db.Char(30)
+  isInternal Int? @map("internal") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  // Relations
+  notificationPerformed NotificationPerformed[] // Replacing fieldnames with new model name
+  // TODO: Commented out as fields are uncertain, rename "hyobj" when new model name is known
+  // hyobj_hyobj_keyhyobtTohyobt hyobj[] @relation("hyobj_keyhyobtTohyobt") 
+  // hyobj_hyobj_keyhyobt2Tohyobt hyobj[] @relation("hyobj_keyhyobt2Tohyobt") 
+  
+
+  @@index([chargingTypeId], map: "fkhyobtfadbt")
+  @@index([moduleId], map: "fkhyobtsymdl")
+}

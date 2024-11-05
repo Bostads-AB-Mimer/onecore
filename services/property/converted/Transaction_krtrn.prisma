@@ -1,0 +1,42 @@
+model Transaction {
+  @@map("krtrn")
+
+  transactionId String @id(map: "pkkrtrn") @map("keykrtrn") @db.Char(15)
+  companyId String @map("keycmcmp") @db.Char(15)
+  billingMethodId String? @map("keycmdbm") @db.Char(15) // TODO: Verify if this should be called BillingMethod
+  transactionTypeId String @map("keyrevrt") @db.Char(15)
+  secondaryTransactionTypeId String? @map("keyrevrt2") @db.Char(15) // TODO: Verify if this is a secondary transaction type
+  codeTypeId String? @map("keyrekpy") @db.Char(15) // TODO: Confirm the function of keyrekpy
+  invoiceRowId String @map("keykrfkr") @db.Char(15) // Refers to Fakturarad, aligning with invoiceRow
+  contactId String @map("keycmctc") @db.Char(15) // Already mapped in previous conversion
+  invoiceId String @map("keykrfkh") @db.Char(15) // Refers to Faktura, already mapped in AutogiroTransaction
+  linkedTransactionId String? @map("keykrtrn2") @db.Char(15) // Referring to a related transaction
+  userId String? @map("keysyusr") @db.Char(15) // Already mapped in previous conversion
+  transactionDate DateTime? @map("transdate") @db.DateTime
+  registrationDate DateTime? @map("regdate") @db.DateTime
+  exportDate DateTime? @map("exportdate") @db.DateTime
+  type Int @default(0, map: "DF__krtrn__type__42C61C42") @map("type") @db.TinyInt
+  status Int @map("status") // Assuming a generic status field, no additional information needed
+  amount Float? @map("amount") @db.Money
+  originalAmount Float @default(0, map: "DF__krtrn__orgamount__43BA407B") @map("orgamount") @db.Money
+  reference String? @map("reference") @db.Char(30)
+  transactionReference String? @map("tranid") @db.VarChar(500) // Corresponding to transaction ID/reference
+  transactionNoteLocked Int @default(0, map: "DF__krtrn__tranidloc__44AE64B4") @map("tranidlock") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if timestamp should be uniquely identified
+
+  // TODO: Ensure the relation name aligns with context; rename if needed
+  kragl AutogiroTransaction[] @relation
+
+  @@index([companyId], map: "fkkrtrncmcmp")
+  @@index([contactId], map: "fkkrtrncmctc")
+  @@index([billingMethodId], map: "fkkrtrncmdbm")
+  @@index([invoiceId], map: "fkkrtrnkrfkh")
+  @@index([invoiceRowId], map: "fkkrtrnkrfkr")
+  @@index([linkedTransactionId], map: "fkkrtrnkrtrn2")
+  @@index([codeTypeId], map: "fkkrtrnrekpy")
+  @@index([transactionTypeId], map: "fkkrtrnrevrt")
+  @@index([secondaryTransactionTypeId], map: "fkkrtrnrevrt2")
+  @@index([userId], map: "fkkrtrnsyusr")
+  @@index([transactionDate], map: "inkrtrn_2HU0W1VQG")
+  @@index([transactionTypeId, contactId, companyId, transactionId], map: "inkrtrn_2HU0W1VSM")
+}

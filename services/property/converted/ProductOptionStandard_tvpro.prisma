@@ -1,0 +1,17 @@
+model ProductOptionStandard {
+  @@map("tvpro")
+  optionStandardId String @id(map: "pktvpro") @map("keytvpro") @db.Char(15)
+  productId String @map("keytvprd") @db.Char(15)
+  objectId String @map("keycmobj") @db.Char(15)
+  startDate DateTime @map("fdate") @db.Date
+  endDate DateTime? @map("tdate") @db.Date
+  discountPercentage Decimal? @map("disperce") @db.Decimal(4, 1)
+  productOption Int @default(0, map: "DF__tvpro__prdoption__498C3F3A") @map("prdoption") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing its usage
+
+  cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fktvprokeycmobj") // TODO: Change to new name once cmobj is renamed
+  tvprd tvprd @relation(fields: [productId], references: [keytvprd], onDelete: Cascade, onUpdate: NoAction, map: "fktvprokeytvprd") // TODO: Change to new name once tvprd is renamed
+
+  @@unique([productId, objectId], map: "aktvpro")
+  @@index([objectId], map: "fktvprocmobj")
+}

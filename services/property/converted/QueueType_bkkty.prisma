@@ -1,0 +1,78 @@
+model QueueType {
+  @@map("bkkty")
+  
+  queueTypeId String @id(map: "pkbkkty") @map("keybkkty") @db.Char(15)
+  categoryId String @map("keycmobt") @db.Char(15) // Assuming this refers to a category, TODO: Confirm in later passes
+  unitId String? @map("keycmuni") @db.Char(15) // Assuming this is related to Unit, as seen in previous conversions
+  republishOnId String? @map("keybkkty2") @db.Char(15) // TODO: Investigate exact purpose
+  queueRuleNegativeResponseId String? @map("keybkqrl") @db.Char(15) // Assuming fare rule names based on field use
+  queueRuleApplicationsId String? @map("keybkqrl2") @db.Char(15)
+  queueRuleOffersId String? @map("keybkqrl3") @db.Char(15)
+  queueRulePositiveResponseId String? @map("keybkqrl4") @db.Char(15)
+  queueTransactionTypeId String? @map("keybkvrt") @db.Char(15) // Assuming transaction naming convention
+  responseCodeId String? @map("keybksva") @db.Char(15) // From previous conversions related to response code
+  emailTypeId String @map("keycmemt") @db.Char(15) // Assuming email or communication meta type
+  checklistId String? @map("keyprclh") @db.Char(15) // Based on previous conversions
+  integrationSchemaId String? @map("keycmmap") @db.Char(15) // Related to integration schema as flagged in past notes
+  waitingListType String? @map("bkktyben") @db.VarChar(30) 
+  operational Int @map("idrift") @db.TinyInt // Represents 'Kötypen är i drift'
+  queuePeriod Int? @map("period") @db.TinyInt // Mapping Swedish term for queue period
+  specialHandlingExistingTenants Int @map("befhyg") @db.TinyInt
+  internalUse Int @default(0, map: "DF__bkkty__internal__1959F25B") @map("internal") @db.TinyInt
+  internalResourceQueueFactor Int @default(0, map: "DF__bkkty__cmrestfr__1A4E1694") @map("cmrestfr") @db.TinyInt
+  queueFactor Decimal? @map("cmresfact") @db.Decimal(5, 2)
+  maxDefermentInterestApplications Int @default(0, map: "DF__bkkty__maxinter__1B423ACD") @map("maxinter") @db.TinyInt
+  minContractTimeForOffer Int? @map("minkont") @db.SmallInt
+  afterQueueTime Int? @map("kotidefter") @db.SmallInt
+  customerCheckRequiredBeforeContract Int @map("kundkontr") @db.TinyInt
+  queueTimeSource Int @default(0, map: "DF__bkkty__tidfrctc__1C365F06") @map("tidfrctc") @db.TinyInt
+  defaultContactMethod Int @default(255, map: "DF__bkkty__defdest__1D2A833F") @map("defdest") @db.TinyInt
+  offerTextIntro String? @map("erbjtext1") @db.VarChar(Max)
+  offerTextConclusion String? @map("erbjtext2") @db.VarChar(Max)
+  simultaneousOffersSuggestion Int @default(4, map: "DF__bkkty__simoffers__1E1EA778") @map("simoffers") @db.SmallInt
+  renewalRequest Int @map("fornyelse") @db.TinyInt
+  renewalLetterIntro String? @map("fornbrev1") @db.VarChar(Max)
+  renewalLetterConclusion String? @map("fornbrev2") @db.VarChar(Max)
+  senderEmail String? @map("sendermail") @db.VarChar(80)
+  selectableOnWeb Int @default(0, map: "DF__bkkty__valbar__1F12CBB1") @map("valbar") @db.TinyInt
+  publicationDuration Int @default(0, map: "DF__bkkty__pubdays__2006EFEA") @map("pubdays") @db.TinyInt
+  proposedPublicationStartDate Int @default(1, map: "DF__bkkty__pubwhen__20FB1423") @map("pubwhen") @db.TinyInt
+  offerDuringPublication Int @default(0, map: "DF__bkkty__offdurpub__21EF385C") @map("offdurpubl") @db.TinyInt
+  associatedType Int @default(0, map: "DF__bkkty__avsertyp__22E35C95") @map("avsertyp") @db.TinyInt
+  interestNotification Int @default(0, map: "DF__bkkty__offerdir__23D780CE") @map("offerdir") @db.TinyInt
+  offerAgain Int @default(0, map: "DF__bkkty__offerrep__24CBA507") @map("offerrep") @db.TinyInt
+  exclusiveOffer Int @default(0, map: "DF__bkkty__offerexcl__25BFC940") @map("offerexcl") @db.TinyInt
+  maxDaysForPublication Int @map("maxoffdays") @db.SmallInt
+  shortestTimeToMoveIn Int @map("minvacdays") @db.SmallInt
+  renewFrom Int @default(1, map: "DF__bkkty__renewfrom__26B3ED79") @map("renewfrom") @db.TinyInt
+  republish Int @default(0, map: "DF__bkkty__publrep__27A811B2") @map("publrep") @db.TinyInt
+  responseTimeForOfferDays Int @default(7, map: "DF__bkkty__replytime__289C35EB") @map("replytime") @db.TinyInt
+  interestNotificationEnds Int @default(0, map: "DF__bkkty__termwoffe__29905A24") @map("termwoffer") @db.TinyInt
+  defaultOnNewApplication Int @default(0, map: "DF__bkkty__defonnew__2A847E5D") @map("defonnew") @db.TinyInt
+  useRandomSort Int @default(0, map: "DF__bkkty__randomsor__2B78A296") @map("randomsort") @db.TinyInt
+  socialConnectionQueuePoints Int? @map("socpoints") @db.SmallInt
+  calculateQueuePointsBy Int @default(1, map: "DF__bkkty__calcpoint__2C6CC6CF") @map("calcpoints") @db.TinyInt
+  maximumQueuePoints Int? @map("maxpoints") @db.SmallInt
+  fixedQueuePoints Int? @map("tenapoints") @db.SmallInt
+  discloseQueuePointsFrom Int @default(0, map: "DF__bkkty__showpoint__2D60EB08") @map("showpoints") @db.TinyInt
+  noSearchSubscription Int @default(0, map: "DF__bkkty__exclfroms__2E550F41") @map("exclfromsu") @db.TinyInt
+  guarantorRequired Int @default(0, map: "DF__bkkty__guarantor__2F49337A") @map("guarantor") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  
+  integrationSchema IntegrationSchema? @relation(fields: [integrationSchemaId], references: [integrationSchemaId], onUpdate: NoAction, map: "fkbkktykeycmmap")
+  checklist Checklist? @relation(fields: [checklistId], references: [checklistId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkktykeyprclh")
+  waitingListTypeMessageTemplates WaitingListTypeMessageTemplate[] // Updated relation from bkmtc
+  rentalObjectTypes RentalObjectType[] // Updated relation from hyint
+
+  @@index([republishOnId], map: "fkbkktybkkty2")
+  @@index([queueRuleNegativeResponseId], map: "fkbkktybkqrl")
+  @@index([queueRuleApplicationsId], map: "fkbkktybkqrl2")
+  @@index([queueRuleOffersId], map: "fkbkktybkqrl3")
+  @@index([queueRulePositiveResponseId], map: "fkbkktybkqrl4")
+  @@index([responseCodeId], map: "fkbkktybksva")
+  @@index([emailTypeId], map: "fkbkktycmemt")
+  @@index([integrationSchemaId], map: "fkbkktycmmap")
+  @@index([categoryId], map: "fkbkktycmobt")
+  @@index([unitId], map: "fkbkktycmuni")
+  @@index([checklistId], map: "fkbkktyprclh")
+}

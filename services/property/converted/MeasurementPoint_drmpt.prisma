@@ -1,0 +1,41 @@
+model MeasurementPoint {
+  @@map("drmpt")
+
+  measurementPointId String @id(map: "pkdrmpt") @map("keydrmpt") @db.Char(15)
+  propertyId String @map("keycmobj") @db.Char(15)
+  resourceId String? @map("keycmctc") @db.Char(15)
+  measurementTypeId String @map("keydrmts") @db.Char(15)
+  climateLocationId String? @map("keydrort") @db.Char(15)
+  networkAreaId String? @map("keydromr") @db.Char(15)
+  measurementType Int @default(0, map: "DF__drmpt__mtstype__10EDDE65") @map("mtstype") @db.TinyInt
+  indexType Int @default(1, map: "DF__drmpt__indextype__11E2029E") @map("indextype") @db.TinyInt
+  code String @map("code") @db.Char(30)
+  name String @map("caption") @db.Char(50)
+  note String? @map("mptplace") @db.Char(100)
+  isExportMeter Int @map("mptexport") @db.TinyInt
+  isActive Int @map("mptactive") @db.TinyInt
+  climateCorrection Int @map("mptclimate")
+  correctionMethod Int @map("mptclmtype") @db.TinyInt
+  barcode String @map("mpteancode") @db.Char(30)
+  degreeMethod Int? @map("mptgmethod") @db.TinyInt
+  hotWaterPercentage Int @map("mptvvp") @db.TinyInt
+  plantId String? @map("mptanlid") @db.Char(25)
+  shouldDebitConsumption Int @default(0, map: "DF__drmpt__debiting__12D626D7") @map("debiting") @db.TinyInt
+  readingInterval Int @default(1, map: "DF__drmpt__readinter__13CA4B10") @map("readinterv") @db.TinyInt
+  operator Int @default(0, map: "DF__drmpt__operator__14BE6F49") @map("operator") @db.TinyInt
+  referenceYear Int? @map("refyear") @db.SmallInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp format later if more information is available
+
+  cmctc Contact? @relation(fields: [resourceId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeycmctc")
+  property Property @relation(fields: [propertyId], references: [propertyObjectId], onUpdate: NoAction, map: "fkdrmptkeycmobj") // TODO: Update model name when schema becomes available
+  drmts drmts @relation(fields: [measurementTypeId], references: [keydrmts], onUpdate: NoAction, map: "fkdrmptkeydrmts")
+  dromr NetworkArea? @relation(fields: [networkAreaId], references: [networkAreaId], onDelete: Cascade, onUpdate: NoAction, map: "fkdrmptkeydromr")
+  drort ClimateLocation? @relation(fields: [climateLocationId], references: [climateLocationId], onDelete: NoAction, onUpdate: NoAction, map: "fkdrmptkeydrort")
+
+  @@index([resourceId], map: "fkdrmptcmctc")
+  @@index([propertyId], map: "fkdrmptcmobj")
+  @@index([measurementTypeId], map: "fkdrmptdrmts")
+  @@index([networkAreaId], map: "fkdrmptdromr")
+  @@index([climateLocationId], map: "fkdrmptdrort")
+  @@index([shouldDebitConsumption, measurementPointId, isActive, code], map: "indrmpt_3500QDJHG")
+}

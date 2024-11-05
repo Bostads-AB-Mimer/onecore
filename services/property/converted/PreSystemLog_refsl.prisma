@@ -1,0 +1,40 @@
+model PreSystemLog {
+  @@map("refsl")
+  
+  preSystemLogId String @id(map: "pkrefsl") @map("keyrefsl") @db.Char(15)
+  verificationId String @map("keyrevrh") @db.Char(15)
+  ledgerRowId String @map("keyrevrr") @db.Char(15)
+  transactionTypeId String @map("keyrevrt") @db.Char(15)
+  codeTypeCategoryId String? @map("keyrektk") @db.Char(15)
+  tableId String @map("keydbtbl") @db.Char(15)
+  connectionId String @map("keycode") @db.Char(15)
+  tableId2 String? @map("keydbtbl2") @db.Char(15)
+  connectionId2 String? @map("keycode2") @db.Char(15)
+  tableId3 String? @map("keydbtbl3") @db.Char(15)
+  connectionId3 String? @map("keycode3") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Clarify usage and rename if needed
+  
+  // Relations
+  codeTypeCategory CodeTypeCategory? @relation(fields: [codeTypeCategoryId], references: [codeTypeCategoryId], onDelete: NoAction, onUpdate: NoAction, map: "fkrefslkeyrektk")
+  verification Verification @relation(fields: [verificationId], references: [verificationId], onUpdate: NoAction, map: "fkrefslkeyrevrh")
+  ledgerRow LedgerRow @relation(fields: [ledgerRowId], references: [ledgerRowId], onUpdate: NoAction, map: "fkrefslkeyrevrr")
+  transactionType TransactionType @relation(fields: [transactionTypeId], references: [transactionTypeId], onUpdate: NoAction, map: "fkrefslkeyrevrt")
+
+  @@index([connectionId], map: "fkrefslcode")
+  @@index([connectionId2], map: "fkrefslcode2")
+  @@index([connectionId3], map: "fkrefslcode3")
+  @@index([tableId], map: "fkrefsldbtbl")
+  @@index([tableId2], map: "fkrefsldbtbl2")
+  @@index([tableId3], map: "fkrefsldbtbl3")
+  @@index([codeTypeCategoryId], map: "fkrefslrektk")
+  @@index([verificationId], map: "fkrefslrevrh")
+  @@index([ledgerRowId], map: "fkrefslrevrr")
+  @@index([transactionTypeId], map: "fkrefslrevrt")
+  @@index([tableId, connectionId, tableId2, verificationId], map: "inrefsl_21D0VWGFY")
+  @@index([tableId2, connectionId2, codeTypeCategoryId, verificationId, ledgerRowId, connectionId], map: "inrefsl_21D0VWGJF")
+  @@index([connectionId, transactionTypeId, tableId], map: "inrefsl_21D0VWGSJ")
+  @@index([connectionId, transactionTypeId, tableId, codeTypeCategoryId], map: "inrefsl_35010MA0A")
+  @@index([tableId, codeTypeCategoryId, transactionTypeId], map: "inrefsl_35010MA2N")
+  @@index([tableId, connectionId, codeTypeCategoryId], map: "inrefsl_ocr")
+  @@index([tableId3, connectionId3], map: "ix_refsl_keydbtbl3_keycode3")
+}

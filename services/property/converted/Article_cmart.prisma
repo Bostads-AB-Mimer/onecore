@@ -1,0 +1,101 @@
+model Article {
+  @@map("cmart")
+
+  // Field Mappings
+  articleId String @id(map: "pkcmart") @map("keycmart") @db.Char(15)
+  moduleId String @map("keysymdl") @db.Char(15)
+  articleTypeId String? @map("keycmtyp") @db.Char(15)
+  subTypeId String? @map("keycmtyp2") @db.Char(15)
+  unitId String @map("keycmuni") @db.Char(15)
+  secondaryUnitId String? @map("keycmuni2") @db.Char(15)
+  articleGroupId String? @map("keycmarg") @db.Char(15)
+  serviceFundId String? @map("keycmsfd") @db.Char(15)
+  baseRentMeasurementTypeId String? @map("keycmvat") @db.Char(15)
+  contractRowMeasurementTypeId String? @map("keycmvat2") @db.Char(15)
+  summaryRowId String? @map("keyhysum") @db.Char(15)
+  contributionGroupId String? @map("keyhysgp") @db.Char(15)
+  relatedArticleId String? @map("keycmart2") @db.Char(15)
+  code String @map("code") @db.VarChar(20)
+  name String? @map("caption") @db.VarChar(70)
+  isActive Int @map("artused") @db.TinyInt
+  priceAmount Float @map("price") @db.Money
+  internalPriceAmount Float? @map("priceint") @db.Money
+  purchasePriceAmount Float? @map("pricebuy") @db.Money
+  storageLocation String? @map("reference1") @db.VarChar(30)
+  alternateReference1 String? @map("reference2") @db.VarChar(30)
+  alternateReference2 String? @map("reference3") @db.VarChar(30)
+  aviText String? @map("avitext") @db.VarChar(80)
+  rentDeduction Int? @map("hybortfall") @db.TinyInt
+  rentalAreaUnit String? @map("areahyra") @db.Char(1)
+  regulationMethod String? @map("reglmetod") @db.Char(1)
+  printGroup String? @map("utskrgrupp") @db.Char(4)
+  duration Int? @map("varaktig") @db.SmallInt
+  includeInContractRent Int? @map("kontsumma") @db.TinyInt
+  absence Int? @map("absence") @db.TinyInt
+  generalArticle Int? @map("regular") @db.TinyInt
+  applicationArea Int @map("artusage") @db.TinyInt
+  includeInAssessedValue Int @map("amcalcinc") @db.TinyInt
+  externalInternal Int @map("prinvextin") @db.TinyInt
+  debitLockedForEditing Int @map("debitlock") @db.TinyInt
+  billingAlwaysFullPeriod Int? @map("helperiod") @db.TinyInt
+  administrationFee Int @map("pdfee") @db.TinyInt
+  heatDeduction Int @map("pdheat") @db.TinyInt
+  administrationFeePercentage Decimal? @map("pdfeeprcnt") @db.Decimal(4, 2)
+  export Int @map("artexport") @db.TinyInt
+  priority Int @map("priority") @db.TinyInt
+  standardCode Int @map("repabkod") @db.TinyInt
+  deviationTolerance Int? @map("devtoleran")
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // Relations
+  contractPrice ContractPrice[] @relation("fkavarkkeycmart")
+  articleGroup ArticleGroup? @relation(fields: [articleGroupId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmarg")
+  linkedArticle Article? @relation("cmartTocmart", fields: [relatedArticleId], references: [articleId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmart2")
+  other_articles Article[] @relation("cmartTocmart")
+
+  // Commented out pending resolution
+  // primaryUnit Unit @relation("cmart_keycmuniTocmuni", fields: [unitId], references: [id], onUpdate: NoAction, map: "fkcmartkeycmuni")
+  // secondaryUnit Unit? @relation("cmart_keycmuni2Tocmuni", fields: [secondaryUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmuni2")
+  // baseRentMeasurementType MeasurementType? @relation("cmart_keycmvatTocmvat", fields: [baseRentMeasurementTypeId], references: [measurementTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeycmvat")
+  // contractRowMeasurementType MeasurementType? @relation("cmart_keycmvat2Tocmvat", fields: [contractRowMeasurementTypeId], references: [measurementTypeId], onUpdate: NoAction, map: "fkcmartkeycmvat2")
+  summaryRow SummaryRow? @relation(fields: [summaryRowId], references: [summaryRowId], onDelete: NoAction, onUpdate: NoAction, map: "fkcmartkeyhysum")
+  // cmcmp_cmcmp_keycmartTocmart cmcmp[] @relation("cmcmp_keycmartTocmart")
+  // cmcmp_cmcmp_keycmart2Tocmart cmcmp[] @relation("cmcmp_keycmart2Tocmart")
+  // cmcmp_cmcmp_keycmart3Tocmart cmcmp[] @relation("cmcmp_keycmart3Tocmart")
+  allocationRentalRow AllocationRentalRow[]
+
+  // Commented out pending resolution
+  // contract Contract[] @relation("fkavarkkeyhyobj")
+  // alternateContract Contract[] @relation("hyobj_keycmart2Tocmart")
+  rentalRow RentalRow[]
+  orderRow OrderRow[]
+  inspectionRemark InspectionRemark[]
+  priceListRow PriceListRow[]
+  vacancyDistribution VacancyDistribution[]
+  activityTime ActivityTime[]
+  projectTransaction ProjectTransaction[]
+  maintenanceActionGroup MaintenanceActionGroup[]
+  maintenanceAction MaintenanceAction[]
+
+  // Commented out pending resolution
+  // tvpdg tvpdg[] @relation("tvpdg_keycmartTocmart")
+  // tvpdg tvpdg2 tvpdg[] @relation("tvpdg_keycmart2Tocmart")
+  // tvpdg tvpdg3 tvpdg[] @relation("tvpdg_keycmart3Tocmart")
+  // tvprd tvprd[] @relation("tvprd_keycmartTocmart")
+  // tvprd tvprd2 tvprd[] @relation("tvprd_keycmart2Tocmart")
+  // tvprd tvprd3 tvprd[] @relation("tvprd_keycmart3Tocmart")
+  // tvprd tvprd4 tvprd[] @relation("tvprd_keycmart4Tocmart")
+
+  // Indexes
+  @@index([articleGroupId], map: "fkcmartcmarg")
+  @@index([relatedArticleId], map: "fkcmartcmart2")
+  @@index([articleTypeId], map: "fkcmartcmtyp")
+  @@index([subTypeId], map: "fkcmartcmtyp2")
+  @@index([unitId], map: "fkcmartcmuni")
+  @@index([secondaryUnitId], map: "fkcmartcmuni2")
+  @@index([baseRentMeasurementTypeId], map: "fkcmartcmvat")
+  @@index([contractRowMeasurementTypeId], map: "fkcmartcmvat2")
+  @@index([summaryRowId], map: "fkcmarthysum")
+  @@index([moduleId], map: "fkcmartsymdl")
+  @@index([code, isActive, moduleId], map: "incmart1")
+}

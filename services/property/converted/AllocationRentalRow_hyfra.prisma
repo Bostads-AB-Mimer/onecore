@@ -1,0 +1,25 @@
+model AllocationRentalRow {
+  @@map("hyfra")
+  
+  allocationRentalRowId String @id(map: "pkhyfra") @map("keyhyfra") @db.Char(15)
+  rentalRowId String @map("keyhyrad") @db.Char(15)
+  rentalArticleId String @map("keycmart") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15)
+  rentalObjectId String @map("keycmobj") @db.Char(15)
+  annualRentAmount Float @map("akthyratot") @db.Money
+  vatPercentage Decimal @map("momsproc") @db.Decimal(7, 2)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
+
+  //rentalArticle RentalArticle @relation(fields: [rentalArticleId], references: [rentalArticleId], onUpdate: NoAction, map: "fkhyfrakeycmart")
+  rentalRow RentalRow @relation(fields: [rentalRowId], references: [rentalRowId], onDelete: Cascade, onUpdate: NoAction, map: "fkhyfrakeyhyrad")
+  
+  // TODO: Uncomment and update when the new model names are available
+  // cmart  
+  // hyrad  
+  
+  @@unique([rentalRowId, rentalObjectId], map: "akhyfra1")
+  @@index([rentalArticleId], map: "fkhyfracmart")
+  @@index([rentalObjectId], map: "fkhyfracmobj")
+  @@index([contractId], map: "fkhyfrahyobj")
+  @@index([rentalRowId], map: "fkhyfrahyrad")
+}

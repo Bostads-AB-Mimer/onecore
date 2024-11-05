@@ -1,0 +1,36 @@
+model WorkOrderCategory {
+  @@map("aokat")
+
+  workOrderCategoryId String @id(map: "pkaokat") @map("keyaokat") @db.Char(15)
+  priorityId String? @map("keyaopri") @db.Char(15)
+  workOrderPackageId String? @map("keyaopah") @db.Char(15)
+  routeId String? @map("keyatway") @db.Char(15)
+  resourcePlanningTypeId String? @map("keybaret") @db.Char(15)
+  resourcePlanningTypeId2 String? @map("keybaret2") @db.Char(15)
+  name String @unique(map: "akaokat") @map("caption") @db.VarChar(30)
+  sendToManager Int @default(0, map: "DF__aokat__notiadmin__63BEC505") @map("notiadmin") @db.TinyInt
+  requireModule Int @default(0, map: "DF__aokat__forcemdl__64B2E93E") @map("forcemdl") @db.TinyInt
+  requirePriorityGroup Int @default(0, map: "DF__aokat__forceprg__65A70D77") @map("forceprg") @db.TinyInt
+  requireDevelopmentProject Int @default(0, map: "DF__aokat__devprj__669B31B0") @map("devprj") @db.TinyInt
+  printOrder Int @default(0, map: "DF__aokat__printsort__678F55E9") @map("printsort") @db.SmallInt
+  publish Int @default(0, map: "DF__aokat__publish__68837A22") @map("publish") @db.TinyInt
+  isActive Int @default(1, map: "DF__aokat__isactive__69779E5B") @map("isactive") @db.TinyInt
+  emergencyNumber String? @map("smsalarm") @db.VarChar(60)
+  timestamp String @map("timestamp") @db.Char(10)
+
+  workOrderPackage WorkOrderPackage? @relation(fields: [workOrderPackageId], references: [workOrderPackageId], onUpdate: NoAction, map: "fkaokatkeyaopah")
+  priority Priority? @relation(fields: [priorityId], references: [id], onUpdate: NoAction, onDelete: NoAction, map: "fkaokatkeyaopri")
+  // TODO: Comment out or deal with missing model 'baret' references in forward pass
+  // resourcePlanningType baret_aokat_keybaretTobaret baret? @relation("aokat_keybaretTobaret", fields: [resourcePlanningTypeId], references: [keybaret], onUpdate: NoAction, map: "fkaokatkeybaret")
+  // resourcePlanningType2 baret_aokat_keybaret2Tobaret baret? @relation("aokat_keybaret2Tobaret", fields: [resourcePlanningTypeId2], references: [keybaret], onDelete: NoAction, onUpdate: NoAction, map: "fkaokatkeybaret2")
+
+  workOrderCategoryTemplateLinks WorkOrderCategoryTemplateLink[]
+  workOrderCategoryLinks WorkOrderCategoryLink[]
+  workOrders WorkOrder[] 
+  productGroups ProductGroup[]
+
+  @@index([workOrderPackageId], map: "fkaokataopah")
+  @@index([priorityId], map: "fkaokataopri")
+  // @@index([resourcePlanningTypeId], map: "fkaokatbaret") // Commented out due to missing model
+  // @@index([resourcePlanningTypeId2], map: "fkaokatbaret2") // Commented out due to missing model
+}

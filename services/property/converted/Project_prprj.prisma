@@ -1,0 +1,104 @@
+model Project {
+  @@map("prprj")
+  
+  projectId String @id(map: "pkprprj") @map("keyprprj") @db.Char(15)
+  projectTransactionTypeId String @map("keyprvrt") @db.Char(15)
+  invoiceContentId String? @map("keyprsdi") @db.Char(15)
+  projectTypeId String? @map("keyprtyp") @db.Char(15)
+  projectCategoryId String? @map("keyprcat") @db.Char(15)
+  checklistId String? @map("keyprclh") @db.Char(15)
+  extraTableIdA String? @map("keypreta") @db.Char(15) // TODO: determine correct naming later
+  extraTableIdB String? @map("keypretb") @db.Char(15) // TODO: determine correct naming later
+  extraTableIdC String? @map("keypretc") @db.Char(15) // TODO: determine correct naming later
+  clientContactId String @map("keycmctc") @db.Char(15)
+  referenceContactId String? @map("keycmctc2") @db.Char(15)
+  responsibleContactId String? @map("keycmctc3") @db.Char(15)
+  businessContactId String? @map("keycmctc4") @db.Char(15)
+  internalClientContactId String? @map("keycmctc5") @db.Char(15)
+  companyClientId String @map("keycmcmp") @db.Char(15)
+  serviceAreaId String? @map("keycmsom") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15)
+  routeId String? @map("keyatway") @db.Char(15)
+  priorityId String? @map("keyaopri") @db.Char(15)
+  deviationTypeId String? @map("keyikdnt") @db.Char(15)
+  projectCode String @map("code") @db.VarChar(30)
+  projectName String? @map("caption") @db.VarChar(50)
+  projectSummary String? @map("prjsummary") @db.VarChar(1000)
+  isInternalProject Int @map("internal") @db.TinyInt
+  projectType Int @default(0, map: "DF__prprj__prjtype__2D0D7C65") @map("prjtype") @db.TinyInt
+  canBeDebited Int @map("debit") @db.TinyInt
+  supplierInvoicesDebit Int @map("debitlr") @db.TinyInt
+  isSubProjectInReportRequired Int @default(0, map: "DF__prprj__forceppr__2E01A09E") @map("forceppr") @db.TinyInt
+  isSubProjectInWorkOrderRequired Int @default(0, map: "DF__prprj__forceaopp__2EF5C4D7") @map("forceaoppr") @db.TinyInt
+  isSubProjectInOrderRequired Int @default(0, map: "DF__prprj__forceikpp__2FE9E910") @map("forceikppr") @db.TinyInt
+  isBundled Int? @map("bundle") @db.TinyInt
+  reportDate DateTime? @map("repodate") @db.Date
+  startDate DateTime? @map("fdate") @db.Date
+  endDate DateTime? @map("tdate") @db.Date
+  estimatedTimeAmount Int? @map("preltime")
+  estimatedCompletionDate DateTime? @map("preltdate") @db.Date
+  orderAmount Float @default(0, map: "DF__prprj__orderval__30DE0D49") @map("orderval") @db.Money
+  orderChancePercentage Int @default(0, map: "DF__prprj__orderprcn__31D23182") @map("orderprcnt") @db.TinyInt
+  projectStatus Int @default(0, map: "DF__prprj__status__32C655BB") @map("status") @db.TinyInt
+  isCustomerDefault Int @default(0, map: "DF__prprj__custdefa__33BA79F4") @map("custdefa") @db.TinyInt
+  isProjectReportingBlocked Int @default(0, map: "DF__prprj__blkprmtr__34AE9E2D") @map("blkprmtr") @db.TinyInt
+  projectResult Int @default(0, map: "DF__prprj__prjresult__35A2C266") @map("prjresult") @db.TinyInt
+  certificationStatus Int @default(0, map: "DF__prprj__atstatus__3696E69F") @map("atstatus") @db.TinyInt
+  constructionStartDate DateTime? @map("buildstart") @db.Date
+  constructionCompletionDate DateTime? @map("buildstop") @db.Date
+  originalConstructionCompletionDate DateTime? @map("bldorgstop") @db.Date
+  completionDate DateTime? @map("closedate") @db.Date
+  completionSignature String? @map("closesign") @db.VarChar(80)
+  profitMarginAmount Float @default(0, map: "DF__prprj__addprcnt__378B0AD8") @map("addprcnt") @db.Money
+  supplierProfitMarginAmount Float @default(0, map: "DF__prprj__addprcntl__387F2F11") @map("addprcntlr") @db.Money
+  investmentInterest Int @default(0, map: "DF__prprj__intctr__3973534A") @map("intctr") @db.TinyInt
+  investmentInterestCost Float @default(0, map: "DF__prprj__intctrcos__3A677783") @map("intctrcost") @db.Money
+  invoiceInterval Int @default(0, map: "DF__prprj__invinter__3B5B9BBC") @map("invinter") @db.SmallInt
+  isInvoiceSignatureRequired Int @default(0, map: "DF__prprj__prinvsign__3C4FBFF5") @map("prinvsign") @db.TinyInt
+  invoiceReviewInterval Int @default(0, map: "DF__prprj__prinvint__3D43E42E") @map("prinvint") @db.TinyInt
+  invoiceReviewDays Int @default(0, map: "DF__prprj__prinvrday__3E380867") @map("prinvrdays") @db.SmallInt
+  invoiceStartDate DateTime? @map("prinvstart") @db.Date
+  invoiceResidualDate DateTime? @map("prinvresd") @db.Date
+  canSubProjectBeDebited Int @default(0, map: "DF__prprj__aodebit__3F2C2CA0") @map("aodebit") @db.TinyInt
+  includeResourceOnInvoice Int @default(1, map: "DF__prprj__incresinv__402050D9") @map("incresinv") @db.TinyInt
+  invoiceGroupKind Int @default(1, map: "DF__prprj__invgrpkin__41147512") @map("invgrpkind") @db.TinyInt
+  estimatedCostAmount Float? @map("estimcost") @db.Money
+  markingReference String? @map("yreference") @db.VarChar(30)
+  deviationNote String? @map("devinote") @db.VarChar(600)
+  isNotPublishedToNotifier Int @default(0, map: "DF__prprj__devprj__4208994B") @map("devprj") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine if timestamp needs a different naming convention
+
+  // Virtual fields
+  workOrders WorkOrder[] // aoupp
+  rentalBlocks RentalBlock[] // hyspt
+  orders Order[] // ikbeh
+  apartmentInspections ApartmentInspection[] // lbbes
+  activityTimes ActivityTime[] // pract
+  projectTransactions ProjectTransaction[] // prmtr
+  subProjects SubProject[] // prppr
+  plannedMaintenances PlannedMaintenance[] // puund
+
+  // Relations
+  priority Priority? @relation(fields: [priorityId], references: [id], onUpdate: NoAction, map: "fkprprjkeyaopri ")
+  companyClient cmcmp @relation(fields: [companyClientId], references: [keycmcmp], onUpdate: NoAction, map: "fkprprjkeycmcmp ")
+  clientContact Contact @relation("prprj_keycmctcTocmctc", fields: [clientContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc")
+  referenceContact Contact? @relation("prprj_keycmctc2Tocmctc", fields: [referenceContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc2")
+  responsibleContact Contact? @relation("prprj_keycmctc3Tocmctc", fields: [responsibleContactId], references: [keycmctc], onUpdate: NoAction, map: "fkprprjkeycmctc3")
+  businessContact Contact? @relation("prprj_keycmctc4Tocmctc", fields: [businessContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc4")
+  internalClientContact Contact? @relation("prprj_keycmctc5Tocmctc", fields: [internalClientContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkprprjkeycmctc5")
+  checklist Checklist? @relation(fields: [checklistId], references: [checklistId], onUpdate: NoAction, onDelete: NoAction, map: "fkprprjkeyprclh ")
+  transactionType TransactionType @relation(fields: [projectTransactionTypeId], references: [keyprvrt], onUpdate: NoAction, map: "fkprprjkeyprvrt ")
+
+  // Indexes
+  @@index([priorityId], map: "fkprprjaopri")
+  @@index([companyClientId], map: "fkprprjcmcmp")
+  @@index([clientContactId], map: "fkprprjcmctc")
+  @@index([referenceContactId], map: "fkprprjcmctc2")
+  @@index([responsibleContactId], map: "fkprprjcmctc3")
+  @@index([businessContactId], map: "fkprprjcmctc4")
+  @@index([internalClientContactId], map: "fkprprjcmctc5")
+  @@index([checklistId], map: "fkprprjprclh")
+  @@index([projectTransactionTypeId], map: "fkprprjprvrt")
+  @@index([userId], map: "fkprprjsyusr")
+  @@index([projectCode], map: "inprprj_code")
+}

@@ -1,0 +1,10 @@
+model LockSystemType {
+  @@map("nysyt")
+  
+  id String @id(map: "pknysyt") @map("keynysyt") @db.Char(15)
+  code String @unique(map: "aknysyt") @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  lockSystems LockSystem[] @relation("fknysyskeynysyt") // Changed relation from nysys to LockSystem using the new name
+}

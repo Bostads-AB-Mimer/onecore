@@ -1,0 +1,17 @@
+model LogProtectedIdentity {
+  @@map("cmlpi")
+
+  id String @id(map: "pkcmlpi") @map("keycmlpi") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15) // corresponds to keysyusr: Användare
+  contactId String? @map("keycmctc") @db.Char(15) // corresponds to keycmctc: Kontakt
+  accessDate DateTime @map("accdate") @db.DateTime // renamed accdate to accessDate 
+  accessStatus Int @default(0, map: "DF__cmlpi__lpistatus__7E52BFB0") @map("lpistatus") @db.TinyInt // renamed lpistatus to accessStatus
+  timestamp String @map("timestamp") @db.Char(10) // kept timestamp for now, needs further information
+  
+  // TODO: Ensure 'cmctc' refers correctly to the 'Contact' model
+  // Commenting out the relation field as 'cmctc' model is not part of the converted models
+  // cmctc cmctc? @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkcmlpikeycmctc")
+
+  @@index([contactId], map: "fkcmlpicmctc")
+  @@index([userId], map: "fkcmlpisyusr")
+}

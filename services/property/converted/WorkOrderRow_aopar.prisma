@@ -1,0 +1,31 @@
+model WorkOrderRow {
+  @@map("aopar")
+
+  workOrderRowId String @id(map: "pkaopar") @map("keyaopar") @db.Char(15)
+  workOrderPackageId String @map("keyaopah") @db.Char(15)
+  locationId String? @map("keyaopla") @db.Char(15) // TODO: change to new model name when available
+  buildingPartId String? @map("keyaobdl") @db.Char(15) 
+  detailId String? @map("keyaodet") @db.Char(15)
+  faultTypeId String? @map("keyaofel") @db.Char(15) 
+  actionId String? @map("keyaoatg") @db.Char(15) 
+  resourcePlanningTypeId String? @map("keybaret") @db.Char(15) 
+  name String @map("caption") @db.VarChar(250)
+  sortOrder Int @default(0, map: "DF__aopar__printsort__12E04878") @map("printsort") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: clarify usage of timestamp later
+
+  action Action? @relation(fields: [actionId], references: [actionId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaoatg ")
+  buildingPart BuildingPart? @relation(fields: [buildingPartId], references: [buildingPartId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaobdl ")
+  detail Detail? @relation(fields: [detailId], references: [detailId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaodet ")
+  faultType FaultType? @relation(fields: [faultTypeId], references: [faultTypeId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaofel ")
+  // TODO: add relation to WorkOrderPackage model when available
+  // aopla aopla? @relation(fields: [locationId], references: [keyaopla], onDelete: Cascade, onUpdate: NoAction, map: "fkaoparkeyaopla ")
+  resourcePlanningType ResourcePlanningType? @relation(fields: [resourcePlanningTypeId], references: [resourcePlanningTypeId], onUpdate: NoAction, map: "fkaoparkeybaret")
+
+  @@index([actionId], map: "fkaoparaoatg")
+  @@index([buildingPartId], map: "fkaoparaobdl")
+  @@index([detailId], map: "fkaoparaodet")
+  @@index([faultTypeId], map: "fkaoparaofel")
+  @@index([workOrderPackageId], map: "fkaoparaopah")
+  @@index([locationId], map: "fkaoparaopla")
+  @@index([resourcePlanningTypeId], map: "fkaoparbaret")
+}

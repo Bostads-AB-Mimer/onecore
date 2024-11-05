@@ -1,0 +1,11 @@
+model CodeTypeCategory {
+  @@map("rektk")
+  codeTypeCategoryId String @id(map: "PK__rektk__2759D01A") @map("keyrektk") @db.Char(15)
+  typeId Int @map("typeid")
+  name String @map("name") @db.Char(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  preSystemLogs PreSystemLog[] @relation("refsl") // Assuming refsl relates to PreSystemLog
+  codeTypes CodeType[] @relation("rekpy") 
+  recordSpecificCodings RecordSpecificCoding[] @relation("repsk")
+}

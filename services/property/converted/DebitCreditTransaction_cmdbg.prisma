@@ -1,0 +1,26 @@
+model DebitCreditTransaction {
+  @@map("cmdbg")
+
+  debitCreditTransactionId String @id(map: "pkcmdbg") @map("keycmdbg") @db.Char(15)
+  companyId String? @map("keycmcmp") @db.Char(15) // TODO: Convert to new model name when available
+  paymentMethodId String @map("keycmdbm") @db.Char(15) // TODO: Convert to new model name when available
+  tableId String @map("keydbtbl") @db.Char(15) // TODO: Convert to new model name when available
+  connectionCode String @map("keycode") @db.Char(15) // TODO: Convert to new model name when available
+  transactionTypeId String? @map("keyrevrt") @db.Char(15) // TODO: Convert to new model name when available
+  giroTransactionTypeId String? @map("keyrevrt2") @db.Char(15) // TODO: Convert to new model name when available
+  transactionIdentifier String? @map("id") @db.Char(20)
+  giroNumber String @map("giro") @db.Char(20)
+  bicCode String? @map("bic") @db.Char(11)
+  ibanCode String? @map("iban") @db.Char(42)
+  // TODO: comment timestamp row since it's not defined in AutogiroTransactionTypeCustomer
+  // timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  autogiroTransactions AutogiroTransactionTypeCustomer[] @relation("fkkragkkeycmdbg") // Updated relation to match new model name and retain historical mapping
+
+  @@index([companyId], map: "fkcmdbgcmcmp")
+  @@index([paymentMethodId], map: "fkcmdbgcmdbm")
+  @@index([connectionCode], map: "fkcmdbgcode")
+  @@index([tableId], map: "fkcmdbgdbtbl")
+  @@index([transactionTypeId], map: "fkcmdbgrevrt")
+  @@index([giroTransactionTypeId], map: "fkcmdbgrevrt2")
+}

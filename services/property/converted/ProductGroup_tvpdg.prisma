@@ -1,0 +1,36 @@
+model ProductGroup {
+  @@map("tvpdg")
+
+  productGroupId String @id(map: "pktvpdg") @map("keytvpdg") @db.Char(15)
+  componentTypeId String? @map("keybakmt") @db.Char(15)
+  rentArticleId String? @map("keycmart") @db.Char(15)
+  agreementArticleId String? @map("keycmart2") @db.Char(15)
+  invoiceArticleId String? @map("keycmart3") @db.Char(15)
+  productAreaId String @map("keytvpra") @db.Char(15)
+  workOrderCategoryId String? @map("keyaokat") @db.Char(15)
+  productGroupCode String @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(30)
+  sortOrder Int @default(0, map: "DF__tvpdg__sortorder__3444BC0D") @map("sortorder") @db.TinyInt
+  allowMultipleObjectsPerItem Int @default(0, map: "DF__tvpdg__allowmult__3538E046") @map("allowmulti") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later if its usage becomes clearer
+
+  // Relations
+  workOrderCategory WorkOrderCategory? @relation(fields: [workOrderCategoryId], references: [workOrderCategoryId], onUpdate: NoAction, map: "fktvpdgkeyaokat")
+  componentType ComponentType? @relation(fields: [componentTypeId], references: [componentTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeybakmt ")
+  // TODO: uncomment and fix relations to cmart when conversion is complete
+  // cmart_tvpdg_keycmartTocmart cmart? @relation("tvpdg_keycmartTocmart", fields: [rentArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart")
+  // cmart_tvpdg_keycmart2Tocmart cmart? @relation("tvpdg_keycmart2Tocmart", fields: [agreementArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart2")
+  // cmart_tvpdg_keycmart3Tocmart cmart? @relation("tvpdg_keycmart3Tocmart", fields: [invoiceArticleId], references: [keycmart], onDelete: NoAction, onUpdate: NoAction, map: "fktvpdgkeycmart3")
+  productArea ProductArea @relation(fields: [productAreaId], references: [productAreaId], onUpdate: NoAction, map: "fktvpdgkeytvpra ")
+
+  // TODO: rename tvprd to new model names when available
+  tvprd_tvprd_keytvpdgTotvpdg tvprd[] @relation("tvprd_keytvpdgTotvpdg")
+  tvprd_tvprd_keytvpdg2Totvpdg tvprd[] @relation("tvprd_keytvpdg2Totvpdg")
+
+  @@unique([productAreaId, productGroupCode], map: "aktvpdg")
+  @@index([workOrderCategoryId], map: "fktvpdgaokat")
+  @@index([componentTypeId], map: "fktvpdgbakmt")
+  @@index([rentArticleId], map: "fktvpdgcmart")
+  @@index([agreementArticleId], map: "fktvpdgcmart2")
+  @@index([invoiceArticleId], map: "fktvpdgcmart3")
+}

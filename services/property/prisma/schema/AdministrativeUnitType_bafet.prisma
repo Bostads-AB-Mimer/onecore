@@ -1,0 +1,13 @@
+model AdministrativeUnitType {
+  @@map("bafet")
+
+  // Fields
+  id String @id(map: "pkbafet") @map("keybafet") @db.Char(15)
+  code String @unique(map: "akbafet") @map("code") @db.VarChar(15)
+  name String? @map("caption") @db.VarChar(60)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations
+  // TODO: Verify that the relation name matches the defined relation in AdministrativeUnit when models are fully gathered
+  administrativeUnits AdministrativeUnit[]
+}

@@ -1,0 +1,58 @@
+model ApartmentInspection {
+  @@map("lbbes")
+
+  inspectionId String @id(map: "pklbbes") @map("keylbbes") @db.Char(15)
+  inspectionCategoryId String @map("keylbbka") @db.Char(15)
+  inspectorId String? @map("keycmctc") @db.Char(15)
+  propertyObjectId String @map("keycmobj") @db.Char(15)
+  resourceGroupId String? @map("keycmrgr") @db.Char(15)
+  // TODO: Confirm relation mapping for 'blockTimeId'
+  // blockTimeId String? @map("keycmpbt") @db.Char(15)
+  contractId String? @map("keyhyobj") @db.Char(15)
+  plannedAccessId String? @map("keyaotlt") @db.Char(15)
+  // TODO: verify if 'selfMadeWorkId' is correctly mapped
+  // selfMadeWorkId String? @map("keybazav") @db.Char(15)
+  projectId String? @map("keyprprj") @db.Char(15)
+  inspectionCaption String @map("caption") @db.VarChar(30)
+  bookingStatus Int @default(0, map: "DF__lbbes__bokning__7486A9E1") @map("bokning") @db.TinyInt
+  inspectionStatus Int @default(0, map: "DF__lbbes__status__757ACE1A") @map("status") @db.TinyInt
+  noticeExists Int @default(0, map: "DF__lbbes__anmexists__766EF253") @map("anmexists") @db.TinyInt
+  inspectionDate DateTime? @map("besdat") @db.DateTime
+  inspectionTime DateTime? @map("bestime") @db.DateTime
+  endTime DateTime? @map("endtime") @db.DateTime
+  notes String? @map("text") @db.VarChar(100)
+  furnishedStatus Int @default(0, map: "DF__lbbes__moblerad__7763168C") @map("moblerad") @db.TinyInt
+  preliminaryTenantPresent Int @default(0, map: "DF__lbbes__hgnarvpl__78573AC5") @map("hgnarvpl") @db.TinyInt
+  preliminaryNewTenantPresent Int @default(0, map: "DF__lbbes__nyhgnarvp__794B5EFE") @map("nyhgnarvpl") @db.TinyInt
+  tenantPresent Int @default(0, map: "DF__lbbes__hgnarvar__7A3F8337") @map("hgnarvar") @db.TinyInt
+  newTenantPresent Int @default(0, map: "DF__lbbes__nyhgnarva__7B33A770") @map("nyhgnarvar") @db.TinyInt
+  exportedToExcel Int @default(0, map: "DF__lbbes__exportxls__7C27CBA9") @map("exportxls") @db.TinyInt
+  tenantApproval Int @default(0, map: "DF__lbbes__hggodk__7D1BEFE2") @map("hggodk") @db.TinyInt
+  newTenantApproval Int @default(0, map: "DF__lbbes__nyhggodk__7E10141B") @map("nyhggodk") @db.TinyInt
+  editable Int @default(1, map: "DF__lbbes__editerbar__7F043854") @map("editerbar") @db.TinyInt
+  totalAmount Float? @map("amount") @db.Money
+  daysUntilRecheck Int @default(0, map: "DF__lbbes__rechkdays__7FF85C8D") @map("rechkdays") @db.TinyInt
+  recheckGenerated Int @default(0, map: "DF__lbbes__rechkgen__00EC80C6") @map("rechkgen") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' needs a different naming convention
+
+  inspectionRemarks InspectionRemark[] @relation("fklbanmkeylbbes")
+
+  // Relations
+  plannedAccess Access? @relation(fields: [plannedAccessId], references: [accessId], onUpdate: NoAction, map: "fklbbeskeyaotlt")
+  inspector Contact? @relation(fields: [inspectorId], references: [contactId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeycmctc")
+  // TODO: Confirm mapping for 'propertyObjectId' if 'cmobj' is correct in the new schema context
+  //cmobj cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fklbbeskeycmobj") 
+  resourceGroup ResourceGroup? @relation(fields: [resourceGroupId], references: [resourceGroupId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeycmrgr")
+  contract Contract? @relation(fields: [contractId], references: [contractId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeyhyobj")
+  // TODO: Confirm relation mapping for 'inspectionCategoryId'
+  //inspectionCategory lbbka @relation(fields: [inspectionCategoryId], references: [keylbbka], onUpdate: NoAction, map: "fklbbeskeylbbka")
+  project Project? @relation(fields: [projectId], references: [projectId], onUpdate: NoAction, onDelete: NoAction, map: "fklbbeskeyprprj")
+
+  @@index([plannedAccessId], map: "fklbbesaotlt")
+  @@index([inspectorId], map: "fklbbescmctc")
+  @@index([propertyObjectId], map: "fklbbescmobj")
+  @@index([resourceGroupId], map: "fklbbescmrgr")
+  @@index([contractId], map: "fklbbeshyobj")
+  @@index([inspectionCategoryId], map: "fklbbeslbbka")
+  @@index([projectId], map: "fklbbesprprj")
+}

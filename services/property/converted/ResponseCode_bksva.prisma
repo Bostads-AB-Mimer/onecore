@@ -1,0 +1,15 @@
+model ResponseCode {
+  @@map("bksva")
+  responseCodeId String @id(map: "PK__bksva__38852773") @map("keybksva") @db.Char(15)
+  queueRuleId String? @map("keybkqrl") @db.Char(15) // TODO: confirm with actual queue rule name in future passes
+  responseCode String? @map("bksvakod") @db.Char(30)
+  name String? @map("bksvaben") @db.Char(30) // Assuming bksvaben represents 'Benämning'
+  meaning Int @map("innebord") @db.TinyInt // Assuming innebord represents 'Innebörd'
+  repabCode String? @map("repabkod") @db.Char(1)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: Verify 'bkerb' relation in future passes
+  offers Offer[] @relation("fkbkerbkeybksva2") // Adapted to match the Offer model already converted
+
+  @@index([queueRuleId], map: "fkbksvabkqrl")
+}

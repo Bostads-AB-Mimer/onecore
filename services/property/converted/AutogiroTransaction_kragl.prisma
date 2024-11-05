@@ -1,0 +1,32 @@
+model AutogiroTransaction {
+  @@map("kragl")
+
+  autogiroTransactionId String @id(map: "pkkragl") @map("keykragl") @db.Char(15)
+  userId String @map("keysyusr") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  invoiceId String? @map("keykrfkh") @db.Char(15)
+  transactionId String? @map("keykrtrn") @db.Char(15)
+  contractId String? @map("keyhyobj") @db.Char(15)
+  autogiroType Int @map("logtype") @db.TinyInt
+  signature String @map("signature") @db.VarChar(80)
+  autogiroDate DateTime @map("logdate") @db.DateTime
+  autogiroTime DateTime @map("logtime") @db.DateTime
+  transactionDate DateTime @map("transdate") @db.DateTime
+  description String @map("caption") @db.VarChar(120)
+  mandateId String? @map("mandateid") @db.VarChar(20)
+  information String? @map("info") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10)
+
+  contact Contact? @relation(fields: [contactId], references: [contactId], onUpdate: NoAction, map: "fkkraglkeycmctc")
+  contract Contract? @relation(fields: [contractId], references: [contractId], onUpdate: NoAction, map: "fkkraglkeyhyobj")
+  invoice Invoice? @relation(fields: [invoiceId], references: [invoiceId], onDelete: Cascade, onUpdate: NoAction, map: "fkkraglkeykrfkh")
+  transaction Transaction? @relation(fields: [transactionId], references: [transactionId], onDelete: Cascade, onUpdate: NoAction, map: "fkkraglkeykrtrn")
+
+  @@index([contactId], map: "fkkraglcmctc")
+  @@index([contractId], map: "fkkraglhyobj")
+  @@index([invoiceId], map: "fkkraglkrfkh")
+  @@index([transactionId], map: "fkkraglkrtrn")
+  @@index([userId], map: "fkkraglsyusr")
+
+  // TODO: Verify 'userId' relation once User model is available.
+}

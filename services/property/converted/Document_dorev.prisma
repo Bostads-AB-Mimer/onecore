@@ -1,0 +1,62 @@
+model Document {
+  @@map("dorev")
+
+  // Fields
+  documentId String @id(map: "pkdorev") @map("keydorev") @db.Char(15)
+  fileTypeId String? @map("keydoftp") @db.Char(15)
+  documentTypeId String? @map("keydotyp") @db.Char(15)
+  subtypeId String? @map("keydosty") @db.Char(15)
+  mediaTypeId String? @map("keycmtyp") @db.Char(15)
+  statusId String? @map("keycmtyp2") @db.Char(15)
+  contactId String? @map("keycmctc") @db.Char(15)
+  reviewerContactId String? @map("keycmctc2") @db.Char(15)
+  createdSignature String? @map("skapsign") @db.VarChar(80)
+  creationDate DateTime? @map("skapdat") @db.Date
+  documentCode String @map("dok") @db.VarChar(30)
+  revisionCode String @map("rev") @db.VarChar(30)
+  drawingNumber String? @map("revid") @db.VarChar(30)
+  registrationDate DateTime? @map("regdat") @db.Date
+  registeredSignature String? @map("regsign") @db.VarChar(80)
+  description String? @map("revbes") @db.VarChar(70)
+  designation String? @map("revben") @db.VarChar(70)
+  revisionDate DateTime? @map("revdat") @db.Date
+  revisedSignature String? @map("revsign") @db.VarChar(80)
+  receivedDate DateTime? @map("recidate") @db.Date
+  returnedDate DateTime? @map("retudate") @db.Date
+  fromDate DateTime? @map("fdate") @db.Date
+  toDate DateTime? @map("tdate") @db.Date
+  calibrationData String? @map("calibrate") @db.VarChar(30)
+  multiplier Int @map("multiplier")
+  divider Int @map("divider")
+  filePath String? @map("path") @db.VarChar(Max)
+  cdNumber String? @map("cdnr") @db.VarChar(30)
+  isStored Int @default(0, map: "DF__dorev__datastore__1FF5F821") @map("datastored") @db.TinyInt
+  originalReleased Int @default(0, map: "DF__dorev__orgutl__20EA1C5A") @map("orgutl") @db.TinyInt
+  isReversed Int @default(0, map: "DF__dorev__revers__21DE4093") @map("revers") @db.TinyInt
+  layers String? @map("layers") @db.VarChar(Max)
+  grading Int @default(0, map: "DF__dorev__grade__22D264CC") @map("grade") @db.TinyInt
+  isPublished Int @default(0, map: "DF__dorev__publicera__23C68905") @map("publiceras") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // Relations
+  digitalSignatures DigitalSignature[] 
+  documentLinks DocumentLink[]
+  cmctc_dorev_keycmctcTocmctc cmctc? @relation("dorev_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeycmctc")
+  cmctc_dorev_keycmctc2Tocmctc cmctc? @relation("dorev_keycmctc2Tocmctc", fields: [reviewerContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeycmctc2")
+  cmtyp_dorev_keycmtypTocmtyp cmtyp? @relation("dorev_keycmtypTocmtyp", fields: [mediaTypeId], references: [keycmtyp], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeycmtyp")
+  cmtyp_dorev_keycmtyp2Tocmtyp cmtyp? @relation("dorev_keycmtyp2Tocmtyp", fields: [statusId], references: [keycmtyp], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeycmtyp2")
+  FileType FileType? @relation(fields: [fileTypeId], references: [keydoftp], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeydoftp")
+  Subtype Subtype? @relation(fields: [subtypeId], references: [keydosty], onUpdate: NoAction, map: "fkdorevkeydosty")
+  DocumentType DocumentType? @relation(fields: [documentTypeId], references: [keydotyp], onDelete: NoAction, onUpdate: NoAction, map: "fkdorevkeydotyp")
+
+  // TODO: Update doers, cmctc, and cmtyp relations when new model names are available
+
+  @@index([contactId], map: "fkdorevcmctc")
+  @@index([reviewerContactId], map: "fkdorevcmctc2")
+  @@index([mediaTypeId], map: "fkdorevcmtyp")
+  @@index([statusId], map: "fkdorevcmtyp2")
+  @@index([fileTypeId], map: "fkdorevdoftp")
+  @@index([subtypeId], map: "fkdorevdosty")
+  @@index([documentTypeId], map: "fkdorevdotyp")
+  @@index([documentCode, revisionCode, documentId], map: "indorev1")
+}

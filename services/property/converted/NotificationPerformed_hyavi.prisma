@@ -1,0 +1,26 @@
+model NotificationPerformed {
+  @@map("hyavi")
+
+  notificationPerformedId String @id(map: "pkhyavi") @map("keyhyavi") @db.Char(15)
+  moduleId String @map("keysymdl") @db.Char(15) // TODO: rename when new model name is known
+  companyId String? @map("keycmcmp") @db.Char(15) // Linked to Company model
+  userId String? @map("keysyusr") @db.Char(15) // TODO: rename when new model name is known
+  contractTypeId String? @map("keyhyobt") @db.Char(15) // Linked to AgreementForm model
+  description String? @map("caption") @db.VarChar(120)
+  userSignature String @map("signatur") @db.VarChar(80)
+  performedDate DateTime @map("logdate") @db.DateTime
+  periodFromDate DateTime @map("forfddate") @db.DateTime
+  periodToDate DateTime @map("forftdate") @db.DateTime
+  mainNotification Int @map("havisering") @db.TinyInt
+  selection String @map("urval") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Verify usage of timestamp
+
+  // Relations
+  company Company? @relation(fields: [companyId], references: [companyId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyavikeycmcmp")
+  contractType AgreementForm? @relation(fields: [contractTypeId], references: [contractTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyavikeyhyobt") // Linked to AgreementForm model
+
+  @@index([companyId], map: "fkhyavicmcmp")
+  @@index([contractTypeId], map: "fkhyavihyobt")
+  @@index([moduleId], map: "fkhyavisymdl")
+  @@index([userId], map: "fkhyavisyusr")
+}

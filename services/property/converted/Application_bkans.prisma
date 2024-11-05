@@ -1,0 +1,60 @@
+model Application {
+  @@map("bkans")
+
+  applicationId String @id(map: "pkbkans") @map("keybkans") @db.Char(15)
+  searchConditionId String @unique(map: "akbkans1") @map("keycmqry") @db.Char(15)
+  queueTypeId String @map("keybkkty") @db.Char(15)
+  reasonId String? @map("keybkors") @db.Char(15)
+  priorityId String? @map("keybkpri") @db.Char(15)
+  applicantContactId String? @map("keycmctc") @db.Char(15)
+  coApplicantContactId String? @map("keycmctc2") @db.Char(15)
+  exchangeFromPropertyId String? @map("keyhyobj") @db.Char(15) // TODO: Field exchangeFromPropertyId relation does not exist
+  terminatingContractId String? @map("keyhyobj2") @db.Char(15)
+  publicationRoundId String? @map("keybkpuo") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15)
+  objectId String? @map("keycmobj") @db.Char(15)
+  applicationCode String @map("bkanskod") @db.Char(30)
+  generalNumber Int @map("gennr") @db.TinyInt
+  applicationDate DateTime @map("ansokdat") @db.DateTime
+  queuePeriodFrom DateTime @map("periodfrom") @db.DateTime
+  queuePeriodTo DateTime? @map("periodtom") @db.DateTime
+  passiveApplication Int @map("passiv") @db.TinyInt
+  registeredDate DateTime @map("aktiverad") @db.DateTime
+  closedDate DateTime? @map("avslutdat") @db.DateTime
+  closedReason String? @map("avslutors") @db.Char(1)
+  closedSignature String? @map("avslutsign") @db.VarChar(80)
+  queueTime Float? @map("kotid")
+  queuePosition Int? @map("koplats")
+  applicationControl Int @default(0, map: "DF__bkans__utslag__2C22AE0C") @map("utslag") @db.TinyInt
+  desiredEntryDateFrom DateTime? @map("wishedentr") @db.DateTime
+  desiredEntryDateTo DateTime? @map("wishedexp") @db.DateTime
+  source Int @default(1, map: "DF__bkans__source__2D16D245") @map("source") @db.TinyInt
+  emailNotification Int @default(0, map: "DF__bkans__notify__2E0AF67E") @map("notify") @db.TinyInt
+  chargeFromDate DateTime? @map("chargefrom") @db.DateTime
+  chargeToDate DateTime? @map("chargeto") @db.DateTime
+  invoicesPaid Int @default(0, map: "DF__bkans__invpaid__2EFF1AB7") @map("invpaid") @db.TinyInt
+  reference String? @map("reference") @db.VarChar(50)
+  label String? @map("labeling") @db.VarChar(50)
+  invoiceReceiver String? @map("invreceive") @db.VarChar(30)
+  externalCandidateId String? @map("extcandid") @db.VarChar(100)
+  debitType Int @default(0, map: "DF__bkans__paytype__2FF33EF0") @map("paytype") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  propertyObject PropertyObject? @relation(fields: [objectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeycmobj")
+  contract Contract? @relation(fields: [terminatingContractId], references: [contractId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkanskeyhyobj2")
+  
+  @@index([queueTypeId], map: "fkbkansbkkty")
+  @@index([reasonId], map: "fkbkansbkors")
+  @@index([priorityId], map: "fkbkansbkpri")
+  @@index([publicationRoundId], map: "fkbkansbkpuo")
+  @@index([applicantContactId], map: "fkbkanscmctc")
+  @@index([coApplicantContactId], map: "fkbkanscmctc2")
+  @@index([objectId], map: "fkbkanscmobj")
+  // exchangeFromPropertyId relation does not exist
+  @@index([terminatingContractId], map: "fkbkanshyobj2")
+  @@index([userId], map: "fkbkanssyusr")
+  @@index([applicationId, applicantContactId], map: "inbkans1")
+  @@index([applicationId, priorityId, queueTypeId, applicantContactId, coApplicantContactId], map: "inbkans2")
+  @@index([queuePeriodTo, passiveApplication, queuePeriodFrom], map: "inbkans3")
+  @@index([closedDate, searchConditionId, applicationId, passiveApplication, queuePeriodFrom, queuePeriodTo], map: "inbkans4")
+}

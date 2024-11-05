@@ -1,0 +1,9 @@
+model PlannedMaintenanceAggregate {
+  @@map("puagg")
+
+  id String @id(map: "pkpuagg") @map("keypuagg") @db.Char(15)
+  code String @map("code") @db.VarChar(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Determine whether to rename 'timestamp' after understanding its usage
+  
+  maintenanceActionGroups MaintenanceActionGroup[] // Updated from 'puagr' to 'MaintenanceActionGroup' as per conversion
+}

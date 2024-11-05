@@ -1,0 +1,28 @@
+model ReportRow {
+  @@map("cmrdr")
+
+  reportRowId       String   @id(map: "pkcmrdr") @map("keycmrdr") @db.Char(15)
+  reportId          String   @map("keycmrdh") @db.Char(15)
+  moduleId          String   @map("keysymdl") @db.Char(15)
+  selectionId       String?  @map("keycmqry") @db.Char(15)
+  typeId            Int      @map("type") @default(0, map: "DF__cmrdr__type__7DA0E01D") @db.TinyInt
+  title             String?  @map("caption") @db.VarChar(Max)
+  sortOrder         Int      @map("sortorder") @default(0, map: "DF__cmrdr__sortorder__7E950456")
+  backgroundColor   Int      @map("bcolor") @default(0, map: "DF__cmrdr__bcolor__7F89288F")
+  foregroundColor   Int      @map("fcolor") @default(0, map: "DF__cmrdr__fcolor__007D4CC8")
+  textAlignment     Int      @map("textalign") @default(0, map: "DF__cmrdr__textalign__01717101")
+  fontName          String   @map("fontname") @db.VarChar(50)
+  fontStyle         Int      @map("fontstyle") @default(0, map: "DF__cmrdr__fontstyle__0265953A")
+  fontSize          Int      @map("fontsize") @default(0, map: "DF__cmrdr__fontsize__0359B973")
+  isVisible         Int      @map("visible") @default(0, map: "DF__cmrdr__visible__044DDDAC") @db.TinyInt
+  pageBreak         Int      @map("pagebreak") @default(0, map: "DF__cmrdr__pagebreak__054201E5") @db.TinyInt
+  timestamp         String   @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  reportColumn      ReportColumn[]  @relation("fkcmrdckeycmrdr") // Using new name from previous conversions
+  selection         Selection?      @relation(fields: [selectionId], references: [selectionId], onUpdate: NoAction, map: "fkcmrdrkeycmqry") // Using new name from previous conversions 
+  reportHeader      ReportHeader    @relation(fields: [reportId], references: [reportHeaderId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrdrkeycmrdh") // Assuming ReportHeader is the new name
+
+  @@index([selectionId], map: "fkcmrdrcmqry")
+  @@index([reportId], map: "fkcmrdrcmrdh")
+  @@index([moduleId], map: "fkcmrdrsymdl")
+}

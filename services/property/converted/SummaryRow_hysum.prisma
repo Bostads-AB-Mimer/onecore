@@ -1,0 +1,13 @@
+model SummaryRow {
+  @@map("hysum")
+  
+  summaryRowId String @id(map: "PK__hysum__4EA8A765") @map("keyhysum") @db.Char(15)
+  moduleId String? @map("keysymdl") @db.Char(15) // Based on previous note "keysymdl: Modul"
+  summaryDescription String? @map("hysumben") @db.Char(80) // Based on "Summarad"
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  article Article[] // Updated using the new model name "Article" from the forward pass
+  rentalRow RentalRow[] // Already converted to "RentalRow" in the previous example
+
+  @@index([moduleId], map: "fkhysumsymdl")
+}

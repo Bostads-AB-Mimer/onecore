@@ -1,0 +1,15 @@
+model ContactInGroup {
+  @@map("cmcgc")
+
+  contactInGroupId String @id(map: "pkcmcgc") @map("keycmcgc") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  groupId String @map("keycmcgr") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Assess timestamp usage for potential renaming
+
+  // TODO: Check if the relation models cmcgr and cmctc exist or if the relation field names needed correction
+  group /* cmcgr */ @relation(fields: [groupId], references: [keycmcgr], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcgckeycmcgr ")
+  contact /* cmctc */ @relation(fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkcmcgckeycmctc")
+
+  @@unique([contactId, groupId], map: "akcmcgc1")
+  @@index([groupId], map: "fkcmcgccmcgr")
+}

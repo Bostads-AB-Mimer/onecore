@@ -1,0 +1,25 @@
+model PublishingRound {
+  @@map("bkpuo")
+
+  publishingRoundId String @id(map: "pkbkpuo") @map("keybkpuo") @db.Char(15)
+  rentalRoundId String @map("keyhyuto") @db.Char(15) // TODO: Confirm exact table/model being referenced
+  tenantQueueTypeId String @map("keybkkty") @db.Char(15) // TODO: Confirm exact table/model being referenced
+  contractId String? @map("keyhyobj") @db.Char(15) // TODO: Confirm exact table/model being referenced
+  vicinityId String? @map("keyhyvct") @db.Char(15) // TODO: Confirm exact table/model being referenced
+  integrationSchemaId String? @map("keycmmap") @db.Char(15) // TODO: Confirm exact table/model being referenced
+  startDate DateTime @map("fdate") @db.DateTime
+  endDate DateTime? @map("tdate") @db.DateTime
+  availableFrom DateTime? @map("vacantfrom") @db.DateTime
+  availableUntil DateTime? @map("vacantto") @db.DateTime
+  incorrectPublishing Int @default(0, map: "DF__bkpuo__avpub__20C7A111") @map("avpub") @db.TinyInt
+  queueLength Int @default(0, map: "DF__bkpuo__quelen__21BBC54A") @map("quelen") @db.SmallInt
+  externalStatus Int @default(0, map: "DF__bkpuo__extstatus__22AFE983") @map("extstatus") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider if this requires a different naming convention
+
+  cmmap IntegrationSchema? @relation(fields: [integrationSchemaId], references: [integrationSchemaId], onUpdate: NoAction, map: "fkbkpuokeycmmap")
+
+  @@index([tenantQueueTypeId], map: "fkbkpuobkkty")
+  @@index([integrationSchemaId], map: "fkbkpuocmmap")
+  @@index([contractId], map: "fkbkpuohyobj")
+  @@index([rentalRoundId], map: "fkbkpuohyuto")
+}

@@ -1,0 +1,31 @@
+model ContractPrice {
+  @@map("avark")
+
+  contractPriceId String @id(map: "pkavark") @map("keyavark") @db.Char(15)
+  contractId String @map("keyhyobj") @db.Char(15) // TODO: Verify the existence of the Contract model
+  articleId String @map("keycmart") @db.Char(15) // TODO: Verify the existence of the Article model
+  indexSeriesId String? @map("keycmind") @db.Char(15)
+  baseIndexId String? @map("keycminv") @db.Char(15) // TODO: Verify the mapping to the new models
+  currentIndexId String? @map("keycminv2") @db.Char(15) // TODO: Verify the mapping to the new models
+  measurementTypeId String? @map("keycmvat") @db.Char(15) // TODO: Verify the correct mapping
+  supplierPartNumber String? @map("suppartno") @db.VarChar(30)
+  description String? @map("caption") @db.VarChar(60)
+  basePrice Float? @map("basprice") @db.Money
+  priceAmount Float @map("price") @db.Money
+  conversionFactor Decimal? @map("factor") @db.Decimal(5, 1)
+  percentageDiscount Decimal? @map("prcntdisc") @db.Decimal(5, 1)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Evaluate usage
+
+  // TODO: Commented out these lines waiting verification of those models
+  // article Article @relation(fields: [articleId], references: [keycmart], onUpdate: NoAction, map: "fkavarkkeycmart") 
+  indexSeries IndexSeries? @relation(fields: [indexSeriesId], references: [indexId], onDelete: NoAction, onUpdate: NoAction, map: "fkavarkkeycmind") // Updated references to new Index model
+  measurementType MeasurementType? @relation(fields: [measurementTypeId], references: [measurementTypeId], onUpdate: NoAction, map: "fkavarkkeycmvat")
+  // contract Contract @relation(fields: [contractId], references: [contractId], onUpdate: NoAction, map: "fkavarkkeyhyobj") // TODO: Verify the mapping to the new Contract model
+  
+  @@index([articleId], map: "fkavarkcmart")
+  @@index([indexSeriesId], map: "fkavarkcmind")
+  @@index([baseIndexId], map: "fkavarkcminv")
+  @@index([currentIndexId], map: "fkavarkcminv2")
+  @@index([measurementTypeId], map: "fkavarkcmvat")
+  @@index([contractId], map: "fkavarkhyobj")
+}

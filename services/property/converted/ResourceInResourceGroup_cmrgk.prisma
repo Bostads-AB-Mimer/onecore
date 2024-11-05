@@ -1,0 +1,20 @@
+model ResourceInResourceGroup {
+  @@map("cmrgk")
+  
+  resourceInResourceGroupId String @id(map: "pkcmrgk") @map("keycmrgk") @db.Char(15)
+  resourceGroupId String @map("keycmrgr") @db.Char(15)
+  resourceId String @map("keycmctc") @db.Char(15)
+  fromDate DateTime? @map("fdate") @db.Date 
+  toDate DateTime? @map("tdate") @db.Date
+  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm new name for 'timestamp' field if needed
+
+  // Relations
+  // TODO: Check Resource model reference
+  // Resource @relation(fields: [resourceId], references: [resourceId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmctc")
+  
+  // TODO: Check ResourceGroup model reference
+  // ResourceGroup @relation(fields: [resourceGroupId], references: [resourceGroupId], onDelete: Cascade, onUpdate: NoAction, map: "fkcmrgkkeycmrgr")
+  
+  @@unique([resourceGroupId, resourceId, fromDate, toDate], map: "akcmrgk")
+  @@index([resourceId], map: "fkcmrgkcmctc")
+}

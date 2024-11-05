@@ -1,0 +1,20 @@
+model MeasurementType {
+  @@map("drmts")
+  
+  measurementTypeId String @id(map: "PK__drmts__13FDAE3A") @map("keydrmts") @db.Char(15)
+  accountingUnitId String @map("keydruni") @db.Char(15)
+  keyFigureUnitId String @map("keydruni2") @db.Char(15)
+  name String @map("caption") @db.Char(30)
+  climateCorrection Int @map("mtsclimate") @db.TinyInt
+  networkFee Int @map("mtsnetfee") @db.TinyInt
+  refill Int @map("mtsrefill") @db.TinyInt
+  systemStandard Int @map("sysrec") @db.TinyInt
+  recordTimestamp String @map("timestamp") @db.Char(10) // TODO: Review how recordTimestamp is used for potential date conversion
+  
+  // TODO: Uncomment and verify foreign key references once the relevant models and relations are double-checked
+  // workOrders WorkOrderRow[] @relation("fkaouppkeydrmts") // Corrected to WorkOrderRow based on the forward pass
+  // measurementPoints MeasurementPoint[] @relation("fkdrmptkeydrmts")
+
+  @@index([accountingUnitId], map: "fkdrmtsdruni")
+  @@index([keyFigureUnitId], map: "fkdrmtsdruni2")
+}

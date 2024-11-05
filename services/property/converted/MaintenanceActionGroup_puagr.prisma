@@ -1,0 +1,20 @@
+model MaintenanceActionGroup {
+  @@map("puagr")
+  
+  maintenanceActionGroupId String @id(map: "pkpuagr") @map("keypuagr") @db.Char(15)
+  plannedMaintenanceAggregateId String? @map("keypuagg") @db.Char(15) // TODO: Rename plannedMaintenanceAggregateId to new name in backward pass if needed
+  articleId String? @map("keycmart") @db.Char(15) // Since cmart is mapped as Article in previous conversions
+  actionGroup String @map("atggrp") @db.VarChar(30) // Directly translated from Swedish 'atggrp'
+  actionGroupName String? @map("atggrpben") @db.VarChar(30) // Directly translated from Swedish 'atggrpben'
+  perpetualCost Int @default(0, map: "DF__puagr__perpecost__7182D477") @map("perpecost") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider renaming 'timestamp' after understanding its usage
+
+  article Article? @relation(fields: [articleId], references: [articleId], onDelete: NoAction, onUpdate: NoAction, map: "fkpuagrkeycmart")
+  plannedMaintenanceAggregate PlannedMaintenanceAggregate? @relation(fields: [plannedMaintenanceAggregateId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkpuagrkeypuagg")
+  maintenanceActions MaintenanceAction[] // Updated from 'puatg'
+  productLinks ProductLink[] @relation("fkpuprkkeypuagr") // Updated from 'puprk'
+  plannedMaintenance PlannedMaintenance[] // Updated from 'puund'
+  
+  @@index([articleId], map: "fkpuagrcmart")
+  @@index([plannedMaintenanceAggregateId], map: "fkpuagrpuagg")
+}

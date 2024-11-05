@@ -1,0 +1,18 @@
+model Detail {
+  @@map("aodet")
+
+  detailId String @id(map: "pkaodet") @map("keyaodet") @db.Char(15)
+  code String @unique(map: "akaodet1") @map("code") @db.VarChar(10)
+  name String? @map("caption") @db.VarChar(70)
+  useInWorkOrder Int @default(1, map: "DF__aodet__useao__2B03580E") @map("useao") @db.TinyInt
+  useInApartmentInspection Int @default(1, map: "DF__aodet__uselb__2BF77C47") @map("uselb") @db.TinyInt
+  isPublished Int @default(0, map: "DF__aodet__publish__2CEBA080") @map("publish") @db.TinyInt
+  isActive Int @default(1, map: "DF__aodet__isactive__2DDFC4B9") @map("isactive") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+
+  buildingPartDetails BuildingPartDetail[] @relation("fkaobdekeyaodet")
+  workOrderRows WorkOrderRow[] @relation("fkaoparkeyaodet")
+  statistics Statistics[] @relation("fkaostakeyaodet")
+  workOrderRows WorkOrderRow[] @relation("fkaouprkeyaodet")
+  inspectionRemarks InspectionRemark[] @relation("fklbanmkeyaodet")
+}

@@ -1,0 +1,24 @@
+model DayTemplate {
+  @@map("skdmd")
+
+  dayTemplateId String @id(map: "pkskdmd") @map("keyskdmd") @db.Char(15)
+  caption String @unique(map: "akskdmd") @db.VarChar(60)
+  mondayOccurrences Int @default(0, map: "DF__skdmd__d1__54DDF655") @map("d1") @db.TinyInt
+  tuesdayOccurrences Int @default(0, map: "DF__skdmd__d2__55D21A8E") @map("d2") @db.TinyInt
+  wednesdayOccurrences Int @default(0, map: "DF__skdmd__d3__56C63EC7") @map("d3") @db.TinyInt
+  thursdayOccurrences Int @default(0, map: "DF__skdmd__d4__57BA6300") @map("d4") @db.TinyInt
+  fridayOccurrences Int @default(0, map: "DF__skdmd__d5__58AE8739") @map("d5") @db.TinyInt
+  saturdayOccurrences Int @default(0, map: "DF__skdmd__d6__59A2AB72") @map("d6") @db.TinyInt
+  sundayOccurrences Int @default(0, map: "DF__skdmd__d7__5A96CFAB") @map("d7") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+
+  // TODO: rename skatg to new model name when available
+  skatg_skatg_keyskdmdToskdmd skatg[] @relation("skatg_keyskdmdToskdmd")
+  skatg_skatg_keyskdmd2Toskdmd skatg[] @relation("skatg_keyskdmd2Toskdmd")
+
+  weekTemplates WeekTemplate[] @relation("fkskpinkeyskdmd") // Changed skdmv to WeekTemplate as defined
+  
+  maintenancePackageContents MaintenancePackageContent[] @relation("fkskpinkeyskdmd") // Changed skpin to MaintenancePackageContent as defined
+
+  periodicWorks PeriodicWork[] @relation("fkskundkeyskdmd") // Changed skund to PeriodicWork as defined
+}

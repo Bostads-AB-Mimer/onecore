@@ -1,0 +1,17 @@
+model WorkOrderCategoryTemplateLink {
+  @@map("aokax")
+
+  // Fields
+  workOrderCategoryTemplateLinkId String @id(map: "pkaokax") @map("keyaokax") @db.Char(15)
+  workOrderCategoryId String @map("keyaokat") @db.Char(15)
+  namingTemplateId String @map("keyaoctx") @db.Char(15)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
+
+  // Relations
+  namingTemplate NamingTemplate @relation(fields: [namingTemplateId], references: [namingTemplateId], onDelete: Cascade, onUpdate: NoAction, map: "fkaokaxkeyaoctx")
+  workOrderCategory WorkOrderCategory @relation(fields: [workOrderCategoryId], references: [workOrderCategoryId], onDelete: Cascade, onUpdate: NoAction, map: "fkaokaxkeyaokat")
+
+  @@unique([workOrderCategoryId, namingTemplateId], map: "akaokax1")
+  @@index([namingTemplateId], map: "fkaokaxaoctx")
+  @@index([workOrderCategoryId], map: "fkaokaxaokat")
+}

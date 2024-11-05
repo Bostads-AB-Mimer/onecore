@@ -1,0 +1,19 @@
+model ActionGroupLevel2 {
+  @@map("skafc")
+
+  actionGroupLevel2Id String @id(map: "pkskafc") @map("keyskafc") @db.Char(15)
+  actionGroupLevel1Id String @map("keyskafb") @db.Char(15)
+  code String @map("code") @db.VarChar(10)
+  name String @map("caption") @db.VarChar(120)
+  systemStandard Int @default(0, map: "DF__skafc__repabkod__0DBEDEC0") @map("repabkod") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: determine correct usage and update name if needed
+
+  // TODO: Verify if `WorkOrderRow` is the correct model related to `aoupp`
+  // Commented out due to potential inconsistency.
+  // workOrders WorkOrderRow[] @relation("fkaouppkeyskafc")
+
+  // TODO: Verify if `MaintenanceAction` is the correct model related to `skatg`
+  maintenanceActions MaintenanceAction[] @relation("fkskatgkeyskafc")
+
+  @@index([actionGroupLevel1Id], map: "fkskafcskafb")
+}

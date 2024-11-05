@@ -1,0 +1,16 @@
+model BuildingType {
+  @@map("babyt")
+  
+  buildingTypeId String @id(map: "pkbabyt") @map("keybabyt") @db.Char(15)
+  componentTypeActionId String? @map("keypuatt") @db.Char(15) // This is mapped to the old keypuatt
+  buildingTypeCode String @unique(map: "akbabyt") @map("code") @db.VarChar(15)
+  buildingTypeName String? @map("caption") @db.VarChar(60)
+  isSystemStandard Int @default(0, map: "DF__babyt__issystem__2AE2BA92") @map("issystem") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10)
+
+  buildings Building[] //@relation("fkbabygkeybabyt") // Updated to the new model name 'Building'
+  // TODO: Verify the correct references for 'actionTypeId'. Ensure that 'actionTypeId' exists in ActionType model and is mapped properly.
+  // actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabytkeypuatt") // Updated to the new model name 'ActionType'
+
+  @@index([componentTypeActionId], map: "fkbabytpuatt")
+}

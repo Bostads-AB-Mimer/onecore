@@ -1,0 +1,20 @@
+model ApplicationLetter {
+  @@map("bkalt")
+  
+  applicationLetterId String @id(map: "pkbkalt") @map("keybkalt") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  offerId String? @map("keybkerb") @db.Char(15)
+  propertyObjectId String @map("keycmobj") @db.Char(15) // TODO: may need renaming based on domain
+  messageType Int @map("lettertype") @db.TinyInt
+  sentDate DateTime @map("senddate") @db.DateTime
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
+
+  offer Offer? @relation(fields: [offerId], references: [offerId], onDelete: NoAction, onUpdate: NoAction, map: "fkbkaltkeybkerb")
+  contact Contact @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkbkaltkeycmctc")
+  // TODO: Ensure 'cmobj' is updated to reflect new model naming
+  // propertyObject cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onUpdate: NoAction, map: "fkbkaltkeycmobj")
+
+  @@index([offerId], map: "fkbkaltbkerb")
+  @@index([contactId], map: "fkbkaltcmctc")
+  // @@index([propertyObjectId], map: "fkbkaltcmobj")
+}

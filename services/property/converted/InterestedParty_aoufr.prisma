@@ -1,0 +1,20 @@
+model InterestedParty {
+  @@map("aoufr")
+
+  // Fields
+  interestedPartyId String @id(map: "pkaoufr") @map("keyaoufr") @db.Char(15)
+  workOrderId String @map("keyaoupp") @db.Char(15)
+  contactId String @map("keycmctc") @db.Char(15)
+  notificationMethod Int @default(0, map: "DF__aoufr__notkind__65B89C46") @map("notkind") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // Relations; update these when new model names are determined
+  // TODO: Verify WorkOrder model existence
+  // TODO: Confirm contact model name; ContactInfo is assumed
+  // Commenting out as model names need to be verified
+  // workOrder WorkOrder @relation(fields: [workOrderId], references: [workOrderId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoufrkeyaoupp") 
+  // contact ContactInfo @relation(fields: [contactId], references: [contactId], onDelete: Cascade, onUpdate: NoAction, map: "fkaoufrkeycmctc")
+
+  @@index([workOrderId], map: "fkaoufraoupp")
+  @@index([contactId], map: "fkaoufrcmctc")
+}

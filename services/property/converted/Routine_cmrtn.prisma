@@ -1,0 +1,15 @@
+model Routine {
+  @@map("cmrtn")
+
+  // Fields
+  id String @id(map: "PK__cmrtn__235F2204") @map("keycmrtn") @db.Char(15)
+  moduleId String? @map("keysymdl") @db.Char(15) // TODO: change moduleId when knowing more about its usage/relationship
+  typeId Int @map("typeid") @db.SmallInt
+  name String? @map("name") @db.Char(30)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: consider a meaningful name change if more context is available
+
+  // Relations
+  revrt TransactionType[] // Changed revrt to TransactionType[] based on the context from previously converted models
+
+  @@index([moduleId], map: "fkcmrtnsymdl")
+}

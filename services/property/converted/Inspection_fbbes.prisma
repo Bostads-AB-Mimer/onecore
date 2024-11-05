@@ -1,0 +1,46 @@
+model Inspection {
+  @@map("fbbes")
+
+  inspectionId String @id(map: "pkfbbes") @map("keyfbbes") @db.Char(15)
+  propertyObjectId String @map("keycmobj") @db.Char(15)
+  inspectionCategoryId String? @map("keyfbbka") @db.Char(15)
+  inspectorId String? @map("keycmctc") @db.Char(15) // Assuming this refers to the inspector
+  userId String? @map("keysyusr") @db.Char(15)
+  standardProtocolId String? @map("keyfbbla") @db.Char(15)
+  name String @map("caption") @db.VarChar(30)
+  nextInspectionDate DateTime? @map("nastadat") @db.Date
+  status Int @default(0, map: "DF__fbbes__status__4141DD53") @map("status") @db.TinyInt
+  inspectionDate DateTime? @map("besdat") @db.Date
+  conducted Int @default(0, map: "DF__fbbes__genomford__4236018C") @map("genomford") @db.TinyInt
+  approved Int @default(0, map: "DF__fbbes__godkand__432A25C5") @map("godkand") @db.TinyInt
+  approvedUntilDate DateTime? @map("godktomdat") @db.Date
+  reInspection Int @default(0, map: "DF__fbbes__ombes__441E49FE") @map("ombes") @db.TinyInt
+  exportedToExcel Int @default(0, map: "DF__fbbes__exportxls__45126E37") @map("exportxls") @db.TinyInt
+  inspectionCostAmount Float? @map("beskost") @db.Money
+  remarkCostAmount Float? @map("anmkost") @db.Money
+  technicalStatus Decimal? @map("statustech") @db.Decimal(3, 2)
+  climateStatus Decimal? @map("statusclim") @db.Decimal(3, 2)
+  functionalityStatus Decimal? @map("statusfunc") @db.Decimal(3, 2)
+  totalPoints Decimal? @map("totpint") @db.Decimal(7, 2)
+  totalPointsWeighted Decimal? @map("totpinttw") @db.Decimal(7, 2)
+  alarmAuthorityTransfer Int @default(0, map: "DF__fbbes__larmauth__46069270") @map("larmauth") @db.TinyInt
+  alarmCompanyTransfer Int @default(0, map: "DF__fbbes__larmemco__46FAB6A9") @map("larmemco") @db.TinyInt
+  tenantInformed Int @default(0, map: "DF__fbbes__tenantinf__47EEDAE2") @map("tenantinfo") @db.TinyInt
+  evacuationTime Int @default(0, map: "DF__fbbes__evatime__48E2FF1B") @map("evatime") @db.SmallInt
+  evacuatedCount Int @default(0, map: "DF__fbbes__evacnt__49D72354") @map("evacnt") @db.SmallInt
+  alarmStarted DateTime? @map("larmstart") @db.Date
+  editable Int @default(0, map: "DF__fbbes__editerbar__4ACB478D") @map("editerbar") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: review timestamp field usage later
+
+  remarks Remark[] @relation("fbanm") // Assuming fbanm refers to "Remark"
+  inspector Contact? @relation(fields: [inspectorId], references: [contactId], onUpdate: NoAction, map: "fkfbbeskeycmctc") // Changed to new Contact model
+  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkfbbeskeycmobj") 
+  inspectionCategory InspectionCategory? @relation(fields: [inspectionCategoryId], references: [inspectionCategoryId], onDelete: NoAction, onUpdate: NoAction, map: "fkfbbeskeyfbbka")
+  standardProtocol InspectionProtocolTemplate? @relation(fields: [standardProtocolId], references: [protocolTemplateId], onDelete: NoAction, onUpdate: NoAction, map: "fkfbbeskeyfbbla")
+
+  @@index([inspectorId], map: "fkfbbescmctc")
+  @@index([propertyObjectId], map: "fkfbbescmobj")
+  @@index([inspectionCategoryId], map: "fkfbbesfbbka")
+  @@index([standardProtocolId], map: "fkfbbesfbbla")
+  @@index([userId], map: "fkfbbessyusr")
+}

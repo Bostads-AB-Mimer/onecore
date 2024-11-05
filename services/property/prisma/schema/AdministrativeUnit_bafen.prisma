@@ -1,0 +1,54 @@
+model AdministrativeUnit {
+  @@map("bafen")
+
+  administrativeUnitId String @id(map: "pkbafen") @map("keybafen") @db.Char(15)
+  propertyObjectId String @unique(map: "akbafen1") @map("keycmobj") @db.Char(15)
+  ownerContactId String? @map("keycmctc") @db.Char(15)
+  administratorContactId String? @map("keycmctc2") @db.Char(15)
+  administrativeUnitTypeId String? @map("keybafet") @db.Char(15)
+  municipalityId String? @map("keybamun") @db.Char(15)
+  shoppingCenterId String? @map("keybascr") @db.Char(15)
+  code String @map("code") @db.VarChar(30)
+  name String? @map("caption") @db.VarChar(60)
+  ownOrRented String @default("E", map: "DF__bafen__egetinhyr__6B5FB499") @map("egetinhyrt") @db.Char(1)
+  maintenanceFundYear Int? @map("pufondar") @db.SmallInt
+  maintenanceFundBalance Int? @map("pufondbeho")
+  costConversionFactor Decimal @default(1, map: "DF__bafen__skfaktor__6C53D8D2") @map("skfaktor") @db.Decimal(5, 2)
+  district String? @map("distrikt") @db.VarChar(30)
+  area String? @map("omrade") @db.VarChar(30)
+  districtPart String? @map("stadsdel") @db.VarChar(30)
+  investmentReference String? @map("invref") @db.VarChar(60)
+  faultReportingAdminStatus Int @default(1, map: "DF__bafen__aoadm__6D47FD0B") @map("aoadm") @db.TinyInt
+  noticeText String? @map("warntext") @db.VarChar(300)
+  grading Int @default(0, map: "DF__bafen__grade__6E3C2144") @map("grade") @db.TinyInt
+  socialPlan Int @default(0, map: "DF__bafen__socialpla__6F30457D") @map("socialplan") @db.TinyInt
+  socialPlanStartDate DateTime? @map("socialfrom") @db.Date
+  socialPlanEndDate DateTime? @map("socialto") @db.Date
+  deleteMark Int @default(0, map: "DF__bafen__deletemar__702469B6") @map("deletemark") @db.TinyInt
+  fromDate DateTime @map("fdate") @db.DateTime
+  toDate DateTime @map("tdate") @db.DateTime
+  plannedChargeThroughMonth Int? @map("pdmonth") @db.TinyInt
+  newPlannedChargeFromMonth Int? @map("pdnewmonth") @db.TinyInt
+  preliminaryDebitFee Int @default(0, map: "DF__bafen__pdfee__71188DEF") @map("pdfee") @db.TinyInt
+  establishedPlace String? @map("contplace") @db.VarChar(60)
+  ownerPercentageOfEmptyArea Decimal? @map("ownpdperc") @db.Decimal(5, 2)
+  extendedDistributionKeysUsed Int @default(0, map: "DF__bafen__extdistke__720CB228") @map("extdistkey") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: determine if the 'timestamp' requires further name adjustment
+
+  // Relations
+  administrativeUnitType AdministrativeUnitType? @relation(fields: [administrativeUnitTypeId], references: [id], onUpdate: NoAction, map: "fkbafenkeybafet")
+  municipality Municipality? @relation(fields: [municipalityId], references: [municipalityId], onUpdate: NoAction, map: "fkbafenkeybamun")
+  //contactOwner cmctc? @relation("bafen_keycmctcTocmctc", fields: [ownerContactId], references: [keycmctc], onUpdate: NoAction, map: "fkbafenkeycmctc")
+  //contactAdministrator cmctc? @relation("bafen_keycmctc2Tocmctc", fields: [administratorContactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafenkeycmctc2")
+  //propertyObject cmobj @relation(fields: [propertyObjectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbafenkeycmobj ")
+  propertyObject PropertyObject? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafenkeycmobj ")
+
+
+  @@index([municipalityId], map: "fkbafenbamun")
+  @@index([ownerContactId], map: "fkbafencmctc")
+  @@index([administratorContactId], map: "fkbafencmctc2")
+  @@index([fromDate], map: "inbafen_2CS0P6MW3")
+  @@index([toDate], map: "inbafen_2CS0P6MZ4")
+  @@index([code], map: "inbafen_2CS0P6N16")
+  @@index([name], map: "inbafen_2CS0P6N3I")
+}

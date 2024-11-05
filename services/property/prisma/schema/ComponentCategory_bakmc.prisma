@@ -1,0 +1,10 @@
+model ComponentCategory {
+  @@map("bakmc")
+  id String @id(map: "pkbakmc") @map("keybakmc") @db.Char(15)
+  code String @unique(map: "akbakmc") @map("code") @db.VarChar(10)
+  name String @map("caption") @db.VarChar(60)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  // TODO: Check if 'components' field refers correctly to a valid model and relation
+  components Component[]
+}

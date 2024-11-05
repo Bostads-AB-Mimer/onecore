@@ -1,0 +1,15 @@
+model OtherSetting {
+  @@map("cmmoe")
+  
+  // Fields
+  id String @id(map: "pkcmmoe") @map("keycmmoe") @db.Char(15)
+  integrationSchemaId String @map("keycmmap") @db.Char(15)
+  name String @map("caption") @db.VarChar(100)
+  value String? @map("value") @db.VarChar(Max)
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Consider changing to a datetime format if applicable
+  
+  cmmap TODO: Change this model name to the new name already used @relation(fields: [integrationSchemaId], references: [keycmmap], onDelete: Cascade, onUpdate: NoAction, map: "fkcmmoekeycmmap")
+  
+  // Index
+  @@index([integrationSchemaId], map: "fkcmmoecmmap")
+}

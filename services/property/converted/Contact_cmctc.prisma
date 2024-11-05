@@ -1,0 +1,196 @@
+model Contact {
+  @@map("cmctc")
+
+  contactId String @id(map: "pkcmctc") @map("keycmctc") @db.Char(15)
+  propertyObjectId String @map("keycmobj") @db.Char(15) // TODO: may need renaming based on domain
+  contactCategoryId String @map("keycmctk") @db.Char(15)
+  // TODO: Confirm the intended use of keycmctc2
+  keycmctc2 String? @db.Char(15)
+  currencyId String? @map("keycmcuh") @db.Char(15)
+  cultureId String @map("keysyloc") @db.Char(15)
+  userId String? @map("keysyusr") @db.Char(15)
+  paymentMethodId String @map("keylrpmt") @db.Char(15)
+  versionId String? @map("keyaover") @db.Char(15)
+  allowedVersionId String? @map("keyaover2") @db.Char(15)
+  targetGroupId String? @map("keycmtgr") @db.Char(15)
+  deliveryPlanId String? @map("keyprdel") @db.Char(15)
+  languageId String? @map("keysylng") @db.Char(15)
+  contactCode String @unique(map: "akcmctc") @map("cmctckod") @db.VarChar(30)
+  contactNameCaption String @map("cmctcben") @db.VarChar(100)
+  personalOrOrgNr String? @map("persorgnr") @db.VarChar(15)
+  civilNoFormat Int @map("lcidcivno")
+  birthDate DateTime? @map("birthdate") @db.DateTime
+  gender Int @default(0, map: "DF__cmctc__gender__23035826") @map("gender") @db.TinyInt
+  civilStatus Int @default(0, map: "DF__cmctc__civilstat__23F77C5F") @map("civilstat") @db.TinyInt
+  firstName String? @map("fnamn") @db.VarChar(30)
+  middleName String? @map("mname") @db.VarChar(30)
+  lastName String? @map("enamn") @db.VarChar(45)
+  birthName String? @map("birthname") @db.VarChar(45)
+  initials String? @map("xname") @db.VarChar(30)
+  title String? @db.VarChar(30)
+  passportNumber String? @map("passno") @db.VarChar(30)
+  nationality String? @map("region") @db.Char(2)
+  department String? @map("avdelning") @db.VarChar(45)
+  studentNumber String? @map("studentno") @db.VarChar(30)
+  nationalStudentNumber String? @map("nstudentno") @db.VarChar(30)
+  uniqueStudentId String? @map("sstudentno") @db.VarChar(30)
+  studentAgreementControl Int @default(0, map: "DF__cmctc__studcheck__24EBA098") @map("studcheck") @db.TinyInt
+  studyStartDate DateTime? @map("startstu") @db.DateTime
+  estimatedGraduationDate DateTime? @map("graddate") @db.DateTime
+  createdDate DateTime? @map("createdate") @db.Date
+  deceasedDate DateTime? @map("avliden") @db.DateTime
+  bankruptcyDate DateTime? @map("konkurs") @db.DateTime
+  soughtLegalAgainDate DateTime? @map("lagsokt") @db.DateTime
+  verdictDate DateTime? @map("utslag") @db.DateTime
+  evictionDate DateTime? @map("avhyst") @db.DateTime
+  deliveredDate DateTime? @map("delgiven") @db.DateTime
+  paymentOrderDate DateTime? @map("betfore") @db.DateTime
+  aggressiveDate DateTime? @map("aggressive") @db.DateTime
+  msnpDate DateTime? @map("msnp") @db.DateTime
+  wsnpDate DateTime? @map("wsnp") @db.DateTime
+  companyDeletedDate DateTime? @map("sletdate") @db.DateTime
+  collectionCaseStatus Int @default(0, map: "DF__cmctc__demstatus__25DFC4D1") @map("demstatus") @db.TinyInt
+  memberFrom DateTime? @map("hgffrom") @db.DateTime
+  memberTo DateTime? @map("hgftom") @db.DateTime
+  employmentNumber String? @map("anstnr") @db.VarChar(15)
+  contactPersonStatus Int @default(0, map: "DF__cmctc__cper__26D3E90A") @map("cper") @db.TinyInt
+  minimumAmountForInvoice Float? @map("prminbel") @db.Money
+  administratorType Int? @map("forvtyp") @db.TinyInt
+  messageNotificationMethodWorkOrder Int @default(0, map: "DF__cmctc__resursmai__27C80D43") @map("resursmail") @db.TinyInt
+  exportFileOnWorkOrderChange Int @default(0, map: "DF__cmctc__aoexport__28BC317C") @map("aoexport") @db.TinyInt
+  emailNotificationOnWorkOrder Int @default(0, map: "DF__cmctc__mailnoti__29B055B5") @map("mailnoti") @db.TinyInt
+  servicePercentage Decimal? @map("jobprcnt") @db.Decimal(4, 1)
+  plusGiro String? @map("pg") @db.VarChar(11)
+  bankGiro String? @map("bg") @db.VarChar(11)
+  clearingNumber Int? @map("clearing")
+  accountNumber String? @map("account") @db.VarChar(20)
+  recurringDirectDebit Int @default(0, map: "DF__cmctc__accheck__2AA479EE") @map("accheck") @db.TinyInt
+  accountType Int @default(0, map: "DF__cmctc__accnttype__2B989E27") @map("accnttype") @db.TinyInt
+  bicCode String? @map("bic") @db.VarChar(11)
+  ibanCode String? @map("iban") @db.VarChar(42)
+  vatNumber String? @map("vatno") @db.VarChar(20)
+  locationNumber String? @map("gln") @db.VarChar(13)
+  additionalInfo String? @map("aouppinfo") @db.VarChar(60)
+  adminEmailOnWorkOrder Int @default(0, map: "DF__cmctc__aoadmmail__2C8CC260") @map("aoadmmail") @db.TinyInt
+  blockedFromGDPRCleanup Int @default(0, map: "DF__cmctc__gdprkeep__2D80E699") @map("gdprkeep") @db.TinyInt
+  gdprBlockedUntil DateTime? @map("gdprdate") @db.Date
+  gdprBlockedReason String? @map("gdprreason") @db.VarChar(100)
+  externalUserId String? @map("externid") @db.VarChar(64)
+  messageNotificationMethodApprove Int @default(0, map: "DF__cmctc__atremtype__2E750AD2") @map("atremtype") @db.TinyInt
+  messageNotificationMethodPurchase Int @default(0, map: "DF__cmctc__ikmestype__2F692F0B") @map("ikmestype") @db.TinyInt
+  generateControlNote Int @default(1, map: "DF__cmctc__gensoi__305D5344") @map("gensoi") @db.TinyInt
+  mergeNotification Int @default(0, map: "DF__cmctc__nomerge__3151777D") @map("nomerge") @db.TinyInt
+  preferredContactMethod Int @default(0, map: "DF__cmctc__korrvag__32459BB6") @map("korrvag") @db.TinyInt
+  lockedAddressInfo Int @default(0, map: "DF__cmctc__extblocke__3339BFEF") @map("extblocked") @db.TinyInt
+  blockOffers Int @default(0, map: "DF__cmctc__blockads__342DE428") @map("blockads") @db.TinyInt
+  blockLandlordInfo Int @default(0, map: "DF__cmctc__blockinfo__35220861") @map("blockinfo") @db.TinyInt
+  blockPhoneNumbers Int @default(0, map: "DF__cmctc__dgophone__36162C9A") @map("dgophone") @db.TinyInt
+  citizenship Int @default(0, map: "DF__cmctc__citizen__370A50D3") @map("citizen") @db.TinyInt
+  birthTime String? @map("birthtime") @db.Char(3)
+  otherIdentifier String? @map("otherid") @db.VarChar(30)
+  taxIdentificationNumber String? @map("tin") @db.VarChar(30)
+  tinCountry String? @map("tincountry") @db.Char(2)
+  protectedPersonalOrOrgNr String? @map("ppersorgnr") @db.VarChar(15)
+  protectedFirstName String? @map("pfnamn") @db.VarChar(30)
+  protectedLastName String? @map("penamn") @db.VarChar(30)
+  protectedNameCaption String? @map("pcmctcben") @db.VarChar(100)
+  digitalSignatureGuid String? @map("dsguid") @db.VarChar(60)
+  digitalCommunication Int @default(0, map: "DF__cmctc__digitalco__37FE750C") @map("digitalcom") @db.TinyInt
+  deleteMark Int @default(0, map: "DF__cmctc__deletemar__38F29945") @map("deletemark") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: Confirm if 'timestamp' needs a different naming convention or purpose
+
+  // Relations
+  asset alobj[]
+  appointment aocap[]
+  aorml_aorml_keycmctcTocmctc aorml[] @relation("aorml_keycmctcTocmctc")
+  aorml_aorml_keycmctc6Tocmctc aorml[] @relation("aorml_keycmctc6Tocmctc")
+  interestedParties InterestedParty[] @relation("aoufr") // Based on default mapping and context
+  workOrders aoupp[] @relation("aoupp_keycmctcTocmctc")
+  subWorkOrders aoupp[] @relation("aoupp_keycmctc2Tocmctc")
+  additionalSubWorkOrders aoupp[] @relation("aoupp_keycmctc3Tocmctc")
+  workOrderResources aoupp[] @relation("aoupp_keycmctc4Tocmctc")
+  workOrderExtras aoupp[] @relation("aoupp_keycmctc5Tocmctc")
+  additionalWorkOrderExtras aoupp[] @relation("aoupp_keycmctc6Tocmctc")
+  extendedWorkOrders aoupp[] @relation("aoupp_keycmctc7Tocmctc")
+  financialEntries bafen[] @relation("bafen_keycmctcTocmctc")
+  additionalFinancialEntries bafen[] @relation("bafen_keycmctc2Tocmctc")
+  fastEntries bafst[] @relation("bafst_keycmctcTocmctc")
+  additionalFastEntries bafst[] @relation("bafst_keycmctc2Tocmctc")
+  companyContacts bakmp[] @relation("bakmp_keycmctcTocmctc")
+  additionalCompanyContacts bakmp[] @relation("bakmp_keycmctc2Tocmctc")
+  resourcePlannings ResourcePlanning[]
+  basys_basys_keycmctcTocmctc basys[] @relation("basys_keycmctcTocmctc")
+  basys_basys_keycmctc2Tocmctc basys[] @relation("basys_keycmctc2Tocmctc")
+  applicationLetters ApplicationLetter[]
+  groupContacts cmcgc[]
+  companyRepresentatives cmcmp[] @relation("cmcmp_keycmctcTocmctc")
+  alternateCompanyRepresentatives cmcmp[] @relation("cmcmp_keycmctc2Tocmctc")
+  thirdPartyCompanyRepresentatives cmcmp[] @relation("cmcmp_keycmctc3Tocmctc")
+  contactRoles cmcro[]
+  contactCategory cmctk @relation(fields: [contactCategoryId], references: [keycmctk], onUpdate: NoAction, map: "fkcmctckeycmctk")
+  currency cmcuh? @relation(fields: [currencyId], references: [keycmcuh], onDelete: NoAction, onUpdate: NoAction, map: "fkcmctckeycmcuh")
+  paymentMethod lrpmt @relation(fields: [paymentMethodId], references: [keylrpmt], onUpdate: NoAction, map: "fkcmctckeylrpmt")
+  logProtectedIdentities cmlpi[]
+  resourceAssignments Resource[] @relation("cmres")
+  resourceGroupConnections cmrgk[]
+  messages Message[]
+  signatories Signatory[]
+  documentVersions dorev[] @relation("dorev_keycmctcTocmctc")
+  ampDocumentVersions dorev[] @relation("dorev_keycmctc2Tocmctc")
+  measurementPoints MeasurementPoint[]
+  inspections Inspection[]
+  inspectionProtocols InspectionProtocol[]
+  inspectionRights InspectionRight[]
+  inspectors Inspector[]
+  digitalSignatures DigitalSignature[]
+  securities Security[]
+  procurementHandlers ikbeh[] @relation("ikbeh_keycmctcTocmctc")
+  additionalProcurementHandlers ikbeh[] @relation("ikbeh_keycmctc2Tocmctc")
+  autogiroTransactions AutogiroTransaction[]
+  paymentSchedules kramp[] @relation("kramp_keycmctcTocmctc")
+  additionalPaymentSchedules kramp[] @relation("kramp_keycmctc2Tocmctc")
+  invoices krfkh[] @relation("krfkh_keycmctc2Tocmctc")
+  invoiceReminders krfkh[] @relation("krfkh_keycmctc3Tocmctc")
+  invoiceExemptions krfkh[] @relation("krfkh_keycmctc4Tocmctc")
+  invoiceDisputes krfkh[] @relation("krfkh_keycmctc5Tocmctc")
+  customer Customer? @relation(fields: [contactId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkkrknrkeycmctc")
+  apartmentInspections ApartmentInspection[] @relation("apartmentInspections_inspectorIdToContact_relation")
+  groupMemberships mmctc? @relation("mmctc_keycmctcTocmctc")
+  additionalGroupMemberships mmctc[] @relation("mmctc_keycmctc2Tocmctc")
+  additionalGroupMemberships3 mmctc[] @relation("mmctc_keycmctc3Tocmctc")
+  newSysConnections nysys[] @relation("nysys_keycmctcTocmctc")
+  additionalNewSysConnections nysys[] @relation("nysys_keycmctc2Tocmctc")
+  additionalNewSysConnections3 nysys[] @relation("nysys_keycmctc3Tocmctc")
+  activityTimes ActivityTime[]
+  prmtr_prmtr_keycmctcTocmctc prmtr[] @relation("prmtr_keycmctcTocmctc")
+  prmtr_prmtr_keycmctc2Tocmctc prmtr[] @relation("prmtr_keycmctc2Tocmctc")
+  subProjects prppr[] @relation("prppr_keycmctcTocmctc")
+  additionalSubProjects prppr[] @relation("prppr_keycmctc2Tocmctc")
+  additionalSubProjectLinks prppr[] @relation("prppr_keycmctc3Tocmctc")
+  furtherSubProjectLinks prppr[] @relation("prppr_keycmctc4Tocmctc")
+  projects prprj[] @relation("prprj_keycmctcTocmctc")
+  additionalProjects prprj[] @relation("prprj_keycmctc2Tocmctc")
+  additionalProjectLinks prprj[] @relation("prprj_keycmctc3Tocmctc")
+  furtherProjectLinks prprj[] @relation("prprj_keycmctc4Tocmctc")
+  furtherProjectLinks5 prprj[] @relation("prprj_keycmctc5Tocmctc")
+  product puprd[]
+  periodicWorks PeriodicWork[]
+  tvProducts Product[]
+  productHistories ProductHistory[]
+
+  @@index([allowedVersionId], map: "fkcmctcaover2")
+  @@index([keycmctc2], map: "fkcmctccmctc2")
+  @@index([contactCategoryId], map: "fkcmctccmctk")
+  @@index([currencyId], map: "fkcmctccmcuh")
+  @@index([propertyObjectId], map: "fkcmctccmobj")
+  @@index([paymentMethodId], map: "fkcmctclrpmt")
+  @@index([languageId], map: "fkcmctcsylng")
+  @@index([cultureId], map: "fkcmctcsyloc")
+  @@index([userId], map: "fkcmctcsyusr")
+  @@index([contactNameCaption], map: "incmctc2")
+  @@index([personalOrOrgNr], map: "incmctc3")
+  @@index([firstName], map: "incmctc4")
+  @@index([lastName], map: "incmctc5")
+  @@index([contactId, userId], map: "incmctc6")
+  @@index([contactId, deleteMark, propertyObjectId], map: "incmctc7")
+}

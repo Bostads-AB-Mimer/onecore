@@ -1,0 +1,18 @@
+model ParkingSpaceType {
+  @@map("babpt")
+
+  id String @id(map: "pkbabpt") @map("keybabpt") @db.Char(15)
+  componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: Verify this relationship
+  code String @unique(map: "akbabpt") @map("code") @db.VarChar(15)
+  name String? @map("caption") @db.VarChar(60)
+  vat Int @default(0, map: "DF__babpt__vat__2529E13C") @map("vat") @db.TinyInt
+  terminateWithDwelling Int @default(0, map: "DF__babpt__terwithdw__261E0575") @map("terwithdwe") @db.TinyInt
+  isSystemStandard Int @default(0, map: "DF__babpt__issystem__271229AE") @map("issystem") @db.TinyInt
+  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+
+  parkingSpaces ParkingSpace[] //@relation("fkbabpskeybabpt") // Changed babps to ParkingSpace
+
+  //actionType ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbabptkeypuatt") // Changed puatt to ActionType
+
+  @@index([componentTypeActionId], map: "fkbabptpuatt")
+}
