@@ -66,7 +66,11 @@ const ParkingSpaces = () => {
           />
         </Box>
       </Box>
-      {parkingSpaces.error && 'Error'}
+      {parkingSpaces.error && (
+        <Typography color="error" paddingTop="1rem" paddingBottom="2rem">
+          Ett okänt fel inträffade när parkeringsplatserna skulle hämtas.
+        </Typography>
+      )}
       <TabContext value={currentTypeSearchParam}>
         <Tabs onChange={handleTabChange}>
           <Tab disableRipple label="Publicerade" value="published" />
@@ -157,7 +161,7 @@ const Listings = (props: {
       noRowsOverlay: () => (
         <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
           <Typography fontSize="14px">
-            Det finns inga annonser att visa...
+            Det finns inga annonser att visa.
           </Typography>
         </Stack>
       ),
