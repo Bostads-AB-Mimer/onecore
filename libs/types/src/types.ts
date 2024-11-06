@@ -350,6 +350,15 @@ interface SystemHealth {
   timeStamp: Date
 }
 
+type ApplicationProfile = {
+  contactCode: string
+  id: number
+  numAdults: number
+  numChildren: number
+  expiresAt: Date | null
+  createdAt: Date
+}
+
 export type {
   Contact,
   Lease,
@@ -382,4 +391,5 @@ export type {
   ResidentialArea,
   SystemHealth,
   SystemStatus,
+  ApplicationProfile,
 }
