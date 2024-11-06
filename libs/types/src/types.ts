@@ -185,6 +185,10 @@ interface Email {
   text: string
 }
 
+interface Sms {
+  phoneNumber: string
+}
+
 interface Invoices {
   unpaidInvoices?: Invoice[]
   paidInvoices?: Invoice[]
@@ -376,6 +380,7 @@ export type {
   Invoice,
   ParkingSpace,
   Email,
+  Sms,
   WaitingList,
   Listing,
   Applicant,
