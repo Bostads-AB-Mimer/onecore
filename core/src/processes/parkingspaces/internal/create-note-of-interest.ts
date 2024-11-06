@@ -15,7 +15,7 @@ import {
   getContact,
   getLeasesForPnr,
   addApplicantToWaitingList,
-  getListingByRentalObjectCode,
+  getActiveListingByRentalObjectCode,
   createNewListing,
   applyForListing,
   getInternalCreditInformation,
@@ -190,7 +190,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     //todo: refactor get and create listing to new func ->
     //todo: should return the listing regardless of if it exists previously or is being created
     let listingAdapterResult =
-      await getListingByRentalObjectCode(parkingSpaceId)
+      await getActiveListingByRentalObjectCode(parkingSpaceId)
     if (listingAdapterResult?.ok) {
       log.push(
         `Annons med id ${listingAdapterResult.data?.id} existerar sedan tidigare i onecore-leasing`

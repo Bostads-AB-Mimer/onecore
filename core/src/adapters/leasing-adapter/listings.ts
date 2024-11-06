@@ -13,12 +13,12 @@ import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-const getListingByRentalObjectCode = async (
+const getActiveListingByRentalObjectCode = async (
   rentalObjectCode: string
 ): Promise<AdapterResult<Listing | undefined, 'not-found' | 'unknown'>> => {
   try {
     const res = await axios.get(
-      `${tenantsLeasesServiceUrl}/listings/by-code/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/listings/active/by-code/${rentalObjectCode}`
     )
 
     if (res.status == HttpStatusCode.NotFound) {
@@ -27,7 +27,10 @@ const getListingByRentalObjectCode = async (
 
     return { ok: true, data: res.data.content }
   } catch (error) {
-    logger.error(error, 'Error fetching listing by rental object code:', error)
+    logger.error(
+      error,
+      'Error fetching active listing by rental object code:'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -207,7 +210,7 @@ const getExpiredListingsWithNoOffers = async (): Promise<
 }
 
 export {
-  getListingByRentalObjectCode,
+  getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
   createNewListing,
   applyForListing,

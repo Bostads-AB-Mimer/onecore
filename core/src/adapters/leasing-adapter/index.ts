@@ -542,7 +542,7 @@ export {
   createNewListing,
   deleteListing,
   getListingByListingId,
-  getListingByRentalObjectCode,
+  getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
   syncInternalParkingSpacesFromXpand,
   updateListingStatus,

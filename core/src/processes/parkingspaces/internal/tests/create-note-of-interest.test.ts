@@ -73,8 +73,8 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     .spyOn(leasingAdapter, 'getApplicantByContactCodeAndListingId')
     .mockResolvedValue({ content: mockedApplicant })
 
-  const getListingByRentalObjectCodeSpy = jest
-    .spyOn(leasingAdapter, 'getListingByRentalObjectCode')
+  const getActiveListingByRentalObjectCodeSpy = jest
+    .spyOn(leasingAdapter, 'getActiveListingByRentalObjectCode')
     .mockResolvedValue({
       ok: true,
       data: sharedListing,
@@ -101,10 +101,12 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     .spyOn(communicationAdapter, 'sendNotificationToRole')
     .mockResolvedValue({})
 
-  jest.spyOn(leasingAdapter, 'getListingByRentalObjectCode').mockResolvedValue({
-    ok: true,
-    data: sharedListing,
-  })
+  jest
+    .spyOn(leasingAdapter, 'getActiveListingByRentalObjectCode')
+    .mockResolvedValue({
+      ok: true,
+      data: sharedListing,
+    })
   jest.spyOn(leasingAdapter, 'createNewListing').mockResolvedValue({
     ok: true,
     data: sharedListing,
@@ -313,7 +315,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       'Additional'
     )
 
-    expect(getListingByRentalObjectCodeSpy).toHaveBeenCalledWith('foo')
+    expect(getActiveListingByRentalObjectCodeSpy).toHaveBeenCalledWith('foo')
   })
 
   it("creates new listing if it hasn't been added already", async () => {
@@ -322,7 +324,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getLeasesForPnrSpy.mockResolvedValue(mockedLeases)
     getInternalCreditInformationSpy.mockResolvedValue(true)
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: false,
       err: 'not-found',
     })
@@ -364,7 +366,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       ok: true,
       data: sharedListing,
     })
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: true,
       data: sharedListing,
     })
@@ -409,7 +411,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       ok: true,
       data: sharedListing,
     })
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: false,
       err: 'not-found',
     })
@@ -441,7 +443,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       ok: false,
       err: 'conflict',
     } as any)
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: true,
       data: factory.listing.build({ status: ListingStatus.Active }),
     })
@@ -470,7 +472,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     applyForListingSpy.mockResolvedValue({
       status: HttpStatusCode.Ok,
     } as any)
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: true,
       data: sharedListing,
     })
@@ -505,7 +507,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       ok: false,
       err: 'conflict',
     })
-    getListingByRentalObjectCodeSpy.mockResolvedValue({
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: true,
       data: sharedListing,
     })
