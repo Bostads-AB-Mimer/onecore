@@ -74,20 +74,32 @@ describe('listing-adapter', () => {
     })
   })
 
-  describe(listingAdapter.getListingByRentalObjectCode, () => {
-    it('returns a listing by rental object code', async () => {
+  describe(listingAdapter.getActiveListingByRentalObjectCode, () => {
+    it('returns an active listing by rental object code', async () => {
       const insertedListing = await listingAdapter.createListing(
-        factory.listing.build({ rentalObjectCode: '1' })
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
       )
       assert(insertedListing.ok)
+      const insertedListing2 = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Closed,
+        })
+      )
+      assert(insertedListing2.ok)
+
       const listingFromDatabase =
-        await listingAdapter.getListingByRentalObjectCode(
+        await listingAdapter.getActiveListingByRentalObjectCode(
           insertedListing.data.rentalObjectCode
         )
       expect(listingFromDatabase?.rentalObjectCode).toBeDefined()
       expect(listingFromDatabase?.rentalObjectCode).toEqual(
         insertedListing.data.rentalObjectCode
       )
+      expect(listingFromDatabase?.status).toEqual(ListingStatus.Active)
     })
   })
 

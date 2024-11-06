@@ -103,17 +103,18 @@ const createListing = async (
 }
 
 /**
- * Checks if a listing already exists based on unique criteria.
+ * Checks if an active listing already exists based on unique criteria.
  *
- * @param {string} rentalObjectCode - The rental object code of the listing (originally from xpand)
+ * @param {string} rentalObjectCode - The rental object code of the active listing (originally from xpand)
  * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
  */
-const getListingByRentalObjectCode = async (
+const getActiveListingByRentalObjectCode = async (
   rentalObjectCode: string
 ): Promise<Listing | undefined> => {
   const listing = await db<DbListing>('Listing')
     .where({
       RentalObjectCode: rentalObjectCode,
+      Status: ListingStatus.Active,
     })
     .first()
 
@@ -475,7 +476,7 @@ export {
   createListing,
   createApplication,
   getListingById,
-  getListingByRentalObjectCode,
+  getActiveListingByRentalObjectCode,
   getExpiredListingsWithNoOffers,
   getListingsWithApplicants,
   getApplicantById,

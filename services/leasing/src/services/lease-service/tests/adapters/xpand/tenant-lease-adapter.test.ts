@@ -1,6 +1,8 @@
 import { WaitingListType } from 'onecore-types'
 import * as tenantLeaseAdapter from '../../../adapters/xpand/tenant-lease-adapter'
 
+const queueTime = new Date('2024-10-17T00:00:00.000Z')
+
 jest.mock('knex', () => () => ({
   raw: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
@@ -27,7 +29,7 @@ jest.mock('knex', () => () => ({
           keycmobj: '12345',
           contactKey: '_ADBAEC',
           queueName: 'Bilplats (intern)',
-          queueTime: new Date('2024-10-17T00:00:00.000Z'),
+          queueTime: queueTime,
         },
       ])
     )
@@ -50,6 +52,10 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
     const contact = await tenantLeaseAdapter.getContactByContactCode(
       'P123456',
       undefined
+    )
+
+    const queuePonts = Math.round(
+      (new Date().getTime() - queueTime.getTime()) / (1000 * 3600 * 24)
     )
 
     expect(contact).toStrictEqual({
@@ -79,7 +85,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         emailAddress: 'redacted',
         isTenant: false,
         parkingSpaceWaitingList: {
-          queuePoints: 13,
+          queuePoints: queuePonts,
           queueTime: new Date('2024-10-17T00:00:00.000Z'),
           type: WaitingListType.ParkingSpace,
         },

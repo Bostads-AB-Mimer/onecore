@@ -290,10 +290,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /listings/by-code/{rentalObjectCode}:
+   * /listings/active/by-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get a listing by Rental Object Code
-   *     description: Fetches a listing from the database using its Rental Object Code.
+   *     summary: Get an active listing by Rental Object Code
+   *     description: Fetches an active listing from the database using its Rental Object Code.
    *     tags:
    *       - Listings
    *     parameters:
@@ -330,12 +330,14 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    */
-  router.get('/listings/by-code/:rentalObjectCode', async (ctx) => {
+  router.get('/listings/active/by-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const rentaLObjectCode = ctx.params.rentalObjectCode
       const listing =
-        await listingAdapter.getListingByRentalObjectCode(rentaLObjectCode)
+        await listingAdapter.getActiveListingByRentalObjectCode(
+          rentaLObjectCode
+        )
       if (listing == undefined) {
         ctx.status = 404
         ctx.body = { reason: 'Listing not found', ...metadata }
