@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.35.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.34.1...v1.35.0) (2024-11-06)
+
+
+### Features
+
+* add application profile ([#118](https://github.com/Bostads-AB-Mimer/onecore-types/issues/118)) ([ee52e4e](https://github.com/Bostads-AB-Mimer/onecore-types/commit/ee52e4e736a462eef6155ee52f186fe9c8f61eb5))
+
 ## [1.34.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.34.0...v1.34.1) (2024-10-30)
 
 
