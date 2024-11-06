@@ -1,19 +1,21 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { leasing, WaitingListType } from 'onecore-types'
+import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
   getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
-import { logger } from 'onecore-utilities'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
 import { getTenant } from '../get-tenant'
-import { WaitingListType } from 'onecore-types'
+import { db } from '../adapters/db'
 
 /**
  * @swagger
@@ -433,4 +435,65 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/application-profile:
+   *   get:
+   *     summary: Gets an application profile by contact code
+   *     description: Retrieve application profile information by contact code.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code associated with the application profile.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       404:
+   *         description: Not found.
+   *       500:
+   *         description: Internal server error. Failed to retrieve application profile information.
+   */
+
+  type GetApplicationProfileResponseData = z.infer<
+    typeof leasing.GetApplicationProfileResponseDataSchema
+  >
+
+  router.get('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const profile = await applicationProfileAdapter.getByContactCode(
+      db,
+      ctx.params.contactCode
+    )
+
+    if (!profile.ok) {
+      if (profile.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'not-found', ...metadata }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: 'unknown', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: profile.data satisfies GetApplicationProfileResponseData,
+      ...metadata,
+    }
+  })
 }

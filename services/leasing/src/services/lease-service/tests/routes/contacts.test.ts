@@ -2,11 +2,12 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { leasing, WaitingListType } from 'onecore-types'
 
 import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
-import { WaitingListType } from 'onecore-types'
+import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -137,5 +138,47 @@ describe('GET /contacts/search', () => {
         error: 'Noooo fel',
       })
     })
+  })
+})
+
+describe('GET /contacts/:contactCode/application-profile', () => {
+  it('responds with 404 if not found', async () => {
+    jest
+      .spyOn(applicationProfileAdapter, 'getByContactCode')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback()).get(
+      '/contacts/1234/application-profile'
+    )
+
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({
+      error: 'not-found',
+    })
+  })
+
+  it('responds with 200 and application profile', async () => {
+    jest
+      .spyOn(applicationProfileAdapter, 'getByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          contactCode: '1234',
+          createdAt: new Date(),
+          expiresAt: null,
+          id: 1,
+          numAdults: 0,
+          numChildren: 0,
+        },
+      })
+
+    const res = await request(app.callback()).get(
+      '/contacts/1234/application-profile'
+    )
+
+    expect(res.status).toBe(200)
+    expect(() =>
+      leasing.GetApplicationProfileResponseDataSchema.parse(res.body.content)
+    ).not.toThrow()
   })
 })
