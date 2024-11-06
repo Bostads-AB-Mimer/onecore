@@ -6,16 +6,14 @@ import * as listingAdapter from '../adapters/listing-adapter'
 import * as offerAdapter from '../adapters/offer-adapter'
 import { db, migrate, teardown } from '../adapters/db'
 import * as service from '../offer-service'
+import { clearDb } from './testUtils'
 
 beforeAll(async () => {
   await migrate()
 })
 
 beforeEach(async () => {
-  await db('offer_applicant').del()
-  await db('offer').del()
-  await db('applicant').del()
-  await db('listing').del()
+  await clearDb(db)
 })
 
 afterAll(async () => {

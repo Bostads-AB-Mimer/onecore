@@ -6,16 +6,14 @@ import { db, migrate, teardown } from '../../adapters/db'
 import * as offerAdapter from '../../adapters/offer-adapter'
 import * as factory from './../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
+import { clearDb } from '../testUtils'
 
 beforeAll(async () => {
   await migrate()
 })
 
 afterEach(async () => {
-  await db('offer_applicant').del()
-  await db('offer').del()
-  await db('applicant').del()
-  await db('listing').del()
+  await clearDb(db)
 })
 
 afterAll(async () => {

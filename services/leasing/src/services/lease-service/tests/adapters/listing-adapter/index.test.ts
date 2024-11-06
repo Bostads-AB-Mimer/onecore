@@ -4,16 +4,14 @@ import assert from 'node:assert'
 import { db, migrate, teardown } from '../../../adapters/db'
 import * as listingAdapter from '../../../adapters/listing-adapter'
 import * as factory from './../../factories'
+import { clearDb } from '../../testUtils'
 
 beforeAll(async () => {
   await migrate()
 })
 
 afterEach(async () => {
-  await db('offer_applicant').del()
-  await db('offer').del()
-  await db('applicant').del()
-  await db('listing').del()
+  await clearDb(db)
 })
 
 afterAll(async () => {
