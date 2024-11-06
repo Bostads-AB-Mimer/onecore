@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   ApplicantStatus,
   InvoiceTransactionType,
@@ -9,6 +10,7 @@ import {
   OfferStatus,
   WaitingListType,
 } from './enums'
+import { ApplicationProfileSchema } from './schemas'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -354,14 +356,7 @@ interface SystemHealth {
   timeStamp: Date
 }
 
-type ApplicationProfile = {
-  contactCode: string
-  id: number
-  numAdults: number
-  numChildren: number
-  expiresAt: Date | null
-  createdAt: Date
-}
+type ApplicationProfile = z.infer<typeof ApplicationProfileSchema>
 
 export type {
   Contact,
