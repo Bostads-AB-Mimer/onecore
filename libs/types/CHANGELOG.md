@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.36.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.35.0...v1.36.0) (2024-11-06)
+
+
+### Features
+
+* Add types for ticket sms messages (empty commit to trigger release) ([704817b](https://github.com/Bostads-AB-Mimer/onecore-types/commit/704817b04b03a756c2e8c4af04188b8acf3a0b35))
+
 ## [1.35.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.34.1...v1.35.0) (2024-11-06)
 
 
