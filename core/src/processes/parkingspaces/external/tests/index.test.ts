@@ -68,7 +68,7 @@ describe('parkingspaces', () => {
         .spyOn(propertyManagementAdapter, 'getParkingSpace')
         .mockResolvedValue(mockedParkingSpace)
       getContactSpy = jest
-        .spyOn(leasingAdapter, 'getContact')
+        .spyOn(leasingAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: mockedApplicantWithoutLeases })
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')

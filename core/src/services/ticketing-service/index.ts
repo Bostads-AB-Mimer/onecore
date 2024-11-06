@@ -1,6 +1,5 @@
 import KoaRouter from '@koa/router'
 import {
-  getContact,
   getContactByContactCode,
   getContactByPhoneNumber,
   getLease,
@@ -415,7 +414,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/maintenanceUnitsByContactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const contactResult = await getContact(ctx.params.contactCode)
+      const contactResult = await getContactByContactCode(
+        ctx.params.contactCode
+      )
       if (!contactResult.ok) {
         ctx.status = 404
         ctx.body = { reason: 'Contact not found', ...metadata }

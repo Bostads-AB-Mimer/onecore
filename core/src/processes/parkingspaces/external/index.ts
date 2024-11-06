@@ -10,7 +10,7 @@ import {
 } from 'onecore-types'
 import {
   createLease,
-  getContact,
+  getContactByContactCode,
   getCreditInformation,
   getInternalCreditInformation,
 } from '../../../adapters/leasing-adapter'
@@ -74,7 +74,7 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     // Step 2. Get information about applicant and contracts
-    const applicantResult = await getContact(contactId)
+    const applicantResult = await getContactByContactCode(contactId)
 
     if (!applicantResult.ok) {
       return {

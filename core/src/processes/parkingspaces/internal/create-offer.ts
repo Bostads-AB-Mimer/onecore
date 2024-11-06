@@ -87,7 +87,9 @@ export const createOfferForInternalParkingSpace = async (
 
     const [applicant, ...restApplicants] = eligibleApplicants
 
-    const getContact = await leasingAdapter.getContact(applicant.contactCode)
+    const getContact = await leasingAdapter.getContactByContactCode(
+      applicant.contactCode
+    )
     if (!getContact.ok) {
       return endFailingProcess(
         log,

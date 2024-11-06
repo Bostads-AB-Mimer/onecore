@@ -56,7 +56,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   })
 
   const getContactSpy = jest
-    .spyOn(leasingAdapter, 'getContact')
+    .spyOn(leasingAdapter, 'getContactByContactCode')
     .mockResolvedValue({ ok: true, data: mockedContact })
   const getLeasesForPnrSpy = jest
     .spyOn(leasingAdapter, 'getLeasesForPnr')

@@ -313,7 +313,7 @@ describe('ticketing-service index', () => {
 
     it('should return all maintenance units', async () => {
       const getContactSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getContact')
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: contactMockData })
       const getLeasesForPnrSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')

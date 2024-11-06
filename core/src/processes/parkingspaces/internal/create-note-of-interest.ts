@@ -12,7 +12,6 @@ import {
 import { logger } from 'onecore-utilities'
 
 import {
-  getContact,
   getLeasesForPnr,
   addApplicantToWaitingList,
   getActiveListingByRentalObjectCode,
@@ -23,6 +22,7 @@ import {
   getApplicantByContactCodeAndListingId,
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
+  getContactByContactCode,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import {
@@ -76,7 +76,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     }
 
     // Step 2. Get information about applicant and contracts
-    const getApplicantContact = await getContact(contactCode)
+    const getApplicantContact = await getContactByContactCode(contactCode)
     if (!getApplicantContact.ok) {
       return endFailingProcess(
         log,
