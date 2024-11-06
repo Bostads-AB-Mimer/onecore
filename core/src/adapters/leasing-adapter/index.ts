@@ -13,7 +13,10 @@ import {
   ApplicantWithListing,
   DetailedApplicant,
   Tenant,
+  ApplicationProfile,
+  leasing,
 } from 'onecore-types'
+import { z } from 'zod'
 
 import { AdapterResult } from './../types'
 import config from '../../common/config'
@@ -510,12 +513,42 @@ const validatePropertyRentalRules = async (
   }
 }
 
+type GetApplicationProfileResponseData = z.infer<
+  typeof leasing.GetApplicationProfileResponseDataSchema
+>
+
+async function getApplicationProfileByContactCode(
+  contactCode: string
+): Promise<
+  AdapterResult<GetApplicationProfileResponseData, 'unknown' | 'not-found'>
+> {
+  try {
+    const response = await axios.get<{
+      content: GetApplicationProfileResponseData
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/application-profile`)
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error fetching application profile by contact code:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,
+  getApplicationProfileByContactCode,
   getContact,
   getContactByContactCode,
   getContactByPhoneNumber,

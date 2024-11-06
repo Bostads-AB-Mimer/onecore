@@ -2,11 +2,6 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { routes } from '../index'
-import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
-import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
-import * as offerProcess from '../../../processes/parkingspaces/internal/create-offer'
-
 import {
   Lease,
   ConsumerReport,
@@ -14,9 +9,16 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   ListingStatus,
   UpdateListingStatusErrorCodes,
+  leasing,
 } from 'onecore-types'
+
+import { routes } from '../index'
+import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
+
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
@@ -604,6 +606,48 @@ describe('lease-service', () => {
 
       expect(res.status).toBe(200)
       expect(updateListingStatus).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('GET /contacts/:contactCode/application-profile', () => {
+    it('responds with 404 if not found', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/contacts/1234/application-profile'
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body).toEqual({
+        error: 'not-found',
+      })
+    })
+
+    it('responds with 200 and application profile', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            contactCode: '1234',
+            createdAt: new Date(),
+            expiresAt: null,
+            id: 1,
+            numAdults: 0,
+            numChildren: 0,
+          },
+        })
+
+      const res = await request(app.callback()).get(
+        '/contacts/1234/application-profile'
+      )
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        leasing.GetApplicationProfileResponseDataSchema.parse(res.body.content)
+      ).not.toThrow()
     })
   })
 })

@@ -6,8 +6,9 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { GetActiveOfferByListingIdErrorCodes } from 'onecore-types'
+import { GetActiveOfferByListingIdErrorCodes, leasing } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
@@ -1441,4 +1442,63 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+  /**
+   * @swagger
+   * /contacts/{contactCode}/application-profile:
+   *   get:
+   *     summary: Gets an application profile by contact code
+   *     description: Retrieve application profile information by contact code.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code associated with the application profile.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       404:
+   *         description: Not found.
+   *       500:
+   *         description: Internal server error. Failed to retrieve application profile information.
+   */
+
+  type GetApplicationProfileResponseData = z.infer<
+    typeof leasing.GetApplicationProfileResponseDataSchema
+  >
+
+  router.get('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const profile = await leasingAdapter.getApplicationProfileByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!profile.ok) {
+      if (profile.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'not-found', ...metadata }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: 'unknown', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: profile.data satisfies GetApplicationProfileResponseData,
+      ...metadata,
+    }
+  })
 }

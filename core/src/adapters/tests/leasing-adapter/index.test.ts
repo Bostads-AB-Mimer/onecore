@@ -184,4 +184,42 @@ describe('leasing-adapter', () => {
       })
     })
   })
+
+  describe(leasingAdapter.getApplicationProfileByContactCode, () => {
+    it('returns not found when leasing responds with 404', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/123/application-profile')
+        .reply(404)
+
+      const result =
+        await leasingAdapter.getApplicationProfileByContactCode('123')
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns unknown err when leasing responds with 500', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/123/application-profile')
+        .reply(500)
+
+      const result =
+        await leasingAdapter.getApplicationProfileByContactCode('123')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns ok and application profile when leasing responds with 200', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/123/application-profile')
+        .reply(200, { content: { id: 1 } })
+
+      const result =
+        await leasingAdapter.getApplicationProfileByContactCode('123')
+
+      expect(result).toEqual({
+        ok: true,
+        data: expect.objectContaining({ id: 1 }),
+      })
+    })
+  })
 })
