@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.36.0...v2.0.0) (2024-11-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* UTH-21 - Get application profile types ([#120](https://github.com/Bostads-AB-Mimer/onecore-types/issues/120))
+
+### Features
+
+* UTH-21 - Get application profile types ([#120](https://github.com/Bostads-AB-Mimer/onecore-types/issues/120)) ([6770ff3](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6770ff396b72ce17e71941cb9ebb8b5f67218329))
+
 ## [1.36.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v1.35.0...v1.36.0) (2024-11-06)
 
 
