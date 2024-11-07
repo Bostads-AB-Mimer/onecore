@@ -624,7 +624,8 @@ export const routes = (router: KoaRouter) => {
         )
         const newTenantRecord = await createTenantRecord(
           tenants[0],
-          AccessOptions.PhoneNumber
+          AccessOptions.PhoneNumber,
+          AccessOptions.Email
         )
         const newMaintenanceUnitRecord = await createMaintenanceUnitRecord(
           laundryRoom,
@@ -639,7 +640,6 @@ export const routes = (router: KoaRouter) => {
           maintenance_unit_id: newMaintenanceUnitRecord.toString(),
           // In the web ui, email can only be set if the user claims to be hearing impaired
           hearing_impaired: !!AccessOptions.Email,
-          phone_number: AccessOptions.PhoneNumber || tenants[0].phoneNumbers[0],
           call_between: AccessOptions.CallBetween,
           pet: Pet,
           space_code: ticket.LocationCode,
