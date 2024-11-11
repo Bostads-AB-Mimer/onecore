@@ -2,7 +2,7 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { TicketMessageSms } from 'onecore-types'
+import { Email, TicketMessageSms } from 'onecore-types'
 
 import { isMessageEmail, isValidTicketMessageSms } from '../index'
 import * as infobipAdapter from '../adapters/infobip-adapter'
@@ -88,6 +88,56 @@ describe('/sendTicketSms', () => {
 
     expect(res.status).toBe(400)
     expect(sendTicketSmsSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('/sendTicketEmail', () => {
+  let sendEmailSpy: jest.SpyInstance<Promise<any>, [message: Email], any>
+
+  beforeEach(() => {
+    sendEmailSpy = jest.spyOn(infobipAdapter, 'sendEmail')
+    sendEmailSpy.mockReset()
+  })
+
+  it('should return 200', async () => {
+    sendEmailSpy.mockResolvedValue({})
+
+    const res = await request(app.callback()).post('/sendTicketEmail').send({
+      to: 'hello@example.com',
+      subject: 'subject',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(200)
+    expect(sendEmailSpy).toHaveBeenCalledWith({
+      to: 'hello@example.com',
+      subject: 'subject',
+      text: 'hello',
+    })
+  })
+
+  it('should return 400 for invalid request body', async () => {
+    sendEmailSpy.mockResolvedValue({})
+
+    const res = await request(app.callback()).post('/sendTicketEmail').send({
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(400)
+    expect(sendEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 for invalid email', async () => {
+    sendEmailSpy.mockResolvedValue({})
+
+    const res = await request(app.callback()).post('/sendTicketSms').send({
+      to: 'hello',
+      subject: 'subject',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(400)
+    expect(sendEmailSpy).not.toHaveBeenCalled()
   })
 })
 
