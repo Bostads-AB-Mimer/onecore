@@ -37,8 +37,6 @@ const publicRouter = new KoaRouter()
 swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
-//app.use(jwt({ secret: config.auth.secret }))
-
 app.use(api.routes())
 
 export default app
