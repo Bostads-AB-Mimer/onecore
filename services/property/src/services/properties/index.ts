@@ -13,14 +13,6 @@ import { getPropertyById } from '../../adapters/property-adapter'
  * tags:
  *   - name: Property base service
  *     description: Operations related to property base
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- * security:
- *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
   /**
@@ -42,8 +34,6 @@ export const routes = (router: KoaRouter) => {
    *       200:
    *         description: Successfully retrieved the property.
    *         content:
-   *     security:
-   *       - bearerAuth: []
    */
   router.get('(.*)/properties/:id/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
