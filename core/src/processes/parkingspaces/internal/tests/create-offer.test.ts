@@ -79,7 +79,7 @@ describe('createOfferForInternalParkingSpace', () => {
       error: CreateOfferErrorCodes.NoApplicants,
       httpStatus: 500,
       response: {
-        message: 'No eligible applicants found, cannot create new offer',
+        message: 'No eligible applicant found, cannot create new offer',
         errorCode: CreateOfferErrorCodes.NoApplicants,
       },
     })
@@ -124,16 +124,16 @@ describe('createOfferForInternalParkingSpace', () => {
     const applicants = [
       factory.detailedApplicant
         .params({
-          id: 987,
-          contactCode: '123ABC',
-          priority: undefined,
+          id: 432,
+          contactCode: '456DEF',
+          priority: 1,
         })
         .build(),
       factory.detailedApplicant
         .params({
-          id: 432,
-          contactCode: '456DEF',
-          priority: 1,
+          id: 987,
+          contactCode: '123ABC',
+          priority: undefined,
         })
         .build(),
     ]
