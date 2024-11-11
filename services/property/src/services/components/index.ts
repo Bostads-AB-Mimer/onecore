@@ -13,14 +13,6 @@ import { getComponentByMaintenanceUnitCode } from '../../adapters/component-adap
  * tags:
  *   - name: Property base service
  *     description: Operations related to property base
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- * security:
- *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
   /**
@@ -42,8 +34,6 @@ export const routes = (router: KoaRouter) => {
    *       200:
    *         description: Successfully retrieved the components.
    *         content:
-   *     security:
-   *       - bearerAuth: []
    */
   router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
