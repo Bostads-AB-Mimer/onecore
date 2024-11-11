@@ -1,18 +1,8 @@
-import Koa from 'koa'
-import Router from '@koa/router'
-import { PrismaClient } from '@prisma/client'
+import app from './src/app'
+import { logger } from 'onecore-utilities'
+import port from './src/config/port'
 
-const app = new Koa()
-const router = new Router()
-const prisma = new PrismaClient()
-const port = 3000
-
-router.get('/', async (ctx) => {
-  ctx.body = 'hello world'
-})
-
-app.use(router.routes()).use(router.allowedMethods())
-
-app.listen(port, () => {
-  console.log(`listening at http://localhost:${port}`)
+const PORT = port
+app.listen(PORT, () => {
+  logger.info(`🏢 property base listening on http://localhost:${PORT}`)
 })
