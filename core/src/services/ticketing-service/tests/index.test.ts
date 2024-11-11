@@ -255,6 +255,53 @@ describe('ticketing-service index', () => {
     })
   })
 
+  describe('POST /closeTicket/:ticketId', () => {
+    it('should close ticket', async () => {
+      const closeTicketSpy = jest
+        .spyOn(odooAdapter, 'closeTicket')
+        .mockResolvedValue(Promise.resolve(true))
+      const res = await request(app.callback()).post('/api/closeTicket/13')
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(closeTicketSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /updateTicket/:ticketId', () => {
+    const ticketId = 13
+    const message = 'test'
+    const addMessageToTicketSpy = jest
+      .spyOn(odooAdapter, 'addMessageToTicket')
+      .mockResolvedValue(Promise.resolve(ticketId))
+
+    beforeEach(() => {
+      addMessageToTicketSpy.mockClear()
+    })
+
+    it('should update ticket', async () => {
+      const res = await request(app.callback())
+        .post(`/api/updateTicket/${ticketId}`)
+        .send({ message })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(addMessageToTicketSpy).toHaveBeenCalledWith(ticketId, {
+        body: message,
+      })
+    })
+
+    it('should return 400 if message body is missing', async () => {
+      const res = await request(app.callback())
+        .post(`/api/updateTicket/${ticketId}`)
+        .send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.reason).toBe('message is missing from the request body')
+      expect(addMessageToTicketSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('GET /maintenanceUnitsByRentalPropertyId/:rentalPropertyId/:type?', () => {
     let maintenanceUnitsMock: MaintenanceUnitInfo[]
     beforeEach(() => {
