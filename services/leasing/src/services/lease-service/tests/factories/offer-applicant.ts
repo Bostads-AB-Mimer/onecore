@@ -7,7 +7,7 @@ export const OfferApplicantFactory = Factory.define<OfferApplicant>(
     listingId: 1,
     offerId: 1,
     applicantId: 1,
-    priority: 1,
+    priority: null,
     queuePoints: 1,
     status: ApplicantStatus.Active,
     address: 'Testgatan 14',

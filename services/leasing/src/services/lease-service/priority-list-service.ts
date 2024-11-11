@@ -32,11 +32,9 @@ const sortApplicantsBasedOnRentalRules = (
   applicants: DetailedApplicant[]
 ): DetailedApplicant[] => {
   return Array.from(applicants).sort((a, b) => {
-    //undefined priority is the lowest priority
-    const aPriority =
-      a.priority !== undefined ? a.priority : Number.MAX_SAFE_INTEGER
-    const bPriority =
-      b.priority !== undefined ? b.priority : Number.MAX_SAFE_INTEGER
+    // Nulls are the lowest priority
+    const aPriority = a.priority !== null ? a.priority : Number.MAX_SAFE_INTEGER
+    const bPriority = b.priority !== null ? b.priority : Number.MAX_SAFE_INTEGER
 
     //sort by priority (ascending)
     if (aPriority !== bPriority) {
@@ -70,7 +68,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     //applicant is not allowed to rent this object, return priority:undefined
     return {
       ...applicant,
-      priority: undefined,
+      priority: null,
     }
   }
 
@@ -153,10 +151,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     }
   }
 
-  //Applicant is not in any of the 3 priority groups and is not eligible to rent the parking space. Ie because they doesn't have a housing contract
+  //Applicant is not in any of the 3 priority groups and is not eligible to rent the parking space. Ie because they don't have a housing contract
   return {
     ...applicant,
-    priority: undefined,
+    priority: null,
   }
 }
 

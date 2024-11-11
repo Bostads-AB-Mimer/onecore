@@ -612,6 +612,7 @@ export const routes = (router: KoaRouter) => {
             currentHousingContract: tenant.data.currentHousingContract,
             upcomingHousingContract: tenant.data.upcomingHousingContract,
             parkingSpaceContracts: tenant.data.parkingSpaceContracts,
+            priority: null,
           })
         }
       }
@@ -621,7 +622,6 @@ export const routes = (router: KoaRouter) => {
           listing,
           applicants
         )
-
       ctx.status = 200
       ctx.body = {
         content: priorityListService.sortApplicantsBasedOnRentalRules(

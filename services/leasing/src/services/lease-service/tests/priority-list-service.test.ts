@@ -405,7 +405,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       listing,
       applicant
     )
-    expect(result.priority).toBe(undefined)
+    expect(result.priority).toBe(null)
   })
 })
 
@@ -695,9 +695,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       applicantsWithPriority.filter((applicant) => applicant.priority === 1)
     ).toHaveLength(1)
     expect(
-      applicantsWithPriority.filter(
-        (applicant) => applicant.priority === undefined
-      )
+      applicantsWithPriority.filter((applicant) => applicant.priority === null)
     ).toHaveLength(1)
 
     const sortedApplicantsBasedOnRentalRules = sortApplicantsBasedOnRentalRules(

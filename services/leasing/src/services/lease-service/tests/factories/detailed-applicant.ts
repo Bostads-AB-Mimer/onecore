@@ -21,6 +21,6 @@ export const DetailedApplicantFactory = Factory.define<DetailedApplicant>(
     currentHousingContract: undefined,
     upcomingHousingContract: undefined,
     parkingSpaceContracts: [],
-    priority: undefined,
+    priority: null,
   })
 )
