@@ -30,6 +30,16 @@ export const OfferRound = (props: {
         rowHeight={72}
         disableRowSelectionOnClick
         autoHeight
+        sx={{
+          '& .MuiDataGrid-row': {
+            '&.opaque-row': {
+              filter: 'contrast(20%)',
+            },
+          },
+        }}
+        getRowClassName={(params) =>
+          params.row.priority == null ? 'opaque-row' : ''
+        }
       />
     </>
   )
