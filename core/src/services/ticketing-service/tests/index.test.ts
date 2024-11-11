@@ -3,6 +3,7 @@ import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as odooAdapter from '../adapters/odoo-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
@@ -299,6 +300,126 @@ describe('ticketing-service index', () => {
       expect(res.status).toBe(400)
       expect(res.body.reason).toBe('message is missing from the request body')
       expect(addMessageToTicketSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /sendTicketMessageSms', () => {
+    const sendTicketMessageSmsSpy = jest.spyOn(
+      communicationAdapter,
+      'sendTicketMessageSms'
+    )
+
+    beforeEach(() => {
+      sendTicketMessageSmsSpy.mockReset()
+    })
+
+    it('should return 200', async () => {
+      sendTicketMessageSmsSpy.mockResolvedValue(
+        Promise.resolve({ ok: true, data: {} })
+      )
+      const res = await request(app.callback())
+        .post('/api/sendTicketMessageSms')
+        .send({
+          phoneNumber: '1234567890',
+          message: 'test',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(sendTicketMessageSmsSpy).toHaveBeenCalled()
+    })
+
+    it('should return 400 if phoneNumber or message are missing', async () => {
+      sendTicketMessageSmsSpy.mockResolvedValue(
+        Promise.resolve({ ok: true, data: {} })
+      )
+
+      const resMissingPhoneNumber = await request(app.callback())
+        .post('/api/sendTicketMessageSms')
+        .send({
+          message: 'test',
+        })
+
+      expect(resMissingPhoneNumber.status).toBe(400)
+      expect(resMissingPhoneNumber.body.reason).toBeDefined()
+      expect(sendTicketMessageSmsSpy).not.toHaveBeenCalled()
+
+      const resMissingMessage = await request(app.callback())
+        .post('/api/sendTicketMessageSms')
+        .send({
+          phoneNumber: '1234567890',
+        })
+
+      expect(resMissingMessage.status).toBe(400)
+      expect(resMissingMessage.body.reason).toBeDefined()
+      expect(sendTicketMessageSmsSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /sendTicketMessageEmail', () => {
+    const sendTicketMessageEmailSpy = jest.spyOn(
+      communicationAdapter,
+      'sendTicketMessageEmail'
+    )
+
+    beforeEach(() => {
+      sendTicketMessageEmailSpy.mockReset()
+    })
+
+    it('should return 200', async () => {
+      sendTicketMessageEmailSpy.mockResolvedValue(
+        Promise.resolve({ ok: true, data: {} })
+      )
+      const res = await request(app.callback())
+        .post('/api/sendTicketMessageEmail')
+        .send({
+          to: 'hello@example.com',
+          subject: 'subject',
+          message: 'hello',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(sendTicketMessageEmailSpy).toHaveBeenCalled()
+    })
+
+    it('should return 400 if to, subject or message are missing', async () => {
+      sendTicketMessageEmailSpy.mockResolvedValue(
+        Promise.resolve({ ok: true, data: {} })
+      )
+
+      const resMissingTo = await request(app.callback())
+        .post('/api/sendTicketMessageEmail')
+        .send({
+          subject: 'subject',
+          message: 'hello',
+        })
+
+      expect(resMissingTo.status).toBe(400)
+      expect(resMissingTo.body.reason).toBeDefined()
+      expect(sendTicketMessageEmailSpy).not.toHaveBeenCalled()
+
+      const resMissingMessage = await request(app.callback())
+        .post('/api/sendTicketMessageEmail')
+        .send({
+          to: 'hello@example.com',
+          subject: 'subject',
+        })
+
+      expect(resMissingMessage.status).toBe(400)
+      expect(resMissingMessage.body.reason).toBeDefined()
+      expect(sendTicketMessageEmailSpy).not.toHaveBeenCalled()
+
+      const resMissingSubject = await request(app.callback())
+        .post('/api/sendTicketMessageEmail')
+        .send({
+          to: 'hello@example.com',
+          message: 'hello',
+        })
+
+      expect(resMissingSubject.status).toBe(400)
+      expect(resMissingSubject.body.reason).toBeDefined()
+      expect(sendTicketMessageEmailSpy).not.toHaveBeenCalled()
     })
   })
 
