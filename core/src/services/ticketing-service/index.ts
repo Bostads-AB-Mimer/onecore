@@ -24,6 +24,10 @@ import {
   addMessageToTicket,
 } from './adapters/odoo-adapter'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import {
+  sendTicketMessageEmail,
+  sendTicketMessageSms,
+} from '../../adapters/communication-adapter'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -742,6 +746,78 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         message: `Failed to add message to ticket with ID ${ticketId}`,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendTicketMessageSms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { phoneNumber, message } = ctx.request.body
+
+    if (phoneNumber === undefined || message === undefined) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Bad request',
+        ...metadata,
+      }
+
+      return
+    }
+
+    const result = await sendTicketMessageSms(phoneNumber, message)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Sms sent to ${phoneNumber}`,
+        ...metadata,
+      }
+    } else {
+      logger.error(
+        result.err,
+        `Error sending sms to ${phoneNumber}, status: ${result.statusCode}`
+      )
+
+      ctx.status = 500
+      ctx.body = {
+        message: `Failed to send sms to ${phoneNumber}, status: ${result.statusCode}`,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendTicketMessageEmail', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { to, subject, message } = ctx.request.body
+
+    if (to === undefined || subject === undefined || message === undefined) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Bad request',
+        ...metadata,
+      }
+
+      return
+    }
+
+    const result = await sendTicketMessageEmail(to, subject, message)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Email sent to ${to}`,
+        ...metadata,
+      }
+    } else {
+      logger.error(
+        result.err,
+        `Error sending email to ${to}, status: ${result.statusCode}`
+      )
+
+      ctx.status = 500
+      ctx.body = {
+        message: `Failed to send email to ${to}, status: ${result.statusCode}`,
         ...metadata,
       }
     }
