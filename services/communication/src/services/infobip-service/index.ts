@@ -6,12 +6,14 @@ import {
   sendParkingSpaceOffer,
   sendParkingSpaceAssignedToOther,
   sendParkingSpaceOfferSms,
+  sendTicketSms,
 } from './adapters/infobip-adapter'
 import {
   Email,
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
+  TicketMessageSms,
 } from 'onecore-types'
 import { generateRouteMetadata } from 'onecore-utilities'
 import config from '../../common/config'
@@ -79,9 +81,11 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/sendSms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
     try {
       const sms = ctx.request.body
-      if (!isValidSms(sms)) {
+      if (!isValidParkingSpaceOfferSms(sms)) {
         ctx.throw(400, 'Message is not an sms object')
         return
       }
@@ -95,11 +99,49 @@ export const routes = (router: KoaRouter) => {
 
       const result = await sendParkingSpaceOfferSms({ ...sms, phoneNumber })
       ctx.status = 200
-      ctx.body = result
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
         message: error.message,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendTicketSms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const sms = ctx.request.body
+      if (!isValidTicketMessageSms(sms)) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Message is not a TicketMessageSms object',
+          ...metadata,
+        }
+        return
+      }
+
+      let phoneNumber = sms.phoneNumber
+      if (!phoneValidator(phoneNumber, { onlyMobile: true })) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid phone number',
+          ...metadata,
+        }
+        return
+      }
+      phoneNumber = '46' + normalize(phoneNumber).slice(1)
+
+      const result = await sendTicketSms({ message: sms.message, phoneNumber })
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+        ...metadata,
       }
     }
   })
@@ -141,12 +183,23 @@ export const isMessageEmail = (message: any): message is Email => {
   )
 }
 
-export const isValidSms = (sms: any): sms is ParkingSpaceOfferSms => {
+export const isValidParkingSpaceOfferSms = (
+  sms: any
+): sms is ParkingSpaceOfferSms => {
   return (
     typeof sms === 'object' &&
     sms !== null &&
     typeof sms.phoneNumber === 'string' &&
     typeof sms.firstName === 'string' &&
     typeof sms.deadlineDate === 'string'
+  )
+}
+
+export const isValidTicketMessageSms = (sms: any): sms is TicketMessageSms => {
+  return (
+    typeof sms === 'object' &&
+    sms !== null &&
+    typeof sms.phoneNumber === 'string' &&
+    typeof sms.message === 'string'
   )
 }
