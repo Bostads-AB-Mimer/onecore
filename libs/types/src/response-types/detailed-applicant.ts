@@ -8,7 +8,7 @@ interface DetailedApplicant extends Applicant {
   currentHousingContract?: Lease
   upcomingHousingContract?: Lease
   parkingSpaceContracts?: Lease[]
-  priority?: number
+  priority: number | null;
 }
 
 export type {

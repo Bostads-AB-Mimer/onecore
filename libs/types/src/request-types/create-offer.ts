@@ -9,7 +9,7 @@ interface CreateOfferApplicantParams {
   address: string
   hasParkingSpace: boolean
   housingLeaseStatus: LeaseStatus
-  priority: number
+  priority: number | null
 }
 
 interface CreateOfferParams {

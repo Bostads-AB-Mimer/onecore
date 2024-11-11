@@ -278,7 +278,7 @@ interface OfferApplicant {
   address: string
   hasParkingSpace: boolean
   housingLeaseStatus: LeaseStatus
-  priority: number
+  priority: number | null
   sortOrder: number
   createdAt: Date
 
