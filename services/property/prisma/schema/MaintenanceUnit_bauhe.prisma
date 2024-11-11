@@ -22,6 +22,13 @@ model MaintenanceUnit {
   maintenanceUnitType MaintenanceUnitType? @relation(fields: [maintenanceUnitTypeId], references: [maintenanceUnitTypeId], onUpdate: NoAction, map: "fkbauhekeybauht ")
   //relatedObject RelatedObject @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbauhekeycmobj ") // TODO: Model needs verification
 
+  //componentType ComponentType? @relation(fields: [typeId], references: [componentTypeId], onUpdate: NoAction, map: "fkbakmpkeybakmt")
+  //componentCategory ComponentCategory? @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "fkbakmpkeybakmc")
+  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade)
+  propertyStructures PropertyStructure[]
+
+
+
   @@index([maintenanceUnitTypeId], map: "fkbauhebauht")
   @@index([maintenanceUnitCode], map: "inbauhe_1A00UDL36")
   @@index([name], map: "inbauhe_1A00UDL45")

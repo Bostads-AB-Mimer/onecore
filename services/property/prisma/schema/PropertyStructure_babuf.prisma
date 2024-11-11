@@ -66,6 +66,7 @@ model PropertyStructure {
   timestamp String @map("timestamp") @db.Char(10)
 
   propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbabufkeycmobj")
+  maintenanceUnit MaintenanceUnit? @relation(fields: [maintenanceUnitId], references: [maintenanceUnitId], onDelete: NoAction, onUpdate: NoAction)
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")
