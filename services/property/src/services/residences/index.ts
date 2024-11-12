@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getResidencesByType } from '../../adapters/residence-adapter'
+import { getResidencesByType, getLatestResidences } from '../../adapters/residence-adapter'
 
 /**
  * @swagger
@@ -26,6 +26,19 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the residence type.
    *     responses:
+   *       200:
+   *         description: Successfully retrieved the latest residences.
+   *         content:
+   */
+  router.get('(.*)/residences/latest', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info('GET /residences/latest', metadata)
+    const response = await getLatestResidences()
+    ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
    *       200:
    *         description: Successfully retrieved the residences.
    *         content:
