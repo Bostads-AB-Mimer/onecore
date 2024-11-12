@@ -19,7 +19,7 @@ model PropertyObject {
   //workOrder WorkOrder[] @relation("PropertyObjectToWorkOrder")
   //constructionPart ConstructionPart? //@relation("PropertyObjectToConstructionPart")
   //parkingSpace ParkingSpace? //@relation("PropertyObjectToParkingSpace")
-  propertyStructure PropertyStructure[]
+  propertyStructures PropertyStructure[] //@relation("PropertyObjectToPropertyStructure", @map("fkbabufkeycmobj"))
   component Component[] @relation("ComponentToPropertyObject")
   building Building? //@relation("PropertyObjectToBuilding")
   administrativeUnit AdministrativeUnit? //@relation("PropertyObjectToAdministrativeUnit")

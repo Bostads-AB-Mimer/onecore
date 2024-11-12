@@ -32,6 +32,8 @@ model Component {
   propertyObject PropertyObject @relation("ComponentToPropertyObject", fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbakmpkeycmobj")
   //item Item? @relation(fields: [itemId], references: [itemId], onUpdate: NoAction, map: "fkbakmpkeytvart")
   //priceCategory PriceCategory? @relation(fields: [priceCategoryId], references: [priceCategoryId], onUpdate: NoAction, map: "fkbakmpkeytvpca")
+  propertyStructures PropertyStructure[] @relation("ComponentToPropertyStructure")
+
 
   @@index([constructionPartId], map: "fkbakmpaobdl")
   @@index([typeId], map: "fkbakmpbakmt")
