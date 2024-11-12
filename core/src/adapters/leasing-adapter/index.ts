@@ -13,7 +13,6 @@ import {
   ApplicantWithListing,
   DetailedApplicant,
   Tenant,
-  ApplicationProfile,
   leasing,
 } from 'onecore-types'
 import { z } from 'zod'
@@ -520,6 +519,53 @@ async function getApplicationProfileByContactCode(
   }
 }
 
+type CreateOrUpdateApplicationProfileResponseData = z.infer<
+  typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+>
+
+type CreateOrUpdateApplicationProfileRequestParams = z.infer<
+  typeof leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+>
+
+async function createOrUpdateApplicationProfileByContactCode(
+  contactCode: string,
+  params: CreateOrUpdateApplicationProfileRequestParams
+): Promise<
+  AdapterResult<
+    CreateOrUpdateApplicationProfileResponseData,
+    'bad-params' | 'unknown'
+  >
+> {
+  try {
+    const response = await axios.post<{
+      content: CreateOrUpdateApplicationProfileResponseData
+    }>(
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/application-profile`,
+      params
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return {
+        ok: true,
+        data: response.data.content,
+        statusCode: response.status,
+      }
+    }
+
+    if (response.status === 400) {
+      return { ok: false, err: 'bad-params' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      err,
+      `Error create or updating application profile by contact code: ${contactCode}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
@@ -540,6 +586,7 @@ export {
   getTenantByContactCode,
   resetWaitingList,
   setApplicantStatusActive,
+  createOrUpdateApplicationProfileByContactCode,
   updateApplicantStatus,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,

@@ -5,6 +5,7 @@
     "outDir": "./build",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "types": ["koa-body", "jest"]
+    "types": ["koa-body", "jest"],
+    "strict": true
   }
 }

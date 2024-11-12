@@ -650,4 +650,44 @@ describe('lease-service', () => {
       ).not.toThrow()
     })
   })
+
+  describe('POST /contacts/:contactCode/application-profile', () => {
+    it('responds with 400 if bad params', async () => {
+      const res = await request(app.callback()).post(
+        '/contacts/1234/application-profile'
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 200 and application profile', async () => {
+      jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            contactCode: '1234',
+            createdAt: new Date(),
+            expiresAt: null,
+            id: 1,
+            numAdults: 0,
+            numChildren: 0,
+          },
+        })
+
+      const res = await request(app.callback())
+        .post('/contacts/1234/application-profile')
+        .send({ numAdults: 0, numChildren: 0 })
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+    })
+  })
 })

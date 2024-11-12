@@ -6,12 +6,14 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import dayjs from 'dayjs'
 import { GetActiveOfferByListingIdErrorCodes, leasing } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { ProcessStatus } from '../../common/types'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
@@ -1442,6 +1444,7 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
   /**
    * @swagger
    * /contacts/{contactCode}/application-profile:
@@ -1501,4 +1504,95 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/application-profile:
+   *   post:
+   *     summary: Creates or updates an application profile by contact code
+   *     description: Create or update application profile information by contact code.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code associated with the application profile.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *       properties:
+   *         numAdults:
+   *           type: number
+   *           description: Number of adults in the current housing.
+   *         numChildren:
+   *           type: number
+   *           description: Number of children in the current housing.
+   *     responses:
+   *       200:
+   *         description: Successfully updated application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       201:
+   *         description: Successfully created application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       500:
+   *         description: Internal server error. Failed to update application profile information.
+   */
+
+  type CreateOrUpdateApplicationProfileResponseData = z.infer<
+    typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+  >
+
+  const UpdateApplicationProfileRequestParams =
+    leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.pick({
+      numAdults: true,
+      numChildren: true,
+    })
+
+  router.post(
+    '(.*)/contacts/:contactCode/application-profile',
+    parseRequestBody(UpdateApplicationProfileRequestParams),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const createOrUpdate =
+        await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
+          ctx.params.contactCode,
+          {
+            ...ctx.request.body,
+            expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
+          }
+        )
+
+      if (!createOrUpdate.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'unknown', ...metadata }
+        return
+      }
+
+      ctx.status = createOrUpdate.statusCode ?? 200
+      ctx.body = {
+        content:
+          createOrUpdate.data satisfies CreateOrUpdateApplicationProfileResponseData,
+        ...metadata,
+      }
+    }
+  )
 }
