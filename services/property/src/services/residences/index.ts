@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getResidencesByType, getLatestResidences, getResidenceById } from '../../adapters/residence-adapter'
+import { Residence } from '../../types/residence'
 
 /**
  * @swagger
