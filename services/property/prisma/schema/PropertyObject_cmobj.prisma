@@ -52,6 +52,7 @@ model PropertyObject {
   //productHistories ProductHistory[] @relation("PropertyObjectToProductHistory")
   //actionRentalRows ActionRentalRow[] @relation("PropertyObjectToActionRentalRow")
 
+  residence Residence[]
   maintenanceUnit MaintenanceUnit[]
   
   @@index([objectTypeId], map: "fkcmobjcmobt")
