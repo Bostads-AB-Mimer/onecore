@@ -58,7 +58,158 @@ export const routes = (router: KoaRouter) => {
   })
   /**
    * @swagger
-   * /residences/{id}:
+   * components:
+   *   schemas:
+   *     Residence:
+   *       type: object
+   *       properties:
+   *         id:
+   *           type: string
+   *         code:
+   *           type: string
+   *         name:
+   *           type: string
+   *         location:
+   *           type: string
+   *         accessibility:
+   *           type: object
+   *           properties:
+   *             wheelchairAccessible:
+   *               type: boolean
+   *             residenceAdapted:
+   *               type: boolean
+   *             elevator:
+   *               type: boolean
+   *         features:
+   *           type: object
+   *           properties:
+   *             balcony1:
+   *               type: object
+   *               properties:
+   *                 location:
+   *                   type: string
+   *                 type:
+   *                   type: string
+   *             balcony2:
+   *               type: object
+   *               properties:
+   *                 location:
+   *                   type: string
+   *                 type:
+   *                   type: string
+   *             patioLocation:
+   *               type: string
+   *             hygieneFacility:
+   *               type: string
+   *             sauna:
+   *               type: boolean
+   *             extraToilet:
+   *               type: boolean
+   *             sharedKitchen:
+   *               type: boolean
+   *             petAllergyFree:
+   *               type: boolean
+   *             electricAllergyIntolerance:
+   *               type: boolean
+   *             smokeFree:
+   *               type: boolean
+   *             asbestos:
+   *               type: boolean
+   *         rooms:
+   *           type: array
+   *           items:
+   *             type: object
+   *             properties:
+   *               roomId:
+   *                 type: string
+   *               roomCode:
+   *                 type: string
+   *               name:
+   *                 type: string
+   *               sharedUse:
+   *                 type: boolean
+   *               sortingOrder:
+   *                 type: integer
+   *               allowPeriodicWorks:
+   *                 type: boolean
+   *               spaceType:
+   *                 type: integer
+   *               hasToilet:
+   *                 type: boolean
+   *               isHeated:
+   *                 type: integer
+   *               hasThermostatValve:
+   *                 type: boolean
+   *               orientation:
+   *                 type: integer
+   *               installationDate:
+   *                 type: string
+   *                 format: date-time
+   *               deleteMark:
+   *                 type: boolean
+   *               fromDate:
+   *                 type: string
+   *                 format: date-time
+   *               toDate:
+   *                 type: string
+   *                 format: date-time
+   *               availableFrom:
+   *                 type: string
+   *                 format: date-time
+   *               availableTo:
+   *                 type: string
+   *                 format: date-time
+   *               timestamp:
+   *                 type: string
+   *         entrance:
+   *           type: string
+   *         partNo:
+   *           type: integer
+   *         part:
+   *           type: string
+   *         deleted:
+   *           type: boolean
+   *         validityPeriod:
+   *           type: object
+   *           properties:
+   *             fromDate:
+   *               type: string
+   *               format: date-time
+   *             toDate:
+   *               type: string
+   *               format: date-time
+   *         timestamp:
+   *           type: string
+   *         residenceType:
+   *           type: object
+   *           properties:
+   *             code:
+   *               type: string
+   *             name:
+   *               type: string
+   *             roomCount:
+   *               type: integer
+   *             kitchen:
+   *               type: integer
+   *             selectionFundAmount:
+   *               type: number
+   *         propertyObject:
+   *           type: object
+   *           properties:
+   *             energy:
+   *               type: object
+   *               properties:
+   *                 energyClass:
+   *                   type: integer
+   *                 energyRegistered:
+   *                   type: string
+   *                   format: date-time
+   *                 energyReceived:
+   *                   type: string
+   *                   format: date-time
+   *                 energyIndex:
+   *                   type: number
+   *
    *   get:
    *     summary: Get a residence by ID.
    *     description: Returns a residence with the specified ID.
@@ -77,65 +228,7 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 id:
-   *                   type: string
-   *                 code:
-   *                   type: string
-   *                 name:
-   *                   type: string
-   *                 roomCount:
-   *                   type: integer
-   *                 kitchen:
-   *                   type: integer
-   *                 rooms:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       roomId:
-   *                         type: string
-   *                       roomCode:
-   *                         type: string
-   *                       name:
-   *                         type: string
-   *                       sharedUse:
-   *                         type: boolean
-   *                       sortingOrder:
-   *                         type: integer
-   *                       allowPeriodicWorks:
-   *                         type: boolean
-   *                       spaceType:
-   *                         type: integer
-   *                       hasToilet:
-   *                         type: boolean
-   *                       isHeated:
-   *                         type: integer
-   *                       hasThermostatValve:
-   *                         type: boolean
-   *                       orientation:
-   *                         type: integer
-   *                       installationDate:
-   *                         type: string
-   *                         format: date-time
-   *                       deleteMark:
-   *                         type: boolean
-   *                       fromDate:
-   *                         type: string
-   *                         format: date-time
-   *                       toDate:
-   *                         type: string
-   *                         format: date-time
-   *                       availableFrom:
-   *                         type: string
-   *                         format: date-time
-   *                       availableTo:
-   *                         type: string
-   *                         format: date-time
-   *                       timestamp:
-   *                         type: string
-   *                   type: number
+   *               $ref: '#/components/schemas/Residence'
    */
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
