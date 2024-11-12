@@ -6,19 +6,6 @@ export const getLatestResidences = async () => {
       timestamp: 'desc',
     },
     select: {
-      building: {
-        select: {
-          buildingCode: true,
-          name: true,
-          constructionYear: true,
-          renovationYear: true,
-          valueYear: true,
-          heating: true,
-          fireRating: true,
-          insuranceClass: true,
-          insuranceValue: true,
-        },
-      },
       residenceId: true,
       objectId: true,
       residenceTypeId: true,
@@ -72,15 +59,50 @@ export const getLatestResidences = async () => {
 export const getResidenceById = async (id: string) => {
   const response = await prisma.residence.findUnique({
     where: {
-      id,
+      residenceId: id,
     },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      roomCount: true,
-      kitchen: true,
-      selectionFundAmount: true,
+    include: {
+      residenceType: {
+        select: {
+          code: true,
+          name: true,
+          roomCount: true,
+          kitchen: true,
+          selectionFundAmount: true,
+        },
+      },
+      propertyObject: {
+        include: {
+          property: true,
+          rentalObject: {
+            select: {
+              rentalObjectId: true,
+              name: true,
+              fromDate: true,
+              toDate: true,
+              timestamp: true,
+              rentalObjectType: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          building: {
+            select: {
+              buildingCode: true,
+              name: true,
+              constructionYear: true,
+              renovationYear: true,
+              valueYear: true,
+              heating: true,
+              fireRating: true,
+              insuranceClass: true,
+              insuranceValue: true,
+            },
+          },
+        },
+      },
     },
   })
 
