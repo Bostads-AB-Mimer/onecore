@@ -28,6 +28,11 @@ export function mapDbToResidence(dbRecord: any): Residence {
       smokeFree: dbRecord.smokeFree === 1,
       asbestos: dbRecord.asbestos === 1,
     },
+    rooms: dbRecord.rooms.map((room: any) => ({
+      roomType: room.roomType,
+      roomSize: room.roomSize,
+      roomCount: room.roomCount,
+    })),
     entrance: dbRecord.entrance,
     partNo: dbRecord.partNo,
     part: dbRecord.part,

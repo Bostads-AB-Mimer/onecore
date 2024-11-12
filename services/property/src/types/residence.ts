@@ -29,6 +29,11 @@ export type Residence = {
     smokeFree: boolean
     asbestos: boolean
   }
+  rooms: {
+    roomType: string
+    roomSize: number
+    roomCount: number
+  }[]
   entrance: string
   partNo: number
   part: string
