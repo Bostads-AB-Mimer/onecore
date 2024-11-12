@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getResidencesByType, getLatestResidences, getResidenceById } from '../../adapters/residence-adapter'
 import { Residence } from '../../types/residence'
+import { mapDbToResidence } from './residence-mapper'
 
 /**
  * @swagger
@@ -94,7 +95,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(`GET /residences/${ctx.params.id}`, metadata)
-    const response = await getResidenceById(ctx.params.id)
+    const dbRecord = await getResidenceById(ctx.params.id)
+    const response: Residence = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
   })
 }
