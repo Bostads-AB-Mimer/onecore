@@ -5,28 +5,38 @@ export type Residence = {
   code: string
   name: string
   location?: string | null
-  wheelchairAccessible: boolean
-  residenceAdapted: boolean
-  balcony1Location?: string | null
-  balcony2Location?: string | null
-  balcony1Type?: string | null
-  balcony2Type?: string | null
-  patioLocation?: string | null
-  hygieneFacility: string
-  sauna: boolean
-  extraToilet: boolean
-  sharedKitchen: boolean
-  petAllergyFree: boolean
-  electricAllergyIntolerance: boolean
-  smokeFree: boolean
-  elevator: boolean
-  asbestos: boolean
+  accessibility: {
+    wheelchairAccessible: boolean
+    residenceAdapted: boolean
+    elevator: boolean
+  }
+  features: {
+    balcony1?: {
+      location: string | null
+      type: string | null
+    }
+    balcony2?: {
+      location: string | null
+      type: string | null
+    }
+    patioLocation?: string | null
+    hygieneFacility: string
+    sauna: boolean
+    extraToilet: boolean
+    sharedKitchen: boolean
+    petAllergyFree: boolean
+    electricAllergyIntolerance: boolean
+    smokeFree: boolean
+    asbestos: boolean
+  }
   entrance: string
   partNo: number
   part: string
   deleted: boolean
-  fromDate: Date
-  toDate: Date
+  validityPeriod: {
+    fromDate: Date
+    toDate: Date
+  }
   timestamp: string
   residenceType: {
     code: string
