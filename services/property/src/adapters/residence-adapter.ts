@@ -6,13 +6,17 @@ export const getLatestResidences = async () => {
       timestamp: 'desc',
     },
     select: {
-      propertyObject: {
+      building: {
         select: {
-          barcode: true,
-          condition: true,
-          energyClass: true,
-          energyIndex: true,
-          heatingNature: true,
+          buildingCode: true,
+          name: true,
+          constructionYear: true,
+          renovationYear: true,
+          valueYear: true,
+          heating: true,
+          fireRating: true,
+          insuranceClass: true,
+          insuranceValue: true,
         },
       },
       residenceId: true,
