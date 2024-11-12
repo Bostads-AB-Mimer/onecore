@@ -28,7 +28,7 @@ export function mapDbToResidence(dbRecord: any): Residence {
       smokeFree: dbRecord.smokeFree === 1,
       asbestos: dbRecord.asbestos === 1,
     },
-    rooms: dbRecord.rooms.map((room: any) => ({
+    rooms: Array.isArray(dbRecord.rooms) ? dbRecord.rooms.map((room: any) => ({
       id: room.roomId,
       code: room.roomCode,
       name: room.name,
