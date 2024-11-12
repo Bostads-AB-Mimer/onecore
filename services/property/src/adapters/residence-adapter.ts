@@ -11,6 +11,24 @@ export const getLatestResidences = async () => {
   return response
 }
 
+export const getResidenceById = async (id: string) => {
+  const response = await prisma.residence.findUnique({
+    where: {
+      id,
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      roomCount: true,
+      kitchen: true,
+      selectionFundAmount: true,
+    },
+  })
+
+  return response
+}
+
 const prisma = new PrismaClient({
   log: ['query'],
 })
