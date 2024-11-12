@@ -89,7 +89,52 @@ export const routes = (router: KoaRouter) => {
    *                   type: integer
    *                 kitchen:
    *                   type: integer
-   *                 selectionFundAmount:
+   *                 rooms:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       roomId:
+   *                         type: string
+   *                       roomCode:
+   *                         type: string
+   *                       name:
+   *                         type: string
+   *                       sharedUse:
+   *                         type: boolean
+   *                       sortingOrder:
+   *                         type: integer
+   *                       allowPeriodicWorks:
+   *                         type: boolean
+   *                       spaceType:
+   *                         type: integer
+   *                       hasToilet:
+   *                         type: boolean
+   *                       isHeated:
+   *                         type: integer
+   *                       hasThermostatValve:
+   *                         type: boolean
+   *                       orientation:
+   *                         type: integer
+   *                       installationDate:
+   *                         type: string
+   *                         format: date-time
+   *                       deleteMark:
+   *                         type: boolean
+   *                       fromDate:
+   *                         type: string
+   *                         format: date-time
+   *                       toDate:
+   *                         type: string
+   *                         format: date-time
+   *                       availableFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       availableTo:
+   *                         type: string
+   *                         format: date-time
+   *                       timestamp:
+   *                         type: string
    *                   type: number
    */
   router.get('(.*)/residences/:id', async (ctx) => {
