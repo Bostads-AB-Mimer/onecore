@@ -12,15 +12,15 @@ import { getResidencesByType } from '../../adapters/residence-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /residences/{residenceTypeId}/:
+   * /residences/:
    *   get:
    *     summary: Gets a list of residences.
    *     description: Returns the residences for the relevant type ID.
    *     tags:
    *       - Residence service
    *     parameters:
-   *       - in: path
-   *         name: residenceTypeId
+   *       - in: query
+   *         name: residenceType
    *         required: true
    *         schema:
    *           type: string
@@ -30,10 +30,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Successfully retrieved the residences.
    *         content:
    */
-  router.get('(.*)/residences/:residenceTypeId/', async (ctx) => {
+  router.get('(.*)/residences/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /residences/:residenceTypeId/', metadata)
-    const response = await getResidencesByType(ctx.params.residenceTypeId)
+    const response = await getResidencesByType(ctx.query.residenceType)
     ctx.body = { content: response, ...metadata }
   })
 }

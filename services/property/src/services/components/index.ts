@@ -17,15 +17,15 @@ import { getComponentByMaintenanceUnitCode } from '../../adapters/component-adap
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /components/{maintenanceUnitCode}/:
+   * /components/:
    *   get:
    *     summary: Gets a list of components.
    *     description: Returns the component for the relevant unit code.
    *     tags:
    *       - Property base service
    *     parameters:
-   *       - in: path
-   *         name: maintenanceUnitCode
+   *       - in: query
+   *         name: maintenanceUnit
    *         required: true
    *         schema:
    *           type: string
@@ -35,12 +35,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Successfully retrieved the components.
    *         content:
    */
-  router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
+  router.get('(.*)/components/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /components/:maintenanceUnitCode/', metadata)
-    const response = await getComponentByMaintenanceUnitCode(
-      ctx.params.maintenanceUnitCode,
-    )
+    const response = await getComponentByMaintenanceUnitCode(ctx.query.maintenanceUnit)
     ctx.body = { content: response, ...metadata }
   })
 }
