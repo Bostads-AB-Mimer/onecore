@@ -29,7 +29,7 @@ model Component {
   componentType ComponentType? @relation(fields: [typeId], references: [componentTypeId], onUpdate: NoAction, map: "fkbakmpkeybakmt")
   //systemSupplier Contact? @relation("bakmp_keycmctcTocmctc", fields: [systemSupplierId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkbakmpkeycmctc")
   //ownerUser Contact? @relation("bakmp_keycmctc2Tocmctc", fields: [ownerUserId], references: [contactId], onDelete: NoAction, onUpdate: NoAction, map: "fkbakmpkeycmctc2")
-  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbakmpkeycmobj")
+  propertyObject PropertyObject @relation("ComponentToPropertyObject", fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbakmpkeycmobj")
   //item Item? @relation(fields: [itemId], references: [itemId], onUpdate: NoAction, map: "fkbakmpkeytvart")
   //priceCategory PriceCategory? @relation(fields: [priceCategoryId], references: [priceCategoryId], onUpdate: NoAction, map: "fkbakmpkeytvpca")
 
