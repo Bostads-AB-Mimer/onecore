@@ -4,6 +4,8 @@ export const getLatestResidences = async () => {
   const response = await prisma.residence.findMany({
     orderBy: {
       timestamp: 'desc',
+    },
+    select: {
       propertyObject: {
         select: {
           barcode: true,
@@ -13,8 +15,6 @@ export const getLatestResidences = async () => {
           heatingNature: true,
         },
       },
-    },
-    select: {
       residenceId: true,
       objectId: true,
       residenceTypeId: true,
