@@ -48,20 +48,22 @@ export type Residence = {
   propertyObject: {
     propertyObjectId: string
     objectTypeId: string
-    barcode?: string | null
-    barcodeType: number
-    condition: number
-    conditionInspectionDate?: Date | null
-    vatAdjustmentPrinciple: number
-    energyClass: number
-    energyRegistered?: Date | null
-    energyReceived?: Date | null
-    energyIndex?: number | null
-    heatingNature: number
-    deleteMark: boolean
-    timestamp: string
-    property?: any
-    rentalObject?: any
-    building?: any
+    // barcode?: string | null
+    // barcodeType: number
+    // condition: number
+    // conditionInspectionDate?: Date | null
+    // vatAdjustmentPrinciple: number
+    energy: {
+      energyClass: number
+      energyRegistered?: Date | null
+      energyReceived?: Date | null
+      energyIndex?: number | null
+    }
+    // heatingNature: number
+    // deleteMark: boolean
+    // timestamp: string
+    // property?: any
+    // rentalObject?: any
+    // building?: any
   }
 }
