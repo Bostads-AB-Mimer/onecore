@@ -1,9 +1,0 @@
-model NetworkArea {
-  @@map("dromr")
-  networkAreaId String @id(map: "PK__dromr__69DC8BE5") @map("keydromr") @db.Char(15)
-  networkId String @map("code") @db.Char(3) // Reason: Nät-id typically refers to a network identifier
-  name String @map("caption") @db.Char(30) // Reason: "Benämning" often refers to a name or title
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp format field later if more information is available
-
-  measurementPoints MeasurementPoint[] @relation("fkdrmptkeydromr") // Update drmpt[] to use the new model name MeasurementPoint
-}

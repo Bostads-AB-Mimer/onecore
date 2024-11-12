@@ -1,9 +1,0 @@
-model BlockReason {
-  @@map("hyspa")
-
-  blockReasonId String @id(map: "pkhyspa") @map("keyhyspa") @db.Char(15)
-  name String @map("caption") @db.VarChar(50)
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage 
-
-  rentalBlocks RentalBlock[] @relation("fkhysptkeyhyspa") // Updating relation to use the converted RentalBlock model
-}
