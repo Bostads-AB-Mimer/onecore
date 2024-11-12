@@ -10,12 +10,14 @@ import {
   getContactByNationalRegistrationNumber,
   getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
+
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
 } from '../adapters/xpand/xpand-soap-adapter'
 import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -496,4 +498,113 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/application-profile:
+   *   post:
+   *     summary: Creates or updates an application profile by contact code
+   *     description: Create or update application profile information by contact code.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code associated with the application profile.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *       properties:
+   *         numAdults:
+   *           type: number
+   *           description: Number of adults in the current housing.
+   *         numChildren:
+   *           type: number
+   *           description: Number of children in the current housing.
+   *         expiresAt:
+   *           type: string
+   *           format: date
+   *           nullable: true
+   *           description: Number of children in the current housing.
+   *     responses:
+   *       200:
+   *         description: Successfully updated application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       201:
+   *         description: Successfully created application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       404:
+   *         description: Not found.
+   *       500:
+   *         description: Internal server error. Failed to update application profile information.
+   */
+
+  type CreateOrUpdateApplicationProfileResponseData = z.infer<
+    typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+  >
+
+  router.post(
+    '(.*)/contacts/:contactCode/application-profile',
+    parseRequestBody(
+      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+    ),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const update = await applicationProfileAdapter.update(
+        db,
+        ctx.params.contactCode,
+        ctx.request.body
+      )
+
+      if (!update.ok) {
+        if (update.err === 'no-update') {
+          const insert = await applicationProfileAdapter.create(db, {
+            ...ctx.request.body,
+            contactCode: ctx.params.contactCode,
+          })
+
+          if (!insert.ok) {
+            ctx.status = 500
+            ctx.body = { error: 'Internal server error', ...metadata }
+          } else {
+            ctx.status = 201
+            ctx.body = {
+              content:
+                insert.data satisfies CreateOrUpdateApplicationProfileResponseData,
+              ...metadata,
+            }
+          }
+        }
+
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content:
+          update.data satisfies CreateOrUpdateApplicationProfileResponseData,
+        ...metadata,
+      }
+    }
+  )
 }

@@ -95,4 +95,53 @@ describe('application-profile-adapter', () => {
       })
     })
   })
+
+  describe(applicationProfileAdapter.update, () => {
+    it('returns err if no update', async () => {
+      const result = await applicationProfileAdapter.update(
+        db,
+        'contact-code',
+        {
+          expiresAt: new Date(),
+          numAdults: 1,
+          numChildren: 1,
+        }
+      )
+
+      expect(result).toMatchObject({ ok: false, err: 'no-update' })
+    })
+
+    it('updates application profile', async () => {
+      const profile = await applicationProfileAdapter.create(db, {
+        contactCode: '1234',
+        expiresAt: null,
+        numAdults: 1,
+        numChildren: 1,
+      })
+
+      assert(profile.ok)
+      await applicationProfileAdapter.update(db, profile.data.contactCode, {
+        expiresAt: new Date(),
+        numAdults: 2,
+        numChildren: 2,
+      })
+
+      const updated = await applicationProfileAdapter.getByContactCode(
+        db,
+        profile.data.contactCode
+      )
+
+      expect(updated).toMatchObject({
+        ok: true,
+        data: {
+          id: expect.any(Number),
+          contactCode: '1234',
+          numAdults: 2,
+          numChildren: 2,
+          expiresAt: expect.any(Date),
+          createdAt: expect.any(Date),
+        },
+      })
+    })
+  })
 })

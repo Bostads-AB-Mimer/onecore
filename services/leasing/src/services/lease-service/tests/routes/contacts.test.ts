@@ -182,3 +182,68 @@ describe('GET /contacts/:contactCode/application-profile', () => {
     ).not.toThrow()
   })
 })
+
+describe('POST /contacts/:contactCode/application-profile', () => {
+  it('responds with 400 if bad params', async () => {
+    const res = await request(app.callback()).post(
+      '/contacts/1234/application-profile'
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it('updates application profile', async () => {
+    jest.spyOn(applicationProfileAdapter, 'update').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        contactCode: '1234',
+        createdAt: new Date(),
+        expiresAt: null,
+        id: 1,
+        numAdults: 0,
+        numChildren: 0,
+      },
+    })
+
+    const res = await request(app.callback())
+      .post('/contacts/1234/application-profile')
+      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+
+    expect(res.status).toBe(200)
+    expect(() =>
+      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+        res.body.content
+      )
+    ).not.toThrow()
+  })
+
+  it('creates if non-existent', async () => {
+    jest.spyOn(applicationProfileAdapter, 'update').mockResolvedValueOnce({
+      ok: false,
+      err: 'no-update',
+    })
+
+    jest.spyOn(applicationProfileAdapter, 'create').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        contactCode: '1234',
+        createdAt: new Date(),
+        expiresAt: null,
+        id: 1,
+        numAdults: 0,
+        numChildren: 0,
+      },
+    })
+
+    const res = await request(app.callback())
+      .post('/contacts/1234/application-profile')
+      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+
+    expect(res.status).toBe(201)
+    expect(() =>
+      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+        res.body.content
+      )
+    ).not.toThrow()
+  })
+})
