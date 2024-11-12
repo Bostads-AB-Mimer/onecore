@@ -73,6 +73,7 @@ export const getResidenceById = async (id: string) => {
       },
       propertyObject: {
         include: {
+          rooms: true,
           property: true,
           rentalObject: {
             select: {

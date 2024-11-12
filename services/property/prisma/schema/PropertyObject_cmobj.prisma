@@ -52,6 +52,7 @@ model PropertyObject {
   //productHistories ProductHistory[] @relation("PropertyObjectToProductHistory")
   //actionRentalRows ActionRentalRow[] @relation("PropertyObjectToActionRentalRow")
 
+  rooms Room[]
   residence Residence[]
   maintenanceUnit MaintenanceUnit[]
   

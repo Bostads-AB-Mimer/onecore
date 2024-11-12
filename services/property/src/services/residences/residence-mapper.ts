@@ -12,8 +12,12 @@ export function mapDbToResidence(dbRecord: any): Residence {
       elevator: dbRecord.elevator === 1,
     },
     features: {
-      balcony1: dbRecord.balcony1 ? { location: dbRecord.balcony1Location, type: dbRecord.balcony1Type } : undefined,
-      balcony2: dbRecord.balcony2 ? { location: dbRecord.balcony2Location, type: dbRecord.balcony2Type } : undefined,
+      balcony1: dbRecord.balcony1
+        ? { location: dbRecord.balcony1Location, type: dbRecord.balcony1Type }
+        : undefined,
+      balcony2: dbRecord.balcony2
+        ? { location: dbRecord.balcony2Location, type: dbRecord.balcony2Type }
+        : undefined,
       patioLocation: dbRecord.patioLocation,
       hygieneFacility: dbRecord.hygieneFacility,
       sauna: dbRecord.sauna === 1,
@@ -43,8 +47,12 @@ export function mapDbToResidence(dbRecord: any): Residence {
     propertyObject: {
       energy: {
         energyClass: dbRecord.energyClass,
-        energyRegistered: dbRecord.energyRegistered ? new Date(dbRecord.energyRegistered) : undefined,
-        energyReceived: dbRecord.energyReceived ? new Date(dbRecord.energyReceived) : undefined,
+        energyRegistered: dbRecord.energyRegistered
+          ? new Date(dbRecord.energyRegistered)
+          : undefined,
+        energyReceived: dbRecord.energyReceived
+          ? new Date(dbRecord.energyReceived)
+          : undefined,
         energyIndex: dbRecord.energyIndex,
       },
     },

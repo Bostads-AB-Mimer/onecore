@@ -4,7 +4,7 @@ export type Residence = {
   // residenceTypeId: string
   code: string
   name: string
-  location?: string | null
+  location?: string
   accessibility: {
     wheelchairAccessible: boolean
     residenceAdapted: boolean
@@ -12,14 +12,14 @@ export type Residence = {
   }
   features: {
     balcony1?: {
-      location: string | null
-      type: string | null
+      location: string
+      type: string
     }
     balcony2?: {
-      location: string | null
-      type: string | null
+      location: string
+      type: string
     }
-    patioLocation?: string | null
+    patioLocation?: string
     hygieneFacility: string
     sauna: boolean
     extraToilet: boolean
@@ -48,16 +48,16 @@ export type Residence = {
   propertyObject: {
     // propertyObjectId: string
     // objectTypeId: string
-    // barcode?: string | null
+    // barcode?: string
     // barcodeType: number
     // condition: number
-    // conditionInspectionDate?: Date | null
+    // conditionInspectionDate?: Date
     // vatAdjustmentPrinciple: number
     energy: {
       energyClass: number
-      energyRegistered?: Date | null
-      energyReceived?: Date | null
-      energyIndex?: number | null
+      energyRegistered?: Date
+      energyReceived?: Date
+      energyIndex?: number
     }
     // heatingNature: number
     // deleteMark: boolean
