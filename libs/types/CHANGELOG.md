@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.1.0...v2.2.0) (2024-11-12)
+
+
+### Features
+
+* UTH-24 - update application profile ([#124](https://github.com/Bostads-AB-Mimer/onecore-types/issues/124)) ([20364cf](https://github.com/Bostads-AB-Mimer/onecore-types/commit/20364cfc323218bea4c4ead264c0b41403806959))
+
 ## [2.1.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.0.0...v2.1.0) (2024-11-11)
 
 
