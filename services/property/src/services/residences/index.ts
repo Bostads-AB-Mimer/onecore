@@ -54,4 +54,46 @@ export const routes = (router: KoaRouter) => {
     }
     ctx.body = { content: response, ...metadata }
   })
+  /**
+   * @swagger
+   * /residences/{id}:
+   *   get:
+   *     summary: Get a residence by ID.
+   *     description: Returns a residence with the specified ID.
+   *     tags:
+   *       - Residence service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the residence.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 id:
+   *                   type: string
+   *                 code:
+   *                   type: string
+   *                 name:
+   *                   type: string
+   *                 roomCount:
+   *                   type: integer
+   *                 kitchen:
+   *                   type: integer
+   *                 selectionFundAmount:
+   *                   type: number
+   */
+  router.get('(.*)/residences/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /residences/${ctx.params.id}`, metadata)
+    const response = await getResidenceById(ctx.params.id)
+    ctx.body = { content: response, ...metadata }
+  })
 }
