@@ -21,7 +21,7 @@ export const routes = (router: KoaRouter) => {
    *     parameters:
    *       - in: query
    *         name: residenceType
-   *         required: true
+   *         required: false
    *         schema:
    *           type: string
    *         description: The ID of the residence type.
