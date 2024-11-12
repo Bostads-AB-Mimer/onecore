@@ -1,7 +1,7 @@
 export type Residence = {
   id: string
-  objectId: string
-  residenceTypeId: string
+  // objectId: string
+  // residenceTypeId: string
   code: string
   name: string
   location?: string | null
@@ -46,8 +46,8 @@ export type Residence = {
     selectionFundAmount: number
   }
   propertyObject: {
-    propertyObjectId: string
-    objectTypeId: string
+    // propertyObjectId: string
+    // objectTypeId: string
     // barcode?: string | null
     // barcodeType: number
     // condition: number
