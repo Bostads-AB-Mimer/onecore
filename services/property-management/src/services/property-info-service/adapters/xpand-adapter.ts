@@ -1,6 +1,5 @@
-import { loggedAxios as axios } from 'onecore-utilities'
+import { loggedAxios as axios, logger } from 'onecore-utilities'
 import knex from 'knex'
-import Config from '../../../common/config'
 import {
   RentalPropertyInfo,
   ApartmentInfo,
@@ -9,18 +8,21 @@ import {
   MaintenanceUnitInfo,
   ParkingSpace,
 } from 'onecore-types'
+
+import Config from '../../../common/config'
 import {
   getParkingSpaceApplicationCategory,
   getParkingSpaceType,
   getStreet,
   getStreetNumber,
 } from '../../../utils/parking-spaces'
-import { logger } from 'onecore-utilities'
 
 const db = knex({
   client: 'mssql',
   connection: Config.xpandDatabase,
 })
+
+export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
 
 function trimRow(obj: any): any {
   return Object.fromEntries(
@@ -48,6 +50,7 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
           code: row.apartment_code,
           number: row.apartment_number,
           type: row.apartment_type,
+          roomTypeCode: row.apartment_type_code,
           entrance: row.entrance,
           floor: row.floor,
           hasElevator: row.has_elevator === 1 ? true : false,
@@ -177,6 +180,80 @@ const getRentalPropertyInfo = async (
   return rentalPropertyInfo
 }
 
+const getApartmentRentalPropertyInfo = async (
+  rentalPropertyId: string
+): Promise<AdapterResult<ApartmentInfo, 'not-found' | 'unknown'>> => {
+  try {
+    const [row] = await db('cmobj')
+      .select(
+        'hyint.code as rental_type_code',
+        'hyint.caption as rental_type',
+        'hyinf.lmnr as apartment_number',
+        'babuf.caption as address',
+        'babuf.lghcode as apartment_code',
+        'babuf.vancode as entrance',
+        'babuf.fstcode as estate_code',
+        'babuf.fstcaption as estate',
+        'babuf.bygcode as building_code',
+        'babuf.bygcaption as building',
+        'babuf.hyresid as rental_property_id',
+        'babuf.lokcode as commercial_space_code',
+        'babuf.bpscode as parking_space_code',
+        'balgh.uppgang as floor',
+        'balgh.hiss as has_elevator',
+        'balgh.hygienutr as wash_space',
+        'balgt.caption as apartment_type',
+        'balgt.code as apartment_type_code',
+        'cmvalboa.value as apartment_area'
+      )
+      .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
+      .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
+      .innerJoin('hyint', 'hyinf.keyhyint', 'hyint.keyhyint')
+      .innerJoin('babuf', 'cmobj.keycmobj', 'babuf.keycmobj')
+      .leftJoin('balgh', 'cmobj.keycmobj', 'balgh.keycmobj')
+      .leftJoin('balgt', 'balgh.keybalgt', 'balgt.keybalgt')
+      .leftJoin('cmval as cmvalboa', function () {
+        this.on('cmvalboa.keycode', '=', 'cmobj.keycmobj').andOn(
+          'cmvalboa.keycmvat',
+          '=',
+          db.raw('?', ['BOA'])
+        )
+      })
+      .where('hyinf.hyresid', rentalPropertyId)
+      .andWhere('cmobt.keycmobt', 'balgh')
+
+    if (!row) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    const trimmed = trimRow(row)
+    return {
+      ok: true,
+      data: {
+        rentalTypeCode: trimmed.rental_type_code,
+        rentalType: trimmed.rental_type,
+        address: trimmed.address,
+        code: trimmed.apartment_code,
+        number: trimmed.apartment_number,
+        type: trimmed.apartment_type,
+        roomTypeCode: trimmed.apartment_type_code,
+        entrance: trimmed.entrance,
+        floor: trimmed.floor,
+        hasElevator: trimmed.has_elevator === 1 ? true : false,
+        washSpace: trimmed.wash_space,
+        area: trimmed.apartment_area,
+        estateCode: trimmed.estate_code,
+        estate: trimmed.estate,
+        buildingCode: trimmed.building_code,
+        building: trimmed.building,
+      },
+    }
+  } catch (err) {
+    logger.error(err, 'Error getting apartment rental property info')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getMaintenanceUnits = async (
   rentalPropertyId: string
 ): Promise<MaintenanceUnitInfo[] | undefined> => {
@@ -249,4 +326,9 @@ const getParkingSpace = async (
   }
 }
 
-export { getRentalPropertyInfo, getMaintenanceUnits, getParkingSpace }
+export {
+  getRentalPropertyInfo,
+  getMaintenanceUnits,
+  getParkingSpace,
+  getApartmentRentalPropertyInfo,
+}

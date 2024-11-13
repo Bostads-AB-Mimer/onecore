@@ -13,6 +13,7 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
   getRentalPropertyInfo,
   getMaintenanceUnits,
+  getApartmentRentalPropertyInfo,
 } from './adapters/xpand-adapter'
 
 import { routes as parkingspaceRoutes } from './routes/parkingspaces'
@@ -115,6 +116,73 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /rentalPropertyInfo/apartment/{rentalObjectCode}:
+   *   get:
+   *     summary: Get apartment rental property information by rental object code
+   *     tags:
+   *       - Property management
+   *     description: Retrieve detailed information about a rental property identified by {rentalObjectCode}.
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: rentalObjectCode of the rental property to fetch information for.
+   *     responses:
+   *       '200':
+   *         description: Successful response with the requested rental property information
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '404':
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   */
+  router.get(
+    '(.*)/rentalPropertyInfo/apartment/:rentalObjectCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await getApartmentRentalPropertyInfo(
+        ctx.params.rentalObjectCode
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            reason: `No rental property info found for property with rental object code: ${ctx.params.rentalObjectCode}`,
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: `An error occurred while fetching the rental property info for property with rentalObjectCode: ${ctx.params.rentalObjectCode}`,
+            ...metadata,
+          }
+          return
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger

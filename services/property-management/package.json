@@ -17,7 +17,8 @@
     "migrate:down": "knex migrate:down --env dev",
     "seed": "knex seed:run --env dev",
     "test:ci": "jest --silent",
-    "ts:ci": "tsc --noEmit"
+    "ts:ci": "tsc --noEmit",
+    "ts:watch": "tsc --watch --noEmit"
   },
   "author": "",
   "license": "MIT",
@@ -59,9 +60,10 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "koa2-swagger-ui": "^5.10.0",
-    "onecore-types": "^1.18.0",
+    "onecore-types": "^2.3.0",
     "onecore-utilities": "^1.1.0",
     "swagger-jsdoc": "^6.2.8",
-    "tedious": "^16.6.1"
+    "tedious": "^16.6.1",
+    "zod": "^3.23.8"
   }
 }
