@@ -514,7 +514,7 @@ async function getApplicationProfileByContactCode(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(err, 'Error fetching application profile by contact code:')
+    logger.error(err, 'Error getting application profile by contact code:')
     return { ok: false, err: 'unknown' }
   }
 }
