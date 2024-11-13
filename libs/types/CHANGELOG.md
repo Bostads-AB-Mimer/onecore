@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.2.0...v2.3.0) (2024-11-13)
+
+
+### Features
+
+* UTH-25 - add typeCode to ApartmentInfo ([#127](https://github.com/Bostads-AB-Mimer/onecore-types/issues/127)) ([cf4fe9a](https://github.com/Bostads-AB-Mimer/onecore-types/commit/cf4fe9ac508ccc321994536b63ebc65cc6407423))
+
 ## [2.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.1.0...v2.2.0) (2024-11-12)
 
 
