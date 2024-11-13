@@ -51,7 +51,27 @@ describe('listing-adapter', () => {
       })
     })
 
-    it('allows duplicate combination of closed Listing statuses and RentalObjectCode', async () => {
+    it('allows duplicate combination of Listing status Assigned and RentalObjectCode', async () => {
+      await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Assigned,
+        })
+      )
+
+      const insertionResult = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+        })
+      )
+
+      expect(insertionResult).toMatchObject({
+        ok: true,
+      })
+    })
+
+    it('allows duplicate combination of Listing status Closed and RentalObjectCode', async () => {
       await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '1',
@@ -62,7 +82,7 @@ describe('listing-adapter', () => {
       const insertionResult = await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '1',
-          status: ListingStatus.Expired,
+          status: ListingStatus.Active,
         })
       )
 

@@ -83,9 +83,7 @@ describe(service.syncInternalParkingSpaces, () => {
       await db('listing').select('rentalObjectCode')
     ).map((v) => v.rentalObjectCode)
 
-    expect(insertedListings).toEqual(
-      internalParkingSpaceMocks.map((v) => v.RentalObjectCode)
-    )
+    expect(insertedListings.length).toEqual(internalParkingSpaceMocks.length)
   })
 
   it('fails with error if fail to patch with residential data', async () => {

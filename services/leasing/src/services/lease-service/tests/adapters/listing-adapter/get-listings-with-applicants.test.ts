@@ -268,22 +268,37 @@ describe(listingAdapter.getListingsWithApplicants, () => {
       )
 
       assert(activeListing.ok)
-      const historicalListing = await listingAdapter.createListing(
+      const assignedListing = await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '2',
           status: ListingStatus.Assigned,
         })
       )
 
-      assert(historicalListing.ok)
+      assert(assignedListing.ok)
+      await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: assignedListing.data.id })
+      )
+
+      const closedListing = await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '2',
+          status: ListingStatus.Closed,
+        })
+      )
+
+      assert(closedListing.ok)
+      await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: closedListing.data.id })
+      )
 
       const listings = await listingAdapter.getListingsWithApplicants({
         by: { type: 'historical' },
       })
       assert(listings.ok)
-
       expect(listings.data).toEqual([
-        expect.objectContaining({ id: historicalListing.data.id }),
+        expect.objectContaining({ id: assignedListing.data.id }),
+        expect.objectContaining({ id: closedListing.data.id }),
       ])
     })
 

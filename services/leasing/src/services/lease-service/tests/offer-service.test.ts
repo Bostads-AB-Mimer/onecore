@@ -317,9 +317,7 @@ describe('denyOffer', () => {
     expect(updateOfferStatusSpy).toHaveBeenCalled()
     expect(res).toEqual({ ok: false, err: 'update-offer' })
 
-    const applicantFromDb = await listingAdapter.getApplicantById(
-      listing.data.id
-    )
+    const applicantFromDb = await listingAdapter.getApplicantById(applicant.id)
     expect(applicantFromDb?.status).toBe(applicant.status)
   })
 
