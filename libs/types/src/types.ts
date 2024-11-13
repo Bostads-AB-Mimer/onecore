@@ -305,6 +305,7 @@ interface ApartmentInfo {
   code: string
   number: string
   type: string
+  roomTypeCode: string
   entrance: string
   floor: string
   hasElevator: boolean
