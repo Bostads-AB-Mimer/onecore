@@ -11,18 +11,11 @@ import {
   Radio,
   FormControlLabel,
   RadioGroup,
-  Stack,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import {
-  CreateNoteOfInterestErrorCodes,
-  Lease,
-  Listing,
-  Tenant,
-} from 'onecore-types'
+import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from 'onecore-types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
-import { GridColDef } from '@mui/x-data-grid'
 
 import {
   CreateNoteOfInterestRequestParams,
@@ -36,7 +29,7 @@ import {
   useTenantWithValidation,
 } from '../../hooks/useTenantWithValidation'
 import { ContactInfo } from './ContactInfo'
-import { DataGridTable, Tab, Tabs } from '../../../../components'
+import { Tab, Tabs } from '../../../../components'
 import { RequestError } from '../../../../types'
 import { ContactInfoLoading } from './ContactInfoLoading'
 
@@ -149,11 +142,11 @@ export const CreateApplicantForListing = (props: Props) => {
                       value="1"
                       sx={{ paddingLeft: 0 }}
                     />
-                    <Tab
-                      label={`Kontrakt (${leases.length})`}
-                      value="2"
-                      disableRipple
-                    />
+                    {/*<Tab*/}
+                    {/*  label={`Kontrakt (${leases.length})`}*/}
+                    {/*  value="2"*/}
+                    {/*  disableRipple*/}
+                    {/*/>*/}
                   </Tabs>
                   <TabPanel value="1" sx={{ padding: 0 }}>
                     <SearchContact
@@ -173,9 +166,7 @@ export const CreateApplicantForListing = (props: Props) => {
                       <Divider />
                     </Box>
                   </TabPanel>
-                  <TabPanel value="2" sx={{ padding: 0 }}>
-                    <Leases leases={leases} />
-                  </TabPanel>
+                  {/*<Contracts leases={leases} />*/}
                 </TabContext>
               </Box>
               {tenantQuery.data &&
@@ -295,63 +286,6 @@ function renderWarningIfDistrictsMismatch(listing: Listing, tenant: Tenant) {
   }
   return null
 }
-
-const sharedProps = {
-  editable: false,
-  flex: 1,
-}
-
-const columns: GridColDef[] = [
-  {
-    field: 'type',
-    headerName: 'Typ',
-    ...sharedProps,
-  },
-  {
-    field: 'status',
-    headerName: 'Status',
-    ...sharedProps,
-    renderCell: () => 'N/A',
-  },
-  {
-    field: 'address',
-    headerName: 'Adress',
-    ...sharedProps,
-    renderCell: () => 'N/A',
-  },
-  {
-    field: 'monthlyRent',
-    headerName: 'Hyra',
-    ...sharedProps,
-    renderCell: () => 'N/A',
-  },
-]
-
-const Leases = (props: { leases: Lease[] }) => (
-  <DataGridTable
-    sx={{ paddingTop: '1rem' }}
-    initialState={{
-      pagination: { paginationModel: { pageSize: 5 } },
-    }}
-    slots={{
-      noRowsOverlay: () => (
-        <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
-          <Typography fontSize="14px">
-            Det finns inga kontrakt att visa...
-          </Typography>
-        </Stack>
-      ),
-    }}
-    hideFooter
-    columns={columns}
-    rows={props.leases}
-    getRowId={(row) => row.leaseId}
-    loading={false}
-    rowHeight={72}
-    disableRowSelectionOnClick
-    autoHeight
-  />
-)
 
 const CreateApplicantError = (props: {
   reset: () => void
