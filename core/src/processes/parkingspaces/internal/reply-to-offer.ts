@@ -1,5 +1,4 @@
 import {
-  ListingStatus,
   OfferStatus,
   OfferWithRentalObjectCode,
   ReplyToOfferErrorCodes,
@@ -142,21 +141,11 @@ export const acceptOffer = async (
       }
     }
 
-    //Close offer
+    // Closes offer, updates listing and applicant status
     const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
     if (!closeOffer.ok) {
       log.push(`Something went wrong when closing the offer ${offer.id}.`)
       logger.error(closeOffer.err)
-    }
-
-    const closeListing = await leasingAdapter.updateListingStatus(
-      listing.id,
-      ListingStatus.Closed
-    )
-
-    if (!closeListing.ok) {
-      log.push(`Something went wrong when closing the listing ${listing.id}.`)
-      logger.error(closeListing.err)
     }
 
     try {

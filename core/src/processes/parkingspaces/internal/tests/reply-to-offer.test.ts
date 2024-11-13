@@ -233,17 +233,12 @@ describe('replyToOffer', () => {
           processStatus: ProcessStatus.successful,
         } as ProcessResult)
 
-      const updateListingStatusSpy = jest
-        .spyOn(leasingAdapter, 'updateListingStatus')
-        .mockResolvedValueOnce({ ok: true, data: null })
-
       const result = await replyProcesses.acceptOffer(123)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.successful,
       })
 
-      expect(updateListingStatusSpy).toHaveBeenCalledTimes(1)
       denyOfferSpy.mockRestore()
     })
   })
