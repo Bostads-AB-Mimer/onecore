@@ -5,7 +5,12 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getPropertyById } from '../../adapters/property-adapter'
+import {
+  getBuildings,
+  getBuildingsBasedOnPropertyCode,
+  getProperties,
+  getPropertyById, getPropertyStructure
+} from '../../adapters/property-adapter'
 
 /**
  * @swagger
@@ -39,6 +44,92 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties/:id/', metadata)
     const response = await getPropertyById(ctx.params.id)
+    ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /properties:
+   *   get:
+   *     summary: Gets all real estate properties
+   *     description: Returns the property.
+   *     tags:
+   *       - Property base service
+   *     parameters:
+   *       - in: query
+   *         name: tract
+   *         schema:
+   *           type: string
+   *         description: Filter properties by tract.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the properties.
+   *         content:
+   */
+  router.get('(.*)/properties', async (ctx) => {
+    let query = undefined
+    if(ctx.query.tract ){
+      query = ctx.query.tract.toString()
+    }
+
+    const metadata = generateRouteMetadata(ctx);
+    logger.info('GET /properties', metadata)
+    const response = await getProperties(query)
+    ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /building/{propertyId}/:
+   *   get:
+   *     summary: Get a building by property ID
+   *     description: Returns the property.
+   *     tags:
+   *       - Property base service
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the property.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the building.
+   *         content:
+   */
+  router.get('(.*)/building/:propertyId/', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info('GET /building/:propertyId/', metadata)
+    //const response = await getBuilding(ctx.params.propertyId)
+    const response = await getBuildingsBasedOnPropertyCode(ctx.params.propertyId)
+    ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /propertyStructure/{id}/:
+   *   get:
+   *     summary: Get a real estate property by ID
+   *     description: Returns the property.
+   *     tags:
+   *       - Property base service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the rental property.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the property.
+   *         content:
+   */
+  router.get('(.*)/propertyStructure/:propertyId/', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info('GET /building/:propertyId/', metadata)
+    const response = await getBuildings(ctx.params.propertyId)
     ctx.body = { content: response, ...metadata }
   })
 }
