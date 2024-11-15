@@ -81,7 +81,7 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /buildings/{propertyCode}/:
    *   get:
-   *     summary: Get a building by property code
+   *     summary: Gets buildings belonging to a property by property code
    *     description: Returns the buildings belonging to the property.
    *     tags:
    *       - Property base service
