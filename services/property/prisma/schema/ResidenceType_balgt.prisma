@@ -30,7 +30,7 @@ model ResidenceType {
   //checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalgtkeylbpro ")
 
   // Keeping the original relation to 'puatt' for now, fields and references checked in previous pass
-  //componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalgtkeypuatt ")
+  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalgtkeypuatt")
 
   @@index([statisticsGroupSCBId], map: "fkbalgtballs")
   @@index([statisticsGroup2Id], map: "fkbalgtballs2")

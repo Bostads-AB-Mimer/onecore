@@ -1,20 +1,19 @@
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  log: ['query'],
+})
 
 export const getComponentByMaintenanceUnitCode = async (
   maintenanceUnitCode: string,
 ) => {
   console.log('maintenanceUnitCode', maintenanceUnitCode)
   const response = await prisma.component.findMany({
-    take: 10,
     where: {
-      propertyObject: {
-        propertyStructure: {
-          some: {
-            maintenanceUnit: {
-              //maintenanceUnitCode, // test: 703T01
-            },
+      propertyStructures: {
+        some: {
+          maintenanceUnitByCode: {
+            maintenanceUnitCode,
           },
         },
       },
@@ -42,13 +41,13 @@ export const getComponentByMaintenanceUnitCode = async (
           name: true,
         },
       },
-      propertyObject: {
+      propertyStructures: {
         select: {
-          propertyStructure: {
+          maintenanceUnitByCode: {
             select: {
               maintenanceUnitId: true,
               maintenanceUnitCode: true,
-              maintenanceUnitName: true,
+              name: true,
             },
           },
         },

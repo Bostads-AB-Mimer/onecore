@@ -19,7 +19,8 @@ model PropertyObject {
   //workOrder WorkOrder[] @relation("PropertyObjectToWorkOrder")
   //constructionPart ConstructionPart? //@relation("PropertyObjectToConstructionPart")
   //parkingSpace ParkingSpace? //@relation("PropertyObjectToParkingSpace")
-  propertyStructure PropertyStructure? //@relation("PropertyObjectToPropertyStructure")
+  propertyStructures PropertyStructure[] //@relation("PropertyObjectToPropertyStructure", @map("fkbabufkeycmobj"))
+  component Component[] @relation("ComponentToPropertyObject")
   building Building? //@relation("PropertyObjectToBuilding")
   administrativeUnit AdministrativeUnit? //@relation("PropertyObjectToAdministrativeUnit")
   propertyArea PropertyArea[] //@relation("PropertyObjectToPropertyArea")
@@ -51,5 +52,9 @@ model PropertyObject {
   //productHistories ProductHistory[] @relation("PropertyObjectToProductHistory")
   //actionRentalRows ActionRentalRow[] @relation("PropertyObjectToActionRentalRow")
 
+  rooms Room[]
+  residence Residence[]
+  maintenanceUnit MaintenanceUnit[]
+  
   @@index([objectTypeId], map: "fkcmobjcmobt")
 }
