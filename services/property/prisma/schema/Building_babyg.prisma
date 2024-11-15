@@ -41,7 +41,8 @@ model Building {
   // block bablo? @relation(fields: [blockId], references: [keybablo], onUpdate: NoAction, map: "fkbabygkeybablo ")
   // area FreeTable1? @relation(fields: [freeTable1Id], references: [keybabya], onUpdate: NoAction, map: "fkbabygkeybabya ")
   // property FreeTable2? @relation(fields: [freeTable2Id], references: [keybabyb], onUpdate: NoAction, map: "fkbabygkeybabyb ")
-  // buildings FreeTable3? @relation(fields: [freeTable3Id], references: [keybabyc], onUpdate: NoAction, map: "fkbabygkeybabyc ")
+  buildings FreeTable3? @relation("fkbabygkeybabyc", fields: [freeTable3Id], references: [id], onUpdate: NoAction)
+
   // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [keybabyt], onUpdate: NoAction, map: "fkbabygkeybabyt ")
 
   // TODO: Uncomment and verify naming for these relations when original schema is available

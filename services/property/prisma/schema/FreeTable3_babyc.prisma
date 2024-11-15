@@ -1,15 +1,15 @@
 model FreeTable3 {
-  @@map("babyc")
+  id        String  @id(map: "pkbabyc") @map("keybabyc") @db.Char(15)
+  code      String  @unique(map: "akbabyc1") @map("code") @db.VarChar(10)
+  name      String? @map("caption") @db.VarChar(30)
+  timestamp String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
-  id String @id(map: "pkbabyc") @map("keybabyc") @db.Char(15)
-  code String @unique(map: "akbabyc1") @map("code") @db.VarChar(10)
-  name String? @map("caption") @db.VarChar(30)
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
-
-  //buildings Building[] //@relation("fkbabygkeybabyc") // Changed from babyg to buildings
+  buildings  Building[] @relation("fkbabygkeybabyc") // Changed from babyg to buildings
   properties Property[] //@relation("fkbafstkeybabyc") // Changed from bafst to properties
 
   // TODO: Verify relation name and integrity constraint
   // TODO: Commented out due to inconsistency in old schema
   // areas Area[] @relation("fkbabygbayta") // Changed from bayta to areas
+
+  @@map("babyc")
 }

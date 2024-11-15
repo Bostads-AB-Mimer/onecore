@@ -8,7 +8,6 @@ const prisma = new PrismaClient({
 // Building -> PropertyObject -> property -> staircase ?
 
 const getPropertyById = async (propertyId: string) => {
-    console.log('propertyId', propertyId)
     const response = await prisma.property.findUnique({
         where: {
             propertyId: propertyId,
@@ -21,8 +20,6 @@ const getPropertyById = async (propertyId: string) => {
 }
 
 const getProperties = async (tract: string | undefined) => {
-    //todo: freetable keys seem to point towards different tables?
-    //todo: Xpand workspace also renders the company that owns the property
     if (tract) {
         return prisma.property.findMany({
             where: {tract},
@@ -42,96 +39,25 @@ const getProperties = async (tract: string | undefined) => {
             tract: true,
             propertyDesignation: true,
             propertyObjectId: true //todo: for dev purposes
-            //todo: db contains different object type ids
-            //todo: currenty we only support bafst as a relation
-            // propertyObject: {
-            //     select: {objectTypeId: true},
-            // },
         },
     })
 }
 
-const getBuildings = async (propertyId: string) => {
-
-    //todo: relationship to property seems broken? Is it the query or the relation?
-    //todo: property will always come back as null
-    //todo: update - database does not have an explicit relationship on cmobj between these tables
-    // return prisma.building.findMany({
-    //     take: 15,
-    //     include: {
-    //         propertyObject: {
-    //             include: {
-    //                 property: true,
-    //             },
-    //         },
-    //     },
-    // });
-
-    //todo: goal query
-    // return prisma.building.findMany({
-    //     where: {
-    //         propertyObject: {
-    //             property: {
-    //                 propertyId: propertyId,
-    //             },
-    //         },
-    //     },
-    //     include: {
-    //         propertyObject: {
-    //             include: {
-    //                 property: true,
-    //             },
-    //         },
-    //     },
-    // });
-
-    //todo: test query with cmobj:
-    // return prisma.building.findMany({
-    //     where: {
-    //         propertyObject: {
-    //             propertyObjectId: propertyId,
-    //         },
-    //     },
-    //     include: {
-    //         propertyObject: {
-    //             include: {
-    //                 property: true,
-    //             },
-    //         },
-    //     },
-    // });
-    return []
-}
-
-const getBuildingsBasedOnPropertyCode = async (buildingCode: string) => {
-    return prisma.building.findMany({
+const getBuildings = async (propertyCode: string) => {
+    const result = await  prisma.property.findMany({
         where: {
-            buildingCode: buildingCode,
-            // propertyObject: {
-            //     property: {
-            //         propertyCode: propertyCode,
-            //     },
-            // },
+            propertyCode: propertyCode,
         },
         include: {
-            propertyObject: {
-                include: {
-                    property: true,
+            freeTable3: { //todo: rename to connection table to PropertyBuilding?
+                select: {
+                    buildings: true,
                 },
             },
         },
     })
 
-    //todo: no results from below query
-    // const buildingWithProperty = await prisma.building.findMany({
-    //     take: 15,
-    //     select: {
-    //         buildingCode: true,
-    //         Property: true
-    //     }
-    // });
-
-    //return buildingWithProperty
+    return result[0].freeTable3?.buildings
 }
 
 const getPropertyStructure = async (propertyId: string) => {
@@ -143,4 +69,4 @@ const getPropertyStructure = async (propertyId: string) => {
 }
 
 
-export {getPropertyById, getProperties, getBuildings, getBuildingsBasedOnPropertyCode, getPropertyStructure}
+export {getPropertyById, getProperties, getBuildings, getPropertyStructure}
