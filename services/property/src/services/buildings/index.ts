@@ -5,40 +5,42 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getComponentByMaintenanceUnitCode } from '../../adapters/component-adapter'
+import {
+  getBuildings,
+} from '../../adapters/building-adapter'
 
 /**
  * @swagger
  * openapi: 3.0.0
  * tags:
- *   - name: Components
- *     description: Operations related to components
+ *   - name: Buildings
+ *     description: Operations related to buildings
  */
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /components/:
+   * /buildings/{propertyCode}/:
    *   get:
-   *     summary: Gets a list of components.
-   *     description: Returns the component for the relevant unit code.
+   *     summary: Gets buildings belonging to a property by property code
+   *     description: Returns the buildings belonging to the property.
    *     tags:
-   *       - Components
+   *       - Buildings
    *     parameters:
-   *       - in: query
-   *         name: maintenanceUnit
+   *       - in: path
+   *         name: propertyCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The code of the maintenance unit.
+   *         description: The code of the property.
    *     responses:
    *       200:
-   *         description: Successfully retrieved the components.
+   *         description: Successfully retrieved the buildings.
    *         content:
    */
-  router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
+  router.get('(.*)/buildings/:propertyCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /components/:maintenanceUnitCode/', metadata)
-    const response = await getComponentByMaintenanceUnitCode(ctx.params.maintenanceUnit)
+    logger.info('GET /building/:propertyId/', metadata)
+    const response = await getBuildings(ctx.params.propertyCode)
     ctx.body = { content: response, ...metadata }
   })
 }

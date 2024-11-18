@@ -8,7 +8,7 @@ import { mapDbToResidence } from './residence-mapper'
  * @swagger
  * openapi: 3.0.0
  * tags:
- *   - name: Residence service
+ *   - name: Residences
  *     description: Operations related to residences
  */
 export const routes = (router: KoaRouter) => {
@@ -19,7 +19,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Gets a list of residences.
    *     description: Returns the residences for the relevant type ID.
    *     tags:
-   *       - Residence service
+   *       - Residences
    *     parameters:
    *       - in: query
    *         name: residenceType
@@ -41,10 +41,25 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/:
+   *   get:
+   *     summary: Gets a list of residences.
+   *     description: Returns residences filtered by type if a residence type is provided; otherwise, returns the latest residences.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: residenceType
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Optional filter for the type of residences to retrieve.
+   *     responses:
    *       200:
-   *         description: Successfully retrieved the residences.
+   *         description: Successfully retrieved residences data.
    *         content:
    */
+
   router.get('(.*)/residences/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /residences/:residenceTypeId/', metadata)
@@ -56,6 +71,7 @@ export const routes = (router: KoaRouter) => {
     }
     ctx.body = { content: response, ...metadata }
   })
+
   /**
    * @swagger
    * /residences/{id}:
@@ -63,7 +79,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get a residence by ID.
    *     description: Returns a residence with the specified ID.
    *     tags:
-   *       - Residence service
+   *       - Residences
    *     parameters:
    *       - in: path
    *         name: id
