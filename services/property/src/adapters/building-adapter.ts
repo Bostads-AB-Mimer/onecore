@@ -10,6 +10,7 @@ const getBuildings = async (propertyCode: string) => {
         where: {
             propertyCode: propertyCode,
         },
+
         include: {
             freeTable3: { //todo: rename connection table in schema
                 select: {
@@ -21,7 +22,8 @@ const getBuildings = async (propertyCode: string) => {
                     code: true,
                     caption: true,
                 },
-            }
+            },
+
         },
     })
 
@@ -37,4 +39,19 @@ const getBuildings = async (propertyCode: string) => {
     })
 }
 
-export {getBuildings}
+const getBuilding = async (buildingId: string) => {
+    return prisma.building.findUnique({
+        where: {
+            buildingId: buildingId,
+        },
+        include: {
+            buildingType: true,
+            property: true,
+            buildings: true,
+            area: true,
+        }
+    })
+};
+
+
+export {getBuildings, getBuilding}

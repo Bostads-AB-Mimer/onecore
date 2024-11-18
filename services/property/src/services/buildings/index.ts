@@ -6,8 +6,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
+  getBuilding,
   getBuildings,
 } from '../../adapters/building-adapter'
+import {getPropertyById} from "../../adapters/property-adapter";
 
 /**
  * @swagger
@@ -39,8 +41,36 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/buildings/:propertyCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /building/:propertyId/', metadata)
+    logger.info('GET /buildings/:propertyId/', metadata)
     const response = await getBuildings(ctx.params.propertyCode)
+    ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /buildings/byId/{id}/:
+   *   get:
+   *     summary: Get a building by ID
+   *     description: Returns the building.
+   *     tags:
+   *       - Buildings
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the building.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the building.
+   *         content:
+   */
+  //todo: better slug for this route
+  router.get('(.*)/buildings/byId/:id/', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info('GET /buildings/:id/', metadata)
+    const response = await getBuilding(ctx.params.id)
     ctx.body = { content: response, ...metadata }
   })
 }
