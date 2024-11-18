@@ -1,14 +1,14 @@
 model FreeTable2 {
-  @@map("babyb")
-  
-  id String @id(map: "pkbabyb") @map("keybabyb") @db.Char(15)
-  code String @unique(map: "akbabyb1") @map("code") @db.VarChar(10)
-  caption String? @map("caption") @db.VarChar(30)
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  id        String  @id(map: "pkbabyb") @map("keybabyb") @db.Char(15)
+  code      String  @unique(map: "akbabyb1") @map("code") @db.VarChar(10)
+  caption   String? @map("caption") @db.VarChar(30)
+  timestamp String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // TODO: Verify relations if needed
   // Commented out relations to potentially missing or incorrectly configured models.
-  //Building Building[] // @relation("fkbabygkeybabyb") 
+  Building   Building[] @relation("fkbabygkeybabyb")
   properties Property[] // @relation("fkbafstkeybabyb") 
   //Area Area[] // @relation("fkbaytakeybabyb")
+
+  @@map("babyb")
 }

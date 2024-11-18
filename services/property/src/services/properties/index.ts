@@ -6,6 +6,7 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
+  getBuildingParts,
   getBuildings,
   getProperties,
   getPropertyById
@@ -106,28 +107,28 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyStructure/{id}/:
+   * /buildingParts/{buildingCode}/:
    *   get:
-   *     summary: Get a real estate property by ID
-   *     description: Returns the property.
+   *     summary: Get building parts by building code
+   *     description: Returns the building parts.
    *     tags:
    *       - Property base service
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: buildingCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the rental property.
+   *         description: The building code of the building.
    *     responses:
    *       200:
-   *         description: Successfully retrieved the property.
+   *         description: Successfully retrieved the building parts.
    *         content:
    */
-  router.get('(.*)/propertyStructure/:propertyId/', async (ctx) => {
+  router.get('(.*)/buildingParts/:buildingCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /building/:propertyId/', metadata)
-    const response = await getBuildings(ctx.params.propertyId)
+    const response = await getBuildingParts(ctx.params.propertyCode)
     ctx.body = { content: response, ...metadata }
   })
 }

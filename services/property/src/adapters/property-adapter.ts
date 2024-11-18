@@ -1,4 +1,5 @@
 import {PrismaClient} from '@prisma/client'
+import {map} from "lodash";
 
 const prisma = new PrismaClient({
     log: ['query'],
@@ -44,23 +45,38 @@ const getProperties = async (tract: string | undefined) => {
 }
 
 const getBuildings = async (propertyCode: string) => {
-    const result = await  prisma.property.findMany({
+    const result = await prisma.property.findMany({
         where: {
             propertyCode: propertyCode,
         },
         include: {
-            freeTable3: { //todo: rename to connection table to PropertyBuilding?
+            freeTable3: { //todo: rename to connection table in schema
                 select: {
                     buildings: true,
                 },
             },
+            freeTable2: { //todo: rename to connection table in schema
+                select: {
+                    code: true,
+                    caption: true,
+                },
+            }
         },
     })
 
-    return result[0].freeTable3?.buildings
+    if(!result[0]){
+        return []
+    }
+
+    return map(result[0].freeTable3?.buildings, (building) => {
+        return {
+            ...building,
+            ...result[0].freeTable2,
+        }
+    })
 }
 
-const getPropertyStructure = async (propertyId: string) => {
+const getBuildingParts = async (propertyId: string) => {
     return prisma.propertyStructure.findMany({
         where: {
             propertyId: propertyId,
@@ -69,4 +85,4 @@ const getPropertyStructure = async (propertyId: string) => {
 }
 
 
-export {getPropertyById, getProperties, getBuildings, getPropertyStructure}
+export {getPropertyById, getProperties, getBuildings, getBuildingParts}

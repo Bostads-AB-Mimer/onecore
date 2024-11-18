@@ -40,7 +40,7 @@ model Building {
   // Relations, keeping the old names for now with a TODO to change when new names are available
   // block bablo? @relation(fields: [blockId], references: [keybablo], onUpdate: NoAction, map: "fkbabygkeybablo ")
   // area FreeTable1? @relation(fields: [freeTable1Id], references: [keybabya], onUpdate: NoAction, map: "fkbabygkeybabya ")
-  // property FreeTable2? @relation(fields: [freeTable2Id], references: [keybabyb], onUpdate: NoAction, map: "fkbabygkeybabyb ")
+  property  FreeTable2? @relation("fkbabygkeybabyb", fields: [freeTable2Id], references: [id], onUpdate: NoAction)
   buildings FreeTable3? @relation("fkbabygkeybabyc", fields: [freeTable3Id], references: [id], onUpdate: NoAction)
 
   // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [keybabyt], onUpdate: NoAction, map: "fkbabygkeybabyt ")
