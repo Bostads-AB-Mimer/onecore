@@ -47,7 +47,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties:
+   * /properties/:
    *   get:
    *     summary: Gets all real estate properties
    *     description: Returns the property.
@@ -64,7 +64,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Successfully retrieved the properties.
    *         content:
    */
-  router.get('(.*)/properties', async (ctx) => {
+  router.get('(.*)/properties/', async (ctx) => {
     let query = undefined
     if(ctx.query.tract ){
       query = ctx.query.tract.toString()

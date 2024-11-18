@@ -14,7 +14,7 @@ import { mapDbToResidence } from './residence-mapper'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /residences/:
+   * /residences/latest/:
    *   get:
    *     summary: Gets a list of residences.
    *     description: Returns the residences for the relevant type ID.
