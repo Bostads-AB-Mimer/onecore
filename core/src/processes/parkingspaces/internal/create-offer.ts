@@ -172,7 +172,7 @@ export const createOfferForInternalParkingSpace = async (
         subject: 'Erbjudande om intern bilplats',
         text: 'Erbjudande om intern bilplats',
         address: listing.address,
-        firstName: eligibleApplicant.name,
+        firstName: extractApplicantFirstName(eligibleApplicant.name),
         availableFrom: new Date(listing.vacantFrom).toISOString(),
         deadlineDate: new Date(offer.data.expiresAt).toISOString(),
         rent: String(listing.monthlyRent),
@@ -286,4 +286,9 @@ function mapDetailedApplicantsToCreateOfferSelectedApplicants(
         ? a.currentHousingContract.status
         : LeaseStatus.Ended,
   }
+}
+
+function extractApplicantFirstName(name: string): string {
+  const fullName = name.split(' ')
+  return fullName[1] //return first name due to format "lastname, firstname"
 }
