@@ -5,9 +5,6 @@ const prisma = new PrismaClient({
     log: ['query'],
 });
 
-
-// Building -> PropertyObject -> property -> staircase ?
-
 const getPropertyById = async (propertyId: string) => {
     const response = await prisma.property.findUnique({
         where: {
@@ -29,7 +26,6 @@ const getProperties = async (tract: string | undefined) => {
                 propertyCode: true,
                 tract: true,
                 propertyDesignation: true,
-                propertyObjectId: true //todo: for dev purposes
             },
         })
     }
@@ -39,7 +35,6 @@ const getProperties = async (tract: string | undefined) => {
             propertyCode: true,
             tract: true,
             propertyDesignation: true,
-            propertyObjectId: true //todo: for dev purposes
         },
     })
 }
@@ -50,12 +45,12 @@ const getBuildings = async (propertyCode: string) => {
             propertyCode: propertyCode,
         },
         include: {
-            freeTable3: { //todo: rename to connection table in schema
+            freeTable3: { //todo: rename connection table in schema
                 select: {
                     buildings: true,
                 },
             },
-            freeTable2: { //todo: rename to connection table in schema
+            freeTable2: { //todo: rename connection table in schema
                 select: {
                     code: true,
                     caption: true,
