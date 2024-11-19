@@ -124,12 +124,9 @@ export const getResidencesByType = async (residenceTypeId: string) => {
       name: 'asc',
     },
     select: {
-      id: true,
+      residenceId: true,
       code: true,
       name: true,
-      roomCount: true,
-      kitchen: true,
-      selectionFundAmount: true,
     },
   })
 

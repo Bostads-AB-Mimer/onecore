@@ -52,10 +52,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * components:
-   *   schemas:
-   *     Residence: 
-   *       ${JSON.stringify(zodToJsonSchema(ResidenceSchema), null, 2)}
    * /residences/:id:
    *   get:
    *     summary: Get a residence by ID.
@@ -85,7 +81,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 404
       return
     }
-    const response: Residence = mapDbToResidence(dbRecord)
+    const response = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
   })
 }

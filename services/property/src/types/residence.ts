@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const ResidenceSchema = z.object({
   id: z.string(),
@@ -29,7 +29,9 @@ export const ResidenceSchema = z.object({
     extraToilet: z.boolean(),
     sharedKitchen: z.boolean(),
     petAllergyFree: z.boolean(),
-    electricAllergyIntolerance: z.boolean(),
+    electricAllergyIntolerance: z
+      .boolean()
+      .describe('Is the apartment checked for electric allergy intolerance?'),
     smokeFree: z.boolean(),
     asbestos: z.boolean(),
   }),
@@ -53,7 +55,7 @@ export const ResidenceSchema = z.object({
       availableFrom: z.date().optional(),
       availableTo: z.date().optional(),
       timestamp: z.string(),
-    })
+    }),
   ),
   entrance: z.string(),
   partNo: z.number(),
@@ -79,6 +81,6 @@ export const ResidenceSchema = z.object({
       energyIndex: z.number().optional(),
     }),
   }),
-});
+})
 
-export type Residence = z.infer<typeof ResidenceSchema>;
+export type Residence = z.infer<typeof ResidenceSchema>

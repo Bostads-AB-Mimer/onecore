@@ -89,5 +89,5 @@ export function mapDbToResidence(dbRecord: any): Residence {
         energyIndex: dbRecord.energyIndex,
       },
     },
-  }
+  })
 }
