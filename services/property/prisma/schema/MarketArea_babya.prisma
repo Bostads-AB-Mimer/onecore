@@ -1,4 +1,4 @@
-model FreeTable1 {
+model MarketArea {
   id        String  @id(map: "pkbabya") @map("keybabya") @db.Char(15)
   code      String  @unique(map: "akbabya1") @map("code") @db.VarChar(10)
   name      String? @map("caption") @db.VarChar(30)

@@ -1,14 +1,14 @@
 model Property {
-  propertyId               String    @id(map: "pkbafst") @map("keybafst") @db.Char(15)
+  id                       String    @id(map: "pkbafst") @map("keybafst") @db.Char(15)
   propertyObjectId         String    @unique(map: "fkbafstcmobj") @map("keycmobj") @db.Char(15)
-  freeTableKeyA            String?   @map("keybabya") @db.Char(15) // Mapping for 'Fritabellen 1'. Rename if domain clarification is obtained
-  freeTableKeyB            String?   @map("keybabyb") @db.Char(15) // Mapping for 'Fritabellen 2'. Rename if domain clarification is obtained
-  freeTableKeyC            String?   @map("keybabyc") @db.Char(15) // Mapping for 'Fritabellen 3'. Rename if domain clarification is obtained
+  marketAreaId             String?   @map("keybabya") @db.Char(15) // Mapping for 'Fritabellen 1'. Rename if domain clarification is obtained
+  districtId               String?   @map("keybabyb") @db.Char(15) // Mapping for 'Fritabellen 2'. Rename if domain clarification is obtained
+  propertyDesignationId    String?   @map("keybabyc") @db.Char(15) // Mapping for 'Fritabellen 3'. Rename if domain clarification is obtained
   valueAreaId              String?   @map("keybavom") @db.Char(15) // TODO: Once mapped, verify if 'Värdeområde' means value area
-  //contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
-  //legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
-  propertyCode             String    @map("code") @db.VarChar(30)
-  propertyDesignation      String?   @map("caption") @db.VarChar(60)
+  // contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
+  // legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
+  code                     String    @map("code") @db.VarChar(30)
+  designation              String?   @map("caption") @db.VarChar(60)
   municipality             String?   @map("kommun") @db.VarChar(30)
   tract                    String?   @map("trakt") @db.VarChar(30)
   block                    String?   @map("block") @db.VarChar(30)
@@ -35,22 +35,22 @@ model Property {
   toDate                   DateTime  @map("tdate") @db.DateTime
   timestamp                String    @map("timestamp") @db.Char(10)
 
-  freeTable1     FreeTable1?    @relation(fields: [freeTableKeyA], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabya")
-  freeTable2     FreeTable2?    @relation(fields: [freeTableKeyB], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyb")
-  freeTable3     FreeTable3?    @relation(fields: [freeTableKeyC], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyc")
-  //cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
-  //cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
-  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmobj")
-  building       Building?      @relation(fields: [propertyObjectId], references: [objectId])
+  marketArea          MarketArea?          @relation(fields: [marketAreaId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabya")
+  district            District?            @relation(fields: [districtId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyb")
+  propertyDesignation PropertyDesignation? @relation(fields: [propertyDesignationId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeybabyc")
+  // cmctc_bafst_keycmctcTocmctc cmctc? @relation("bafst_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmctc")
+  // cmctc_bafst_keycmctc2Tocmctc cmctc? @relation("bafst_keycmctc2Tocmctc", fields: [legalOwnerId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbafstkeycmctc2")
+  propertyObject      PropertyObject       @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafstkeycmobj")
+  building            Building?            @relation(fields: [propertyObjectId], references: [objectId])
 
-  @@index([freeTableKeyA], map: "fkbafstbabya")
-  @@index([freeTableKeyB], map: "fkbafstbabyb")
-  @@index([freeTableKeyC], map: "fkbafstbabyc")
+  @@index([marketAreaId], map: "fkbafstbabya")
+  @@index([districtId], map: "fkbafstbabyb")
+  @@index([propertyDesignationId], map: "fkbafstbabyc")
   //@@index([contactId], map: "fkbafstcmctc")
   //@@index([legalOwnerId], map: "fkbafstcmctc2")
   @@index([fromDate], map: "inbafst_2KR0I5KYU")
   @@index([toDate], map: "inbafst_2KR0I5KZP")
-  @@index([propertyCode], map: "inbafst_2KR0I5L0X")
-  @@index([propertyDesignation], map: "inbafst_2KR0I5L1V")
+  @@index([code], map: "inbafst_2KR0I5L0X")
+  @@index([designation], map: "inbafst_2KR0I5L1V")
   @@map("bafst")
 }

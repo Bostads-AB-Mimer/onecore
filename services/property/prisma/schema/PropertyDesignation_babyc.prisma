@@ -1,4 +1,4 @@
-model FreeTable3 {
+model PropertyDesignation {
   id        String  @id(map: "pkbabyc") @map("keybabyc") @db.Char(15)
   code      String  @unique(map: "akbabyc1") @map("code") @db.VarChar(10)
   name      String? @map("caption") @db.VarChar(30)

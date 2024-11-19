@@ -8,7 +8,7 @@ const prisma = new PrismaClient({
 const getPropertyById = async (propertyId: string) => {
     const response = await prisma.property.findUnique({
         where: {
-            propertyId: propertyId,
+            id: propertyId,
         },
         include: {
             propertyObject: true,
@@ -22,19 +22,19 @@ const getProperties = async (tract: string | undefined) => {
         return prisma.property.findMany({
             where: {tract},
             select: {
-                propertyId: true,
-                propertyCode: true,
+                id: true,
+                code: true,
                 tract: true,
-                propertyDesignation: true,
+                designation: true,
             },
         })
     }
     return prisma.property.findMany({
         select: {
-            propertyId: true,
-            propertyCode: true,
+            id: true,
+            code: true,
             tract: true,
-            propertyDesignation: true,
+            designation: true,
         },
     })
 }
