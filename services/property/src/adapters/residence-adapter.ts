@@ -56,9 +56,7 @@ export const getLatestResidences = async () => {
   return response
 }
 
-import { ResidenceWithDetails } from '../../types/residence'
-
-export const getResidenceById = async (id: string): Promise<ResidenceWithDetails> => {
+export const getResidenceById = async (id: string) => {
   const response = await prisma.residence.findUnique({
     where: {
       residenceId: id,

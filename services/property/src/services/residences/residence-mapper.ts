@@ -1,10 +1,14 @@
 import { Residence, ResidenceSchema } from '../../types/residence'
 import { Prisma } from '@prisma/client'
 
-export function mapDbToResidence(dbRecord: Prisma.ResidenceGetPayload<{ include: { rooms: true } }>): Residence {
+export function mapDbToResidence(
+  dbRecord: Prisma.ResidenceGetPayload<{
+    include: { /*rooms: true;*/ residenceType: true; propertyObject: true }
+  }>,
+): Residence {
   if (!dbRecord) return {} as Residence
   return ResidenceSchema.parse({
-    id: dbRecord.id,
+    id: dbRecord.residenceId,
     code: dbRecord.code,
     name: dbRecord.name,
     location: dbRecord.location,
@@ -14,12 +18,14 @@ export function mapDbToResidence(dbRecord: Prisma.ResidenceGetPayload<{ include:
       elevator: dbRecord.elevator === 1,
     },
     features: {
-      balcony1: dbRecord.balcony1
-        ? { location: dbRecord.balcony1Location, type: dbRecord.balcony1Type }
-        : undefined,
-      balcony2: dbRecord.balcony2
-        ? { location: dbRecord.balcony2Location, type: dbRecord.balcony2Type }
-        : undefined,
+      balcony1: {
+        location: dbRecord.balcony1Location,
+        type: dbRecord.balcony1Type,
+      },
+      balcony2: {
+        location: dbRecord.balcony2Location,
+        type: dbRecord.balcony2Type,
+      },
       patioLocation: dbRecord.patioLocation,
       hygieneFacility: dbRecord.hygieneFacility,
       sauna: dbRecord.sauna === 1,
@@ -30,7 +36,7 @@ export function mapDbToResidence(dbRecord: Prisma.ResidenceGetPayload<{ include:
       smokeFree: dbRecord.smokeFree === 1,
       asbestos: dbRecord.asbestos === 1,
     },
-    rooms:
+    /*rooms: // activate when rooms are implemented
       dbRecord.rooms?.map((room: any) => ({
         id: room.roomId,
         code: room.roomCode,
@@ -61,33 +67,27 @@ export function mapDbToResidence(dbRecord: Prisma.ResidenceGetPayload<{ include:
         },
         deleteMark: room.deleteMark === 1,
         timestamp: room.timestamp,
-      })) || [],
+      })) || [],*/
     entrance: dbRecord.entrance,
-    partNo: dbRecord.partNo,
-    part: dbRecord.part,
+    //partNo: dbRecord.partNo,
+    //part: dbRecord.part,
     deleted: dbRecord.deleted === 1,
     validityPeriod: {
       fromDate: new Date(dbRecord.fromDate),
       toDate: new Date(dbRecord.toDate),
     },
-    timestamp: dbRecord.timestamp,
     residenceType: {
-      code: dbRecord.residenceTypeCode,
-      name: dbRecord.residenceTypeName,
-      roomCount: dbRecord.roomCount,
-      kitchen: dbRecord.kitchen,
-      selectionFundAmount: dbRecord.selectionFundAmount,
+      code: dbRecord.residenceType.code,
+      name: dbRecord.residenceType.name,
+      roomCount: dbRecord.residenceType.roomCount,
+      kitchen: dbRecord.residenceType.kitchen,
+      systemStandard: dbRecord.residenceType.systemStandard,
     },
     propertyObject: {
       energy: {
-        energyClass: dbRecord.energyClass,
-        energyRegistered: dbRecord.energyRegistered
-          ? new Date(dbRecord.energyRegistered)
-          : undefined,
-        energyReceived: dbRecord.energyReceived
-          ? new Date(dbRecord.energyReceived)
-          : undefined,
-        energyIndex: dbRecord.energyIndex,
+        energyClass: dbRecord.propertyObject.energyClass,
+        heatingNature: dbRecord.propertyObject.heatingNature,
+        // .. add more fields when needed
       },
     },
   })
