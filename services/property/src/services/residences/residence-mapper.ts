@@ -1,6 +1,7 @@
 import { Residence, ResidenceSchema } from '../../types/residence'
+import { Prisma } from '@prisma/client'
 
-export function mapDbToResidence(dbRecord: any): Residence {
+export function mapDbToResidence(dbRecord: Prisma.ResidenceGetPayload<{ include: { rooms: true } }>): Residence {
   if (!dbRecord) return {} as Residence
   return ResidenceSchema.parse({
     id: dbRecord.id,
