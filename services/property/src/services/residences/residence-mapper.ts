@@ -12,6 +12,7 @@ export function mapDbToResidence(dbRecord: any): Residence {
       residenceAdapted: dbRecord.residenceAdapted === 1,
       elevator: dbRecord.elevator === 1,
     },
+    location: dbRecord.location || undefined,
     features: {
       balcony1: dbRecord.balcony1
         ? { location: dbRecord.balcony1Location, type: dbRecord.balcony1Type }
@@ -37,6 +38,27 @@ export function mapDbToResidence(dbRecord: any): Residence {
         usage: {
           shared: room.shared === 1,
           allowPeriodicWorks: room.allowPeriodicWorks === 1,
+        },
+        fromDate: new Date(room.fromDate),
+        toDate: new Date(room.toDate),
+        availableFrom: room.availableFrom
+          ? new Date(room.availableFrom)
+          : undefined,
+        availableTo: room.availableTo
+          ? new Date(room.availableTo)
+          : undefined,
+        dates: {
+          installation: room.installationDate
+            ? new Date(room.installationDate)
+            : undefined,
+          from: new Date(room.fromDate),
+          to: new Date(room.toDate),
+          availableFrom: room.availableFrom
+            ? new Date(room.availableFrom)
+            : undefined,
+          availableTo: room.availableTo
+            ? new Date(room.availableTo)
+            : undefined,
         },
         specifications: {
           spaceType: room.spaceType,
