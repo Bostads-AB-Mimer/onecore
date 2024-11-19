@@ -438,7 +438,9 @@ export const routes = (router: KoaRouter) => {
           getMaintenanceUnitsForRentalProperty(lease.rentalPropertyId)
         )
 
-      const maintenanceUnits = (await Promise.all(promises)).flat()
+      const maintenanceUnits = await Promise.all(promises).then((units) =>
+        units.filter((unit) => unit !== undefined).flat()
+      )
 
       if (maintenanceUnits && maintenanceUnits.length > 0) {
         ctx.status = 200
