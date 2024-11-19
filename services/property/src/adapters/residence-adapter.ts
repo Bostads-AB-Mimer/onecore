@@ -56,7 +56,7 @@ export const getLatestResidences = async () => {
   return response
 }
 
-export const getResidenceById = async (id: string) => {
+export const getResidenceById = async (id: string): Promise<Prisma.ResidenceGetPayload<{ include: { propertyObject: { include: { rooms: true, property: true, rentalObject: { select: { rentalObjectId: true, name: true, fromDate: true, toDate: true, timestamp: true, rentalObjectType: { select: { name: true } } } }, building: { select: { buildingCode: true, name: true, constructionYear: true, renovationYear: true, valueYear: true, heating: true, fireRating: true, insuranceClass: true, insuranceValue: true } } } } } }>> => {
   const response = await prisma.residence.findUnique({
     where: {
       residenceId: id,
