@@ -35,7 +35,7 @@ export function mapDbToResidence(dbRecord: any): Residence {
         code: room.code,
         name: room.name,
         usage: {
-          shared: room.sharedUse === 1,
+          shared: room.shared === 1,
           allowPeriodicWorks: room.allowPeriodicWorks === 1,
         },
         specifications: {
@@ -48,14 +48,6 @@ export function mapDbToResidence(dbRecord: any): Residence {
         dates: {
           installation: room.installationDate
             ? new Date(room.installationDate)
-            : undefined,
-          from: new Date(room.fromDate),
-          to: new Date(room.toDate),
-          availableFrom: room.availableFrom
-            ? new Date(room.availableFrom)
-            : undefined,
-          availableTo: room.availableTo
-            ? new Date(room.availableTo)
             : undefined,
         },
         deleteMark: room.deleteMark === 1,
