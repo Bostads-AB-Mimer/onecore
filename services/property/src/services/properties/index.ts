@@ -70,7 +70,7 @@ export const routes = (router: KoaRouter) => {
       query = ctx.query.tract.toString()
     }
 
-    const metadata = generateRouteMetadata(ctx);
+    const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties', metadata)
     const response = await getProperties(query)
     ctx.body = { content: response, ...metadata }

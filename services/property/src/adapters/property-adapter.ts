@@ -1,9 +1,8 @@
 import {PrismaClient} from '@prisma/client'
-import {map} from "lodash";
 
 const prisma = new PrismaClient({
     log: ['query'],
-});
+})
 
 const getPropertyById = async (propertyId: string) => {
     const response = await prisma.property.findUnique({
