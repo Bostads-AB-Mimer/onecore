@@ -1,11 +1,14 @@
 import KoaRouter from '@koa/router'
-import { routes as propertiesRoutes } from './services/components'
+import { routes as componentsRoutes } from './services/components'
 import { routes as residencesRoutes } from './services/residences'
+import { routes as buildingsRoutes } from './services/buildings'
+import { routes as propertiesRoutes } from './services/properties'
 
 const router = new KoaRouter()
 
-propertiesRoutes(router)
-
+componentsRoutes(router)
 residencesRoutes(router)
+buildingsRoutes(router)
+propertiesRoutes(router)
 
 export default router

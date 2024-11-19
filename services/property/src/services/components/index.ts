@@ -11,8 +11,8 @@ import { getComponentByMaintenanceUnitCode } from '../../adapters/component-adap
  * @swagger
  * openapi: 3.0.0
  * tags:
- *   - name: Property base service
- *     description: Operations related to property base
+ *   - name: Components
+ *     description: Operations related to components
  */
 export const routes = (router: KoaRouter) => {
   /**
@@ -22,7 +22,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Gets a list of components.
    *     description: Returns the component for the relevant unit code.
    *     tags:
-   *       - Property base service
+   *       - Components
    *     parameters:
    *       - in: query
    *         name: maintenanceUnit
@@ -35,10 +35,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Successfully retrieved the components.
    *         content:
    */
-  router.get('(.*)/components/', async (ctx) => {
+  router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /components/:maintenanceUnitCode/', metadata)
-    const response = await getComponentByMaintenanceUnitCode(ctx.query.maintenanceUnit)
+    const response = await getComponentByMaintenanceUnitCode(ctx.params.maintenanceUnit)
     ctx.body = { content: response, ...metadata }
   })
 }
