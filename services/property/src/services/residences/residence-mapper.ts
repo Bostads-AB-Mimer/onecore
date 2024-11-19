@@ -31,8 +31,8 @@ export function mapDbToResidence(dbRecord: any): Residence {
     },
     rooms:
       dbRecord.rooms?.map((room: any) => ({
-        id: room.roomId,
-        code: room.roomCode,
+        id: room.id,
+        code: room.code,
         name: room.name,
         usage: {
           shared: room.sharedUse === 1,
