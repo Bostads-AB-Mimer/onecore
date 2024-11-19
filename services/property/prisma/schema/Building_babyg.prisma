@@ -1,15 +1,15 @@
 model Building {
-  buildingId     String  @id(map: "pkbabyg") @map("keybabyg") @db.Char(15)
+  id             String  @id(map: "pkbabyg") @map("keybabyg") @db.Char(15)
   objectId       String  @unique(map: "akbabyg1") @map("keycmobj") @db.Char(15)
   buildingTypeId String? @map("keybabyt") @db.Char(15)
-  // freetable tables only contain various codes and captions. No explicit keys to join further with.
-  freeTable1Id   String? @map("keybabya") @db.Char(15) // TODO: Verify correct naming
-  freeTable2Id   String? @map("keybabyb") @db.Char(15) // TODO: Verify correct naming
-  freeTable3Id   String? @map("keybabyc") @db.Char(15) // TODO: Verify correct naming
+
+  marketAreaId          String? @map("keybabya") @db.Char(15)
+  districtId            String? @map("keybabyb") @db.Char(15)
+  propertyDesignationId String? @map("keybabyc") @db.Char(15)
 
   // TODO: Uncomment and verify naming for these fields when original schema is available
-  districtId String? @map("keybanbh") @db.Char(15)
-  blockId    String? @map("keybablo") @db.Char(15)
+  districtObjectId String? @map("keybanbh") @db.Char(15) @ignore // empty table in db therefore ignored
+  blockId          String? @map("keybablo") @db.Char(15)
   // buildingMemoryClassificationId String? @map("keybacls") @db.Char(15)
 
   heatingId             String?   @map("keybahea") @db.Char(15)
@@ -39,9 +39,9 @@ model Building {
 
   // Relations, keeping the old names for now with a TODO to change when new names are available
   // block bablo? @relation(fields: [blockId], references: [keybablo], onUpdate: NoAction, map: "fkbabygkeybablo ")
-  area      FreeTable1? @relation("fkbabygkeybabya", fields: [freeTable1Id], references: [id], onUpdate: NoAction) //todo: rename
-  property  FreeTable2? @relation("fkbabygkeybabyb", fields: [freeTable2Id], references: [id], onUpdate: NoAction) //todo: rename
-  buildings FreeTable3? @relation("fkbabygkeybabyc", fields: [freeTable3Id], references: [id], onUpdate: NoAction) //todo: rename
+  marketArea          MarketArea?          @relation("fkbabygkeybabya", fields: [marketAreaId], references: [id], onUpdate: NoAction)
+  district            District?            @relation("fkbabygkeybabyb", fields: [districtId], references: [id], onUpdate: NoAction)
+  propertyDesignation PropertyDesignation? @relation("fkbabygkeybabyc", fields: [propertyDesignationId], references: [id], onUpdate: NoAction)
 
   buildingType BuildingType? @relation("fkbabygkeybabyt", fields: [buildingTypeId], references: [id], onUpdate: NoAction)
 
@@ -49,11 +49,11 @@ model Building {
   // buildingMemoryClassification bacls? @relation(fields: [buildingMemoryClassificationId], references: [keybacls], onUpdate: NoAction, map: "fkbabygkeybacls ")
 
   heatingSystem  Heating?       @relation(fields: [heatingId], references: [heatingId], onUpdate: NoAction, map: "fkbabygkeybahea ")
-  //district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
-  //object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+  // district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
+  // object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
   propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbabygkeycmobj ")
 
-  //buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
+  // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
 
   Property Property[]
 

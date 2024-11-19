@@ -1,4 +1,4 @@
-model FreeTable2 {
+model District {
   id        String  @id(map: "pkbabyb") @map("keybabyb") @db.Char(15)
   code      String  @unique(map: "akbabyb1") @map("code") @db.VarChar(10)
   caption   String? @map("caption") @db.VarChar(30)
