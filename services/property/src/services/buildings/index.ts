@@ -9,7 +9,6 @@ import {
   getBuildingByCode,
   getBuildings,
 } from '../../adapters/building-adapter'
-import {getPropertyById} from "../../adapters/property-adapter";
 
 /**
  * @swagger
@@ -75,7 +74,7 @@ export const routes = (router: KoaRouter) => {
     if (!buildingCode || buildingCode.length < 7) {
       ctx.status = 400
       ctx.body = { content: 'Invalid building code', ...metadata }
-      return;
+      return
     }
 
     const parsedBuildingCode = buildingCode.slice(0, 7)
@@ -88,6 +87,6 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = { content: 'Internal server error', ...metadata }
     }
-  });
+  })
 
 }

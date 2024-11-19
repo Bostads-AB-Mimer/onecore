@@ -1,9 +1,9 @@
-import {map} from "lodash";
-import {PrismaClient} from "@prisma/client";
+import {map} from "lodash"
+import {PrismaClient} from "@prisma/client"
 
 const prisma = new PrismaClient({
     log: ['query'],
-});
+})
 
 const getBuildings = async (propertyCode: string) => {
     const result = await prisma.property.findMany({
@@ -54,7 +54,7 @@ const getBuildingByCode = async (buildingCode: string) => {
             area: true,
         }
     })
-};
+}
 
 
 export {getBuildings, getBuildingByCode}
