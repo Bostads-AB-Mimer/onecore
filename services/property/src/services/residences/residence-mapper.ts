@@ -1,8 +1,8 @@
-import { Residence } from '../../types/residence'
+import { Residence, ResidenceSchema } from '../../types/residence'
 
 export function mapDbToResidence(dbRecord: any): Residence {
   if (!dbRecord) return {} as Residence
-  return {
+  return ResidenceSchema.parse({
     id: dbRecord.id,
     code: dbRecord.code,
     name: dbRecord.name,

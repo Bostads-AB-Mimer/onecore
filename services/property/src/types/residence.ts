@@ -1,89 +1,84 @@
-export type Residence = {
-  id: string
-  // objectId: string
-  // residenceTypeId: string
-  code: string
-  name: string
-  location?: string
-  accessibility: {
-    wheelchairAccessible: boolean
-    residenceAdapted: boolean
-    elevator: boolean
-  }
-  features: {
-    balcony1?: {
-      location: string
-      type: string
-    }
-    balcony2?: {
-      location: string
-      type: string
-    }
-    patioLocation?: string
-    hygieneFacility: string
-    sauna: boolean
-    extraToilet: boolean
-    sharedKitchen: boolean
-    petAllergyFree: boolean
-    electricAllergyIntolerance: boolean
-    smokeFree: boolean
-    asbestos: boolean
-  }
-  rooms: {
-    roomId: string
-    roomCode: string
-    name?: string
-    sharedUse: boolean
-    sortingOrder: number
-    allowPeriodicWorks: boolean
-    spaceType: number
-    hasToilet: boolean
-    isHeated: number
-    hasThermostatValve: boolean
-    orientation: number
-    installationDate?: Date
-    deleteMark: boolean
-    fromDate: Date
-    toDate: Date
-    availableFrom?: Date
-    availableTo?: Date
-    timestamp: string
-  }[]
-  entrance: string
-  partNo: number
-  part: string
-  deleted: boolean
-  validityPeriod: {
-    fromDate: Date
-    toDate: Date
-  }
-  timestamp: string
-  residenceType: {
-    code: string
-    name: string
-    roomCount: number
-    kitchen: number
-    selectionFundAmount: number
-  }
-  propertyObject: {
-    // propertyObjectId: string
-    // objectTypeId: string
-    // barcode?: string
-    // barcodeType: number
-    // condition: number
-    // conditionInspectionDate?: Date
-    // vatAdjustmentPrinciple: number
-    energy: {
-      energyClass: number
-      energyRegistered?: Date
-      energyReceived?: Date
-      energyIndex?: number
-    }
-    // heatingNature: number
-    // deleteMark: boolean
-    // timestamp: string
-    // property?: any
-    // rentalObject?: any
-    // building?: any
-  }
-}
+import { z } from 'zod';
+
+export const ResidenceSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  location: z.string().optional(),
+  accessibility: z.object({
+    wheelchairAccessible: z.boolean(),
+    residenceAdapted: z.boolean(),
+    elevator: z.boolean(),
+  }),
+  features: z.object({
+    balcony1: z
+      .object({
+        location: z.string(),
+        type: z.string(),
+      })
+      .optional(),
+    balcony2: z
+      .object({
+        location: z.string(),
+        type: z.string(),
+      })
+      .optional(),
+    patioLocation: z.string().optional(),
+    hygieneFacility: z.string(),
+    sauna: z.boolean(),
+    extraToilet: z.boolean(),
+    sharedKitchen: z.boolean(),
+    petAllergyFree: z.boolean(),
+    electricAllergyIntolerance: z.boolean(),
+    smokeFree: z.boolean(),
+    asbestos: z.boolean(),
+  }),
+  rooms: z.array(
+    z.object({
+      roomId: z.string(),
+      roomCode: z.string(),
+      name: z.string().optional(),
+      sharedUse: z.boolean(),
+      sortingOrder: z.number(),
+      allowPeriodicWorks: z.boolean(),
+      spaceType: z.number(),
+      hasToilet: z.boolean(),
+      isHeated: z.number(),
+      hasThermostatValve: z.boolean(),
+      orientation: z.number(),
+      installationDate: z.date().optional(),
+      deleteMark: z.boolean(),
+      fromDate: z.date(),
+      toDate: z.date(),
+      availableFrom: z.date().optional(),
+      availableTo: z.date().optional(),
+      timestamp: z.string(),
+    })
+  ),
+  entrance: z.string(),
+  partNo: z.number(),
+  part: z.string(),
+  deleted: z.boolean(),
+  validityPeriod: z.object({
+    fromDate: z.date(),
+    toDate: z.date(),
+  }),
+  timestamp: z.string(),
+  residenceType: z.object({
+    code: z.string(),
+    name: z.string(),
+    roomCount: z.number(),
+    kitchen: z.number(),
+    selectionFundAmount: z.number(),
+  }),
+  propertyObject: z.object({
+    energy: z.object({
+      energyClass: z.number(),
+      energyRegistered: z.date().optional(),
+      energyReceived: z.date().optional(),
+      energyIndex: z.number().optional(),
+    }),
+  }),
+});
+
+export type Residence = z.infer<typeof ResidenceSchema>;
