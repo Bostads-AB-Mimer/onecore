@@ -33,15 +33,14 @@ export interface OdooPostTicket {
   maintenance_unit_id: string
   tenant_id: string
   hearing_impaired: boolean
-  phone_number: string
   call_between: string
   pet: string
   space_code: string
+  space_caption: string
   equipment_code: string
   description: string
   images: OdooPostTicketImage[]
   name: string
-  space_caption: string
   maintenance_team_id: number
   master_key: boolean
   creation_origin: string
@@ -207,14 +206,18 @@ const createLeaseRecord = async (lease: Lease) => {
   return leaseRecord
 }
 
-const createTenantRecord = async (tenant: Tenant, phoneNumber: string) => {
+const createTenantRecord = async (
+  tenant: Tenant,
+  phoneNumber: string,
+  emailAddress: string
+) => {
   await odoo.connect()
   const tenantRecord = odoo.create('maintenance.tenant', {
     name: tenant.firstName + ' ' + tenant.lastName,
     contact_code: tenant.contactCode,
     contact_key: tenant.contactKey,
     national_registration_number: tenant.nationalRegistrationNumber,
-    email_address: tenant.emailAddress,
+    email_address: emailAddress ? emailAddress : tenant.emailAddress,
     phone_number: phoneNumber
       ? phoneNumber
       : tenant.phoneNumbers
