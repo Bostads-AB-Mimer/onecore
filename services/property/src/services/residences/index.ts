@@ -109,32 +109,53 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: object
    *             properties:
-   *               roomId:
+   *               id:
    *                 type: string
-   *               roomCode:
+   *               code:
    *                 type: string
    *               name:
    *                 type: string
-   *               sharedUse:
+   *               usage:
+   *                 type: object
+   *                 properties:
+   *                   shared:
+   *                     type: boolean
+   *                   allowPeriodicWorks:
+   *                     type: boolean
    *                 type: boolean
-   *               sortingOrder:
-   *                 type: integer
-   *               allowPeriodicWorks:
-   *                 type: boolean
-   *               spaceType:
-   *                 type: integer
-   *               hasToilet:
-   *                 type: boolean
-   *               isHeated:
-   *                 type: integer
-   *               hasThermostatValve:
-   *                 type: boolean
-   *               orientation:
-   *                 type: integer
-   *               installationDate:
-   *                 type: string
-   *                 format: date-time
+   *               specifications:
+   *                 type: object
+   *                 properties:
+   *                   spaceType:
+   *                     type: integer
+   *                   hasToilet:
+   *                     type: boolean
+   *                   isHeated:
+   *                     type: integer
+   *                   hasThermostatValve:
+   *                     type: boolean
+   *                   orientation:
+   *                     type: integer
+   *               dates:
+   *                 type: object
+   *                 properties:
+   *                   installation:
+   *                     type: string
+   *                     format: date-time
+   *                   from:
+   *                     type: string
+   *                     format: date-time
+   *                   to:
+   *                     type: string
+   *                     format: date-time
+   *                   availableFrom:
+   *                     type: string
+   *                     format: date-time
+   *                   availableTo:
+   *                     type: string
+   *                     format: date-time
    *               deleteMark:
+   *                 type: boolean
    *                 type: boolean
    *               fromDate:
    *                 type: string
