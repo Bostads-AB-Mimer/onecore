@@ -6,7 +6,7 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
-  getBuilding,
+  getBuildingByCode,
   getBuildings,
 } from '../../adapters/building-adapter'
 import {getPropertyById} from "../../adapters/property-adapter";
@@ -48,29 +48,46 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /buildings/byId/{id}/:
+   * /buildings/byCode/{buildingCode}/:
    *   get:
-   *     summary: Get a building by ID
+   *     summary: Get a building by building code
    *     description: Returns the building.
    *     tags:
    *       - Buildings
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: buildingCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the building.
+   *         description: The code of the building.
    *     responses:
    *       200:
    *         description: Successfully retrieved the building.
    *         content:
    */
-  //todo: better slug for this route
-  router.get('(.*)/buildings/byId/:id/', async (ctx) => {
+  router.get('(.*)/buildings/byCode/:buildingCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /buildings/:id/', metadata)
-    const response = await getBuilding(ctx.params.id)
-    ctx.body = { content: response, ...metadata }
-  })
+    logger.info('GET /buildings/byCode/:buildingCode/', metadata)
+
+    const { buildingCode } = ctx.params
+
+    if (!buildingCode || buildingCode.length < 7) {
+      ctx.status = 400
+      ctx.body = { content: 'Invalid building code', ...metadata }
+      return;
+    }
+
+    const parsedBuildingCode = buildingCode.slice(0, 7)
+
+    try {
+      const response = await getBuildingByCode(parsedBuildingCode)
+      ctx.body = { content: response, ...metadata }
+    } catch (error) {
+      logger.error('Error fetching building by code:', error)
+      ctx.status = 500
+      ctx.body = { content: 'Internal server error', ...metadata }
+    }
+  });
+
 }
