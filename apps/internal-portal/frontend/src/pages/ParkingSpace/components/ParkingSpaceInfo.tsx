@@ -1,8 +1,6 @@
-import { Box, Button, Typography } from '@mui/material'
-import { ListingStatus } from 'onecore-types'
+import { Box, Typography } from '@mui/material'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
-import { useCreateOffer } from '../hooks/useCreateOffer'
 
 export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
@@ -15,35 +13,9 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
     currency: 'SEK',
   })
 
-  const createOffer = useCreateOffer()
-
-  const onCreateOffer = () => {
-    createOffer.mutate(props, {})
-  }
-
   const getMapImageUrl = (rentalObjectCodes: string) => {
     const identifier = rentalObjectCodes.slice(0, 7)
     return `https://pub.mimer.nu/bofaktablad/mediabank/byggnad/${identifier}_1.jpg`
-  }
-
-  const renderStartOfferProcessButton = (listingStatus: ListingStatus) => {
-    if (listingStatus == ListingStatus.Expired) {
-      return (
-        <Box paddingY="1rem">
-          <Button variant="dark-outlined" onClick={() => onCreateOffer()}>
-            <Box
-              sx={{
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              Starta erbjudandeomgång
-            </Box>
-          </Button>
-        </Box>
-      )
-    }
   }
 
   return (
@@ -157,7 +129,6 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           />
         </Box>
       </Box>
-      {renderStartOfferProcessButton(parkingSpaceListing.status)}
     </Box>
   )
 }

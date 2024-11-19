@@ -156,7 +156,7 @@ const Listings = (props: {
       },
       pagination: { paginationModel: { pageSize: 30 } },
     }}
-    pageSizeOptions={[5, 10, 25]}
+    pageSizeOptions={[10, 30, 60, 100]}
     slots={{
       noRowsOverlay: () => (
         <Stack paddingTop="1rem" alignItems="center" justifyContent="center">

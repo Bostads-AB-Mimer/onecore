@@ -1,11 +1,37 @@
-import { Box, Chip, Typography } from '@mui/material'
+import { Box, Button, Chip, Typography } from '@mui/material'
 import { TabContext, TabPanel } from '@mui/lab'
 import { Listing, ListingStatus } from 'onecore-types'
 
-import { Tab, Tabs } from '../../../components'
 import { Applicants } from './Applicants'
+import { useCreateOffer } from '../hooks/useCreateOffer'
 
 const AllApplicantsTabContext = (props: { listing: Listing }) => {
+  const createOffer = useCreateOffer()
+
+  const onCreateOffer = () => {
+    createOffer.mutate({ listingId: props.listing.id }, {})
+  }
+
+  const renderStartOfferProcessButton = (listingStatus: ListingStatus) => {
+    if (listingStatus == ListingStatus.Expired) {
+      return (
+        <Box>
+          <Button variant="dark" onClick={() => onCreateOffer()}>
+            <Box
+              sx={{
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+              }}
+            >
+              Starta erbjudandeomgång
+            </Box>
+          </Button>
+        </Box>
+      )
+    }
+  }
+
   return (
     <TabContext value={'1'}>
       <Box
@@ -14,7 +40,7 @@ const AllApplicantsTabContext = (props: { listing: Listing }) => {
           flexDirection: 'row',
         }}
       >
-        <Typography paddingBottom="0.5rem" marginRight="1rem" variant="h1">
+        <Typography paddingBottom="2rem" marginRight="1rem" variant="h1">
           <span>Intresseanmälningar {props.listing.address}</span>
         </Typography>
         <Chip
@@ -22,9 +48,7 @@ const AllApplicantsTabContext = (props: { listing: Listing }) => {
           sx={{ marginY: 'auto' }}
         ></Chip>
       </Box>
-      <Tabs>
-        <Tab disableRipple label="Alla sökande" value="1" />
-      </Tabs>
+      {renderStartOfferProcessButton(props.listing.status)}
       <Box paddingTop="1rem">
         <TabPanel value="1" sx={{ padding: 0 }}>
           <Applicants key="foo" listingId={props.listing.id} />
