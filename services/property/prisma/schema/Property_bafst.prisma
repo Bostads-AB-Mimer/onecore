@@ -1,9 +1,9 @@
 model Property {
   id                       String    @id(map: "pkbafst") @map("keybafst") @db.Char(15)
   propertyObjectId         String    @unique(map: "fkbafstcmobj") @map("keycmobj") @db.Char(15)
-  marketAreaId             String?   @map("keybabya") @db.Char(15) // Mapping for 'Fritabellen 1'. Rename if domain clarification is obtained
-  districtId               String?   @map("keybabyb") @db.Char(15) // Mapping for 'Fritabellen 2'. Rename if domain clarification is obtained
-  propertyDesignationId    String?   @map("keybabyc") @db.Char(15) // Mapping for 'Fritabellen 3'. Rename if domain clarification is obtained
+  marketAreaId             String?   @map("keybabya") @db.Char(15)
+  districtId               String?   @map("keybabyb") @db.Char(15)
+  propertyDesignationId    String?   @map("keybabyc") @db.Char(15)
   valueAreaId              String?   @map("keybavom") @db.Char(15) // TODO: Once mapped, verify if 'Värdeområde' means value area
   // contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
   // legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"

@@ -12,12 +12,12 @@ const getBuildings = async (propertyCode: string) => {
         },
 
         include: {
-            propertyDesignation: { //todo: rename connection table in schema
+            propertyDesignation: {
                 select: {
                     buildings: true,
                 },
             },
-            district: { //todo: rename connection table in schema
+            district: {
                 select: {
                     code: true,
                     caption: true,
