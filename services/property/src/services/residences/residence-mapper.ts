@@ -28,6 +28,38 @@ export function mapDbToResidence(dbRecord: any): Residence {
       smokeFree: dbRecord.smokeFree === 1,
       asbestos: dbRecord.asbestos === 1,
     },
+    rooms:
+      dbRecord.rooms?.map((room: any) => ({
+        id: room.roomId,
+        code: room.roomCode,
+        name: room.name,
+        usage: {
+          shared: room.sharedUse === 1,
+          allowPeriodicWorks: room.allowPeriodicWorks === 1,
+        },
+        specifications: {
+          spaceType: room.spaceType,
+          hasToilet: room.hasToilet === 1,
+          isHeated: room.isHeated,
+          hasThermostatValve: room.hasThermostatValve === 1,
+          orientation: room.orientation,
+        },
+        dates: {
+          installation: room.installationDate
+            ? new Date(room.installationDate)
+            : undefined,
+          from: new Date(room.fromDate),
+          to: new Date(room.toDate),
+          availableFrom: room.availableFrom
+            ? new Date(room.availableFrom)
+            : undefined,
+          availableTo: room.availableTo
+            ? new Date(room.availableTo)
+            : undefined,
+        },
+        deleteMark: room.deleteMark === 1,
+        timestamp: room.timestamp,
+      })) || [],
     entrance: dbRecord.entrance,
     partNo: dbRecord.partNo,
     part: dbRecord.part,

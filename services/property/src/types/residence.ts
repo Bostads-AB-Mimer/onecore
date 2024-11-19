@@ -29,6 +29,26 @@ export type Residence = {
     smokeFree: boolean
     asbestos: boolean
   }
+  rooms: {
+    roomId: string
+    roomCode: string
+    name?: string
+    sharedUse: boolean
+    sortingOrder: number
+    allowPeriodicWorks: boolean
+    spaceType: number
+    hasToilet: boolean
+    isHeated: number
+    hasThermostatValve: boolean
+    orientation: number
+    installationDate?: Date
+    deleteMark: boolean
+    fromDate: Date
+    toDate: Date
+    availableFrom?: Date
+    availableTo?: Date
+    timestamp: string
+  }[]
   entrance: string
   partNo: number
   part: string
