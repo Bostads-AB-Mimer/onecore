@@ -1,6 +1,7 @@
 import { Residence } from '../../types/residence'
 
 export function mapDbToResidence(dbRecord: any): Residence {
+  if (!dbRecord) return {} as Residence
   return {
     id: dbRecord.id,
     code: dbRecord.code,
