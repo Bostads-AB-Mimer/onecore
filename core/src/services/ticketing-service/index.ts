@@ -779,7 +779,7 @@ export const routes = (router: KoaRouter) => {
         `Error sending sms to ${phoneNumber}, status: ${result.statusCode}`
       )
 
-      ctx.status = 500
+      ctx.status = result.statusCode ?? 500
       ctx.body = {
         message: `Failed to send sms to ${phoneNumber}, status: ${result.statusCode}`,
         ...metadata,
@@ -815,7 +815,7 @@ export const routes = (router: KoaRouter) => {
         `Error sending email to ${to}, status: ${result.statusCode}`
       )
 
-      ctx.status = 500
+      ctx.status = result.statusCode ?? 500
       ctx.body = {
         message: `Failed to send email to ${to}, status: ${result.statusCode}`,
         ...metadata,
