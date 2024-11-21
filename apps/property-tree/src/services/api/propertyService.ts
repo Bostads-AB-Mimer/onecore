@@ -22,7 +22,7 @@ interface ApiResponse {
 const mapApiPropertyToProperty = (apiProperty: ApiProperty, areaId: string): Property => ({
   id: apiProperty.propertyId.trim(),
   name: apiProperty.propertyDesignation,
-  address: apiProperty.propertyCode,
+  address: apiProperty.tract,
   areaId: areaId,
   buildings: [],
   totalApartments: 0,
