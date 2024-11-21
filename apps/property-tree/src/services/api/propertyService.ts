@@ -2,21 +2,40 @@ import { Property, NavigationItem } from '../types';
 import { fetchApi, simulateDelay } from './baseApi';
 import { mockProperties, mockNavigation } from '../mockData';
 
+interface ApiProperty {
+  propertyId: string;
+  propertyCode: string;
+  tract: string;
+  propertyDesignation: string;
+}
+
+interface ApiResponse {
+  content: ApiProperty[];
+}
+
+const mapApiPropertyToProperty = (apiProperty: ApiProperty): Property => ({
+  id: apiProperty.propertyId.trim(),
+  name: apiProperty.propertyDesignation,
+  code: apiProperty.propertyCode,
+  tract: apiProperty.tract,
+  areaId: 'area-1' // TODO: Get real area ID from API when available
+});
+
 export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
-    return fetchApi<Property[]>('http://localhost:5050/properties/');
+    const response = await fetchApi<ApiResponse>('http://localhost:5050/properties/');
+    return response.content.map(mapApiPropertyToProperty);
   },
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    // TODO: Replace with actual API call
-    await simulateDelay();
-    const property = mockProperties[id];
-    if (!property) {
+    const response = await fetchApi<ApiResponse>('http://localhost:5050/properties/');
+    const apiProperty = response.content.find(p => p.propertyId.trim() === id);
+    if (!apiProperty) {
       throw new Error(`Property with id ${id} not found`);
     }
-    return property;
+    return mapApiPropertyToProperty(apiProperty);
   },
 
   // Get properties by area ID
