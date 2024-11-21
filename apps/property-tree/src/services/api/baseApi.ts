@@ -40,6 +40,7 @@ export async function fetchApi<T>(
       ...defaultHeaders,
       ...options.headers,
     },
+    mode: 'cors', // Lägg till detta för att hantera CORS
   })
 
   if (!response.ok) {

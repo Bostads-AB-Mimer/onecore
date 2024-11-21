@@ -13,6 +13,8 @@ interface ApiProperty {
   propertyCode: string
   tract: string
   propertyDesignation: string
+  constructionYear: number
+  lastRenovation?: number
 }
 
 interface ApiResponse {
@@ -30,7 +32,8 @@ const mapApiPropertyToProperty = (
   buildings: [],
   totalApartments: 0,
   occupiedApartments: 0,
-  constructionYear: 0,
+  constructionYear: apiProperty.constructionYear,
+  lastRenovation: apiProperty.lastRenovation,
 })
 
 const mapApiAreaToArea = (apiArea: ApiArea): Area => ({
