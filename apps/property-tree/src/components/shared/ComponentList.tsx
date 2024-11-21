@@ -1,60 +1,61 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Settings, 
-  Building, 
-  Package, 
+import React from 'react'
+import { motion } from 'framer-motion'
+import {
+  Settings,
+  Building,
+  Package,
   Wrench,
   Plus,
-  ArrowRight
-} from 'lucide-react';
-import { Component } from '../../services/types';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { ComponentModal } from './ComponentModal';
+  ArrowRight,
+} from 'lucide-react'
+import { Component } from '../../services/types'
+import { Card } from '../ui/Card'
+import { Button } from '../ui/Button'
+import { ComponentModal } from './ComponentModal'
 
 interface ComponentListProps {
-  components: Component[];
-  rooms: string[];
-  onAddComponent: (data: any) => Promise<void>;
-  onEditComponent: (id: string, data: any) => Promise<void>;
-  onViewComponent: (component: Component) => void;
+  components: Component[]
+  rooms: string[]
+  onAddComponent: (data: any) => Promise<void>
+  onEditComponent: (id: string, data: any) => Promise<void>
+  onViewComponent: (component: Component) => void
 }
 
 const typeIcons = {
   appliance: Settings,
   fixture: Building,
   furniture: Package,
-  other: Wrench
-};
+  other: Wrench,
+}
 
 const statusColors = {
   operational: 'text-green-500',
   'needs-service': 'text-yellow-500',
-  broken: 'text-red-500'
-};
+  broken: 'text-red-500',
+}
 
 export function ComponentList({
   components,
   rooms,
   onAddComponent,
   onEditComponent,
-  onViewComponent
+  onViewComponent,
 }: ComponentListProps) {
-  const [showAddModal, setShowAddModal] = React.useState(false);
-  const [editingComponent, setEditingComponent] = React.useState<Component | null>(null);
+  const [showAddModal, setShowAddModal] = React.useState(false)
+  const [editingComponent, setEditingComponent] =
+    React.useState<Component | null>(null)
 
   const handleAddSubmit = async (data: any) => {
-    await onAddComponent(data);
-    setShowAddModal(false);
-  };
+    await onAddComponent(data)
+    setShowAddModal(false)
+  }
 
   const handleEditSubmit = async (data: any) => {
     if (editingComponent) {
-      await onEditComponent(editingComponent.id, data);
-      setEditingComponent(null);
+      await onEditComponent(editingComponent.id, data)
+      setEditingComponent(null)
     }
-  };
+  }
 
   return (
     <>
@@ -72,7 +73,7 @@ export function ComponentList({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {components.map((component) => {
-              const Icon = typeIcons[component.type];
+              const Icon = typeIcons[component.type]
               return (
                 <motion.div
                   key={component.id}
@@ -89,11 +90,15 @@ export function ComponentList({
                         <h3 className="font-medium group-hover:text-blue-500 transition-colors">
                           {component.name}
                         </h3>
-                        <p className="text-sm text-gray-500">{component.room}</p>
+                        <p className="text-sm text-gray-500">
+                          {component.room}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span className={`text-sm ${statusColors[component.status]}`}>
+                      <span
+                        className={`text-sm ${statusColors[component.status]}`}
+                      >
                         {component.status === 'operational' && 'OK'}
                         {component.status === 'needs-service' && 'Service'}
                         {component.status === 'broken' && 'Trasig'}
@@ -102,7 +107,7 @@ export function ComponentList({
                     </div>
                   </div>
                 </motion.div>
-              );
+              )
             })}
           </div>
         </div>
@@ -125,5 +130,5 @@ export function ComponentList({
         />
       )}
     </>
-  );
+  )
 }

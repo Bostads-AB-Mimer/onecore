@@ -1,7 +1,7 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
+import React from 'react'
+import { useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
   Home,
   Square,
   BedDouble,
@@ -9,56 +9,62 @@ import {
   CalendarClock,
   FileText,
   Mail,
-  Phone
-} from 'lucide-react';
-import { propertyService } from '../../services/propertyService';
-import { Apartment } from '../../services/types';
-import { ViewHeader } from '../shared/ViewHeader';
-import { Card } from '../ui/Card';
-import { Grid } from '../ui/Grid';
-import { RoomCard } from '../shared/RoomCard';
-import { ActiveIssues } from '../shared/ActiveIssues';
-import { StatCard } from '../shared/StatCard';
-import { Button } from '../ui/Button';
-import { ContractModal } from '../shared/ContractModal';
+  Phone,
+} from 'lucide-react'
+import { propertyService } from '../../services/propertyService'
+import { Apartment } from '../../services/types'
+import { ViewHeader } from '../shared/ViewHeader'
+import { Card } from '../ui/Card'
+import { Grid } from '../ui/Grid'
+import { RoomCard } from '../shared/RoomCard'
+import { ActiveIssues } from '../shared/ActiveIssues'
+import { StatCard } from '../shared/StatCard'
+import { Button } from '../ui/Button'
+import { ContractModal } from '../shared/ContractModal'
 
 export function ApartmentView() {
-  const { apartmentId } = useParams();
-  const [apartment, setApartment] = React.useState<Apartment | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [showContract, setShowContract] = React.useState(false);
+  const { apartmentId } = useParams()
+  const [apartment, setApartment] = React.useState<Apartment | null>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [showContract, setShowContract] = React.useState(false)
 
   React.useEffect(() => {
     const loadApartment = async () => {
       try {
-        const data = await propertyService.getApartment(apartmentId!);
-        setApartment(data);
+        const data = await propertyService.getApartment(apartmentId!)
+        setApartment(data)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    loadApartment();
-  }, [apartmentId]);
+    }
+    loadApartment()
+  }, [apartmentId])
 
   if (loading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-8 animate-pulse" />
-        
+
         <Grid cols={4} className="mb-8">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
+            />
           ))}
         </Grid>
 
         <Grid cols={2}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-48 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-48 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
+            />
           ))}
         </Grid>
       </div>
-    );
+    )
   }
 
   if (!apartment) {
@@ -68,7 +74,7 @@ export function ApartmentView() {
           Lägenhet hittades inte
         </h2>
       </div>
-    );
+    )
   }
 
   return (
@@ -86,11 +92,7 @@ export function ApartmentView() {
           value={`${apartment.size} m²`}
           icon={Square}
         />
-        <StatCard
-          title="Sovrum"
-          value={apartment.bedrooms}
-          icon={BedDouble}
-        />
+        <StatCard title="Sovrum" value={apartment.bedrooms} icon={BedDouble} />
         <StatCard
           title="Hyra"
           value={`${apartment.rent} kr/mån`}
@@ -113,9 +115,9 @@ export function ApartmentView() {
           <Card title="Rum och ytor">
             <Grid cols={2}>
               {apartment.rooms.map((room) => (
-                <RoomCard 
-                  key={room.id} 
-                  room={room} 
+                <RoomCard
+                  key={room.id}
+                  room={room}
                   apartmentId={apartment.id}
                 />
               ))}
@@ -130,7 +132,7 @@ export function ApartmentView() {
         <div className="space-y-6">
           <Card title="Hyresgästinformation">
             <div className="flex items-center space-x-4 mb-6">
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 className="h-12 w-12 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/20"
               >
@@ -195,5 +197,5 @@ export function ApartmentView() {
         apartment={apartment}
       />
     </div>
-  );
+  )
 }

@@ -1,29 +1,31 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import React from 'react'
+import { motion } from 'framer-motion'
+import { LucideIcon } from 'lucide-react'
 
 interface CardProps {
-  title?: string;
-  icon?: LucideIcon;
-  children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
-  hover?: boolean;
+  title?: string
+  icon?: LucideIcon
+  children: React.ReactNode
+  className?: string
+  onClick?: () => void
+  hover?: boolean
 }
 
-export function Card({ 
-  title, 
-  icon: Icon, 
-  children, 
-  className = '', 
+export function Card({
+  title,
+  icon: Icon,
+  children,
+  className = '',
   onClick,
-  hover = false
+  hover = false,
 }: CardProps) {
-  const CardComponent = hover ? motion.div : 'div';
-  const cardProps = hover ? {
-    whileHover: { scale: 1.02 },
-    whileTap: { scale: 0.98 }
-  } : {};
+  const CardComponent = hover ? motion.div : 'div'
+  const cardProps = hover
+    ? {
+        whileHover: { scale: 1.02 },
+        whileTap: { scale: 0.98 },
+      }
+    : {}
 
   return (
     <CardComponent
@@ -39,5 +41,5 @@ export function Card({
       )}
       {children}
     </CardComponent>
-  );
+  )
 }

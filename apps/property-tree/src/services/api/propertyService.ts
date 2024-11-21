@@ -1,25 +1,28 @@
-import { Property, NavigationItem } from '../types';
-import { fetchApi, simulateDelay } from './baseApi';
-import { mockProperties, mockNavigation } from '../mockData';
+import { Property, NavigationItem } from '../types'
+import { fetchApi, simulateDelay } from './baseApi'
+import { mockProperties, mockNavigation } from '../mockData'
 
 interface ApiArea {
-  areaId: string;
-  areaName: string;
-  properties: ApiProperty[];
+  areaId: string
+  areaName: string
+  properties: ApiProperty[]
 }
 
 interface ApiProperty {
-  propertyId: string;
-  propertyCode: string;
-  tract: string;
-  propertyDesignation: string;
+  propertyId: string
+  propertyCode: string
+  tract: string
+  propertyDesignation: string
 }
 
 interface ApiResponse {
-  content: ApiArea[];
+  content: ApiArea[]
 }
 
-const mapApiPropertyToProperty = (apiProperty: ApiProperty, areaId: string): Property => ({
+const mapApiPropertyToProperty = (
+  apiProperty: ApiProperty,
+  areaId: string
+): Property => ({
   id: apiProperty.propertyId.trim(),
   name: apiProperty.propertyDesignation,
   address: apiProperty.tract,
@@ -28,49 +31,55 @@ const mapApiPropertyToProperty = (apiProperty: ApiProperty, areaId: string): Pro
   totalApartments: 0,
   occupiedApartments: 0,
   constructionYear: 0,
-});
+})
 
 const mapApiAreaToArea = (apiArea: ApiArea): Area => ({
   id: apiArea.areaId.trim(),
   name: apiArea.areaName,
-  properties: apiArea.properties.map(property => property.propertyId.trim()),
+  properties: apiArea.properties.map((property) => property.propertyId.trim()),
   totalApartments: 0, // Assuming totalApartments are not provided by the API
   occupiedApartments: 0, // Assuming occupiedApartments are not provided by the API
   totalProperties: apiArea.properties.length,
-});
+})
 
 export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
-    const response = await fetchApi<ApiResponse>('http://localhost:5050/properties/');
-    const areas = response.content.map(mapApiAreaToArea);
-    const properties = response.content.flatMap(area =>
-      area.properties.map(property => mapApiPropertyToProperty(property, area.areaId))
-    );
+    const response = await fetchApi<ApiResponse>(
+      'http://localhost:5050/properties/'
+    )
+    const areas = response.content.map(mapApiAreaToArea)
+    const properties = response.content.flatMap((area) =>
+      area.properties.map((property) =>
+        mapApiPropertyToProperty(property, area.areaId)
+      )
+    )
     // You might want to store or use areas somewhere in your application
-    return properties;
+    return properties
   },
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const apiProperty = await fetchApi<ApiProperty>(`http://localhost:5050/properties/_${id}/`);
-    return mapApiPropertyToProperty(apiProperty);
+    const apiProperty = await fetchApi<ApiProperty>(
+      `http://localhost:5050/properties/_${id}/`
+    )
+    return mapApiPropertyToProperty(apiProperty)
   },
 
   // Get properties by area ID
   async getByAreaId(areaId: string): Promise<Property[]> {
     // TODO: Replace with actual API call
-    await simulateDelay();
+    await simulateDelay()
     return Object.values(mockProperties).filter(
-      property => property.areaId === areaId
-    );
+      (property) => property.areaId === areaId
+    )
   },
 
   // Get navigation tree
   async getNavigation(): Promise<NavigationItem[]> {
     // TODO: Replace with actual API call
-    await simulateDelay();
-    return mockNavigation;
+    await simulateDelay()
+    return mockNavigation
   },
 
   // Create new property
@@ -79,7 +88,7 @@ export const propertyService = {
     return fetchApi<Property>('/properties', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    })
   },
 
   // Update property
@@ -88,7 +97,7 @@ export const propertyService = {
     return fetchApi<Property>(`/properties/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
-    });
+    })
   },
 
   // Delete property
@@ -96,6 +105,6 @@ export const propertyService = {
     // TODO: Replace with actual API call
     return fetchApi<void>(`/properties/${id}`, {
       method: 'DELETE',
-    });
-  }
-};
+    })
+  },
+}

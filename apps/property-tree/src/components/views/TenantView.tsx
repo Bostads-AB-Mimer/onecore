@@ -1,15 +1,23 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { User2, Mail, Phone, Calendar, Home, FileText, MessageSquare } from 'lucide-react';
-import { propertyService } from '../../services/propertyService';
-import { Tenant } from '../../services/types';
-import { ViewHeader } from '../shared/ViewHeader';
+import React from 'react'
+import { useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  User2,
+  Mail,
+  Phone,
+  Calendar,
+  Home,
+  FileText,
+  MessageSquare,
+} from 'lucide-react'
+import { propertyService } from '../../services/propertyService'
+import { Tenant } from '../../services/types'
+import { ViewHeader } from '../shared/ViewHeader'
 
 export function TenantView() {
-  const { tenantId } = useParams();
-  const [tenant, setTenant] = React.useState<Tenant | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const { tenantId } = useParams()
+  const [tenant, setTenant] = React.useState<Tenant | null>(null)
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadTenant = async () => {
@@ -22,17 +30,17 @@ export function TenantView() {
           email: 'anna.svensson@example.com',
           phone: '070-123 45 67',
           moveInDate: '2021-01-01',
-          apartmentId: '101'
-        });
+          apartmentId: '101',
+        })
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    loadTenant();
-  }, [tenantId]);
+    }
+    loadTenant()
+  }, [tenantId])
 
-  if (loading) return <div>Loading...</div>;
-  if (!tenant) return <div>Tenant not found</div>;
+  if (loading) return <div>Loading...</div>
+  if (!tenant) return <div>Tenant not found</div>
 
   return (
     <div className="p-8 animate-in">
@@ -139,5 +147,5 @@ export function TenantView() {
         </div>
       </motion.div>
     </div>
-  );
+  )
 }

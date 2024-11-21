@@ -1,35 +1,35 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  BedDouble, 
-  ChefHat, 
-  ShowerHead, 
-  Sofa, 
+import React from 'react'
+import { useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  BedDouble,
+  ChefHat,
+  ShowerHead,
+  Sofa,
   Home,
   Maximize2,
   DoorOpen,
   Wrench,
   Plus,
   Settings,
-  AlertCircle
-} from 'lucide-react';
-import { Room, Component, Issue } from '../../services/types';
-import { ViewHeader } from '../shared/ViewHeader';
-import { Card } from '../ui/Card';
-import { Grid } from '../ui/Grid';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
-import { ComponentList } from '../shared/ComponentList';
-import { ActiveIssues } from '../shared/ActiveIssues';
+  AlertCircle,
+} from 'lucide-react'
+import { Room, Component, Issue } from '../../services/types'
+import { ViewHeader } from '../shared/ViewHeader'
+import { Card } from '../ui/Card'
+import { Grid } from '../ui/Grid'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { ComponentList } from '../shared/ComponentList'
+import { ActiveIssues } from '../shared/ActiveIssues'
 
 const roomIcons = {
   bedroom: BedDouble,
   kitchen: ChefHat,
   bathroom: ShowerHead,
   living: Sofa,
-  other: Home
-};
+  other: Home,
+}
 
 function LoadingSkeleton() {
   return (
@@ -43,7 +43,10 @@ function LoadingSkeleton() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <div
+            key={i}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -64,7 +67,10 @@ function LoadingSkeleton() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                <div
+                  key={i}
+                  className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
+                />
               ))}
             </div>
           </div>
@@ -77,7 +83,10 @@ function LoadingSkeleton() {
             </div>
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                <div
+                  key={i}
+                  className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
+                />
               ))}
             </div>
           </div>
@@ -92,63 +101,72 @@ function LoadingSkeleton() {
             </div>
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                <div
+                  key={i}
+                  className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
+                />
               ))}
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export function RoomView() {
-  const { roomId, apartmentId } = useParams();
-  const [room, setRoom] = React.useState<Room | null>(null);
-  const [components, setComponents] = React.useState<Component[]>([]);
-  const [issues, setIssues] = React.useState<Issue[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { roomId, apartmentId } = useParams()
+  const [room, setRoom] = React.useState<Room | null>(null)
+  const [components, setComponents] = React.useState<Component[]>([])
+  const [issues, setIssues] = React.useState<Issue[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadRoom = async () => {
       try {
         // In a real app, these would be actual API calls
-        const roomData = await fetch(`/api/rooms/${roomId}`).then(res => res.json());
-        const componentsData = await fetch(`/api/rooms/${roomId}/components`).then(res => res.json());
-        const issuesData = await fetch(`/api/rooms/${roomId}/issues`).then(res => res.json());
-        
-        setRoom(roomData);
-        setComponents(componentsData);
-        setIssues(issuesData);
+        const roomData = await fetch(`/api/rooms/${roomId}`).then((res) =>
+          res.json()
+        )
+        const componentsData = await fetch(
+          `/api/rooms/${roomId}/components`
+        ).then((res) => res.json())
+        const issuesData = await fetch(`/api/rooms/${roomId}/issues`).then(
+          (res) => res.json()
+        )
+
+        setRoom(roomData)
+        setComponents(componentsData)
+        setIssues(issuesData)
       } catch (error) {
-        console.error('Failed to load room data:', error);
+        console.error('Failed to load room data:', error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    loadRoom();
-  }, [roomId]);
+    loadRoom()
+  }, [roomId])
 
-  if (loading) return <LoadingSkeleton />;
-  if (!room) return <div>Room not found</div>;
+  if (loading) return <LoadingSkeleton />
+  if (!room) return <div>Room not found</div>
 
-  const Icon = roomIcons[room.type] || Home;
+  const Icon = roomIcons[room.type] || Home
 
   const handleAddComponent = async (data: any) => {
     // Implementation for adding a component
-    console.log('Adding component:', data);
-  };
+    console.log('Adding component:', data)
+  }
 
   const handleEditComponent = async (id: string, data: any) => {
     // Implementation for editing a component
-    console.log('Editing component:', id, data);
-  };
+    console.log('Editing component:', id, data)
+  }
 
   const handleViewComponent = (component: Component) => {
     // Implementation for viewing a component
-    console.log('Viewing component:', component);
-  };
+    console.log('Viewing component:', component)
+  }
 
   return (
     <div className="p-8 animate-in">
@@ -272,10 +290,14 @@ export function RoomView() {
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Skick</span>
-                  <span className="text-sm font-medium text-green-500">Gott</span>
+                  <span className="text-sm font-medium text-green-500">
+                    Gott
+                  </span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-500">Senaste besiktning</span>
+                  <span className="text-sm text-gray-500">
+                    Senaste besiktning
+                  </span>
                   <span className="text-sm font-medium">2024-01-15</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -288,5 +310,5 @@ export function RoomView() {
         </div>
       </motion.div>
     </div>
-  );
+  )
 }

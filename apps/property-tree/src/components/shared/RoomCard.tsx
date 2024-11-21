@@ -1,31 +1,31 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Room } from '../../services/types';
-import { 
-  BedDouble, 
-  ChefHat, 
-  ShowerHead, 
-  Sofa, 
+import React from 'react'
+import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { Room } from '../../services/types'
+import {
+  BedDouble,
+  ChefHat,
+  ShowerHead,
+  Sofa,
   Home,
   Maximize2,
   DoorOpen,
   CheckCircle2,
-  ArrowRight
-} from 'lucide-react';
-import { FeatureModal } from './FeatureModal';
+  ArrowRight,
+} from 'lucide-react'
+import { FeatureModal } from './FeatureModal'
 
 const roomIcons = {
   bedroom: BedDouble,
   kitchen: ChefHat,
   bathroom: ShowerHead,
   living: Sofa,
-  other: Home
-};
+  other: Home,
+}
 
 // Mock feature details - in a real app, this would come from an API
 const mockFeatureDetails = {
-  'Diskmaskin': {
+  Diskmaskin: {
     name: 'Diskmaskin',
     installationDate: '2023-05-15',
     warranty: 't.o.m. 2026-05-15',
@@ -35,16 +35,16 @@ const mockFeatureDetails = {
       {
         date: '2023-12-05',
         description: 'Läckage från vattenanslutning',
-        status: 'resolved' as const
+        status: 'resolved' as const,
       },
       {
         date: '2024-02-15',
         description: 'Onormalt ljud vid start',
-        status: 'in-progress' as const
-      }
-    ]
+        status: 'in-progress' as const,
+      },
+    ],
   },
-  'Parkettgolv': {
+  Parkettgolv: {
     name: 'Parkettgolv',
     installationDate: '2023-01-20',
     warranty: 't.o.m. 2033-01-20',
@@ -54,30 +54,32 @@ const mockFeatureDetails = {
       {
         date: '2023-11-10',
         description: 'Mindre repor i vardagsrum',
-        status: 'pending' as const
-      }
-    ]
-  }
-};
+        status: 'pending' as const,
+      },
+    ],
+  },
+}
 
 interface RoomCardProps {
-  room: Room;
-  apartmentId: string;
+  room: Room
+  apartmentId: string
 }
 
 export function RoomCard({ room, apartmentId }: RoomCardProps) {
-  const navigate = useNavigate();
-  const Icon = roomIcons[room.type];
-  const [selectedFeature, setSelectedFeature] = React.useState<string | null>(null);
+  const navigate = useNavigate()
+  const Icon = roomIcons[room.type]
+  const [selectedFeature, setSelectedFeature] = React.useState<string | null>(
+    null
+  )
 
   const handleFeatureClick = (e: React.MouseEvent, feature: string) => {
-    e.stopPropagation();
-    setSelectedFeature(feature);
-  };
+    e.stopPropagation()
+    setSelectedFeature(feature)
+  }
 
   const handleClick = () => {
-    navigate(`/apartments/${apartmentId}/rooms/${room.id}`);
-  };
+    navigate(`/apartments/${apartmentId}/rooms/${room.id}`)
+  }
 
   return (
     <>
@@ -92,7 +94,9 @@ export function RoomCard({ room, apartmentId }: RoomCardProps) {
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <Icon className="h-5 w-5 text-blue-500 dark:text-blue-400" />
             </div>
-            <h3 className="font-medium group-hover:text-blue-500 transition-colors">{room.name}</h3>
+            <h3 className="font-medium group-hover:text-blue-500 transition-colors">
+              {room.name}
+            </h3>
           </div>
           <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
         </div>
@@ -143,5 +147,5 @@ export function RoomCard({ room, apartmentId }: RoomCardProps) {
         />
       )}
     </>
-  );
+  )
 }

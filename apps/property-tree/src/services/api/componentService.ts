@@ -1,5 +1,5 @@
-import { Component } from '../types';
-import { fetchApi, simulateDelay } from './baseApi';
+import { Component } from '../types'
+import { fetchApi, simulateDelay } from './baseApi'
 
 // Mock data for components
 const mockComponents: Record<string, Component[]> = {
@@ -18,7 +18,7 @@ const mockComponents: Record<string, Component[]> = {
       nextService: '2024-07-10',
       status: 'operational',
       room: 'Kök',
-      issues: []
+      issues: [],
     },
     {
       id: 'comp-2',
@@ -28,57 +28,68 @@ const mockComponents: Record<string, Component[]> = {
       installationDate: '2023-01-01',
       status: 'operational',
       room: 'Vardagsrum',
-      issues: []
-    }
-  ]
-};
+      issues: [],
+    },
+  ],
+}
 
 export const componentService = {
   // Get all components for an apartment
   async getByApartmentId(apartmentId: string): Promise<Component[]> {
     // TODO: Replace with actual API call
-    await simulateDelay();
-    return mockComponents[apartmentId] || [];
+    await simulateDelay()
+    return mockComponents[apartmentId] || []
   },
 
   // Get component by ID
   async getById(apartmentId: string, componentId: string): Promise<Component> {
     // TODO: Replace with actual API call
-    await simulateDelay();
-    const component = mockComponents[apartmentId]?.find(c => c.id === componentId);
+    await simulateDelay()
+    const component = mockComponents[apartmentId]?.find(
+      (c) => c.id === componentId
+    )
     if (!component) {
-      throw new Error(`Component with id ${componentId} not found`);
+      throw new Error(`Component with id ${componentId} not found`)
     }
-    return component;
+    return component
   },
 
   // Create new component
-  async create(apartmentId: string, data: Omit<Component, 'id' | 'issues'>): Promise<Component> {
+  async create(
+    apartmentId: string,
+    data: Omit<Component, 'id' | 'issues'>
+  ): Promise<Component> {
     // TODO: Replace with actual API call
     return fetchApi<Component>(`/apartments/${apartmentId}/components`, {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    })
   },
 
   // Update component
   async update(
-    apartmentId: string, 
-    componentId: string, 
+    apartmentId: string,
+    componentId: string,
     data: Partial<Component>
   ): Promise<Component> {
     // TODO: Replace with actual API call
-    return fetchApi<Component>(`/apartments/${apartmentId}/components/${componentId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    return fetchApi<Component>(
+      `/apartments/${apartmentId}/components/${componentId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    )
   },
 
   // Delete component
   async delete(apartmentId: string, componentId: string): Promise<void> {
     // TODO: Replace with actual API call
-    return fetchApi<void>(`/apartments/${apartmentId}/components/${componentId}`, {
-      method: 'DELETE',
-    });
-  }
-};
+    return fetchApi<void>(
+      `/apartments/${apartmentId}/components/${componentId}`,
+      {
+        method: 'DELETE',
+      }
+    )
+  },
+}

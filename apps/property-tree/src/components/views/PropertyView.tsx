@@ -1,41 +1,51 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Building2, Calendar, Home, Wrench, Users, ArrowRight } from 'lucide-react';
-import { propertyService } from '../../services/propertyService';
-import { Property } from '../../services/types';
-import { ViewHeader } from '../shared/ViewHeader';
-import { Card } from '../ui/Card';
-import { Grid } from '../ui/Grid';
-import { StatCard } from '../shared/StatCard';
+import React from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  Building2,
+  Calendar,
+  Home,
+  Wrench,
+  Users,
+  ArrowRight,
+} from 'lucide-react'
+import { propertyService } from '../../services/propertyService'
+import { Property } from '../../services/types'
+import { ViewHeader } from '../shared/ViewHeader'
+import { Card } from '../ui/Card'
+import { Grid } from '../ui/Grid'
+import { StatCard } from '../shared/StatCard'
 
 export function PropertyView() {
-  const { propertyId } = useParams();
-  const navigate = useNavigate();
-  const [property, setProperty] = React.useState<Property | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const { propertyId } = useParams()
+  const navigate = useNavigate()
+  const [property, setProperty] = React.useState<Property | null>(null)
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadProperty = async () => {
       try {
-        const data = await propertyService.getProperty(propertyId!);
-        setProperty(data);
+        const data = await propertyService.getProperty(propertyId!)
+        setProperty(data)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    loadProperty();
-  }, [propertyId]);
+    }
+    loadProperty()
+  }, [propertyId])
 
   if (loading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-8 animate-pulse" />
-        
+
         <Grid cols={4} className="mb-8">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
+            />
           ))}
         </Grid>
 
@@ -46,7 +56,7 @@ export function PropertyView() {
           <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
         </div>
       </div>
-    );
+    )
   }
 
   if (!property) {
@@ -56,7 +66,7 @@ export function PropertyView() {
           Fastighet hittades inte
         </h2>
       </div>
-    );
+    )
   }
 
   return (
@@ -163,21 +173,32 @@ export function PropertyView() {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-500">Underhållsstatus</span>
-                  <span className="text-sm font-medium text-green-500">God</span>
+                  <span className="text-sm text-gray-500">
+                    Underhållsstatus
+                  </span>
+                  <span className="text-sm font-medium text-green-500">
+                    God
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '85%' }} />
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{ width: '85%' }}
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Senaste besiktning</span>
+                  <span className="text-sm text-gray-500">
+                    Senaste besiktning
+                  </span>
                   <span className="text-sm font-medium">2024-01-15</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Nästa besiktning</span>
+                  <span className="text-sm text-gray-500">
+                    Nästa besiktning
+                  </span>
                   <span className="text-sm font-medium">2024-07-15</span>
                 </div>
               </div>
@@ -186,5 +207,5 @@ export function PropertyView() {
         </div>
       </motion.div>
     </div>
-  );
+  )
 }

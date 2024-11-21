@@ -1,27 +1,32 @@
-import React from 'react';
-import { Modal } from '../ui/Modal';
-import { InfoItem } from '../ui/InfoItem';
-import { Calendar, Home, FileText, User2, CreditCard } from 'lucide-react';
-import { Button } from '../ui/Button';
+import React from 'react'
+import { Modal } from '../ui/Modal'
+import { InfoItem } from '../ui/InfoItem'
+import { Calendar, Home, FileText, User2, CreditCard } from 'lucide-react'
+import { Button } from '../ui/Button'
 
 interface ContractModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
   tenant: {
-    name: string;
-    email: string;
-    phone: string;
-    moveInDate: string;
-    apartmentId: string;
-  };
+    name: string
+    email: string
+    phone: string
+    moveInDate: string
+    apartmentId: string
+  }
   apartment: {
-    rent: number;
-    size: number;
-    bedrooms: number;
-  };
+    rent: number
+    size: number
+    bedrooms: number
+  }
 }
 
-export function ContractModal({ isOpen, onClose, tenant, apartment }: ContractModalProps) {
+export function ContractModal({
+  isOpen,
+  onClose,
+  tenant,
+  apartment,
+}: ContractModalProps) {
   return (
     <Modal
       isOpen={isOpen}
@@ -29,16 +34,10 @@ export function ContractModal({ isOpen, onClose, tenant, apartment }: ContractMo
       title="Hyreskontrakt"
       footer={
         <div className="flex justify-end space-x-3">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-          >
+          <Button variant="secondary" onClick={onClose}>
             Stäng
           </Button>
-          <Button
-            variant="primary"
-            icon={FileText}
-          >
+          <Button variant="primary" icon={FileText}>
             Ladda ner kontrakt
           </Button>
         </div>
@@ -50,11 +49,7 @@ export function ContractModal({ isOpen, onClose, tenant, apartment }: ContractMo
             Hyresgästinformation
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoItem
-              icon={User2}
-              label="Namn"
-              value={tenant.name}
-            />
+            <InfoItem icon={User2} label="Namn" value={tenant.name} />
             <InfoItem
               icon={Calendar}
               label="Inflyttningsdatum"
@@ -104,7 +99,9 @@ export function ContractModal({ isOpen, onClose, tenant, apartment }: ContractMo
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Antal rum</span>
-              <span className="text-sm font-medium">{apartment.bedrooms} rum och kök</span>
+              <span className="text-sm font-medium">
+                {apartment.bedrooms} rum och kök
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Balkong</span>
@@ -115,10 +112,11 @@ export function ContractModal({ isOpen, onClose, tenant, apartment }: ContractMo
 
         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-600 dark:text-blue-400">
-            Detta är en digital kopia av hyreskontraktet. Det signerade originalet finns arkiverat hos fastighetsförvaltningen.
+            Detta är en digital kopia av hyreskontraktet. Det signerade
+            originalet finns arkiverat hos fastighetsförvaltningen.
           </p>
         </div>
       </div>
     </Modal>
-  );
+  )
 }

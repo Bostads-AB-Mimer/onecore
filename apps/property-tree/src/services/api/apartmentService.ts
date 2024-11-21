@@ -1,24 +1,24 @@
-import { Apartment } from '../types';
-import { fetchApi, simulateDelay } from './baseApi';
-import { mockApartments } from '../mockData';
+import { Apartment } from '../types'
+import { fetchApi, simulateDelay } from './baseApi'
+import { mockApartments } from '../mockData'
 
 export const apartmentService = {
   // Get all apartments
   async getAll(): Promise<Apartment[]> {
     // TODO: Replace with actual API call
-    await simulateDelay();
-    return Object.values(mockApartments);
+    await simulateDelay()
+    return Object.values(mockApartments)
   },
 
   // Get apartment by ID
   async getById(id: string): Promise<Apartment> {
     // TODO: Replace with actual API call
-    await simulateDelay();
-    const apartment = mockApartments[id];
+    await simulateDelay()
+    const apartment = mockApartments[id]
     if (!apartment) {
-      throw new Error(`Apartment with id ${id} not found`);
+      throw new Error(`Apartment with id ${id} not found`)
     }
-    return apartment;
+    return apartment
   },
 
   // Create new apartment
@@ -27,7 +27,7 @@ export const apartmentService = {
     return fetchApi<Apartment>('/apartments', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    })
   },
 
   // Update apartment
@@ -36,7 +36,7 @@ export const apartmentService = {
     return fetchApi<Apartment>(`/apartments/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
-    });
+    })
   },
 
   // Delete apartment
@@ -44,15 +44,15 @@ export const apartmentService = {
     // TODO: Replace with actual API call
     return fetchApi<void>(`/apartments/${id}`, {
       method: 'DELETE',
-    });
+    })
   },
 
   // Get apartments by entrance ID
   async getByEntranceId(entranceId: string): Promise<Apartment[]> {
     // TODO: Replace with actual API call
-    await simulateDelay();
+    await simulateDelay()
     return Object.values(mockApartments).filter(
-      apartment => apartment.entranceId === entranceId
-    );
-  }
-};
+      (apartment) => apartment.entranceId === entranceId
+    )
+  },
+}

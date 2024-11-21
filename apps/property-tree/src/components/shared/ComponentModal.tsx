@@ -1,13 +1,13 @@
-import React from 'react';
-import { Modal } from '../ui/Modal';
-import { ComponentForm } from './ComponentForm';
+import React from 'react'
+import { Modal } from '../ui/Modal'
+import { ComponentForm } from './ComponentForm'
 
 interface ComponentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  rooms: string[];
-  initialData?: any;
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: any) => Promise<void>
+  rooms: string[]
+  initialData?: any
 }
 
 export function ComponentModal({
@@ -15,7 +15,7 @@ export function ComponentModal({
   onClose,
   onSubmit,
   rooms,
-  initialData
+  initialData,
 }: ComponentModalProps) {
   return (
     <Modal
@@ -30,5 +30,5 @@ export function ComponentModal({
         initialData={initialData}
       />
     </Modal>
-  );
+  )
 }

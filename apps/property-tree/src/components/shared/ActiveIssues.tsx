@@ -1,34 +1,35 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { AlertCircle, ArrowRight } from 'lucide-react';
-import { Issue } from '../../services/types';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+import React from 'react'
+import { motion } from 'framer-motion'
+import { AlertCircle, ArrowRight } from 'lucide-react'
+import { Issue } from '../../services/types'
+import { Card } from '../ui/Card'
+import { Badge } from '../ui/Badge'
 
 interface ActiveIssuesProps {
-  issues: Issue[];
+  issues: Issue[]
 }
 
 const priorityColors = {
   low: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-  medium: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-  high: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-};
+  medium:
+    'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+  high: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+}
 
 const priorityLabels = {
   low: 'Låg',
   medium: 'Medium',
-  high: 'Hög'
-};
+  high: 'Hög',
+}
 
 const statusLabels = {
-  'pending': 'Väntar',
+  pending: 'Väntar',
   'in-progress': 'Pågående',
-  'resolved': 'Åtgärdat'
-};
+  resolved: 'Åtgärdat',
+}
 
 export function ActiveIssues({ issues }: ActiveIssuesProps) {
-  if (!issues.length) return null;
+  if (!issues.length) return null
 
   return (
     <Card title="Pågående ärenden" icon={AlertCircle}>
@@ -47,9 +48,7 @@ export function ActiveIssues({ issues }: ActiveIssuesProps) {
                   <Badge variant={issue.priority as any}>
                     {priorityLabels[issue.priority]}
                   </Badge>
-                  <Badge>
-                    {statusLabels[issue.status]}
-                  </Badge>
+                  <Badge>{statusLabels[issue.status]}</Badge>
                 </div>
                 <p className="font-medium group-hover:text-blue-500 transition-colors">
                   {issue.description}
@@ -68,5 +67,5 @@ export function ActiveIssues({ issues }: ActiveIssuesProps) {
         ))}
       </div>
     </Card>
-  );
+  )
 }

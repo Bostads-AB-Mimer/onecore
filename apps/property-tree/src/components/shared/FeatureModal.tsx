@@ -1,53 +1,53 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, History, Wrench, AlertCircle } from 'lucide-react';
-import { IssueForm, IssueFormData } from './IssueForm';
+import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Calendar, History, Wrench, AlertCircle } from 'lucide-react'
+import { IssueForm, IssueFormData } from './IssueForm'
 
 interface FeatureDetails {
-  name: string;
-  installationDate: string;
-  warranty: string;
-  lastService?: string;
-  nextService?: string;
+  name: string
+  installationDate: string
+  warranty: string
+  lastService?: string
+  nextService?: string
   issues?: {
-    date: string;
-    description: string;
-    status: 'resolved' | 'pending' | 'in-progress';
-  }[];
+    date: string
+    description: string
+    status: 'resolved' | 'pending' | 'in-progress'
+  }[]
 }
 
 interface FeatureModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  feature: FeatureDetails;
+  isOpen: boolean
+  onClose: () => void
+  feature: FeatureDetails
 }
 
 export function FeatureModal({ isOpen, onClose, feature }: FeatureModalProps) {
-  const [showIssueForm, setShowIssueForm] = React.useState(false);
+  const [showIssueForm, setShowIssueForm] = React.useState(false)
   const statusColors = {
     resolved: 'text-green-500',
     pending: 'text-yellow-500',
-    'in-progress': 'text-blue-500'
-  };
+    'in-progress': 'text-blue-500',
+  }
 
   const handleSubmitIssue = async (data: IssueFormData) => {
     // In a real application, this would send the data to an API
-    console.log('Submitting issue:', data);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-    setShowIssueForm(false);
-    onClose();
-  };
+    console.log('Submitting issue:', data)
+    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate API call
+    setShowIssueForm(false)
+    onClose()
+  }
 
   React.useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'unset'
     }
     return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
   return (
     <AnimatePresence>
@@ -65,10 +65,10 @@ export function FeatureModal({ isOpen, onClose, feature }: FeatureModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ 
-              type: "spring",
+            transition={{
+              type: 'spring',
               stiffness: 300,
-              damping: 30
+              damping: 30,
             }}
             className="relative w-full max-w-lg max-h-[90vh] overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl mx-4"
           >
@@ -123,13 +123,17 @@ export function FeatureModal({ isOpen, onClose, feature }: FeatureModalProps) {
                       <div className="grid grid-cols-2 gap-4">
                         {feature.lastService && (
                           <div>
-                            <p className="text-sm text-gray-500">Senaste service</p>
+                            <p className="text-sm text-gray-500">
+                              Senaste service
+                            </p>
                             <p className="font-medium">{feature.lastService}</p>
                           </div>
                         )}
                         {feature.nextService && (
                           <div>
-                            <p className="text-sm text-gray-500">Nästa service</p>
+                            <p className="text-sm text-gray-500">
+                              Nästa service
+                            </p>
                             <p className="font-medium">{feature.nextService}</p>
                           </div>
                         )}
@@ -151,8 +155,12 @@ export function FeatureModal({ isOpen, onClose, feature }: FeatureModalProps) {
                             className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium">{issue.date}</span>
-                              <span className={`text-sm font-medium ${statusColors[issue.status]}`}>
+                              <span className="text-sm font-medium">
+                                {issue.date}
+                              </span>
+                              <span
+                                className={`text-sm font-medium ${statusColors[issue.status]}`}
+                              >
                                 {issue.status === 'resolved' && 'Åtgärdat'}
                                 {issue.status === 'pending' && 'Väntar'}
                                 {issue.status === 'in-progress' && 'Pågående'}
@@ -197,5 +205,5 @@ export function FeatureModal({ isOpen, onClose, feature }: FeatureModalProps) {
         </div>
       )}
     </AnimatePresence>
-  );
+  )
 }

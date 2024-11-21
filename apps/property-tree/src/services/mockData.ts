@@ -1,4 +1,13 @@
-import { Apartment, NavigationItem, Area, Property, Building, Entrance, Room, Issue } from './types';
+import {
+  Apartment,
+  NavigationItem,
+  Area,
+  Property,
+  Building,
+  Entrance,
+  Room,
+  Issue,
+} from './types'
 
 export const mockActiveIssues: Record<string, Issue[]> = {
   '101': [
@@ -10,7 +19,7 @@ export const mockActiveIssues: Record<string, Issue[]> = {
       priority: 'medium',
       category: 'repair',
       feature: 'Diskmaskin',
-      room: 'Kök'
+      room: 'Kök',
     },
     {
       id: 'issue-2',
@@ -20,8 +29,8 @@ export const mockActiveIssues: Record<string, Issue[]> = {
       priority: 'low',
       category: 'maintenance',
       feature: 'Parkettgolv',
-      room: 'Vardagsrum'
-    }
+      room: 'Vardagsrum',
+    },
   ],
   '201': [
     {
@@ -32,8 +41,8 @@ export const mockActiveIssues: Record<string, Issue[]> = {
       priority: 'medium',
       category: 'repair',
       feature: 'Blandare',
-      room: 'Kök'
-    }
+      room: 'Kök',
+    },
   ],
   '202': [
     {
@@ -44,10 +53,10 @@ export const mockActiveIssues: Record<string, Issue[]> = {
       priority: 'high',
       category: 'repair',
       feature: 'Golvvärme',
-      room: 'Badrum'
-    }
-  ]
-};
+      room: 'Badrum',
+    },
+  ],
+}
 
 export const mockRooms: Record<string, Room[]> = {
   '101': [
@@ -57,7 +66,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'living',
       size: 25,
       windows: 2,
-      features: ['Parkettgolv', 'Balkong', 'Öppen planlösning']
+      features: ['Parkettgolv', 'Balkong', 'Öppen planlösning'],
     },
     {
       id: '101-2',
@@ -65,7 +74,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bedroom',
       size: 15,
       windows: 1,
-      features: ['Garderob', 'Parkettgolv']
+      features: ['Garderob', 'Parkettgolv'],
     },
     {
       id: '101-3',
@@ -73,7 +82,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bedroom',
       size: 12,
       windows: 1,
-      features: ['Garderob', 'Parkettgolv']
+      features: ['Garderob', 'Parkettgolv'],
     },
     {
       id: '101-4',
@@ -81,7 +90,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'kitchen',
       size: 15,
       windows: 1,
-      features: ['Diskmaskin', 'Induktionshäll', 'Mikrovågsugn']
+      features: ['Diskmaskin', 'Induktionshäll', 'Mikrovågsugn'],
     },
     {
       id: '101-5',
@@ -89,8 +98,8 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bathroom',
       size: 8,
       windows: 0,
-      features: ['Tvättmaskin', 'Torktumlare', 'Golvvärme']
-    }
+      features: ['Tvättmaskin', 'Torktumlare', 'Golvvärme'],
+    },
   ],
   '201': [
     {
@@ -99,7 +108,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'living',
       size: 28,
       windows: 2,
-      features: ['Parkettgolv', 'Balkong', 'Öppen planlösning']
+      features: ['Parkettgolv', 'Balkong', 'Öppen planlösning'],
     },
     {
       id: '201-2',
@@ -107,7 +116,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bedroom',
       size: 16,
       windows: 1,
-      features: ['Garderob', 'Parkettgolv']
+      features: ['Garderob', 'Parkettgolv'],
     },
     {
       id: '201-3',
@@ -115,7 +124,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bedroom',
       size: 14,
       windows: 1,
-      features: ['Garderob', 'Parkettgolv']
+      features: ['Garderob', 'Parkettgolv'],
     },
     {
       id: '201-4',
@@ -123,7 +132,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'kitchen',
       size: 16,
       windows: 1,
-      features: ['Diskmaskin', 'Induktionshäll', 'Mikrovågsugn']
+      features: ['Diskmaskin', 'Induktionshäll', 'Mikrovågsugn'],
     },
     {
       id: '201-5',
@@ -131,8 +140,8 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bathroom',
       size: 8,
       windows: 0,
-      features: ['Tvättmaskin', 'Torktumlare', 'Golvvärme']
-    }
+      features: ['Tvättmaskin', 'Torktumlare', 'Golvvärme'],
+    },
   ],
   '202': [
     {
@@ -141,7 +150,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'living',
       size: 22,
       windows: 2,
-      features: ['Parkettgolv', 'Balkong']
+      features: ['Parkettgolv', 'Balkong'],
     },
     {
       id: '202-2',
@@ -149,7 +158,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bedroom',
       size: 14,
       windows: 1,
-      features: ['Garderob', 'Parkettgolv']
+      features: ['Garderob', 'Parkettgolv'],
     },
     {
       id: '202-3',
@@ -157,7 +166,7 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'kitchen',
       size: 12,
       windows: 1,
-      features: ['Diskmaskin', 'Induktionshäll']
+      features: ['Diskmaskin', 'Induktionshäll'],
     },
     {
       id: '202-4',
@@ -165,10 +174,10 @@ export const mockRooms: Record<string, Room[]> = {
       type: 'bathroom',
       size: 6,
       windows: 0,
-      features: ['Tvättmaskin', 'Golvvärme']
-    }
-  ]
-};
+      features: ['Tvättmaskin', 'Golvvärme'],
+    },
+  ],
+}
 
 export const mockNavigation: NavigationItem[] = [
   {
@@ -192,8 +201,8 @@ export const mockNavigation: NavigationItem[] = [
                 type: 'entrance',
                 children: [
                   { id: '101', name: 'Lägenhet 101', type: 'apartment' },
-                  { id: '102', name: 'Lägenhet 102', type: 'apartment' }
-                ]
+                  { id: '102', name: 'Lägenhet 102', type: 'apartment' },
+                ],
               },
               {
                 id: 'entrance-2',
@@ -201,30 +210,30 @@ export const mockNavigation: NavigationItem[] = [
                 type: 'entrance',
                 children: [
                   { id: '201', name: 'Lägenhet 201', type: 'apartment' },
-                  { id: '202', name: 'Lägenhet 202', type: 'apartment' }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-];
+                  { id: '202', name: 'Lägenhet 202', type: 'apartment' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]
 
 export const mockAreas: Record<string, Area> = {
-  'vasteras': {
+  vasteras: {
     id: 'vasteras',
     name: 'Västerås',
     properties: ['storgatan'],
     totalApartments: 12,
     occupiedApartments: 10,
-    totalProperties: 1
-  }
-};
+    totalProperties: 1,
+  },
+}
 
 export const mockProperties: Record<string, Property> = {
-  'storgatan': {
+  storgatan: {
     id: 'storgatan',
     name: 'Storgatan',
     address: 'Storgatan 1, Västerås',
@@ -233,9 +242,9 @@ export const mockProperties: Record<string, Property> = {
     totalApartments: 8,
     occupiedApartments: 7,
     constructionYear: 1985,
-    lastRenovation: 2015
-  }
-};
+    lastRenovation: 2015,
+  },
+}
 
 export const mockBuildings: Record<string, Building> = {
   'building-1': {
@@ -244,9 +253,9 @@ export const mockBuildings: Record<string, Building> = {
     propertyId: 'storgatan',
     entrances: ['entrance-1', 'entrance-2'],
     totalApartments: 8,
-    occupiedApartments: 7
-  }
-};
+    occupiedApartments: 7,
+  },
+}
 
 export const mockEntrances: Record<string, Entrance> = {
   'entrance-1': {
@@ -255,7 +264,7 @@ export const mockEntrances: Record<string, Entrance> = {
     buildingId: 'building-1',
     apartments: ['101', '102'],
     totalApartments: 4,
-    occupiedApartments: 4
+    occupiedApartments: 4,
   },
   'entrance-2': {
     id: 'entrance-2',
@@ -263,9 +272,9 @@ export const mockEntrances: Record<string, Entrance> = {
     buildingId: 'building-1',
     apartments: ['201', '202'],
     totalApartments: 4,
-    occupiedApartments: 3
-  }
-};
+    occupiedApartments: 3,
+  },
+}
 
 export const mockApartments: Record<string, Apartment> = {
   '101': {
@@ -282,10 +291,10 @@ export const mockApartments: Record<string, Apartment> = {
       email: 'anna.svensson@example.com',
       phone: '070-123 45 67',
       moveInDate: '2021-01-01',
-      apartmentId: '101'
+      apartmentId: '101',
     },
     rooms: mockRooms['101'],
-    activeIssues: mockActiveIssues['101']
+    activeIssues: mockActiveIssues['101'],
   },
   '201': {
     id: '201',
@@ -301,10 +310,10 @@ export const mockApartments: Record<string, Apartment> = {
       email: 'johan.nilsson@example.com',
       phone: '070-555 66 77',
       moveInDate: '2022-08-01',
-      apartmentId: '201'
+      apartmentId: '201',
     },
     rooms: mockRooms['201'],
-    activeIssues: mockActiveIssues['201']
+    activeIssues: mockActiveIssues['201'],
   },
   '202': {
     id: '202',
@@ -320,9 +329,9 @@ export const mockApartments: Record<string, Apartment> = {
       email: 'maria.larsson@example.com',
       phone: '070-888 99 00',
       moveInDate: '2023-03-15',
-      apartmentId: '202'
+      apartmentId: '202',
     },
     rooms: mockRooms['202'],
-    activeIssues: mockActiveIssues['202']
-  }
-};
+    activeIssues: mockActiveIssues['202'],
+  },
+}

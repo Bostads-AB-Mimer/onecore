@@ -1,27 +1,33 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { Button } from './Button';
+import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
+import { Button } from './Button'
 
 interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
+  isOpen: boolean
+  onClose: () => void
+  title: string
+  children: React.ReactNode
+  footer?: React.ReactNode
 }
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+}: ModalProps) {
   React.useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'unset'
     }
     return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
   return (
     <AnimatePresence>
@@ -39,10 +45,10 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ 
-              type: "spring",
+            transition={{
+              type: 'spring',
               stiffness: 300,
-              damping: 30
+              damping: 30,
             }}
             className="relative w-full max-w-lg max-h-[90vh] overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl mx-4"
           >
@@ -58,9 +64,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             </div>
 
             {/* Content */}
-            <div className="p-6">
-              {children}
-            </div>
+            <div className="p-6">{children}</div>
 
             {/* Footer */}
             {footer && (
@@ -72,5 +76,5 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         </div>
       )}
     </AnimatePresence>
-  );
+  )
 }

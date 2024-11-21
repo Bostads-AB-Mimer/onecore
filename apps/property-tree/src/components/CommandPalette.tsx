@@ -1,10 +1,18 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Command, Search, Building2, MapPin, Home, ArrowRight, User2 } from 'lucide-react';
-import { NavigationItem } from '../services/types';
-import { propertyService } from '../services/propertyService';
-import { useCommandPalette } from '../hooks/useCommandPalette';
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Command,
+  Search,
+  Building2,
+  MapPin,
+  Home,
+  ArrowRight,
+  User2,
+} from 'lucide-react'
+import { NavigationItem } from '../services/types'
+import { propertyService } from '../services/propertyService'
+import { useCommandPalette } from '../hooks/useCommandPalette'
 
 const routeMap = {
   area: '/areas',
@@ -12,8 +20,8 @@ const routeMap = {
   building: '/buildings',
   entrance: '/entrances',
   apartment: '/apartments',
-  tenant: '/tenants'
-};
+  tenant: '/tenants',
+}
 
 const iconMap = {
   area: MapPin,
@@ -21,70 +29,66 @@ const iconMap = {
   building: Building2,
   entrance: Home,
   apartment: Home,
-  tenant: User2
-};
+  tenant: User2,
+}
 
 export function CommandPalette() {
-  const navigate = useNavigate();
-  const { isOpen, close } = useCommandPalette();
-  const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<NavigationItem[]>([]);
-  const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const navigate = useNavigate()
+  const { isOpen, close } = useCommandPalette()
+  const [query, setQuery] = React.useState('')
+  const [results, setResults] = React.useState<NavigationItem[]>([])
+  const [selectedIndex, setSelectedIndex] = React.useState(0)
+  const inputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     const search = async () => {
       if (query.trim()) {
-        const searchResults = await propertyService.searchProperties(query);
-        setResults(searchResults);
-        setSelectedIndex(0);
+        const searchResults = await propertyService.searchProperties(query)
+        setResults(searchResults)
+        setSelectedIndex(0)
       } else {
-        setResults([]);
+        setResults([])
       }
-    };
-    search();
-  }, [query]);
+    }
+    search()
+  }, [query])
 
   React.useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setResults([]);
-      setSelectedIndex(0);
+      setQuery('')
+      setResults([])
+      setSelectedIndex(0)
       requestAnimationFrame(() => {
-        inputRef.current?.focus();
-      });
+        inputRef.current?.focus()
+      })
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(i => 
-          i < results.length - 1 ? i + 1 : 0
-        );
-        break;
+        e.preventDefault()
+        setSelectedIndex((i) => (i < results.length - 1 ? i + 1 : 0))
+        break
       case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(i => 
-          i > 0 ? i - 1 : results.length - 1
-        );
-        break;
+        e.preventDefault()
+        setSelectedIndex((i) => (i > 0 ? i - 1 : results.length - 1))
+        break
       case 'Enter':
         if (results[selectedIndex]) {
-          const item = results[selectedIndex];
-          const basePath = routeMap[item.type];
+          const item = results[selectedIndex]
+          const basePath = routeMap[item.type]
           if (basePath) {
-            navigate(`${basePath}/${item.id}`);
-            close();
+            navigate(`${basePath}/${item.id}`)
+            close()
           }
         }
-        break;
+        break
       case 'Escape':
-        close();
-        break;
+        close()
+        break
     }
-  };
+  }
 
   return (
     <AnimatePresence>
@@ -123,7 +127,7 @@ export function CommandPalette() {
               {results.length > 0 ? (
                 <div className="p-2">
                   {results.map((item, index) => {
-                    const Icon = iconMap[item.type] || Home;
+                    const Icon = iconMap[item.type] || Home
                     return (
                       <motion.button
                         key={item.id}
@@ -132,16 +136,17 @@ export function CommandPalette() {
                         transition={{ delay: index * 0.03 }}
                         className={`
                           w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm
-                          ${selectedIndex === index 
-                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          ${
+                            selectedIndex === index
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                         `}
                         onClick={() => {
-                          const basePath = routeMap[item.type];
+                          const basePath = routeMap[item.type]
                           if (basePath) {
-                            navigate(`${basePath}/${item.id}`);
-                            close();
+                            navigate(`${basePath}/${item.id}`)
+                            close()
                           }
                         }}
                       >
@@ -149,7 +154,7 @@ export function CommandPalette() {
                         <span className="flex-1 text-left">{item.name}</span>
                         <ArrowRight className="h-4 w-4 opacity-50" />
                       </motion.button>
-                    );
+                    )
                   })}
                 </div>
               ) : query ? (
@@ -166,5 +171,5 @@ export function CommandPalette() {
         </>
       )}
     </AnimatePresence>
-  );
+  )
 }

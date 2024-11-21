@@ -1,25 +1,33 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Search, Settings, User2 } from 'lucide-react';
-import { PropertyNavigation } from './components/PropertyNavigation';
-import { CommandPalette } from './components/CommandPalette';
-import { CommandPaletteProvider, useCommandPalette } from './hooks/useCommandPalette';
-import { AreaView } from './components/views/AreaView';
-import { PropertyView } from './components/views/PropertyView';
-import { BuildingView } from './components/views/BuildingView';
-import { EntranceView } from './components/views/EntranceView';
-import { ApartmentView } from './components/views/ApartmentView';
-import { TenantView } from './components/views/TenantView';
-import { RoomView } from './components/views/RoomView';
+import React from 'react'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Search, Settings, User2 } from 'lucide-react'
+import { PropertyNavigation } from './components/PropertyNavigation'
+import { CommandPalette } from './components/CommandPalette'
+import {
+  CommandPaletteProvider,
+  useCommandPalette,
+} from './hooks/useCommandPalette'
+import { AreaView } from './components/views/AreaView'
+import { PropertyView } from './components/views/PropertyView'
+import { BuildingView } from './components/views/BuildingView'
+import { EntranceView } from './components/views/EntranceView'
+import { ApartmentView } from './components/views/ApartmentView'
+import { TenantView } from './components/views/TenantView'
+import { RoomView } from './components/views/RoomView'
 
 function AppContent() {
-  const { open: openCommandPalette } = useCommandPalette();
+  const { open: openCommandPalette } = useCommandPalette()
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-gray-900">
       <CommandPalette />
-      
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 h-14 border-b bg-white dark:bg-gray-900 dark:border-gray-800 z-40">
         <div className="h-full px-4 flex items-center justify-between">
@@ -35,7 +43,7 @@ function AppContent() {
               <span className="font-semibold">OneCore</span>
             </motion.div>
           </div>
-          
+
           <div className="flex-1 max-w-xl px-4">
             <button
               onClick={openCommandPalette}
@@ -82,12 +90,15 @@ function AppContent() {
           <Route path="/buildings/:buildingId" element={<BuildingView />} />
           <Route path="/entrances/:entranceId" element={<EntranceView />} />
           <Route path="/apartments/:apartmentId" element={<ApartmentView />} />
-          <Route path="/apartments/:apartmentId/rooms/:roomId" element={<RoomView />} />
+          <Route
+            path="/apartments/:apartmentId/rooms/:roomId"
+            element={<RoomView />}
+          />
           <Route path="/tenants/:tenantId" element={<TenantView />} />
         </Routes>
       </main>
     </div>
-  );
+  )
 }
 
 export default function App() {
@@ -97,5 +108,5 @@ export default function App() {
         <AppContent />
       </CommandPaletteProvider>
     </Router>
-  );
+  )
 }

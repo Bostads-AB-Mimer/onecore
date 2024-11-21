@@ -1,37 +1,37 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { MapPin, Building2, Users, Home } from 'lucide-react';
-import { propertyService } from '../../services/propertyService';
-import { Area, Property } from '../../services/types';
+import React from 'react'
+import { useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { MapPin, Building2, Users, Home } from 'lucide-react'
+import { propertyService } from '../../services/propertyService'
+import { Area, Property } from '../../services/types'
 
 export function AreaView() {
-  const { areaId } = useParams();
-  const [area, setArea] = React.useState<Area | null>(null);
-  const [properties, setProperties] = React.useState<Property[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { areaId } = useParams()
+  const [area, setArea] = React.useState<Area | null>(null)
+  const [properties, setProperties] = React.useState<Property[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadArea = async () => {
       try {
-        const areaData = await propertyService.getArea(areaId!);
-        setArea(areaData);
-        
-        // Load property details for each property ID
-        const propertyPromises = areaData.properties.map(id => 
-          propertyService.getProperty(id)
-        );
-        const propertyData = await Promise.all(propertyPromises);
-        setProperties(propertyData);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadArea();
-  }, [areaId]);
+        const areaData = await propertyService.getArea(areaId!)
+        setArea(areaData)
 
-  if (loading) return <div>Loading...</div>;
-  if (!area) return <div>Area not found</div>;
+        // Load property details for each property ID
+        const propertyPromises = areaData.properties.map((id) =>
+          propertyService.getProperty(id)
+        )
+        const propertyData = await Promise.all(propertyPromises)
+        setProperties(propertyData)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadArea()
+  }, [areaId])
+
+  if (loading) return <div>Loading...</div>
+  if (!area) return <div>Area not found</div>
 
   return (
     <div className="p-8 animate-in">
@@ -115,5 +115,5 @@ export function AreaView() {
         </motion.div>
       </div>
     </div>
-  );
+  )
 }
