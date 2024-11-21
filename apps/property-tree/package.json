@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "format": "prettier --write .",
-    "start:server": "node --import tsx src/server/api.ts"
+    "start:server": "node --import tsx src/server/api.ts",
+    "start": "concurrently \"vite\" \"npm run start:server\""
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
