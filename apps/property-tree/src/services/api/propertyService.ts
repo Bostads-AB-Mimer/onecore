@@ -30,7 +30,7 @@ export const propertyService = {
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const apiProperty = await fetchApi<ApiProperty>(`http://localhost:5050/properties/${id}/`);
+    const apiProperty = await fetchApi<ApiProperty>(`http://localhost:5050/properties/_${id}/`);
     return mapApiPropertyToProperty(apiProperty);
   },
 
