@@ -122,7 +122,6 @@ export const routes = (router: KoaRouter) => {
    *                     type: boolean
    *                   allowPeriodicWorks:
    *                     type: boolean
-   *                 type: boolean
    *               specifications:
    *                 type: object
    *                 properties:
@@ -156,19 +155,6 @@ export const routes = (router: KoaRouter) => {
    *                     format: date-time
    *               deleteMark:
    *                 type: boolean
-   *                 type: boolean
-   *               fromDate:
-   *                 type: string
-   *                 format: date-time
-   *               toDate:
-   *                 type: string
-   *                 format: date-time
-   *               availableFrom:
-   *                 type: string
-   *                 format: date-time
-   *               availableTo:
-   *                 type: string
-   *                 format: date-time
    *               timestamp:
    *                 type: string
    *         entrance:
@@ -219,27 +205,27 @@ export const routes = (router: KoaRouter) => {
    *                   format: date-time
    *                 energyIndex:
    *                   type: number
-   *
-   * /residences/{id}:
-   *   get:
-   *     summary: Get a residence by ID.
-   *     description: Returns a residence with the specified ID.
-   *     tags:
-   *       - Residences
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the residence.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the residence.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Residence'
+   * paths:
+   *   /residences/{id}:
+   *     get:
+   *       summary: Get a residence by ID.
+   *       description: Returns a residence with the specified ID.
+   *       tags:
+   *         - Residences
+   *       parameters:
+   *         - in: path
+   *           name: id
+   *           required: true
+   *           schema:
+   *             type: string
+   *           description: The ID of the residence.
+   *       responses:
+   *         200:
+   *           description: Successfully retrieved the residence.
+   *           content:
+   *             application/json:
+   *               schema:
+   *                 $ref: '#/components/schemas/Residence'
    */
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
