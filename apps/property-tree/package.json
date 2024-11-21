@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start:server": "node --import tsx src/server/api.ts"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
