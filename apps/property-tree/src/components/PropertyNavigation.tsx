@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { NavigationItem } from '../services/types';
-import { propertyService } from '../services/propertyService';
+import { propertyService } from '../services/api/propertyService';
 
 const iconMap = {
   area: MapPin,
@@ -153,27 +153,38 @@ export function PropertyNavigation() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const loadNavigation = async () => {
+    const loadProperties = async () => {
       try {
-        const data = await propertyService.getNavigation();
-        setNavigationItems(data);
+        const properties = await propertyService.getAll();
+        const navigationItems = properties.map(property => ({
+          id: property.id,
+          name: property.name,
+          type: 'property',
+          children: property.buildings.map(buildingId => ({
+            id: buildingId,
+            name: 'Building', // Placeholder, replace with actual building name if available
+            type: 'building',
+            children: [] // Add more nested items if needed
+          }))
+        }));
+        setNavigationItems(navigationItems);
 
         // Auto-expand root level if there's only one item
-        if (data.length === 1) {
+        if (navigationItems.length === 1) {
           setExpanded(prev => ({
             ...prev,
-            [data[0].id]: true
+            [navigationItems[0].id]: true
           }));
         }
       } catch (err) {
-        setError('Failed to load navigation data');
+        setError('Failed to load properties');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadNavigation();
+    loadProperties();
   }, []);
 
   const handleToggle = (id: string) => {
