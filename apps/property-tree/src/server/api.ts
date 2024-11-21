@@ -1,28 +1,25 @@
-import express from 'express'
+import express from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const app = express()
-app.use(express.json())
+const app = express();
+app.use(express.json());
 
-// Mock data
-const properties = [
-  { id: '1', name: 'Property 1', areaId: '1' },
-  { id: '2', name: 'Property 2', areaId: '2' },
-]
+// Proxy configuration
+app.use(
+  '/properties',
+  createProxyMiddleware({
+    target: 'http://localhost:5050',
+    changeOrigin: true,
+  })
+);
 
-const areas = [
-  { id: '1', name: 'Area 1', properties: ['1'] },
-  { id: '2', name: 'Area 2', properties: ['2'] },
-]
-
-// Endpoint to get all properties
-app.get('/properties', (req, res) => {
-  res.json(properties)
-})
-
-// Endpoint to get all areas
-app.get('/areas', (req, res) => {
-  res.json(areas)
-})
+app.use(
+  '/areas',
+  createProxyMiddleware({
+    target: 'http://localhost:5050',
+    changeOrigin: true,
+  })
+);
 
 // Start the server
 const PORT = process.env.PORT || 5050
