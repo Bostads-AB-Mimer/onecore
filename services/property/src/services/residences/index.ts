@@ -1,6 +1,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getResidencesByType, getLatestResidences, getResidenceById } from '../../adapters/residence-adapter'
+import {
+  getResidencesByType,
+  getLatestResidences,
+  getResidenceById,
+} from '../../adapters/residence-adapter'
 import { Residence } from '../../types/residence'
 import { mapDbToResidence } from './residence-mapper'
 
@@ -12,33 +16,6 @@ import { mapDbToResidence } from './residence-mapper'
  *     description: Operations related to residences
  */
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /residences/latest/:
-   *   get:
-   *     summary: Gets a list of residences.
-   *     description: Returns the residences for the relevant type ID.
-   *     tags:
-   *       - Residences
-   *     parameters:
-   *       - in: query
-   *         name: residenceType
-   *         required: false
-   *         schema:
-   *           type: string
-   *         description: The ID of the residence type.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the latest residences.
-   *         content:
-   */
-  router.get('(.*)/residences/latest', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /residences/latest', metadata)
-    const response = await getLatestResidences()
-    ctx.body = { content: response, ...metadata }
-  })
-
   /**
    * @swagger
    * /residences/:
@@ -64,11 +41,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /residences/:residenceTypeId/', metadata)
     let response
-    if (ctx.query.residenceType) {
-      response = await getResidencesByType(ctx.query.residenceType)
-    } else {
-      response = await getLatestResidences()
-    }
+    response = await getLatestResidences()
     ctx.body = { content: response, ...metadata }
   })
 
@@ -136,32 +109,53 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: object
    *             properties:
-   *               roomId:
+   *               id:
    *                 type: string
-   *               roomCode:
+   *               code:
    *                 type: string
    *               name:
    *                 type: string
-   *               sharedUse:
+   *               usage:
+   *                 type: object
+   *                 properties:
+   *                   shared:
+   *                     type: boolean
+   *                   allowPeriodicWorks:
+   *                     type: boolean
    *                 type: boolean
-   *               sortingOrder:
-   *                 type: integer
-   *               allowPeriodicWorks:
-   *                 type: boolean
-   *               spaceType:
-   *                 type: integer
-   *               hasToilet:
-   *                 type: boolean
-   *               isHeated:
-   *                 type: integer
-   *               hasThermostatValve:
-   *                 type: boolean
-   *               orientation:
-   *                 type: integer
-   *               installationDate:
-   *                 type: string
-   *                 format: date-time
+   *               specifications:
+   *                 type: object
+   *                 properties:
+   *                   spaceType:
+   *                     type: integer
+   *                   hasToilet:
+   *                     type: boolean
+   *                   isHeated:
+   *                     type: integer
+   *                   hasThermostatValve:
+   *                     type: boolean
+   *                   orientation:
+   *                     type: integer
+   *               dates:
+   *                 type: object
+   *                 properties:
+   *                   installation:
+   *                     type: string
+   *                     format: date-time
+   *                   from:
+   *                     type: string
+   *                     format: date-time
+   *                   to:
+   *                     type: string
+   *                     format: date-time
+   *                   availableFrom:
+   *                     type: string
+   *                     format: date-time
+   *                   availableTo:
+   *                     type: string
+   *                     format: date-time
    *               deleteMark:
+   *                 type: boolean
    *                 type: boolean
    *               fromDate:
    *                 type: string
@@ -226,6 +220,7 @@ export const routes = (router: KoaRouter) => {
    *                 energyIndex:
    *                   type: number
    *
+   * /residences/{id}:
    *   get:
    *     summary: Get a residence by ID.
    *     description: Returns a residence with the specified ID.
@@ -250,6 +245,11 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(`GET /residences/${ctx.params.id}`, metadata)
     const dbRecord = await getResidenceById(ctx.params.id)
+    if (!dbRecord) {
+      ctx.status = 404
+      return
+    }
+    console.log('dbRecord', dbRecord)
     const response: Residence = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
   })
