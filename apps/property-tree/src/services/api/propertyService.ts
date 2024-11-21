@@ -45,17 +45,22 @@ const mapApiAreaToArea = (apiArea: ApiArea): Area => ({
 export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
-    const response = await fetchApi<ApiResponse>(
-      'http://localhost:5050/properties/'
-    )
-    const areas = response.content.map(mapApiAreaToArea)
-    const properties = response.content.flatMap((area) =>
-      area.properties.map((property) =>
-        mapApiPropertyToProperty(property, area.areaId)
+    try {
+      const response = await fetchApi<ApiResponse>(
+        'http://localhost:5050/properties/'
       )
-    )
-    // You might want to store or use areas somewhere in your application
-    return properties
+      const areas = response.content.map(mapApiAreaToArea)
+      const properties = response.content.flatMap((area) =>
+        area.properties.map((property) =>
+          mapApiPropertyToProperty(property, area.areaId)
+        )
+      )
+      // You might want to store or use areas somewhere in your application
+      return properties
+    } catch (error) {
+      console.error('Failed to fetch properties:', error)
+      throw new Error('Failed to load properties')
+    }
   },
 
   // Get property by ID
