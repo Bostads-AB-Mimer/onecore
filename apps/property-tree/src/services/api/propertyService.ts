@@ -16,9 +16,12 @@ interface ApiResponse {
 const mapApiPropertyToProperty = (apiProperty: ApiProperty): Property => ({
   id: apiProperty.propertyId.trim(),
   name: apiProperty.propertyDesignation,
-  code: apiProperty.propertyCode,
-  tract: apiProperty.tract,
-  areaId: 'area-1' // TODO: Get real area ID from API when available
+  address: apiProperty.propertyCode, // Assuming propertyCode is used as address
+  areaId: 'area-1', // TODO: Get real area ID from API when available
+  buildings: [], // Assuming buildings are not provided by the API
+  totalApartments: 0, // Assuming totalApartments are not provided by the API
+  occupiedApartments: 0, // Assuming occupiedApartments are not provided by the API
+  constructionYear: 0, // Assuming constructionYear is not provided by the API
 });
 
 export const propertyService = {
