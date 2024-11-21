@@ -2,6 +2,12 @@ import { Property, NavigationItem } from '../types';
 import { fetchApi, simulateDelay } from './baseApi';
 import { mockProperties, mockNavigation } from '../mockData';
 
+interface ApiArea {
+  areaId: string;
+  areaName: string;
+  properties: ApiProperty[];
+}
+
 interface ApiProperty {
   propertyId: string;
   propertyCode: string;
@@ -10,25 +16,39 @@ interface ApiProperty {
 }
 
 interface ApiResponse {
-  content: ApiProperty[];
+  content: ApiArea[];
 }
 
-const mapApiPropertyToProperty = (apiProperty: ApiProperty): Property => ({
+const mapApiPropertyToProperty = (apiProperty: ApiProperty, areaId: string): Property => ({
   id: apiProperty.propertyId.trim(),
   name: apiProperty.propertyDesignation,
-  address: apiProperty.propertyCode, // Assuming propertyCode is used as address
-  areaId: 'area-1', // TODO: Get real area ID from API when available
-  buildings: [], // Assuming buildings are not provided by the API
+  address: apiProperty.propertyCode,
+  areaId: areaId,
+  buildings: [],
+  totalApartments: 0,
+  occupiedApartments: 0,
+  constructionYear: 0,
+});
+
+const mapApiAreaToArea = (apiArea: ApiArea): Area => ({
+  id: apiArea.areaId.trim(),
+  name: apiArea.areaName,
+  properties: apiArea.properties.map(property => property.propertyId.trim()),
   totalApartments: 0, // Assuming totalApartments are not provided by the API
   occupiedApartments: 0, // Assuming occupiedApartments are not provided by the API
-  constructionYear: 0, // Assuming constructionYear is not provided by the API
+  totalProperties: apiArea.properties.length,
 });
 
 export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
     const response = await fetchApi<ApiResponse>('http://localhost:5050/properties/');
-    return response.content.map(mapApiPropertyToProperty);
+    const areas = response.content.map(mapApiAreaToArea);
+    const properties = response.content.flatMap(area =>
+      area.properties.map(property => mapApiPropertyToProperty(property, area.areaId))
+    );
+    // You might want to store or use areas somewhere in your application
+    return properties;
   },
 
   // Get property by ID
