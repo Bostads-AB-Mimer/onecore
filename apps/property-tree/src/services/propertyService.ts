@@ -1,3 +1,4 @@
+import { hello } from './hello'
 import {
   NavigationItem,
   Apartment,
