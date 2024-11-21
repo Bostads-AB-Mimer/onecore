@@ -30,11 +30,7 @@ export const propertyService = {
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const response = await fetchApi<ApiResponse>('http://localhost:5050/properties/');
-    const apiProperty = response.content.find(p => p.propertyId.trim() === id);
-    if (!apiProperty) {
-      throw new Error(`Property with id ${id} not found`);
-    }
+    const apiProperty = await fetchApi<ApiProperty>(`http://localhost:5050/properties/${id}/`);
     return mapApiPropertyToProperty(apiProperty);
   },
 
