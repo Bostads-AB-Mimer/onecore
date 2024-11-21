@@ -5,9 +5,7 @@ import { mockProperties, mockNavigation } from '../mockData';
 export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
-    // TODO: Replace with actual API call
-    await simulateDelay();
-    return Object.values(mockProperties);
+    return fetchApi<Property[]>('http://localhost:5050/properties/');
   },
 
   // Get property by ID

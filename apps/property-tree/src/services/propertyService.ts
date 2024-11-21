@@ -1,5 +1,6 @@
 import { NavigationItem, Apartment, Area, Property, Building, Entrance } from './types';
-import { mockNavigation, mockApartments, mockAreas, mockProperties, mockBuildings, mockEntrances } from './mockData';
+import { mockNavigation, mockApartments, mockAreas, mockBuildings, mockEntrances } from './mockData';
+import { propertyService as propertyApi } from './api/propertyService';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -30,10 +31,7 @@ export const propertyService = {
   },
 
   async getProperty(id: string): Promise<Property> {
-    await delay(500);
-    const property = mockProperties[id];
-    if (!property) throw new Error(`Property with id ${id} not found`);
-    return property;
+    return propertyApi.getById(id);
   },
 
   async getBuilding(id: string): Promise<Building> {
