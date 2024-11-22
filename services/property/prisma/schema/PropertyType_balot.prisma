@@ -1,19 +1,18 @@
 model PropertyType {
-  @@map("balot")
 
-  propertyTypeId String @id(map: "pkbalot") @map("keybalot") @db.Char(15)
-  componentTypeActionId String? @map("keypuatt") @db.Char(15)
-  statisticsGroupScbId String? @map("keyballs") @db.Char(15)
-  statisticsGroup2Id String? @map("keyballs2") @db.Char(15)
-  statisticsGroup3Id String? @map("keyballs3") @db.Char(15)
-  statisticsGroup4Id String? @map("keyballs4") @db.Char(15)
+  propertyTypeId                String  @id(map: "pkbalot") @map("keybalot") @db.Char(15)
+  componentTypeActionId         String? @map("keypuatt") @db.Char(15)
+  statisticsGroupScbId          String? @map("keyballs") @db.Char(15)
+  statisticsGroup2Id            String? @map("keyballs2") @db.Char(15)
+  statisticsGroup3Id            String? @map("keyballs3") @db.Char(15)
+  statisticsGroup4Id            String? @map("keyballs4") @db.Char(15)
   assetManagementPropertyTypeId String? @map("keyamvat") @db.Char(15)
-  checklistId String? @map("keylbpro") @db.Char(15)
-  code String @unique(map: "akbalot") @map("code") @db.VarChar(15)
-  name String? @map("caption") @db.VarChar(60)
-  usage Int @default(0, map: "DF__balot__usage__4A5B65EB") @map("usage") @db.TinyInt
-  isSystemStandard Int @default(0, map: "DF__balot__issystem__4B4F8A24") @map("issystem") @db.TinyInt
-  timestamp String @map("timestamp") @db.Char(10) // TODO: consider renaming timestamp field when knowing more about its usage
+  checklistId                   String? @map("keylbpro") @db.Char(15)
+  code                          String  @unique(map: "akbalot") @map("code") @db.VarChar(15)
+  name                          String? @map("caption") @db.VarChar(60)
+  usage                         Int     @default(0, map: "DF__balot__usage__4A5B65EB") @map("usage") @db.TinyInt
+  isSystemStandard              Int     @default(0, map: "DF__balot__issystem__4B4F8A24") @map("issystem") @db.TinyInt
+  timestamp                     String  @map("timestamp") @db.Char(10) // TODO: consider renaming timestamp field when knowing more about its usage
 
   location Location[] //@relation("fkbalokkeybalot") // Changed the relation from balok
   // TODO: Commented out as StatisticsGroupScb is not defined
@@ -33,4 +32,5 @@ model PropertyType {
   @@index([statisticsGroup4Id], map: "fkbalotballs4")
   @@index([checklistId], map: "fkbalotlbpro")
   @@index([componentTypeActionId], map: "fkbalotpuatt")
+  @@map("balot")
 }
