@@ -16,7 +16,6 @@ import {
   TicketMessageSms,
 } from 'onecore-types'
 import { generateRouteMetadata } from 'onecore-utilities'
-import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
@@ -141,6 +140,28 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         message: error.message,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendTicketEmail', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const emailData = ctx.request.body
+
+    if (!isMessageEmail(emailData)) {
+      ctx.status = 400
+      ctx.body = { reason: 'Message is not an email object', ...metadata }
+      return
+    }
+    try {
+      const result = await sendEmail(emailData)
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        error: error.message,
         ...metadata,
       }
     }
