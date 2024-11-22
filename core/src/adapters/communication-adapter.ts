@@ -2,6 +2,7 @@ import { loggedAxios as axios } from 'onecore-utilities'
 import config from '../common/config'
 import { Contact, ParkingSpaceOfferEmail } from 'onecore-types'
 import { logger } from 'onecore-utilities'
+import { AdapterResult } from './types'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,
@@ -110,5 +111,66 @@ export const sendParkingSpaceOfferEmail = async (
       error,
       `Error sending parking space offer to ${parkingSpaceDetails.to}`
     )
+  }
+}
+
+export const sendTicketMessageSms = async (
+  phoneNumber: string,
+  message: string
+): Promise<AdapterResult<any, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendTicketSms`,
+      {
+        ...axiosOptions,
+        data: { phoneNumber, message },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendTicketMessageEmail = async (
+  to: string,
+  subject: string,
+  message: string
+): Promise<AdapterResult<any, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendTicketEmail`,
+      {
+        ...axiosOptions,
+        data: { to, subject, text: message },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    return { ok: false, err: 'error', statusCode: 500 }
   }
 }
