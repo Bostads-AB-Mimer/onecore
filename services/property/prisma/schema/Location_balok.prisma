@@ -1,32 +1,31 @@
 model Location {
-  @@map("balok")
 
-  locationId String @id(map: "pkbalok") @map("keybalok") @db.Char(15)
-  propertyObjectId String @unique(map: "akbalok1") @map("keycmobj") @db.Char(15)
-  typeCodeId String @map("keybalot") @db.Char(15)
-  sharedTypeId String? @map("keybacat") @db.Char(15)
-  mainFunctionId String? @map("keybarch") @db.Char(15)
-  subFunctionId String? @map("keybarcp") @db.Char(15)
+  locationId          String  @id(map: "pkbalok") @map("keybalok") @db.Char(15)
+  propertyObjectId    String  @unique(map: "akbalok1") @map("keycmobj") @db.Char(15)
+  typeCodeId          String  @map("keybalot") @db.Char(15)
+  sharedTypeId        String? @map("keybacat") @db.Char(15)
+  mainFunctionId      String? @map("keybarch") @db.Char(15)
+  subFunctionId       String? @map("keybarcp") @db.Char(15)
   roomSpecificationId String? @map("keybarcr") @db.Char(15)
-  checklistId String? @map("keylbpro") @db.Char(15)
-  areaClassId String? @map("keyvcacl") @db.Char(15)
+  checklistId         String? @map("keylbpro") @db.Char(15)
+  areaClassId         String? @map("keyvcacl") @db.Char(15)
 
-  code String @map("code") @db.VarChar(30)
-  name String? @map("caption") @db.VarChar(30)
-  location String? @map("lage") @db.VarChar(5)
-  entrance String? @map("uppgang") @db.VarChar(20)
-  usage Int @default(0, map: "DF__balok__usage__4AD31BAA") @map("usage") @db.TinyInt
-  deleteMark Int @default(0, map: "DF__balok__deletemar__4BC73FE3") @map("deletemark") @db.TinyInt
-  fromDate DateTime @map("fdate") @db.DateTime
-  toDate DateTime @map("tdate") @db.DateTime
+  code          String    @map("code") @db.VarChar(30)
+  name          String?   @map("caption") @db.VarChar(30)
+  location      String?   @map("lage") @db.VarChar(5)
+  entrance      String?   @map("uppgang") @db.VarChar(20)
+  usage         Int       @default(0, map: "DF__balok__usage__4AD31BAA") @map("usage") @db.TinyInt
+  deleteMark    Int       @default(0, map: "DF__balok__deletemar__4BC73FE3") @map("deletemark") @db.TinyInt
+  fromDate      DateTime  @map("fdate") @db.DateTime
+  toDate        DateTime  @map("tdate") @db.DateTime
   availableFrom DateTime? @map("availfrom") @db.Time
-  availableTo DateTime? @map("availto") @db.Time
-  timestamp String @map("timestamp") @db.Char(10)
+  availableTo   DateTime? @map("availto") @db.Time
+  timestamp     String    @map("timestamp") @db.Char(10)
 
   propertyType PropertyType @relation(fields: [typeCodeId], references: [propertyTypeId], onUpdate: NoAction, map: "fkbalokkeybalot")
   //propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbalokkeycmobj")
   //inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalokkeylbpro")
-  
+
   // TODO: Consider renaming the remaining models when more information is available
   // bacat SharedType? 
   // barch MainFunction? 
@@ -40,4 +39,5 @@ model Location {
   @@index([toDate], map: "inbalok_2BR0U8Z3S")
   @@index([code], map: "inbalok_2BR0U8Z4N")
   @@index([name], map: "inbalok_2BR0U8Z5X")
+  @@map("balok")
 }

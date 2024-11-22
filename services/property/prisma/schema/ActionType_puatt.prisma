@@ -1,12 +1,11 @@
 model ActionType {
-  @@map("puatt")
 
-  actionTypeId String @id(map: "pkpuatt") @map("keypuatt") @db.Char(15)
-  keypuhdt String @map("keypuhdt") @db.Char(15)
-  actionTypeCode String @unique(map: "akpuatt1") @map("code") @db.Char(4)
-  actionTypeName String @map("caption") @db.VarChar(100)
-  isSystemStandard Int @default(0, map: "DF__puatt__issystem__7C9452BE") @map("issystem") @db.TinyInt
-  timestamp String @map("timestamp") @db.Char(10) // TODO: revisit 'timestamp' once more context is available
+  actionTypeId     String @id(map: "pkpuatt") @map("keypuatt") @db.Char(15)
+  keypuhdt         String @map("keypuhdt") @db.Char(15)
+  actionTypeCode   String @unique(map: "akpuatt1") @map("code") @db.Char(4)
+  actionTypeName   String @map("caption") @db.VarChar(100)
+  isSystemStandard Int    @default(0, map: "DF__puatt__issystem__7C9452BE") @map("issystem") @db.TinyInt
+  timestamp        String @map("timestamp") @db.Char(10) // TODO: revisit 'timestamp' once more context is available
 
   // Updated with new model names
   // leaseObjectType LeaseObjectType[] @relation("fkbaaotkeypuatt") // Changed baaot to LeaseObjectType
@@ -17,9 +16,10 @@ model ActionType {
   // componentType ComponentType[] @relation("fkbakmtkeypuatt") // Changed bakmt to ComponentType
   residenceType ResidenceType[] //@relation("fkbalgtkeypuatt") // Changed balgt to ResidenceType
   // propertyType PropertyType[] @relation("fkbalotkeypuatt") // Changed balot to PropertyType
-  roomType RoomType[] //@relation("fkbarutkeypuatt") // Changed barut to RoomType
+  roomType      RoomType[] //@relation("fkbarutkeypuatt") // Changed barut to RoomType
   // systemType SystemType[] @relation("fkbasytkeypuatt") // Changed basyt to SystemType
   //maintenanceAction MaintenanceAction[] @relation("fkpuatgkeypuatt") // Changed puatg to MaintenanceAction
 
   @@index([keypuhdt], map: "fkpuattpuhdt")
+  @@map("puatt")
 }

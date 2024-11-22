@@ -1,15 +1,14 @@
 model ResourcePlanning {
-  @@map("barek")
 
   // Fields
-  resourcePlanningId String @id(map: "pkbarek") @map("keybarek") @db.Char(15)
-  planningTypeId String @map("keybaret") @db.Char(15) // TODO: confirm if "Resursplaneringstyp" translates directly to "planningTypeId"
-  propertyObjectId String @map("keycmobj") @db.Char(15) // TODO: may need renaming based on domain
-  contactId String? @map("keycmctc") @db.Char(15)
-  resourceGroupId String? @map("keycmrgr") @db.Char(15)
-  fromDate DateTime? @map("fdate") @db.Date
-  toDate DateTime? @map("tdate") @db.Date
-  timestamp String @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' needs a different naming convention
+  resourcePlanningId String    @id(map: "pkbarek") @map("keybarek") @db.Char(15)
+  planningTypeId     String    @map("keybaret") @db.Char(15) // TODO: confirm if "Resursplaneringstyp" translates directly to "planningTypeId"
+  propertyObjectId   String    @map("keycmobj") @db.Char(15) // TODO: may need renaming based on domain
+  contactId          String?   @map("keycmctc") @db.Char(15)
+  resourceGroupId    String?   @map("keycmrgr") @db.Char(15)
+  fromDate           DateTime? @map("fdate") @db.Date
+  toDate             DateTime? @map("tdate") @db.Date
+  timestamp          String    @map("timestamp") @db.Char(10) // TODO: confirm if 'timestamp' needs a different naming convention
 
   // Relations
   // baret // TODO: Relation is missing or model does not exist
@@ -23,4 +22,5 @@ model ResourcePlanning {
   @@index([contactId], map: "fkbarekcmctc")
   @@index([propertyObjectId], map: "fkbarekcmobj")
   @@index([resourceGroupId], map: "fkbarekcmrgr")
+  @@map("barek")
 }

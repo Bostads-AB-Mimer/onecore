@@ -1,44 +1,43 @@
 model Residence {
-  @@map("balgh")
 
-  residenceId String @id(map: "pkbalgh") @map("keybalgh") @db.Char(15)
-  objectId String @unique(map: "akbalgh1") @map("keycmobj") @db.Char(15)
-  residenceTypeId String @map("keybalgt") @db.Char(15)
-  housingFormId String? @map("keybalbf") @db.Char(15)
-  checklistId String? @map("keylbpro") @db.Char(15)
-  areaClassId String? @map("keyvcacl") @db.Char(15)
-  code String @map("code") @db.VarChar(30)
-  name String? @map("caption") @db.VarChar(30)
-  location String? @map("lage") @db.Char(1)
-  wheelchairAccessible Int? @map("hkprullsto") @db.TinyInt
-  residenceAdapted Int? @map("hkpvanlig") @db.TinyInt
-  serviceApartment Int? @map("service") @db.TinyInt
-  balcony1Location String? @map("balk1lage") @db.Char(1)
-  balcony2Location String? @map("balk2lage") @db.Char(1)
-  balcony1Type String? @map("balk1typ") @db.Char(1)
-  balcony2Type String? @map("balk2typ") @db.Char(1)
-  patioLocation String? @map("utepllage") @db.Char(1)
-  hygieneFacility String? @map("hygienutr") @db.Char(1)
-  sauna Int @default(0, map: "DF__balgh__sauna__3F6168FE") @map("sauna") @db.TinyInt
-  extraToilet Int @map("extrawc") @db.TinyInt
-  sharedKitchen Int @default(0, map: "DF__balgh__lmcomkitc__40558D37") @map("lmcomkitch") @db.TinyInt
-  petAllergyFree Int @map("allergdjur") @db.TinyInt
-  electricAllergyIntolerance Int @map("allergel") @db.TinyInt
-  smokeFree Int @default(0, map: "DF__balgh__smokefree__4149B170") @map("smokefree") @db.TinyInt
-  elevator Int? @map("hiss") @db.TinyInt
-  asbestos Int @default(0, map: "DF__balgh__asbestos__423DD5A9") @map("asbestos") @db.TinyInt
-  entrance String? @map("uppgang") @db.VarChar(20)
-  hluFundAvailableAmount Float? @map("hlufondavs") @db.Money
-  hluFundMaxAmount Float? @map("hlufondmax") @db.Money
-  hluDiscountStartDate DateTime? @map("fdatehglu") @db.DateTime
-  partNo Int? @map("partno") @db.TinyInt
-  part String? @map("part") @db.VarChar(10)
-  deleted Int @default(0, map: "DF__balgh__deletemar__4331F9E2") @map("deletemark") @db.TinyInt
-  fromDate DateTime @map("fdate") @db.DateTime
-  toDate DateTime @map("tdate") @db.DateTime
-  timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later
+  residenceId                String    @id(map: "pkbalgh") @map("keybalgh") @db.Char(15)
+  objectId                   String    @unique(map: "akbalgh1") @map("keycmobj") @db.Char(15)
+  residenceTypeId            String    @map("keybalgt") @db.Char(15)
+  housingFormId              String?   @map("keybalbf") @db.Char(15)
+  checklistId                String?   @map("keylbpro") @db.Char(15)
+  areaClassId                String?   @map("keyvcacl") @db.Char(15)
+  code                       String    @map("code") @db.VarChar(30)
+  name                       String?   @map("caption") @db.VarChar(30)
+  location                   String?   @map("lage") @db.Char(1)
+  wheelchairAccessible       Int?      @map("hkprullsto") @db.TinyInt
+  residenceAdapted           Int?      @map("hkpvanlig") @db.TinyInt
+  serviceApartment           Int?      @map("service") @db.TinyInt
+  balcony1Location           String?   @map("balk1lage") @db.Char(1)
+  balcony2Location           String?   @map("balk2lage") @db.Char(1)
+  balcony1Type               String?   @map("balk1typ") @db.Char(1)
+  balcony2Type               String?   @map("balk2typ") @db.Char(1)
+  patioLocation              String?   @map("utepllage") @db.Char(1)
+  hygieneFacility            String?   @map("hygienutr") @db.Char(1)
+  sauna                      Int       @default(0, map: "DF__balgh__sauna__3F6168FE") @map("sauna") @db.TinyInt
+  extraToilet                Int       @map("extrawc") @db.TinyInt
+  sharedKitchen              Int       @default(0, map: "DF__balgh__lmcomkitc__40558D37") @map("lmcomkitch") @db.TinyInt
+  petAllergyFree             Int       @map("allergdjur") @db.TinyInt
+  electricAllergyIntolerance Int       @map("allergel") @db.TinyInt
+  smokeFree                  Int       @default(0, map: "DF__balgh__smokefree__4149B170") @map("smokefree") @db.TinyInt
+  elevator                   Int?      @map("hiss") @db.TinyInt
+  asbestos                   Int       @default(0, map: "DF__balgh__asbestos__423DD5A9") @map("asbestos") @db.TinyInt
+  entrance                   String?   @map("uppgang") @db.VarChar(20)
+  hluFundAvailableAmount     Float?    @map("hlufondavs") @db.Money
+  hluFundMaxAmount           Float?    @map("hlufondmax") @db.Money
+  hluDiscountStartDate       DateTime? @map("fdatehglu") @db.DateTime
+  partNo                     Int?      @map("partno") @db.TinyInt
+  part                       String?   @map("part") @db.VarChar(10)
+  deleted                    Int       @default(0, map: "DF__balgh__deletemar__4331F9E2") @map("deletemark") @db.TinyInt
+  fromDate                   DateTime  @map("fdate") @db.DateTime
+  toDate                     DateTime  @map("tdate") @db.DateTime
+  timestamp                  String    @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later
 
-  residenceType ResidenceType @relation(fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction, map: "fkbalghkeybalgt ")
+  residenceType  ResidenceType  @relation(fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction, map: "fkbalghkeybalgt ")
   propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbalghkeycmobj")
   // TODO: Verify relation for checklistId as the InspectionProtocol model was provided but fields need to be verified
   // inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalghkeylbpro ")
@@ -49,4 +48,5 @@ model Residence {
   @@index([toDate], map: "inbalgh_2BR0U8P3K")
   @@index([code], map: "inbalgh_2BR0U8P4U")
   @@index([name], map: "inbalgh_2BR0U8P5R")
+  @@map("balgh")
 }

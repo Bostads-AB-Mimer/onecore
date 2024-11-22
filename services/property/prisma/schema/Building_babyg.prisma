@@ -8,7 +8,7 @@ model Building {
   propertyDesignationId String? @map("keybabyc") @db.Char(15)
 
   // TODO: Uncomment and verify naming for these fields when original schema is available
-  districtObjectId String? @map("keybanbh") @db.Char(15) @ignore // empty table in db therefore ignored
+  districtObjectId String? @map("keybanbh") @ignore @db.Char(15) // empty table in db therefore ignored
   blockId          String? @map("keybablo") @db.Char(15)
   // buildingMemoryClassificationId String? @map("keybacls") @db.Char(15)
 

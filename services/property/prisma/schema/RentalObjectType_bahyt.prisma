@@ -1,13 +1,12 @@
 model RentalObjectType {
-  @@map("bahyt")
 
-  rentalObjectTypeId String @id(map: "pkbahyt") @map("keybahyt") @db.Char(15)
-  actionTypeId String? @map("keypuatt") @db.Char(15) // Relates to a potential action type in the future
-  rentalObjectTypeCode String @unique(map: "akbahyt") @map("code") @db.VarChar(15)
-  name String? @map("caption") @db.VarChar(60)
-  terminateWithDwelling Int @default(0, map: "DF__bahyt__terwithdw__3C0D4694") @map("terwithdwe") @db.TinyInt
-  systemStandard Int @default(0, map: "DF__bahyt__issystem__3D016ACD") @map("issystem") @db.TinyInt
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  rentalObjectTypeId    String  @id(map: "pkbahyt") @map("keybahyt") @db.Char(15)
+  actionTypeId          String? @map("keypuatt") @db.Char(15) // Relates to a potential action type in the future
+  rentalObjectTypeCode  String  @unique(map: "akbahyt") @map("code") @db.VarChar(15)
+  name                  String? @map("caption") @db.VarChar(60)
+  terminateWithDwelling Int     @default(0, map: "DF__bahyt__terwithdw__3C0D4694") @map("terwithdwe") @db.TinyInt
+  systemStandard        Int     @default(0, map: "DF__bahyt__issystem__3D016ACD") @map("issystem") @db.TinyInt
+  timestamp             String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   rentalContracts RentalObject[] // Updated from bahyr to RentalObject based on previous conversion
   // Define relation to action type
@@ -16,4 +15,5 @@ model RentalObjectType {
 
   // TODO: Uncomment and verify after confirming ActionType model
   @@index([actionTypeId], map: "fkbahytpuatt")
+  @@map("bahyt")
 }
