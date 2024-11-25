@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
+import { Residence } from '../types/residence'
 
 export const getLatestResidences = async () => {
   const response = await prisma.residence.findMany({
@@ -79,7 +80,25 @@ export const getLatestResidences = async () => {
   return response
 }
 
-export const getResidenceById = async (id: string): Promise<Residence | null> => {
+export type ResidenceWithRelations = Prisma.ResidenceGetPayload<{
+  include: {
+    residenceType: true
+    propertyObject: {
+      select: {
+        propertyStructure: {
+          select: {
+            property: true
+            building: true
+          }
+        }
+      }
+    }
+  }
+}>
+
+export const getResidenceById = async (
+  id: string,
+): Promise<ResidenceWithRelations | null> => {
   const response = await prisma.residence.findFirst({
     where: {
       residenceId: id,
