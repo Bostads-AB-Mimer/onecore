@@ -24,7 +24,7 @@ export const roomService = {
   // Create new room
   async create(apartmentId: string, data: Omit<Room, 'id'>): Promise<Room> {
     // TODO: Replace with actual API call
-    return fetchApi<Room>(`/apartments/${apartmentId}/rooms`, {
+    return fetchApi<Room>(`/apartments/${apartmentId}/rooms/`, {
       method: 'POST',
       body: JSON.stringify(data),
     })

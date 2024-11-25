@@ -26,7 +26,7 @@ export const tenantService = {
   // Create new tenant
   async create(data: Omit<Tenant, 'id'>): Promise<Tenant> {
     // TODO: Replace with actual API call
-    return fetchApi<Tenant>('/tenants', {
+    return fetchApi<Tenant>('/tenants/', {
       method: 'POST',
       body: JSON.stringify(data),
     })
