@@ -202,7 +202,7 @@ export function PropertyNavigation() {
       }
     }
 
-    loadProperties()
+    loadAreas()
   }, [])
 
   const handleToggle = (id: string) => {
