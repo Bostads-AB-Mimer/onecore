@@ -107,6 +107,17 @@ export function mapDbToResidence(
     links: {
       building: dbRecord.propertyObject?.building?.buildingCode,
       property: dbRecord.propertyObject?.property?.propertyCode,
+      _links: {
+        self: {
+          href: `/residences/${dbRecord.residenceId.trim()}`,
+        },
+        building: dbRecord.propertyObject?.building?.buildingCode ? {
+          href: `/buildings/byCode/${dbRecord.propertyObject.building.buildingCode}`,
+        } : undefined,
+        property: dbRecord.propertyObject?.property?.propertyCode ? {
+          href: `/properties/${dbRecord.propertyObject.property.propertyId}`,
+        } : undefined
+      }
     },
   })
 }

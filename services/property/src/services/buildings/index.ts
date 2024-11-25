@@ -103,7 +103,18 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const response = await getBuildingByCode(parsedBuildingCode)
-      ctx.body = { content: response, ...metadata }
+      ctx.body = { 
+        content: response, 
+        _links: {
+          self: {
+            href: `/buildings/byCode/${parsedBuildingCode}`
+          },
+          property: response?.propertyDesignation?.propertyId ? {
+            href: `/properties/${response.propertyDesignation.propertyId}`
+          } : undefined
+        },
+        ...metadata 
+      }
     } catch (error) {
       logger.error('Error fetching building by code:', error)
       ctx.status = 500
