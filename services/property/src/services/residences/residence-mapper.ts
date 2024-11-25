@@ -1,9 +1,15 @@
-import { Residence, ResidenceSchema } from '../../types/residence'
 import { Prisma } from '@prisma/client'
+import { ResidenceWithRelations } from '../../adapters/residence-adapter'
+import {
+  ExternalResidence,
+  ExternalResidenceSchema,
+} from '../../types/residence'
 
-export function mapDbToResidence(dbRecord: ResidenceWithRelations): Residence {
-  if (!dbRecord) return {} as Residence
-  return ResidenceSchema.parse({
+export function mapDbToResidence(
+  dbRecord: ResidenceWithRelations,
+): ExternalResidence {
+  if (!dbRecord) return {} as ExternalResidence
+  return ExternalResidenceSchema.parse({
     id: dbRecord.residenceId.trim(),
     code: dbRecord.code,
     name: dbRecord.name,
@@ -108,24 +114,20 @@ export function mapDbToResidence(dbRecord: ResidenceWithRelations): Residence {
       },
     },
     links: {
-      building:
-        dbRecord.propertyObject?.propertyStructure?.building?.buildingCode,
-      property:
-        dbRecord.propertyObject?.propertyStructure?.property?.propertyCode,
+      building: dbRecord.propertyObject?.building?.buildingCode,
+      property: dbRecord.propertyObject?.property?.propertyCode,
       _links: {
         self: {
           href: `/residences/${dbRecord.residenceId.trim()}`,
         },
-        building: dbRecord.propertyObject?.propertyStructure?.building
-          ?.buildingCode
+        building: dbRecord.propertyObject?.building?.buildingCode
           ? {
-              href: `/buildings/byCode/${dbRecord.propertyObject.propertyStructure.building.buildingCode}`,
+              href: `/buildings/byCode/${dbRecord.propertyObject.building?.buildingCode}`,
             }
           : undefined,
-        property: dbRecord.propertyObject?.propertyStructure?.property
-          ?.propertyCode
+        property: dbRecord.propertyObject?.property?.propertyCode
           ? {
-              href: `/properties/${dbRecord.propertyObject.propertyStructure.property.propertyId}`,
+              href: `/properties/${dbRecord.propertyObject.property?.propertyCode}`,
             }
           : undefined,
       },
