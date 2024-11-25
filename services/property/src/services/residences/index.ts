@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { Residence } from '../../types/residence'
 import {
   getResidencesByType,
   getLatestResidences,
@@ -81,7 +82,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
     console.log('dbRecord', dbRecord)
-    const response: Residence = mapDbToResidence(dbRecord)
+    const response = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
   })
 }
