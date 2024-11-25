@@ -7,6 +7,7 @@ export const swaggerSpec = {
       title: 'property-base',
       version: '1.0.0',
     },
+    components: {},
   },
   apis: [
     `${basePath}/services/components/*.{ts,js}`,

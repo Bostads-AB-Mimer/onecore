@@ -19,8 +19,12 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /components/:
    *   get:
-   *     summary: Gets a list of components.
-   *     description: Returns the component for the relevant unit code.
+   *     summary: Gets a list of components for a maintenance unit
+   *     description: |
+   *       Retrieves all components associated with a specific maintenance unit code.
+   *       Components are returned ordered by installation date (newest first).
+   *       Each component includes details about its type, category, manufacturer, 
+   *       and associated maintenance unit information.
    *     tags:
    *       - Components
    *     parameters:
@@ -29,11 +33,23 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The code of the maintenance unit.
+   *         description: The unique code identifying the maintenance unit
+   *         example: "MU123456"
    *     responses:
    *       200:
-   *         description: Successfully retrieved the components.
+   *         description: |
+   *           Successfully retrieved the components list. Returns an array of component objects
+   *           containing details like ID, code, name, manufacturer, installation date, etc.
    *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ComponentList'
+   *       400:
+   *         description: Invalid maintenance unit code provided
+   *       404:
+   *         description: No components found for the specified maintenance unit
+   *       500:
+   *         description: Internal server error
    */
   router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

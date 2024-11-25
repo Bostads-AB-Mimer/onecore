@@ -1,12 +1,18 @@
-import { Residence } from '../../types/residence'
+import { Prisma } from '@prisma/client'
+import { ResidenceWithRelations } from '../../adapters/residence-adapter'
+import {
+  ResidenceSchema,
+  Residence,
+} from '../../types/residence'
 
-export function mapDbToResidence(dbRecord: any): Residence {
+export function mapDbToResidence(
+  dbRecord: ResidenceWithRelations,
+): Residence {
   if (!dbRecord) return {} as Residence
-  return {
+  return ResidenceSchema.parse({
     id: dbRecord.residenceId.trim(),
     code: dbRecord.code,
     name: dbRecord.name,
-    location: dbRecord.location || undefined,
     accessibility: {
       wheelchairAccessible: dbRecord.wheelchairAccessible === 1,
       residenceAdapted: dbRecord.residenceAdapted === 1,
@@ -14,12 +20,14 @@ export function mapDbToResidence(dbRecord: any): Residence {
     },
     location: dbRecord.location || undefined,
     features: {
-      balcony1: dbRecord.balcony1
-        ? { location: dbRecord.balcony1Location, type: dbRecord.balcony1Type }
-        : undefined,
-      balcony2: dbRecord.balcony2
-        ? { location: dbRecord.balcony2Location, type: dbRecord.balcony2Type }
-        : undefined,
+      balcony1: {
+        location: dbRecord.balcony1Location,
+        type: dbRecord.balcony1Type,
+      },
+      balcony2: {
+        location: dbRecord.balcony2Location,
+        type: dbRecord.balcony2Type,
+      },
       patioLocation: dbRecord.patioLocation,
       hygieneFacility: dbRecord.hygieneFacility,
       sauna: dbRecord.sauna === 1,
@@ -30,7 +38,7 @@ export function mapDbToResidence(dbRecord: any): Residence {
       smokeFree: dbRecord.smokeFree === 1,
       asbestos: dbRecord.asbestos === 1,
     },
-    rooms:
+    /*rooms: // activate when rooms are implemented
       dbRecord.rooms?.map((room: any) => ({
         id: room.id,
         code: room.code,
@@ -74,38 +82,55 @@ export function mapDbToResidence(dbRecord: any): Residence {
         },
         deleteMark: room.deleteMark === 1,
         timestamp: room.timestamp,
-      })) || [],
+      })) || [],*/
     entrance: dbRecord.entrance,
-    partNo: dbRecord.partNo,
-    part: dbRecord.part,
+    partNo: dbRecord.partNo || 0,
+    part: dbRecord.part || '',
     deleted: dbRecord.deleted === 1,
     validityPeriod: {
       fromDate: new Date(dbRecord.fromDate),
       toDate: new Date(dbRecord.toDate),
     },
-    timestamp: dbRecord.timestamp,
-    residenceType: dbRecord.residenceType
-      ? {
-          code: dbRecord.residenceType.code.trim(),
-          name: dbRecord.residenceType.name.trim(),
-          roomCount: dbRecord.residenceType.roomCount,
-          kitchen: dbRecord.residenceType.kitchen,
-          selectionFundAmount: dbRecord.residenceType.selectionFundAmount,
-        }
-      : undefined,
-    propertyObject: dbRecord.propertyObject
-      ? {
-          energy: {
-            energyClass: dbRecord.propertyObject.energyClass,
-            energyRegistered: dbRecord.propertyObject.energyRegistered
-              ? new Date(dbRecord.propertyObject.energyRegistered)
-              : undefined,
-            energyReceived: dbRecord.propertyObject.energyReceived
-              ? new Date(dbRecord.propertyObject.energyReceived)
-              : undefined,
-            energyIndex: dbRecord.propertyObject.energyIndex,
-          },
-        }
-      : undefined,
-  }
+    residenceType: {
+      code: dbRecord.residenceType.code,
+      name: dbRecord.residenceType.name,
+      roomCount: dbRecord.residenceType.roomCount,
+      kitchen: dbRecord.residenceType.kitchen,
+      systemStandard: dbRecord.residenceType.systemStandard || 0,
+      residenceTypeId: dbRecord.residenceType.residenceTypeId,
+      checklistId: dbRecord.residenceType.checklistId,
+      componentTypeActionId: dbRecord.residenceType.componentTypeActionId,
+      statisticsGroupSCBId: dbRecord.residenceType.statisticsGroupSCBId,
+      statisticsGroup2Id: dbRecord.residenceType.statisticsGroup2Id,
+      statisticsGroup3Id: dbRecord.residenceType.statisticsGroup3Id,
+      statisticsGroup4Id: dbRecord.residenceType.statisticsGroup4Id,
+      timestamp: dbRecord.residenceType.timestamp,
+    },
+    propertyObject: {
+      energy: {
+        energyClass: dbRecord.propertyObject.energyClass,
+        heatingNature: dbRecord.propertyObject.heatingNature,
+        // .. add more fields when needed
+      },
+    },
+    links: {
+      building: dbRecord.propertyObject?.building?.buildingCode,
+      property: dbRecord.propertyObject?.property?.propertyCode,
+      _links: {
+        self: {
+          href: `/residences/${dbRecord.residenceId.trim()}`,
+        },
+        building: dbRecord.propertyObject?.building?.buildingCode
+          ? {
+              href: `/buildings/byCode/${dbRecord.propertyObject.building?.buildingCode}`,
+            }
+          : undefined,
+        property: dbRecord.propertyObject?.property?.propertyCode
+          ? {
+              href: `/properties/${dbRecord.propertyObject.property?.propertyCode}`,
+            }
+          : undefined,
+      },
+    },
+  })
 }

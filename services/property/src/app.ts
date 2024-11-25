@@ -11,13 +11,25 @@ import { routes as swaggerRoutes } from './services/swagger'
 
 const app = new Koa()
 
-app.use(cors())
+// Configure CORS with specific options
+app.use(cors({
+  origin: '*', // Allow all origins
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposeHeaders: ['Content-Length', 'Date', 'X-Request-Id'],
+  maxAge: 5, // Preflight requests are cached for 5 seconds
+  credentials: true, // Allow credentials (cookies, authorization headers, etc)
+}))
 
 app.use(
   koaSwagger({
     routePrefix: '/swagger',
     swaggerOptions: {
       url: '/swagger.json',
+      defaultModelsExpandDepth: '-1',
+      tryItOutEnabled: true,
+      displayRequestDuration: true,
+      persistAuthorization: true,
     },
   }),
 )

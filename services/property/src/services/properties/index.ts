@@ -9,6 +9,7 @@ import {
   getProperties,
   getPropertyById
 } from '../../adapters/property-adapter'
+import { generateMetaLinks } from '../../utils/links'
 
 /**
  * @swagger
@@ -22,8 +23,11 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /properties/{id}/:
    *   get:
-   *     summary: Get a real estate property by ID
-   *     description: Returns the property.
+   *     summary: Get detailed information about a specific property
+   *     description: |
+   *       Retrieves comprehensive information about a real estate property using its unique identifier.
+   *       Returns detailed property information including property code, tract, designation,
+   *       and associated property objects.
    *     tags:
    *       - Properties
    *     parameters:
@@ -37,20 +41,35 @@ export const routes = (router: KoaRouter) => {
    *       200:
    *         description: Successfully retrieved the property.
    *         content:
+   *           application/json:
+   *             schema:
+   *               oneOf:
+   *                 - $ref: '#/components/schemas/PropertyList'
+   *                 - $ref: '#/components/schemas/Property'
    */
-  router.get('(.*)/properties/:id/', async (ctx) => {
+  router.get(['(.*)/properties/:id', '(.*)/properties/:id/'], async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties/:id/', metadata)
     const response = await getPropertyById(ctx.params.id)
-    ctx.body = { content: response, ...metadata }
+    ctx.body = { 
+      content: response,
+      ...metadata,
+      _links: generateMetaLinks(ctx, '/properties', {
+        id: ctx.params.id,
+        buildings: response?.propertyCode || ''
+      })
+    }
   })
 
   /**
    * @swagger
    * /properties/:
    *   get:
-   *     summary: Gets all real estate properties
-   *     description: Returns the property.
+   *     summary: Get a list of all real estate properties
+   *     description: |
+   *       Retrieves a list of all real estate properties in the system.
+   *       Can be filtered by tract if provided. Returns basic property information
+   *       including property ID, code, tract, and designation.
    *     tags:
    *       - Properties
    *     parameters:
@@ -58,21 +77,35 @@ export const routes = (router: KoaRouter) => {
    *         name: tract
    *         schema:
    *           type: string
-   *         description: Filter properties by tract.
+   *         description: Optional filter to get properties in a specific tract
+   *         example: "T123"
    *     responses:
    *       200:
-   *         description: Successfully retrieved the properties.
+   *         description: Successfully retrieved list of properties
    *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PropertyList'
+   *       500:
+   *         description: Internal server error
    */
-  router.get('(.*)/properties/', async (ctx) => {
-    let query = undefined
-    if(ctx.query.tract ){
-      query = ctx.query.tract.toString()
-    }
+  router.get(['(.*)/properties', '(.*)/properties/'], async (ctx) => {
+    let query = ctx.query.tract?.toString()
 
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties', metadata)
     const response = await getProperties(query)
-    ctx.body = { content: response, ...metadata }
+    ctx.body = { 
+      content: response.map(property => ({
+        ...property,
+        _links: {
+          self: {
+            href: `/properties/${property.propertyId}`
+          }
+        }
+      })),
+      ...metadata,
+      _links: generateMetaLinks(ctx, '/properties')
+    }
   })
 }
