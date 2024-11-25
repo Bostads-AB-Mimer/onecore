@@ -8,10 +8,27 @@ const prisma = new PrismaClient({
 const getPropertyById = async (propertyId: string): Promise<PropertyWithObject | null> => {
     const response = await prisma.property.findUnique({
         where: {
-            id: propertyId,
+            propertyId: propertyId,
         },
         include: {
-            propertyObject: true,
+            propertyObject: {
+                select: {
+                    propertyObjectId: true,
+                    deleteMark: true,
+                    timestamp: true,
+                    objectTypeId: true,
+                    barcode: true,
+                    barcodeType: true,
+                    condition: true,
+                    conditionInspectionDate: true,
+                    vatAdjustmentPrinciple: true,
+                    energyClass: true,
+                    energyRegistered: true,
+                    energyReceived: true,
+                    energyIndex: true,
+                    heatingNature: true
+                }
+            }
         },
     })
     return response
