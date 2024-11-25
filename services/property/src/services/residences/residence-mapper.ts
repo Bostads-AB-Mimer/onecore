@@ -1,15 +1,15 @@
 import { Prisma } from '@prisma/client'
 import { ResidenceWithRelations } from '../../adapters/residence-adapter'
 import {
-  ExternalResidence,
-  ExternalResidenceSchema,
+  ResidenceSchema,
+  Residence,
 } from '../../types/residence'
 
 export function mapDbToResidence(
   dbRecord: ResidenceWithRelations,
-): ExternalResidence {
-  if (!dbRecord) return {} as ExternalResidence
-  return ExternalResidenceSchema.parse({
+): Residence {
+  if (!dbRecord) return {} as Residence
+  return ResidenceSchema.parse({
     id: dbRecord.residenceId.trim(),
     code: dbRecord.code,
     name: dbRecord.name,
