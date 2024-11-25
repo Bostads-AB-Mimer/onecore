@@ -107,15 +107,15 @@ export const getResidenceById = async (
       residenceType: true,
       propertyObject: {
         select: {
-          propertyStructures: {
+          propertyStructure: {
             select: {
-              propertyId: true,
-              buildingId: true,
-            },
-          },
-        },
-      },
-    },
+              property: true,
+              building: true
+            }
+          }
+        }
+      }
+    }
   })
 
   return response
