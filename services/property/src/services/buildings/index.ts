@@ -103,20 +103,9 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const response = await getBuildingByCode(parsedBuildingCode)
-      ctx.body = { 
-        content: response, 
-        _links: {
-          self: {
-            href: `/buildings/byCode/${parsedBuildingCode}`
-          },
-          property: response?.propertyDesignation?.propertyId ? {
-            href: `/properties/${response.propertyDesignation.propertyId}`
-          } : undefined,
-          residences: {
-            href: `/residences/?buildingCode=${parsedBuildingCode}`
-          }
-        },
-        ...metadata 
+      ctx.body = {
+        content: response,
+        ...metadata,
       }
     } catch (error) {
       logger.error('Error fetching building by code:', error)
@@ -124,5 +113,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: 'Internal server error', ...metadata }
     }
   })
-
 }
