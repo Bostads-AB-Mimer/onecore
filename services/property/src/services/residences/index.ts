@@ -48,11 +48,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * paths:
-   *   /residences/{id}:
+   * /residences/{id}:
    *   get:
-   *     summary: Get a residence by ID.
-   *     description: Returns a residence with the specified ID.
+   *     summary: Get a residence by ID
+   *     description: Returns a residence with the specified ID
    *     tags:
    *       - Residences
    *     parameters:
@@ -61,14 +60,17 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the residence.
+   *         description: The ID of the residence
+   *         example: "_6J50WTZQ2928FJ"
    *     responses:
    *       200:
-   *         description: Successfully retrieved the residence.
+   *         description: Successfully retrieved the residence
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/Residence'
+   *       404:
+   *         description: Residence not found
    */
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
