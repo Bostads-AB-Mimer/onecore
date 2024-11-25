@@ -169,24 +169,24 @@ export function PropertyNavigation() {
           areas.map(async (area) => {
             const propertiesResponse = await getProperties()
             const properties = propertiesResponse.content
-            const areaProperties = properties.filter(property => 
-              property.tract === area.id
+            const areaProperties = properties.filter(
+              (property) => property.tract === area.id
             )
-            
+
             return {
               id: area.id,
               name: area.name,
               type: 'area',
-              children: areaProperties.map(property => ({
+              children: areaProperties.map((property) => ({
                 id: property.propertyId,
                 name: property.propertyDesignation,
                 type: 'property',
                 children: [], // We'll add buildings when that API is available
-              }))
+              })),
             }
           })
         )
-        
+
         setNavigationItems(navigationItems)
 
         // Auto-expand root level if there's only one area
@@ -197,7 +197,7 @@ export function PropertyNavigation() {
           }))
         }
       } catch (err) {
-        setError('Failed to load properties')
+        setError('Failed to load properties:' + err!.message)
         console.error(err)
       } finally {
         setLoading(false)
