@@ -25,7 +25,12 @@ describe('API Navigation Tests', () => {
       expect(Array.isArray(propertiesResponse.data.content)).toBe(true)
       expect(propertiesResponse.data.content.length).toBeGreaterThan(0)
 
-      // For each property, get its details
+      // Check that _links are present in the response
+      expect(propertiesResponse.data._links).toBeDefined()
+      expect(propertiesResponse.data._links.self).toBeDefined()
+      expect(propertiesResponse.data._links.self.href).toBeDefined()
+
+      // For each property, get its details and follow links
       for (const property of propertiesResponse.data.content) {
         expect(property.propertyId).toBeDefined()
         expect(property.propertyCode).toBeDefined()
@@ -43,6 +48,19 @@ describe('API Navigation Tests', () => {
         expect(propertyDetails.propertyId).toBe(property.propertyId)
         expect(propertyDetails.propertyCode).toBe(property.propertyCode)
         expect(propertyDetails.tract).toBe(testTract)
+
+        // Verify HATEOAS links are present
+        expect(propertyDetailsResponse.data._links).toBeDefined()
+        expect(propertyDetailsResponse.data._links.self).toBeDefined()
+        expect(propertyDetailsResponse.data._links.self.href).toBeDefined()
+
+        // If there are buildings associated, verify the building links
+        if (propertyDetails.propertyCode) {
+          const buildingsLink = `/buildings/${propertyDetails.propertyCode}/`
+          const buildingsResponse = await axios.get(`${API_BASE}${buildingsLink}`)
+          expect(buildingsResponse.status).toBe(200)
+          expect(buildingsResponse.data.content).toBeDefined()
+        }
       }
     } catch (error: any) {
       console.error('Test failed:', error.message)
