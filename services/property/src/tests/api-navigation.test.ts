@@ -1,13 +1,12 @@
 import axios from 'axios'
 import app from '../app'
-import port from '../config/port'
-
-const API_BASE = `http://localhost:${port}`
+const TEST_PORT = 5051
+const API_BASE = `http://localhost:${TEST_PORT}`
 let server: any
 
 describe('API Navigation Tests', () => {
   beforeAll(async () => {
-    server = app.listen(port)
+    server = app.listen(TEST_PORT)
   })
 
   afterAll(async () => {
