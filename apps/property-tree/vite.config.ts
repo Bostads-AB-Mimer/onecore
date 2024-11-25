@@ -8,8 +8,9 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
+    port: 3000,
     proxy: {
-      '/api': {
+      '/api/properties': {
         target: 'http://localhost:5050',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
