@@ -115,8 +115,15 @@ export const getResidenceById = async (id: string) => {
           building: {
             select: {
               buildingCode: true,
-              name: true
-            }
+              name: true,
+              constructionYear: true,
+              renovationYear: true,
+              valueYear: true,
+              heating: true,
+              fireRating: true,
+              insuranceClass: true,
+              insuranceValue: true,
+            },
           },
           rentalObject: {
             select: {
@@ -130,19 +137,6 @@ export const getResidenceById = async (id: string) => {
                   name: true,
                 },
               },
-            },
-          },
-          building: {
-            select: {
-              buildingCode: true,
-              name: true,
-              constructionYear: true,
-              renovationYear: true,
-              valueYear: true,
-              heating: true,
-              fireRating: true,
-              insuranceClass: true,
-              insuranceValue: true,
             },
           },
         },
