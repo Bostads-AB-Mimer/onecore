@@ -79,7 +79,7 @@ export const getLatestResidences = async () => {
   return response
 }
 
-export const getResidenceById = async (id: string) => {
+export const getResidenceById = async (id: string): Promise<Residence | null> => {
   const response = await prisma.residence.findFirst({
     where: {
       residenceId: id,
