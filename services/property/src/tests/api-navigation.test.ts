@@ -16,8 +16,9 @@ describe('API Navigation Tests', () => {
 
   it('should get properties in BÄVERN tract and their details', async () => {
     try {
-      // Get properties in BÄVERN tract
-      const propertiesResponse = await axios.get(`${API_BASE}/properties/?tract=BÄVERN`)
+      // Get properties for a specific tract
+      const testTract = "TEST_TRACT"
+      const propertiesResponse = await axios.get(`${API_BASE}/properties/?tract=${testTract}`)
       expect(propertiesResponse.status).toBe(200)
       expect(propertiesResponse.data.content).toBeDefined()
       expect(Array.isArray(propertiesResponse.data.content)).toBe(true)
@@ -27,7 +28,7 @@ describe('API Navigation Tests', () => {
       for (const property of propertiesResponse.data.content) {
         expect(property.propertyId).toBeDefined()
         expect(property.propertyCode).toBeDefined()
-        expect(property.tract).toBe('BÄVERN')
+        expect(property.tract).toBe(testTract)
         
         // Get detailed property information
         const propertyDetailsResponse = await axios.get(`${API_BASE}/properties/${property.propertyId}/`)

@@ -90,7 +90,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('(.*)/properties/', async (ctx) => {
-    let query = ctx.query.tract?.toString() || 'BÄVERN'
+    let query = ctx.query.tract?.toString()
 
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties', metadata)
