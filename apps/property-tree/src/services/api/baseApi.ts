@@ -1,5 +1,5 @@
 // Base configuration for API calls
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 // Simulate network latency for development
 const SIMULATED_DELAY = 200
