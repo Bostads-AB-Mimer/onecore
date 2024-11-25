@@ -85,10 +85,16 @@ export const getResidenceById = async (id: string) => {
     include: {
       residenceType: {
         select: {
+          residenceTypeId: true,
           code: true,
           name: true,
           roomCount: true,
           kitchen: true,
+          timestamp: true,
+          systemStandard: true,
+          checklistId: true,
+          componentTypeActionId: true,
+          statisticsGroupSCBId: true,
           selectionFundAmount: true,
         },
       },
