@@ -8,34 +8,23 @@ const prisma = new PrismaClient({
 const getBuildings = async (propertyCode: string) => {
     const result = await prisma.property.findMany({
         where: {
-            code: propertyCode,
+            propertyCode: propertyCode,
         },
-
         include: {
-            propertyDesignation: {
-                select: {
-                    buildings: true,
-                },
-            },
-            district: {
-                select: {
-                    code: true,
-                    caption: true,
-                },
-            },
-        },
+            building: true,
+            district: true
+        }
     })
 
     if (!result[0]) {
         return []
     }
 
-    return map(result[0].propertyDesignation?.buildings, (building) => {
-        return {
-            ...building,
-            ...result[0].district,
-        }
-    })
+    return result[0].building ? [{
+        ...result[0].building,
+        code: result[0].district?.code || '',
+        caption: result[0].district?.caption || ''
+    }] : []
 }
 
 const getBuildingByCode = async (buildingCode: string) => {
@@ -48,9 +37,7 @@ const getBuildingByCode = async (buildingCode: string) => {
         },
         include: {
             buildingType: true,
-            marketArea: true,
-            propertyDesignation: true,
-            district: true,
+            district: true
         }
     })
 }
