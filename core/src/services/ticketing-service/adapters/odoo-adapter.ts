@@ -1,5 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
+import { groupBy, last } from 'lodash'
 import Config from '../../../common/config'
 import {
   ApartmentInfo,
@@ -54,6 +55,15 @@ interface OdooPostTicketImage {
 
 interface OdooAddMessage {
   body: string
+}
+
+interface OdooTicketMessage {
+  id: number
+  res_id: number
+  body: string
+  message_type: string
+  author_id: [number, string]
+  create_date: string
 }
 
 const odoo = new Odoo({
@@ -138,6 +148,7 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
   const domain: any[] = [['contact_code', '=', contactCode]]
 
   const fields: string[] = [
+    'id',
     'uuid',
     'contact_code',
     'name',
@@ -161,7 +172,38 @@ const getTicketByContactCode = async (contactCode: string): Promise<any> => {
     domain,
     fields
   )
-  return tickets.map(transformTicket)
+
+  const messages = await odoo.searchRead<OdooTicketMessage>(
+    'mail.message',
+    [
+      ['res_id', 'in', tickets.map((ticket) => ticket.id)],
+      ['model', '=', 'maintenance.request'],
+      [
+        'message_type',
+        'in',
+        [
+          'from_tenant',
+          'tenant_sms',
+          'tenant_mail',
+          'tenant_sms_error',
+          'tenant_mail_error',
+        ],
+      ],
+    ],
+    ['id', 'res_id', 'body', 'message_type', 'author_id', 'create_date']
+  )
+  const messagesById = groupBy(messages, 'res_id')
+
+  return tickets.map((ticket) => ({
+    ...transformTicket(ticket),
+    messages: messagesById[ticket.id]?.map((message) => ({
+      id: message.id,
+      body: striptags(message.body, ['br']).replaceAll('<br>', '\n'),
+      messageType: message.message_type,
+      author: last(message.author_id[1].split(', ')), // author name is in format "YourCompany, Mitchell Admin"
+      createDate: message.create_date,
+    })),
+  }))
 }
 
 const createRentalPropertyRecord = async (
@@ -284,7 +326,7 @@ const addMessageToTicket = async (
     [ticketId],
     {
       body: striptags(message.body).replaceAll('\n', '<br>'),
-      message_type: 'comment',
+      message_type: 'from_tenant',
       body_is_html: true,
     },
   ])
