@@ -1,13 +1,14 @@
 model Heating {
-  @@map("bahea")
 
   // Fields
-  heatingId String @id(map: "pkbahea") @map("keybahea") @db.Char(15)
-  name String @map("caption") @db.VarChar(60)
-  pointsPerRoom Float? @map("ptsroom") @db.Money
+  heatingId          String @id(map: "pkbahea") @map("keybahea") @db.Char(15)
+  name               String @map("caption") @db.VarChar(60)
+  pointsPerRoom      Float? @map("ptsroom") @db.Money
   pointsPerOtherRoom Float? @map("ptsother") @db.Money
-  timestamp String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  timestamp          String @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   buildings Building[] //@relation("fkbabygkeybahea") // Updated from babyg to Building based on old-new model conversion
   //rentalObjectInformations RentalObjectInformation[] @relation("fkhyinfbahea") // Updated from hyinf to RentalObjectInformation based on old-new model conversion
+
+  @@map("bahea")
 }

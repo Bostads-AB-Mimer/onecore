@@ -8,15 +8,16 @@ export function mapDbToResidence(
 ): Residence {
   if (!dbRecord) return {} as Residence
   return ResidenceSchema.parse({
-    id: dbRecord.residenceId,
+    id: dbRecord.residenceId.trim(),
     code: dbRecord.code,
     name: dbRecord.name,
-    location: dbRecord.location,
+    location: dbRecord.location || undefined,
     accessibility: {
       wheelchairAccessible: dbRecord.wheelchairAccessible === 1,
       residenceAdapted: dbRecord.residenceAdapted === 1,
       elevator: dbRecord.elevator === 1,
     },
+    location: dbRecord.location || undefined,
     features: {
       balcony1: {
         location: dbRecord.balcony1Location,
@@ -38,20 +39,21 @@ export function mapDbToResidence(
     },
     /*rooms: // activate when rooms are implemented
       dbRecord.rooms?.map((room: any) => ({
-        id: room.roomId,
-        code: room.roomCode,
+        id: room.id,
+        code: room.code,
         name: room.name,
         usage: {
-          shared: room.sharedUse === 1,
+          shared: room.shared === 1,
           allowPeriodicWorks: room.allowPeriodicWorks === 1,
         },
-        specifications: {
-          spaceType: room.spaceType,
-          hasToilet: room.hasToilet === 1,
-          isHeated: room.isHeated,
-          hasThermostatValve: room.hasThermostatValve === 1,
-          orientation: room.orientation,
-        },
+        fromDate: new Date(room.fromDate),
+        toDate: new Date(room.toDate),
+        availableFrom: room.availableFrom
+          ? new Date(room.availableFrom)
+          : undefined,
+        availableTo: room.availableTo
+          ? new Date(room.availableTo)
+          : undefined,
         dates: {
           installation: room.installationDate
             ? new Date(room.installationDate)
@@ -63,6 +65,18 @@ export function mapDbToResidence(
             : undefined,
           availableTo: room.availableTo
             ? new Date(room.availableTo)
+            : undefined,
+        },
+        specifications: {
+          spaceType: room.spaceType,
+          hasToilet: room.hasToilet === 1,
+          isHeated: room.isHeated,
+          hasThermostatValve: room.hasThermostatValve === 1,
+          orientation: room.orientation,
+        },
+        dates: {
+          installation: room.installationDate
+            ? new Date(room.installationDate)
             : undefined,
         },
         deleteMark: room.deleteMark === 1,

@@ -1,20 +1,19 @@
 model ResidenceType {
-  @@map("balgt")
 
-  residenceTypeId String @id(map: "pkbalgt") @map("keybalgt") @db.Char(15)
+  residenceTypeId       String  @id(map: "pkbalgt") @map("keybalgt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: determine a more appropriate name for component type action if available.
-  statisticsGroupSCBId String? @map("keyballs") @db.Char(15)
-  statisticsGroup2Id String? @map("keyballs2") @db.Char(15)
-  statisticsGroup3Id String? @map("keyballs3") @db.Char(15)
-  statisticsGroup4Id String? @map("keyballs4") @db.Char(15)
-  checklistId String? @map("keylbpro") @db.Char(15)
-  code String @unique(map: "akbalgt") @map("code") @db.VarChar(15)
-  name String? @map("caption") @db.VarChar(60)
-  roomCount Int? @map("roomcount") @db.TinyInt
-  kitchen Int @default(0, map: "DF__balgt__lmkitchen__40D1FBB1") @map("lmkitchen") @db.TinyInt
-  selectionFundAmount Float? @map("tvpool") @db.Money
-  systemStandard Int @default(0, map: "DF__balgt__issystem__41C61FEA") @map("issystem") @db.TinyInt
-  timestamp String @map("timestamp") @db.Char(10) // TODO: consider changing later when knowing more about its usage
+  statisticsGroupSCBId  String? @map("keyballs") @db.Char(15)
+  statisticsGroup2Id    String? @map("keyballs2") @db.Char(15)
+  statisticsGroup3Id    String? @map("keyballs3") @db.Char(15)
+  statisticsGroup4Id    String? @map("keyballs4") @db.Char(15)
+  checklistId           String? @map("keylbpro") @db.Char(15)
+  code                  String  @unique(map: "akbalgt") @map("code") @db.VarChar(15)
+  name                  String? @map("caption") @db.VarChar(60)
+  roomCount             Int?    @map("roomcount") @db.TinyInt
+  kitchen               Int     @default(0, map: "DF__balgt__lmkitchen__40D1FBB1") @map("lmkitchen") @db.TinyInt
+  selectionFundAmount   Float?  @map("tvpool") @db.Money
+  systemStandard        Int     @default(0, map: "DF__balgt__issystem__41C61FEA") @map("issystem") @db.TinyInt
+  timestamp             String  @map("timestamp") @db.Char(10) // TODO: consider changing later when knowing more about its usage
 
   // Updated relation to use the new model name 'Residence'
   residences Residence[] //@relation("balgt_balgh", fields: [residenceTypeId], references: [residenceTypeId], onUpdate: NoAction)
@@ -38,4 +37,5 @@ model ResidenceType {
   @@index([statisticsGroup4Id], map: "fkbalgtballs4")
   @@index([checklistId], map: "fkbalgtlbpro")
   @@index([componentTypeActionId], map: "fkbalgtpuatt")
+  @@map("balgt")
 }

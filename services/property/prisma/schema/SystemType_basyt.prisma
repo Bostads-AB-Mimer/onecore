@@ -1,14 +1,13 @@
 model SystemType {
-  @@map("basyt")
 
-  systemTypeId String @id(map: "pkbasyt") @map("keybasyt") @db.Char(15)
+  systemTypeId          String  @id(map: "pkbasyt") @map("keybasyt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15)
-  textTypeId String @map("keycmtyp") @db.Char(15)
-  inspectionTypeId String? @map("keycmtyp2") @db.Char(15)
-  systemTypeCode String @unique(map: "akbasyt") @map("code") @db.VarChar(15)
-  name String? @map("caption") @db.VarChar(60)
-  isSystemStandard Int @default(0, map: "DF__basyt__issystem__6232EF7C") @map("issystem") @db.TinyInt
-  timestamp String @map("timestamp") @db.Char(10)
+  textTypeId            String  @map("keycmtyp") @db.Char(15)
+  inspectionTypeId      String? @map("keycmtyp2") @db.Char(15)
+  systemTypeCode        String  @unique(map: "akbasyt") @map("code") @db.VarChar(15)
+  name                  String? @map("caption") @db.VarChar(60)
+  isSystemStandard      Int     @default(0, map: "DF__basyt__issystem__6232EF7C") @map("issystem") @db.TinyInt
+  timestamp             String  @map("timestamp") @db.Char(10)
 
   system System[] // Updated from TODO, assuming System is the new name for basys
   //cmtyp_basyt_keycmtypTocmtyp TextType @relation("basyt_keycmtypTocmtyp", fields: [textTypeId], references: [textTypeId], onUpdate: NoAction, map: "fkbasytkeycmtyp")
@@ -18,4 +17,5 @@ model SystemType {
   @@index([textTypeId], map: "fkbasytcmtyp")
   @@index([inspectionTypeId], map: "fkbasytcmtyp2")
   @@index([componentTypeActionId], map: "fkbasytpuatt")
+  @@map("basyt")
 }
