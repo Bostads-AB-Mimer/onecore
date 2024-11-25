@@ -52,6 +52,7 @@ export const routes = (router: KoaRouter) => {
     const response = await getPropertyById(ctx.params.id)
     ctx.body = { 
       content: response,
+      ...metadata,
       _links: {
         self: {
           href: `/properties/${ctx.params.id}`
@@ -59,8 +60,7 @@ export const routes = (router: KoaRouter) => {
         buildings: {
           href: `/buildings/${response?.propertyCode}`
         }
-      },
-      ...metadata 
+      }
     }
   })
 
@@ -100,6 +100,7 @@ export const routes = (router: KoaRouter) => {
     const response = await getProperties(query)
     ctx.body = { 
       content: response,
+      ...metadata,
       _links: {
         self: {
           href: `http://localhost:${process.env.PORT || 5050}/properties/`
@@ -108,8 +109,7 @@ export const routes = (router: KoaRouter) => {
           href: `http://localhost:${process.env.PORT || 5050}/properties/`,
           templated: false
         }
-      },
-      ...metadata 
+      }
     }
   })
 }
