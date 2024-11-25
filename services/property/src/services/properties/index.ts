@@ -22,8 +22,11 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /properties/{id}/:
    *   get:
-   *     summary: Get a real estate property by ID
-   *     description: Returns the property.
+   *     summary: Get detailed information about a specific property
+   *     description: |
+   *       Retrieves comprehensive information about a real estate property using its unique identifier.
+   *       Returns detailed property information including property code, tract, designation,
+   *       and associated property objects.
    *     tags:
    *       - Properties
    *     parameters:
@@ -54,10 +57,29 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /properties/:
    *   get:
-   *     summary: Gets all real estate properties
-   *     description: Returns the property.
+   *     summary: Get a list of all real estate properties
+   *     description: |
+   *       Retrieves a list of all real estate properties in the system.
+   *       Can be filtered by tract if provided. Returns basic property information
+   *       including property ID, code, tract, and designation.
    *     tags:
    *       - Properties
+   *     parameters:
+   *       - in: query
+   *         name: tract
+   *         schema:
+   *           type: string
+   *         description: Optional filter to get properties in a specific tract
+   *         example: "T123"
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved list of properties
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PropertyList'
+   *       500:
+   *         description: Internal server error
    *     parameters:
    *       - in: query
    *         name: tract
