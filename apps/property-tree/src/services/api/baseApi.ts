@@ -1,8 +1,8 @@
 // Base configuration for API calls
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050'
 
 // Simulate network latency for development
-const SIMULATED_DELAY = 800
+const SIMULATED_DELAY = 200
 
 // Common headers for API requests
 const defaultHeaders = {

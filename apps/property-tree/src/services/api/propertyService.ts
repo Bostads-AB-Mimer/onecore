@@ -21,14 +21,11 @@ interface ApiResponse {
   content: ApiArea[]
 }
 
-const mapApiPropertyToProperty = (
-  apiProperty: ApiProperty,
-  areaId: string
-): Property => ({
+const mapApiPropertyToProperty = (apiProperty: ApiProperty): Property => ({
   id: apiProperty.propertyId.trim(),
   name: apiProperty.propertyDesignation,
-  address: apiProperty.tract,
-  areaId: areaId,
+  address: apiProperty.propertyDesignation,
+  areaId: apiProperty.tract,
   buildings: [],
   totalApartments: 0,
   occupiedApartments: 0,
@@ -49,9 +46,7 @@ export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
     try {
-      const response = await fetchApi<ApiResponse>(
-        'http://localhost:5050/properties/'
-      )
+      const response = await fetchApi<ApiResponse>('/properties/')
       const areas = response.content.map(mapApiAreaToArea)
       const properties = response.content.flatMap((area) =>
         area.properties.map((property) =>
@@ -68,9 +63,7 @@ export const propertyService = {
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const apiProperty = await fetchApi<ApiProperty>(
-      `http://localhost:5050/properties/_${id}/`
-    )
+    const apiProperty = await fetchApi<ApiProperty>(`/properties/_${id}/`)
     return mapApiPropertyToProperty(apiProperty)
   },
 
@@ -105,14 +98,6 @@ export const propertyService = {
     return fetchApi<Property>(`/properties/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
-    })
-  },
-
-  // Delete property
-  async delete(id: string): Promise<void> {
-    // TODO: Replace with actual API call
-    return fetchApi<void>(`/properties/${id}`, {
-      method: 'DELETE',
     })
   },
 }
