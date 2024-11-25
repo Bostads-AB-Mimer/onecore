@@ -111,7 +111,10 @@ export const routes = (router: KoaRouter) => {
           },
           property: response?.propertyDesignation?.propertyId ? {
             href: `/properties/${response.propertyDesignation.propertyId}`
-          } : undefined
+          } : undefined,
+          residences: {
+            href: `/residences/?buildingCode=${parsedBuildingCode}`
+          }
         },
         ...metadata 
       }
