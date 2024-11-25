@@ -70,11 +70,16 @@ export const ResidenceSchema = z.object({
     toDate: z.date(),
   }),
   residenceType: z.object({
+    residenceTypeId: z.string(),
     code: z.string(),
-    name: z.string(),
-    roomCount: z.number(),
+    name: z.string().nullable(),
+    roomCount: z.number().nullable(),
     kitchen: z.number(),
-    systemStandard: z.number().optional().default(0),
+    systemStandard: z.number(),
+    checklistId: z.string().nullable(),
+    componentTypeActionId: z.string().nullable(),
+    statisticsGroupSCBId: z.string().nullable(),
+    timestamp: z.string(),
   }),
   propertyObject: z.object({
     energy: z.object({

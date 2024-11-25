@@ -95,7 +95,12 @@ export function mapDbToResidence(
       name: dbRecord.residenceType.name,
       roomCount: dbRecord.residenceType.roomCount,
       kitchen: dbRecord.residenceType.kitchen,
-      systemStandard: dbRecord.residenceType.systemStandard,
+      systemStandard: dbRecord.residenceType.systemStandard || 0,
+      residenceTypeId: dbRecord.residenceType.residenceTypeId,
+      checklistId: dbRecord.residenceType.checklistId,
+      componentTypeActionId: dbRecord.residenceType.componentTypeActionId,
+      statisticsGroupSCBId: dbRecord.residenceType.statisticsGroupSCBId,
+      timestamp: dbRecord.residenceType.timestamp,
     },
     propertyObject: {
       energy: {

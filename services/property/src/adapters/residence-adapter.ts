@@ -57,10 +57,16 @@ export const getLatestResidences = async () => {
       residenceType: {
         select: {
           residenceTypeId: true,
+          residenceTypeId: true,
           code: true,
           name: true,
           roomCount: true,
           kitchen: true,
+          timestamp: true,
+          systemStandard: true,
+          checklistId: true,
+          componentTypeActionId: true,
+          statisticsGroupSCBId: true,
           selectionFundAmount: true,
         },
       },
