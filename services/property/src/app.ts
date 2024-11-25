@@ -26,7 +26,7 @@ app.use(
     routePrefix: '/swagger',
     swaggerOptions: {
       url: '/swagger.json',
-      defaultModelsExpandDepth: -1,
+      defaultModelsExpandDepth: '-1',
       tryItOutEnabled: true,
       displayRequestDuration: true,
       persistAuthorization: true,
