@@ -96,7 +96,14 @@ export const routes = (router: KoaRouter) => {
     logger.info('GET /properties', metadata)
     const response = await getProperties(query)
     ctx.body = { 
-      content: response,
+      content: response.map(property => ({
+        ...property,
+        _links: {
+          self: {
+            href: `/properties/${property.propertyId}`
+          }
+        }
+      })),
       ...metadata,
       _links: generateMetaLinks(ctx, '/properties')
     }
