@@ -4,7 +4,7 @@
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
   "main": "index.ts",
   "scripts": {
-    "dev": "node --import tsx --watch index.ts",
+    "dev": "tsx watch index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "force-generate": "rm -rf node_modules && npm install && npx prisma generate"
   },
