@@ -104,5 +104,9 @@ export function mapDbToResidence(
         // .. add more fields when needed
       },
     },
+    links: {
+      building: dbRecord.propertyObject?.building?.buildingCode,
+      property: dbRecord.propertyObject?.property?.propertyCode,
+    },
   })
 }

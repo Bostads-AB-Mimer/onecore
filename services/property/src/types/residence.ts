@@ -4,6 +4,10 @@ export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
+  links: z.object({
+    building: z.string().optional(),
+    property: z.string().optional(),
+  }).optional(),
   location: z.string().optional(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),

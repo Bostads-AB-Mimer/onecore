@@ -8,6 +8,21 @@ export const getLatestResidences = async () => {
     select: {
       residenceId: true,
       objectId: true,
+      propertyObject: {
+        select: {
+          property: {
+            select: {
+              propertyId: true,
+              propertyCode: true,
+            }
+          },
+          building: {
+            select: {
+              buildingCode: true,
+            }
+          }
+        }
+      },
       residenceTypeId: true,
       code: true,
       name: true,
