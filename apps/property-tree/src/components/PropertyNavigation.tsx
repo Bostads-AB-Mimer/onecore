@@ -168,12 +168,7 @@ export function PropertyNavigation() {
           id: property.id,
           name: property.name,
           type: 'property',
-          children: property.buildings.map((buildingId) => ({
-            id: buildingId,
-            name: 'Building', // Placeholder, replace with actual building name if available
-            type: 'building',
-            children: [], // Add more nested items if needed
-          })),
+          children: [], // We'll add buildings when that API is available
         }))
         setNavigationItems(navigationItems)
 

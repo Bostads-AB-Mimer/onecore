@@ -10,6 +10,10 @@ export interface Property {
   tract: string;
   propertyDesignation: string;
   _links: PropertyLink;
+  // Derived fields for UI
+  id: string;
+  name: string;
+  buildings?: string[];
 }
 
 export interface PropertyResponse {

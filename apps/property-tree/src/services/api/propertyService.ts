@@ -1,32 +1,15 @@
-import { Property, NavigationItem } from '../types'
-import apiClient from './apiClient'
-
-interface ApiProperty {
-  id: string
-  name: string
-  address: string
-  constructionYear: number
-  lastRenovation?: number
-  buildings: string[]
-  totalApartments: number
-  occupiedApartments: number
-}
+import { Property, PropertyResponse } from '../types'
+import { getProperties } from './propertyApi'
 
 export const propertyService = {
-  // Get all properties
   async getAll(): Promise<Property[]> {
     try {
-      const { data } = await apiClient.get<ApiProperty[]>('/api/properties/')
-      return data.map((property) => ({
-        id: property.id,
-        name: property.name,
-        address: property.address,
-        areaId: '', // Will be populated when area structure is available
-        buildings: property.buildings,
-        totalApartments: property.totalApartments,
-        occupiedApartments: property.occupiedApartments,
-        constructionYear: property.constructionYear,
-        lastRenovation: property.lastRenovation,
+      const response = await getProperties()
+      return response.content.map(property => ({
+        ...property,
+        id: property.propertyId.trim(), // Remove whitespace from ID
+        name: property.propertyDesignation,
+        buildings: [] // We'll populate this when building data is available
       }))
     } catch (error) {
       console.error('Failed to fetch properties:', error)
