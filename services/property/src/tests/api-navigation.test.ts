@@ -60,6 +60,33 @@ describe('API Navigation Tests', () => {
     expect(propertyDetailsResponse.data._links.self.href).toBeDefined()
   })
 
+  it('should get residences associated with a property', async () => {
+    const testTract = 'BÄVERN'
+    // First get properties in the test tract
+    const propertiesResponse = await axios.get(
+      `${API_BASE}/properties/?tract=${testTract}`,
+    )
+    const property = propertiesResponse.data.content[0]
+    
+    // Then get residences for the first property
+    const residencesResponse = await axios.get(
+      `${API_BASE}/residences/?propertyCode=${property.propertyCode}`,
+    )
+    expect(residencesResponse.status).toBe(200)
+    expect(residencesResponse.data.content).toBeDefined()
+    expect(Array.isArray(residencesResponse.data.content)).toBe(true)
+
+    // Verify residence structure if any exist
+    if (residencesResponse.data.content.length > 0) {
+      const residence = residencesResponse.data.content[0]
+      expect(residence.id).toBeDefined()
+      expect(residence.code).toBeDefined()
+      expect(residence.name).toBeDefined()
+      expect(residence.links).toBeDefined()
+      expect(residence.links.property).toBe(property.propertyCode)
+    }
+  })
+
   it('should get buildings associated with a property', async () => {
     const testTract = 'BÄVERN'
     const propertiesResponse = await axios.get(
