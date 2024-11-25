@@ -9,6 +9,7 @@ import {
   getProperties,
   getPropertyById
 } from '../../adapters/property-adapter'
+import { generateMetaLinks } from '../../utils/links'
 
 /**
  * @swagger
@@ -53,14 +54,10 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { 
       content: response,
       ...metadata,
-      _links: {
-        self: {
-          href: `/properties/${ctx.params.id}`
-        },
-        buildings: {
-          href: `/buildings/${response?.propertyCode}`
-        }
-      }
+      _links: generateMetaLinks(ctx, '/properties', {
+        id: ctx.params.id,
+        buildings: response?.propertyCode || ''
+      })
     }
   })
 
@@ -101,15 +98,7 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { 
       content: response,
       ...metadata,
-      _links: {
-        self: {
-          href: `http://localhost:${process.env.PORT || 5050}/properties/`
-        },
-        link: {
-          href: `http://localhost:${process.env.PORT || 5050}/properties/`,
-          templated: false
-        }
-      }
+      _links: generateMetaLinks(ctx, '/properties')
     }
   })
 }
