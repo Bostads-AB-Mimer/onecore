@@ -60,10 +60,10 @@ export const ResidenceSchema = z.object({
       availableTo: z.date().optional(),
       timestamp: z.string(),
     }),
-  ),
+  ).optional().default([]),
   entrance: z.string(),
-  partNo: z.number(),
-  part: z.string(),
+  partNo: z.number().optional().nullable(),
+  part: z.string().optional().nullable(),
   deleted: z.boolean(),
   validityPeriod: z.object({
     fromDate: z.date(),
@@ -74,7 +74,7 @@ export const ResidenceSchema = z.object({
     name: z.string(),
     roomCount: z.number(),
     kitchen: z.number(),
-    systemStandard: z.number(),
+    systemStandard: z.number().optional().default(0),
   }),
   propertyObject: z.object({
     energy: z.object({

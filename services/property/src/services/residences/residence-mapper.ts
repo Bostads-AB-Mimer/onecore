@@ -83,8 +83,8 @@ export function mapDbToResidence(
         timestamp: room.timestamp,
       })) || [],*/
     entrance: dbRecord.entrance,
-    //partNo: dbRecord.partNo,
-    //part: dbRecord.part,
+    partNo: dbRecord.partNo || 0,
+    part: dbRecord.part || '',
     deleted: dbRecord.deleted === 1,
     validityPeriod: {
       fromDate: new Date(dbRecord.fromDate),
