@@ -14,6 +14,7 @@ import {
 import clsx from 'clsx'
 import { NavigationItem } from '../services/types'
 import { propertyService } from '../services/propertyService'
+import { getProperties } from '../services/api/propertyApi'
 
 const iconMap = {
   area: MapPin,
@@ -166,7 +167,8 @@ export function PropertyNavigation() {
         const areas = await propertyService.getAreas()
         const navigationItems = await Promise.all(
           areas.map(async (area) => {
-            const properties = await propertyService.getAll()
+            const propertiesResponse = await getProperties()
+            const properties = propertiesResponse.content
             const areaProperties = properties.filter(property => 
               property.tract === area.id
             )
