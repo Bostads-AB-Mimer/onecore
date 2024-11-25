@@ -1,10 +1,11 @@
-import {PrismaClient} from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+import { PropertyWithObject, PropertyBasicInfo } from '../types/property-adapter'
 
 const prisma = new PrismaClient({
     log: ['query'],
 })
 
-const getPropertyById = async (propertyId: string) => {
+const getPropertyById = async (propertyId: string): Promise<PropertyWithObject | null> => {
     const response = await prisma.property.findUnique({
         where: {
             id: propertyId,
@@ -16,7 +17,7 @@ const getPropertyById = async (propertyId: string) => {
     return response
 }
 
-const getProperties = async (tract: string | undefined) => {
+const getProperties = async (tract: string | undefined): Promise<PropertyBasicInfo[]> => {
     if (tract) {
         return prisma.property.findMany({
             where: {tract},
