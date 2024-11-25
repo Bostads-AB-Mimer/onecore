@@ -3,7 +3,12 @@ import { Prisma } from '@prisma/client'
 
 export function mapDbToResidence(
   dbRecord: Prisma.ResidenceGetPayload<{
-    include: { /*rooms: true;*/ residenceType: true; propertyObject: true }
+    include: {
+      /*rooms: true;*/ residenceType: true
+      propertyObject: {
+        include: { propertyStructure: true }
+      }
+    }
   }>,
 ): Residence {
   if (!dbRecord) return {} as Residence
@@ -112,19 +117,27 @@ export function mapDbToResidence(
       },
     },
     links: {
-      building: dbRecord.propertyObject?.propertyStructure?.building?.buildingCode,
-      property: dbRecord.propertyObject?.propertyStructure?.property?.propertyCode,
+      building:
+        dbRecord.propertyObject?.propertyStructure?.building?.buildingCode,
+      property:
+        dbRecord.propertyObject?.propertyStructure?.property?.propertyCode,
       _links: {
         self: {
           href: `/residences/${dbRecord.residenceId.trim()}`,
         },
-        building: dbRecord.propertyObject?.propertyStructure?.building?.buildingCode ? {
-          href: `/buildings/byCode/${dbRecord.propertyObject.propertyStructure.building.buildingCode}`,
-        } : undefined,
-        property: dbRecord.propertyObject?.propertyStructure?.property?.propertyCode ? {
-          href: `/properties/${dbRecord.propertyObject.propertyStructure.property.propertyId}`,
-        } : undefined
-      }
+        building: dbRecord.propertyObject?.propertyStructure?.building
+          ?.buildingCode
+          ? {
+              href: `/buildings/byCode/${dbRecord.propertyObject.propertyStructure.building.buildingCode}`,
+            }
+          : undefined,
+        property: dbRecord.propertyObject?.propertyStructure?.property
+          ?.propertyCode
+          ? {
+              href: `/properties/${dbRecord.propertyObject.propertyStructure.property.propertyId}`,
+            }
+          : undefined,
+      },
     },
   })
 }
