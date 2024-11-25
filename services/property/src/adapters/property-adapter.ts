@@ -21,19 +21,19 @@ const getProperties = async (tract: string | undefined) => {
         return prisma.property.findMany({
             where: {tract},
             select: {
-                id: true,
-                code: true,
+                propertyId: true,
+                propertyCode: true,
                 tract: true,
-                designation: true,
+                propertyDesignation: true,
             },
         })
     }
     return prisma.property.findMany({
         select: {
-            id: true,
-            code: true,
+            propertyId: true,
+            propertyCode: true,
             tract: true,
-            designation: true,
+            propertyDesignation: true,
         },
     })
 }
