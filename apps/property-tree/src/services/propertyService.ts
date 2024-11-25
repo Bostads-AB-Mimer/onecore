@@ -15,6 +15,7 @@ import {
   mockEntrances,
 } from './mockData'
 import { propertyService as propertyApi } from './api/propertyService'
+import { getAreas } from './api/propertyApi'
 
 // Simulate network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -35,6 +36,10 @@ const createTenantSearchResult = (
 })
 
 export const propertyService = {
+  // Get all areas with their properties
+  async getAreas(): Promise<Area[]> {
+    return getAreas();
+  },
   async getNavigation(): Promise<NavigationItem[]> {
     await delay(800)
     return mockNavigation
