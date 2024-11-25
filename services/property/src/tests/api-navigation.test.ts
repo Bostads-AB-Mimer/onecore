@@ -39,7 +39,7 @@ describe('API Navigation Tests', () => {
         const propertyDetails = propertyDetailsResponse.data.content
         expect(propertyDetails.propertyId).toBe(property.propertyId)
         expect(propertyDetails.propertyCode).toBe(property.propertyCode)
-        expect(propertyDetails.tract).toBe('BÄVERN')
+        expect(propertyDetails.tract).toBe(testTract)
       }
     } catch (error: any) {
       console.error('Test failed:', error.message)
