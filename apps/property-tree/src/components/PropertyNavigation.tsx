@@ -178,8 +178,8 @@ export function PropertyNavigation() {
               name: area.name,
               type: 'area',
               children: areaProperties.map(property => ({
-                id: property.id,
-                name: property.name,
+                id: property.propertyId,
+                name: property.propertyDesignation,
                 type: 'property',
                 children: [], // We'll add buildings when that API is available
               }))
