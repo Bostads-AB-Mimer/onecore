@@ -100,6 +100,9 @@ export function mapDbToResidence(
       checklistId: dbRecord.residenceType.checklistId,
       componentTypeActionId: dbRecord.residenceType.componentTypeActionId,
       statisticsGroupSCBId: dbRecord.residenceType.statisticsGroupSCBId,
+      statisticsGroup2Id: dbRecord.residenceType.statisticsGroup2Id,
+      statisticsGroup3Id: dbRecord.residenceType.statisticsGroup3Id,
+      statisticsGroup4Id: dbRecord.residenceType.statisticsGroup4Id,
       timestamp: dbRecord.residenceType.timestamp,
     },
     propertyObject: {

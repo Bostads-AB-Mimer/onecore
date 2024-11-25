@@ -79,6 +79,9 @@ export const ResidenceSchema = z.object({
     checklistId: z.string().nullable(),
     componentTypeActionId: z.string().nullable(),
     statisticsGroupSCBId: z.string().nullable(),
+    statisticsGroup2Id: z.string().nullable(),
+    statisticsGroup3Id: z.string().nullable(),
+    statisticsGroup4Id: z.string().nullable(),
     timestamp: z.string(),
   }),
   propertyObject: z.object({
