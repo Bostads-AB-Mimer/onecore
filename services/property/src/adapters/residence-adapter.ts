@@ -57,7 +57,6 @@ export const getLatestResidences = async () => {
       residenceType: {
         select: {
           residenceTypeId: true,
-          residenceTypeId: true,
           code: true,
           name: true,
           roomCount: true,
