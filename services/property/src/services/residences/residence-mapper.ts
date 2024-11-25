@@ -11,7 +11,6 @@ export function mapDbToResidence(
     id: dbRecord.residenceId.trim(),
     code: dbRecord.code,
     name: dbRecord.name,
-    location: dbRecord.location || undefined,
     accessibility: {
       wheelchairAccessible: dbRecord.wheelchairAccessible === 1,
       residenceAdapted: dbRecord.residenceAdapted === 1,
