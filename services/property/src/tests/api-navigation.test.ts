@@ -14,37 +14,31 @@ describe('API Navigation Tests', () => {
     server.close()
   })
 
-  it('should navigate from properties to buildings to residences', async () => {
+  it('should get properties in BÄVERN tract and their details', async () => {
     try {
-      // Start by getting properties
-      const propertiesResponse = await axios.get(`${API_BASE}/properties/`)
+      // Get properties in BÄVERN tract
+      const propertiesResponse = await axios.get(`${API_BASE}/properties/?tract=BÄVERN`)
       expect(propertiesResponse.status).toBe(200)
       expect(propertiesResponse.data.content).toBeDefined()
-      expect(propertiesResponse.data._links).toBeDefined()
+      expect(Array.isArray(propertiesResponse.data.content)).toBe(true)
+      expect(propertiesResponse.data.content.length).toBeGreaterThan(0)
       
-      // Get the first property
-      const property = propertiesResponse.data.content[0]
-      expect(property.propertyCode).toBeDefined()
-      
-      // Follow link to buildings
-      const buildingsResponse = await axios.get(`${API_BASE}/buildings/${property.propertyCode}/`)
-      expect(buildingsResponse.status).toBe(200)
-      expect(buildingsResponse.data.content).toBeDefined()
-      
-      // Get the first building
-      const building = buildingsResponse.data.content[0]
-      expect(building.buildingCode).toBeDefined()
-      
-      // Follow link to building details
-      const buildingDetailsResponse = await axios.get(`${API_BASE}/buildings/byCode/${building.buildingCode}/`)
-      expect(buildingDetailsResponse.status).toBe(200)
-      expect(buildingDetailsResponse.data.content).toBeDefined()
-      
-      // Follow link to residences (if building has any)
-      if (buildingDetailsResponse.data._links?.residences) {
-        const residencesResponse = await axios.get(`${API_BASE}${buildingDetailsResponse.data._links.residences.href}`)
-        expect(residencesResponse.status).toBe(200)
-        expect(residencesResponse.data.content).toBeDefined()
+      // For each property, get its details
+      for (const property of propertiesResponse.data.content) {
+        expect(property.propertyId).toBeDefined()
+        expect(property.propertyCode).toBeDefined()
+        expect(property.tract).toBe('BÄVERN')
+        
+        // Get detailed property information
+        const propertyDetailsResponse = await axios.get(`${API_BASE}/properties/${property.propertyId}/`)
+        expect(propertyDetailsResponse.status).toBe(200)
+        expect(propertyDetailsResponse.data.content).toBeDefined()
+        
+        // Verify property details structure
+        const propertyDetails = propertyDetailsResponse.data.content
+        expect(propertyDetails.propertyId).toBe(property.propertyId)
+        expect(propertyDetails.propertyCode).toBe(property.propertyCode)
+        expect(propertyDetails.tract).toBe('BÄVERN')
       }
     } catch (error: any) {
       console.error('Test failed:', error.message)
