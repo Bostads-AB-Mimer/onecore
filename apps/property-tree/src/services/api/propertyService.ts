@@ -16,7 +16,7 @@ export const propertyService = {
   // Get all properties
   async getAll(): Promise<Property[]> {
     try {
-      const { data } = await apiClient.get<ApiProperty[]>('/api/properties')
+      const { data } = await apiClient.get<ApiProperty[]>('/api/properties/')
       return data.map((property) => ({
         id: property.id,
         name: property.name,
@@ -52,7 +52,10 @@ export const propertyService = {
 
   // Create new property
   async create(data: Omit<Property, 'id'>): Promise<Property> {
-    const { data: response } = await apiClient.post<ApiProperty>('/api/properties', data)
+    const { data: response } = await apiClient.post<ApiProperty>(
+      '/api/properties/',
+      data
+    )
     return {
       id: response.id,
       name: response.name,
@@ -68,7 +71,10 @@ export const propertyService = {
 
   // Update property
   async update(id: string, data: Partial<Property>): Promise<Property> {
-    const { data: response } = await apiClient.put<ApiProperty>(`/api/properties/${id}`, data)
+    const { data: response } = await apiClient.put<ApiProperty>(
+      `/api/properties/${id}`,
+      data
+    )
     return {
       id: response.id,
       name: response.name,
@@ -80,10 +86,5 @@ export const propertyService = {
       constructionYear: response.constructionYear,
       lastRenovation: response.lastRenovation,
     }
-  },
-
-  // Delete property
-  async delete(id: string): Promise<void> {
-    await apiClient.delete(`/api/properties/${id}`)
   },
 }
