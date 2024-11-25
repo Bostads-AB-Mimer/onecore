@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const ExternalResidenceSchema = z.object({
+export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
@@ -99,4 +99,5 @@ export const ExternalResidenceSchema = z.object({
   }),
 })
 
-export type ExternalResidence = z.infer<typeof ExternalResidenceSchema>
+export type ExternalResidence = z.infer<typeof ResidenceSchema>
+export type Residence = ExternalResidence

@@ -1,12 +1,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { Residence } from '../../types/residence'
 import {
   getResidencesByType,
   getLatestResidences,
   getResidenceById,
 } from '../../adapters/residence-adapter'
-import { ResidenceSchema } from '../../types/residence'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { mapDbToResidence } from './residence-mapper'
 
