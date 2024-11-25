@@ -85,27 +85,34 @@ export const getResidenceById = async (id: string) => {
       residenceId: id,
     },
     include: {
-      residenceType: true,
-      propertyObject: {
-        include: {
-          rooms: true,
-          propertyStructure: true,
-          rentalObject: {
-            select: {
-              rentalObjectId: true,
-              name: true,
-              fromDate: true,
-              toDate: true,
-              timestamp: true,
-              rentalObjectType: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
+      residenceType: {
+        select: {
+          residenceTypeId: true,
+          code: true,
+          name: true,
+          roomCount: true,
+          kitchen: true,
+          timestamp: true,
+          systemStandard: true,
+          checklistId: true,
+          componentTypeActionId: true,
+          statisticsGroupSCBId: true,
+          statisticsGroup2Id: true,
+          statisticsGroup3Id: true,
+          statisticsGroup4Id: true,
+          selectionFundAmount: true,
         },
       },
+      propertyObject: {
+        include: {
+          propertyStructure: {
+            include: {
+              property: true,
+              building: true
+            }
+          }
+        }
+      }
     },
   })
 

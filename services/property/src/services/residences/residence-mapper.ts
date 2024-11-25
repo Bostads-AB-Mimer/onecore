@@ -4,9 +4,33 @@ import { Prisma } from '@prisma/client'
 export function mapDbToResidence(
   dbRecord: Prisma.ResidenceGetPayload<{
     include: {
-      /*rooms: true;*/ residenceType: true
+      residenceType: {
+        select: {
+          residenceTypeId: true,
+          code: true,
+          name: true,
+          roomCount: true,
+          kitchen: true,
+          timestamp: true,
+          systemStandard: true,
+          checklistId: true,
+          componentTypeActionId: true,
+          statisticsGroupSCBId: true,
+          statisticsGroup2Id: true,
+          statisticsGroup3Id: true,
+          statisticsGroup4Id: true,
+          selectionFundAmount: true,
+        }
+      },
       propertyObject: {
-        include: { propertyStructure: true }
+        include: {
+          propertyStructure: {
+            include: {
+              property: true,
+              building: true
+            }
+          }
+        }
       }
     }
   }>,
