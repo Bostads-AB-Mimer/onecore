@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = ''  // Empty since we're using relative URLs with the proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '' // Empty since we're using relative URLs with the proxy
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
