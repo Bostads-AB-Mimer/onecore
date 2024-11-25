@@ -38,7 +38,11 @@ const createTenantSearchResult = (
 export const propertyService = {
   // Get all areas with their properties
   async getAreas(): Promise<Area[]> {
-    return getAreas();
+    const areas = await getAreas();
+    return areas.map(area => ({
+      ...area,
+      name: `Område ${area.id}` // Temporary name based on tract
+    }));
   },
   async getNavigation(): Promise<NavigationItem[]> {
     await delay(800)

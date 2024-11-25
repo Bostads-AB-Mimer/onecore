@@ -161,18 +161,33 @@ export function PropertyNavigation() {
   const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    const loadProperties = async () => {
+    const loadAreas = async () => {
       try {
-        const properties = await propertyService.getAll()
-        const navigationItems = properties.map((property) => ({
-          id: property.id,
-          name: property.name,
-          type: 'property',
-          children: [], // We'll add buildings when that API is available
-        }))
+        const areas = await propertyService.getAreas()
+        const navigationItems = await Promise.all(
+          areas.map(async (area) => {
+            const properties = await propertyService.getAll()
+            const areaProperties = properties.filter(property => 
+              property.tract === area.id
+            )
+            
+            return {
+              id: area.id,
+              name: area.name,
+              type: 'area',
+              children: areaProperties.map(property => ({
+                id: property.id,
+                name: property.name,
+                type: 'property',
+                children: [], // We'll add buildings when that API is available
+              }))
+            }
+          })
+        )
+        
         setNavigationItems(navigationItems)
 
-        // Auto-expand root level if there's only one item
+        // Auto-expand root level if there's only one area
         if (navigationItems.length === 1) {
           setExpanded((prev) => ({
             ...prev,
