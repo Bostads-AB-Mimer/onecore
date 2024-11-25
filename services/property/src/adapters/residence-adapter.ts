@@ -1,7 +1,16 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 
-export const getLatestResidences = async () => {
+export const getLatestResidences = async (propertyCode?: string) => {
+  const where = propertyCode ? {
+    propertyObject: {
+      property: {
+        propertyCode
+      }
+    }
+  } : undefined
+
   const response = await prisma.residence.findMany({
+    where,
     orderBy: {
       timestamp: 'desc',
     },

@@ -40,8 +40,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /residences/:residenceTypeId/', metadata)
-    let response
-    response = await getLatestResidences()
+    const propertyCode = ctx.query.propertyCode?.toString()
+    const response = await getLatestResidences(propertyCode)
     ctx.body = { content: response, ...metadata }
   })
 
