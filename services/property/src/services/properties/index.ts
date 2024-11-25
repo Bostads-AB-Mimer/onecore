@@ -47,7 +47,7 @@ export const routes = (router: KoaRouter) => {
    *                 - $ref: '#/components/schemas/PropertyList'
    *                 - $ref: '#/components/schemas/Property'
    */
-  router.get('(.*)/properties/:id/', async (ctx) => {
+  router.get(['(.*)/properties/:id', '(.*)/properties/:id/'], async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties/:id/', metadata)
     const response = await getPropertyById(ctx.params.id)
@@ -89,7 +89,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/properties/', async (ctx) => {
+  router.get(['(.*)/properties', '(.*)/properties/'], async (ctx) => {
     let query = ctx.query.tract?.toString()
 
     const metadata = generateRouteMetadata(ctx)
