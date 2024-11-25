@@ -98,6 +98,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties', metadata)
     const response = await getProperties(query)
-    ctx.body = { content: response, ...metadata }
+    ctx.body = { 
+      content: response,
+      _links: {
+        self: {
+          href: `http://localhost:${process.env.PORT || 5050}/properties/`
+        },
+        link: {
+          href: `http://localhost:${process.env.PORT || 5050}/properties/`,
+          templated: false
+        }
+      },
+      ...metadata 
+    }
   })
 }
