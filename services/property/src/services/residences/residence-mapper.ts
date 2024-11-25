@@ -112,17 +112,17 @@ export function mapDbToResidence(
       },
     },
     links: {
-      building: dbRecord.propertyObject?.building?.buildingCode,
-      property: dbRecord.propertyObject?.property?.propertyCode,
+      building: dbRecord.propertyObject?.propertyStructure?.building?.buildingCode,
+      property: dbRecord.propertyObject?.propertyStructure?.property?.propertyCode,
       _links: {
         self: {
           href: `/residences/${dbRecord.residenceId.trim()}`,
         },
-        building: dbRecord.propertyObject?.building?.buildingCode ? {
-          href: `/buildings/byCode/${dbRecord.propertyObject.building.buildingCode}`,
+        building: dbRecord.propertyObject?.propertyStructure?.building?.buildingCode ? {
+          href: `/buildings/byCode/${dbRecord.propertyObject.propertyStructure.building.buildingCode}`,
         } : undefined,
-        property: dbRecord.propertyObject?.property?.propertyCode ? {
-          href: `/properties/${dbRecord.propertyObject.property.propertyId}`,
+        property: dbRecord.propertyObject?.propertyStructure?.property?.propertyCode ? {
+          href: `/properties/${dbRecord.propertyObject.propertyStructure.property.propertyId}`,
         } : undefined
       }
     },
