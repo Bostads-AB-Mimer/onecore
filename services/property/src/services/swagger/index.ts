@@ -7,17 +7,40 @@ import { ComponentTypeSchema, ComponentListSchema } from '../../types/component'
 import { PropertyTypeSchema, PropertyListSchema } from '../../types/property'
 import zodToJsonSchema from 'zod-to-json-schema'
 
+const schemas = {
+  Residence: zodToJsonSchema(ResidenceSchema, {
+    name: 'Residence',
+    target: 'openApi3',
+  }),
+  Building: zodToJsonSchema(BuildingTypeSchema, {
+    name: 'Building',
+    target: 'openApi3',
+  }),
+  BuildingList: zodToJsonSchema(BuildingListSchema, {
+    name: 'BuildingList',
+    target: 'openApi3',
+  }),
+  Component: zodToJsonSchema(ComponentTypeSchema, {
+    name: 'Component',
+    target: 'openApi3',
+  }),
+  ComponentList: zodToJsonSchema(ComponentListSchema, {
+    name: 'ComponentList',
+    target: 'openApi3',
+  }),
+  Property: zodToJsonSchema(PropertyTypeSchema, {
+    name: 'Property',
+    target: 'openApi3',
+  }),
+  PropertyList: zodToJsonSchema(PropertyListSchema, {
+    name: 'PropertyList',
+    target: 'openApi3',
+  }),
+}
+
 swaggerSpec.definition.components = {
   ...swaggerSpec.definition.components,
-  schemas: {
-    Residence: zodToJsonSchema(ResidenceSchema),
-    Building: zodToJsonSchema(BuildingTypeSchema),
-    BuildingList: zodToJsonSchema(BuildingListSchema),
-    Component: zodToJsonSchema(ComponentTypeSchema),
-    ComponentList: zodToJsonSchema(ComponentListSchema),
-    Property: zodToJsonSchema(PropertyTypeSchema),
-    PropertyList: zodToJsonSchema(PropertyListSchema),
-  },
+  schemas,
 }
 
 const swaggerOptions = swaggerJsdoc(swaggerSpec)
