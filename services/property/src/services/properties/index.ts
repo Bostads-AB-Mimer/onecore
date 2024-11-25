@@ -80,16 +80,6 @@ export const routes = (router: KoaRouter) => {
    *               $ref: '#/components/schemas/PropertyList'
    *       500:
    *         description: Internal server error
-   *     parameters:
-   *       - in: query
-   *         name: tract
-   *         schema:
-   *           type: string
-   *         description: Filter properties by tract.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the properties.
-   *         content:
    */
   router.get('(.*)/properties/', async (ctx) => {
     let query = undefined

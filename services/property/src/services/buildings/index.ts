@@ -86,17 +86,6 @@ export const routes = (router: KoaRouter) => {
    *         description: Building not found
    *       500:
    *         description: Internal server error
-   *     parameters:
-   *       - in: path
-   *         name: buildingCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The code of the building.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the building.
-   *         content:
    */
   router.get('(.*)/buildings/byCode/:buildingCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
