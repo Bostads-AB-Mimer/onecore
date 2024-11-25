@@ -14,14 +14,14 @@ export const getLatestResidences = async () => {
             select: {
               propertyId: true,
               propertyCode: true,
-            }
+            },
           },
           building: {
             select: {
               buildingCode: true,
-            }
-          }
-        }
+            },
+          },
+        },
       },
       residenceTypeId: true,
       code: true,
@@ -88,14 +88,14 @@ export const getResidenceById = async (id: string) => {
       residenceType: true,
       propertyObject: {
         select: {
-          propertyStructure: {
+          propertyStructures: {
             select: {
-              property: true,
-              building: true
-            }
-          }
-        }
-      }
+              propertyId: true,
+              buildingId: true,
+            },
+          },
+        },
+      },
     },
   })
 
