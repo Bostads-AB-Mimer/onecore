@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import type { PropertyWithObject, PropertyBasicInfo } from './property-adapter'
 
 // Extend from the adapter type to ensure compatibility
 export const PropertyTypeSchema = z.object<z.ZodRawShape>({

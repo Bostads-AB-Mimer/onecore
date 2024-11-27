@@ -10,7 +10,6 @@ export const getLatestResidences = async (propertyCode?: string) => {
   } : undefined
 
   const response = await prisma.residence.findMany({
-    where,
     orderBy: {
       timestamp: 'desc',
     },
@@ -21,8 +20,8 @@ export const getLatestResidences = async (propertyCode?: string) => {
         select: {
           property: {
             select: {
-              propertyId: true,
-              propertyCode: true,
+              id: true,
+              code: true,
             },
           },
           building: {

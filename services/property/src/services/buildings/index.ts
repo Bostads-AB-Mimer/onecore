@@ -72,7 +72,6 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           minLength: 7
    *         description: The unique building code (minimum 7 characters)
-   *         example: "BLD1234"
    *     responses:
    *       200:
    *         description: Successfully retrieved building information

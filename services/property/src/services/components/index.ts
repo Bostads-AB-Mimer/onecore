@@ -34,7 +34,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The unique code identifying the maintenance unit
-   *         example: "MU123456"
    *     responses:
    *       200:
    *         description: |

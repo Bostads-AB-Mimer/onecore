@@ -8,8 +8,8 @@ export type PropertyWithObject = Prisma.PropertyGetPayload<{
 
 export type PropertyBasicInfo = Prisma.PropertyGetPayload<{
   select: {
-    propertyId: true
-    propertyCode: true
+    id: true
+    code: true
     tract: true
     propertyDesignation: true
   }

@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import { ResidenceWithRelations } from '../../adapters/residence-adapter'
 import {
   ResidenceSchema,
@@ -115,7 +114,7 @@ export function mapDbToResidence(
     },
     links: {
       building: dbRecord.propertyObject?.building?.buildingCode,
-      property: dbRecord.propertyObject?.property?.propertyCode,
+      property: dbRecord.propertyObject?.property?.code,
       _links: {
         self: {
           href: `/residences/${dbRecord.residenceId.trim()}`,
@@ -125,9 +124,9 @@ export function mapDbToResidence(
               href: `/buildings/byCode/${dbRecord.propertyObject.building?.buildingCode}`,
             }
           : undefined,
-        property: dbRecord.propertyObject?.property?.propertyCode
+        property: dbRecord.propertyObject?.property?.code
           ? {
-              href: `/properties/${dbRecord.propertyObject.property?.propertyCode}`,
+              href: `/properties/${dbRecord.propertyObject.property?.code}`,
             }
           : undefined,
       },

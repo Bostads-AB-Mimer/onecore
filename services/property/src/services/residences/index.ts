@@ -1,11 +1,9 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
-  getResidencesByType,
   getLatestResidences,
   getResidenceById,
 } from '../../adapters/residence-adapter'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { mapDbToResidence } from './residence-mapper'
 
 /**
@@ -60,7 +58,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the residence
-   *         example: "_6J50WTZQ2928FJ"
    *     responses:
    *       200:
    *         description: Successfully retrieved the residence
