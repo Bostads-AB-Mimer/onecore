@@ -1,5 +1,4 @@
 model RentalObject {
-
   // Fields
   rentalObjectId       String   @id(map: "pkbahyr") @map("keybahyr") @db.Char(15)
   objectId             String   @unique(map: "akbahyr1") @map("keycmobj") @db.Char(15)

@@ -1,5 +1,4 @@
 model BuildingPartLocation {
-
   // Fields
   id             String @id(map: "pkaopbd") @map("keyaopbd") @db.Char(15)
   locationId     String @map("keyaopla") @db.Char(15)

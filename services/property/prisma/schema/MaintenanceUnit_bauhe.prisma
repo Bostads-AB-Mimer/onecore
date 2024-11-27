@@ -1,5 +1,4 @@
 model MaintenanceUnit {
-
   maintenanceUnitId     String   @id(map: "pkbauhe") @map("keybauhe") @db.Char(15)
   objectId              String   @unique(map: "akbauhe1") @map("keycmobj") @db.Char(15)
   maintenanceUnitTypeId String?  @map("keybauht") @db.Char(15) // Confirmed as MaintenanceUnitType

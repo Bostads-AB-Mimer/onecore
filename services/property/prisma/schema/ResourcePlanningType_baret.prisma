@@ -1,5 +1,4 @@
 model ResourcePlanningType {
-
   resourcePlanningTypeId String @id(map: "pkbaret") @map("keybaret") @db.Char(15)
   name                   String @unique(map: "akbaret1") @map("caption") @db.VarChar(60)
   uniqueControl          Int    @default(1, map: "DF__baret__onlyonce__71EB1F7F") @map("onlyonce") @db.TinyInt

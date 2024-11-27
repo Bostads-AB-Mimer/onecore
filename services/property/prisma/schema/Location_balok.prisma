@@ -1,5 +1,4 @@
 model Location {
-
   locationId          String  @id(map: "pkbalok") @map("keybalok") @db.Char(15)
   propertyObjectId    String  @unique(map: "akbalok1") @map("keycmobj") @db.Char(15)
   typeCodeId          String  @map("keybalot") @db.Char(15)

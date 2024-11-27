@@ -1,5 +1,4 @@
 model ResidenceType {
-
   residenceTypeId       String  @id(map: "pkbalgt") @map("keybalgt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: determine a more appropriate name for component type action if available.
   statisticsGroupSCBId  String? @map("keyballs") @db.Char(15)

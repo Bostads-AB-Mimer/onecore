@@ -1,5 +1,4 @@
 model AdministrativeUnit {
-
   administrativeUnitId         String    @id(map: "pkbafen") @map("keybafen") @db.Char(15)
   propertyObjectId             String    @unique(map: "akbafen1") @map("keycmobj") @db.Char(15)
   ownerContactId               String?   @map("keycmctc") @db.Char(15)

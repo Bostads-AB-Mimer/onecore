@@ -1,5 +1,4 @@
 model Room {
-
   roomId              String    @id(map: "pkbarum") @map("keybarum") @db.Char(15)
   propertyObjectId    String    @unique(map: "akbarum1") @map("keycmobj") @db.Char(15)
   roomTypeId          String?   @map("keybarut") @db.Char(15)

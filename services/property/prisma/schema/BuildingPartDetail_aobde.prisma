@@ -1,5 +1,4 @@
 model BuildingPartDetail {
-
   buildingPartDetailId String @id(map: "pkaobde") @map("keyaobde") @db.Char(15)
   buildingPartId       String @map("keyaobdl") @db.Char(15)
   detailId             String @map("keyaodet") @db.Char(15)

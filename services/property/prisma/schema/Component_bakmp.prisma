@@ -1,5 +1,4 @@
 model Component {
-
   id                           String    @id(map: "pkbakmp") @map("keybakmp") @db.Char(15)
   objectId                     String    @unique(map: "fkbakmpcmobj") @map("keycmobj") @db.Char(15)
   typeId                       String?   @map("keybakmt") @db.Char(15)

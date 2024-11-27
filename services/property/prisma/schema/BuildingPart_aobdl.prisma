@@ -1,5 +1,4 @@
 model BuildingPart {
-
   buildingPartId            String  @id(map: "pkaobdl") @map("keyaobdl") @db.Char(15)
   code                      String  @unique(map: "akaobdl1") @map("code") @db.VarChar(10)
   name                      String? @map("caption") @db.VarChar(70)

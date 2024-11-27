@@ -1,5 +1,4 @@
 model ParkingSpaceType {
-
   id                    String  @id(map: "pkbabpt") @map("keybabpt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: Verify this relationship
   code                  String  @unique(map: "akbabpt") @map("code") @db.VarChar(15)

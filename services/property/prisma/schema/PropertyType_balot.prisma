@@ -1,5 +1,4 @@
 model PropertyType {
-
   propertyTypeId                String  @id(map: "pkbalot") @map("keybalot") @db.Char(15)
   componentTypeActionId         String? @map("keypuatt") @db.Char(15)
   statisticsGroupScbId          String? @map("keyballs") @db.Char(15)

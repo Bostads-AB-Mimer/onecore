@@ -1,5 +1,4 @@
 model FieldSearch {
-
   // Fields
   fieldSearchId     String @id(map: "pkbatep") @map("keybatep") @db.Char(15)
   typTextTemplateId String @unique(map: "akbatep1") @map("keycmtep") @db.Char(15)

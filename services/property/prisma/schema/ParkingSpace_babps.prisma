@@ -1,5 +1,4 @@
 model ParkingSpace {
-
   // Fields
   id                 String   @id(map: "pkbabps") @map("keybabps") @db.Char(15)
   objectId           String   @unique(map: "akbabps1") @map("keycmobj") @db.Char(15)

@@ -1,5 +1,4 @@
 model ComponentType {
-
   componentTypeId   String  @id(map: "pkbakmt") @map("keybakmt") @db.Char(15)
   textTypeId        String? @map("keycmtyp") @db.Char(15) // Relation to TextType model
   actionTypeId      String? @map("keypuatt") @db.Char(15) // Likely related to an action type

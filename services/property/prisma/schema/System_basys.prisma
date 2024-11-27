@@ -1,5 +1,4 @@
 model System {
-
   // Fields
   systemId         String    @id(map: "pkbasys") @map("keybasys") @db.Char(15)
   propertyObjectId String    @unique(map: "akbasys1") @map("keycmobj") @db.Char(15)

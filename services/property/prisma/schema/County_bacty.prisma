@@ -1,5 +1,4 @@
 model County {
-
   countyId  String  @id(map: "pkbacty") @map("keybacty") @db.Char(15)
   code      String  @unique(map: "akbacty") @map("code") @db.VarChar(10)
   name      String? @map("caption") @db.VarChar(30)

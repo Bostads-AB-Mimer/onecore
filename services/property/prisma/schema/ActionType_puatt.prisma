@@ -1,5 +1,4 @@
 model ActionType {
-
   actionTypeId     String @id(map: "pkpuatt") @map("keypuatt") @db.Char(15)
   keypuhdt         String @map("keypuhdt") @db.Char(15)
   actionTypeCode   String @unique(map: "akpuatt1") @map("code") @db.Char(4)

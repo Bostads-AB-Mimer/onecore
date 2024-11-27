@@ -1,5 +1,4 @@
 model ResourcePlanning {
-
   // Fields
   resourcePlanningId String    @id(map: "pkbarek") @map("keybarek") @db.Char(15)
   planningTypeId     String    @map("keybaret") @db.Char(15) // TODO: confirm if "Resursplaneringstyp" translates directly to "planningTypeId"

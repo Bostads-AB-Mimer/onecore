@@ -1,5 +1,4 @@
 model RentalObjectType {
-
   rentalObjectTypeId    String  @id(map: "pkbahyt") @map("keybahyt") @db.Char(15)
   actionTypeId          String? @map("keypuatt") @db.Char(15) // Relates to a potential action type in the future
   rentalObjectTypeCode  String  @unique(map: "akbahyt") @map("code") @db.VarChar(15)

@@ -1,5 +1,4 @@
 model MaintenanceUnitType {
-
   maintenanceUnitTypeId   String  @id(map: "pkbauht") @map("keybauht") @db.Char(15)
   componentActionTypeId   String? @map("keypuatt") @db.Char(15) // TODO: Confirm if this name aligns with the domain knowledge
   maintenanceUnitTypeCode String  @unique(map: "akbauht") @map("code") @db.VarChar(15)

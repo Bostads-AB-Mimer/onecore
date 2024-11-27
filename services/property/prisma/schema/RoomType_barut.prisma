@@ -1,5 +1,4 @@
 model RoomType {
-
   roomTypeId                 String  @id(map: "pkbarut") @map("keybarut") @db.Char(15)
   componentActionTypeId      String? @map("keypuatt") @db.Char(15)
   roomTypeCode               String  @unique(map: "akbarut") @map("code") @db.VarChar(15)

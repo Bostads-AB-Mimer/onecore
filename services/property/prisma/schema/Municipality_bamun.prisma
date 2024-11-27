@@ -1,5 +1,4 @@
 model Municipality {
-
   municipalityId  String  @id(map: "pkbamun") @map("keybamun") @db.Char(15)
   countyId        String? @map("keybacty") @db.Char(15)
   code            String  @map("code") @db.VarChar(10)

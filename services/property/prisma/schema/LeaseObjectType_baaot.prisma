@@ -1,5 +1,4 @@
 model LeaseObjectType {
-
   // Fields
   leaseObjectTypeId     String  @id(map: "pkbaaot") @map("keybaaot") @db.Char(15)
   actionComponentTypeId String? @map("keypuatt") @db.Char(15)

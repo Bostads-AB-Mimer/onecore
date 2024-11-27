@@ -1,5 +1,4 @@
 model AreaType {
-
   areaTypeId            String  @id(map: "pkbaytt") @map("keybaytt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: Clarify naming when more domain info is available
   areaTypeCode          String  @unique(map: "akbaytt1") @map("code") @db.VarChar(15)

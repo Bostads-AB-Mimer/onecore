@@ -1,5 +1,4 @@
 model Heating {
-
   // Fields
   heatingId          String @id(map: "pkbahea") @map("keybahea") @db.Char(15)
   name               String @map("caption") @db.VarChar(60)

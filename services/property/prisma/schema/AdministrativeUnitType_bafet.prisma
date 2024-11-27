@@ -1,5 +1,4 @@
 model AdministrativeUnitType {
-
   // Fields
   id        String  @id(map: "pkbafet") @map("keybafet") @db.Char(15)
   code      String  @unique(map: "akbafet") @map("code") @db.VarChar(15)

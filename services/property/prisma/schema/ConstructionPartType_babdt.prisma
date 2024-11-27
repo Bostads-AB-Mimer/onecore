@@ -1,5 +1,4 @@
 model ConstructionPartType {
-
   // Fields
   constructionPartTypeId String  @id(map: "pkbabdt") @map("keybabdt") @db.Char(15)
   componentTypeActionId  String? @map("keypuatt") @db.Char(15)

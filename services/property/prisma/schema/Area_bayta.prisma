@@ -1,5 +1,4 @@
 model Area {
-
   // Fields
   areaId             String   @id(map: "pkbayta") @map("keybayta") @db.Char(15)
   objectId           String   @unique(map: "akbayta1") @map("keycmobj") @db.Char(15)
