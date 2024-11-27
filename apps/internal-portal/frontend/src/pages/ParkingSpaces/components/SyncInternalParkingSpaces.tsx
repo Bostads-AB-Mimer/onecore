@@ -30,14 +30,14 @@ export const SyncInternalParkingSpaces = () => {
             overflow: 'hidden',
           }}
         >
-          Synka interna bilplatser
+          Hämta publicerade bilplatser
         </Box>
       </Button>
       <Dialog onClose={onCloseModal} open={open} maxWidth="sm" fullWidth>
         <Box paddingTop="0.5rem">
           <Box display="flex">
             <DialogTitle variant="h1" fontSize={24} textAlign="left">
-              Synka interna bilplatser från Xpand
+              Hämta publicerade bilplatser från XPand
             </DialogTitle>
             <Box
               display="flex"
@@ -56,13 +56,13 @@ export const SyncInternalParkingSpaces = () => {
           <Box minHeight="500px" display="flex" flexDirection="column">
             <Box paddingX="0.5rem">
               <Typography variant="body1">
-                Här kan du synkronisera alla <i>publicerade</i> bilplatser som
-                finns i Xpand till OneCore. När du trycker på "Synka" så hämtas
-                alla bilplatser från Xpand och sen läggs de in i OneCores
+                Här kan du hämta alla <i>publicerade</i> bilplatser som finns i
+                Xpand. När du trycker på "Hämta publicerade bilplatser" så
+                hämtas alla bilplatser från XPand och sen läggs de in i OneCores
                 databas.
               </Typography>
               <Typography>
-                Om en bilplats som ligger inne i OneCore tas bort från Xpand så
+                Om en bilplats som ligger inne i OneCore tas bort från XPand så
                 kommer den behövas tas bort manuellt även här i
                 medarbetarportalen.
               </Typography>
@@ -80,7 +80,7 @@ export const SyncInternalParkingSpaces = () => {
               sx={{ marginTop: '1rem' }}
               onClick={() => syncInternalParkingSpaces.mutate()}
             >
-              Synka
+              Hämta publicerade bilplatser
             </LoadingButton>
           </Box>
         </DialogContent>
@@ -95,7 +95,7 @@ const SyncInternalParkingSpacesResult = (props: {
   return (
     <Box flex="1" display="flex" flexDirection="column">
       <Typography fontWeight="bold" align="center">
-        Resultat synkronisering
+        Resultat hämtning av bilplatser
       </Typography>
       <Box
         maxHeight="500px"
