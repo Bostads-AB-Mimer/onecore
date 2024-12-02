@@ -1,5 +1,5 @@
 model Residence {
-  residenceId                String    @id(map: "pkbalgh") @map("keybalgh") @db.Char(15)
+  id                         String    @id(map: "pkbalgh") @map("keybalgh") @db.Char(15)
   objectId                   String    @unique(map: "akbalgh1") @map("keycmobj") @db.Char(15)
   residenceTypeId            String    @map("keybalgt") @db.Char(15)
   housingFormId              String?   @map("keybalbf") @db.Char(15)

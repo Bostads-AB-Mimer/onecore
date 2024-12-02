@@ -2,7 +2,7 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
   getLatestResidences,
-  getResidenceById,
+  getResidenceById, getResidencesByBuildingCode, getResidencesByBuildingCodeAndFloorCode,
 } from '../../adapters/residence-adapter'
 import { mapDbToResidence } from './residence-mapper'
 
@@ -68,7 +68,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Residence not found
    */
-  router.get('(.*)/residences/:id', async (ctx) => {
+  router.get('(.*)//residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(`GET /residences/${ctx.params.id}`, metadata)
     const dbRecord = await getResidenceById(ctx.params.id)
@@ -79,5 +79,98 @@ export const routes = (router: KoaRouter) => {
     console.log('dbRecord', dbRecord)
     const response = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
+  })
+
+  /**
+   * @swagger
+   *   /residences/buildingCode/{buildingCode}:
+   *     get:
+   *       summary: Get residences by building code.
+   *       description: Returns all residences belonging to a specific building by building code.
+   *       tags:
+   *         - Residences
+   *       parameters:
+   *         - in: path
+   *           name: buildingCode
+   *           required: true
+   *           schema:
+   *             type: string
+   *           description: The building code of the building.
+   *       responses:
+   *         200:
+   *           description: Successfully retrieved the residencies.
+   */
+  router.get('(.*)/residences/buildingCode/:buildingCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /residences/buildingCode/${ctx.params.buildingCode}`, metadata)
+
+    const { buildingCode } = ctx.params
+
+    if (!buildingCode || buildingCode.length < 7) {
+      ctx.status = 400
+      ctx.body = { content: 'Invalid building code', ...metadata }
+      return
+    }
+
+    const parsedBuildingCode = buildingCode.slice(0, 7)
+
+    try {
+      const response = await getResidencesByBuildingCode(parsedBuildingCode)
+      ctx.body = { content: response, ...metadata }
+    } catch (err){
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error';
+      ctx.body = {reason: errorMessage, ...metadata}
+    }
+  })
+
+  /**
+   * @swagger
+   *   /residences/buildingCode/{buildingCode}/staircase/{floorCode}:
+   *     get:
+   *       summary: Get residences by building and staircase code.
+   *       description: Returns all residences belonging to a specific building and staircase.
+   *       tags:
+   *         - Residences
+   *       parameters:
+   *         - in: path
+   *           name: buildingCode
+   *           required: true
+   *           description: The building code of the building.
+   *           schema:
+   *             type: string
+   *         - in: path
+   *           name: floorCode
+   *           required: true
+   *           description: The floor code of the staircase.
+   *           schema:
+   *             type: string
+   *       responses:
+   *         200:
+   *           description: Successfully retrieved the residences.
+   */
+
+  router.get('(.*)/residences/buildingCode/:buildingCode/staircase/:floorCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /residences/buildingCode/${ctx.params.buildingCode}`, metadata)
+
+    const { buildingCode, floorCode } = ctx.params
+
+    if (!buildingCode || buildingCode.length < 7) {
+      ctx.status = 400
+      ctx.body = { content: 'Invalid building code', ...metadata }
+      return
+    }
+
+    const parsedBuildingCode = buildingCode.slice(0, 7)
+
+    try {
+      const response = await getResidencesByBuildingCodeAndFloorCode(parsedBuildingCode, floorCode)
+      ctx.body = { content: response, ...metadata }
+    } catch (err){
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error';
+      ctx.body = {reason: errorMessage, ...metadata}
+    }
   })
 }

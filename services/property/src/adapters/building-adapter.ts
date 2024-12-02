@@ -54,5 +54,4 @@ const getBuildingByCode = async (buildingCode: string) => {
     })
 }
 
-
 export {getBuildings, getBuildingByCode}
