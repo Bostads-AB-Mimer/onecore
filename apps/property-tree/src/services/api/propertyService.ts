@@ -1,13 +1,18 @@
 import { Property, NavigationItem } from '../types'
+import { PropertyList } from './types'
 import { fetchApi, simulateDelay } from './baseApi'
 import { mockProperties, mockNavigation } from '../mockData'
 
 export const propertyService = {
   // Get all properties
-  async getAll(): Promise<Property[]> {
+  async getAll(): Promise<PropertyList> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    return Object.values(mockProperties)
+    const items = Object.values(mockProperties)
+    return {
+      items,
+      total: items.length
+    }
   },
 
   // Get property by ID
