@@ -34,7 +34,7 @@ export const useCreateNoteOfInterest = (listingId: number) => {
     onSuccess: () =>
       Promise.all([
         queryClient.refetchQueries({
-          queryKey: ['parkingSpaceListing', String(listingId)],
+          queryKey: ['parkingSpaceListing', listingId],
         }),
         queryClient.invalidateQueries({
           queryKey: ['parkingSpaceListings'],
