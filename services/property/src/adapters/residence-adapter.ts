@@ -1,6 +1,10 @@
 import {Prisma, PrismaClient} from '@prisma/client'
 import {map} from "lodash";
 
+const prisma = new PrismaClient({
+    log: ['query'],
+})
+
 export const getLatestResidences = async (propertyCode?: string) => {
     const where = propertyCode ? {
         propertyObject: {
@@ -120,10 +124,6 @@ export const getResidenceById = async (
 
     return response
 }
-
-const prisma = new PrismaClient({
-    log: ['query'],
-})
 
 export const getResidencesByType = async (residenceTypeId: string) => {
     console.log('residenceTypeId', residenceTypeId)
