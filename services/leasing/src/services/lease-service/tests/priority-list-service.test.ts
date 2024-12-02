@@ -711,4 +711,51 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       applicant2.contactCode
     )
   })
+
+  it('should assign priority null if applicant has no upcoming housing contracts or active parking space contracts', () => {
+    const listing = factory.listing.build({
+      rentalObjectCode: '307-706-00-0015',
+      districtCaption: 'Vallby',
+      districtCode: 'VAL',
+      objectTypeCaption: 'Parkeringsplats med el',
+      objectTypeCode: 'PPLMEL',
+      rentalObjectTypeCaption: 'Standard hyresobjektstyp',
+      publishedFrom: new Date('2024-10-21T07:55:51.000Z'),
+      publishedTo: new Date('2024-10-19T22:59:59.000Z'),
+      vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
+      status: 4,
+      waitingListType: 'Bilplats (intern)',
+    })
+
+    const detailedApplicant3 = factory.detailedApplicant
+      .params({
+        applicationDate: new Date('2024-11-07T14:44:40.610Z'),
+        applicationType: 'Additional',
+        status: 1,
+        listingId: listing.id,
+        currentHousingContract: {
+          leaseId: '705-008-04-0101/04',
+          leaseNumber: '04',
+          rentalPropertyId: '705-008-04-0101',
+          type: 'Bostadskontrakt               ',
+          leaseStartDate: new Date('2013-03-01T00:00:00.000Z'),
+          status: 0,
+          noticeTimeTenant: '3',
+          contractDate: new Date('2013-01-23T00:00:00.000Z'),
+          approvalDate: new Date('2013-01-23T00:00:00.000Z'),
+          residentialArea: {
+            code: 'MAL',
+            caption: 'Malmaberg',
+          },
+        },
+        parkingSpaceContracts: [],
+      })
+      .build()
+
+    const result3 = assignPriorityToApplicantBasedOnRentalRules(
+      listing,
+      detailedApplicant3
+    )
+    expect(result3.priority).toBe(null)
+  })
 })

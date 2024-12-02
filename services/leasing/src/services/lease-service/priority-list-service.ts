@@ -19,12 +19,15 @@ const addPriorityToApplicantsBasedOnRentalRules = (
   applicants: DetailedApplicant[]
 ) => {
   const applicantsWithAssignedPriority: DetailedApplicant[] = []
+  logger.info(
+    `Adding priority to applicants based on rental rules for listing ${listing.id}`
+  )
   for (const applicant of applicants) {
     applicantsWithAssignedPriority.push(
       assignPriorityToApplicantBasedOnRentalRules(listing, applicant)
     )
   }
-
+  logger.info(`Priority assigned to applicants for ${listing.id}`)
   return applicantsWithAssignedPriority
 }
 
@@ -65,22 +68,31 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     )
   ) {
     //special residential area rental rules apply to this listing
-    //applicant is not allowed to rent this object, return priority:undefined
+    //applicant is not allowed to rent this object, return priority:null
+    logger.info(
+      applicant.name +
+        ': priority null - special residential area rental rules apply to this listing. applicant is not allowed to rent this object'
+    )
     return {
       ...applicant,
       priority: null,
     }
   }
 
-  //priority  1
-
-  //Applicant has no active parking space contract and is tenant in same area as listing
   if (!applicant.parkingSpaceContracts?.length) {
+    //priority  1
+
+    //Applicant has no active parking space contract and is tenant in same area as listing
     if (applicant.currentHousingContract) {
       if (
         applicant.currentHousingContract?.residentialArea?.code ===
         listing.districtCode
       ) {
+        logger.info(
+          applicant.name +
+            ': priority 1 - Applicant has no active parking space contract and is tenant in same area as listing'
+        )
+
         return {
           ...applicant,
           priority: 1,
@@ -94,6 +106,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
         applicant.upcomingHousingContract?.residentialArea?.code ===
         listing.districtCode
       ) {
+        logger.info(
+          applicant.name +
+            ': priority 1 - Applicant has no active parking space contract and has upcoming housing contract in same area as listing'
+        )
         return {
           ...applicant,
           priority: 1,
@@ -107,6 +123,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     applicant.parkingSpaceContracts?.length === 1 &&
     applicant.applicationType === 'Replace'
   ) {
+    logger.info(
+      applicant.name +
+        ': priority 1  - Applicant has 1 active contract for parking space and wishes to replace current parking space'
+    )
     return {
       ...applicant,
       priority: 1,
@@ -120,6 +140,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     applicant.parkingSpaceContracts?.length === 1 &&
     applicant.applicationType === 'Additional'
   ) {
+    logger.info(
+      applicant.name +
+        ': priority 2 - Applicant has 1 active parking space contract and wishes to rent an additional parking space'
+    )
     return {
       ...applicant,
       priority: 2,
@@ -132,6 +156,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     applicant.parkingSpaceContracts.length > 1 &&
     applicant.applicationType === 'Replace'
   ) {
+    logger.info(
+      applicant.name +
+        ': priority 2 - Applicant has more than 1 active parking space contract and wishes to replace 1 parking space contract'
+    )
     return {
       ...applicant,
       priority: 2,
@@ -145,6 +173,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     applicant.parkingSpaceContracts &&
     applicant.parkingSpaceContracts.length >= 2
   ) {
+    logger.info(
+      applicant.name +
+        ': priority 3 - Applicant has 2 or more active parking space and wishes to rent an additional parking space'
+    )
     return {
       ...applicant,
       priority: 3,
@@ -152,6 +184,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   }
 
   //Applicant is not in any of the 3 priority groups and is not eligible to rent the parking space. Ie because they don't have a housing contract
+  logger.info(
+    applicant.name +
+      ": priority null - Applicant is not in any of the 3 priority groups and is not eligible to rent the parking space. Ie because they don't have a housing contract"
+  )
   return {
     ...applicant,
     priority: null,
