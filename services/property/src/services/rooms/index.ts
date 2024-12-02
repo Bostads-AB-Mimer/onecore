@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import {getRooms} from "../../adapters/room-adapter";
+import { getRooms } from '../../adapters/room-adapter'
 
 /**
  * @swagger
@@ -42,26 +42,37 @@ export const routes = (router: KoaRouter) => {
    *           description: Successfully retrieved the rooms.
    */
 
-  router.get('(.*)/rooms/buildingCode/:buildingCode/staircase/:floorCode/residenceCode/:residenceCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { buildingCode, floorCode, residenceCode } = ctx.params
-    logger.info(`GET /rooms/buildingCode/${buildingCode}/staircase/${floorCode}/residenceCode/${residenceCode}`, metadata)
+  router.get(
+    '(.*)/rooms/buildingCode/:buildingCode/staircase/:floorCode/residenceCode/:residenceCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { buildingCode, floorCode, residenceCode } = ctx.params
+      logger.info(
+        `GET /rooms/buildingCode/${buildingCode}/staircase/${floorCode}/residenceCode/${residenceCode}`,
+        metadata
+      )
 
-    if (!buildingCode || buildingCode.length < 7) {
-      ctx.status = 400
-      ctx.body = { content: 'Invalid building code', ...metadata }
-      return
+      if (!buildingCode || buildingCode.length < 7) {
+        ctx.status = 400
+        ctx.body = { content: 'Invalid building code', ...metadata }
+        return
+      }
+
+      const parsedBuildingCode = buildingCode.slice(0, 7)
+
+      try {
+        const response = await getRooms(
+          parsedBuildingCode,
+          floorCode,
+          residenceCode
+        )
+        ctx.body = { content: response, ...metadata }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
     }
-
-    const parsedBuildingCode = buildingCode.slice(0, 7)
-
-    try {
-      const response = await getRooms(parsedBuildingCode, floorCode, residenceCode)
-      ctx.body = { content: response, ...metadata }
-    } catch (err){
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error';
-      ctx.body = {reason: errorMessage, ...metadata}
-    }
-  })
+  )
 }

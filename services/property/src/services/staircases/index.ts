@@ -5,7 +5,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import {getStaircasesByBuildingCode} from "../../adapters/staircase-adapter";
+import { getStaircasesByBuildingCode } from '../../adapters/staircase-adapter'
 
 /**
  * @swagger
@@ -16,7 +16,6 @@ import {getStaircasesByBuildingCode} from "../../adapters/staircase-adapter";
  */
 
 export const routes = (router: KoaRouter) => {
-
   /**
    * @swagger
    * /staircases/{buildingCode}/:
@@ -54,10 +53,10 @@ export const routes = (router: KoaRouter) => {
     try {
       const response = await getStaircasesByBuildingCode(parsedBuildingCode)
       ctx.body = { content: response, ...metadata }
-    } catch (err){
+    } catch (err) {
       ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error';
-      ctx.body = {reason: errorMessage, ...metadata}
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
     }
   })
 }

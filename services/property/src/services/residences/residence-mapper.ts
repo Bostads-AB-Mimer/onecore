@@ -1,12 +1,7 @@
 import { ResidenceWithRelations } from '../../adapters/residence-adapter'
-import {
-  ResidenceSchema,
-  Residence,
-} from '../../types/residence'
+import { ResidenceSchema, Residence } from '../../types/residence'
 
-export function mapDbToResidence(
-  dbRecord: ResidenceWithRelations,
-): Residence {
+export function mapDbToResidence(dbRecord: ResidenceWithRelations): Residence {
   if (!dbRecord) return {} as Residence
   return ResidenceSchema.parse({
     id: dbRecord.residenceId.trim(),

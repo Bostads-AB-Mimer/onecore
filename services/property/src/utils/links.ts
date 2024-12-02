@@ -5,7 +5,7 @@ import port from '../config/port'
 export const generateMetaLinks = (
   ctx: Context,
   path: string,
-  params?: Record<string, string>,
+  params?: Record<string, string>
 ) => {
   const baseUrl = `http://localhost:${port}`
 
@@ -23,7 +23,7 @@ export const generateMetaLinks = (
           }
           return acc
         },
-        {} as Record<string, { href: string }>,
+        {} as Record<string, { href: string }>
       ),
     }
   }

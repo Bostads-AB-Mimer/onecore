@@ -62,7 +62,7 @@ export const ResidenceSchema = z.object({
         availableFrom: z.date().optional(),
         availableTo: z.date().optional(),
         timestamp: z.string(),
-      }),
+      })
     )
     .optional()
     .default([]),

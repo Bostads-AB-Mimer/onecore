@@ -8,9 +8,9 @@ export const PropertyTypeSchema = z.object<z.ZodRawShape>({
   propertyDesignation: z.string(),
   _links: z.object({
     self: z.object({
-      href: z.string()
-    })
-  })
+      href: z.string(),
+    }),
+  }),
 })
 
 export const PropertyListSchema = z.array(PropertyTypeSchema)

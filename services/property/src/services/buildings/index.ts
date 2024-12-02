@@ -7,7 +7,7 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
   getBuildingByCode,
-  getBuildings
+  getBuildings,
 } from '../../adapters/building-adapter'
 
 /**

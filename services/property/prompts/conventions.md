@@ -1,4 +1,5 @@
 ## Naming conventions
+
 - Use PascalCase for model names
 - Use camelCase for field names
 - Use singular for model names

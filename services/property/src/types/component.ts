@@ -16,13 +16,15 @@ export const ComponentTypeSchema = z.object({
     code: z.string(),
     name: z.string(),
   }),
-  propertyStructures: z.array(z.object({
-    maintenanceUnitByCode: z.object({
-      maintenanceUnitId: z.string(),
-      maintenanceUnitCode: z.string(),
-      name: z.string(),
-    }),
-  })),
+  propertyStructures: z.array(
+    z.object({
+      maintenanceUnitByCode: z.object({
+        maintenanceUnitId: z.string(),
+        maintenanceUnitCode: z.string(),
+        name: z.string(),
+      }),
+    })
+  ),
 })
 
 export const ComponentListSchema = z.array(ComponentTypeSchema)

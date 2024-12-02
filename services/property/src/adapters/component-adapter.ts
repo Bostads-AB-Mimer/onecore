@@ -5,7 +5,7 @@ const prisma = new PrismaClient({
 })
 
 export const getComponentByMaintenanceUnitCode = async (
-  maintenanceUnitCode: string,
+  maintenanceUnitCode: string
 ) => {
   console.log('maintenanceUnitCode', maintenanceUnitCode)
   const response = await prisma.component.findMany({

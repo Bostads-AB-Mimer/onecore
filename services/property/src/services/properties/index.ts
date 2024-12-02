@@ -5,10 +5,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import {
-  getProperties,
-  getPropertyById
-} from '../../adapters/property-adapter'
+import { getProperties, getPropertyById } from '../../adapters/property-adapter'
 import { generateMetaLinks } from '../../utils/links'
 
 /**
@@ -51,13 +48,13 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties/:id/', metadata)
     const response = await getPropertyById(ctx.params.id)
-    ctx.body = { 
+    ctx.body = {
       content: response,
       ...metadata,
       _links: generateMetaLinks(ctx, '/properties', {
         id: ctx.params.id,
-        buildings: response?.code || ''
-      })
+        buildings: response?.code || '',
+      }),
     }
   })
 
@@ -94,17 +91,17 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /properties', metadata)
     const response = await getProperties(query)
-    ctx.body = { 
-      content: response.map(property => ({
+    ctx.body = {
+      content: response.map((property) => ({
         ...property,
         _links: {
           self: {
-            href: `/properties/${property.id}`
-          }
-        }
+            href: `/properties/${property.id}`,
+          },
+        },
       })),
       ...metadata,
-      _links: generateMetaLinks(ctx, '/properties')
+      _links: generateMetaLinks(ctx, '/properties'),
     }
   })
 }

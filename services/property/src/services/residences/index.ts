@@ -2,7 +2,9 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
   getLatestResidences,
-  getResidenceById, getResidencesByBuildingCode, getResidencesByBuildingCodeAndFloorCode,
+  getResidenceById,
+  getResidencesByBuildingCode,
+  getResidencesByBuildingCodeAndFloorCode,
 } from '../../adapters/residence-adapter'
 import { mapDbToResidence } from './residence-mapper'
 
@@ -102,7 +104,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/buildingCode/:buildingCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /residences/buildingCode/${ctx.params.buildingCode}`, metadata)
+    logger.info(
+      `GET /residences/buildingCode/${ctx.params.buildingCode}`,
+      metadata
+    )
 
     const { buildingCode } = ctx.params
 
@@ -117,10 +122,10 @@ export const routes = (router: KoaRouter) => {
     try {
       const response = await getResidencesByBuildingCode(parsedBuildingCode)
       ctx.body = { content: response, ...metadata }
-    } catch (err){
+    } catch (err) {
       ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error';
-      ctx.body = {reason: errorMessage, ...metadata}
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
     }
   })
 
@@ -149,27 +154,36 @@ export const routes = (router: KoaRouter) => {
    *         200:
    *           description: Successfully retrieved the residences.
    */
+  router.get(
+    '(.*)/residences/buildingCode/:buildingCode/staircase/:floorCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { buildingCode, floorCode } = ctx.params
+      logger.info(
+        `GET /residences/buildingCode/${buildingCode}/staircase/${floorCode}`,
+        metadata
+      )
 
-  router.get('(.*)/residences/buildingCode/:buildingCode/staircase/:floorCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { buildingCode, floorCode } = ctx.params
-    logger.info(`GET /residences/buildingCode/${buildingCode}/staircase/${floorCode}`, metadata)
+      if (!buildingCode || buildingCode.length < 7) {
+        ctx.status = 400
+        ctx.body = { content: 'Invalid building code', ...metadata }
+        return
+      }
 
-    if (!buildingCode || buildingCode.length < 7) {
-      ctx.status = 400
-      ctx.body = { content: 'Invalid building code', ...metadata }
-      return
+      const parsedBuildingCode = buildingCode.slice(0, 7)
+
+      try {
+        const response = await getResidencesByBuildingCodeAndFloorCode(
+          parsedBuildingCode,
+          floorCode
+        )
+        ctx.body = { content: response, ...metadata }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
     }
-
-    const parsedBuildingCode = buildingCode.slice(0, 7)
-
-    try {
-      const response = await getResidencesByBuildingCodeAndFloorCode(parsedBuildingCode, floorCode)
-      ctx.body = { content: response, ...metadata }
-    } catch (err){
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error';
-      ctx.body = {reason: errorMessage, ...metadata}
-    }
-  })
+  )
 }

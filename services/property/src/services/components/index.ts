@@ -23,7 +23,7 @@ export const routes = (router: KoaRouter) => {
    *     description: |
    *       Retrieves all components associated with a specific maintenance unit code.
    *       Components are returned ordered by installation date (newest first).
-   *       Each component includes details about its type, category, manufacturer, 
+   *       Each component includes details about its type, category, manufacturer,
    *       and associated maintenance unit information.
    *     tags:
    *       - Components
@@ -53,7 +53,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/components/:maintenanceUnitCode/', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info('GET /components/:maintenanceUnitCode/', metadata)
-    const response = await getComponentByMaintenanceUnitCode(ctx.params.maintenanceUnit)
+    const response = await getComponentByMaintenanceUnitCode(
+      ctx.params.maintenanceUnit
+    )
     ctx.body = { content: response, ...metadata }
   })
 }
