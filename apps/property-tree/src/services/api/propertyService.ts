@@ -1,73 +1,65 @@
-import { Property, PropertyResponse } from '../types'
-import { getProperties } from './propertyApi'
+import { Property, NavigationItem } from '../types'
+import { fetchApi, simulateDelay } from './baseApi'
+import { mockProperties, mockNavigation } from '../mockData'
 
 export const propertyService = {
+  // Get all properties
   async getAll(): Promise<Property[]> {
-    try {
-      const response = await getProperties()
-      return response.content.map(property => ({
-        ...property,
-        id: property.propertyId.trim(), // Remove whitespace from ID
-        name: property.propertyDesignation,
-        buildings: [] // We'll populate this when building data is available
-      }))
-    } catch (error) {
-      console.error('Failed to fetch properties:', error)
-      throw new Error('Failed to load properties')
-    }
+    // TODO: Replace with actual API call
+    await simulateDelay()
+    return Object.values(mockProperties)
   },
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const { data } = await apiClient.get<ApiProperty>(`/api/properties/${id}`)
-    return {
-      id: data.id,
-      name: data.name,
-      address: data.address,
-      areaId: '', // Will be populated when area structure is available
-      buildings: data.buildings,
-      totalApartments: data.totalApartments,
-      occupiedApartments: data.occupiedApartments,
-      constructionYear: data.constructionYear,
-      lastRenovation: data.lastRenovation,
+    // TODO: Replace with actual API call
+    await simulateDelay()
+    const property = mockProperties[id]
+    if (!property) {
+      throw new Error(`Property with id ${id} not found`)
     }
+    return property
+  },
+
+  // Get properties by area ID
+  async getByAreaId(areaId: string): Promise<Property[]> {
+    // TODO: Replace with actual API call
+    await simulateDelay()
+    return Object.values(mockProperties).filter(
+      (property) => property.areaId === areaId,
+    )
+  },
+
+  // Get navigation tree
+  async getNavigation(): Promise<NavigationItem[]> {
+    // TODO: Replace with actual API call
+    await simulateDelay()
+    return mockNavigation
   },
 
   // Create new property
   async create(data: Omit<Property, 'id'>): Promise<Property> {
-    const { data: response } = await apiClient.post<ApiProperty>(
-      '/api/properties/',
-      data
-    )
-    return {
-      id: response.id,
-      name: response.name,
-      address: response.address,
-      areaId: '', // Will be populated when area structure is available
-      buildings: response.buildings,
-      totalApartments: response.totalApartments,
-      occupiedApartments: response.occupiedApartments,
-      constructionYear: response.constructionYear,
-      lastRenovation: response.lastRenovation,
-    }
+    // TODO: Replace with actual API call
+    return fetchApi<Property>('/properties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   },
 
   // Update property
   async update(id: string, data: Partial<Property>): Promise<Property> {
-    const { data: response } = await apiClient.put<ApiProperty>(
-      `/api/properties/${id}`,
-      data
-    )
-    return {
-      id: response.id,
-      name: response.name,
-      address: response.address,
-      areaId: '', // Will be populated when area structure is available
-      buildings: response.buildings,
-      totalApartments: response.totalApartments,
-      occupiedApartments: response.occupiedApartments,
-      constructionYear: response.constructionYear,
-      lastRenovation: response.lastRenovation,
-    }
+    // TODO: Replace with actual API call
+    return fetchApi<Property>(`/properties/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Delete property
+  async delete(id: string): Promise<void> {
+    // TODO: Replace with actual API call
+    return fetchApi<void>(`/properties/${id}`, {
+      method: 'DELETE',
+    })
   },
 }
