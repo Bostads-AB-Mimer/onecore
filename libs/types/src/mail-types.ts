@@ -9,7 +9,7 @@ interface ParkingSpaceOfferEmail extends Email {
   type: string
   parkingSpaceId: string
   objectId: string
-  hasParkingSpace: boolean
+  applicationType: 'Replace' | 'Additional'
 }
 
 interface ParkingSpaceOfferSms extends Sms {
