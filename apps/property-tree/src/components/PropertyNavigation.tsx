@@ -163,7 +163,7 @@ export function PropertyNavigation() {
   React.useEffect(() => {
     const loadNavigation = async () => {
       try {
-        const data = await propertyService.getNavigation()
+        const data = await propertyService.getNavigationTree()
         setNavigationItems(data)
 
         // Auto-expand root level if there's only one item
@@ -174,7 +174,7 @@ export function PropertyNavigation() {
           }))
         }
       } catch (err) {
-        setError('Failed to load navigation data')
+        setError('Kunde inte ladda navigationsdata')
         console.error(err)
       } finally {
         setLoading(false)
