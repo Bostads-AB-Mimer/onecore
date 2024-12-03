@@ -6,17 +6,8 @@ import {
   Building,
   Entrance,
 } from './types'
-import {
-  mockNavigation,
-  mockResidences,
-  mockAreas,
-  mockProperties,
-  mockBuildings,
-  mockEntrances,
-} from './mockData'
-
-// Simulate network delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+import { residenceService } from './api/residenceService'
+import { roomService } from './api/roomService'
 
 // Convert tenant to search result
 const createTenantSearchResult = (
@@ -68,10 +59,7 @@ export const propertyService = {
   },
 
   async getResidence(id: string): Promise<Residence> {
-    await delay(500)
-    const residence = mockResidences[id]
-    if (!residence) throw new Error(`Residence with id ${id} not found`)
-    return residence
+    return residenceService.getById(id)
   },
 
   async searchProperties(query: string): Promise<NavigationItem[]> {
