@@ -5,22 +5,12 @@ import { mockResidences } from '../mockData'
 export const tenantService = {
   // Get all tenants
   async getAll(): Promise<Tenant[]> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    return Object.values(mockResidences).map((residence) => residence.tenant)
+    return fetchApi<Tenant[]>('/tenants')
   },
 
   // Get tenant by ID
   async getById(id: string): Promise<Tenant> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    const tenant = Object.values(mockResidences).find(
-      (residence) => residence.tenant.id === id,
-    )?.tenant
-    if (!tenant) {
-      throw new Error(`Tenant with id ${id} not found`)
-    }
-    return tenant
+    return fetchApi<Tenant>(`/tenants/${id}`)
   },
 
   // Create new tenant

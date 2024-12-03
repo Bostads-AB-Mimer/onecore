@@ -17,34 +17,18 @@ export const propertyService = {
     return this.propertiesCache
   },
   // Get all properties
-  async getAll(): Promise<PropertyList> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    const items = Object.values(mockProperties)
-    return {
-      items,
-      total: items.length,
-    }
+  async getAll(): Promise<Property[]> {
+    return fetchApi<Property[]>('/properties')
   },
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    const property = mockProperties[id]
-    if (!property) {
-      throw new Error(`Property with id ${id} not found`)
-    }
-    return property
+    return fetchApi<Property>(`/properties/${id}`)
   },
 
   // Get properties by area ID
   async getByAreaId(areaId: string): Promise<Property[]> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    return Object.values(mockProperties).filter(
-      (property) => property.tract === areaId
-    )
+    return fetchApi<Property[]>(`/areas/${areaId}/properties`)
   },
 
   // Get navigation tree
