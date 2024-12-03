@@ -6,8 +6,8 @@ import {
   Building,
   Entrance,
 } from './types'
+import { fetchApi } from './api/baseApi'
 import { residenceService } from './api/residenceService'
-import { roomService } from './api/roomService'
 
 // Convert tenant to search result
 const createTenantSearchResult = (
@@ -26,36 +26,23 @@ const createTenantSearchResult = (
 
 export const propertyService = {
   async getNavigation(): Promise<NavigationItem[]> {
-    await delay(800)
-    return mockNavigation
+    return fetchApi<NavigationItem[]>('/navigation')
   },
 
   async getArea(id: string): Promise<Area> {
-    await delay(500)
-    const area = mockAreas[id]
-    if (!area) throw new Error(`Area with id ${id} not found`)
-    return area
+    return fetchApi<Area>(`/areas/${id}`)
   },
 
   async getProperty(id: string): Promise<Property> {
-    await delay(500)
-    const property = mockProperties[id]
-    if (!property) throw new Error(`Property with id ${id} not found`)
-    return property
+    return fetchApi<Property>(`/properties/${id}`)
   },
 
   async getBuilding(id: string): Promise<Building> {
-    await delay(500)
-    const building = mockBuildings[id]
-    if (!building) throw new Error(`Building with id ${id} not found`)
-    return building
+    return fetchApi<Building>(`/buildings/${id}`)
   },
 
   async getEntrance(id: string): Promise<Entrance> {
-    await delay(500)
-    const entrance = mockEntrances[id]
-    if (!entrance) throw new Error(`Entrance with id ${id} not found`)
-    return entrance
+    return fetchApi<Entrance>(`/entrances/${id}`)
   },
 
   async getResidence(id: string): Promise<Residence> {
@@ -63,34 +50,6 @@ export const propertyService = {
   },
 
   async searchProperties(query: string): Promise<NavigationItem[]> {
-    await delay(300)
-    const normalizedQuery = query.toLowerCase()
-
-    const searchInItems = (items: NavigationItem[]): NavigationItem[] => {
-      return items.reduce<NavigationItem[]>((acc, item) => {
-        if (item.name.toLowerCase().includes(normalizedQuery)) {
-          acc.push(item)
-        }
-        if (item.children) {
-          acc.push(...searchInItems(item.children))
-        }
-        return acc
-      }, [])
-    }
-
-    // Search in navigation items
-    const navigationResults = searchInItems(mockNavigation)
-
-    // Search in tenants
-    const tenantResults = Object.entries(mockResidences)
-      .filter(
-        ([_, residence]) =>
-          residence.tenant.name.toLowerCase().includes(normalizedQuery) ||
-          residence.tenant.email.toLowerCase().includes(normalizedQuery) ||
-          residence.tenant.phone.toLowerCase().includes(normalizedQuery),
-      )
-      .map(([id, residence]) => createTenantSearchResult(id, residence.tenant))
-
-    return [...navigationResults, ...tenantResults]
+    return fetchApi<NavigationItem[]>(`/search?q=${encodeURIComponent(query)}`)
   },
 }
