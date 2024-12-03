@@ -3,41 +3,40 @@ import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { MapPin, Building2, Users, Home } from 'lucide-react'
 import { propertyService } from '../../services/api'
-import { Area, Property } from '../../services/types'
+import { Property } from '../../services/types'
 
 export function AreaView() {
   const { areaId } = useParams()
-  const [area, setArea] = React.useState<Area | null>(null)
+  const [areaName, setAreaName] = React.useState<string>('')
   const [properties, setProperties] = React.useState<Property[]>([])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    const loadArea = async () => {
+    const loadAreaData = async () => {
       try {
-        const areaData = await propertyService.getArea(areaId!)
-        setArea(areaData)
+        // Get all areas to find the name
+        const areas = await propertyService.getAreas()
+        const currentArea = areas.find(area => area === areaId)
+        setAreaName(currentArea || areaId || '')
 
-        // Load property details for each property ID
-        const propertyPromises = areaData.properties.map((id) =>
-          propertyService.getProperty(id),
-        )
-        const propertyData = await Promise.all(propertyPromises)
-        setProperties(propertyData)
+        // Load properties for this area
+        const areaProperties = await propertyService.getAll(areaId)
+        setProperties(areaProperties)
       } finally {
         setLoading(false)
       }
     }
-    loadArea()
+    loadAreaData()
   }, [areaId])
 
   if (loading) return <div>Loading...</div>
-  if (!area) return <div>Area not found</div>
+  if (!areaName) return <div>Area not found</div>
 
   return (
     <div className="p-8 animate-in">
       <div className="mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-gray-800 dark:from-white dark:via-gray-200 dark:to-gray-300 bg-clip-text text-transparent">
-          {area.name}
+          {areaName}
         </h1>
         <div className="flex items-center text-gray-500 mt-2">
           <MapPin className="h-4 w-4 mr-2" />
@@ -58,15 +57,15 @@ export function AreaView() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Fastigheter</span>
-              <span className="font-semibold">{area.properties.length}</span>
+              <span className="font-semibold">{properties.length}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Lägenheter</span>
-              <span className="font-semibold">{area.totalApartments}</span>
+              <span className="font-semibold">{properties.reduce((sum, p) => sum + (p.totalApartments || 0), 0)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Uthyrda lägenheter</span>
-              <span className="font-semibold">{area.occupiedApartments}</span>
+              <span className="font-semibold">{properties.reduce((sum, p) => sum + (p.occupiedApartments || 0), 0)}</span>
             </div>
           </div>
         </motion.div>
