@@ -143,22 +143,62 @@ export const ResidenceSchema = z.object({
 
 export const BuildingSchema = z.object({
   id: z.string(),
-  code: z.string(),
+  objectId: z.string(),
+  buildingTypeId: z.string(),
+  marketAreaId: z.string(),
+  districtId: z.string(),
+  propertyDesignationId: z.string(),
+  blockId: z.string().nullable(),
+  heatingId: z.string(),
+  buildingCode: z.string(),
   name: z.string(),
-  construction: z.object({
-    constructionYear: z.number().nullable(),
-    renovationYear: z.number().nullable(),
-    valueYear: z.number().nullable(),
+  description: z.string().nullable(),
+  constructionYear: z.number().nullable(),
+  renovationYear: z.number().nullable(),
+  valueYear: z.number().nullable(),
+  heating: z.string(),
+  fireRating: z.string().nullable(),
+  insuranceClass: z.string().nullable(),
+  insuranceValue: z.number().nullable(),
+  lmhNumber: z.string().nullable(),
+  assessmentYear: z.number().nullable(),
+  grade: z.number(),
+  socialPlan: z.number(),
+  socialPlanFrom: z.string().nullable(),
+  socialPlanTo: z.string().nullable(),
+  percentCommonArea: z.number().nullable(),
+  deleteMark: z.number(),
+  fromDate: z.string(),
+  toDate: z.string(),
+  lastContractStartDate: z.string().nullable(),
+  lastContractEndDate: z.string().nullable(),
+  timestamp: z.string(),
+  buildingType: z.object({
+    id: z.string(),
+    componentTypeActionId: z.string().nullable(),
+    buildingTypeCode: z.string(),
+    buildingTypeName: z.string(),
+    isSystemStandard: z.number(),
+    timestamp: z.string()
   }),
-  features: z.object({
-    heating: z.string().nullable(),
-    fireRating: z.string().nullable(),
+  marketArea: z.object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+    timestamp: z.string()
   }),
-  insurance: z.object({
-    class: z.string().nullable(),
-    value: z.number().nullable(),
+  district: z.object({
+    id: z.string(),
+    code: z.string(),
+    caption: z.string(),
+    timestamp: z.string()
   }),
-  deleted: z.boolean(),
+  propertyDesignation: z.object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+    timestamp: z.string()
+  })
 })
 
 export const PropertySchema = z.object({
@@ -166,16 +206,16 @@ export const PropertySchema = z.object({
   code: z.string(),
   tract: z.string(),
   propertyDesignation: z.object({
-    propertyDesignationId: z.string(),
+    id: z.string(),
     code: z.string(),
     name: z.string().nullable(),
-    timestamp: z.string(),
+    timestamp: z.string()
   }),
   _links: z.object({
     self: z.object({
-      href: z.string(),
-    }),
-  }),
+      href: z.string()
+    })
+  })
 })
 
 export const StaircaseSchema = z.object({
