@@ -9,7 +9,7 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { propertyService } from '../../services/api'
+import { propertyService, residenceService } from '../../services/api'
 import { Staircase, Issue } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
@@ -71,12 +71,12 @@ export function StaircaseView() {
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const staircaseData = await propertyService.getStaircase(staircaseId!)
+        const staircaseData = await staircaseService.getById(staircaseId!)
         setStaircase(staircaseData)
 
         // Load all residences and their issues
         const residencePromises = staircaseData.residences.map((id) =>
-          propertyService.getResidence(id),
+          residenceService.getById(id),
         )
         const residences = await Promise.all(residencePromises)
 
