@@ -69,19 +69,19 @@ export const propertyService = {
     return fetchApi<Area>(`/areas/${id}`)
   },
 
-  // Cache for properties
-  private static propertiesCache: Property[] | null = null
-  private static lastFetchTime: number = 0
-  private static CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+  // Cache state
+  private propertiesCache: Property[] | null = null
+  private lastFetchTime: number = 0
+  private readonly CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
   private async ensurePropertiesCache(): Promise<Property[]> {
     const now = Date.now()
-    if (!propertyService.propertiesCache || 
-        now - propertyService.lastFetchTime > propertyService.CACHE_TTL) {
-      propertyService.propertiesCache = await this.getProperties()
-      propertyService.lastFetchTime = now
+    if (!this.propertiesCache || 
+        now - this.lastFetchTime > this.CACHE_TTL) {
+      this.propertiesCache = await this.getProperties()
+      this.lastFetchTime = now
     }
-    return propertyService.propertiesCache
+    return this.propertiesCache
   }
 
   async getAreas(): Promise<Area[]> {
