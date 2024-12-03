@@ -179,7 +179,11 @@ export const createOfferForInternalParkingSpace = async (
         type: listing.rentalObjectTypeCaption ?? '',
         parkingSpaceId: listing.rentalObjectCode,
         objectId: listing.id.toString(),
-        hasParkingSpace: false,
+        applicationType:
+          eligibleApplicant.applicationType &&
+          eligibleApplicant.applicationType === 'Replace'
+            ? 'Replace'
+            : 'Additional',
       })
       const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
         offer.data.id,
