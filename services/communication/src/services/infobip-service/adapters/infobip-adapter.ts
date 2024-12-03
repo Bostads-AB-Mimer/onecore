@@ -15,9 +15,9 @@ const infobip = new Infobip({
   authType: AuthType.ApiKey,
 })
 
-const NewParkingSpaceOfferTemplateId = 200000000092027
+const AdditionalParkingSpaceOfferTemplateId = 200000000092027
 const NewParkingSpaceOfferSmsTemplateId = 200000000094113
-const ExistingParkingSpaceOfferTemplateId = 200000000094058
+const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 
 export const sendEmail = async (message: Email) => {
@@ -64,9 +64,10 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
     const response = await infobip.channels.email.send({
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       to: toField,
-      templateId: email.hasParkingSpace
-        ? ExistingParkingSpaceOfferTemplateId
-        : NewParkingSpaceOfferTemplateId,
+      templateId:
+        email.applicationType === 'Replace'
+          ? ReplaceParkingSpaceOfferTemplateId
+          : AdditionalParkingSpaceOfferTemplateId,
       subject: email.subject, // Might be overriden by tempalte
       text: email.text, // Should be overriden by template, but can be used as fallback
     })

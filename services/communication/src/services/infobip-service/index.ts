@@ -15,7 +15,7 @@ import {
   ParkingSpaceOfferSms,
   TicketMessageSms,
 } from 'onecore-types'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
@@ -42,6 +42,7 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendParkingSpaceOffer', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const emailData = ctx.request.body
+
     if (!isParkingSpaceOfferEmail(emailData)) {
       ctx.status = 400
       ctx.body = { reason: 'Message is not an email object', ...metadata }
@@ -186,7 +187,7 @@ export const isParkingSpaceOfferEmail = (
     typeof emailData.type === 'string' &&
     typeof emailData.parkingSpaceId === 'string' &&
     typeof emailData.objectId === 'string' &&
-    typeof emailData.hasParkingSpace === 'boolean'
+    typeof emailData.applicationType === 'string'
   )
 }
 
