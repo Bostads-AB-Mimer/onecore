@@ -30,7 +30,7 @@ interface RoomCardProps {
 
 export function RoomCard({ room, residenceId }: RoomCardProps) {
   const navigate = useNavigate()
-  const Icon = roomIcons[room.type]
+  const Icon = roomIcons[room.usage.spaceType] || Home
   const [selectedFeature, setSelectedFeature] = React.useState<string | null>(
     null,
   )
@@ -68,23 +68,23 @@ export function RoomCard({ room, residenceId }: RoomCardProps) {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center text-gray-500">
               <Maximize2 className="h-4 w-4 mr-2" />
-              <span>Storlek</span>
+              <span>Typ</span>
             </div>
-            <span className="font-medium">{room.size} m²</span>
+            <span className="font-medium">{room.name || room.code}</span>
           </div>
 
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center text-gray-500">
               <DoorOpen className="h-4 w-4 mr-2" />
-              <span>Fönster</span>
+              <span>Användning</span>
             </div>
-            <span className="font-medium">{room.windows} st</span>
+            <span className="font-medium">{room.usage.shared ? 'Delat' : 'Privat'}</span>
           </div>
 
-          {room.features.length > 0 && (
+          {Object.entries(room.features).filter(([_, value]) => value === true).length > 0 && (
             <div className="pt-3 border-t dark:border-gray-700">
               <div className="flex flex-wrap gap-2">
-                {room.features.map((feature, index) => (
+                {Object.entries(room.features).map(([feature, value]) => value === true && (
                   <motion.div
                     key={index}
                     whileHover={{ scale: 1.05 }}
