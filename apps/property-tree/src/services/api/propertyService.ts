@@ -2,20 +2,21 @@ import { Property, NavigationItem } from '../types'
 import { fetchApi, simulateDelay } from './baseApi'
 import { mockProperties, mockNavigation } from '../mockData'
 
-export const propertyService = {
-  // Cache for properties
-  private propertiesCache: Property[] | null = null,
-  private lastFetchTime: number = 0,
-  private readonly CACHE_TTL = 5 * 60 * 1000, // 5 minutes
+// Cache configuration
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+let propertiesCache: Property[] | null = null
+let lastFetchTime = 0
 
-  private async ensurePropertiesCache(): Promise<Property[]> {
-    const now = Date.now()
-    if (!this.propertiesCache || now - this.lastFetchTime > this.CACHE_TTL) {
-      this.propertiesCache = await this.getProperties()
-      this.lastFetchTime = now
-    }
-    return this.propertiesCache
-  },
+const ensurePropertiesCache = async (): Promise<Property[]> => {
+  const now = Date.now()
+  if (!propertiesCache || now - lastFetchTime > CACHE_TTL) {
+    propertiesCache = await propertyService.getAll()
+    lastFetchTime = now
+  }
+  return propertiesCache
+}
+
+export const propertyService = {
   // Get all properties
   async getAll(tract?: string): Promise<Property[]> {
     const url = tract ? `/properties/?tract=${tract}` : '/properties/'
