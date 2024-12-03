@@ -2,7 +2,6 @@ import { Typography } from '@mui/material'
 import { Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 
-import { PageGoBackTo } from '../../components'
 import {
   ApplicantsLoading,
   ParkingSpaceInfo,
@@ -11,6 +10,7 @@ import {
 import { useParkingSpaceListing } from './hooks/useParkingSpaceListing'
 import OffersTabContext from './components/OffersTabContext'
 import AllApplicantsTabContext from './components/AllApplicantsTabContext'
+import { PageGoBack } from '../../components/PageGoBack'
 
 const ParkingSpace = () => {
   const routeParams = useParams<'id'>()
@@ -19,7 +19,7 @@ const ParkingSpace = () => {
 
   return (
     <>
-      <PageGoBackTo to="/parkingspaces" text="Översikt lediga bilplatser" />
+      <PageGoBack text="Översikt lediga bilplatser" />
       <Suspense fallback={<ApplicantsLoading />}>
         <ParkingSpaceTabs listingId={listingId} />
       </Suspense>

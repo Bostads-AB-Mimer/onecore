@@ -75,11 +75,6 @@ export const CreateApplicantForListing = (props: Props) => {
   const handleChange = (_e: React.SyntheticEvent, tab: string) =>
     setSelectedTab(tab)
 
-  const leases =
-    tenantQuery.data?.tenant.housingContracts.concat(
-      tenantQuery.data.tenant.parkingSpaceContracts ?? []
-    ) ?? []
-
   return (
     <>
       <Button
