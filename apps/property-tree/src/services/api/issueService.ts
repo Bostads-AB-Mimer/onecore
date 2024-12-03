@@ -3,53 +3,33 @@ import { fetchApi, simulateDelay } from './baseApi'
 import { mockActiveIssues } from '../mockData'
 
 export const issueService = {
-  // Get all issues for a residence
-  async getByResidenceId(residenceId: string): Promise<Issue[]> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    return mockActiveIssues[residenceId] || []
+  // Get all issues
+  async getAll(status?: string): Promise<Issue[]> {
+    const url = status ? `/issues/?status=${status}` : '/issues/'
+    const response = await fetchApi<{content: Issue[]}>(url)
+    return response.content
   },
 
   // Get issue by ID
-  async getById(issueId: string): Promise<Issue> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    const issue = Object.values(mockActiveIssues)
-      .flat()
-      .find((i) => i.id === issueId)
-    if (!issue) {
-      throw new Error(`Issue with id ${issueId} not found`)
-    }
-    return issue
+  async getById(id: string): Promise<Issue> {
+    return fetchApi<Issue>(`/issues/${id}/`)
   },
 
-  // Create new issue
-  async create(data: Omit<Issue, 'id' | 'date' | 'status'>): Promise<Issue> {
-    // TODO: Replace with actual API call
-    return fetchApi<Issue>('/issues', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+  // Get issues by residence
+  async getByResidenceId(residenceId: string): Promise<Issue[]> {
+    const response = await fetchApi<{content: Issue[]}>(`/residences/${residenceId}/issues/`)
+    return response.content
   },
 
-  // Update issue status
-  async updateStatus(
-    issueId: string,
-    status: 'pending' | 'in-progress' | 'resolved',
-  ): Promise<Issue> {
-    // TODO: Replace with actual API call
-    return fetchApi<Issue>(`/issues/${issueId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    })
+  // Get issues by component
+  async getByComponentId(componentId: string): Promise<Issue[]> {
+    const response = await fetchApi<{content: Issue[]}>(`/components/${componentId}/issues/`)
+    return response.content
   },
 
-  // Get issues by feature
-  async getByFeature(featureName: string): Promise<Issue[]> {
-    // TODO: Replace with actual API call
-    await simulateDelay()
-    return Object.values(mockActiveIssues)
-      .flat()
-      .filter((issue) => issue.feature === featureName)
-  },
+  // Get issues by priority
+  async getByPriority(priority: string): Promise<Issue[]> {
+    const response = await fetchApi<{content: Issue[]}>(`/issues/?priority=${priority}`)
+    return response.content
+  }
 }
