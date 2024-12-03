@@ -23,53 +23,16 @@ const roomIcons = {
   other: Home,
 }
 
-// Mock feature details - in a real app, this would come from an API
-const mockFeatureDetails = {
-  Diskmaskin: {
-    name: 'Diskmaskin',
-    installationDate: '2023-05-15',
-    warranty: 't.o.m. 2026-05-15',
-    lastService: '2024-01-10',
-    nextService: '2024-07-10',
-    issues: [
-      {
-        date: '2023-12-05',
-        description: 'Läckage från vattenanslutning',
-        status: 'resolved' as const,
-      },
-      {
-        date: '2024-02-15',
-        description: 'Onormalt ljud vid start',
-        status: 'in-progress' as const,
-      },
-    ],
-  },
-  Parkettgolv: {
-    name: 'Parkettgolv',
-    installationDate: '2023-01-20',
-    warranty: 't.o.m. 2033-01-20',
-    lastService: '2023-08-15',
-    nextService: '2024-08-15',
-    issues: [
-      {
-        date: '2023-11-10',
-        description: 'Mindre repor i vardagsrum',
-        status: 'pending' as const,
-      },
-    ],
-  },
-}
-
 interface RoomCardProps {
   room: Room
-  apartmentId: string
+  residenceId: string
 }
 
-export function RoomCard({ room, apartmentId }: RoomCardProps) {
+export function RoomCard({ room, residenceId }: RoomCardProps) {
   const navigate = useNavigate()
   const Icon = roomIcons[room.type]
   const [selectedFeature, setSelectedFeature] = React.useState<string | null>(
-    null
+    null,
   )
 
   const handleFeatureClick = (e: React.MouseEvent, feature: string) => {
@@ -78,7 +41,7 @@ export function RoomCard({ room, apartmentId }: RoomCardProps) {
   }
 
   const handleClick = () => {
-    navigate(`/apartments/${apartmentId}/rooms/${room.id}`)
+    navigate(`/residences/${residenceId}/rooms/${room.id}`)
   }
 
   return (
@@ -139,11 +102,16 @@ export function RoomCard({ room, apartmentId }: RoomCardProps) {
         </div>
       </motion.div>
 
-      {selectedFeature && mockFeatureDetails[selectedFeature] && (
+      {selectedFeature && (
         <FeatureModal
           isOpen={true}
           onClose={() => setSelectedFeature(null)}
-          feature={mockFeatureDetails[selectedFeature]}
+          feature={{
+            name: selectedFeature,
+            installationDate: '2023-01-01',
+            warranty: 't.o.m. 2026-01-01',
+            issues: [],
+          }}
         />
       )}
     </>

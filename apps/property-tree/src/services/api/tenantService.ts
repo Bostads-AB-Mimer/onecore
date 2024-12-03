@@ -15,7 +15,7 @@ export const tenantService = {
     // TODO: Replace with actual API call
     await simulateDelay()
     const tenant = Object.values(mockApartments).find(
-      (apartment) => apartment.tenant.id === id
+      (apartment) => apartment.tenant.id === id,
     )?.tenant
     if (!tenant) {
       throw new Error(`Tenant with id ${id} not found`)
@@ -26,7 +26,7 @@ export const tenantService = {
   // Create new tenant
   async create(data: Omit<Tenant, 'id'>): Promise<Tenant> {
     // TODO: Replace with actual API call
-    return fetchApi<Tenant>('/tenants/', {
+    return fetchApi<Tenant>('/tenants', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -60,7 +60,7 @@ export const tenantService = {
         (tenant) =>
           tenant.name.toLowerCase().includes(normalizedQuery) ||
           tenant.email.toLowerCase().includes(normalizedQuery) ||
-          tenant.phone.toLowerCase().includes(normalizedQuery)
+          tenant.phone.toLowerCase().includes(normalizedQuery),
       )
   },
 }

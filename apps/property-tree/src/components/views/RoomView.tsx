@@ -125,14 +125,14 @@ export function RoomView() {
     const loadRoom = async () => {
       try {
         // In a real app, these would be actual API calls
-        const roomData = await fetch(`/rooms/${roomId}`).then((res) =>
-          res.json()
+        const roomData = await fetch(`/api/rooms/${roomId}`).then((res) =>
+          res.json(),
         )
-        const componentsData = await fetch(`/rooms/${roomId}/components`).then(
-          (res) => res.json()
-        )
-        const issuesData = await fetch(`/rooms/${roomId}/issues`).then((res) =>
-          res.json()
+        const componentsData = await fetch(
+          `/api/rooms/${roomId}/components`,
+        ).then((res) => res.json())
+        const issuesData = await fetch(`/api/rooms/${roomId}/issues`).then(
+          (res) => res.json(),
         )
 
         setRoom(roomData)

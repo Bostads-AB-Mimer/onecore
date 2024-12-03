@@ -16,8 +16,8 @@ import {
 import { AreaView } from './components/views/AreaView'
 import { PropertyView } from './components/views/PropertyView'
 import { BuildingView } from './components/views/BuildingView'
-import { EntranceView } from './components/views/EntranceView'
-import { ApartmentView } from './components/views/ApartmentView'
+import { StaircaseView } from './components/views/StaircaseView'
+import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
 
@@ -88,10 +88,10 @@ function AppContent() {
           <Route path="/areas/:areaId" element={<AreaView />} />
           <Route path="/properties/:propertyId" element={<PropertyView />} />
           <Route path="/buildings/:buildingId" element={<BuildingView />} />
-          <Route path="/entrances/:entranceId" element={<EntranceView />} />
-          <Route path="/apartments/:apartmentId" element={<ApartmentView />} />
+          <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
+          <Route path="/residences/:residenceId" element={<ResidenceView />} />
           <Route
-            path="/apartments/:apartmentId/rooms/:roomId"
+            path="/residences/:residenceId/rooms/:roomId"
             element={<RoomView />}
           />
           <Route path="/tenants/:tenantId" element={<TenantView />} />

@@ -14,14 +14,13 @@ import {
 import clsx from 'clsx'
 import { NavigationItem } from '../services/types'
 import { propertyService } from '../services/propertyService'
-import { getProperties } from '../services/api/propertyApi'
 
 const iconMap = {
   area: MapPin,
   property: Building2,
   building: Building,
-  entrance: Layers,
-  apartment: Home,
+  staircase: Layers,
+  residence: Home,
   default: DoorClosed,
 }
 
@@ -29,8 +28,8 @@ const routeMap = {
   area: '/areas',
   property: '/properties',
   building: '/buildings',
-  entrance: '/entrances',
-  apartment: '/apartments',
+  staircase: '/staircases',
+  residence: '/residences',
   tenant: '/tenants',
 }
 
@@ -93,7 +92,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           isSelected
             ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
             : 'text-gray-600 dark:text-gray-400',
-          'group relative'
+          'group relative',
         )}
         style={{ paddingLeft: `${level * 12 + 12}px` }}
         whileHover={{ scale: 1.01 }}
@@ -105,7 +104,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
               'h-4 w-4 transition-colors duration-300',
               isSelected
                 ? 'text-blue-500 dark:text-blue-400'
-                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300',
             )}
           />
           <span className="truncate">{item.name}</span>
@@ -162,49 +161,27 @@ export function PropertyNavigation() {
   const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    const loadAreas = async () => {
+    const loadNavigation = async () => {
       try {
-        const areas = await propertyService.getAreas()
-        const navigationItems = await Promise.all(
-          areas.map(async (area) => {
-            const propertiesResponse = await getProperties()
-            const properties = propertiesResponse.content
-            const areaProperties = properties.filter(
-              (property) => property.tract === area.id
-            )
+        const data = await propertyService.getNavigation()
+        setNavigationItems(data)
 
-            return {
-              id: area.id,
-              name: area.name,
-              type: 'area',
-              children: areaProperties.map((property) => ({
-                id: property.propertyId,
-                name: property.propertyDesignation,
-                type: 'property',
-                children: [], // We'll add buildings when that API is available
-              })),
-            }
-          })
-        )
-
-        setNavigationItems(navigationItems)
-
-        // Auto-expand root level if there's only one area
-        if (navigationItems.length === 1) {
+        // Auto-expand root level if there's only one item
+        if (data.length === 1) {
           setExpanded((prev) => ({
             ...prev,
-            [navigationItems[0].id]: true,
+            [data[0].id]: true,
           }))
         }
       } catch (err) {
-        setError('Failed to load properties:' + err!.message)
+        setError('Failed to load navigation data')
         console.error(err)
       } finally {
         setLoading(false)
       }
     }
 
-    loadAreas()
+    loadNavigation()
   }, [])
 
   const handleToggle = (id: string) => {
@@ -232,7 +209,7 @@ export function PropertyNavigation() {
   const handleSelect = (item: NavigationItem) => {
     setSelected(item.id)
 
-    if (item.type === 'apartment') {
+    if (item.type === 'residence') {
       let path = []
 
       const findPath = (items: NavigationItem[], target: string): boolean => {

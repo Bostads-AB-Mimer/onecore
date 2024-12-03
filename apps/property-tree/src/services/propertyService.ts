@@ -1,7 +1,6 @@
-import { hello } from './hello'
 import {
   NavigationItem,
-  Apartment,
+  Residence,
   Area,
   Property,
   Building,
@@ -9,41 +8,32 @@ import {
 } from './types'
 import {
   mockNavigation,
-  mockApartments,
+  mockResidences,
   mockAreas,
+  mockProperties,
   mockBuildings,
   mockEntrances,
 } from './mockData'
-import { propertyService as propertyApi } from './api/propertyService'
-import { getAreas } from './api/propertyApi'
 
 // Simulate network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // Convert tenant to search result
 const createTenantSearchResult = (
-  apartmentId: string,
-  tenant: Apartment['tenant']
+  residenceId: string,
+  tenant: Residence['tenant'],
 ): NavigationItem => ({
-  id: `tenant-${apartmentId}`,
+  id: `tenant-${residenceId}`,
   name: tenant.name,
   type: 'tenant',
   metadata: {
-    apartmentId,
+    residenceId,
     email: tenant.email,
     phone: tenant.phone,
   },
 })
 
 export const propertyService = {
-  // Get all areas with their properties
-  async getAreas(): Promise<Area[]> {
-    const areas = await getAreas();
-    return areas.map(area => ({
-      ...area,
-      name: `Område ${area.id}` // Temporary name based on tract
-    }));
-  },
   async getNavigation(): Promise<NavigationItem[]> {
     await delay(800)
     return mockNavigation
@@ -57,7 +47,10 @@ export const propertyService = {
   },
 
   async getProperty(id: string): Promise<Property> {
-    return propertyApi.getById(id)
+    await delay(500)
+    const property = mockProperties[id]
+    if (!property) throw new Error(`Property with id ${id} not found`)
+    return property
   },
 
   async getBuilding(id: string): Promise<Building> {
@@ -74,11 +67,11 @@ export const propertyService = {
     return entrance
   },
 
-  async getApartment(id: string): Promise<Apartment> {
+  async getResidence(id: string): Promise<Residence> {
     await delay(500)
-    const apartment = mockApartments[id]
-    if (!apartment) throw new Error(`Apartment with id ${id} not found`)
-    return apartment
+    const residence = mockResidences[id]
+    if (!residence) throw new Error(`Residence with id ${id} not found`)
+    return residence
   },
 
   async searchProperties(query: string): Promise<NavigationItem[]> {
@@ -101,14 +94,14 @@ export const propertyService = {
     const navigationResults = searchInItems(mockNavigation)
 
     // Search in tenants
-    const tenantResults = Object.entries(mockApartments)
+    const tenantResults = Object.entries(mockResidences)
       .filter(
-        ([_, apartment]) =>
-          apartment.tenant.name.toLowerCase().includes(normalizedQuery) ||
-          apartment.tenant.email.toLowerCase().includes(normalizedQuery) ||
-          apartment.tenant.phone.toLowerCase().includes(normalizedQuery)
+        ([_, residence]) =>
+          residence.tenant.name.toLowerCase().includes(normalizedQuery) ||
+          residence.tenant.email.toLowerCase().includes(normalizedQuery) ||
+          residence.tenant.phone.toLowerCase().includes(normalizedQuery),
       )
-      .map(([id, apartment]) => createTenantSearchResult(id, apartment.tenant))
+      .map(([id, residence]) => createTenantSearchResult(id, residence.tenant))
 
     return [...navigationResults, ...tenantResults]
   },

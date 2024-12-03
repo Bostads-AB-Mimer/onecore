@@ -19,7 +19,7 @@ export function AreaView() {
 
         // Load property details for each property ID
         const propertyPromises = areaData.properties.map((id) =>
-          propertyService.getProperty(id)
+          propertyService.getProperty(id),
         )
         const propertyData = await Promise.all(propertyPromises)
         setProperties(propertyData)

@@ -24,7 +24,7 @@ export const apartmentService = {
   // Create new apartment
   async create(data: Omit<Apartment, 'id'>): Promise<Apartment> {
     // TODO: Replace with actual API call
-    return fetchApi<Apartment>('/apartments/', {
+    return fetchApi<Apartment>('/apartments', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -52,7 +52,7 @@ export const apartmentService = {
     // TODO: Replace with actual API call
     await simulateDelay()
     return Object.values(mockApartments).filter(
-      (apartment) => apartment.entranceId === entranceId
+      (apartment) => apartment.entranceId === entranceId,
     )
   },
 }

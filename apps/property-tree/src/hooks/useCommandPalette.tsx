@@ -40,7 +40,7 @@ export function CommandPaletteProvider({
       close: () => setIsOpen(false),
       toggle: () => setIsOpen((open) => !open),
     }),
-    [isOpen]
+    [isOpen],
   )
 
   return (
@@ -54,7 +54,7 @@ export const useCommandPalette = () => {
   const context = React.useContext(CommandPaletteContext)
   if (!context) {
     throw new Error(
-      'useCommandPalette must be used within a CommandPaletteProvider'
+      'useCommandPalette must be used within a CommandPaletteProvider',
     )
   }
   return context

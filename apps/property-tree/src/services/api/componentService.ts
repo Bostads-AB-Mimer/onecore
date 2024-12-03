@@ -46,7 +46,7 @@ export const componentService = {
     // TODO: Replace with actual API call
     await simulateDelay()
     const component = mockComponents[apartmentId]?.find(
-      (c) => c.id === componentId
+      (c) => c.id === componentId,
     )
     if (!component) {
       throw new Error(`Component with id ${componentId} not found`)
@@ -57,7 +57,7 @@ export const componentService = {
   // Create new component
   async create(
     apartmentId: string,
-    data: Omit<Component, 'id' | 'issues'>
+    data: Omit<Component, 'id' | 'issues'>,
   ): Promise<Component> {
     // TODO: Replace with actual API call
     return fetchApi<Component>(`/apartments/${apartmentId}/components`, {
@@ -70,7 +70,7 @@ export const componentService = {
   async update(
     apartmentId: string,
     componentId: string,
-    data: Partial<Component>
+    data: Partial<Component>,
   ): Promise<Component> {
     // TODO: Replace with actual API call
     return fetchApi<Component>(
@@ -78,7 +78,7 @@ export const componentService = {
       {
         method: 'PUT',
         body: JSON.stringify(data),
-      }
+      },
     )
   },
 
@@ -89,7 +89,7 @@ export const componentService = {
       `/apartments/${apartmentId}/components/${componentId}`,
       {
         method: 'DELETE',
-      }
+      },
     )
   },
 }

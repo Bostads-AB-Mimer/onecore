@@ -35,7 +35,7 @@ export const issueService = {
   // Update issue status
   async updateStatus(
     issueId: string,
-    status: 'pending' | 'in-progress' | 'resolved'
+    status: 'pending' | 'in-progress' | 'resolved',
   ): Promise<Issue> {
     // TODO: Replace with actual API call
     return fetchApi<Issue>(`/issues/${issueId}/status`, {

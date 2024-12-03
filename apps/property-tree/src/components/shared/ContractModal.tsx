@@ -12,9 +12,9 @@ interface ContractModalProps {
     email: string
     phone: string
     moveInDate: string
-    apartmentId: string
+    residenceId: string
   }
-  apartment: {
+  residence: {
     rent: number
     size: number
     bedrooms: number
@@ -25,7 +25,7 @@ export function ContractModal({
   isOpen,
   onClose,
   tenant,
-  apartment,
+  residence,
 }: ContractModalProps) {
   return (
     <Modal
@@ -58,12 +58,12 @@ export function ContractModal({
             <InfoItem
               icon={Home}
               label="Lägenhetsnummer"
-              value={tenant.apartmentId}
+              value={tenant.residenceId}
             />
             <InfoItem
               icon={CreditCard}
               label="Månadshyra"
-              value={`${apartment.rent} kr`}
+              value={`${residence.rent} kr`}
             />
           </div>
         </div>
@@ -83,7 +83,7 @@ export function ContractModal({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Deposition</span>
-              <span className="text-sm font-medium">{apartment.rent} kr</span>
+              <span className="text-sm font-medium">{residence.rent} kr</span>
             </div>
           </div>
         </div>
@@ -95,12 +95,12 @@ export function ContractModal({
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Storlek</span>
-              <span className="text-sm font-medium">{apartment.size} m²</span>
+              <span className="text-sm font-medium">{residence.size} m²</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Antal rum</span>
               <span className="text-sm font-medium">
-                {apartment.bedrooms} rum och kök
+                {residence.bedrooms} rum och kök
               </span>
             </div>
             <div className="flex justify-between">

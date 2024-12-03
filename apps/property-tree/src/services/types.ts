@@ -41,10 +41,10 @@ export interface Tenant {
   email: string
   phone: string
   moveInDate: string
-  apartmentId: string
+  residenceId: string
 }
 
-export interface Apartment {
+export interface Residence {
   id: string
   name: string
   address: string
@@ -52,28 +52,28 @@ export interface Apartment {
   bedrooms: number
   rent: number
   tenant: Tenant
-  entranceId: string
+  staircaseId: string
   rooms: Room[]
   activeIssues: Issue[]
   components: Component[]
 }
 
-export interface Entrance {
+export interface Staircase {
   id: string
   name: string
   buildingId: string
-  apartments: string[]
-  totalApartments: number
-  occupiedApartments: number
+  residences: string[]
+  totalResidences: number
+  occupiedResidences: number
 }
 
 export interface Building {
   id: string
   name: string
   propertyId: string
-  entrances: string[]
-  totalApartments: number
-  occupiedApartments: number
+  staircases: string[]
+  totalResidences: number
+  occupiedResidences: number
 }
 
 export interface Property {
@@ -82,8 +82,8 @@ export interface Property {
   address: string
   areaId: string
   buildings: string[]
-  totalApartments: number
-  occupiedApartments: number
+  totalResidences: number
+  occupiedResidences: number
   constructionYear: number
   lastRenovation?: number
 }
@@ -92,18 +92,18 @@ export interface Area {
   id: string
   name: string
   properties: string[]
-  totalApartments: number
-  occupiedApartments: number
+  totalResidences: number
+  occupiedResidences: number
   totalProperties: number
 }
 
 export interface NavigationItem {
   id: string
   name: string
-  type: 'area' | 'property' | 'building' | 'entrance' | 'apartment' | 'tenant'
+  type: 'area' | 'property' | 'building' | 'staircase' | 'residence' | 'tenant'
   children?: NavigationItem[]
   metadata?: {
-    apartmentId?: string
+    residenceId?: string
     email?: string
     phone?: string
   }
