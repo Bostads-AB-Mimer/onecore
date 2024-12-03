@@ -10,7 +10,7 @@ import {
   FileText,
   MessageSquare,
 } from 'lucide-react'
-import { propertyService } from '../../services/propertyService'
+import { propertyService } from '../../services/api'
 import { Tenant } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 

@@ -9,7 +9,7 @@ import {
   Users,
   ArrowRight,
 } from 'lucide-react'
-import { propertyService } from '../../services/propertyService'
+import { propertyService } from '../../services/api'
 import { Property } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/Card'

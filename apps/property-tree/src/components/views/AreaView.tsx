@@ -2,7 +2,7 @@ import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { MapPin, Building2, Users, Home } from 'lucide-react'
-import { propertyService } from '../../services/propertyService'
+import { propertyService } from '../../services/api'
 import { Area, Property } from '../../services/types'
 
 export function AreaView() {

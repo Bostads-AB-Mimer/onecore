@@ -11,7 +11,7 @@ import {
   Mail,
   Phone,
 } from 'lucide-react'
-import { propertyService } from '../../services/propertyService'
+import { propertyService } from '../../services/api'
 import { Apartment } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/Card'
