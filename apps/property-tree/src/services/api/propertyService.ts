@@ -4,6 +4,7 @@ import { fetchApi } from './baseApi'
 // Cache singleton
 let propertiesCache: Property[] | null = null
 let lastCacheUpdate: number = 0
+let cacheUpdatePromise: Promise<void> | null = null
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Types based on API schema
@@ -26,17 +27,27 @@ export const propertyService = {
     
     // Refresh cache if expired or doesn't exist
     if (!propertiesCache || (now - lastCacheUpdate) > CACHE_TTL) {
-      const response = await fetchApi<PropertyResponse>('/properties/')
-      propertiesCache = response.content
-      lastCacheUpdate = now
+      // If there's already a cache update in progress, wait for it
+      if (!cacheUpdatePromise) {
+        cacheUpdatePromise = (async () => {
+          try {
+            const response = await fetchApi<PropertyResponse>('/properties/')
+            propertiesCache = response.content
+            lastCacheUpdate = now
+          } finally {
+            cacheUpdatePromise = null
+          }
+        })()
+      }
+      await cacheUpdatePromise
     }
 
     // Filter by tract if specified
     if (tract) {
-      return propertiesCache.filter(p => p.tract === tract)
+      return propertiesCache!.filter(p => p.tract === tract)
     }
 
-    return propertiesCache
+    return propertiesCache!
   },
 
   // Get unique areas (tracts) from all properties
