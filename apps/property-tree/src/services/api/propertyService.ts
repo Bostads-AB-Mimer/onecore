@@ -1,11 +1,9 @@
 import { Building, NavigationItem, Property, Staircase } from '../types'
 import { fetchApi } from './baseApi'
+import { Cache } from '../../utils/cache'
 
-// Cache singleton
-let propertiesCache: Property[] | null = null
-let lastCacheUpdate: number = 0
-let cacheUpdatePromise: Promise<void> | null = null
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const propertiesCache = new Cache<Property[]>(CACHE_TTL)
 
 // Types based on API schema
 interface PropertyResponse {
@@ -23,31 +21,17 @@ interface StaircaseResponse {
 export const propertyService = {
   // Get all properties with optional tract filter
   async getAll(tract?: string): Promise<Property[]> {
-    const now = Date.now()
-    
-    // Refresh cache if expired or doesn't exist
-    if (!propertiesCache || (now - lastCacheUpdate) > CACHE_TTL) {
-      // If there's already a cache update in progress, wait for it
-      if (!cacheUpdatePromise) {
-        cacheUpdatePromise = (async () => {
-          try {
-            const response = await fetchApi<PropertyResponse>('/properties/')
-            propertiesCache = response.content
-            lastCacheUpdate = now
-          } finally {
-            cacheUpdatePromise = null
-          }
-        })()
-      }
-      await cacheUpdatePromise
-    }
+    const properties = await propertiesCache.get(async () => {
+      const response = await fetchApi<PropertyResponse>('/properties/')
+      return response.content
+    })
 
     // Filter by tract if specified
     if (tract) {
-      return propertiesCache!.filter(p => p.tract === tract)
+      return properties.filter(p => p.tract === tract)
     }
 
-    return propertiesCache!
+    return properties
   },
 
   // Get unique areas (tracts) from all properties
