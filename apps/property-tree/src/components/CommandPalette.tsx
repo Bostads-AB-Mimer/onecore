@@ -11,7 +11,7 @@ import {
   User2,
 } from 'lucide-react'
 import { NavigationItem } from '../services/types'
-import { propertyService } from '../services/propertyService'
+import { propertyService } from '../services/api'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 
 const routeMap = {

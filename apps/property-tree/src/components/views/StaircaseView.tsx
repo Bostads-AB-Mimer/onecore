@@ -9,7 +9,7 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { propertyService } from '../../services/propertyService'
+import { propertyService } from '../../services/api'
 import { Staircase, Issue } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'

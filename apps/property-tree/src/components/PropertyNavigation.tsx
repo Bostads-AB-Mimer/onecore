@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { NavigationItem } from '../services/types'
-import { propertyService } from '../services/propertyService'
+import { propertyService } from '../services/api'
 
 const iconMap = {
   area: MapPin,
