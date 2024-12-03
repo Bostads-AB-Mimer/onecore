@@ -9,13 +9,14 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { propertyService, residenceService } from '../../services/api'
+import { residenceService } from '../../services/api'
 import { Staircase, Issue } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/Card'
 import { Grid } from '../ui/Grid'
 import { Badge } from '../ui/Badge'
+import { staircaseService } from '../../services/api/staircaseService'
 
 function LoadingSkeleton() {
   return (
@@ -76,7 +77,7 @@ export function StaircaseView() {
 
         // Load all residences and their issues
         const residencePromises = staircaseData.residences.map((id) =>
-          residenceService.getById(id),
+          residenceService.getById(id)
         )
         const residences = await Promise.all(residencePromises)
 
@@ -86,7 +87,7 @@ export function StaircaseView() {
             ...issue,
             residenceId: residence.id,
             residenceName: `Lägenhet ${residence.id}`,
-          })),
+          }))
         )
 
         setAllIssues(issues)

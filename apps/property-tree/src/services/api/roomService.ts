@@ -2,35 +2,20 @@ import { Room } from '../types'
 import { fetchApi } from './baseApi'
 
 export const roomService = {
+  // Get all rooms for a residence
   async getByResidenceId(residenceId: string): Promise<Room[]> {
-    return fetchApi<Room[]>(`/residences/${residenceId}/rooms`)
+    const response = await fetchApi<{content: Room[]}>(`/residences/${residenceId}/rooms/`)
+    return response.content
   },
 
+  // Get room by ID
   async getById(residenceId: string, roomId: string): Promise<Room> {
-    return fetchApi<Room>(`/residences/${residenceId}/rooms/${roomId}`)
+    return fetchApi<Room>(`/residences/${residenceId}/rooms/${roomId}/`)
   },
 
-  async create(residenceId: string, data: Omit<Room, 'id'>): Promise<Room> {
-    return fetchApi<Room>(`/residences/${residenceId}/rooms`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
-  },
-
-  async update(
-    residenceId: string,
-    roomId: string,
-    data: Partial<Room>,
-  ): Promise<Room> {
-    return fetchApi<Room>(`/residences/${residenceId}/rooms/${roomId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    })
-  },
-
-  async delete(residenceId: string, roomId: string): Promise<void> {
-    return fetchApi<void>(`/residences/${residenceId}/rooms/${roomId}`, {
-      method: 'DELETE',
-    })
-  },
+  // Get rooms by type
+  async getByType(residenceId: string, roomType: string): Promise<Room[]> {
+    const response = await fetchApi<{content: Room[]}>(`/residences/${residenceId}/rooms/?roomType=${roomType}`)
+    return response.content
+  }
 }

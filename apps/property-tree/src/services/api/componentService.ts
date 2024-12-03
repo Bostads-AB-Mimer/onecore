@@ -4,50 +4,24 @@ import { fetchApi, simulateDelay } from './baseApi'
 export const componentService = {
   // Get all components for a residence
   async getByResidenceId(residenceId: string): Promise<Component[]> {
-    return fetchApi<Component[]>(`/residences/${residenceId}/components`)
+    const response = await fetchApi<{content: Component[]}>(`/residences/${residenceId}/components/`)
+    return response.content
   },
 
   // Get component by ID
   async getById(residenceId: string, componentId: string): Promise<Component> {
-    return fetchApi<Component>(`/residences/${residenceId}/components/${componentId}`)
+    return fetchApi<Component>(`/residences/${residenceId}/components/${componentId}/`)
   },
 
-  // Create new component
-  async create(
-    residenceId: string,
-    data: Omit<Component, 'id' | 'issues'>,
-  ): Promise<Component> {
-    // TODO: Replace with actual API call
-    return fetchApi<Component>(`/residences/${residenceId}/components`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+  // Get components by type
+  async getByType(residenceId: string, componentType: string): Promise<Component[]> {
+    const response = await fetchApi<{content: Component[]}>(`/residences/${residenceId}/components/?componentType=${componentType}`)
+    return response.content
   },
 
-  // Update component
-  async update(
-    residenceId: string,
-    componentId: string,
-    data: Partial<Component>,
-  ): Promise<Component> {
-    // TODO: Replace with actual API call
-    return fetchApi<Component>(
-      `/residences/${residenceId}/components/${componentId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      },
-    )
-  },
-
-  // Delete component
-  async delete(residenceId: string, componentId: string): Promise<void> {
-    // TODO: Replace with actual API call
-    return fetchApi<void>(
-      `/residences/${residenceId}/components/${componentId}`,
-      {
-        method: 'DELETE',
-      },
-    )
-  },
+  // Get components by category
+  async getByCategory(residenceId: string, category: string): Promise<Component[]> {
+    const response = await fetchApi<{content: Component[]}>(`/residences/${residenceId}/components/?category=${category}`)
+    return response.content
+  }
 }
