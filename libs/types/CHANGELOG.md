@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.3.0...v2.3.1) (2024-12-03)
+
+
+### Features
+
+* uth-142 Correct Offer Email For Changing Parking Space ([#130](https://github.com/Bostads-AB-Mimer/onecore-types/issues/130)) ([8b6a02b](https://github.com/Bostads-AB-Mimer/onecore-types/commit/8b6a02b8e4a6e751265a779782f76d414023f976))
+
 ## [2.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.2.0...v2.3.0) (2024-11-13)
 
 
