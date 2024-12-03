@@ -84,6 +84,14 @@ export const propertyService = {
     // Get all properties first using the cache
     const properties = await this.getAll()
 
+    // Group properties by area
+    const propertiesByArea = properties.reduce((acc, property) => {
+      const area = property.tract || 'Övriga'
+      if (!acc[area]) acc[area] = []
+      acc[area].push(property)
+      return acc
+    }, {} as Record<string, Property[]>)
+
     // Create a map to store building data for each property
     const buildingsByProperty: Record<string, Building[]> = {}
     
@@ -107,31 +115,36 @@ export const propertyService = {
     )
 
     // Build navigation tree using the cached data
-    return properties.map((property) => {
-      const buildings = buildingsByProperty[property.propertyDesignation.code] || []
-      
-      const buildingItems = buildings.map((building) => {
-        const staircases = staircasesByBuilding[building.code] || []
+    return Object.entries(propertiesByArea).map(([areaName, areaProperties]) => ({
+      id: areaName,
+      name: areaName,
+      type: 'area' as const,
+      children: areaProperties.map((property) => {
+        const buildings = buildingsByProperty[property.propertyDesignation.code] || []
         
-        return {
-          id: building.id,
-          name: building.name,
-          type: 'building' as const,
-          children: staircases.map((staircase) => ({
-            id: staircase.id,
-            name: staircase.name || staircase.code,
-            type: 'staircase' as const,
-            children: [],
-          })),
-        }
-      })
+        const buildingItems = buildings.map((building) => {
+          const staircases = staircasesByBuilding[building.code] || []
+          
+          return {
+            id: building.id,
+            name: building.name,
+            type: 'building' as const,
+            children: staircases.map((staircase) => ({
+              id: staircase.id,
+              name: staircase.name || staircase.code,
+              type: 'staircase' as const,
+              children: [],
+            })),
+          }
+        })
 
-      return {
-        id: property.id,
-        name: property.propertyDesignation.name || property.code,
-        type: 'property' as const,
-        children: buildingItems,
-      }
-    })
+        return {
+          id: property.id,
+          name: property.propertyDesignation.name || property.code,
+          type: 'property' as const,
+          children: buildingItems,
+        }
+      }),
+    }))
   },
 }
