@@ -17,18 +17,16 @@ export const propertyService = {
     return this.propertiesCache
   },
   // Get all properties
-  async getAll(): Promise<Property[]> {
-    return fetchApi<Property[]>('/properties')
+  async getAll(tract?: string): Promise<Property[]> {
+    const url = tract ? `/properties/?tract=${tract}` : '/properties/'
+    const response = await fetchApi<{content: Property[]}>(url)
+    return response.content
   },
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    return fetchApi<Property>(`/properties/${id}`)
-  },
-
-  // Get properties by area ID
-  async getByAreaId(areaId: string): Promise<Property[]> {
-    return fetchApi<Property[]>(`/areas/${areaId}/properties`)
+    const response = await fetchApi<{content: Property}>(`/properties/${id}/`)
+    return response.content
   },
 
   // Get navigation tree

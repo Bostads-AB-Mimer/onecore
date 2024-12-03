@@ -2,35 +2,23 @@ import { Residence } from '../types'
 import { fetchApi } from './baseApi'
 
 export const residenceService = {
-  async getAll(): Promise<Residence[]> {
-    return fetchApi<Residence[]>('/residences')
+  async getAll(residenceType?: string): Promise<Residence[]> {
+    const url = residenceType ? `/residences/?residenceType=${residenceType}` : '/residences/'
+    const response = await fetchApi<{content: Residence[]}>(url)
+    return response.content
   },
 
   async getById(id: string): Promise<Residence> {
     return fetchApi<Residence>(`/residences/${id}`)
   },
 
-  async create(data: Omit<Residence, 'id'>): Promise<Residence> {
-    return fetchApi<Residence>('/residences', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+  async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/residences/buildingCode/${buildingCode}`)
+    return response.content
   },
 
-  async update(id: string, data: Partial<Residence>): Promise<Residence> {
-    return fetchApi<Residence>(`/residences/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    })
-  },
-
-  async delete(id: string): Promise<void> {
-    return fetchApi<void>(`/residences/${id}`, {
-      method: 'DELETE',
-    })
-  },
-
-  async getByEntranceId(entranceId: string): Promise<Residence[]> {
-    return fetchApi<Residence[]>(`/entrances/${entranceId}/residences`)
+  async getByBuildingAndStaircase(buildingCode: string, staircaseCode: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/residences/buildingCode/${buildingCode}/staircase/${staircaseCode}`)
+    return response.content
   },
 }
