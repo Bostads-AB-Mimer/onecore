@@ -69,8 +69,40 @@ export const propertyService = {
     return fetchApi<Area>(`/areas/${id}`)
   },
 
+  // Cache for properties
+  private static propertiesCache: Property[] | null = null
+  private static lastFetchTime: number = 0
+  private static CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+  private async ensurePropertiesCache(): Promise<Property[]> {
+    const now = Date.now()
+    if (!propertyService.propertiesCache || 
+        now - propertyService.lastFetchTime > propertyService.CACHE_TTL) {
+      propertyService.propertiesCache = await this.getProperties()
+      propertyService.lastFetchTime = now
+    }
+    return propertyService.propertiesCache
+  }
+
   async getAreas(): Promise<Area[]> {
-    return fetchApi<Area[]>('/areas')
+    // Get all properties first
+    const properties = await this.ensurePropertiesCache()
+    
+    // Get unique area IDs from properties
+    const areaIds = [...new Set(properties.map(p => p.areaId))]
+    
+    // Fetch area details and combine with property counts
+    const areas = await fetchApi<Area[]>('/areas')
+    
+    return areas.map(area => {
+      const areaProperties = properties.filter(p => p.areaId === area.id)
+      return {
+        ...area,
+        properties: areaProperties.map(p => p.id),
+        totalApartments: areaProperties.reduce((sum, p) => sum + p.totalApartments, 0),
+        occupiedApartments: areaProperties.reduce((sum, p) => sum + p.occupiedApartments, 0)
+      }
+    })
   },
 
   async getProperty(id: string): Promise<Property> {
