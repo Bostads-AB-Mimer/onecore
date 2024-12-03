@@ -169,8 +169,8 @@ export const createOfferForInternalParkingSpace = async (
 
       await communicationAdapter.sendParkingSpaceOfferEmail({
         to: contact.emailAddress,
-        subject: 'Erbjudande om intern bilplats',
-        text: 'Erbjudande om intern bilplats',
+        subject: 'Erbjudande om bilplats',
+        text: 'Erbjudande om bilplats',
         address: listing.address,
         firstName: extractApplicantFirstName(eligibleApplicant.name),
         availableFrom: new Date(listing.vacantFrom).toISOString(),
