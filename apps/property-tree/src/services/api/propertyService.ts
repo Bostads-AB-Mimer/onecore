@@ -1,4 +1,4 @@
-import { Building, Property, Staircase } from '../types'
+import { Building, NavigationItem, Property, Staircase } from '../types'
 import { fetchApi } from './baseApi'
 
 // Types based on API schema
@@ -8,10 +8,6 @@ interface PropertyResponse {
 
 interface SinglePropertyResponse {
   content: Property
-}
-
-interface BuildingResponse {
-  content: Building[]
 }
 
 interface StaircaseResponse {
@@ -28,7 +24,9 @@ export const propertyService = {
 
   // Get property by ID
   async getById(id: string): Promise<Property> {
-    const response = await fetchApi<SinglePropertyResponse>(`/properties/${id}/`)
+    const response = await fetchApi<SinglePropertyResponse>(
+      `/properties/${id}/`
+    )
     return response.content
   },
 
@@ -40,13 +38,19 @@ export const propertyService = {
 
   // Get building by building code
   async getBuildingByCode(buildingCode: string): Promise<Building> {
-    const response = await fetchApi<Building>(`/buildings/buildingCode/${buildingCode}/`)
+    const response = await fetchApi<Building>(
+      `/buildings/buildingCode/${buildingCode}/`
+    )
     return response
   },
 
   // Get staircases for a building
-  async getStaircasesByBuildingCode(buildingCode: string): Promise<Staircase[]> {
-    const response = await fetchApi<StaircaseResponse>(`/staircases/${buildingCode}/`)
+  async getStaircasesByBuildingCode(
+    buildingCode: string
+  ): Promise<Staircase[]> {
+    const response = await fetchApi<StaircaseResponse>(
+      `/staircases/${buildingCode}/`
+    )
     return response.content
   },
 
@@ -54,41 +58,45 @@ export const propertyService = {
   async getNavigationTree(): Promise<NavigationItem[]> {
     // Get all properties first
     const properties = await this.getAll()
-    
+
     // Build navigation tree
     const navigationItems: NavigationItem[] = await Promise.all(
       properties.map(async (property) => {
         // Get buildings for this property
-        const buildings = await this.getBuildingsByPropertyCode(property.propertyCode)
-        
+        const buildings = await this.getBuildingsByPropertyCode(
+          property.propertyDesignation.code
+        )
+
         // Get staircases for each building
         const buildingItems = await Promise.all(
           buildings.map(async (building) => {
-            const staircases = await this.getStaircasesByBuildingCode(building.code)
-            
+            const staircases = await this.getStaircasesByBuildingCode(
+              building.code
+            )
+
             return {
               id: building.id,
               name: building.name,
               type: 'building' as const,
-              children: staircases.map(staircase => ({
+              children: staircases.map((staircase) => ({
                 id: staircase.id,
                 name: staircase.name || staircase.code,
                 type: 'staircase' as const,
-                children: []
-              }))
+                children: [],
+              })),
             }
           })
         )
 
         return {
-          id: property.propertyId,
-          name: property.propertyDesignation.name || property.propertyCode,
+          id: property.id,
+          name: property.propertyDesignation.name || property.code,
           type: 'property' as const,
-          children: buildingItems
+          children: buildingItems,
         }
       })
     )
 
     return navigationItems
-  }
+  },
 }
