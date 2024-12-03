@@ -11,7 +11,58 @@ import { residenceService } from './api/residenceService'
 
 export const propertyService = {
   async getNavigation(): Promise<NavigationItem[]> {
-    return fetchApi<NavigationItem[]>('/navigation')
+    // Get all areas
+    const areas = await this.getAreas()
+    
+    // Build navigation tree
+    const navigationItems: NavigationItem[] = await Promise.all(
+      areas.map(async (area) => {
+        // Get properties for this area
+        const properties = await this.getProperties()
+        const areaProperties = properties.filter(p => p.areaId === area.id)
+        
+        // Get buildings and staircases for each property
+        const propertyItems = await Promise.all(
+          areaProperties.map(async (property) => {
+            const buildings = await this.getBuildings(property.id)
+            
+            const buildingItems = await Promise.all(
+              buildings.map(async (building) => {
+                const staircases = await this.getStaircases(building.id)
+                
+                return {
+                  id: building.id,
+                  name: building.name,
+                  type: 'building' as const,
+                  children: staircases.map(staircase => ({
+                    id: staircase.id,
+                    name: staircase.name,
+                    type: 'staircase' as const,
+                    children: []
+                  }))
+                }
+              })
+            )
+
+            return {
+              id: property.id,
+              name: property.name,
+              type: 'property' as const,
+              children: buildingItems
+            }
+          })
+        )
+
+        return {
+          id: area.id,
+          name: area.name,
+          type: 'area' as const,
+          children: propertyItems
+        }
+      })
+    )
+
+    return navigationItems
   },
 
   async getArea(id: string): Promise<Area> {
