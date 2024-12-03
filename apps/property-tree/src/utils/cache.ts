@@ -14,15 +14,15 @@ export class Cache<T> {
 
   async get(fetchFn: () => Promise<T>): Promise<T> {
     const now = Date.now()
-    
-    if (!this.cache || (now - this.cache.timestamp) > this.ttl) {
+
+    if (!this.cache || now - this.cache.timestamp > this.ttl) {
       if (!this.updatePromise) {
         this.updatePromise = (async () => {
           try {
             const data = await fetchFn()
             this.cache = {
               data,
-              timestamp: now
+              timestamp: now,
             }
           } finally {
             this.updatePromise = null

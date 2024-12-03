@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"node --import tsx --watch src/server/api.ts\"",
+    "dev": "vite",
     "format": "prettier --write .",
     "start:server": "node --import tsx src/server/api.ts",
     "start": "vite"
