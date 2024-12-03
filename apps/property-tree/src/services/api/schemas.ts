@@ -186,10 +186,10 @@ export const StaircaseSchema = z.object({
   timestamp: z.string()
 })
 
-// Response types
-export type PropertyResponse = z.infer<typeof PropertySchema>
-export type BuildingResponse = z.infer<typeof BuildingSchema>
-export type ResidenceResponse = z.infer<typeof ResidenceSchema>
-export type ComponentResponse = z.infer<typeof ComponentSchema>
-export type RoomResponse = z.infer<typeof RoomSchema>
-export type StaircaseResponse = z.infer<typeof StaircaseSchema>
+// Types
+export type Property = z.infer<typeof PropertySchema>
+export type Building = z.infer<typeof BuildingSchema>
+export type Residence = z.infer<typeof ResidenceSchema>
+export type Component = z.infer<typeof ComponentSchema>
+export type Room = z.infer<typeof RoomSchema>
+export type Staircase = z.infer<typeof StaircaseSchema>

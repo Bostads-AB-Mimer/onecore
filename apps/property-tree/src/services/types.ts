@@ -1,18 +1,20 @@
 import type {
-  RoomResponse,
-  ComponentResponse,
-  ResidenceResponse,
-  BuildingResponse,
-  PropertyResponse,
-  StaircaseResponse
+  Room,
+  Component,
+  Residence,
+  Building,
+  Property,
+  Staircase
 } from './api/schemas'
 
-export type Room = RoomResponse
-export type Component = ComponentResponse
-export type Residence = ResidenceResponse
-export type Building = BuildingResponse
-export type Property = PropertyResponse
-export type Staircase = StaircaseResponse
+export type {
+  Room,
+  Component,
+  Residence,
+  Building,
+  Property,
+  Staircase
+}
 
 export interface NavigationItem {
   id: string
