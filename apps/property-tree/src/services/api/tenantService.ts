@@ -1,21 +1,21 @@
 import { Tenant } from '../types'
 import { fetchApi, simulateDelay } from './baseApi'
-import { mockApartments } from '../mockData'
+import { mockResidences } from '../mockData'
 
 export const tenantService = {
   // Get all tenants
   async getAll(): Promise<Tenant[]> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    return Object.values(mockApartments).map((apartment) => apartment.tenant)
+    return Object.values(mockResidences).map((residence) => residence.tenant)
   },
 
   // Get tenant by ID
   async getById(id: string): Promise<Tenant> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    const tenant = Object.values(mockApartments).find(
-      (apartment) => apartment.tenant.id === id,
+    const tenant = Object.values(mockResidences).find(
+      (residence) => residence.tenant.id === id,
     )?.tenant
     if (!tenant) {
       throw new Error(`Tenant with id ${id} not found`)
@@ -54,8 +54,8 @@ export const tenantService = {
     // TODO: Replace with actual API call
     await simulateDelay()
     const normalizedQuery = query.toLowerCase()
-    return Object.values(mockApartments)
-      .map((apartment) => apartment.tenant)
+    return Object.values(mockResidences)
+      .map((residence) => residence.tenant)
       .filter(
         (tenant) =>
           tenant.name.toLowerCase().includes(normalizedQuery) ||

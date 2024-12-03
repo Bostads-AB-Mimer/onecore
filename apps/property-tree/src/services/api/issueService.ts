@@ -3,11 +3,11 @@ import { fetchApi, simulateDelay } from './baseApi'
 import { mockActiveIssues } from '../mockData'
 
 export const issueService = {
-  // Get all issues for an apartment
-  async getByApartmentId(apartmentId: string): Promise<Issue[]> {
+  // Get all issues for a residence
+  async getByResidenceId(residenceId: string): Promise<Issue[]> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    return mockActiveIssues[apartmentId] || []
+    return mockActiveIssues[residenceId] || []
   },
 
   // Get issue by ID

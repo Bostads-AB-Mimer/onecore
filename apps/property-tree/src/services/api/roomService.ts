@@ -3,18 +3,18 @@ import { fetchApi, simulateDelay } from './baseApi'
 import { mockRooms } from '../mockData'
 
 export const roomService = {
-  // Get all rooms for an apartment
-  async getByApartmentId(apartmentId: string): Promise<Room[]> {
+  // Get all rooms for a residence
+  async getByResidenceId(residenceId: string): Promise<Room[]> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    return mockRooms[apartmentId] || []
+    return mockRooms[residenceId] || []
   },
 
   // Get room by ID
-  async getById(apartmentId: string, roomId: string): Promise<Room> {
+  async getById(residenceId: string, roomId: string): Promise<Room> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    const room = mockRooms[apartmentId]?.find((r) => r.id === roomId)
+    const room = mockRooms[residenceId]?.find((r) => r.id === roomId)
     if (!room) {
       throw new Error(`Room with id ${roomId} not found`)
     }
@@ -22,9 +22,9 @@ export const roomService = {
   },
 
   // Create new room
-  async create(apartmentId: string, data: Omit<Room, 'id'>): Promise<Room> {
+  async create(residenceId: string, data: Omit<Room, 'id'>): Promise<Room> {
     // TODO: Replace with actual API call
-    return fetchApi<Room>(`/apartments/${apartmentId}/rooms`, {
+    return fetchApi<Room>(`/residences/${residenceId}/rooms`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -32,21 +32,21 @@ export const roomService = {
 
   // Update room
   async update(
-    apartmentId: string,
+    residenceId: string,
     roomId: string,
     data: Partial<Room>,
   ): Promise<Room> {
     // TODO: Replace with actual API call
-    return fetchApi<Room>(`/apartments/${apartmentId}/rooms/${roomId}`, {
+    return fetchApi<Room>(`/residences/${residenceId}/rooms/${roomId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
   },
 
   // Delete room
-  async delete(apartmentId: string, roomId: string): Promise<void> {
+  async delete(residenceId: string, roomId: string): Promise<void> {
     // TODO: Replace with actual API call
-    return fetchApi<void>(`/apartments/${apartmentId}/rooms/${roomId}`, {
+    return fetchApi<void>(`/residences/${residenceId}/rooms/${roomId}`, {
       method: 'DELETE',
     })
   },

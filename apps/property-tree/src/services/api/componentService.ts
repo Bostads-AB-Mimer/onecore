@@ -34,18 +34,18 @@ const mockComponents: Record<string, Component[]> = {
 }
 
 export const componentService = {
-  // Get all components for an apartment
-  async getByApartmentId(apartmentId: string): Promise<Component[]> {
+  // Get all components for a residence
+  async getByResidenceId(residenceId: string): Promise<Component[]> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    return mockComponents[apartmentId] || []
+    return mockComponents[residenceId] || []
   },
 
   // Get component by ID
-  async getById(apartmentId: string, componentId: string): Promise<Component> {
+  async getById(residenceId: string, componentId: string): Promise<Component> {
     // TODO: Replace with actual API call
     await simulateDelay()
-    const component = mockComponents[apartmentId]?.find(
+    const component = mockComponents[residenceId]?.find(
       (c) => c.id === componentId,
     )
     if (!component) {
@@ -56,11 +56,11 @@ export const componentService = {
 
   // Create new component
   async create(
-    apartmentId: string,
+    residenceId: string,
     data: Omit<Component, 'id' | 'issues'>,
   ): Promise<Component> {
     // TODO: Replace with actual API call
-    return fetchApi<Component>(`/apartments/${apartmentId}/components`, {
+    return fetchApi<Component>(`/residences/${residenceId}/components`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -68,13 +68,13 @@ export const componentService = {
 
   // Update component
   async update(
-    apartmentId: string,
+    residenceId: string,
     componentId: string,
     data: Partial<Component>,
   ): Promise<Component> {
     // TODO: Replace with actual API call
     return fetchApi<Component>(
-      `/apartments/${apartmentId}/components/${componentId}`,
+      `/residences/${residenceId}/components/${componentId}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -83,10 +83,10 @@ export const componentService = {
   },
 
   // Delete component
-  async delete(apartmentId: string, componentId: string): Promise<void> {
+  async delete(residenceId: string, componentId: string): Promise<void> {
     // TODO: Replace with actual API call
     return fetchApi<void>(
-      `/apartments/${apartmentId}/components/${componentId}`,
+      `/residences/${residenceId}/components/${componentId}`,
       {
         method: 'DELETE',
       },
