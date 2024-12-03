@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient, Room } from '@prisma/client'
 import { map } from 'lodash'
 
 const prisma = new PrismaClient({
@@ -32,8 +32,53 @@ export const getRooms = async (
         in: map(propertyStructures, 'objectId'),
       },
     },
-    include: {
+    select: {
+      roomId: true,
+      roomCode: true,
+      name: true,
+      sharedUse: true,
+      sortingOrder: true,
+      allowPeriodicWorks: true,
+      spaceType: true,
+      hasToilet: true,
+      isHeated: true,
+      hasThermostatValve: true,
+      orientation: true,
+      installationDate: true,
+      deleteMark: true,
+      fromDate: true,
+      toDate: true,
+      availableFrom: true,
+      availableTo: true,
+      timestamp: true,
       roomType: true,
     },
+    /*transform: (room: Room) => ({
+      id: room.roomId,
+      code: room.roomCode,
+      name: room.name?.trim(),
+      usage: {
+        shared: Boolean(room.sharedUse),
+        allowPeriodicWorks: Boolean(room.allowPeriodicWorks),
+        spaceType: room.spaceType,
+      },
+      features: {
+        hasToilet: Boolean(room.hasToilet),
+        isHeated: Boolean(room.isHeated),
+        hasThermostatValve: Boolean(room.hasThermostatValve),
+        orientation: room.orientation,
+      },
+      dates: {
+        installation: room.installationDate,
+        from: room.fromDate,
+        to: room.toDate,
+        availableFrom: room.availableFrom,
+        availableTo: room.availableTo,
+      },
+      sortingOrder: room.sortingOrder,
+      deleted: Boolean(room.deleteMark),
+      timestamp: room.timestamp,
+      roomType: room.roomTypeId,
+    }),*/
   })
 }

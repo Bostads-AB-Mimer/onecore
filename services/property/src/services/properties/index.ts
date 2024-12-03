@@ -40,9 +40,10 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               oneOf:
-   *                 - $ref: '#/components/schemas/PropertyList'
-   *                 - $ref: '#/components/schemas/Property'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Property'
    */
   router.get(['(.*)/properties/:id', '(.*)/properties/:id/'], async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -81,7 +82,12 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PropertyList'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Property'
    *       500:
    *         description: Internal server error
    */

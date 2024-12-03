@@ -7,7 +7,6 @@ const prisma = new PrismaClient({
 export const getComponentByMaintenanceUnitCode = async (
   maintenanceUnitCode: string
 ) => {
-  console.log('maintenanceUnitCode', maintenanceUnitCode)
   const response = await prisma.component.findMany({
     where: {
       propertyStructures: {
@@ -55,5 +54,32 @@ export const getComponentByMaintenanceUnitCode = async (
     },
   })
 
-  return response
+  return response.map((component) => ({
+    id: component.id,
+    code: component.code,
+    name: component.name,
+    details: {
+      manufacturer: component.manufacturer,
+      typeDesignation: component.typeDesignation,
+    },
+    dates: {
+      installation: component.installationDate,
+      warrantyEnd: component.warrantyEndDate,
+    },
+    classification: {
+      componentType: {
+        code: component.componentType?.componentTypeCode ?? '',
+        name: component.componentType?.name ?? '',
+      },
+      category: {
+        code: component.componentCategory?.code ?? '',
+        name: component.componentCategory?.name ?? '',
+      },
+    },
+    maintenanceUnits: component.propertyStructures.map((ps) => ({
+      id: ps.maintenanceUnitByCode?.maintenanceUnitId ?? '',
+      code: ps.maintenanceUnitByCode?.maintenanceUnitCode ?? '',
+      name: ps.maintenanceUnitByCode?.name ?? '',
+    })),
+  }))
 }

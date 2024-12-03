@@ -1,33 +1,34 @@
 import { z } from 'zod'
 
-export const ComponentTypeSchema = z.object({
+export const ComponentSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  manufacturer: z.string().nullable(),
-  typeDesignation: z.string().nullable(),
-  installationDate: z.date().nullable(),
-  warrantyEndDate: z.date().nullable(),
-  componentType: z.object({
-    componentTypeCode: z.string(),
-    name: z.string(),
+  details: z.object({
+    manufacturer: z.string().nullable(),
+    typeDesignation: z.string().nullable(),
   }),
-  componentCategory: z.object({
-    code: z.string(),
-    name: z.string(),
+  dates: z.object({
+    installation: z.date().nullable(),
+    warrantyEnd: z.date().nullable(),
   }),
-  propertyStructures: z.array(
+  classification: z.object({
+    componentType: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+    category: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+  }),
+  maintenanceUnits: z.array(
     z.object({
-      maintenanceUnitByCode: z.object({
-        maintenanceUnitId: z.string(),
-        maintenanceUnitCode: z.string(),
-        name: z.string(),
-      }),
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
     })
   ),
 })
 
-export const ComponentListSchema = z.array(ComponentTypeSchema)
-
-export type Component = z.infer<typeof ComponentTypeSchema>
-export type ComponentList = z.infer<typeof ComponentListSchema>
+export type Component = z.infer<typeof ComponentSchema>

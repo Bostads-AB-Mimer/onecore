@@ -2,40 +2,38 @@ import KoaRouter from '@koa/router'
 import swaggerJsdoc from 'swagger-jsdoc'
 import { swaggerSpec } from '../../swagger'
 import { ResidenceSchema } from '../../types/residence'
-import { BuildingTypeSchema, BuildingListSchema } from '../../types/building'
-import { ComponentTypeSchema, ComponentListSchema } from '../../types/component'
-import { PropertyTypeSchema, PropertyListSchema } from '../../types/property'
+import { BuildingSchema } from '../../types/building'
+import { ComponentSchema } from '../../types/component'
+import { PropertySchema } from '../../types/property'
+import { StaircaseSchema } from '../../types/staircase'
+import { RoomSchema } from '../../types/room'
 import zodToJsonSchema from 'zod-to-json-schema'
 
 const schemas = {
-  Residence: zodToJsonSchema(ResidenceSchema, {
+  ...zodToJsonSchema(ResidenceSchema, {
     name: 'Residence',
     target: 'openApi3',
-  }),
-  Building: zodToJsonSchema(BuildingTypeSchema, {
+  }).definitions,
+  ...zodToJsonSchema(BuildingSchema, {
     name: 'Building',
     target: 'openApi3',
-  }),
-  BuildingList: zodToJsonSchema(BuildingListSchema, {
-    name: 'BuildingList',
-    target: 'openApi3',
-  }),
-  Component: zodToJsonSchema(ComponentTypeSchema, {
+  }).definitions,
+  ...zodToJsonSchema(ComponentSchema, {
     name: 'Component',
     target: 'openApi3',
-  }),
-  ComponentList: zodToJsonSchema(ComponentListSchema, {
-    name: 'ComponentList',
-    target: 'openApi3',
-  }),
-  Property: zodToJsonSchema(PropertyTypeSchema, {
+  }).definitions,
+  ...zodToJsonSchema(PropertySchema, {
     name: 'Property',
     target: 'openApi3',
-  }),
-  PropertyList: zodToJsonSchema(PropertyListSchema, {
-    name: 'PropertyList',
+  }).definitions,
+  ...zodToJsonSchema(StaircaseSchema, {
+    name: 'Staircase',
     target: 'openApi3',
-  }),
+  }).definitions,
+  ...zodToJsonSchema(RoomSchema, {
+    name: 'Room',
+    target: 'openApi3',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {
