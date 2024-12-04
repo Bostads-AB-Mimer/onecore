@@ -59,6 +59,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
         type: email.type,
         parkingSpaceId: email.parkingSpaceId,
         objectId: email.objectId,
+        offerURL: email.offerURL,
       },
     })
     const response = await infobip.channels.email.send({
