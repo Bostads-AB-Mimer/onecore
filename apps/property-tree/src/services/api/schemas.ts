@@ -43,6 +43,17 @@ export const ComponentSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
+  _links: z.object({
+    self: z.object({
+      href: z.string()
+    }),
+    maintenanceUnit: z.object({
+      href: z.string()
+    }),
+    componentType: z.object({
+      href: z.string()
+    })
+  }),
   details: z.object({
     manufacturer: z.string().nullable(),
     typeDesignation: z.string().nullable(),
@@ -67,7 +78,7 @@ export const ComponentSchema = z.object({
       code: z.string(),
       name: z.string(),
     })
-  ),
+  )
 })
 
 export const ResidenceSchema = z.object({
@@ -143,62 +154,41 @@ export const ResidenceSchema = z.object({
 
 export const BuildingSchema = z.object({
   id: z.string(),
-  objectId: z.string(),
-  buildingTypeId: z.string(),
-  marketAreaId: z.string(),
-  districtId: z.string(),
-  propertyDesignationId: z.string(),
-  blockId: z.string().nullable(),
-  heatingId: z.string(),
-  buildingCode: z.string(),
+  code: z.string(),
   name: z.string(),
-  description: z.string().nullable(),
-  constructionYear: z.number().nullable(),
-  renovationYear: z.number().nullable(),
-  valueYear: z.number().nullable(),
-  heating: z.string(),
-  fireRating: z.string().nullable(),
-  insuranceClass: z.string().nullable(),
-  insuranceValue: z.number().nullable(),
-  lmhNumber: z.string().nullable(),
-  assessmentYear: z.number().nullable(),
-  grade: z.number(),
-  socialPlan: z.number(),
-  socialPlanFrom: z.string().nullable(),
-  socialPlanTo: z.string().nullable(),
-  percentCommonArea: z.number().nullable(),
-  deleteMark: z.number(),
-  fromDate: z.string(),
-  toDate: z.string(),
-  lastContractStartDate: z.string().nullable(),
-  lastContractEndDate: z.string().nullable(),
-  timestamp: z.string(),
+  _links: z.object({
+    self: z.object({
+      href: z.string()
+    }),
+    property: z.object({
+      href: z.string()
+    }),
+    residences: z.object({
+      href: z.string()
+    }),
+    staircases: z.object({
+      href: z.string()
+    })
+  }),
   buildingType: z.object({
     id: z.string(),
-    componentTypeActionId: z.string().nullable(),
-    buildingTypeCode: z.string(),
-    buildingTypeName: z.string(),
-    isSystemStandard: z.number(),
-    timestamp: z.string()
-  }),
-  marketArea: z.object({
-    id: z.string(),
     code: z.string(),
-    name: z.string(),
-    timestamp: z.string()
+    name: z.string()
   }),
-  district: z.object({
-    id: z.string(),
-    code: z.string(),
-    caption: z.string(),
-    timestamp: z.string()
+  construction: z.object({
+    constructionYear: z.number().nullable(),
+    renovationYear: z.number().nullable(),
+    valueYear: z.number().nullable()
   }),
-  propertyDesignation: z.object({
-    id: z.string(),
-    code: z.string(),
-    name: z.string(),
-    timestamp: z.string()
-  })
+  features: z.object({
+    heating: z.string().nullable(),
+    fireRating: z.string().nullable()
+  }),
+  insurance: z.object({
+    class: z.string().nullable(),
+    value: z.number().nullable()
+  }),
+  deleted: z.boolean()
 })
 
 export const PropertySchema = z.object({
@@ -206,13 +196,36 @@ export const PropertySchema = z.object({
   code: z.string(),
   tract: z.string(),
   propertyDesignation: z.object({
-    id: z.string(),
+    propertyDesignationId: z.string(),
     code: z.string(),
     name: z.string().nullable(),
     timestamp: z.string()
   }),
+  propertyObject: z.object({
+    deleted: z.boolean(),
+    timestamp: z.string(),
+    objectType: z.object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string().nullable()
+    }).nullable(),
+    condition: z.string().nullable(),
+    conditionInspectionDate: z.string().datetime().nullable(),
+    energy: z.object({
+      class: z.number().nullable(),
+      registered: z.string().datetime().nullable(),
+      received: z.string().datetime().nullable(),
+      index: z.number().nullable()
+    })
+  }).nullable(),
   _links: z.object({
     self: z.object({
+      href: z.string()
+    }),
+    buildings: z.object({
+      href: z.string()
+    }),
+    residences: z.object({
       href: z.string()
     })
   })
