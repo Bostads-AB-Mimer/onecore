@@ -13,10 +13,32 @@ describe('API Navigation Tests', () => {
     server.close()
   })
 
+  it('should get companies', async () => {
+    const companyResponse = await axios.get(`${API_BASE}/companies/`)
+    expect(companyResponse.status).toBe(200)
+    expect(companyResponse.data.content).toBeDefined()
+    expect(Array.isArray(companyResponse.data.content)).toBe(true)
+    expect(companyResponse.data.content.length).toBeGreaterThan(0)
+
+    // Check that _links are present in the response
+    expect(companyResponse.data._links).toBeDefined()
+    expect(companyResponse.data._links.self).toBeDefined()
+    expect(companyResponse.data._links.self.href).toBeDefined()
+
+    // Verify company structure
+    const company = companyResponse.data.content[0]
+    expect(company.id).toBeDefined()
+    expect(company.propertyObjectId).toBeDefined()
+    expect(company.code).toBeDefined()
+    expect(company.name).toBeDefined()
+    expect(company.organizationNumber).toBeDefined()
+  })
+
   it('should get properties list filtered by tract', async () => {
+    const testCompany = '001'
     const testTract = 'BÄVERN'
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/?tract=${testTract}`
+      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
     )
     expect(propertiesResponse.status).toBe(200)
     expect(propertiesResponse.data.content).toBeDefined()
@@ -31,26 +53,27 @@ describe('API Navigation Tests', () => {
     // Verify property structure
     const property = propertiesResponse.data.content[0]
     expect(property.propertyId).toBeDefined()
-    expect(property.propertyCode).toBeDefined()
-    expect(property.tract).toBe(testTract)
+    expect(property.code).toBeDefined()
+    expect(property.name).toContain(testTract)
   })
 
   it('should get detailed property information by ID', async () => {
+    const testCompany = '001'
     const testTract = 'BÄVERN'
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/?tract=${testTract}`
+      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
     )
     const property = propertiesResponse.data.content[0]
 
     const propertyDetailsResponse = await axios.get(
-      `${API_BASE}/properties/${property.propertyId}/`
+      `${API_BASE}/properties/Id/${property.propertyId}/`
     )
     expect(propertyDetailsResponse.status).toBe(200)
     expect(propertyDetailsResponse.data.content).toBeDefined()
 
     // Verify property details structure
     const propertyDetails = propertyDetailsResponse.data.content
-    expect(propertyDetails.propertyId).toBe(property.propertyId)
+    expect(propertyDetails.propertyObjectId).toBe(property.propertyId)
     expect(propertyDetails.propertyCode).toBe(property.propertyCode)
     expect(propertyDetails.tract).toBe(testTract)
 
@@ -60,12 +83,18 @@ describe('API Navigation Tests', () => {
     expect(propertyDetailsResponse.data._links.self.href).toBeDefined()
   })
 
+  //todo: add test for staircases before residence test
+
   it('should get residences associated with a property', async () => {
+    //todo: this test will fail due to links not being present in the response
+    //todo: it should also either use /residences/buildingCode/<val> or /residences/buildingCode/<val>/staircase/<val>
+    const testCompany = '001'
     const testTract = 'BÄVERN'
     // First get properties in the test tract
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/?tract=${testTract}`
+      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
     )
+
     const property = propertiesResponse.data.content[0]
 
     // Then get residences for the first property
@@ -88,14 +117,15 @@ describe('API Navigation Tests', () => {
   })
 
   it('should get buildings associated with a property', async () => {
+    const testCompany = '001'
     const testTract = 'BÄVERN'
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/?tract=${testTract}`
+      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
     )
     const property = propertiesResponse.data.content[0]
 
     const propertyDetailsResponse = await axios.get(
-      `${API_BASE}/properties/${property.propertyId}/`
+      `${API_BASE}/properties/Id/${property.propertyId}/`
     )
     const propertyDetails = propertyDetailsResponse.data.content
 

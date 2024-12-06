@@ -5,6 +5,8 @@ const prisma = new PrismaClient({
   log: ['query'],
 })
 
+//todo: add types
+
 const getBuildings = async (propertyCode: string) => {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
@@ -33,7 +35,6 @@ const getBuildings = async (propertyCode: string) => {
   })
 }
 
-//todo: remove this endpoint?
 const getBuildingByCode = async (buildingCode: string) => {
   return prisma.building.findFirst({
     where: {

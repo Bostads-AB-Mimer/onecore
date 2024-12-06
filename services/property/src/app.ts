@@ -32,6 +32,7 @@ app.use(
       tryItOutEnabled: true,
       displayRequestDuration: true,
       persistAuthorization: true,
+      tagsSorter: 'alpha',
     },
   })
 )

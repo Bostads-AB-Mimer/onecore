@@ -5,6 +5,8 @@ const prisma = new PrismaClient({
   log: ['query'],
 })
 
+//todo: add types
+
 export const getRooms = async (
   buildingCode: string,
   floorCode: string,

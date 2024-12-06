@@ -4,9 +4,10 @@ import { swaggerSpec } from '../../swagger'
 import { ResidenceSchema } from '../../types/residence'
 import { BuildingSchema } from '../../types/building'
 import { ComponentSchema } from '../../types/component'
-import { PropertySchema } from '../../types/property'
+import { PropertySchema, PropertyDetailsSchema } from '../../types/property'
 import { StaircaseSchema } from '../../types/staircase'
 import { RoomSchema } from '../../types/room'
+import { CompanySchema, CompanyDetailsSchema } from '../../types/company'
 import zodToJsonSchema from 'zod-to-json-schema'
 
 const schemas = {
@@ -26,12 +27,24 @@ const schemas = {
     name: 'Property',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(PropertyDetailsSchema, {
+    name: 'PropertyDetails',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(StaircaseSchema, {
     name: 'Staircase',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(RoomSchema, {
     name: 'Room',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(CompanySchema, {
+    name: 'Company',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(CompanyDetailsSchema, {
+    name: 'CompanyDetails',
     target: 'openApi3',
   }).definitions,
 }

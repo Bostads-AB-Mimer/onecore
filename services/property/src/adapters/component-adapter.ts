@@ -4,6 +4,8 @@ const prisma = new PrismaClient({
   log: ['query'],
 })
 
+//todo: add types
+
 export const getComponentByMaintenanceUnitCode = async (
   maintenanceUnitCode: string
 ) => {

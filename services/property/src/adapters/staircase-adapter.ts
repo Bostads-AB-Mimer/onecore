@@ -6,6 +6,8 @@ const prisma = new PrismaClient({
   log: ['query'],
 })
 
+//todo: add types
+
 async function getStaircasesByBuildingCode(buildingCode: string) {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {

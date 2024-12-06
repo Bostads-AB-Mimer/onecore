@@ -5,6 +5,9 @@ const prisma = new PrismaClient({
   log: ['query'],
 })
 
+//todo: add types
+//todo: refactor endpoints and remove redudant ones
+
 export const getLatestResidences = async (propertyCode?: string) => {
   const where = propertyCode
     ? {
