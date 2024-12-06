@@ -22,11 +22,8 @@ export interface Config {
   communicationService: {
     url: string
   }
-  ticketingService: {
+  workOrderService: {
     url: string
-    database: string
-    username: string
-    password: string
   }
   auth: {
     secret: string
@@ -52,7 +49,7 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
-    odoo: {
+    workOrder: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -75,6 +72,9 @@ const config = configPackage({
     communicationService: {
       url: 'http://localhost:5040',
     },
+    workOrderService: {
+      url: 'http://localhost:5060',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -83,12 +83,6 @@ const config = configPackage({
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
-    },
-    ticketingService: {
-      url: 'http://127.0.0.1:8069',
-      database: '',
-      username: '',
-      password: '',
     },
     health: {
       leasing: {
@@ -103,8 +97,8 @@ const config = configPackage({
         systemName: 'communication',
         minimumMinutesBetweenRequests: 1,
       },
-      odoo: {
-        systemName: 'odoo',
+      workOrder: {
+        systemName: 'work-order',
         minimumMinutesBetweenRequests: 1,
       },
     },
@@ -117,8 +111,8 @@ export default {
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
+  workOrderService: config.get('workOrderService'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
-  ticketingService: config.get('ticketingService'),
   health: config.get('health'),
 } as Config

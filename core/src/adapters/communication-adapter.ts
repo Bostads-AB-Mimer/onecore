@@ -114,7 +114,7 @@ export const sendParkingSpaceOfferEmail = async (
   }
 }
 
-export const sendTicketMessageSms = async (
+export const sendWorkOrderSms = async (
   phoneNumber: string,
   message: string
 ): Promise<AdapterResult<any, 'error'>> => {
@@ -127,7 +127,7 @@ export const sendTicketMessageSms = async (
     }
 
     const result = await axios(
-      `${config.communicationService.url}/sendTicketSms`,
+      `${config.communicationService.url}/sendWorkOrderSms`,
       {
         ...axiosOptions,
         data: { phoneNumber, message },
@@ -144,7 +144,7 @@ export const sendTicketMessageSms = async (
   }
 }
 
-export const sendTicketMessageEmail = async (
+export const sendWorkOrderEmail = async (
   to: string,
   subject: string,
   message: string
@@ -158,7 +158,7 @@ export const sendTicketMessageEmail = async (
     }
 
     const result = await axios(
-      `${config.communicationService.url}/sendTicketEmail`,
+      `${config.communicationService.url}/sendWorkOrderEmail`,
       {
         ...axiosOptions,
         data: { to, subject, text: message },

@@ -69,7 +69,7 @@
     "koa2-swagger-ui": "^5.10.0",
     "lodash": "^4.17.21",
     "odoo-await": "^3.4.1",
-    "onecore-types": "^2.3.1",
+    "onecore-types": "^2.6.1",
     "onecore-utilities": "^1.1.0",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",

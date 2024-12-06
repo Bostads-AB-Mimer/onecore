@@ -6,16 +6,8 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import {
-  getRentalProperty,
-  getRoomTypeWithMaterialOptions,
-  getMaterialOption,
-  getMaterialChoices,
-  saveMaterialChoice,
-  getMaterialChoiceStatuses,
-  getRoomsWithMaterialChoices,
-  getRentalPropertyInfoFromXpand,
-} from '../../adapters/property-management-adapter'
+import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { createNoteOfInterestForInternalParkingSpace } from '../../processes/parkingspaces/internal'
@@ -96,7 +88,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rentalproperties/:id/material-options', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const roomTypes = await getRoomTypeWithMaterialOptions(ctx.params.id)
+    const roomTypes =
+      await propertyManagementAdapter.getRoomTypeWithMaterialOptions(
+        ctx.params.id
+      )
 
     ctx.body = { content: roomTypes, ...metadata }
   })
@@ -135,7 +130,7 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rentalproperties/:id/material-option/:materialOptionId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const option = await getMaterialOption(
+      const option = await propertyManagementAdapter.getMaterialOption(
         ctx.params.id,
         ctx.params.materialOptionId
       )
@@ -178,10 +173,11 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rentalproperties/:apartmentId/:contractId/material-choices',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const materialChoices = await getMaterialChoices(
-        ctx.params.apartmentId,
-        ctx.params.contractId
-      )
+      const materialChoices =
+        await propertyManagementAdapter.getMaterialChoices(
+          ctx.params.apartmentId,
+          ctx.params.contractId
+        )
 
       ctx.body = { content: materialChoices, ...metadata }
     }
@@ -215,7 +211,10 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rentalproperties/:id/rooms-with-material-choices',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const materialChoices = await getRoomsWithMaterialChoices(ctx.params.id)
+      const materialChoices =
+        await propertyManagementAdapter.getRoomsWithMaterialChoices(
+          ctx.params.id
+        )
 
       ctx.body = { content: materialChoices, ...metadata }
     }
@@ -248,7 +247,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const materialChoices = await getMaterialChoices(ctx.params.id)
+    const materialChoices = await propertyManagementAdapter.getMaterialChoices(
+      ctx.params.id
+    )
 
     ctx.body = { content: materialChoices, ...metadata }
   })
@@ -281,15 +282,17 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeRentalProperties'])
-    const materialChoiceStatuses = await getMaterialChoiceStatuses(
-      ctx.params.projectCode
-    )
+    const materialChoiceStatuses =
+      await propertyManagementAdapter.getMaterialChoiceStatuses(
+        ctx.params.projectCode
+      )
 
     if (ctx.query.includeRentalProperties === 'true') {
       for (const materialChoiceStatus of materialChoiceStatuses) {
-        materialChoiceStatus.rentalProperty = await getRentalProperty(
-          materialChoiceStatus.apartmentId
-        )
+        materialChoiceStatus.rentalProperty =
+          await propertyManagementAdapter.getRentalProperty(
+            materialChoiceStatus.apartmentId
+          )
       }
     }
 
@@ -329,10 +332,13 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    await getMaterialChoices(ctx.params.id)
+    await propertyManagementAdapter.getMaterialChoices(ctx.params.id)
 
     if (ctx.request.body) {
-      const result = await saveMaterialChoice(ctx.params.id, ctx.request.body)
+      const result = await propertyManagementAdapter.saveMaterialChoice(
+        ctx.params.id,
+        ctx.request.body
+      )
 
       ctx.body = { content: result, ...metadata }
     }
@@ -368,7 +374,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rentalproperties/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getRentalProperty(ctx.params.id)
+    const responseData = await propertyManagementAdapter.getRentalProperty(
+      ctx.params.id
+    )
 
     ctx.body = {
       content: responseData,
@@ -625,10 +633,104 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/propertyInfoFromXpand/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const res = await getRentalPropertyInfoFromXpand(
+    const res = await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
       ctx.params.rentalObjectCode
     )
     ctx.status = res.status
     ctx.body = { content: res.data, ...metadata }
+  })
+
+  router.get(
+    '(.*)/maintenanceUnits/rentalPropertyId/:rentalPropertyId/:type?',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const maintenanceUnits =
+          await propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(
+            ctx.params.rentalPropertyId
+          )
+        if (maintenanceUnits && maintenanceUnits.length > 0) {
+          // Filter by type if type is provided
+          if (ctx.params.type) {
+            ctx.status = 200
+            ctx.body = {
+              content: maintenanceUnits.filter(
+                (unit) =>
+                  unit.type.toUpperCase() === ctx.params.type.toUpperCase()
+              ),
+              ...metadata,
+            }
+            return
+          }
+          // Return all maintenance units if no type is provided
+          ctx.status = 200
+          ctx.body = { content: maintenanceUnits, ...metadata }
+        } else {
+          ctx.status = 200
+          ctx.body = { content: [], reason: 'No maintenance units found' }
+          logger.info('No maintenance units found')
+          return
+        }
+      } catch (error) {
+        logger.error(error, 'Error retreiving maintenance units by property')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
+
+  router.get('(.*)/maintenanceUnits/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const contactResult = await leasingAdapter.getContactByContactCode(
+        ctx.params.contactCode
+      )
+      if (!contactResult.ok) {
+        ctx.status = 404
+        ctx.body = { reason: 'Contact not found', ...metadata }
+        logger.info('Contact not found')
+        return
+      }
+
+      const leases = await leasingAdapter.getLeasesForPnr(
+        contactResult.data.nationalRegistrationNumber,
+        'false',
+        'false'
+      )
+      const promises = leases
+        .filter(
+          (lease) =>
+            lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
+        )
+        .map((lease) =>
+          propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(
+            lease.rentalPropertyId
+          )
+        )
+
+      const maintenanceUnits = await Promise.all(promises).then((units) =>
+        units.filter((unit) => unit !== undefined).flat()
+      )
+
+      if (maintenanceUnits && maintenanceUnits.length > 0) {
+        ctx.status = 200
+        ctx.body = { content: maintenanceUnits, ...metadata }
+      } else {
+        ctx.status = 200
+        ctx.body = {
+          content: [],
+          reason: 'No maintenance units found',
+          ...metadata,
+        }
+        logger.info('No maintenance units found')
+        return
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
   })
 }
