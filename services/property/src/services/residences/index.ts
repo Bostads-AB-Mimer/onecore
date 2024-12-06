@@ -78,7 +78,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Residence not found
    */
-  router.get('(.*)//residences/:id', async (ctx) => {
+  router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(`GET /residences/${ctx.params.id}`, metadata)
     const dbRecord = await getResidenceById(ctx.params.id)
