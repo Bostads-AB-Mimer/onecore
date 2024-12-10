@@ -22,6 +22,9 @@ export interface Config {
   communicationService: {
     url: string
   }
+  minaSidor: {
+    url: string
+  }
   ticketingService: {
     url: string
     database: string
@@ -75,6 +78,9 @@ const config = configPackage({
     communicationService: {
       url: 'http://localhost:5040',
     },
+    minaSidor: {
+      url: 'https://test.mimer.nu/',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -117,6 +123,7 @@ export default {
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
+  minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
   ticketingService: config.get('ticketingService'),
