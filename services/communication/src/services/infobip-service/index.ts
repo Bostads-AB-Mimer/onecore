@@ -187,7 +187,8 @@ export const isParkingSpaceOfferEmail = (
     typeof emailData.type === 'string' &&
     typeof emailData.parkingSpaceId === 'string' &&
     typeof emailData.objectId === 'string' &&
-    typeof emailData.applicationType === 'string'
+    typeof emailData.applicationType === 'string'&&
+    typeof emailData.offerURL === 'string'
   )
 }
 
