@@ -18,12 +18,15 @@ afterAll(async () => {
 
 describe('application-profile-adapter', () => {
   describe(applicationProfileAdapter.create, () => {
-    it('inserts application profile', async () => {
+    it('creates application profile', async () => {
       const profile = await applicationProfileAdapter.create(db, {
         contactCode: '1234',
         expiresAt: new Date(),
         numAdults: 1,
         numChildren: 1,
+        housingType: 'foo',
+        housingTypeDescription: 'bar',
+        landlord: 'baz',
       })
       assert(profile.ok)
 

@@ -9,3 +9,7 @@ export { DetailedOfferFactory as detailedOffer } from './offer'
 export { SoapInternalParkingSpaceFactory as soapInternalParkingSpace } from './soap-parking-space'
 export { TenantFactory as tenant } from './tenant'
 export { OfferApplicantFactory as offerApplicant } from './offer-applicant'
+export {
+  ApplicationProfileFactory as applicationProfile,
+  ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
+} from './application-profile'

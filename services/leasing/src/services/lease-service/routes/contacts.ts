@@ -18,6 +18,7 @@ import {
 import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { updateOrCreateApplicationProfile } from '../update-or-create-application-profile'
 
 /**
  * @swagger
@@ -570,41 +571,25 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const update = await applicationProfileAdapter.update(
+      const result = await updateOrCreateApplicationProfile(
         db,
         ctx.params.contactCode,
         ctx.request.body
       )
 
-      if (!update.ok) {
-        if (update.err === 'no-update') {
-          const insert = await applicationProfileAdapter.create(db, {
-            ...ctx.request.body,
-            contactCode: ctx.params.contactCode,
-          })
-
-          if (!insert.ok) {
-            ctx.status = 500
-            ctx.body = { error: 'Internal server error', ...metadata }
-          } else {
-            ctx.status = 201
-            ctx.body = {
-              content:
-                insert.data satisfies CreateOrUpdateApplicationProfileResponseData,
-              ...metadata,
-            }
-          }
-        }
-
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
         return
       }
 
-      ctx.status = 200
+      const [profile, operation] = result.data
+      ctx.status = operation === 'created' ? 201 : 200
       ctx.body = {
-        content:
-          update.data satisfies CreateOrUpdateApplicationProfileResponseData,
+        content: profile satisfies CreateOrUpdateApplicationProfileResponseData,
         ...metadata,
       }
+      return
     }
   )
 }

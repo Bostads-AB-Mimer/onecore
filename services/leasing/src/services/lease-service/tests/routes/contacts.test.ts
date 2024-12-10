@@ -8,6 +8,7 @@ import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
+import * as applicationProfileService from '../../update-or-create-application-profile'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -185,25 +186,34 @@ describe('GET /contacts/:contactCode/application-profile', () => {
 
 describe('POST /contacts/:contactCode/application-profile', () => {
   it('responds with 400 if bad params', async () => {
-    const res = await request(app.callback()).post(
-      '/contacts/1234/application-profile'
-    )
+    const res = await request(app.callback())
+      .post('/contacts/1234/application-profile')
+      .send({ foo: 'bar' })
 
     expect(res.status).toBe(400)
   })
 
   it('updates application profile', async () => {
-    jest.spyOn(applicationProfileAdapter, 'update').mockResolvedValueOnce({
-      ok: true,
-      data: {
-        contactCode: '1234',
-        createdAt: new Date(),
-        expiresAt: null,
-        id: 1,
-        numAdults: 0,
-        numChildren: 0,
-      },
-    })
+    jest
+      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            contactCode: '1234',
+            createdAt: new Date(),
+            expiresAt: null,
+            id: 1,
+            numAdults: 0,
+            numChildren: 0,
+            housingType: undefined,
+            housingTypeDescription: undefined,
+            landlord: undefined,
+            housingReference: undefined,
+          },
+          'updated',
+        ],
+      })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
@@ -218,22 +228,26 @@ describe('POST /contacts/:contactCode/application-profile', () => {
   })
 
   it('creates if non-existent', async () => {
-    jest.spyOn(applicationProfileAdapter, 'update').mockResolvedValueOnce({
-      ok: false,
-      err: 'no-update',
-    })
-
-    jest.spyOn(applicationProfileAdapter, 'create').mockResolvedValueOnce({
-      ok: true,
-      data: {
-        contactCode: '1234',
-        createdAt: new Date(),
-        expiresAt: null,
-        id: 1,
-        numAdults: 0,
-        numChildren: 0,
-      },
-    })
+    jest
+      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            contactCode: '1234',
+            createdAt: new Date(),
+            expiresAt: null,
+            id: 1,
+            numAdults: 0,
+            numChildren: 0,
+            housingType: undefined,
+            housingTypeDescription: undefined,
+            landlord: undefined,
+            housingReference: undefined,
+          },
+          'created',
+        ],
+      })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
