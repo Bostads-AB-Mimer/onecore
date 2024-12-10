@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.4.0...v2.5.0) (2024-12-10)
+
+
+### Features
+
+* UTH-144: add schemas for housing reference ([#133](https://github.com/Bostads-AB-Mimer/onecore-types/issues/133)) ([fd68b75](https://github.com/Bostads-AB-Mimer/onecore-types/commit/fd68b750d9bc4168de737e491c36e0a27a943562))
+
 ## [2.4.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.3.1...v2.4.0) (2024-12-10)
 
 
