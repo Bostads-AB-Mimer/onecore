@@ -10,7 +10,10 @@ import {
   OfferStatus,
   WaitingListType,
 } from './enums'
-import { ApplicationProfileSchema } from './schemas'
+import {
+  ApplicationProfileHousingReferenceSchema,
+  ApplicationProfileSchema,
+} from './schemas'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -358,6 +361,9 @@ interface SystemHealth {
 }
 
 type ApplicationProfile = z.infer<typeof ApplicationProfileSchema>
+type ApplicationProfileHousingReference = z.infer<
+  typeof ApplicationProfileHousingReferenceSchema
+>
 
 export type {
   Contact,
@@ -393,4 +399,5 @@ export type {
   SystemHealth,
   SystemStatus,
   ApplicationProfile,
+  ApplicationProfileHousingReference,
 }
