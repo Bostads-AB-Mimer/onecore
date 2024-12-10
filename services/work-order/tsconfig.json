@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node16/tsconfig.json",
+  "module": "ESNext",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./build",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "types": ["koa-body", "jest"],
+    "strict": true
+  }
+}

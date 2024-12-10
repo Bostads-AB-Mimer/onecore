@@ -1,0 +1,7 @@
+export { OdooWorkOrderFactory as odooWorkOrder } from './work-order'
+export { OdooWorkOrderMessageFactory as odooWorkOrderMessage } from './work-order'
+export { CreateWorkOrderDetailsFactory as CreateWorkOrderDetails } from './work-order'
+export { CreateWorkOrderFactory as CreateWorkOrder } from './work-order'
+export { LeaseFactory as lease } from './lease'
+export { RentalPropertyInfoFactory as rentalProperty } from './rental-property-info'
+export { TenantFactory as tenant } from './tenant'
