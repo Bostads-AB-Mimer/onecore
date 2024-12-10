@@ -10,6 +10,7 @@ interface ParkingSpaceOfferEmail extends Email {
   parkingSpaceId: string
   objectId: string
   applicationType: 'Replace' | 'Additional'
+  offerURL: string
 }
 
 interface ParkingSpaceOfferSms extends Sms {
