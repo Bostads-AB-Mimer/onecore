@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import { Listing } from 'onecore-types'
+import { printVacantFrom } from '../../../../common/formattingUtils'
 
 export const ListingInfo = (props: { listing: Listing }) => {
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
@@ -89,7 +90,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
         <Typography>Ledig från och med</Typography>
         <Box>
           <Typography>
-            {dateFormatter.format(new Date(props.listing.vacantFrom))}
+            {printVacantFrom(dateFormatter, props.listing.vacantFrom)}
           </Typography>
         </Box>
       </Box>

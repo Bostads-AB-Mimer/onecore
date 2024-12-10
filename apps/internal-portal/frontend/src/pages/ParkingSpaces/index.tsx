@@ -20,6 +20,7 @@ import { CreateApplicantForListing } from './components/create-applicant-for-lis
 import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
 import { DeleteListing } from './components/DeleteListing'
 import { CloseListing } from './components/CloseListing'
+import { printVacantFrom } from '../../common/formattingUtils'
 
 const ParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
@@ -320,7 +321,7 @@ const getColumns = (
       field: 'vacantFrom',
       headerName: 'Ledig FR.O.M',
       ...sharedColumnProps,
-      valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
+      valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
     },
   ]
 }

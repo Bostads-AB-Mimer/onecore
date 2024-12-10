@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
+import { printVacantFrom } from '../../../common/formattingUtils'
 
 export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
@@ -99,7 +100,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Ledig från och med</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {dateFormatter.format(new Date(parkingSpaceListing.vacantFrom))}
+                {printVacantFrom(dateFormatter, parkingSpaceListing.vacantFrom)}
               </Typography>
             </Box>
           </Box>
