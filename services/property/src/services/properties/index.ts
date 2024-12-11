@@ -92,7 +92,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties/{id}/:
+   * /properties/{id}:
    *   get:
    *     summary: Get detailed information about a specific property
    *     description: |

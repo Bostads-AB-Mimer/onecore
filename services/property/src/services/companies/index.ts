@@ -67,7 +67,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}/:
+   * /companies/{id}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     description: |
