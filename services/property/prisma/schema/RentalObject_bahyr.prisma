@@ -1,6 +1,6 @@
 model RentalObject {
   // Fields
-  rentalObjectId       String   @id(map: "pkbahyr") @map("keybahyr") @db.Char(15)
+  id                   String   @id(map: "pkbahyr") @map("keybahyr") @db.Char(15)
   objectId             String   @unique(map: "akbahyr1") @map("keycmobj") @db.Char(15)
   rentalObjectTypeId   String   @map("keybahyt") @db.Char(15)
   areaClassificationId String?  @map("keyvcacl") @db.Char(15)
@@ -13,8 +13,8 @@ model RentalObject {
   timestamp            String   @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations
-  rentalObjectType RentalObjectType @relation(fields: [rentalObjectTypeId], references: [rentalObjectTypeId], onUpdate: NoAction, map: "fkbahyrkeybahyt ")
-  propertyObject   PropertyObject   @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj")
+  rentalObjectType RentalObjectType @relation(fields: [rentalObjectTypeId], references: [id], onUpdate: NoAction, map: "fkbahyrkeybahyt ")
+  propertyObject   PropertyObject   @relation(fields: [objectId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fkbahyrkeycmobj")
 
   @@index([rentalObjectTypeId], map: "fkbahyrbahyt")
   @@index([rentalObjectCode], map: "inbahyr_2BR0U851E")

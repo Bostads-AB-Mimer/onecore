@@ -1,5 +1,5 @@
 model MaintenanceUnit {
-  maintenanceUnitId     String   @id(map: "pkbauhe") @map("keybauhe") @db.Char(15)
+  id                    String   @id(map: "pkbauhe") @map("keybauhe") @db.Char(15)
   objectId              String   @unique(map: "akbauhe1") @map("keycmobj") @db.Char(15)
   maintenanceUnitTypeId String?  @map("keybauht") @db.Char(15) // Confirmed as MaintenanceUnitType
   commonAreaTypeId      String?  @map("keybacat") @db.Char(15) // TODO: Model needs verification
@@ -7,7 +7,7 @@ model MaintenanceUnit {
   subFunctionId         String?  @map("keybarcp") @db.Char(15) // TODO: Model needs verification
   roomSpecificationId   String?  @map("keybarcr") @db.Char(15) // TODO: Model needs verification
   areaClassId           String?  @map("keyvcacl") @db.Char(15) // TODO: Model needs verification
-  maintenanceUnitCode   String   @unique @map("code") @db.VarChar(30) // this field is not unique in the db but is neccessary to be able to use this code as reference in relations
+  code                  String   @unique @map("code") @db.VarChar(30) // this field is not unique in the db but is neccessary to be able to use this code as reference in relations
   name                  String?  @map("caption") @db.VarChar(30)
   stairwell             String?  @map("uppgang") @db.VarChar(20)
   usage                 Int      @default(0, map: "DF__bauhe__usage__5550AA1D") @map("usage") @db.TinyInt
@@ -17,17 +17,17 @@ model MaintenanceUnit {
   timestamp             String   @map("timestamp") @db.Char(10)
 
   // Related models
-  maintenanceUnitType      MaintenanceUnitType? @relation(fields: [maintenanceUnitTypeId], references: [maintenanceUnitTypeId], onUpdate: NoAction, map: "fkbauhekeybauht ")
+  maintenanceUnitType      MaintenanceUnitType? @relation(fields: [maintenanceUnitTypeId], references: [id], onUpdate: NoAction, map: "fkbauhekeybauht ")
   //relatedObject RelatedObject @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbauhekeycmobj ") // TODO: Model needs verification
   propertyStructuresByCode PropertyStructure[]  @relation("MaintenanceUnitCodeRelation")
 
   //componentType ComponentType? @relation(fields: [typeId], references: [componentTypeId], onUpdate: NoAction, map: "fkbakmpkeybakmt")
   //componentCategory ComponentCategory? @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "fkbakmpkeybakmc")
-  propertyObject     PropertyObject      @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade)
+  propertyObject     PropertyObject      @relation(fields: [objectId], references: [id], onDelete: Cascade)
   propertyStructures PropertyStructure[]
 
   @@index([maintenanceUnitTypeId], map: "fkbauhebauht")
-  @@index([maintenanceUnitCode], map: "inbauhe_1A00UDL36")
+  @@index([code], map: "inbauhe_1A00UDL36")
   @@index([name], map: "inbauhe_1A00UDL45")
   @@index([fromDate], map: "inbauhe_1A00UDL5F")
   @@index([toDate], map: "inbauhe_1A00UDL6O")

@@ -1,5 +1,5 @@
 model Municipality {
-  municipalityId  String  @id(map: "pkbamun") @map("keybamun") @db.Char(15)
+  id              String  @id(map: "pkbamun") @map("keybamun") @db.Char(15)
   countyId        String? @map("keybacty") @db.Char(15)
   code            String  @map("code") @db.VarChar(10)
   name            String  @map("caption") @db.VarChar(30)
@@ -9,7 +9,7 @@ model Municipality {
   administrativeUnits AdministrativeUnit[]
 
   // TODO: Verify County model and countyId mapping, to ensure consistency across relations
-  county County? @relation(fields: [countyId], references: [countyId], onDelete: NoAction, onUpdate: NoAction, map: "fkbamunkeybacty")
+  county County? @relation(fields: [countyId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbamunkeybacty")
 
   @@index([countyId], map: "fkbamunbacty")
   @@map("bamun")

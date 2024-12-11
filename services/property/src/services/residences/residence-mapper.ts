@@ -91,7 +91,7 @@ export function mapDbToResidence(dbRecord: ResidenceWithRelations): Residence {
       roomCount: dbRecord.residenceType.roomCount,
       kitchen: dbRecord.residenceType.kitchen,
       systemStandard: dbRecord.residenceType.systemStandard || 0,
-      residenceTypeId: dbRecord.residenceType.residenceTypeId,
+      residenceTypeId: dbRecord.residenceType.id,
       checklistId: dbRecord.residenceType.checklistId,
       componentTypeActionId: dbRecord.residenceType.componentTypeActionId,
       statisticsGroupSCBId: dbRecord.residenceType.statisticsGroupSCBId,

@@ -1,11 +1,11 @@
 model ConstructionPartType {
   // Fields
-  constructionPartTypeId String  @id(map: "pkbabdt") @map("keybabdt") @db.Char(15)
-  componentTypeActionId  String? @map("keypuatt") @db.Char(15)
-  constructionPartCode   String  @unique(map: "akbabdt") @map("code") @db.VarChar(15)
-  constructionPartName   String? @map("caption") @db.VarChar(60)
-  isSystemStandard       Int     @default(0, map: "DF__babdt__issystem__21595058") @map("issystem") @db.TinyInt
-  timestamp              String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
+  id                    String  @id(map: "pkbabdt") @map("keybabdt") @db.Char(15)
+  componentTypeActionId String? @map("keypuatt") @db.Char(15)
+  code                  String  @unique(map: "akbabdt") @map("code") @db.VarChar(15)
+  name                  String? @map("caption") @db.VarChar(60)
+  isSystemStandard      Int     @default(0, map: "DF__babdt__issystem__21595058") @map("issystem") @db.TinyInt
+  timestamp             String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   // Relations
   constructionParts ConstructionPart[]

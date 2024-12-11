@@ -1,5 +1,5 @@
 model ResidenceType {
-  residenceTypeId       String  @id(map: "pkbalgt") @map("keybalgt") @db.Char(15)
+  id                    String  @id(map: "pkbalgt") @map("keybalgt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // TODO: determine a more appropriate name for component type action if available.
   statisticsGroupSCBId  String? @map("keyballs") @db.Char(15)
   statisticsGroup2Id    String? @map("keyballs2") @db.Char(15)
@@ -28,7 +28,7 @@ model ResidenceType {
   //checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalgtkeylbpro ")
 
   // Keeping the original relation to 'puatt' for now, fields and references checked in previous pass
-  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalgtkeypuatt")
+  componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [id], onUpdate: NoAction, map: "fkbalgtkeypuatt")
 
   @@index([statisticsGroupSCBId], map: "fkbalgtballs")
   @@index([statisticsGroup2Id], map: "fkbalgtballs2")

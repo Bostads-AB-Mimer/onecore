@@ -1,5 +1,5 @@
 model PropertyObject {
-  propertyObjectId        String    @id(map: "pkcmobj") @map("keycmobj") @db.Char(15)
+  id                      String    @id(map: "pkcmobj") @map("keycmobj") @db.Char(15)
   objectTypeId            String    @map("keycmobt") @db.Char(15)
   barcode                 String?   @map("bcode") @db.VarChar(500)
   barcodeType             Int       @default(0, map: "DF__cmobj__bcodetype__6C76541B") @map("bcodetype") @db.TinyInt

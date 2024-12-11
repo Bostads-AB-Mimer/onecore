@@ -1,6 +1,6 @@
 model System {
   // Fields
-  systemId         String    @id(map: "pkbasys") @map("keybasys") @db.Char(15)
+  id               String    @id(map: "pkbasys") @map("keybasys") @db.Char(15)
   propertyObjectId String    @unique(map: "akbasys1") @map("keycmobj") @db.Char(15)
   systemTypeId     String?   @map("keybasyt") @db.Char(15)
   contactId        String?   @map("keycmctc") @db.Char(15)
@@ -17,7 +17,7 @@ model System {
   timestamp        String    @map("timestamp") @db.Char(10) // TODO: Confirm its usage for a better naming
 
   // Relations
-  systemType SystemType? @relation(fields: [systemTypeId], references: [systemTypeId], onUpdate: NoAction, map: "fkbasyskeybasyt")
+  systemType SystemType? @relation(fields: [systemTypeId], references: [id], onUpdate: NoAction, map: "fkbasyskeybasyt")
   //contact cmctc? @relation("basys_keycmctcTocmctc", fields: [contactId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc")
   //systemSupplier cmctc? @relation("basys_keycmctc2Tocmctc", fields: [systemSupplierId], references: [keycmctc], onDelete: NoAction, onUpdate: NoAction, map: "fkbasyskeycmctc2")
   //propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbasyskeycmobj")

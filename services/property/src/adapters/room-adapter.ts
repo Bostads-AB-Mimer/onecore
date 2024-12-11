@@ -36,7 +36,7 @@ export const getRooms = async (
       },
     },
     select: {
-      roomId: true,
+      id: true,
       roomCode: true,
       name: true,
       sharedUse: true,

@@ -1,8 +1,8 @@
 model BuildingType {
   id                    String  @id(map: "pkbabyt") @map("keybabyt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15) // This is mapped to the old keypuatt
-  buildingTypeCode      String  @unique(map: "akbabyt") @map("code") @db.VarChar(15)
-  buildingTypeName      String? @map("caption") @db.VarChar(60)
+  code                  String  @unique(map: "akbabyt") @map("code") @db.VarChar(15)
+  name                  String? @map("caption") @db.VarChar(60)
   isSystemStandard      Int     @default(0, map: "DF__babyt__issystem__2AE2BA92") @map("issystem") @db.TinyInt
   timestamp             String  @map("timestamp") @db.Char(10)
 

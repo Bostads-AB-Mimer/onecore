@@ -1,5 +1,5 @@
 model BuildingPart {
-  buildingPartId            String  @id(map: "pkaobdl") @map("keyaobdl") @db.Char(15)
+  id                        String  @id(map: "pkaobdl") @map("keyaobdl") @db.Char(15)
   code                      String  @unique(map: "akaobdl1") @map("code") @db.VarChar(10)
   name                      String? @map("caption") @db.VarChar(70)
   usedInWorkOrder           Int     @default(1, map: "DF__aobdl__useao__254A7EB8") @map("useao") @db.TinyInt

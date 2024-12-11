@@ -1,7 +1,7 @@
 model RoomType {
-  roomTypeId                 String  @id(map: "pkbarut") @map("keybarut") @db.Char(15)
+  id                         String  @id(map: "pkbarut") @map("keybarut") @db.Char(15)
   componentActionTypeId      String? @map("keypuatt") @db.Char(15)
-  roomTypeCode               String  @unique(map: "akbarut") @map("code") @db.VarChar(15)
+  code                       String  @unique(map: "akbarut") @map("code") @db.VarChar(15)
   name                       String? @map("caption") @db.VarChar(60)
   use                        Int     @default(0, map: "DF__barut__roomtype__00B256F2") @map("roomtype") @db.TinyInt
   optionAllowed              Int     @default(1, map: "DF__barut__optitmall__01A67B2B") @map("optitmallo") @db.TinyInt
@@ -10,7 +10,7 @@ model RoomType {
   timestamp                  String  @map("timestamp") @db.Char(10) // TODO: change timestamp later when knowing more about its usage
 
   room       Room[] //@relation("fkbarumbarut")
-  actionType ActionType? @relation(fields: [componentActionTypeId], references: [actionTypeId], onUpdate: NoAction, map: "fkbarutkeypuatt")
+  actionType ActionType? @relation(fields: [componentActionTypeId], references: [id], onUpdate: NoAction, map: "fkbarutkeypuatt")
 
   @@index([componentActionTypeId], map: "fkbarutpuatt")
   @@map("barut")

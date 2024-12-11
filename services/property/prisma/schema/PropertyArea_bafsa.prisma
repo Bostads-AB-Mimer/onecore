@@ -1,12 +1,12 @@
 model PropertyArea {
-  propertyAreaId String   @id(map: "pkbafsa") @map("keybafsa") @db.Char(15)
-  objectId       String   @map("keycmobj") @db.Char(15)
-  areaDate       DateTime @map("fdate") @db.DateTime
-  areaAmount     Decimal  @map("area") @db.Decimal(7, 1)
-  timestamp      String   @map("timestamp") @db.Char(10) // TODO: reconsider the field usage depending on the context
+  id         String   @id(map: "pkbafsa") @map("keybafsa") @db.Char(15)
+  objectId   String   @map("keycmobj") @db.Char(15)
+  areaDate   DateTime @map("fdate") @db.DateTime
+  areaAmount Decimal  @map("area") @db.Decimal(7, 1)
+  timestamp  String   @map("timestamp") @db.Char(10) // TODO: reconsider the field usage depending on the context
 
   // TODO: Replace cmobj with the new model name once we know what cmobj is called now
-  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: Cascade, onUpdate: NoAction, map: "fkbafsakeycmobj")
+  propertyObject PropertyObject @relation(fields: [objectId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fkbafsakeycmobj")
 
   @@unique([objectId, areaDate], map: "akbafsa1")
   @@map("bafsa")

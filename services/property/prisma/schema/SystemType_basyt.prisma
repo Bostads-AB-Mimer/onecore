@@ -1,5 +1,5 @@
 model SystemType {
-  systemTypeId          String  @id(map: "pkbasyt") @map("keybasyt") @db.Char(15)
+  id                    String  @id(map: "pkbasyt") @map("keybasyt") @db.Char(15)
   componentTypeActionId String? @map("keypuatt") @db.Char(15)
   textTypeId            String  @map("keycmtyp") @db.Char(15)
   inspectionTypeId      String? @map("keycmtyp2") @db.Char(15)

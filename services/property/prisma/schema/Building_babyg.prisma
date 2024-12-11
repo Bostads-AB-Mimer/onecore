@@ -48,10 +48,10 @@ model Building {
   // TODO: Uncomment and verify naming for these relations when original schema is available
   // buildingMemoryClassification bacls? @relation(fields: [buildingMemoryClassificationId], references: [keybacls], onUpdate: NoAction, map: "fkbabygkeybacls ")
 
-  heatingSystem  Heating?       @relation(fields: [heatingId], references: [heatingId], onUpdate: NoAction, map: "fkbabygkeybahea ")
+  heatingSystem  Heating?       @relation(fields: [heatingId], references: [id], onUpdate: NoAction, map: "fkbabygkeybahea ")
   // district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
   // object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
-  propertyObject PropertyObject @relation(fields: [objectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+  propertyObject PropertyObject @relation(fields: [objectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabygkeycmobj ")
 
   // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
 

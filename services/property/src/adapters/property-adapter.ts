@@ -35,7 +35,7 @@ const getPropertyById = async (
     include: {
       propertyObject: {
         select: {
-          propertyObjectId: true,
+          id: true,
           deleteMark: true,
           timestamp: true,
           objectTypeId: true,

@@ -1,6 +1,6 @@
 model Area {
   // Fields
-  areaId             String   @id(map: "pkbayta") @map("keybayta") @db.Char(15)
+  id                 String   @id(map: "pkbayta") @map("keybayta") @db.Char(15)
   objectId           String   @unique(map: "akbayta1") @map("keycmobj") @db.Char(15)
   areaTypeId         String?  @map("keybaytt") @db.Char(15)
   freeTable1Id       String?  @map("keybabya") @db.Char(15)
@@ -8,8 +8,8 @@ model Area {
   freeTable3Id       String?  @map("keybabyc") @db.Char(15)
   // districtId String? @map("keybanbh") @db.Char(15) // TODO: Determine appropriate naming based on additional domain knowledge
   // blockId String? @map("keybablo") @db.Char(15)    // TODO: Determine appropriate naming based on additional domain knowledge
-  areaCode           String   @map("code") @db.VarChar(30)
-  areaName           String?  @map("caption") @db.VarChar(30)
+  code               String   @map("code") @db.VarChar(30)
+  name               String?  @map("caption") @db.VarChar(30)
   grade              Int      @default(0, map: "DF__bayta__grade__5DD84EB3") @map("grade") @db.TinyInt
   yearOfConstruction Int?     @map("buildyear") @db.SmallInt
   deleteMark         Int      @default(0, map: "DF__bayta__deletemar__5ECC72EC") @map("deletemark") @db.TinyInt
@@ -27,7 +27,7 @@ model Area {
   @@index([areaTypeId], map: "fkbaytabaytt")
   @@index([fromDate], map: "inbayta_2M111X7XH")
   @@index([toDate], map: "inbayta_2M111X7XZ")
-  @@index([areaCode], map: "inbayta_2M111X7YR")
-  @@index([areaName], map: "inbayta_2M111X7ZA")
+  @@index([code], map: "inbayta_2M111X7YR")
+  @@index([name], map: "inbayta_2M111X7ZA")
   @@map("bayta")
 }
