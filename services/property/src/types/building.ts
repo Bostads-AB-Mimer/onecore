@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+export const buildingsQueryParamsSchema = z.object({
+  propertyCode: z.string().min(1, {
+    message: 'propertyCode is required and must be a non-empty string.',
+  }),
+})
+
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),

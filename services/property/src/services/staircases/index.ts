@@ -6,6 +6,7 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getStaircasesByBuildingCode } from '../../adapters/staircase-adapter'
+import { staircasesQueryParamsSchema } from '../../types/staircase'
 
 /**
  * @swagger
@@ -18,14 +19,14 @@ import { getStaircasesByBuildingCode } from '../../adapters/staircase-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /staircases/{buildingCode}/:
+   * /staircases:
    *   get:
    *     summary: Gets staircases belonging to a building by building code
    *     description: Returns the staircases belonging to the building.
    *     tags:
    *       - Staircases
    *     parameters:
-   *       - in: path
+   *       - in: query
    *         name: buildingCode
    *         required: true
    *         schema:
@@ -43,28 +44,32 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Staircase'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
    */
-  router.get('(.*)/staircases/:buildingCode/', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /staircases/${ctx.params.buildingCode}/`, metadata)
+  router.get(['(.*)/staircases', '(.*)/staircases/'], async (ctx) => {
+    const queryParams = staircasesQueryParamsSchema.safeParse(ctx.query)
 
-    const { buildingCode } = ctx.params
-
-    if (!buildingCode || buildingCode.length < 7) {
+    if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { content: 'Invalid building code', ...metadata }
+      ctx.body = { errors: queryParams.error.errors }
       return
     }
 
-    const parsedBuildingCode = buildingCode.slice(0, 7)
+    const { buildingCode } = queryParams.data
 
-    try {
-      const response = await getStaircasesByBuildingCode(parsedBuildingCode)
-      ctx.body = { content: response, ...metadata }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /staircases?buildingCode=${buildingCode}`, metadata)
+
+    const response = await getStaircasesByBuildingCode(buildingCode)
+    ctx.body = {
+      content: response,
+      ...metadata,
     }
   })
+
+  //todo: add staircases details GET
+  //todo: the details data will be quote identical to the one in the list GET because of the data model
 }

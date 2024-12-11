@@ -35,12 +35,10 @@ const getBuildings = async (propertyCode: string) => {
   })
 }
 
-const getBuildingByCode = async (buildingCode: string) => {
+const getBuildingById = async (id: string) => {
   return prisma.building.findFirst({
     where: {
-      buildingCode: {
-        contains: buildingCode,
-      },
+      id: id,
     },
     include: {
       buildingType: true,
@@ -51,4 +49,4 @@ const getBuildingByCode = async (buildingCode: string) => {
   })
 }
 
-export { getBuildings, getBuildingByCode }
+export { getBuildings, getBuildingById }

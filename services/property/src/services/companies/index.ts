@@ -17,7 +17,6 @@ import { HttpStatusCode } from 'axios'
  *     description: Operations related to companies
  */
 export const routes = (router: KoaRouter) => {
-  //todo: fix docs
   /**
    * @swagger
    * /companies/:
@@ -68,7 +67,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/Id/{id}/:
+   * /companies/{id}/:
    *   get:
    *     summary: Get detailed information about a specific company
    *     description: |
@@ -93,21 +92,18 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/CompanyDetails'
    */
-  router.get(
-    ['(.*)/companies/Id/:id', '(.*)/companies/Id/:id/'],
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      logger.info('GET /companies/by/:id/', metadata)
-      const response = await getCompany(ctx.params.id)
-      console.log(response)
-      ctx.body = {
-        content: response,
-        ...metadata,
-        _links: generateMetaLinks(ctx, '/properties', {
-          id: ctx.params.response,
-          properties: response?.code || '',
-        }),
-      }
+  router.get('(.*)/companies/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = ctx.params.id
+    logger.info(`GET /companies/${id}`, metadata)
+    const response = await getCompany(ctx.params.id)
+    ctx.body = {
+      content: response,
+      ...metadata,
+      _links: generateMetaLinks(ctx, '/properties', {
+        id: ctx.params.response,
+        properties: response?.code || '',
+      }),
     }
-  )
+  })
 }

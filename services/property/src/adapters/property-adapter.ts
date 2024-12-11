@@ -23,7 +23,11 @@ export type PropertyBasicInfo = Prisma.PropertyStructureGetPayload<{
 const getPropertyById = async (
   propertyId: string
 ): Promise<PropertyWithObject | null> => {
-  // we could use code instead of propertyObjectId but code is not unique so we would have to use findMany
+  //todo: /properties/ returns a list of properties from babuf
+  //todo: the are 2 ids in each element: id and propertyId
+  //todo: id is the babuf id and propertyId is the cmobj id
+  //todo: this endpoint relies on propertyId
+  //todo: we need to make this clear in the docs/endpoint or map propertyId in babuf to id
   const response = await prisma.property.findUnique({
     where: {
       propertyObjectId: propertyId,

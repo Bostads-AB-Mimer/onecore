@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+export const roomsQueryParamsSchema = z.object({
+  buildingCode: z
+    .string()
+    .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
+  floorCode: z.string().min(1, { message: 'floorCode is required.' }),
+  residenceCode: z.string().min(1, { message: 'residenceCode is required.' }),
+})
+
 export const RoomTypeSchema = z.object({
   roomTypeId: z.string(),
   roomTypeCode: z.string(),
@@ -8,7 +16,7 @@ export const RoomTypeSchema = z.object({
   optionAllowed: z.number(),
   isSystemStandard: z.number(),
   allowSmallRoomsInValuation: z.number(),
-  timestamp: z.string()
+  timestamp: z.string(),
 })
 
 export const RoomSchema = z.object({
@@ -36,7 +44,7 @@ export const RoomSchema = z.object({
   sortingOrder: z.number(),
   deleted: z.boolean(),
   timestamp: z.string(),
-  roomType: RoomTypeSchema.nullable()
+  roomType: RoomTypeSchema.nullable(),
 })
 
 export type Room = z.infer<typeof RoomSchema>

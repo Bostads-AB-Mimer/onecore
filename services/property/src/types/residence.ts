@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+export const residencesQueryParamsSchema = z.object({
+  buildingCode: z
+    .string()
+    .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
+  floorCode: z.string().optional(),
+})
+
 export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),

@@ -38,7 +38,7 @@ describe('API Navigation Tests', () => {
     const testCompany = '001'
     const testTract = 'BÄVERN'
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
+      `${API_BASE}/properties?companyCode=${testCompany}&tract=${testTract}`
     )
     expect(propertiesResponse.status).toBe(200)
     expect(propertiesResponse.data.content).toBeDefined()
@@ -58,15 +58,13 @@ describe('API Navigation Tests', () => {
   })
 
   it('should get detailed property information by ID', async () => {
-    const testCompany = '001'
-    const testTract = 'BÄVERN'
+    const testCompanyId = '001'
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
+      `${API_BASE}/properties?companyCode=${testCompanyId}`
     )
     const property = propertiesResponse.data.content[0]
-
     const propertyDetailsResponse = await axios.get(
-      `${API_BASE}/properties/Id/${property.propertyId}/`
+      `${API_BASE}/properties/${property.propertyId}/`
     )
     expect(propertyDetailsResponse.status).toBe(200)
     expect(propertyDetailsResponse.data.content).toBeDefined()
@@ -74,8 +72,7 @@ describe('API Navigation Tests', () => {
     // Verify property details structure
     const propertyDetails = propertyDetailsResponse.data.content
     expect(propertyDetails.propertyObjectId).toBe(property.propertyId)
-    expect(propertyDetails.propertyCode).toBe(property.propertyCode)
-    expect(propertyDetails.tract).toBe(testTract)
+    expect(propertyDetails.code).toBe(property.code)
 
     // Verify HATEOAS links are present
     expect(propertyDetailsResponse.data._links).toBeDefined()
@@ -83,23 +80,50 @@ describe('API Navigation Tests', () => {
     expect(propertyDetailsResponse.data._links.self.href).toBeDefined()
   })
 
+  it('should get buildings associated with a property', async () => {
+    const testCompany = '001'
+    const testTract = 'BÄVERN'
+    const propertiesResponse = await axios.get(
+      `${API_BASE}/properties?companyCode=${testCompany}&tract=${testTract}`
+    )
+    const property = propertiesResponse.data.content[0]
+
+    const propertyDetailsResponse = await axios.get(
+      `${API_BASE}/properties/${property.propertyId}/`
+    )
+    const propertyDetails = propertyDetailsResponse.data.content
+
+    if (propertyDetails.code) {
+      const buildingsLink = `/buildings?propertyCode=${propertyDetails.code}/`
+      const buildingsResponse = await axios.get(`${API_BASE}${buildingsLink}`)
+      expect(buildingsResponse.status).toBe(200)
+      expect(buildingsResponse.data.content).toBeDefined()
+    }
+  })
+
   //todo: add test for staircases before residence test
 
   it('should get residences associated with a property', async () => {
-    //todo: this test will fail due to links not being present in the response
-    //todo: it should also either use /residences/buildingCode/<val> or /residences/buildingCode/<val>/staircase/<val>
     const testCompany = '001'
     const testTract = 'BÄVERN'
-    // First get properties in the test tract
     const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
+      `${API_BASE}/properties/?companyCode=${testCompany}&tract=${testTract}`
     )
-
     const property = propertiesResponse.data.content[0]
 
+    const propertyDetailsResponse = await axios.get(
+      `${API_BASE}/properties/${property.propertyId}/`
+    )
+    const propertyDetails = propertyDetailsResponse.data.content
+
+    const buildingsResponse = await axios.get(
+      `${API_BASE}/buildings?propertyCode=${propertyDetails.code}`
+    )
+
+    const building = buildingsResponse.data.content[0]
     // Then get residences for the first property
     const residencesResponse = await axios.get(
-      `${API_BASE}/residences/?propertyCode=${property.propertyCode}`
+      `${API_BASE}/residences?buildingCode=${building.code}`
     )
     expect(residencesResponse.status).toBe(200)
     expect(residencesResponse.data.content).toBeDefined()
@@ -113,27 +137,6 @@ describe('API Navigation Tests', () => {
       expect(residence.name).toBeDefined()
       expect(residence.links).toBeDefined()
       expect(residence.links.property).toBe(property.propertyCode)
-    }
-  })
-
-  it('should get buildings associated with a property', async () => {
-    const testCompany = '001'
-    const testTract = 'BÄVERN'
-    const propertiesResponse = await axios.get(
-      `${API_BASE}/properties/${testCompany}?tract=${testTract}`
-    )
-    const property = propertiesResponse.data.content[0]
-
-    const propertyDetailsResponse = await axios.get(
-      `${API_BASE}/properties/Id/${property.propertyId}/`
-    )
-    const propertyDetails = propertyDetailsResponse.data.content
-
-    if (propertyDetails.propertyCode) {
-      const buildingsLink = `/buildings/${propertyDetails.propertyCode}/`
-      const buildingsResponse = await axios.get(`${API_BASE}${buildingsLink}`)
-      expect(buildingsResponse.status).toBe(200)
-      expect(buildingsResponse.data.content).toBeDefined()
     }
   })
 })

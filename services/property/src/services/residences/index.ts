@@ -1,12 +1,12 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
-  getLatestResidences,
   getResidenceById,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndFloorCode,
 } from '../../adapters/residence-adapter'
 import { mapDbToResidence } from './residence-mapper'
+import { residencesQueryParamsSchema } from '../../types/residence'
 
 /**
  * @swagger
@@ -18,22 +18,28 @@ import { mapDbToResidence } from './residence-mapper'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /residences/:
+   * /residences:
    *   get:
-   *     summary: Gets a list of residences.
-   *     description: Returns residences filtered by type if a residence type is provided; otherwise, returns the latest residences.
+   *     summary: Get residences by building code, optionally filtered by floor code.
+   *     description: Returns all residences belonging to a specific building, optionally filtered by floor code.
    *     tags:
    *       - Residences
    *     parameters:
    *       - in: query
-   *         name: residenceType
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building code of the building.
+   *       - in: query
+   *         name: floorCode
    *         required: false
    *         schema:
    *           type: string
-   *         description: Optional filter for the type of residences to retrieve.
+   *         description: The floor code of the staircase (optional).
    *     responses:
    *       200:
-   *         description: Successfully retrieved residences data.
+   *         description: Successfully retrieved the residences.
    *         content:
    *           application/json:
    *             schema:
@@ -43,14 +49,51 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Residence'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
    */
+  router.get(['(.*)/residences', '(.*)/residences/'], async (ctx) => {
+    const queryParams = residencesQueryParamsSchema.safeParse(ctx.query)
 
-  router.get('(.*)/residences/', async (ctx) => {
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { errors: queryParams.error.errors }
+      return
+    }
+
+    const { buildingCode, floorCode } = queryParams.data
+
     const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /residences/:residenceTypeId/', metadata)
-    const propertyCode = ctx.query.propertyCode?.toString()
-    const response = await getLatestResidences(propertyCode)
-    ctx.body = { content: response, ...metadata }
+    logger.info(
+      `GET /residences?buildingCode=${buildingCode}${
+        floorCode ? `&floorCode=${floorCode}` : ''
+      }`,
+      metadata
+    )
+
+    try {
+      let response
+
+      if (floorCode) {
+        response = await getResidencesByBuildingCodeAndFloorCode(
+          buildingCode,
+          floorCode
+        )
+      } else {
+        response = await getResidencesByBuildingCode(buildingCode)
+      }
+
+      ctx.body = {
+        content: response,
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
   })
 
   /**
@@ -80,8 +123,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /residences/${ctx.params.id}`, metadata)
-    const dbRecord = await getResidenceById(ctx.params.id)
+    const id = ctx.params.id
+    logger.info(`GET /residences/${id}`, metadata)
+    const dbRecord = await getResidenceById(id)
     if (!dbRecord) {
       ctx.status = 404
       return
@@ -90,126 +134,4 @@ export const routes = (router: KoaRouter) => {
     const response = mapDbToResidence(dbRecord)
     ctx.body = { content: response, ...metadata }
   })
-
-  /**
-   * @swagger
-   *   /residences/buildingCode/{buildingCode}:
-   *     get:
-   *       summary: Get residences by building code.
-   *       description: Returns all residences belonging to a specific building by building code.
-   *       tags:
-   *         - Residences
-   *       parameters:
-   *         - in: path
-   *           name: buildingCode
-   *           required: true
-   *           schema:
-   *             type: string
-   *           description: The building code of the building.
-   *       responses:
-   *         200:
-   *           description: Successfully retrieved the residencies.
-   *           content:
-   *             application/json:
-   *               schema:
-   *                 type: object
-   *                 properties:
-   *                   content:
-   *                     type: array
-   *                     items:
-   *                       $ref: '#/components/schemas/Residence'
-   */
-  router.get('(.*)/residences/buildingCode/:buildingCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(
-      `GET /residences/buildingCode/${ctx.params.buildingCode}`,
-      metadata
-    )
-
-    const { buildingCode } = ctx.params
-
-    if (!buildingCode || buildingCode.length < 7) {
-      ctx.status = 400
-      ctx.body = { content: 'Invalid building code', ...metadata }
-      return
-    }
-
-    const parsedBuildingCode = buildingCode.slice(0, 7)
-
-    try {
-      const response = await getResidencesByBuildingCode(parsedBuildingCode)
-      ctx.body = { content: response, ...metadata }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   *   /residences/buildingCode/{buildingCode}/staircase/{floorCode}:
-   *     get:
-   *       summary: Get residences by building and staircase code.
-   *       description: Returns all residences belonging to a specific building and staircase.
-   *       tags:
-   *         - Residences
-   *       parameters:
-   *         - in: path
-   *           name: buildingCode
-   *           required: true
-   *           description: The building code of the building.
-   *           schema:
-   *             type: string
-   *         - in: path
-   *           name: floorCode
-   *           required: true
-   *           description: The floor code of the staircase.
-   *           schema:
-   *             type: string
-   *       responses:
-   *         200:
-   *           description: Successfully retrieved the residences.
-   *           content:
-   *             application/json:
-   *               schema:
-   *                 type: object
-   *                 properties:
-   *                   content:
-   *                     type: array
-   *                     items:
-   *                       $ref: '#/components/schemas/Residence'
-   */
-  router.get(
-    '(.*)/residences/buildingCode/:buildingCode/staircase/:floorCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { buildingCode, floorCode } = ctx.params
-      logger.info(
-        `GET /residences/buildingCode/${buildingCode}/staircase/${floorCode}`,
-        metadata
-      )
-
-      if (!buildingCode || buildingCode.length < 7) {
-        ctx.status = 400
-        ctx.body = { content: 'Invalid building code', ...metadata }
-        return
-      }
-
-      const parsedBuildingCode = buildingCode.slice(0, 7)
-
-      try {
-        const response = await getResidencesByBuildingCodeAndFloorCode(
-          parsedBuildingCode,
-          floorCode
-        )
-        ctx.body = { content: response, ...metadata }
-      } catch (err) {
-        ctx.status = 500
-        const errorMessage =
-          err instanceof Error ? err.message : 'unknown error'
-        ctx.body = { reason: errorMessage, ...metadata }
-      }
-    }
-  )
 }

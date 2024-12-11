@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+export const componentsQueryParamsSchema = z.object({
+  maintenanceUnit: z
+    .string()
+    .min(1, { message: 'maintenanceUnit is required and cannot be empty.' }),
+})
+
 export const ComponentSchema = z.object({
   id: z.string(),
   code: z.string(),
