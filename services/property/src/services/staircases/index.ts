@@ -63,10 +63,16 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(`GET /staircases?buildingCode=${buildingCode}`, metadata)
 
-    const response = await getStaircasesByBuildingCode(buildingCode)
-    ctx.body = {
-      content: response,
-      ...metadata,
+    try {
+      const response = await getStaircasesByBuildingCode(buildingCode)
+      ctx.body = {
+        content: response,
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
     }
   })
 

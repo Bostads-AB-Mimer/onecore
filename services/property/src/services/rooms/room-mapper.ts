@@ -2,9 +2,9 @@ import { Room } from '@prisma/client'
 
 export function mapDbToRoom(dbRecord: Room) {
   if (!dbRecord) return null
-  
+
   return {
-    id: dbRecord.roomId,
+    id: dbRecord.id,
     code: dbRecord.roomCode,
     name: dbRecord.name?.trim(),
     usage: {

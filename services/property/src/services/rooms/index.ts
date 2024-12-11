@@ -1,7 +1,8 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getRooms } from '../../adapters/room-adapter'
+import { getRoomById, getRooms } from '../../adapters/room-adapter'
 import { roomsQueryParamsSchema } from '../../types/room'
+import { generateMetaLinks } from '../../utils/links'
 
 /**
  * @swagger
@@ -73,9 +74,9 @@ export const routes = (router: KoaRouter) => {
     )
 
     try {
-      const response = await getRooms(buildingCode, floorCode, residenceCode)
+      const rooms = await getRooms(buildingCode, floorCode, residenceCode)
       ctx.body = {
-        content: response,
+        content: rooms,
         ...metadata,
       }
     } catch (err) {
@@ -85,5 +86,54 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  //todo: add room details GET
+  /**
+   * @swagger
+   * /rooms/{id}:
+   *   get:
+   *     summary: Get a room by ID
+   *     description: Returns a room with the specified ID
+   *     tags:
+   *       - Rooms
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the room
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the room
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Room'
+   *       404:
+   *         description: Residence not found
+   */
+  router.get('(.*)/rooms/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = ctx.params.id
+    logger.info(`GET /rooms/${id}`, metadata)
+
+    try {
+      const room = await getRoomById(id)
+      if (!room) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.body = {
+        content: room,
+        ...metadata,
+        _links: generateMetaLinks(ctx, '/rooms', {
+          id: ctx.params.response,
+        }),
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
 }

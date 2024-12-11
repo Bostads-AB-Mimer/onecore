@@ -71,8 +71,15 @@ export const routes = (router: KoaRouter) => {
     logger.info(`GET /components?maintenanceUnit=${maintenanceUnit}`, metadata)
 
     try {
-      const response = await getComponentByMaintenanceUnitCode(maintenanceUnit)
-      ctx.body = { content: response, ...metadata }
+      const components =
+        await getComponentByMaintenanceUnitCode(maintenanceUnit)
+
+      if (!components) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.body = { content: components, ...metadata }
     } catch (err) {
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'

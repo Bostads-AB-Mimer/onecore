@@ -5,7 +5,6 @@ import {
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndFloorCode,
 } from '../../adapters/residence-adapter'
-import { mapDbToResidence } from './residence-mapper'
 import { residencesQueryParamsSchema } from '../../types/residence'
 
 /**
@@ -74,19 +73,19 @@ export const routes = (router: KoaRouter) => {
     )
 
     try {
-      let response
+      let residences
 
       if (floorCode) {
-        response = await getResidencesByBuildingCodeAndFloorCode(
+        residences = await getResidencesByBuildingCodeAndFloorCode(
           buildingCode,
           floorCode
         )
       } else {
-        response = await getResidencesByBuildingCode(buildingCode)
+        residences = await getResidencesByBuildingCode(buildingCode)
       }
 
       ctx.body = {
-        content: response,
+        content: residences,
         ...metadata,
       }
     } catch (err) {
@@ -125,13 +124,20 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
     logger.info(`GET /residences/${id}`, metadata)
-    const dbRecord = await getResidenceById(id)
-    if (!dbRecord) {
-      ctx.status = 404
-      return
+
+    try {
+      const residence = await getResidenceById(id)
+      if (!residence) {
+        ctx.status = 404
+        return
+      }
+
+      //todo: add room link
+      ctx.body = { content: residence, ...metadata }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
     }
-    console.log('dbRecord', dbRecord)
-    const response = mapDbToResidence(dbRecord)
-    ctx.body = { content: response, ...metadata }
   })
 }

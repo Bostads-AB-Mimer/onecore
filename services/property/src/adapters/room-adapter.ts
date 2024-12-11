@@ -58,3 +58,32 @@ export const getRooms = async (
     },
   })
 }
+
+export const getRoomById = async (id: string) => {
+  return prisma.room.findUnique({
+    where: {
+      id: id,
+    },
+    select: {
+      id: true,
+      roomCode: true,
+      name: true,
+      sharedUse: true,
+      sortingOrder: true,
+      allowPeriodicWorks: true,
+      spaceType: true,
+      hasToilet: true,
+      isHeated: true,
+      hasThermostatValve: true,
+      orientation: true,
+      installationDate: true,
+      deleteMark: true,
+      fromDate: true,
+      toDate: true,
+      availableFrom: true,
+      availableTo: true,
+      timestamp: true,
+      roomType: true,
+    },
+  })
+}
