@@ -98,6 +98,7 @@ interface OdooWorkOrderMessage {
 
 export type {
   WorkOrder,
+  WorkOrderMessage,
   CreateWorkOrder,
   CreateWorkOrderDetails,
   CreateWorkOrderRow,
