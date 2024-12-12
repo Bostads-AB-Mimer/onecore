@@ -18,7 +18,7 @@ interface ParkingSpaceOfferSms extends Sms {
   deadlineDate: string
 }
 
-interface TicketMessageSms extends Sms {
+interface WorkOrderSms extends Sms {
   message: string
 }
 
@@ -32,5 +32,5 @@ export type {
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
-  TicketMessageSms,
+  WorkOrderSms,
 }
