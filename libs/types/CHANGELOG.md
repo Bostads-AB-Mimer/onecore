@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.5.0...v2.6.0) (2024-12-12)
+
+
+### Features
+
+* (mim-289) new work-order types ([615d712](https://github.com/Bostads-AB-Mimer/onecore-types/commit/615d712e57c20ad0332ddb89c5fed2954c295892))
+
 ## [2.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.4.0...v2.5.0) (2024-12-10)
 
 
