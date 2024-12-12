@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.6.0...v2.6.1) (2024-12-12)
+
+
+### Bug Fixes
+
+* (MIM-289) WorkOrderMessage not exported ([b2e27b3](https://github.com/Bostads-AB-Mimer/onecore-types/commit/b2e27b35744a5666a8aa674d2a2041059d30cc9e))
+
 ## [2.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.5.0...v2.6.0) (2024-12-12)
 
 
