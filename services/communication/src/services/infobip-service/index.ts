@@ -6,14 +6,14 @@ import {
   sendParkingSpaceOffer,
   sendParkingSpaceAssignedToOther,
   sendParkingSpaceOfferSms,
-  sendTicketSms,
+  sendWorkOrderSms,
 } from './adapters/infobip-adapter'
 import {
   Email,
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
-  TicketMessageSms,
+  WorkOrderSms,
 } from 'onecore-types'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
 
@@ -109,15 +109,15 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/sendTicketSms', async (ctx) => {
+  router.post('(.*)/sendWorkOrderSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
       const sms = ctx.request.body
-      if (!isValidTicketMessageSms(sms)) {
+      if (!isValidWorkOrderSms(sms)) {
         ctx.status = 400
         ctx.body = {
-          reason: 'Message is not a TicketMessageSms object',
+          reason: 'Message is not a WorkOrderSms object',
           ...metadata,
         }
         return
@@ -134,7 +134,10 @@ export const routes = (router: KoaRouter) => {
       }
       phoneNumber = '46' + normalize(phoneNumber).slice(1)
 
-      const result = await sendTicketSms({ message: sms.message, phoneNumber })
+      const result = await sendWorkOrderSms({
+        message: sms.message,
+        phoneNumber,
+      })
       ctx.status = 200
       ctx.body = { content: result, ...metadata }
     } catch (error: any) {
@@ -146,7 +149,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/sendTicketEmail', async (ctx) => {
+  router.post('(.*)/sendWorkOrderEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const emailData = ctx.request.body
 
@@ -218,7 +221,7 @@ export const isValidParkingSpaceOfferSms = (
   )
 }
 
-export const isValidTicketMessageSms = (sms: any): sms is TicketMessageSms => {
+export const isValidWorkOrderSms = (sms: any): sms is WorkOrderSms => {
   return (
     typeof sms === 'object' &&
     sms !== null &&

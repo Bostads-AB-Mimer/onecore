@@ -2,9 +2,9 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, TicketMessageSms } from 'onecore-types'
+import { Email, WorkOrderSms } from 'onecore-types'
 
-import { isMessageEmail, isValidTicketMessageSms } from '../index'
+import { isMessageEmail, isValidWorkOrderSms } from '../index'
 import * as infobipAdapter from '../adapters/infobip-adapter'
 import { routes } from '../'
 
@@ -28,70 +28,70 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-describe('/sendTicketSms', () => {
-  let sendTicketSmsSpy: jest.SpyInstance<
+describe('/sendWorkOrderSms', () => {
+  let sendWorkOrderSmsSpy: jest.SpyInstance<
     Promise<any>,
-    [sms: TicketMessageSms],
+    [sms: WorkOrderSms],
     any
   >
 
   beforeEach(() => {
-    sendTicketSmsSpy = jest.spyOn(infobipAdapter, 'sendTicketSms')
-    sendTicketSmsSpy.mockReset()
+    sendWorkOrderSmsSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderSms')
+    sendWorkOrderSmsSpy.mockReset()
   })
 
   it('should return 200', async () => {
-    sendTicketSmsSpy.mockResolvedValue({})
+    sendWorkOrderSmsSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketSms').send({
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
       phoneNumber: '0701234567',
       message: 'hello',
     })
 
     expect(res.status).toBe(200)
-    expect(sendTicketSmsSpy).toHaveBeenCalledWith({
+    expect(sendWorkOrderSmsSpy).toHaveBeenCalledWith({
       phoneNumber: '46701234567',
       message: 'hello',
     })
   })
 
   it('should return 400 for invalid request body', async () => {
-    sendTicketSmsSpy.mockResolvedValue({})
+    sendWorkOrderSmsSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketSms').send({
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
       phoneNumber: '0701234567',
     })
 
     expect(res.status).toBe(400)
-    expect(sendTicketSmsSpy).not.toHaveBeenCalled()
+    expect(sendWorkOrderSmsSpy).not.toHaveBeenCalled()
   })
 
   it('should return 400 for invalid phone number', async () => {
-    sendTicketSmsSpy.mockResolvedValue({})
+    sendWorkOrderSmsSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketSms').send({
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
       phoneNumber: '123',
       message: 'hello',
     })
 
     expect(res.status).toBe(400)
-    expect(sendTicketSmsSpy).not.toHaveBeenCalled()
+    expect(sendWorkOrderSmsSpy).not.toHaveBeenCalled()
   })
 
   it('should return 400 if phone number is not a mobile number', async () => {
-    sendTicketSmsSpy.mockResolvedValue({})
+    sendWorkOrderSmsSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketSms').send({
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
       phoneNumber: '016114164',
       message: 'hello',
     })
 
     expect(res.status).toBe(400)
-    expect(sendTicketSmsSpy).not.toHaveBeenCalled()
+    expect(sendWorkOrderSmsSpy).not.toHaveBeenCalled()
   })
 })
 
-describe('/sendTicketEmail', () => {
+describe('/sendWorkOrderEmail', () => {
   let sendEmailSpy: jest.SpyInstance<Promise<any>, [message: Email], any>
 
   beforeEach(() => {
@@ -102,7 +102,7 @@ describe('/sendTicketEmail', () => {
   it('should return 200', async () => {
     sendEmailSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketEmail').send({
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'hello@example.com',
       subject: 'subject',
       text: 'hello',
@@ -119,7 +119,7 @@ describe('/sendTicketEmail', () => {
   it('should return 400 for invalid request body', async () => {
     sendEmailSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketEmail').send({
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       text: 'hello',
     })
 
@@ -130,7 +130,7 @@ describe('/sendTicketEmail', () => {
   it('should return 400 for invalid email', async () => {
     sendEmailSpy.mockResolvedValue({})
 
-    const res = await request(app.callback()).post('/sendTicketSms').send({
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'hello',
       subject: 'subject',
       text: 'hello',
@@ -186,14 +186,14 @@ describe('isMessageEmail', () => {
   })
 })
 
-describe('isValidTicketMessageSms', () => {
+describe('isValidWorkOrderSms', () => {
   it('should return true for valid TicketMessageSms objects', () => {
     const validSms = {
       phoneNumber: '1234567890',
       message: 'hello',
     }
 
-    expect(isValidTicketMessageSms(validSms)).toBe(true)
+    expect(isValidWorkOrderSms(validSms)).toBe(true)
   })
 
   it('should return false for missing phone number', () => {
@@ -201,7 +201,7 @@ describe('isValidTicketMessageSms', () => {
       message: 'hello',
     }
 
-    expect(isValidTicketMessageSms(invalidSms)).toBe(false)
+    expect(isValidWorkOrderSms(invalidSms)).toBe(false)
   })
 
   it('should return false for missing message', () => {
@@ -209,10 +209,10 @@ describe('isValidTicketMessageSms', () => {
       phoneNumber: '1234567890',
     }
 
-    expect(isValidTicketMessageSms(invalidSms)).toBe(false)
+    expect(isValidWorkOrderSms(invalidSms)).toBe(false)
   })
 
   it('should return false for non-object inputs', () => {
-    expect(isValidTicketMessageSms('not an object')).toBe(false)
+    expect(isValidWorkOrderSms('not an object')).toBe(false)
   })
 })
