@@ -7,11 +7,11 @@ export const getWorkOrdersByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<WorkOrder[], string>> => {
   try {
-    const res = await axios.get<{ content: WorkOrder[] }>(
+    const res = await axios.get<{ content: { workOrders: WorkOrder[] } }>(
       `${config.workOrderService.url}/workOrders/contactCode/${contactCode}`
     )
 
-    return { ok: true, data: res.data.content }
+    return { ok: true, data: res.data.content.workOrders }
   } catch (error) {
     logger.error({ error }, 'work-order-adapter.getWorkOrdersByContactCode')
     const errorMessage = error instanceof Error ? error.message : 'unknown'
@@ -25,7 +25,12 @@ export const createWorkOrder = async (
   try {
     const res = await axios.post(
       `${config.workOrderService.url}/workOrders`,
-      CreateWorkOrder
+      CreateWorkOrder,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     )
     return { ok: true, data: res.data.content }
   } catch (error) {
@@ -42,7 +47,14 @@ export const updateWorkOrder = async (
   try {
     const res = await axios.post(
       `${config.workOrderService.url}/workOrders/${workOrderId}/update`,
-      message
+      {
+        message: message,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     )
     return { ok: true, data: res.data.content }
   } catch (error) {
@@ -57,7 +69,12 @@ export const closeWorkOrder = async (
 ): Promise<AdapterResult<string, string>> => {
   try {
     const res = await axios.post(
-      `${config.workOrderService.url}/workOrders/${workOrderId}/close`
+      `${config.workOrderService.url}/workOrders/${workOrderId}/close`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     )
     return { ok: true, data: res.data.content }
   } catch (error) {

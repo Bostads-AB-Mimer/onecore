@@ -76,7 +76,7 @@ const config = configPackage({
       url: 'http://localhost:5040',
     },
     workOrderService: {
-      url: 'http://localhost:5060',
+      url: 'http://localhost:5070',
     },
     minaSidor: {
       url: 'https://test.mimer.nu/',

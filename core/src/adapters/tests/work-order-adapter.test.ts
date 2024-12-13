@@ -24,14 +24,14 @@ describe('work-order-adapter', () => {
       nock(config.workOrderService.url)
         .get('/workOrders/contactCode/CC123')
         .reply(200, {
-          content: { totalCount: 1, workOrders: [workOrderMock] },
+          content: { workOrders: [workOrderMock] },
         })
 
       const result = await workOrderAdapter.getWorkOrdersByContactCode('CC123')
 
       expect(result).toMatchObject({
         ok: true,
-        data: { totalCount: 1, workOrders: [workOrderMock] },
+        data: [workOrderMock],
       })
     })
   })
