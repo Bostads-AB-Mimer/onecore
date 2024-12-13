@@ -23,7 +23,7 @@ const config = configPackage({
   defaults: {
     port: 5060,
     odoo: {
-      url: 'http://127.0.0.1:8069',
+      url: 'http://localhost:8069',
       database: '',
       username: '',
       password: '',

@@ -87,8 +87,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = {
         content: {
-          totalCount: workOrders.length,
-          workOrders: workOrders,
+          workOrders,
         },
         ...metadata,
       }

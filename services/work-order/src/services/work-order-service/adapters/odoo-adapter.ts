@@ -22,10 +22,7 @@ import {
   transformMessages,
   transformEquipmentCode,
 } from './utils'
-import {
-  AdapterResult,
-
-} from '../types'
+import { AdapterResult } from '../types'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -240,10 +237,10 @@ const createMaintenanceUnitRecord = async (
       CreateWorkOrderRow
 
     return await odoo.create('maintenance.maintenance.unit', {
-      name: caption,
-      caption: caption,
+      name: caption || maintenanceUnit.caption,
+      caption: caption || maintenanceUnit.caption,
       type: maintenanceUnit.type,
-      code: code,
+      code: code || maintenanceUnit.code,
       estate_code: maintenanceUnit.estateCode,
     })
   } catch (error) {

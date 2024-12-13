@@ -14,6 +14,8 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
+app.use(bodyParser())
+
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 

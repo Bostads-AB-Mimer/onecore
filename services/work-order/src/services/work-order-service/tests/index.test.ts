@@ -46,7 +46,6 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content.totalCount).toBe(workOrderMock.length)
       expect(res.body.content.workOrders).toEqual(workOrderMock)
     })
 
