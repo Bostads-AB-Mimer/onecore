@@ -25,6 +25,9 @@ export interface Config {
   workOrderService: {
     url: string
   }
+  minaSidor: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -75,6 +78,9 @@ const config = configPackage({
     workOrderService: {
       url: 'http://localhost:5060',
     },
+    minaSidor: {
+      url: 'https://test.mimer.nu/',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -112,6 +118,7 @@ export default {
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
+  minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
   health: config.get('health'),

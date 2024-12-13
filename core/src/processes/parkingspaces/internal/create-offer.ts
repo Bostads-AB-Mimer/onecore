@@ -19,6 +19,7 @@ import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
+import config from '../../../common/config'
 
 type CreateOfferError =
   | CreateOfferErrorCodes.NoListing
@@ -184,6 +185,7 @@ export const createOfferForInternalParkingSpace = async (
           eligibleApplicant.applicationType === 'Replace'
             ? 'Replace'
             : 'Additional',
+        offerURL: constructOfferURL(offer.data.id),
       })
       const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
         offer.data.id,
@@ -295,4 +297,8 @@ function mapDetailedApplicantsToCreateOfferSelectedApplicants(
 function extractApplicantFirstName(name: string): string {
   const fullName = name.split(' ')
   return fullName[1] //return first name due to format "lastname, firstname"
+}
+
+function constructOfferURL(offerId: number): string {
+  return `${config.minaSidor.url}/mina-sidor/erbjudanden/detalj?e=${offerId}&s=onecore`
 }

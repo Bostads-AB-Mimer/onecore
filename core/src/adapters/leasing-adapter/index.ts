@@ -523,7 +523,7 @@ type CreateOrUpdateApplicationProfileResponseData = z.infer<
   typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
 >
 
-type CreateOrUpdateApplicationProfileRequestParams = z.infer<
+export type CreateOrUpdateApplicationProfileRequestParams = z.infer<
   typeof leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
 >
 
