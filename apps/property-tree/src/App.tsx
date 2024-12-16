@@ -13,7 +13,7 @@ import {
   CommandPaletteProvider,
   useCommandPalette,
 } from './hooks/useCommandPalette'
-import { AreaView } from './components/views/AreaView'
+import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
 import { BuildingView } from './components/views/BuildingView'
 import { StaircaseView } from './components/views/StaircaseView'
@@ -84,8 +84,8 @@ function AppContent() {
       {/* Main Content */}
       <main className="pl-64 pt-14">
         <Routes>
-          <Route path="/" element={<Navigate to="/areas" replace />} />
-          <Route path="/areas/:areaId" element={<AreaView />} />
+          <Route path="/" element={<Navigate to="/companies" replace />} />
+          <Route path="/companies/:companyId" element={<CompanyView />} />
           <Route path="/properties/:propertyId" element={<PropertyView />} />
           <Route path="/buildings/:buildingId" element={<BuildingView />} />
           <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
