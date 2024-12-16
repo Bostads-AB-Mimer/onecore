@@ -245,6 +245,14 @@ export const StaircaseSchema = z.object({
   }),
   deleted: z.boolean(),
   timestamp: z.string(),
+  _links: z.object({
+    self: z.object({
+      href: z.string()
+    }),
+    residences: z.object({
+      href: z.string()
+    })
+  })
 })
 
 // Types
