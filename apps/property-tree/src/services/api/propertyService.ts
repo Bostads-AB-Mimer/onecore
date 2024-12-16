@@ -133,20 +133,11 @@ export const propertyService = {
             type: 'company' as const,
             children: await Promise.all(
               properties.content.map(async (property) => {
-                const buildings = await fetchApi<BuildingListResponse>(
-                  property._links.buildings.href
-                )
                 return {
                   id: property.id,
                   name: property.propertyDesignation?.name || property.code,
                   type: 'property' as const,
-                  children: buildings.content.map((building) => ({
-                    id: building.id,
-                    name: building.name || building.code,
-                    type: 'building' as const,
-                    children: [],
-                    _links: building._links,
-                  })),
+                  children: [],
                   _links: property._links,
                   ...property, // Ensure all property details are included
                 }
@@ -188,18 +179,6 @@ export const propertyService = {
                       }))
                       break
                     }
-                    case 'property': {
-                      const buildings = await fetchApi<{ content: Building[] }>(
-                        item._links.buildings.href
-                      )
-                      item.children = buildings.content.map((building) => ({
-                        id: building.code,
-                        name: building.name || building.code,
-                        type: 'building' as const,
-                        children: [],
-                        _links: building._links,
-                      }))
-                      break
                     }
                     case 'building': {
                       const staircases = await fetchApi<{
