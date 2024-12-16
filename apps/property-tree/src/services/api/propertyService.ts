@@ -83,47 +83,74 @@ export const propertyService = {
 
   // Get navigation tree
   async getNavigationTree(): Promise<NavigationItem[]> {
-    // Get all properties first
-    const properties = await this.getAll()
+    try {
+      // Get all properties first
+      const properties = await this.getAll('DEMO')  // Using demo company code
 
-    // Build navigation tree
-    const navigationItems: NavigationItem[] = await Promise.all(
-      properties.map(async (property) => {
-        // Get buildings for this property
-        const buildings = await this.getBuildingsByPropertyCode(
-          property.propertyDesignation.code
-        )
+      // Build navigation tree
+      const navigationItems: NavigationItem[] = []
+      
+      for (const property of properties) {
+        try {
+          // Get buildings for this property
+          const buildings = await this.getBuildingsByPropertyCode(
+            property.propertyDesignation.code
+          )
 
-        // Get staircases for each building
-        const buildingItems = await Promise.all(
-          buildings.map(async (building) => {
-            const staircases = await this.getStaircasesByBuildingCode(
-              building.buildingCode
-            )
+          const buildingItems = []
+          
+          for (const building of buildings) {
+            try {
+              // Get staircases for each building
+              const staircases = await this.getStaircasesByBuildingCode(
+                building.code
+              )
 
-            return {
-              id: building.id,
-              name: building.name,
-              type: 'building' as const,
-              children: staircases.map((staircase) => ({
-                id: staircase.id,
-                name: staircase.name || staircase.code,
-                type: 'staircase' as const,
+              buildingItems.push({
+                id: building.id,
+                name: building.name,
+                type: 'building' as const,
+                children: staircases.map((staircase) => ({
+                  id: staircase.id,
+                  name: staircase.name || staircase.code,
+                  type: 'staircase' as const,
+                  children: [],
+                })),
+              })
+            } catch (error) {
+              console.error(`Failed to load staircases for building ${building.id}:`, error)
+              // Continue with next building even if this one fails
+              buildingItems.push({
+                id: building.id,
+                name: building.name,
+                type: 'building' as const,
                 children: [],
-              })),
+              })
             }
+          }
+
+          navigationItems.push({
+            id: property.id,
+            name: property.propertyDesignation.name || property.code,
+            type: 'property' as const,
+            children: buildingItems,
           })
-        )
-
-        return {
-          id: property.id,
-          name: property.propertyDesignation.name || property.code,
-          type: 'property' as const,
-          children: buildingItems,
+        } catch (error) {
+          console.error(`Failed to load buildings for property ${property.id}:`, error)
+          // Continue with next property even if this one fails
+          navigationItems.push({
+            id: property.id,
+            name: property.propertyDesignation.name || property.code,
+            type: 'property' as const,
+            children: [],
+          })
         }
-      })
-    )
+      }
 
-    return navigationItems
+      return navigationItems
+    } catch (error) {
+      console.error('Failed to load navigation tree:', error)
+      return [] // Return empty array instead of failing completely
+    }
   },
 }
