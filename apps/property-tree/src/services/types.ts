@@ -24,6 +24,40 @@ export interface Links {
   }
 }
 
+export interface Company {
+  id: string
+  propertyObjectId: string
+  code: string
+  name: string
+  organizationNumber: string | null
+}
+
+export interface CompanyDetails extends Company {
+  phone: string | null
+  fax: string | null
+  vatNumber: string | null
+  internalExternal: number
+  fTax: number
+  cooperativeHousingAssociation: number
+  differentiatedAdditionalCapital: number
+  rentAdministered: number
+  blocked: number
+  rentDaysPerMonth: number
+  economicPlanApproved: number
+  vatObligationPercent: number
+  vatRegistered: number
+  energyOptimization: number
+  ownedCompany: number
+  interestInvoice: number
+  errorReportAdministration: number
+  mediaBilling: number
+  ownResponsibilityForInternalMaintenance: number
+  subletPercentage: any
+  subletFeeAmount: number
+  disableQuantitiesBelowCompany: number
+  timestamp: string
+}
+
 export interface NavigationItem {
   id: string
   name: string
@@ -46,3 +80,4 @@ export type ResidenceWithLinks = Residence & Links
 export type BuildingWithLinks = Building & Links
 export type PropertyWithLinks = Property & Links
 export type StaircaseWithLinks = Staircase & Links
+export type CompanyWithLinks = Company & Links
