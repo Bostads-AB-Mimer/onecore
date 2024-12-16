@@ -95,16 +95,16 @@ export const propertyService = {
         companies.content.map(async company => {
           const properties = await fetchApi<{content: Property[]}>(`/properties?companyCode=${company.code}`)
           return {
-            id: company.id,
+            id: company.code,
             name: company.name,
             type: 'company' as const,
             children: properties.content.map(property => ({
-              id: property.id,
-              name: property.name,
+              id: property.code,
+              name: property.propertyDesignation?.name || property.code,
               type: 'property' as const,
               children: [],
               _links: {
-                self: { href: `/properties/${property.id}` },
+                self: { href: `/properties/${property.code}` },
                 buildings: { href: `/buildings?propertyCode=${property.code}` }
               }
             })),
@@ -139,8 +139,8 @@ export const propertyService = {
                     case 'property': {
                       const buildings = await fetchApi<{content: Building[]}>(item._links.buildings.href)
                       item.children = buildings.content.map(building => ({
-                        id: building.id,
-                        name: building.name,
+                        id: building.code,
+                        name: building.name || building.code,
                         type: 'building' as const,
                         children: [],
                         _links: building._links
@@ -150,7 +150,7 @@ export const propertyService = {
                     case 'building': {
                       const staircases = await fetchApi<{content: Staircase[]}>(item._links.staircases.href)
                       item.children = staircases.content.map(staircase => ({
-                        id: staircase.id,
+                        id: staircase.code,
                         name: staircase.name || staircase.code,
                         type: 'staircase' as const,
                         children: [],
@@ -161,7 +161,7 @@ export const propertyService = {
                     case 'staircase': {
                       const residences = await fetchApi<{content: Residence[]}>(item._links.residences.href)
                       item.children = residences.content.map(residence => ({
-                        id: residence.id,
+                        id: residence.code,
                         name: residence.name || residence.code,
                         type: 'residence' as const
                       }))
