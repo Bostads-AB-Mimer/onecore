@@ -87,14 +87,25 @@ export const propertyService = {
       // First get companies
       const companies = await fetchApi<{content: any[]}>('/companies')
       
-      // Map companies to navigation items with _links for lazy loading
-      const navigationItems: NavigationItem[] = companies.content.map(company => ({
-        id: company.id,
-        name: company.name,
-        type: 'company' as const,
-        children: [],
-        _links: company._links
-      }))
+      // Map companies to navigation items and immediately load their properties
+      const navigationItems: NavigationItem[] = await Promise.all(
+        companies.content.map(async company => {
+          const properties = await fetchApi<{content: any[]}>(`/companies/${company.id}/properties`)
+          return {
+            id: company.id,
+            name: company.name,
+            type: 'company' as const,
+            children: properties.content.map(property => ({
+              id: property.id,
+              name: property.propertyDesignation?.name || property.code,
+              type: 'property' as const,
+              children: [],
+              _links: property._links
+            })),
+            _links: company._links
+          }
+        })
+      )
 
       // For each expanded ID, fetch its children
       for (const expandedId of expandedIds) {
