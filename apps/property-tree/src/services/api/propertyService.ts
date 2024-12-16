@@ -1,18 +1,16 @@
-import { Building, NavigationItem, Property, Staircase } from '../types'
+import { Building, NavigationItem, Property, PropertyWithLinks, Staircase } from '../types'
 import { fetchApi } from './baseApi'
 import { Cache } from '../../utils/cache'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const propertiesCache = new Cache<Property[]>(CACHE_TTL)
+const propertiesCache = new Cache<PropertyWithLinks[]>(CACHE_TTL)
 
-// Types based on API schema
-// Types based on API responses
 interface PropertyListResponse {
-  content: Property[]
+  content: PropertyWithLinks[]
 }
 
 interface PropertyDetailsResponse {
-  content: PropertyDetails
+  content: PropertyWithLinks
 }
 
 interface StaircaseListResponse {
@@ -28,6 +26,47 @@ interface BuildingDetailsResponse {
 }
 
 export const propertyService = {
+  // Get all properties with optional tract filter
+  async getAll(companyCode: string, tract?: string): Promise<PropertyWithLinks[]> {
+    const properties = await propertiesCache.get(async () => {
+      const url = new URL('/properties', API_BASE_URL)
+      url.searchParams.append('companyCode', companyCode)
+      if (tract) {
+        url.searchParams.append('tract', tract)
+      }
+      const response = await fetchApi<PropertyListResponse>(url.toString())
+      return response.content
+    })
+    return properties
+  },
+
+  // Get property by ID
+  async getProperty(id: string): Promise<PropertyWithLinks> {
+    const response = await fetchApi<PropertyDetailsResponse>(`/properties/${id}`)
+    return response.content
+  },
+
+  // Get buildings for a property using HATEOAS link
+  async getPropertyBuildings(property: PropertyWithLinks) {
+    return fetchApi<BuildingListResponse>(property._links.buildings.href)
+  },
+
+  // Get residences for a property using HATEOAS link
+  async getPropertyResidences(property: PropertyWithLinks) {
+    return fetchApi<BuildingListResponse>(property._links.residences.href)
+  },
+
+  // Get property statistics
+  async getPropertyStats(id: string) {
+    const response = await fetchApi<{
+      totalBuildings: number
+      totalResidences: number
+      occupiedResidences: number
+      totalArea: number
+      averageRent: number
+    }>(`/properties/${id}/statistics`)
+    return response
+  },
   // Get all properties with optional tract filter
   async getAll(companyCode: string, tract?: string): Promise<Property[]> {
     const properties = await propertiesCache.get(async () => {
