@@ -2,13 +2,8 @@ import { Residence } from '../types'
 import { fetchApi } from './baseApi'
 
 export const residenceService = {
-  async getByBuildingCode(buildingCode: string, floorCode?: string): Promise<Residence[]> {
-    const url = new URL('/residences', API_BASE_URL)
-    url.searchParams.append('buildingCode', buildingCode)
-    if (floorCode) {
-      url.searchParams.append('floorCode', floorCode)
-    }
-    const response = await fetchApi<{content: Residence[]}>(url.toString())
+  async getByBuildingId(buildingId: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/buildings/${buildingId}/residences`)
     return response.content
   },
 
@@ -16,8 +11,8 @@ export const residenceService = {
     return fetchApi<Residence>(`/residences/${id}`)
   },
 
-  async getByBuildingId(buildingId: string): Promise<Residence[]> {
-    const response = await fetchApi<{content: Residence[]}>(`/buildings/${buildingId}/residences`)
+  async getByPropertyId(propertyId: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/properties/${propertyId}/residences`)
     return response.content
   },
 
