@@ -66,12 +66,19 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    if (hasChildren && !hasSingleChild) {
+      
+    // Always toggle expansion for companies
+    if (item.type === 'company') {
       onToggle(item.id)
     }
+    // For other items with children, only toggle if not single child
+    else if (hasChildren && !hasSingleChild) {
+      onToggle(item.id)
+    }
+      
     onSelect(item)
 
-    // Only navigate if it's not a company (since companies don't have their own view)
+    // Navigate if it's not a company
     if (item.type !== 'company') {
       const basePath = routeMap[item.type]
       if (basePath) {
