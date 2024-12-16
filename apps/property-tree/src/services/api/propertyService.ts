@@ -167,12 +167,11 @@ export const propertyService = {
                   switch (item.type) {
                     case 'company': {
                       const properties = await fetchApi<{
-                        content: Property[]
+                        content: PropertyWithLinks[]
                       }>(item._links.properties.href)
                       item.children = properties.content.map((property) => ({
                         id: property.id,
-                        name:
-                          property.propertyDesignation.name || property.code,
+                        name: property.propertyDesignation.name || property.code,
                         type: 'property' as const,
                         children: [],
                         _links: property._links,
