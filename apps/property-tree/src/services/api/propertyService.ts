@@ -1,4 +1,4 @@
-import { Building, NavigationItem, Property, PropertyWithLinks, Staircase } from '../types'
+import { Building, NavigationItem, PropertyWithLinks, Staircase } from '../types'
 import { fetchApi } from './baseApi'
 import { Cache } from '../../utils/cache'
 
@@ -124,7 +124,7 @@ export const propertyService = {
       // Map companies to navigation items and immediately load their properties
       const navigationItems: NavigationItem[] = await Promise.all(
         companies.content.map(async (company) => {
-          const properties = await fetchApi<{ content: Property[] }>(
+          const properties = await fetchApi<{ content: PropertyWithLinks[] }>(
             `/properties?companyCode=${company.code}`
           )
           return {
