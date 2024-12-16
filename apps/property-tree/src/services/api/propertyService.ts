@@ -6,31 +6,39 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const propertiesCache = new Cache<Property[]>(CACHE_TTL)
 
 // Types based on API schema
-interface PropertyResponse {
+// Types based on API responses
+interface PropertyListResponse {
   content: Property[]
 }
 
-interface SinglePropertyResponse {
-  content: Property
+interface PropertyDetailsResponse {
+  content: PropertyDetails
 }
 
-interface StaircaseResponse {
+interface StaircaseListResponse {
   content: Staircase[]
+}
+
+interface BuildingListResponse {
+  content: Building[]
+}
+
+interface BuildingDetailsResponse {
+  content: Building
 }
 
 export const propertyService = {
   // Get all properties with optional tract filter
-  async getAll(tract?: string): Promise<Property[]> {
+  async getAll(companyCode: string, tract?: string): Promise<Property[]> {
     const properties = await propertiesCache.get(async () => {
-      const response = await fetchApi<PropertyResponse>('/properties/')
+      const url = new URL('/properties', API_BASE_URL)
+      url.searchParams.append('companyCode', companyCode)
+      if (tract) {
+        url.searchParams.append('tract', tract)
+      }
+      const response = await fetchApi<PropertyListResponse>(url.toString())
       return response.content
     })
-
-    // Filter by tract if specified
-    if (tract) {
-      return properties.filter((p) => p.tract === tract)
-    }
-
     return properties
   },
 
@@ -42,9 +50,9 @@ export const propertyService = {
   },
 
   // Get property by ID
-  async getById(id: string): Promise<Property> {
-    const response = await fetchApi<SinglePropertyResponse>(
-      `/properties/${id}/`
+  async getById(id: string): Promise<PropertyDetails> {
+    const response = await fetchApi<PropertyDetailsResponse>(
+      `/properties/${id}`
     )
     return response.content
   },

@@ -2,20 +2,15 @@ import { Building } from '../types'
 import { fetchApi } from './baseApi'
 
 export const buildingService = {
-  // Get all buildings
-  async getAll(): Promise<Building[]> {
-    const response = await fetchApi<{content: Building[]}>('/buildings/')
+  // Get buildings by property code
+  async getByPropertyCode(propertyCode: string): Promise<Building[]> {
+    const response = await fetchApi<BuildingListResponse>(`/buildings?propertyCode=${propertyCode}`)
     return response.content
   },
 
-  // Get building by ID 
+  // Get building by ID
   async getById(id: string): Promise<Building> {
-    return fetchApi<Building>(`/buildings/${id}`)
-  },
-
-  // Get buildings by property ID
-  async getByPropertyId(propertyId: string): Promise<Building[]> {
-    const response = await fetchApi<{content: Building[]}>(`/properties/${propertyId}/buildings/`)
+    const response = await fetchApi<BuildingDetailsResponse>(`/buildings/${id}`)
     return response.content
   }
 }

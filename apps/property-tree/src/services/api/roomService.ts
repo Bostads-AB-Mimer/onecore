@@ -2,9 +2,13 @@ import { Room } from '../types'
 import { fetchApi } from './baseApi'
 
 export const roomService = {
-  // Get all rooms for a residence
-  async getByResidenceId(residenceId: string): Promise<Room[]> {
-    const response = await fetchApi<{content: Room[]}>(`/residences/${residenceId}/rooms/`)
+  // Get rooms by building, floor and residence codes
+  async getRooms(buildingCode: string, floorCode: string, residenceCode: string): Promise<Room[]> {
+    const url = new URL('/rooms', API_BASE_URL)
+    url.searchParams.append('buildingCode', buildingCode)
+    url.searchParams.append('floorCode', floorCode)
+    url.searchParams.append('residenceCode', residenceCode)
+    const response = await fetchApi<{content: Room[]}>(url.toString())
     return response.content
   },
 
