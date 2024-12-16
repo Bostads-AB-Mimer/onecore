@@ -5,8 +5,8 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { generateMetaLinks } from '../../utils/links'
-import { getCompanies, getCompany } from '../../adapters/company-adapter'
+import { generateMetaLinks } from '../utils/links'
+import { getCompanies, getCompany } from '../adapters/company-adapter'
 import { HttpStatusCode } from 'axios'
 
 /**
@@ -58,7 +58,10 @@ export const routes = (router: KoaRouter) => {
           ...company,
           _links: {
             self: {
-              href: `/companies/Id/${company.id}`,
+              href: `/companies/${company.id}`,
+            },
+            properties: {
+              href: `/properties?companyCode=${company.code}`,
             },
           },
         })),

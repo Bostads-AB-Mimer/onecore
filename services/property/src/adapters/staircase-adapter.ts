@@ -2,9 +2,7 @@ import { map } from 'lodash'
 import { PrismaClient } from '@prisma/client'
 import { toBoolean } from '../utils/data-conversion'
 
-const prisma = new PrismaClient({
-  log: ['query'],
-})
+const prisma = new PrismaClient({})
 
 //todo: add types
 
@@ -34,6 +32,7 @@ async function getStaircasesByBuildingCode(buildingCode: string) {
     id: staircase.id,
     code: staircase.code,
     name: staircase.name,
+    buildingCode: buildingCode,
     features: {
       floorPlan: staircase.floorPlan,
       accessibleByElevator: toBoolean(staircase.accessibleByElevator),

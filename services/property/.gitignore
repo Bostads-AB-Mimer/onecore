@@ -9,3 +9,4 @@ node_modules
 .idea/
 .vscode/
 .aider*
+dist

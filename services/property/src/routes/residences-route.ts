@@ -4,8 +4,8 @@ import {
   getResidenceById,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndFloorCode,
-} from '../../adapters/residence-adapter'
-import { residencesQueryParamsSchema } from '../../types/residence'
+} from '../adapters/residence-adapter'
+import { residencesQueryParamsSchema } from '../types/residence'
 
 /**
  * @swagger
@@ -73,19 +73,41 @@ export const routes = (router: KoaRouter) => {
     )
 
     try {
-      let residences
+      let dbResidences
 
       if (floorCode) {
-        residences = await getResidencesByBuildingCodeAndFloorCode(
+        dbResidences = await getResidencesByBuildingCodeAndFloorCode(
           buildingCode,
           floorCode
         )
       } else {
-        residences = await getResidencesByBuildingCode(buildingCode)
+        dbResidences = await getResidencesByBuildingCode(buildingCode)
       }
 
       ctx.body = {
-        content: residences,
+        content: dbResidences.map((residence) => ({
+          ...residence,
+          _links: {
+            self: {
+              href: `/residences/${residence.id}`,
+            },
+            building: {
+              href: `/buildings/${buildingCode}`,
+            },
+            property: {
+              href: `/properties/${residence.code}`,
+            },
+            rooms: {
+              href: `/rooms?buildingCode=${buildingCode}&residenceCode=${residence.code}`,
+            },
+            components: {
+              href: `/components?residenceCode=${residence.code}`,
+            },
+            parent: {
+              href: `/buildings/${buildingCode}`,
+            },
+          },
+        })),
         ...metadata,
       }
     } catch (err) {

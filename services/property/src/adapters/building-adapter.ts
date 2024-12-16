@@ -1,9 +1,7 @@
 import { map } from 'lodash'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient({
-  log: ['query'],
-})
+const prisma = new PrismaClient({})
 
 //todo: add types
 
