@@ -31,6 +31,7 @@ export async function fetchApi<T>(
   })
 
   if (!response.ok) {
+    console.error(`API request failed: ${response.url} - ${response.status} ${response.statusText}`)
     throw new ApiError(response.status, response.statusText)
   }
 
