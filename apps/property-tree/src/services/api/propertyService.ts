@@ -90,7 +90,7 @@ export const propertyService = {
         const buildingItems = await Promise.all(
           buildings.map(async (building) => {
             const staircases = await this.getStaircasesByBuildingCode(
-              building.code
+              building.buildingCode
             )
 
             return {
