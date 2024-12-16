@@ -90,19 +90,24 @@ export const propertyService = {
       // Map companies to navigation items and immediately load their properties
       const navigationItems: NavigationItem[] = await Promise.all(
         companies.content.map(async company => {
-          const properties = await fetchApi<{content: any[]}>(`/companies/${company.id}/properties`)
+          const properties = await fetchApi<{content: Property[]}>(`/properties?companyCode=${company.code}`)
           return {
             id: company.id,
             name: company.name,
             type: 'company' as const,
             children: properties.content.map(property => ({
               id: property.id,
-              name: property.propertyDesignation?.name || property.code,
+              name: property.name,
               type: 'property' as const,
               children: [],
-              _links: property._links
+              _links: {
+                self: { href: `/properties/${property.id}` },
+                buildings: { href: `/buildings?propertyCode=${property.code}` }
+              }
             })),
-            _links: company._links
+            _links: {
+              self: { href: `/companies/${company.id}` }
+            }
           }
         })
       )
