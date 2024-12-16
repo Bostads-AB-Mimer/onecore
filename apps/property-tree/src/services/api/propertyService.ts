@@ -49,13 +49,10 @@ export const propertyService = {
     return Array.from(uniqueAreas).sort()
   },
 
-  // Get property by code
-  async getProperty(code: string): Promise<Property> {
-    const response = await fetchApi<{content: Property[]}>(`/properties?code=${code}`)
-    if (!response.content.length) {
-      throw new Error(`Property with code ${code} not found`)
-    }
-    return response.content[0]
+  // Get property by ID
+  async getProperty(id: string): Promise<Property> {
+    const response = await fetchApi<Property>(`/properties/${id}`)
+    return response
   },
 
   async getPropertyDetails(id: string): Promise<PropertyDetails> {
