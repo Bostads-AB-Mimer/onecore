@@ -179,7 +179,6 @@ export const propertyService = {
                       }))
                       break
                     }
-                    }
                     case 'building': {
                       const staircases = await fetchApi<{
                         content: Staircase[]
