@@ -163,7 +163,12 @@ export function PropertyNavigation() {
   React.useEffect(() => {
     const loadNavigation = async () => {
       try {
-        const data = await propertyService.getNavigationTree()
+        // Get expanded IDs from state
+        const expandedIds = Object.entries(expanded)
+          .filter(([_, value]) => value)
+          .map(([key]) => key)
+        
+        const data = await propertyService.getNavigationTree(expandedIds)
         setNavigationItems(data)
 
         // Auto-expand root level if there's only one item
@@ -182,7 +187,7 @@ export function PropertyNavigation() {
     }
 
     loadNavigation()
-  }, [])
+  }, [expanded]) // Re-run when expanded state changes
 
   const handleToggle = (id: string) => {
     // Only allow toggle if the item has more than one child

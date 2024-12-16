@@ -82,7 +82,7 @@ export const propertyService = {
   },
 
   // Get navigation tree
-  async getNavigationTree(): Promise<NavigationItem[]> {
+  async getNavigationTree(expandedIds: string[] = []): Promise<NavigationItem[]> {
     try {
       // First get companies
       const companies = await fetchApi<{content: any[]}>('/companies')
@@ -90,101 +90,84 @@ export const propertyService = {
       const navigationItems: NavigationItem[] = []
       
       for (const company of companies.content) {
-        try {
-          // Get properties for each company using HATEOAS link
-          const properties = await fetchApi<{content: Property[]}>(company._links.properties.href)
-          
-          const propertyItems = []
-          
-          for (const property of properties.content) {
-            try {
-              // Get buildings using HATEOAS link from property
-              const buildings = await fetchApi<{content: Building[]}>(property._links.buildings.href)
-              
-              const buildingItems = []
-              
-              for (const building of buildings.content) {
-                try {
-                  // Get staircases using HATEOAS link from building
-                  const staircases = await fetchApi<{content: Staircase[]}>(building._links.staircases.href)
-                  
-                  const staircaseItems = []
-                  
-                  for (const staircase of staircases.content) {
-                    try {
-                      // Get residences using HATEOAS link from staircase
-                      const residences = await fetchApi<{content: Residence[]}>(staircase._links.residences.href)
-                      
-                      staircaseItems.push({
-                        id: staircase.id,
-                        name: staircase.name || staircase.code,
-                        type: 'staircase' as const,
-                        children: residences.content.map(residence => ({
-                          id: residence.id,
-                          name: residence.name || residence.code,
-                          type: 'residence' as const,
-                        }))
-                      })
-                    } catch (error) {
-                      console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
-                      staircaseItems.push({
-                        id: staircase.id,
-                        name: staircase.name || staircase.code,
-                        type: 'staircase' as const,
-                        children: []
-                      })
-                    }
-                  }
+        const companyItem: NavigationItem = {
+          id: company.id,
+          name: company.name,
+          type: 'company' as const,
+          children: []
+        }
 
-                  buildingItems.push({
-                    id: building.id,
-                    name: building.name,
-                    type: 'building' as const,
-                    children: staircaseItems
-                  })
-                } catch (error) {
-                  console.error(`Failed to load staircases for building ${building.id}:`, error)
-                  buildingItems.push({
-                    id: building.id,
-                    name: building.name,
-                    type: 'building' as const,
-                    children: []
-                  })
-                }
-              }
-
-              propertyItems.push({
-                id: property.id,
-                name: property.propertyDesignation.name || property.code,
-                type: 'property' as const,
-                children: buildingItems
-              })
-            } catch (error) {
-              console.error(`Failed to load buildings for property ${property.id}:`, error)
-              propertyItems.push({
+        // Only fetch children if company is expanded
+        if (expandedIds.includes(company.id)) {
+          try {
+            const properties = await fetchApi<{content: Property[]}>(company._links.properties.href)
+            
+            for (const property of properties.content) {
+              const propertyItem: NavigationItem = {
                 id: property.id,
                 name: property.propertyDesignation.name || property.code,
                 type: 'property' as const,
                 children: []
-              })
-            }
-          }
+              }
 
-          navigationItems.push({
-            id: company.id,
-            name: company.name,
-            type: 'company' as const,
-            children: propertyItems
-          })
-        } catch (error) {
-          console.error(`Failed to load properties for company ${company.id}:`, error)
-          navigationItems.push({
-            id: company.id,
-            name: company.name,
-            type: 'company' as const,
-            children: []
-          })
+              // Only fetch buildings if property is expanded
+              if (expandedIds.includes(property.id)) {
+                try {
+                  const buildings = await fetchApi<{content: Building[]}>(property._links.buildings.href)
+                  
+                  for (const building of buildings.content) {
+                    const buildingItem: NavigationItem = {
+                      id: building.id,
+                      name: building.name,
+                      type: 'building' as const,
+                      children: []
+                    }
+
+                    // Only fetch staircases if building is expanded
+                    if (expandedIds.includes(building.id)) {
+                      try {
+                        const staircases = await fetchApi<{content: Staircase[]}>(building._links.staircases.href)
+                        
+                        for (const staircase of staircases.content) {
+                          const staircaseItem: NavigationItem = {
+                            id: staircase.id,
+                            name: staircase.name || staircase.code,
+                            type: 'staircase' as const,
+                            children: []
+                          }
+
+                          // Only fetch residences if staircase is expanded
+                          if (expandedIds.includes(staircase.id)) {
+                            try {
+                              const residences = await fetchApi<{content: Residence[]}>(staircase._links.residences.href)
+                              staircaseItem.children = residences.content.map(residence => ({
+                                id: residence.id,
+                                name: residence.name || residence.code,
+                                type: 'residence' as const,
+                              }))
+                            } catch (error) {
+                              console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
+                            }
+                          }
+                          buildingItem.children.push(staircaseItem)
+                        }
+                      } catch (error) {
+                        console.error(`Failed to load staircases for building ${building.id}:`, error)
+                      }
+                    }
+                    propertyItem.children.push(buildingItem)
+                  }
+                } catch (error) {
+                  console.error(`Failed to load buildings for property ${property.id}:`, error)
+                }
+              }
+              companyItem.children.push(propertyItem)
+            }
+          } catch (error) {
+            console.error(`Failed to load properties for company ${company.id}:`, error)
+          }
         }
+        navigationItems.push(companyItem)
       }
 
       return navigationItems
