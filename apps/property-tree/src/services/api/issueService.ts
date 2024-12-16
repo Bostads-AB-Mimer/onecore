@@ -1,5 +1,5 @@
 import { Issue } from '../types'
-import { fetchApi, simulateDelay } from './baseApi'
+import { fetchApi } from './baseApi'
 
 const mockIssues = {
   'residence-1': [
@@ -11,7 +11,7 @@ const mockIssues = {
       room: 'Kök',
       feature: 'Vattenkran',
       date: '2024-02-15',
-      residenceId: 'residence-1'
+      residenceId: 'residence-1',
     },
     {
       id: 'issue-2',
@@ -21,8 +21,8 @@ const mockIssues = {
       room: 'Badrum',
       feature: 'Belysning',
       date: '2024-02-10',
-      residenceId: 'residence-1'
-    }
+      residenceId: 'residence-1',
+    },
   ],
   'residence-2': [
     {
@@ -33,18 +33,17 @@ const mockIssues = {
       room: 'Vardagsrum',
       feature: 'Värmesystem',
       date: '2024-02-18',
-      residenceId: 'residence-2'
-    }
-  ]
+      residenceId: 'residence-2',
+    },
+  ],
 }
 
 export const issueService = {
   // Get all issues
   async getAll(status?: string): Promise<Issue[]> {
-    await simulateDelay()
     const allIssues = Object.values(mockIssues).flat()
     if (status) {
-      return allIssues.filter(issue => issue.status === status)
+      return allIssues.filter((issue) => issue.status === status)
     }
     return allIssues
   },
@@ -54,7 +53,7 @@ export const issueService = {
     await simulateDelay()
     const issue = Object.values(mockIssues)
       .flat()
-      .find(i => i.id === id)
+      .find((i) => i.id === id)
     if (!issue) {
       throw new Error(`Issue with id ${id} not found`)
     }
@@ -72,7 +71,7 @@ export const issueService = {
     await simulateDelay()
     return Object.values(mockIssues)
       .flat()
-      .filter(issue => issue.priority === priority)
+      .filter((issue) => issue.priority === priority)
   },
 
   // Create new issue
@@ -82,7 +81,7 @@ export const issueService = {
       ...data,
       id: `issue-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
-      status: 'pending'
+      status: 'pending',
     }
     if (!mockIssues[data.residenceId]) {
       mockIssues[data.residenceId] = []
@@ -92,15 +91,18 @@ export const issueService = {
   },
 
   // Update issue status
-  async updateStatus(issueId: string, status: 'pending' | 'in-progress' | 'resolved'): Promise<Issue> {
+  async updateStatus(
+    issueId: string,
+    status: 'pending' | 'in-progress' | 'resolved'
+  ): Promise<Issue> {
     await simulateDelay()
     const issue = Object.values(mockIssues)
       .flat()
-      .find(i => i.id === issueId)
+      .find((i) => i.id === issueId)
     if (!issue) {
       throw new Error(`Issue with id ${issueId} not found`)
     }
     issue.status = status
     return issue
-  }
+  },
 }
