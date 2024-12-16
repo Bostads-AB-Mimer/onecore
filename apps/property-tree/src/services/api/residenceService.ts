@@ -16,13 +16,13 @@ export const residenceService = {
     return fetchApi<Residence>(`/residences/${id}`)
   },
 
-  async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
-    const response = await fetchApi<{content: Residence[]}>(`/residences/buildingCode/${buildingCode}`)
+  async getByBuildingId(buildingId: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/buildings/${buildingId}/residences`)
     return response.content
   },
 
-  async getByBuildingAndStaircase(buildingCode: string, staircaseCode: string): Promise<Residence[]> {
-    const response = await fetchApi<{content: Residence[]}>(`/residences/buildingCode/${buildingCode}/staircase/${staircaseCode}`)
+  async getByStaircaseId(staircaseId: string): Promise<Residence[]> {
+    const response = await fetchApi<{content: Residence[]}>(`/staircases/${staircaseId}/residences`)
     return response.content
   },
 }
