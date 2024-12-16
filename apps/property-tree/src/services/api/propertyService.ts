@@ -19,16 +19,8 @@ interface PropertyDetailsResponse {
   content: PropertyWithLinks
 }
 
-interface StaircaseListResponse {
-  content: Staircase[]
-}
-
 interface BuildingListResponse {
   content: Building[]
-}
-
-interface BuildingDetailsResponse {
-  content: Building
 }
 
 export const propertyService = {
@@ -61,39 +53,6 @@ export const propertyService = {
     return fetchApi<BuildingListResponse>(property._links.residences.href)
   },
 
-  // Get property statistics
-  async getPropertyStats(id: string) {
-    const response = await fetchApi<{
-      totalBuildings: number
-      totalResidences: number
-      occupiedResidences: number
-      totalArea: number
-      averageRent: number
-    }>(`/properties/${id}/statistics`)
-    return response
-  },
-  // Get all properties with optional tract filter
-  async getAll(companyCode: string, tract?: string): Promise<Property[]> {
-    const properties = await propertiesCache.get(async () => {
-      const url = new URL('/properties', API_BASE_URL)
-      url.searchParams.append('companyCode', companyCode)
-      if (tract) {
-        url.searchParams.append('tract', tract)
-      }
-      const response = await fetchApi<PropertyListResponse>(url.toString())
-      return response.content
-    })
-    return properties
-  },
-
-  // Get property by ID
-  async getProperty(id: string): Promise<Property> {
-    const response = await fetchApi<PropertyDetailsResponse>(
-      `/properties/${id}`
-    )
-    return response.content
-  },
-
   // Get all buildings for a property
   async getBuildingsByPropertyCode(propertyCode: string): Promise<Building[]> {
     const response = await fetchApi<Building[]>(`/buildings/${propertyCode}/`)
@@ -106,16 +65,6 @@ export const propertyService = {
       `/buildings/buildingCode/${buildingCode}/`
     )
     return response
-  },
-
-  // Get staircases for a building
-  async getStaircasesByBuildingCode(
-    buildingCode: string
-  ): Promise<Staircase[]> {
-    const response = await fetchApi<StaircaseResponse>(
-      `/staircases/${buildingCode}/`
-    )
-    return response.content
   },
 
   // Get navigation tree with lazy loading
@@ -135,8 +84,6 @@ export const propertyService = {
             company._links.properties.href
           )
           return {
-            id: company.code,
-            name: company.name,
             type: 'company' as const,
             children: await Promise.all(
               properties.content.map(async (property) => {
@@ -148,9 +95,7 @@ export const propertyService = {
                 }
               })
             ),
-            _links: {
-              self: { href: `/companies/${company.id}` },
-            },
+            ...company, // Ensure all company details are included
           }
         })
       )
@@ -161,7 +106,7 @@ export const propertyService = {
         const findAndPopulateItem = async (
           items: NavigationItem[]
         ): Promise<boolean> => {
-          for (let item of items) {
+          for (const item of items) {
             if (item.id === expandedId) {
               // If item has no children yet but has links, fetch them
               if (
@@ -176,7 +121,8 @@ export const propertyService = {
                       )
                       item.children = properties.content.map((property) => ({
                         id: property.id,
-                        name: property.propertyDesignation.name || property.code,
+                        name:
+                          property.propertyDesignation.name || property.code,
                         type: 'property' as const,
                         children: [],
                         _links: property._links,
