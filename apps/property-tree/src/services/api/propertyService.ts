@@ -27,6 +27,10 @@ interface StaircaseListResponse {
   content: Staircase[]
 }
 
+interface ResidenceListResponse {
+  content: Residence[]
+}
+
 export const propertyService = {
   // Get all properties using HATEOAS link
   async getAll(company: CompanyWithLinks): Promise<PropertyWithLinks[]> {
