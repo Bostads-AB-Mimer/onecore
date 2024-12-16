@@ -175,12 +175,9 @@ export function PropertyNavigation() {
   React.useEffect(() => {
     const loadNavigation = async () => {
       try {
-        // Get expanded IDs from state
-        const expandedIds = Object.entries(expanded)
-          .filter(([_, value]) => value)
-          .map(([key]) => key)
-
-        const data = await propertyService.getNavigationTree(expandedIds)
+        const data = await propertyService.getNavigationTree(
+          Object.keys(expanded).filter((key) => expanded[key])
+        )
         console.log(data)
         setNavigationItems(data)
 
