@@ -84,65 +84,105 @@ export const propertyService = {
   // Get navigation tree
   async getNavigationTree(): Promise<NavigationItem[]> {
     try {
-      // Get all properties first
-      const properties = await this.getAll('DEMO')  // Using demo company code
-
-      // Build navigation tree
+      // First get companies
+      const companies = await fetchApi<{content: any[]}>('/companies')
+      
       const navigationItems: NavigationItem[] = []
       
-      for (const property of properties) {
+      for (const company of companies.content) {
         try {
-          // Get buildings for this property
-          const buildings = await this.getBuildingsByPropertyCode(
-            property.propertyDesignation.code
-          )
-
-          const buildingItems = []
+          // Get properties for each company using HATEOAS link
+          const properties = await fetchApi<{content: Property[]}>(company._links.properties.href)
           
-          for (const building of buildings) {
+          const propertyItems = []
+          
+          for (const property of properties.content) {
             try {
-              // Get staircases for each building
-              const staircases = await this.getStaircasesByBuildingCode(
-                building.code
-              )
+              // Get buildings using HATEOAS link from property
+              const buildings = await fetchApi<{content: Building[]}>(property._links.buildings.href)
+              
+              const buildingItems = []
+              
+              for (const building of buildings.content) {
+                try {
+                  // Get staircases using HATEOAS link from building
+                  const staircases = await fetchApi<{content: Staircase[]}>(building._links.staircases.href)
+                  
+                  const staircaseItems = []
+                  
+                  for (const staircase of staircases.content) {
+                    try {
+                      // Get residences using HATEOAS link from staircase
+                      const residences = await fetchApi<{content: Residence[]}>(staircase._links.residences.href)
+                      
+                      staircaseItems.push({
+                        id: staircase.id,
+                        name: staircase.name || staircase.code,
+                        type: 'staircase' as const,
+                        children: residences.content.map(residence => ({
+                          id: residence.id,
+                          name: residence.name || residence.code,
+                          type: 'residence' as const,
+                        }))
+                      })
+                    } catch (error) {
+                      console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
+                      staircaseItems.push({
+                        id: staircase.id,
+                        name: staircase.name || staircase.code,
+                        type: 'staircase' as const,
+                        children: []
+                      })
+                    }
+                  }
 
-              buildingItems.push({
-                id: building.id,
-                name: building.name,
-                type: 'building' as const,
-                children: staircases.map((staircase) => ({
-                  id: staircase.id,
-                  name: staircase.name || staircase.code,
-                  type: 'staircase' as const,
-                  children: [],
-                })),
+                  buildingItems.push({
+                    id: building.id,
+                    name: building.name,
+                    type: 'building' as const,
+                    children: staircaseItems
+                  })
+                } catch (error) {
+                  console.error(`Failed to load staircases for building ${building.id}:`, error)
+                  buildingItems.push({
+                    id: building.id,
+                    name: building.name,
+                    type: 'building' as const,
+                    children: []
+                  })
+                }
+              }
+
+              propertyItems.push({
+                id: property.id,
+                name: property.propertyDesignation.name || property.code,
+                type: 'property' as const,
+                children: buildingItems
               })
             } catch (error) {
-              console.error(`Failed to load staircases for building ${building.id}:`, error)
-              // Continue with next building even if this one fails
-              buildingItems.push({
-                id: building.id,
-                name: building.name,
-                type: 'building' as const,
-                children: [],
+              console.error(`Failed to load buildings for property ${property.id}:`, error)
+              propertyItems.push({
+                id: property.id,
+                name: property.propertyDesignation.name || property.code,
+                type: 'property' as const,
+                children: []
               })
             }
           }
 
           navigationItems.push({
-            id: property.id,
-            name: property.propertyDesignation.name || property.code,
-            type: 'property' as const,
-            children: buildingItems,
+            id: company.id,
+            name: company.name,
+            type: 'company' as const,
+            children: propertyItems
           })
         } catch (error) {
-          console.error(`Failed to load buildings for property ${property.id}:`, error)
-          // Continue with next property even if this one fails
+          console.error(`Failed to load properties for company ${company.id}:`, error)
           navigationItems.push({
-            id: property.id,
-            name: property.propertyDesignation.name || property.code,
-            type: 'property' as const,
-            children: [],
+            id: company.id,
+            name: company.name,
+            type: 'company' as const,
+            children: []
           })
         }
       }
