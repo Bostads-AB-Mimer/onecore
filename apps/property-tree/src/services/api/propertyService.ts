@@ -1,4 +1,10 @@
-import { Building, NavigationItem, PropertyWithLinks, Staircase } from '../types'
+import {
+  Building,
+  CompanyWithLinks,
+  NavigationItem,
+  PropertyWithLinks,
+  Staircase,
+} from '../types'
 import { fetchApi } from './baseApi'
 import { Cache } from '../../utils/cache'
 
@@ -29,7 +35,9 @@ export const propertyService = {
   // Get all properties using HATEOAS link
   async getAll(company: CompanyWithLinks): Promise<PropertyWithLinks[]> {
     const properties = await propertiesCache.get(async () => {
-      const response = await fetchApi<PropertyListResponse>(company._links.properties.href)
+      const response = await fetchApi<PropertyListResponse>(
+        company._links.properties.href
+      )
       return response.content
     })
     return properties
@@ -37,7 +45,9 @@ export const propertyService = {
 
   // Get property by ID
   async getProperty(id: string): Promise<PropertyWithLinks> {
-    const response = await fetchApi<PropertyDetailsResponse>(`/properties/${id}`)
+    const response = await fetchApi<PropertyDetailsResponse>(
+      `/properties/${id}`
+    )
     return response.content
   },
 
@@ -114,7 +124,9 @@ export const propertyService = {
   ): Promise<NavigationItem[]> {
     try {
       // First get companies
-      const companies = await fetchApi<{ content: any[] }>('/companies')
+      const companies = await fetchApi<{ content: CompanyWithLinks[] }>(
+        '/companies'
+      )
 
       // Map companies to navigation items and immediately load their properties
       const navigationItems: NavigationItem[] = await Promise.all(
@@ -129,11 +141,9 @@ export const propertyService = {
             children: await Promise.all(
               properties.content.map(async (property) => {
                 return {
-                  id: property.id,
                   name: property.propertyDesignation?.name || property.code,
                   type: 'property' as const,
                   children: [],
-                  _links: property._links,
                   ...property, // Ensure all property details are included
                 }
               })
@@ -166,7 +176,8 @@ export const propertyService = {
                       }>(item._links.properties.href)
                       item.children = properties.content.map((property) => ({
                         id: property.id,
-                        name: property.propertyDesignation.name || property.code,
+                        name:
+                          property.propertyDesignation.name || property.code,
                         type: 'property' as const,
                         children: [],
                         _links: property._links,
