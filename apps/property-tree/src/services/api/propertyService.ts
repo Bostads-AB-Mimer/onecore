@@ -132,11 +132,12 @@ export const propertyService = {
             name: company.name,
             type: 'company' as const,
             children: properties.content.map((property) => ({
-              id: property.code,
-              name: property.propertyDesignation?.name || property.code, // TODO: include the name of the property designation in the list of properties
+              id: property.id,
+              name: property.propertyDesignation?.name || property.code,
               type: 'property' as const,
               children: [],
               _links: property._links,
+              ...property, // Ensure all property details are included
             })),
             _links: {
               self: { href: `/companies/${company.id}` },
