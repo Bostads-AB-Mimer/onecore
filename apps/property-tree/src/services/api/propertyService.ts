@@ -26,15 +26,10 @@ interface BuildingDetailsResponse {
 }
 
 export const propertyService = {
-  // Get all properties with optional tract filter
-  async getAll(companyCode: string, tract?: string): Promise<PropertyWithLinks[]> {
+  // Get all properties using HATEOAS link
+  async getAll(company: CompanyWithLinks): Promise<PropertyWithLinks[]> {
     const properties = await propertiesCache.get(async () => {
-      const url = new URL('/properties', API_BASE_URL)
-      url.searchParams.append('companyCode', companyCode)
-      if (tract) {
-        url.searchParams.append('tract', tract)
-      }
-      const response = await fetchApi<PropertyListResponse>(url.toString())
+      const response = await fetchApi<PropertyListResponse>(company._links.properties.href)
       return response.content
     })
     return properties
@@ -124,8 +119,8 @@ export const propertyService = {
       // Map companies to navigation items and immediately load their properties
       const navigationItems: NavigationItem[] = await Promise.all(
         companies.content.map(async (company) => {
-          const properties = await fetchApi<{ content: PropertyWithLinks[] }>(
-            `/properties?companyCode=${company.code}`
+          const properties = await fetchApi<PropertyListResponse>(
+            company._links.properties.href
           )
           return {
             id: company.code,
