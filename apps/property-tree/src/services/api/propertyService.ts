@@ -45,6 +45,9 @@ export const propertyService = {
 
   // Get property by using HATEOAS self link
   async getProperty(property: PropertyWithLinks): Promise<PropertyWithLinks> {
+    if (!property._links || !property._links.self) {
+      throw new Error("Property does not have a self link");
+    }
     const response = await fetchApi<PropertyDetailsResponse>(
       property._links.self.href
     )
