@@ -143,9 +143,9 @@ export const propertyService = {
                       break
                     }
                     case 'building': {
-                      const staircases = await fetchApi<{
-                        content: Staircase[]
-                      }>(item._links.staircases.href)
+                      const staircases = await fetchApi<StaircaseListResponse>(
+                        item._links.staircases.href
+                      )
                       item.children = staircases.content.map((staircase) => ({
                         id: staircase.code,
                         name: staircase.name || staircase.code,
