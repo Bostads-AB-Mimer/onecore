@@ -71,9 +71,12 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
     }
     onSelect(item)
 
-    const basePath = routeMap[item.type]
-    if (basePath) {
-      navigate(`${basePath}/${item.id}`)
+    // Only navigate if it's not a company (since companies don't have their own view)
+    if (item.type !== 'company') {
+      const basePath = routeMap[item.type]
+      if (basePath) {
+        navigate(`${basePath}/${item.id}`)
+      }
     }
   }
 
