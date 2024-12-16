@@ -19,9 +19,14 @@ export type {
 export interface NavigationItem {
   id: string
   name: string
-  type: 'area' | 'property' | 'building' | 'staircase' | 'residence'
+  type: 'company' | 'property' | 'building' | 'staircase' | 'residence'
   children?: NavigationItem[]
   metadata?: {
     residenceId?: string
+  }
+  _links?: {
+    [key: string]: {
+      href: string
+    }
   }
 }

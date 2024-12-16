@@ -81,99 +81,96 @@ export const propertyService = {
     return response.content
   },
 
-  // Get navigation tree
+  // Get navigation tree with lazy loading
   async getNavigationTree(expandedIds: string[] = []): Promise<NavigationItem[]> {
     try {
       // First get companies
       const companies = await fetchApi<{content: any[]}>('/companies')
       
-      const navigationItems: NavigationItem[] = []
-      
-      for (const company of companies.content) {
-        const companyItem: NavigationItem = {
-          id: company.id,
-          name: company.name,
-          type: 'company' as const,
-          children: []
-        }
+      // Map companies to navigation items with _links for lazy loading
+      const navigationItems: NavigationItem[] = companies.content.map(company => ({
+        id: company.id,
+        name: company.name,
+        type: 'company' as const,
+        children: [],
+        _links: company._links
+      }))
 
-        // Only fetch children if company is expanded
-        if (expandedIds.includes(company.id)) {
-          try {
-            const properties = await fetchApi<{content: Property[]}>(company._links.properties.href)
-            
-            for (const property of properties.content) {
-              const propertyItem: NavigationItem = {
-                id: property.id,
-                name: property.propertyDesignation.name || property.code,
-                type: 'property' as const,
-                children: []
-              }
-
-              // Only fetch buildings if property is expanded
-              if (expandedIds.includes(property.id)) {
+      // For each expanded ID, fetch its children
+      for (const expandedId of expandedIds) {
+        // Find the item in the tree
+        const findAndPopulateItem = async (items: NavigationItem[]): Promise<boolean> => {
+          for (let item of items) {
+            if (item.id === expandedId) {
+              // If item has no children yet but has links, fetch them
+              if (item._links && (!item.children || item.children.length === 0)) {
                 try {
-                  const buildings = await fetchApi<{content: Building[]}>(property._links.buildings.href)
-                  
-                  for (const building of buildings.content) {
-                    const buildingItem: NavigationItem = {
-                      id: building.id,
-                      name: building.name,
-                      type: 'building' as const,
-                      children: []
+                  switch (item.type) {
+                    case 'company': {
+                      const properties = await fetchApi<{content: Property[]}>(item._links.properties.href)
+                      item.children = properties.content.map(property => ({
+                        id: property.id,
+                        name: property.propertyDesignation.name || property.code,
+                        type: 'property' as const,
+                        children: [],
+                        _links: property._links
+                      }))
+                      break
                     }
-
-                    // Only fetch staircases if building is expanded
-                    if (expandedIds.includes(building.id)) {
-                      try {
-                        const staircases = await fetchApi<{content: Staircase[]}>(building._links.staircases.href)
-                        
-                        for (const staircase of staircases.content) {
-                          const staircaseItem: NavigationItem = {
-                            id: staircase.id,
-                            name: staircase.name || staircase.code,
-                            type: 'staircase' as const,
-                            children: []
-                          }
-
-                          // Only fetch residences if staircase is expanded
-                          if (expandedIds.includes(staircase.id)) {
-                            try {
-                              const residences = await fetchApi<{content: Residence[]}>(staircase._links.residences.href)
-                              staircaseItem.children = residences.content.map(residence => ({
-                                id: residence.id,
-                                name: residence.name || residence.code,
-                                type: 'residence' as const,
-                              }))
-                            } catch (error) {
-                              console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
-                            }
-                          }
-                          buildingItem.children.push(staircaseItem)
-                        }
-                      } catch (error) {
-                        console.error(`Failed to load staircases for building ${building.id}:`, error)
-                      }
+                    case 'property': {
+                      const buildings = await fetchApi<{content: Building[]}>(item._links.buildings.href)
+                      item.children = buildings.content.map(building => ({
+                        id: building.id,
+                        name: building.name,
+                        type: 'building' as const,
+                        children: [],
+                        _links: building._links
+                      }))
+                      break
                     }
-                    propertyItem.children.push(buildingItem)
+                    case 'building': {
+                      const staircases = await fetchApi<{content: Staircase[]}>(item._links.staircases.href)
+                      item.children = staircases.content.map(staircase => ({
+                        id: staircase.id,
+                        name: staircase.name || staircase.code,
+                        type: 'staircase' as const,
+                        children: [],
+                        _links: staircase._links
+                      }))
+                      break
+                    }
+                    case 'staircase': {
+                      const residences = await fetchApi<{content: Residence[]}>(item._links.residences.href)
+                      item.children = residences.content.map(residence => ({
+                        id: residence.id,
+                        name: residence.name || residence.code,
+                        type: 'residence' as const
+                      }))
+                      break
+                    }
                   }
                 } catch (error) {
-                  console.error(`Failed to load buildings for property ${property.id}:`, error)
+                  console.error(`Failed to load children for ${item.type} ${item.id}:`, error)
                 }
               }
-              companyItem.children.push(propertyItem)
+              return true
             }
-          } catch (error) {
-            console.error(`Failed to load properties for company ${company.id}:`, error)
+            if (item.children && item.children.length > 0) {
+              if (await findAndPopulateItem(item.children)) {
+                return true
+              }
+            }
           }
+          return false
         }
-        navigationItems.push(companyItem)
+
+        await findAndPopulateItem(navigationItems)
       }
 
       return navigationItems
     } catch (error) {
       console.error('Failed to load navigation tree:', error)
-      return [] // Return empty array instead of failing completely
+      return []
     }
   },
 }
