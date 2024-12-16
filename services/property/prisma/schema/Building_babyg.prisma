@@ -1,8 +1,7 @@
 model Building {
-  id             String  @id(map: "pkbabyg") @map("keybabyg") @db.Char(15)
-  objectId       String  @unique(map: "akbabyg1") @map("keycmobj") @db.Char(15)
-  buildingTypeId String? @map("keybabyt") @db.Char(15)
-
+  id                    String  @id(map: "pkbabyg") @map("keybabyg") @db.Char(15)
+  propertyObjectId      String  @unique(map: "akbabyg1") @map("keycmobj") @db.Char(15)
+  buildingTypeId        String? @map("keybabyt") @db.Char(15)
   marketAreaId          String? @map("keybabya") @db.Char(15)
   districtId            String? @map("keybabyb") @db.Char(15)
   propertyDesignationId String? @map("keybabyc") @db.Char(15)
@@ -50,8 +49,7 @@ model Building {
 
   heatingSystem  Heating?       @relation(fields: [heatingId], references: [id], onUpdate: NoAction, map: "fkbabygkeybahea ")
   // district banbh? @relation(fields: [districtId], references: [keybanbh], onUpdate: NoAction, map: "fkbabygkeybanbh ")
-  // object cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabygkeycmobj ")
-  propertyObject PropertyObject @relation(fields: [objectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabygkeycmobj ")
+  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabygkeycmobj ")
 
   // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
 

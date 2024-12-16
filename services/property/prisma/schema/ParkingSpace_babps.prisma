@@ -1,7 +1,7 @@
 model ParkingSpace {
   // Fields
   id                 String   @id(map: "pkbabps") @map("keybabps") @db.Char(15)
-  objectId           String   @unique(map: "akbabps1") @map("keycmobj") @db.Char(15)
+  propertyObjectId   String   @unique(map: "akbabps1") @map("keycmobj") @db.Char(15)
   parkingSpaceTypeId String   @map("keybabpt") @db.Char(15)
   areaClassId        String?  @map("keyvcacl") @db.Char(15)
   code               String   @map("code") @db.VarChar(30)

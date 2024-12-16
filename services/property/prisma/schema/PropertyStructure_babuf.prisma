@@ -1,6 +1,6 @@
 model PropertyStructure {
   id                       String   @id(map: "pkbabuf") @map("keybabuf") @db.Char(15)
-  objectId                 String   @unique(map: "akbabuf1") @map("keycmobj") @db.Char(15)
+  propertyObjectId         String   @unique(map: "akbabuf1") @map("keycmobj") @db.Char(15)
   companyId                String?  @map("keyobjcmp") @db.Char(15)
   managementUnitId         String?  @map("keyobjfen") @db.Char(15)
   propertyId               String?  @map("keyobjfst") @db.Char(15)
@@ -64,7 +64,7 @@ model PropertyStructure {
   toDate                   DateTime @map("tdate") @db.DateTime
   timestamp                String   @map("timestamp") @db.Char(10)
 
-  propertyObject  PropertyObject   @relation(fields: [objectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
+  propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
   maintenanceUnit MaintenanceUnit? @relation(fields: [maintenanceUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Ny relation baserad på maintenanceUnitCode
@@ -90,8 +90,8 @@ model PropertyStructure {
   @@index([maintenanceUnitId], map: "fkbabufobjuhe")
   @@index([floorId], map: "fkbabufobjvan")
   @@index([landAreaId], map: "fkbabufobjyta")
-  @@index([deleteMark, id, companyId, objectId], map: "inbabuf1")
-  @@index([managementUnitId, deleteMark, objectId, id], map: "inbabuf2")
-  @@index([managementUnitId, buildingId, objectId], map: "inbabuf3")
+  @@index([deleteMark, id, companyId, propertyObjectId], map: "inbabuf1")
+  @@index([managementUnitId, deleteMark, propertyObjectId, id], map: "inbabuf2")
+  @@index([managementUnitId, buildingId, propertyObjectId], map: "inbabuf3")
   @@map("babuf")
 }

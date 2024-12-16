@@ -1,6 +1,6 @@
 model Residence {
   id                         String    @id(map: "pkbalgh") @map("keybalgh") @db.Char(15)
-  objectId                   String    @unique(map: "akbalgh1") @map("keycmobj") @db.Char(15)
+  propertyObjectId           String    @unique(map: "akbalgh1") @map("keycmobj") @db.Char(15)
   residenceTypeId            String    @map("keybalgt") @db.Char(15)
   housingFormId              String?   @map("keybalbf") @db.Char(15)
   checklistId                String?   @map("keylbpro") @db.Char(15)
@@ -37,7 +37,7 @@ model Residence {
   timestamp                  String    @map("timestamp") @db.Char(10) // TODO: consider changing timestamp later
 
   residenceType  ResidenceType  @relation(fields: [residenceTypeId], references: [id], onUpdate: NoAction, map: "fkbalghkeybalgt ")
-  propertyObject PropertyObject @relation(fields: [objectId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fkbalghkeycmobj")
+  propertyObject PropertyObject @relation(fields: [propertyObjectId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fkbalghkeycmobj")
   // TODO: Verify relation for checklistId as the InspectionProtocol model was provided but fields need to be verified
   // inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalghkeylbpro ")
 

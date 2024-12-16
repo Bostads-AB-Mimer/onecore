@@ -1,6 +1,6 @@
 model Staircase {
   id                   String   @id(map: "pkbavan") @map("keybavan") @db.Char(15)
-  objectID             String   @unique(map: "fkbavancmobj") @map("keycmobj") @db.Char(15) // TODO: change cmobj to new model name when available
+  propertyObjectId     String   @unique(map: "fkbavancmobj") @map("keycmobj") @db.Char(15) // TODO: change cmobj to new model name when available
   code                 String   @map("code") @db.VarChar(30)
   name                 String?  @map("caption") @db.VarChar(30)
   floorPlan            String?  @map("vaningplan") @db.VarChar(30)

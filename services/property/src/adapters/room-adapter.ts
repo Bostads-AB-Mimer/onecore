@@ -30,7 +30,7 @@ export const getRooms = async (
   return prisma.room.findMany({
     where: {
       propertyObjectId: {
-        in: map(propertyStructures, 'objectId'),
+        in: map(propertyStructures, 'propertyObjectId'),
       },
     },
     select: {

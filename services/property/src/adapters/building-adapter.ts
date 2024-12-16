@@ -20,8 +20,8 @@ const getBuildings = async (propertyCode: string) => {
 
   return prisma.building.findMany({
     where: {
-      objectId: {
-        in: map(propertyStructures, 'objectId'),
+      propertyObjectId: {
+        in: map(propertyStructures, 'propertyObjectId'),
       },
     },
     include: {

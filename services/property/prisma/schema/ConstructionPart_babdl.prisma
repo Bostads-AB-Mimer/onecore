@@ -1,6 +1,6 @@
 model ConstructionPart {
   id                     String   @id(map: "pkbabdl") @map("keybabdl") @db.Char(15)
-  objectId               String   @unique(map: "akbaabdl1") @map("keycmobj") @db.Char(15)
+  propertyObjectId       String   @unique(map: "akbaabdl1") @map("keycmobj") @db.Char(15)
   constructionPartTypeId String?  @map("keybabdt") @db.Char(15)
   code                   String   @map("code") @db.VarChar(30)
   name                   String?  @map("caption") @db.VarChar(30)
