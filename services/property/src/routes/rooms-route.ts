@@ -125,7 +125,9 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/Room'
    *       404:
-   *         description: Residence not found
+   *         description: Room not found
+   *       500:
+   *         description: Internal server error
    */
   router.get('(.*)/rooms/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

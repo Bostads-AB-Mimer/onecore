@@ -127,8 +127,6 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Building'
-   *       400:
-   *         description: Invalid building code format
    *       404:
    *         description: Building not found
    *       500:
