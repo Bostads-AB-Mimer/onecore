@@ -43,10 +43,10 @@ export const propertyService = {
     return properties
   },
 
-  // Get property by ID
-  async getProperty(id: string): Promise<PropertyWithLinks> {
+  // Get property by using HATEOAS self link
+  async getProperty(property: PropertyWithLinks): Promise<PropertyWithLinks> {
     const response = await fetchApi<PropertyDetailsResponse>(
-      `/properties/${id}`
+      property._links.self.href
     )
     return response.content
   },
