@@ -2,7 +2,7 @@ import type {
   Room,
   Component,
   Residence,
-  Building,
+  Building as BaseBuilding,
   Property,
   Staircase
 } from './api/schemas'
@@ -11,7 +11,6 @@ export type {
   Room,
   Component,
   Residence,
-  Building,
   Property,
   Staircase
 }
@@ -30,6 +29,43 @@ export interface Company {
   code: string
   name: string
   organizationNumber: string | null
+}
+
+export interface Building extends BaseBuilding {
+  features: {
+    heating: string | null
+    fireRating: string | null
+    hasElevator: boolean
+    accessControl: string
+    energyClass: string
+  }
+  insurance: {
+    class: string | null
+    value: number | null
+    lastInspection: string | null
+    nextInspection: string | null
+  }
+  maintenance: {
+    lastMaintenance: string | null
+    nextMaintenance: string | null
+    condition: 'good' | 'fair' | 'poor'
+    notes: string | null
+  }
+  statistics: {
+    totalResidences: number
+    occupiedResidences: number
+    totalArea: number
+    averageRent: number
+  }
+}
+
+export interface BuildingWithLinks extends Building {
+  _links: {
+    self: { href: string }
+    property: { href: string }
+    residences: { href: string }
+    staircases: { href: string }
+  }
 }
 
 export interface CompanyDetails extends Company {
