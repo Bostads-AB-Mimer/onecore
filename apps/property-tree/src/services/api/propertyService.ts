@@ -160,9 +160,9 @@ export const propertyService = {
                       break
                     }
                     case 'staircase': {
-                      const residences = await fetchApi<{
-                        content: Residence[]
-                      }>(item._links.residences.href)
+                      const residences = await fetchApi<ResidenceListResponse>(
+                        item._links.residences.href
+                      )
                       item.children = residences.content.map((residence) => ({
                         id: residence.code,
                         name: residence.name || residence.code,
