@@ -11,7 +11,6 @@ export type {
   Room,
   Component,
   Residence,
-  Property,
   Staircase
 }
 
@@ -29,6 +28,51 @@ export interface Company {
   code: string
   name: string
   organizationNumber: string | null
+}
+
+export interface Property {
+  id: string
+  code: string
+  tract: string
+  propertyDesignation: {
+    propertyDesignationId: string
+    code: string
+    name: string
+    timestamp: string
+  }
+  propertyObject: {
+    deleted: boolean
+    timestamp: string
+    objectType: {
+      id: string
+      code: string
+      name: string
+    } | null
+    condition: string | null
+    conditionInspectionDate: string | null
+    energy: {
+      class: number | null
+      registered: string | null
+      received: string | null
+      index: number | null
+    }
+  } | null
+  statistics?: {
+    totalBuildings: number
+    totalResidences: number
+    occupiedResidences: number
+    totalArea: number
+    averageRent: number
+  }
+}
+
+export interface PropertyWithLinks extends Property {
+  _links: {
+    self: { href: string }
+    buildings: { href: string }
+    residences: { href: string }
+    statistics: { href: string }
+  }
 }
 
 export interface Building extends BaseBuilding {
