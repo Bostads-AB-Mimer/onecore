@@ -50,10 +50,13 @@ export const propertyService = {
   },
 
   // Get property by ID
-  async getById(id: string): Promise<PropertyDetails> {
-    const response = await fetchApi<PropertyDetailsResponse>(
-      `/properties/${id}`
-    )
+  async getProperty(id: string): Promise<Property> {
+    const response = await fetchApi<{content: Property}>(`/properties/${id}`)
+    return response.content
+  },
+
+  async getPropertyDetails(id: string): Promise<PropertyDetails> {
+    const response = await fetchApi<PropertyDetailsResponse>(`/properties/${id}`)
     return response.content
   },
 
