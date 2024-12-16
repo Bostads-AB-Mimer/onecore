@@ -16,6 +16,14 @@ export type {
   Staircase
 }
 
+// Common links interface
+export interface Links {
+  _links: {
+    self: { href: string }
+    [key: string]: { href: string }
+  }
+}
+
 export interface NavigationItem {
   id: string
   name: string
@@ -30,3 +38,11 @@ export interface NavigationItem {
     }
   }
 }
+
+// Extend base types with links
+export type RoomWithLinks = Room & Links
+export type ComponentWithLinks = Component & Links
+export type ResidenceWithLinks = Residence & Links
+export type BuildingWithLinks = Building & Links
+export type PropertyWithLinks = Property & Links
+export type StaircaseWithLinks = Staircase & Links
