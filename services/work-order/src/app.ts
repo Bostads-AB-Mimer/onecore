@@ -8,20 +8,31 @@ import { logger, loggerMiddlewares } from 'onecore-utilities'
 
 const app = new Koa()
 
+import { koaSwagger } from 'koa2-swagger-ui'
+
 app.use(cors())
+
+app.use(
+  koaSwagger({
+    routePrefix: '/swagger',
+    swaggerOptions: {
+      url: '/swagger.json',
+    },
+  })
+)
 
 app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser())
-
-app.use(loggerMiddlewares.pre)
-app.use(loggerMiddlewares.post)
-
 app.use(errorHandler())
 
 app.use(bodyParser())
+
+// Log the start and completion of all incoming requests
+app.use(loggerMiddlewares.pre)
+app.use(loggerMiddlewares.post)
+
 app.use(api.routes())
 
 export default app

@@ -5,18 +5,9 @@ import { CreateWorkOrder } from 'onecore-types'
 
 /**
  * @swagger
- * openapi: 3.0.0
  * tags:
  *   - name: Work Order Service
  *     description: Operations related to work orders
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- * security:
- *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
   /**

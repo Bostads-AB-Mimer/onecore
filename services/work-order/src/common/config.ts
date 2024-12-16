@@ -21,7 +21,7 @@ export interface Config {
 const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
-    port: 5060,
+    port: 5070,
     odoo: {
       url: 'http://localhost:8069',
       database: '',
