@@ -66,7 +66,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
-      
+
     // Always toggle expansion for companies
     if (item.type === 'company') {
       onToggle(item.id)
@@ -75,7 +75,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
     else if (hasChildren && !hasSingleChild) {
       onToggle(item.id)
     }
-      
+
     onSelect(item)
 
     // Navigate if it's not a company
@@ -102,7 +102,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           isSelected
             ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
             : 'text-gray-600 dark:text-gray-400',
-          'group relative',
+          'group relative'
         )}
         style={{ paddingLeft: `${level * 12 + 12}px` }}
         whileHover={{ scale: 1.01 }}
@@ -114,10 +114,12 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
               'h-4 w-4 transition-colors duration-300',
               isSelected
                 ? 'text-blue-500 dark:text-blue-400'
-                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300',
+                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
             )}
           />
-          <span className="truncate">{item.name}</span>
+          <span className="truncate">
+            {item.name.replace('** TEST **', '')}
+          </span>
         </div>
         {hasChildren && !hasSingleChild && (
           <motion.div
@@ -177,8 +179,9 @@ export function PropertyNavigation() {
         const expandedIds = Object.entries(expanded)
           .filter(([_, value]) => value)
           .map(([key]) => key)
-        
+
         const data = await propertyService.getNavigationTree(expandedIds)
+        console.log(data)
         setNavigationItems(data)
 
         // Auto-expand root level if there's only one item
