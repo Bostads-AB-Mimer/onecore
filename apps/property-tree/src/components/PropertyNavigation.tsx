@@ -115,35 +115,35 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
       <SidebarMenuButton
         onClick={handleClick}
         isActive={isSelected}
-        className={cn("cursor-pointer w-full")}
+        className={cn('cursor-pointer w-full')}
         style={{ paddingLeft: `${level * 12 + 12}px` }}
       >
-          <div className="flex items-center space-x-2 flex-1">
-            <Icon
-              className={clsx(
-                'h-4 w-4 transition-colors duration-300',
-                isSelected
-                  ? 'text-blue-500 dark:text-blue-400'
-                  : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-              )}
-            />
-            <span className="truncate">
-              {item.name.replace('** TEST **', '')}
-            </span>
-          </div>
-          {hasChildren && !hasSingleChild && (
-            <motion.div
-              animate={{ rotate: isExpanded ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </motion.div>
-          )}
-
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            layoutId={`hover-${item.id}`}
+        <div className="flex items-center space-x-2 flex-1">
+          <Icon
+            className={clsx(
+              'h-4 w-4 transition-colors duration-300',
+              isSelected
+                ? 'text-blue-500 dark:text-blue-400'
+                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+            )}
           />
+          <span className="truncate">
+            {item.name.replace('** TEST **', '')}
+          </span>
+        </div>
+        {hasChildren && !hasSingleChild && (
+          <motion.div
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </motion.div>
+        )}
+
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          layoutId={`hover-${item.id}`}
+        />
       </SidebarMenuButton>
 
       <AnimatePresence>
@@ -182,8 +182,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarProvider,
-} from "./ui/sidebar"
-import { cn } from "@/utils/cn"
+} from './ui/sidebar'
+import { cn } from '@/utils/cn'
 
 export function PropertyNavigation() {
   interface NavigationState {
@@ -194,13 +194,15 @@ export function PropertyNavigation() {
     residences: Map<string, Residence>
   }
 
-  const [navigationState, setNavigationState] = React.useState<NavigationState>({
-    companies: new Map(),
-    properties: new Map(),
-    buildings: new Map(),
-    staircases: new Map(),
-    residences: new Map(),
-  })
+  const [navigationState, setNavigationState] = React.useState<NavigationState>(
+    {
+      companies: new Map(),
+      properties: new Map(),
+      buildings: new Map(),
+      staircases: new Map(),
+      residences: new Map(),
+    }
+  )
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({})
   const [selected, setSelected] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -210,16 +212,18 @@ export function PropertyNavigation() {
     const loadNavigation = async () => {
       try {
         // Always load companies first
-        const companiesResponse = await fetchApi<{ content: CompanyWithLinks[] }>('/companies')
+        const companiesResponse = await fetchApi<{
+          content: CompanyWithLinks[]
+        }>('/companies')
         const companiesMap = new Map(
-          companiesResponse.content.map(company => [company.id, company])
+          companiesResponse.content.map((company) => [company.id, company])
         )
-        
+
         // For expanded companies, load their properties
-        const expandedCompanies = Object.keys(expanded).filter(id => 
-          expanded[id] && companiesMap.has(id)
+        const expandedCompanies = Object.keys(expanded).filter(
+          (id) => expanded[id] && companiesMap.has(id)
         )
-        
+
         const propertiesMap = new Map()
         const buildingsMap = new Map()
         const staircasesMap = new Map()
@@ -229,18 +233,18 @@ export function PropertyNavigation() {
         for (const companyId of expandedCompanies) {
           const company = companiesMap.get(companyId)
           if (company?._links?.properties) {
-            const propertiesResponse = await fetchApi<{ content: PropertyWithLinks[] }>(
-              company._links.properties.href
-            )
-            propertiesResponse.content.forEach(property => {
+            const propertiesResponse = await fetchApi<{
+              content: PropertyWithLinks[]
+            }>(company._links.properties.href)
+            propertiesResponse.content.forEach((property) => {
               propertiesMap.set(property.id, property)
             })
           }
         }
 
         // Load buildings for expanded properties
-        const expandedProperties = Object.keys(expanded).filter(id => 
-          expanded[id] && propertiesMap.has(id)
+        const expandedProperties = Object.keys(expanded).filter(
+          (id) => expanded[id] && propertiesMap.has(id)
         )
         for (const propertyId of expandedProperties) {
           const property = propertiesMap.get(propertyId)
@@ -248,15 +252,15 @@ export function PropertyNavigation() {
             const buildingsResponse = await fetchApi<{ content: Building[] }>(
               property._links.buildings.href
             )
-            buildingsResponse.content.forEach(building => {
+            buildingsResponse.content.forEach((building) => {
               buildingsMap.set(building.id, building)
             })
           }
         }
 
         // Load staircases for expanded buildings
-        const expandedBuildings = Object.keys(expanded).filter(id => 
-          expanded[id] && buildingsMap.has(id)
+        const expandedBuildings = Object.keys(expanded).filter(
+          (id) => expanded[id] && buildingsMap.has(id)
         )
         for (const buildingId of expandedBuildings) {
           const building = buildingsMap.get(buildingId)
@@ -264,15 +268,15 @@ export function PropertyNavigation() {
             const staircasesResponse = await fetchApi<{ content: Staircase[] }>(
               building._links.staircases.href
             )
-            staircasesResponse.content.forEach(staircase => {
+            staircasesResponse.content.forEach((staircase) => {
               staircasesMap.set(staircase.id, staircase)
             })
           }
         }
 
         // Load residences for expanded staircases
-        const expandedStaircases = Object.keys(expanded).filter(id => 
-          expanded[id] && staircasesMap.has(id)
+        const expandedStaircases = Object.keys(expanded).filter(
+          (id) => expanded[id] && staircasesMap.has(id)
         )
         for (const staircaseId of expandedStaircases) {
           const staircase = staircasesMap.get(staircaseId)
@@ -280,7 +284,7 @@ export function PropertyNavigation() {
             const residencesResponse = await fetchApi<{ content: Residence[] }>(
               staircase._links.residences.href
             )
-            residencesResponse.content.forEach(residence => {
+            residencesResponse.content.forEach((residence) => {
               residencesMap.set(residence.id, residence)
             })
           }
@@ -297,12 +301,11 @@ export function PropertyNavigation() {
         // Auto-expand if there's only one company
         if (companiesMap.size === 1) {
           const [firstCompanyId] = companiesMap.keys()
-          setExpanded(prev => ({
+          setExpanded((prev) => ({
             ...prev,
             [firstCompanyId]: true,
           }))
         }
-
       } catch (err) {
         setError('Kunde inte ladda navigationsdata')
         console.error(err)
@@ -432,108 +435,158 @@ export function PropertyNavigation() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {/* Companies */}
-                {Array.from(navigationState.companies.values()).map((company) => (
-                  <SidebarMenuItem key={company.id}>
-                    <NavigationItemComponent
-                      item={{
-                        id: company.id,
-                        name: company.name,
-                        type: 'company',
-                        _links: company._links,
-                        hasChildren: true
-                      }}
-                      level={0}
-                      expanded={expanded}
-                      selected={selected}
-                      onToggle={handleToggle}
-                      onSelect={handleSelect}
-                    >
-                      {expanded[company.id] && Array.from(navigationState.properties.values())
-                        .filter(property => property.links.company === company.id)
-                        .map(property => (
-                          <SidebarMenuItem key={property.id}>
-                            <NavigationItemComponent
-                              item={{
-                                id: property.id,
-                                name: property.propertyDesignation?.name || property.code,
-                                type: 'property',
-                                _links: property._links,
-                                hasChildren: true
-                              }}
-                              level={1}
-                              expanded={expanded}
-                              selected={selected}
-                              onToggle={handleToggle}
-                              onSelect={handleSelect}
-                            >
-                              {expanded[property.id] && Array.from(navigationState.buildings.values())
-                                .filter(building => building.links.property === property.id)
-                                .map(building => (
-                                  <SidebarMenuItem key={building.id}>
-                                    <NavigationItemComponent
-                                      item={{
-                                        id: building.id,
-                                        name: building.name || building.code,
-                                        type: 'building',
-                                        _links: building._links,
-                                        hasChildren: true
-                                      }}
-                                      level={2}
-                                      expanded={expanded}
-                                      selected={selected}
-                                      onToggle={handleToggle}
-                                      onSelect={handleSelect}
-                                    >
-                                      {expanded[building.id] && Array.from(navigationState.staircases.values())
-                                        .filter(staircase => staircase.links.building === building.id)
-                                        .map(staircase => (
-                                          <SidebarMenuItem key={staircase.id}>
-                                            <NavigationItemComponent
-                                              item={{
-                                                id: staircase.id,
-                                                name: staircase.name || staircase.code,
-                                                type: 'staircase',
-                                                _links: staircase._links,
-                                                hasChildren: true
-                                              }}
-                                              level={3}
-                                              expanded={expanded}
-                                              selected={selected}
-                                              onToggle={handleToggle}
-                                              onSelect={handleSelect}
-                                            >
-                                              {expanded[staircase.id] && Array.from(navigationState.residences.values())
-                                                .filter(residence => residence.links.staircase === staircase.id)
-                                                .map(residence => (
-                                                  <SidebarMenuItem key={residence.id}>
+                {Array.from(navigationState.companies.values()).map(
+                  (company) => (
+                    <SidebarMenuItem key={company.id}>
+                      <NavigationItemComponent
+                        item={{
+                          id: company.id,
+                          name: company.name,
+                          type: 'company',
+                          _links: company._links,
+                          hasChildren: true,
+                        }}
+                        level={0}
+                        expanded={expanded}
+                        selected={selected}
+                        onToggle={handleCompanyToggle}
+                        onSelect={handleSelect}
+                      >
+                        {expanded[company.id] &&
+                          Array.from(navigationState.properties.values())
+                            .filter(
+                              (property) =>
+                                property.links.company === company.id
+                            )
+                            .map((property) => (
+                              <SidebarMenuItem key={property.id}>
+                                <NavigationItemComponent
+                                  item={{
+                                    id: property.id,
+                                    name:
+                                      property.propertyDesignation?.name ||
+                                      property.code,
+                                    type: 'property',
+                                    _links: property._links,
+                                    hasChildren: true,
+                                  }}
+                                  level={1}
+                                  expanded={expanded}
+                                  selected={selected}
+                                  onToggle={handleToggle}
+                                  onSelect={handleSelect}
+                                >
+                                  {expanded[property.id] &&
+                                    Array.from(
+                                      navigationState.buildings.values()
+                                    )
+                                      .filter(
+                                        (building) =>
+                                          building.links.property ===
+                                          property.id
+                                      )
+                                      .map((building) => (
+                                        <SidebarMenuItem key={building.id}>
+                                          <NavigationItemComponent
+                                            item={{
+                                              id: building.id,
+                                              name:
+                                                building.name || building.code,
+                                              type: 'building',
+                                              _links: building._links,
+                                              hasChildren: true,
+                                            }}
+                                            level={2}
+                                            expanded={expanded}
+                                            selected={selected}
+                                            onToggle={handleToggle}
+                                            onSelect={handleSelect}
+                                          >
+                                            {expanded[building.id] &&
+                                              Array.from(
+                                                navigationState.staircases.values()
+                                              )
+                                                .filter(
+                                                  (staircase) =>
+                                                    staircase.links.building ===
+                                                    building.id
+                                                )
+                                                .map((staircase) => (
+                                                  <SidebarMenuItem
+                                                    key={staircase.id}
+                                                  >
                                                     <NavigationItemComponent
                                                       item={{
-                                                        id: residence.id,
-                                                        name: residence.name || residence.code,
-                                                        type: 'residence',
-                                                        _links: residence._links,
-                                                        hasChildren: false
+                                                        id: staircase.id,
+                                                        name:
+                                                          staircase.name ||
+                                                          staircase.code,
+                                                        type: 'staircase',
+                                                        _links:
+                                                          staircase._links,
+                                                        hasChildren: true,
                                                       }}
-                                                      level={4}
+                                                      level={3}
                                                       expanded={expanded}
                                                       selected={selected}
                                                       onToggle={handleToggle}
                                                       onSelect={handleSelect}
-                                                    />
+                                                    >
+                                                      {expanded[staircase.id] &&
+                                                        Array.from(
+                                                          navigationState.residences.values()
+                                                        )
+                                                          .filter(
+                                                            (residence) =>
+                                                              residence.links
+                                                                .staircase ===
+                                                              staircase.id
+                                                          )
+                                                          .map((residence) => (
+                                                            <SidebarMenuItem
+                                                              key={residence.id}
+                                                            >
+                                                              <NavigationItemComponent
+                                                                item={{
+                                                                  id: residence.id,
+                                                                  name:
+                                                                    residence.name ||
+                                                                    residence.code,
+                                                                  type: 'residence',
+                                                                  _links:
+                                                                    residence._links,
+                                                                  hasChildren:
+                                                                    false,
+                                                                }}
+                                                                level={4}
+                                                                expanded={
+                                                                  expanded
+                                                                }
+                                                                selected={
+                                                                  selected
+                                                                }
+                                                                onToggle={
+                                                                  handleToggle
+                                                                }
+                                                                onSelect={
+                                                                  handleSelect
+                                                                }
+                                                              />
+                                                            </SidebarMenuItem>
+                                                          ))}
+                                                    </NavigationItemComponent>
                                                   </SidebarMenuItem>
                                                 ))}
-                                            </NavigationItemComponent>
-                                          </SidebarMenuItem>
-                                        ))}
-                                    </NavigationItemComponent>
-                                  </SidebarMenuItem>
-                                ))}
-                            </NavigationItemComponent>
-                          </SidebarMenuItem>
-                        ))}
-                    </NavigationItemComponent>
-                  </SidebarMenuItem>
-                ))}
+                                          </NavigationItemComponent>
+                                        </SidebarMenuItem>
+                                      ))}
+                                </NavigationItemComponent>
+                              </SidebarMenuItem>
+                            ))}
+                      </NavigationItemComponent>
+                    </SidebarMenuItem>
+                  )
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
