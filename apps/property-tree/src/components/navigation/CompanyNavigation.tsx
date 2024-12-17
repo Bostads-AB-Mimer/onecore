@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem, PropertyWithLinks } from '@/services/types'
+import { CompanyWithLinks, PropertyWithLinks } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { PropertyNavigation } from './PropertyNavigation'
@@ -7,9 +7,9 @@ import { useAsync } from '@/hooks/use-async'
 import { fetchApi } from '@/services/api/baseApi'
 
 interface CompanyNavigationProps {
-  company: NavigationItem
+  company: CompanyWithLinks
   selected: string | null
-  onSelect: (item: NavigationItem) => void
+  onSelect: (company: CompanyWithLinks) => void
 }
 
 export function CompanyNavigation({ company, selected, onSelect }: CompanyNavigationProps) {

@@ -9,7 +9,7 @@ import { fetchApi } from '@/services/api/baseApi'
 interface PropertyNavigationProps {
   property: PropertyWithLinks
   selected: string | null
-  onSelect: (item: PropertyWithLinks) => void
+  onSelect: (property: PropertyWithLinks) => void
 }
 
 export function PropertyNavigation({

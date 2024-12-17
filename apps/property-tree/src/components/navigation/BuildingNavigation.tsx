@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem } from '@/services/types'
+import { BuildingWithLinks, StaircaseWithLinks } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { StaircaseNavigation } from './StaircaseNavigation'
@@ -7,9 +7,9 @@ import { useAsync } from '@/hooks/use-async'
 import { fetchApi } from '@/services/api/baseApi'
 
 interface BuildingNavigationProps {
-  building: NavigationItem
+  building: BuildingWithLinks
   selected: string | null
-  onSelect: (item: NavigationItem) => void
+  onSelect: (building: BuildingWithLinks) => void
 }
 
 export function BuildingNavigation({ building, selected, onSelect }: BuildingNavigationProps) {

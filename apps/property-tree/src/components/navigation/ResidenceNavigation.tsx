@@ -1,12 +1,12 @@
 import React from 'react'
-import { NavigationItem } from '@/services/types'
+import { ResidenceWithLinks } from '@/services/types'
 import { Hotel } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 
 interface ResidenceNavigationProps {
-  residence: NavigationItem
+  residence: ResidenceWithLinks
   selected: string | null
-  onSelect: (item: NavigationItem) => void
+  onSelect: (residence: ResidenceWithLinks) => void
 }
 
 export function ResidenceNavigation({ residence, selected, onSelect }: ResidenceNavigationProps) {

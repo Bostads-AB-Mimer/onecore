@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem } from '@/services/types'
+import { StaircaseWithLinks, ResidenceWithLinks } from '@/services/types'
 import { Home } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { ResidenceNavigation } from './ResidenceNavigation'
@@ -7,9 +7,9 @@ import { useAsync } from '@/hooks/use-async'
 import { fetchApi } from '@/services/api/baseApi'
 
 interface StaircaseNavigationProps {
-  staircase: NavigationItem
+  staircase: StaircaseWithLinks
   selected: string | null
-  onSelect: (item: NavigationItem) => void
+  onSelect: (staircase: StaircaseWithLinks) => void
 }
 
 export function StaircaseNavigation({ staircase, selected, onSelect }: StaircaseNavigationProps) {
