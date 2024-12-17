@@ -1,5 +1,6 @@
 import React from 'react'
-import { Building2, Building, Home, Hotel, Warehouse, Loader2 } from 'lucide-react'
+import { Building2, Loader2 } from 'lucide-react'
+import { PropertyItems } from './navigation/PropertyItems'
 import { motion } from 'framer-motion'
 import {
   Sidebar,
@@ -116,86 +117,18 @@ export function PropertyNavigation() {
       </SidebarMenuButton>
       {expanded.has(item.id) && item.children && (
         <SidebarMenu>
-          {item.children.map(renderPropertyItem)}
+          <PropertyItems
+            properties={item.children}
+            expanded={expanded}
+            selected={selected}
+            onExpand={handleExpand}
+            onSelect={handleSelect}
+          />
         </SidebarMenu>
       )}
     </SidebarMenuItem>
   )
 
-  const renderPropertyItem = (item: NavigationItem) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
-        }}
-        isActive={selected === item.id}
-      >
-        <Building />
-        <span>{item.name}</span>
-      </SidebarMenuButton>
-      {expanded.has(item.id) && item.children && (
-        <SidebarMenu>
-          {item.children.map(renderBuildingItem)}
-        </SidebarMenu>
-      )}
-    </SidebarMenuItem>
-  )
-
-  const renderBuildingItem = (item: NavigationItem) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
-        }}
-        isActive={selected === item.id}
-      >
-        <Warehouse />
-        <span>{item.name}</span>
-      </SidebarMenuButton>
-      {expanded.has(item.id) && item.children && (
-        <SidebarMenu>
-          {item.children.map(renderStaircaseItem)}
-        </SidebarMenu>
-      )}
-    </SidebarMenuItem>
-  )
-
-  const renderStaircaseItem = (item: NavigationItem) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
-        }}
-        isActive={selected === item.id}
-      >
-        <Home />
-        <span>{item.name}</span>
-      </SidebarMenuButton>
-      {expanded.has(item.id) && item.children && (
-        <SidebarMenu>
-          {item.children.map(renderResidenceItem)}
-        </SidebarMenu>
-      )}
-    </SidebarMenuItem>
-  )
-
-  const renderResidenceItem = (item: NavigationItem) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
-        }}
-        isActive={selected === item.id}
-      >
-        <Hotel />
-        <span>{item.name}</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  )
 
   if (loading) {
     return (
