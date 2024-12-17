@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fetchApi } from '../services/api/baseApi'
 import {
   Building2,
   ChevronRight,
