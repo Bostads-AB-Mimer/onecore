@@ -8,16 +8,15 @@ import { fetchApi } from '@/services/api/baseApi'
 
 interface StaircaseNavigationProps {
   staircase: NavigationItem
-  expanded: Set<string>
   selected: string | null
-  onExpand: (item: NavigationItem) => void
   onSelect: (item: NavigationItem) => void
 }
 
-export function StaircaseNavigation({ staircase, expanded, selected, onExpand, onSelect }: StaircaseNavigationProps) {
-  // Använd useAsync för att hantera laddning av residences
+export function StaircaseNavigation({ staircase, selected, onSelect }: StaircaseNavigationProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+
   const { data: residences, loading, error } = useAsync(async () => {
-    if (expanded.has(staircase.id)) {
+    if (isExpanded) {
       if (!staircase._links?.residences?.href) {
         throw new Error('Staircase is missing residences link')
       }
@@ -31,10 +30,9 @@ export function StaircaseNavigation({ staircase, expanded, selected, onExpand, o
       }))
     }
     return []
-  }, [staircase.id, expanded])
+  }, [isExpanded])
 
-  // Visa laddningsindikator
-  if (loading && expanded.has(staircase.id)) {
+  if (loading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
@@ -42,16 +40,20 @@ export function StaircaseNavigation({ staircase, expanded, selected, onExpand, o
     )
   }
 
-  // Visa felmeddelande om något gick fel
   if (error) {
     console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
+    return (
+      <SidebarMenuItem>
+        <div className="text-sm text-destructive px-2">Failed to load residences</div>
+      </SidebarMenuItem>
+    )
   }
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
-          onExpand(staircase)
+          setIsExpanded(!isExpanded)
           onSelect(staircase)
         }}
         isActive={selected === staircase.id}
@@ -60,15 +62,13 @@ export function StaircaseNavigation({ staircase, expanded, selected, onExpand, o
         <Home />
         <span>{staircase.name}</span>
       </SidebarMenuButton>
-      {expanded.has(staircase.id) && residences && residences.length > 0 && (
+      {isExpanded && residences && residences.length > 0 && (
         <SidebarMenu>
           {residences.map(residence => (
             <ResidenceNavigation
               key={residence.id}
               residence={residence}
-              expanded={expanded}
               selected={selected}
-              onExpand={onExpand}
               onSelect={onSelect}
             />
           ))}

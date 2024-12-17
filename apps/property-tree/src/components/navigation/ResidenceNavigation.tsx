@@ -5,20 +5,15 @@ import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 
 interface ResidenceNavigationProps {
   residence: NavigationItem
-  expanded: Set<string>
   selected: string | null
-  onExpand: (item: NavigationItem) => void
   onSelect: (item: NavigationItem) => void
 }
 
-export function ResidenceNavigation({ residence, expanded: _, selected, onExpand, onSelect }: ResidenceNavigationProps) {
+export function ResidenceNavigation({ residence, selected, onSelect }: ResidenceNavigationProps) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        onClick={() => {
-          onExpand(residence)
-          onSelect(residence)
-        }}
+        onClick={() => onSelect(residence)}
         isActive={selected === residence.id}
         tooltip={residence.name}
       >
