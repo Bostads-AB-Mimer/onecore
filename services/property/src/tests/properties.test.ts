@@ -9,7 +9,7 @@ describe('Properties API', () => {
     const response = await request(app.callback())
       .get('/properties')
       .query({ companyCode: testCompany })
-    
+
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
     expect(Array.isArray(response.body.content)).toBe(true)
@@ -18,7 +18,7 @@ describe('Properties API', () => {
     const property = response.body.content[0]
     expect(property.id).toBeDefined()
     expect(property.code).toBeDefined()
-    expect(property.name).toBeDefined()
+    expect(property.designation).toBeDefined() // Changed from name to designation
     expect(property._links).toBeDefined()
     expect(property._links.self).toBeDefined()
     expect(property._links.buildings).toBeDefined()
@@ -28,14 +28,14 @@ describe('Properties API', () => {
     const response = await request(app.callback())
       .get('/properties')
       .query({ companyCode: testCompany, tract: testTract })
-    
+
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
     expect(Array.isArray(response.body.content)).toBe(true)
     expect(response.body.content.length).toBeGreaterThan(0)
 
     const property = response.body.content[0]
-    expect(property.name).toContain(testTract)
+    expect(property.designation).toContain(testTract)
   })
 
   it('should return property details by ID', async () => {
@@ -43,10 +43,12 @@ describe('Properties API', () => {
     const propertiesResponse = await request(app.callback())
       .get('/properties')
       .query({ companyCode: testCompany })
-    
-    const propertyId = propertiesResponse.body.content[0].propertyId
 
-    const response = await request(app.callback()).get(`/properties/${propertyId}`)
+    const propertyId = propertiesResponse.body.content[0].id
+
+    const response = await request(app.callback()).get(
+      `/properties/${propertyId}`
+    )
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
 
@@ -59,7 +61,12 @@ describe('Properties API', () => {
   })
 
   it('should return 404 for non-existent property ID', async () => {
-    const response = await request(app.callback()).get('/properties/nonexistent')
+    const response = await request(app.callback()).get(
+      '/properties/nonexistent'
+    )
     expect(response.status).toBe(404)
+    if (response.status === 500) {
+      console.error('Test failed with reason:', response.body.reason)
+    }
   })
 })

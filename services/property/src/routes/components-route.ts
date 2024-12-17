@@ -103,6 +103,9 @@ export const routes = (router: KoaRouter) => {
             self: { href: `/components/${component.id}` },
             maintenanceUnit: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
             parent: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
+            ...(queryParams.data.type === 'residence' && {
+              residence: { href: `/residences/${queryParams.data.residenceCode}` }
+            }),
           }),
         }
       })

@@ -28,7 +28,7 @@ describe('API Navigation Tests', () => {
     })
 
     const property = properties[0]
-    expect(property.propertyId).toBeDefined()
+    expect(property.id).toBeDefined()
     expect(property.code).toBeDefined()
   })
 
@@ -40,16 +40,14 @@ describe('API Navigation Tests', () => {
 
     const property = properties[0]
     const propertyDetailsResponse = await request(app.callback()).get(
-      `/properties/${property.propertyId}/`
+      `/properties/${property.id}/`
     )
 
     expect(propertyDetailsResponse.status).toBe(200)
     expect(propertyDetailsResponse.body.content).toBeDefined()
 
     const propertyDetails = propertyDetailsResponse.body.content
-    expect(propertyDetails.propertyObjectId.trim()).toBe(
-      property.propertyId.trim()
-    )
+    expect(propertyDetails.id.trim()).toBe(property.id.trim())
     expect(propertyDetails.code).toBe(property.code)
   })
 
@@ -63,7 +61,7 @@ describe('API Navigation Tests', () => {
 
     const property = properties[0]
     const propertyDetailsResponse = await request(app.callback()).get(
-      `/properties/${property.propertyId}/`
+      `/properties/${property.id}/`
     )
 
     const propertyDetails = propertyDetailsResponse.body.content
@@ -86,7 +84,7 @@ describe('API Navigation Tests', () => {
 
     const property = properties[0]
     const propertyDetailsResponse = await request(app.callback()).get(
-      `/properties/${property.propertyId}/`
+      `/properties/${property.id}/`
     )
 
     const propertyDetails = propertyDetailsResponse.body.content

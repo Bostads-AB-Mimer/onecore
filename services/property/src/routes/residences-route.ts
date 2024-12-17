@@ -92,6 +92,7 @@ export const routes = (router: KoaRouter) => {
       const responseContent = dbResidences.map((residence) => {
         const links = ResidenceListLinksSchema.parse({
           self: { href: `/residences/${residence.id}` },
+          parent: { href: `/buildings/${buildingCode}` },
           components: { href: `/components?residenceCode=${residence.code}` },
         })
 
@@ -163,8 +164,6 @@ export const routes = (router: KoaRouter) => {
 
       // TODO: find out why building is null in residence
       //const building = await getBuildingByCode(residence.buildingCode)
-
-      console.log('residence', residence)
 
       const parsedResidence = ResidenceDetailedSchema.parse({
         id: residence.id,

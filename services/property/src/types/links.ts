@@ -33,6 +33,7 @@ export const StaircaseLinksSchema = BaseLinksSchema.extend({
 
 export const ResidenceListLinksSchema = BaseLinksSchema.extend({
   components: LinkSchema,
+  parent: LinkSchema,
 })
 
 export const ResidenceLinksSchema = BaseLinksSchema.extend({
@@ -53,6 +54,7 @@ export const RoomLinksSchema = BaseLinksSchema.extend({
 export const ComponentLinksSchema = BaseLinksSchema.extend({
   maintenanceUnit: LinkSchema,
   parent: LinkSchema,
+  residence: LinkSchema.optional(),
 })
 
 export type CompanyLinks = z.infer<typeof CompanyLinksSchema>

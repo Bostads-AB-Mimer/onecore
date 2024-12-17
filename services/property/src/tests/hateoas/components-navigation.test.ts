@@ -22,6 +22,14 @@ describe('HATEOAS Components Navigation', () => {
       const componentsUrl = residence._links.components.href
       const componentsResponse = await request(app.callback()).get(componentsUrl)
       expect(componentsResponse.status).toBe(200)
+
+      if (componentsResponse.body.content.length > 0) {
+        const component = componentsResponse.body.content[0]
+        expect(component._links.self).toBeDefined()
+        expect(component._links.maintenanceUnit).toBeDefined()
+        expect(component._links.parent).toBeDefined()
+        expect(component._links.residence).toBeDefined()
+      }
     }
   })
 
