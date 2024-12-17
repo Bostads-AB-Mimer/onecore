@@ -1,56 +1,44 @@
-import {
-  Building,
-  BuildingWithLinks,
-  ResidenceWithLinks,
-  Staircase,
-  StaircaseWithLinks,
-} from '../types'
-import { fetchApi } from './baseApi'
+import { GET } from './baseApi'
+import type { components } from './generated/api-types'
 
-interface BuildingResponse {
-  content: BuildingWithLinks[]
-}
-
-interface BuildingDetailsResponse {
-  content: BuildingWithLinks
-}
-
-interface StaircaseResponse {
-  content: StaircaseWithLinks[]
-}
-
-interface ResidenceResponse {
-  content: ResidenceWithLinks[]
-}
+type Building = components['schemas']['Building']
+type Staircase = components['schemas']['Staircase']
+type Residence = components['schemas']['Residence']
 
 export const buildingService = {
   // Get buildings by property code
-  async getByPropertyCode(propertyCode: string): Promise<Building[]> {
-    const response = await fetchApi<BuildingResponse>(
-      `/buildings?propertyCode=${propertyCode}`
-    )
-    return response.content
+  async getByPropertyCode(propertyCode: string) {
+    const { data, error } = await GET('/buildings', {
+      params: { query: { propertyCode } }
+    })
+    if (error) throw error
+    return data?.content as Building[]
   },
 
   // Get building by ID
-  async getById(id: string): Promise<Building> {
-    const response = await fetchApi<BuildingDetailsResponse>(`/buildings/${id}`)
-    return response.content
+  async getById(id: string) {
+    const { data, error } = await GET('/buildings/{id}', {
+      params: { path: { id } }
+    })
+    if (error) throw error
+    return data?.content as Building
   },
 
   // Get building staircases
-  async getBuildingStaircases(building: BuildingWithLinks) {
-    const response = await fetchApi<StaircaseResponse>(
-      `/staircases?buildingCode=${building.code}`
-    )
-    return response.content
+  async getBuildingStaircases(buildingId: string) {
+    const { data, error } = await GET('/buildings/{id}/staircases', {
+      params: { path: { id: buildingId } }
+    })
+    if (error) throw error
+    return data?.content as Staircase[]
   },
 
   // Get building residences
-  async getBuildingResidences(building: BuildingWithLinks) {
-    const response = await fetchApi<ResidenceResponse>(
-      `/residences?buildingCode=${building.code}`
-    )
-    return response.content
+  async getBuildingResidences(buildingId: string) {
+    const { data, error } = await GET('/buildings/{id}/residences', {
+      params: { path: { id: buildingId } }
+    })
+    if (error) throw error
+    return data?.content as Residence[]
   }
 }

@@ -1,48 +1,32 @@
-import {
-  Company,
-  CompanyDetails,
-  CompanyLinks,
-  CompanyWithLinks,
-  PropertyWithLinks,
-} from '../types'
-import { fetchApi } from './baseApi'
-import { Property } from './schemas'
+import { GET } from './baseApi'
+import type { components } from './generated/api-types'
 
-interface CompanyResponse {
-  content: CompanyWithLinks[]
-}
-
-interface CompanyDetailsResponse {
-  content: CompanyWithLinks
-}
-
-interface CompanyPropertiesResponse {
-  content: PropertyWithLinks[]
-}
+type Company = components['schemas']['Company']
+type Property = components['schemas']['Property']
 
 export const companyService = {
   // Get all companies
-  async getAll(): Promise<CompanyWithLinks[]> {
-    const response = await fetchApi<CompanyResponse>('/companies/')
-    return response.content.map(company => ({
-      ...company,
-      id: company.propertyObjectId // Map propertyObjectId to id for compatibility
-    }))
+  async getAll() {
+    const { data, error } = await GET('/companies', {})
+    if (error) throw error
+    return data?.content as Company[]
   },
 
   // Get company by ID
-  async getById(id: string): Promise<CompanyDetails> {
-    const response = await fetchApi<CompanyDetailsResponse>(`/companies/${id}`)
-    return response.content
+  async getById(id: string) {
+    const { data, error } = await GET('/companies/{id}', {
+      params: { path: { id } }
+    })
+    if (error) throw error
+    return data?.content as Company
   },
 
-  // Get properties for a company using the HATEOAS link
-  async getCompanyProperties(company: CompanyWithLinks) {
-    console.log('getting company properties', company)
-    const response = await fetchApi<CompanyPropertiesResponse>(
-      company._links.properties.href
-    )
-    console.log('response', response)
-    return response.content
-  },
+  // Get properties for a company
+  async getCompanyProperties(companyId: string) {
+    const { data, error } = await GET('/companies/{id}/properties', {
+      params: { path: { id: companyId } }
+    })
+    if (error) throw error
+    return data?.content as Property[]
+  }
 }
