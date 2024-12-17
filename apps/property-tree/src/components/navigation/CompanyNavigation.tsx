@@ -6,6 +6,7 @@ import { useNavigation } from '@/hooks/use-navigation-context'
 import { PropertyNavigation } from './PropertyNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from '@/services/api'
+import { GET } from '@/services/api/baseApi'
 
 interface CompanyNavigationProps {
   company: CompanyWithLinks
@@ -23,11 +24,11 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
     queryKey: ['propertiesForCompanyId', company.id],
     queryFn: async () => {
       const { data, error } = await GET('/companies/{id}/properties', {
-        params: { path: { id: company.id } }
+        params: { path: { id: company.id } },
       })
       if (error) throw error
       return data?.content
-    }
+    },
   })
 
   if (isLoading && isExpanded) {
