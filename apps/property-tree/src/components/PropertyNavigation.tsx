@@ -81,21 +81,18 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
 
-    // Handle toggle based on item type
-    if (hasChildren && !hasSingleChild) {
-      switch (item.type) {
-        case 'company':
-          handleCompanyToggle(item.id)
-          break
-        case 'property':
-          handlePropertyToggle(item.id)
-          break
-        case 'building':
-          handleBuildingToggle(item.id)
-          break
-        case 'staircase':
-          handleStaircaseToggle(item.id)
-          break
+    // Always toggle expansion for companies
+    if (item.type === 'company') {
+      handleCompanyToggle(item.id)
+    }
+    // For other items with children, only toggle if not single child
+    else if (hasChildren && !hasSingleChild) {
+      if (item.type === 'property') {
+        handlePropertyToggle(item.id)
+      } else if (item.type === 'building') {
+        handleBuildingToggle(item.id)
+      } else if (item.type === 'staircase') {
+        handleStaircaseToggle(item.id)
       }
     }
 
@@ -162,7 +159,15 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
                 level={level + 1}
                 expanded={expanded}
                 selected={selected}
-                onToggle={onToggle}
+                onToggle={
+                  item.type === 'company'
+                    ? handleCompanyToggle
+                    : item.type === 'property'
+                    ? handlePropertyToggle
+                    : item.type === 'building'
+                    ? handleBuildingToggle
+                    : handleStaircaseToggle
+                }
                 onSelect={onSelect}
               />
             ))}
