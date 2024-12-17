@@ -6,7 +6,8 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
-import { componentsQueryParamsSchema } from '../types/component'
+import { componentsQueryParamsSchema, ComponentSchema } from '../types/component'
+import { ComponentLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -57,7 +58,12 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('(.*)/components', async (ctx) => {
-    const queryParams = componentsQueryParamsSchema.safeParse(ctx.query)
+    // Add default type=residence if residenceCode is provided
+    const queryWithType = ctx.query.residenceCode 
+      ? { ...ctx.query, type: 'residence' }
+      : ctx.query;
+      
+    const queryParams = componentsQueryParamsSchema.safeParse(queryWithType)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -65,32 +71,38 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { maintenanceUnit } = queryParams.data
-
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /components?maintenanceUnit=${maintenanceUnit}`, metadata)
-
+    
     try {
-      const components =
-        await getComponentByMaintenanceUnitCode(maintenanceUnit)
+      let components;
+      if (queryParams.data.type === 'maintenance') {
+        logger.info(`GET /components?type=maintenance&maintenanceUnit=${queryParams.data.maintenanceUnit}`, metadata)
+        components = await getComponentByMaintenanceUnitCode(queryParams.data.maintenanceUnit)
+      } else {
+        logger.info(`GET /components?type=residence&residenceCode=${queryParams.data.residenceCode}`, metadata)
+        components = await getComponentByMaintenanceUnitCode(queryParams.data.residenceCode) // TODO: Implement getComponentByResidenceCode
+      }
 
       if (!components) {
         ctx.status = 404
         return
       }
 
-      ctx.body = {
-        content: components.map((component) => ({
+      const responseContent = components.map((component) => {
+        const parsedComponent = ComponentSchema.parse({
           ...component,
-          _links: {
-            self: {
-              href: `/components/${component.id}`,
-            },
-            maintenanceUnit: {
-              href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}`,
-            },
-          },
-        })),
+        })
+        return {
+          ...parsedComponent,
+          _links: ComponentLinksSchema.parse({
+            self: { href: `/components/${component.id}` },
+            maintenanceUnit: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
+          }),
+        }
+      })
+
+      ctx.body = {
+        content: responseContent,
         ...metadata,
       }
     } catch (err) {

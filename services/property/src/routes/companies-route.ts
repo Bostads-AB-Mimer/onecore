@@ -8,6 +8,9 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { generateMetaLinks } from '../utils/links'
 import { getCompanies, getCompany } from '../adapters/company-adapter'
 import { HttpStatusCode } from 'axios'
+import { CompanySchema, CompanyDetailsSchema } from '../types/company'
+import { CompanyLinksSchema } from '../types/links'
+import { z } from 'zod'
 
 /**
  * @swagger
@@ -53,18 +56,24 @@ export const routes = (router: KoaRouter) => {
         return (ctx.status = HttpStatusCode.NotFound)
       }
 
-      ctx.body = {
-        content: companies.map((company) => ({
-          ...company,
+      // Create a temporary schema that extends CompanySchema with _links
+      const CompanyResponseSchema = z.object({
+        ...CompanySchema.shape,
+        _links: CompanyLinksSchema,
+      })
+
+      const responseContent = companies.map((company) => {
+        return CompanyResponseSchema.parse({
+          ...CompanySchema.parse(company),
           _links: {
-            self: {
-              href: `/companies/${company.id}`,
-            },
-            properties: {
-              href: `/properties?companyCode=${company.code}`,
-            },
+            self: { href: `/companies/${company.id}` },
+            properties: { href: `/properties?companyCode=${company.code}` },
           },
-        })),
+        })
+      })
+
+      ctx.body = {
+        content: responseContent,
         ...metadata,
         _links: generateMetaLinks(ctx, '/companies'),
       }
@@ -119,13 +128,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.body = {
-        content: company,
-        ...metadata,
-        _links: generateMetaLinks(ctx, '/properties', {
-          id: ctx.params.response,
-          properties: company?.code || '',
+      const parsedCompanyDetails = CompanyDetailsSchema.parse({
+        ...company,
+      })
+
+      const content = {
+        ...parsedCompanyDetails,
+        _links: CompanyLinksSchema.parse({
+          self: { href: `/companies/${company.id}` },
+          properties: { href: `/properties?companyCode=${company.code}` },
         }),
+      }
+
+      ctx.body = {
+        content,
+        ...metadata,
       }
     } catch (err) {
       ctx.status = 500

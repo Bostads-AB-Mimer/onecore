@@ -8,7 +8,7 @@ model Room {
   roomSpecificationId String?   @map("keybarcr") @db.Char(15)
   inspectAsId         String?   @map("keyaopla") @db.Char(15)
   orderTemplateId     String?   @map("keyikmal") @db.Char(15)
-  roomCode            String    @map("code") @db.VarChar(30)
+  code                String    @map("code") @db.VarChar(30)
   name                String?   @map("caption") @db.VarChar(30)
   sharedUse           Int       @default(0, map: "DF__barum__gemensam__77D2F82E") @map("gemensam") @db.TinyInt
   sortingOrder        Int       @default(0, map: "DF__barum__bessort__78C71C67") @map("bessort") @db.TinyInt
@@ -34,7 +34,7 @@ model Room {
   @@index([roomTypeId], map: "fkbarumbarut")
   @@index([fromDate], map: "inbarum_1W10H88YR")
   @@index([toDate], map: "inbarum_1W10H88ZM")
-  @@index([roomCode], map: "inbarum_1W10H890J")
+  @@index([code], map: "inbarum_1W10H890J")
   @@index([name], map: "inbarum_1W10H891T")
   @@map("barum")
 }

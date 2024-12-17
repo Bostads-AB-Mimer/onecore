@@ -21,8 +21,8 @@ export const BuildingSchema = z.object({
     valueYear: z.number().nullable(),
   }),
   features: z.object({
-    heating: z.string().nullable(),
-    fireRating: z.string().nullable(),
+    heating: z.string().nullable().optional(),
+    fireRating: z.string().nullable().optional(),
   }),
   insurance: z.object({
     class: z.string().nullable(),

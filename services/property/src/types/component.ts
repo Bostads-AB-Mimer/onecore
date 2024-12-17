@@ -1,10 +1,15 @@
 import { z } from 'zod'
 
-export const componentsQueryParamsSchema = z.object({
-  maintenanceUnit: z
-    .string()
-    .min(1, { message: 'maintenanceUnit is required and cannot be empty.' }),
-})
+export const componentsQueryParamsSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('maintenance'),
+    maintenanceUnit: z.string().min(1, { message: 'maintenanceUnit cannot be empty when type is maintenance' })
+  }),
+  z.object({
+    type: z.literal('residence'), 
+    residenceCode: z.string().min(1, { message: 'residenceCode cannot be empty when type is residence' })
+  })
+])
 
 export const ComponentSchema = z.object({
   id: z.string(),

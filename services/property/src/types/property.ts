@@ -21,11 +21,6 @@ export const PropertySchema = z.object<z.ZodRawShape>({
   name: z.string(),
   code: z.string(),
   propertyId: z.string(),
-  _links: z.object({
-    self: z.object({
-      href: z.string(),
-    }),
-  }),
 })
 
 export const PropertyDetailsSchema = z.object({
@@ -59,11 +54,11 @@ export const PropertyDetailsSchema = z.object({
   includeInAssessedValue: z.number().int(),
   grading: z.number().int(),
   deleteMark: z.number().int(),
-  fromDate: z.string(),
-  toDate: z.string(),
+  fromDate: z.date(),
+  toDate: z.date(),
   timestamp: z.string(),
   propertyObject: z.object({
-    propertyObjectId: z.string().trim(),
+    id: z.string().trim(),
     deleteMark: z.number().int(),
     timestamp: z.string(),
     objectTypeId: z.string().trim(),

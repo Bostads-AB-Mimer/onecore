@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 export const CompanySchema = z.object({
@@ -16,7 +17,7 @@ export const CompanyDetailsSchema = z.object({
   organizationNumber: z.string().nullable(),
   phone: z.string().nullable(),
   fax: z.string().nullable(),
-  vatNumber: z.string().nullable(),
+  vatNumber: z.string().nullable().optional(),
   internalExternal: z.number(),
   fTax: z.number(),
   cooperativeHousingAssociation: z.number(),
@@ -33,7 +34,7 @@ export const CompanyDetailsSchema = z.object({
   errorReportAdministration: z.number(),
   mediaBilling: z.number(),
   ownResponsibilityForInternalMaintenance: z.number(),
-  subletPercentage: z.string(),
+  subletPercentage: z.instanceof(Prisma.Decimal),
   subletFeeAmount: z.number(),
   disableQuantitiesBelowCompany: z.number(),
   timestamp: z.string(),

@@ -20,7 +20,6 @@ export const StaircaseSchema = z.object({
   }),
   deleted: z.boolean(),
   timestamp: z.string(),
-  buildingCode: z.string(),
 })
 
 export type Staircase = z.infer<typeof StaircaseSchema>

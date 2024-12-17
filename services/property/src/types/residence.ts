@@ -2,7 +2,10 @@ import { z } from 'zod'
 
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
-    .string()
+    .string({
+      required_error: "buildingCode query parameter is required",
+      invalid_type_error: "buildingCode must be a string"
+    })
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
   floorCode: z.string().optional(),
 })
@@ -11,10 +14,17 @@ export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  links: z.object({
-    building: z.string().optional(),
-    property: z.string().optional(),
+  deleted: z.boolean(),
+  validityPeriod: z.object({
+    fromDate: z.date(),
+    toDate: z.date(),
   }),
+})
+
+export const ResidenceDetailedSchema = ResidenceSchema.extend({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
   location: z.string().optional(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),
@@ -46,31 +56,6 @@ export const ResidenceSchema = z.object({
     smokeFree: z.boolean(),
     asbestos: z.boolean(),
   }),
-  rooms: z
-    .array(
-      z.object({
-        roomId: z.string(),
-        roomCode: z.string(),
-        name: z.string().optional(),
-        sharedUse: z.boolean(),
-        sortingOrder: z.number(),
-        allowPeriodicWorks: z.boolean(),
-        spaceType: z.number(),
-        hasToilet: z.boolean(),
-        isHeated: z.number(),
-        hasThermostatValve: z.boolean(),
-        orientation: z.number(),
-        installationDate: z.date().optional(),
-        deleteMark: z.boolean(),
-        fromDate: z.date(),
-        toDate: z.date(),
-        availableFrom: z.date().optional(),
-        availableTo: z.date().optional(),
-        timestamp: z.string(),
-      })
-    )
-    .optional()
-    .default([]),
   entrance: z.string(),
   partNo: z.number().optional().nullable(),
   part: z.string().optional().nullable(),
