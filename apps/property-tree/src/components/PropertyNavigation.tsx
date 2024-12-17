@@ -273,27 +273,29 @@ export function PropertyNavigation() {
   }
 
   return (
-    <Sidebar className="w-full">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <NavigationItemComponent
-                    item={item}
-                    level={0}
-                    expanded={expanded}
-                    selected={selected}
-                    onToggle={handleToggle}
-                    onSelect={handleSelect}
-                  />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <SidebarProvider>
+      <Sidebar className="w-full">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigationItems.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <NavigationItemComponent
+                      item={item}
+                      level={0}
+                      expanded={expanded}
+                      selected={selected}
+                      onToggle={handleToggle}
+                      onSelect={handleSelect}
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+    </SidebarProvider>
   )
 }
