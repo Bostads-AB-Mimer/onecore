@@ -5,7 +5,7 @@ import {
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
-  TicketMessageSms,
+  WorkOrderSms,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
@@ -149,7 +149,7 @@ export const sendParkingSpaceAssignedToOther = async (
   }
 }
 
-export const sendTicketSms = async (sms: TicketMessageSms) => {
+export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
   try {
     const response = await infobip.channels.sms.send({
       messages: [
