@@ -275,7 +275,7 @@ export function PropertyNavigation() {
 
   return (
     <SidebarProvider>
-      <Sidebar className="w-full">
+      <Sidebar className="w-64">
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
