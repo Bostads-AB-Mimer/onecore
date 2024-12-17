@@ -3,8 +3,8 @@ import { BuildingWithLinks, PropertyWithLinks } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton, SidebarMenu } from '../ui/sidebar'
 import { BuildingNavigation } from './BuildingNavigation'
-import { useAsync } from '@/hooks/use-async'
-import { fetchApi } from '@/services/api/baseApi'
+import { useQuery } from '@tanstack/react-query'
+import { propertyService } from '@/services/api'
 
 interface PropertyNavigationProps {
   property: PropertyWithLinks
@@ -19,24 +19,14 @@ export function PropertyNavigation({
 }: PropertyNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const {
-    data: buildings,
-    loading,
-    error,
-  } = useAsync(async () => {
-    if (isExpanded) {
-      if (!property._links?.buildings?.href) {
-        throw new Error('Property is missing buildings link')
-      }
-      const response = await fetchApi<{ content: BuildingWithLinks[] }>(
-        property._links.buildings.href
-      )
-      return response.content
-    }
-    return []
-  }, [isExpanded])
+  const { data: buildings, isLoading, error } = useQuery({
+    queryKey: ['buildings', property.id],
+    queryFn: () => propertyService.getPropertyBuildings(property),
+    enabled: isExpanded,
+    select: (response) => response.content,
+  })
 
-  if (loading && isExpanded) {
+  if (isLoading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />

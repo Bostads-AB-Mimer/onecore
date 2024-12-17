@@ -8,7 +8,17 @@ import {
 import { motion } from 'framer-motion'
 import { Search, Settings, User2 } from 'lucide-react'
 import { CommandPalette } from './components/CommandPalette'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CommandPaletteProvider, useCommandPalette } from './hooks/useCommandPalette'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+})
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarProvider } from './components/ui/sidebar'
 import { CompanyNavigation } from './components/navigation/CompanyNavigation'
 import { useAsync } from './hooks/use-async'
@@ -164,10 +174,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <Router>
-      <CommandPaletteProvider>
-        <AppContent />
-      </CommandPaletteProvider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <CommandPaletteProvider>
+          <AppContent />
+        </CommandPaletteProvider>
+      </Router>
+    </QueryClientProvider>
   )
 }

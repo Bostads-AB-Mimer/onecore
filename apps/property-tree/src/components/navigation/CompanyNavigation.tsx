@@ -3,8 +3,8 @@ import { CompanyWithLinks, PropertyWithLinks } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { PropertyNavigation } from './PropertyNavigation'
-import { useAsync } from '@/hooks/use-async'
-import { fetchApi } from '@/services/api/baseApi'
+import { useQuery } from '@tanstack/react-query'
+import { companyService } from '@/services/api'
 
 interface CompanyNavigationProps {
   company: CompanyWithLinks
@@ -19,25 +19,13 @@ export function CompanyNavigation({
 }: CompanyNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const {
-    data: properties,
-    loading,
-    error,
-  } = useAsync(async () => {
-    if (isExpanded) {
-      if (!company._links?.properties?.href) {
-        throw new Error('Company is missing properties link')
-      }
-      const response = await fetchApi<{ content: PropertyWithLinks[] }>(
-        company._links.properties.href
-      )
-      console.log('response', response)
-      return response.content
-    }
-    return []
-  }, [isExpanded])
+  const { data: properties, isLoading, error } = useQuery({
+    queryKey: ['properties', company.id],
+    queryFn: () => companyService.getCompanyProperties(company),
+    enabled: isExpanded,
+  })
 
-  if (loading && isExpanded) {
+  if (isLoading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />

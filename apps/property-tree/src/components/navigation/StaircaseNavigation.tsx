@@ -3,8 +3,7 @@ import { StaircaseWithLinks, ResidenceWithLinks } from '@/services/types'
 import { Home } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { ResidenceNavigation } from './ResidenceNavigation'
-import { useAsync } from '@/hooks/use-async'
-import { fetchApi } from '@/services/api/baseApi'
+import { useQuery } from '@tanstack/react-query'
 
 interface StaircaseNavigationProps {
   staircase: StaircaseWithLinks
@@ -15,24 +14,20 @@ interface StaircaseNavigationProps {
 export function StaircaseNavigation({ staircase, selected, onSelect }: StaircaseNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: residences, loading, error } = useAsync(async () => {
-    if (isExpanded) {
-      if (!staircase._links?.residences?.href) {
-        throw new Error('Staircase is missing residences link')
-      }
-      const response = await fetchApi<{ content: NavigationItem[] }>(staircase._links.residences.href)
-      return response.content.map(residence => ({
-        id: residence.id,
-        name: residence.name || residence.code,
-        type: 'residence' as const,
-        _links: residence._links,
-        children: []
-      }))
-    }
-    return []
-  }, [isExpanded])
+  const { data: residences, isLoading, error } = useQuery({
+    queryKey: ['residences', staircase.id],
+    queryFn: () => fetchApi<{ content: NavigationItem[] }>(staircase._links.residences.href),
+    enabled: isExpanded && !!staircase._links?.residences?.href,
+    select: (response) => response.content.map(residence => ({
+      id: residence.id,
+      name: residence.name || residence.code,
+      type: 'residence' as const,
+      _links: residence._links,
+      children: []
+    }))
+  })
 
-  if (loading && isExpanded) {
+  if (isLoading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />

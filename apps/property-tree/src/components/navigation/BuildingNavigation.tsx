@@ -3,8 +3,8 @@ import { BuildingWithLinks, StaircaseWithLinks } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { StaircaseNavigation } from './StaircaseNavigation'
-import { useAsync } from '@/hooks/use-async'
-import { fetchApi } from '@/services/api/baseApi'
+import { useQuery } from '@tanstack/react-query'
+import { buildingService } from '@/services/api'
 
 interface BuildingNavigationProps {
   building: BuildingWithLinks
@@ -15,24 +15,20 @@ interface BuildingNavigationProps {
 export function BuildingNavigation({ building, selected, onSelect }: BuildingNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: staircases, loading, error } = useAsync(async () => {
-    if (isExpanded) {
-      if (!building._links?.staircases?.href) {
-        throw new Error('Building is missing staircases link')
-      }
-      const response = await fetchApi<{ content: NavigationItem[] }>(building._links.staircases.href)
-      return response.content.map(staircase => ({
-        id: staircase.id,
-        name: staircase.name || staircase.code,
-        type: 'staircase' as const,
-        _links: staircase._links,
-        children: []
-      }))
-    }
-    return []
-  }, [isExpanded])
+  const { data: staircases, isLoading, error } = useQuery({
+    queryKey: ['staircases', building.id],
+    queryFn: () => buildingService.getBuildingStaircases(building),
+    enabled: isExpanded,
+    select: (response) => response.content.map(staircase => ({
+      id: staircase.id,
+      name: staircase.name || staircase.code,
+      type: 'staircase' as const,
+      _links: staircase._links,
+      children: []
+    }))
+  })
 
-  if (loading && isExpanded) {
+  if (isLoading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
