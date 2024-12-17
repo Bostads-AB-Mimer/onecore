@@ -1,14 +1,18 @@
-import type {
-  Room,
-  Component,
-  Residence,
-  Building as BaseBuilding,
-  Property,
-  Staircase,
-} from './api/schemas'
+import type { paths } from './api/generated/api-types'
 
-export type { Room, Component, Residence, Staircase }
+// Extract response types from the generated paths
+type ApiResponse<T> = T extends { responses: { 200: { content: { 'application/json': infer R } } } } ? R : never
 
+// Extract common types from the API responses
+export type Company = ApiResponse<paths['/companies']['get']>['content'][number]
+export type Property = ApiResponse<paths['/properties']['get']>['content'][number]
+export type Building = ApiResponse<paths['/buildings']['get']>['content'][number]
+export type Staircase = ApiResponse<paths['/staircases']['get']>['content'][number]
+export type Residence = ApiResponse<paths['/residences']['get']>['content'][number]
+export type Room = ApiResponse<paths['/rooms']['get']>['content'][number]
+export type Component = ApiResponse<paths['/components']['get']>['content'][number]
+
+// Custom types that aren't in the API
 export interface Issue {
   id: string
   description: string
@@ -18,101 +22,6 @@ export interface Issue {
   feature: string
   date: string
   residenceId: string
-}
-
-// Common links interface
-export interface Links {
-  _links: {
-    self: { href: string }
-    [key: string]: { href: string }
-  }
-}
-
-export interface Company {
-  id: string
-  propertyObjectId: string
-  code: string
-  name: string
-  organizationNumber: string | null
-}
-
-export interface CompanyLinks {
-  _links: {
-    self: { href: string }
-    properties: { href: string }
-  }
-}
-
-export interface PropertyLinks {
-  _links: {
-    self: { href: string }
-    buildings: { href: string }
-    residences: { href: string }
-    statistics: { href: string }
-  }
-}
-
-export interface Building extends BaseBuilding {
-  features: {
-    heating: string | null
-    fireRating: string | null
-    hasElevator: boolean
-    accessControl: string
-    energyClass: string
-  }
-  insurance: {
-    class: string | null
-    value: number | null
-    lastInspection: string | null
-    nextInspection: string | null
-  }
-  maintenance: {
-    lastMaintenance: string | null
-    nextMaintenance: string | null
-    condition: 'good' | 'fair' | 'poor'
-    notes: string | null
-  }
-  statistics: {
-    totalResidences: number
-    occupiedResidences: number
-    totalArea: number
-    averageRent: number
-  }
-}
-
-export interface BuildingLinks {
-  _links: {
-    self: { href: string }
-    property: { href: string }
-    residences: { href: string }
-    staircases: { href: string }
-  }
-}
-
-export interface CompanyDetails extends Company {
-  phone: string | null
-  fax: string | null
-  vatNumber: string | null
-  internalExternal: number
-  fTax: number
-  cooperativeHousingAssociation: number
-  differentiatedAdditionalCapital: number
-  rentAdministered: number
-  blocked: number
-  rentDaysPerMonth: number
-  economicPlanApproved: number
-  vatObligationPercent: number
-  vatRegistered: number
-  energyOptimization: number
-  ownedCompany: number
-  interestInvoice: number
-  errorReportAdministration: number
-  mediaBilling: number
-  ownResponsibilityForInternalMaintenance: number
-  subletPercentage: any
-  subletFeeAmount: number
-  disableQuantitiesBelowCompany: number
-  timestamp: string
 }
 
 export interface NavigationItem {
@@ -130,11 +39,19 @@ export interface NavigationItem {
   }
 }
 
+// Type helpers for responses with links
+export type WithLinks<T> = T & {
+  _links: {
+    self: { href: string }
+    [key: string]: { href: string }
+  }
+}
+
 // Extend base types with links
-export type RoomWithLinks = Room & Links
-export type ComponentWithLinks = Component & Links
-export type ResidenceWithLinks = Residence & Links
-export type BuildingWithLinks = Building & BuildingLinks
-export type PropertyWithLinks = Property & PropertyLinks
-export type StaircaseWithLinks = Staircase & Links
-export type CompanyWithLinks = Company & Links
+export type CompanyWithLinks = WithLinks<Company>
+export type PropertyWithLinks = WithLinks<Property>
+export type BuildingWithLinks = WithLinks<Building>
+export type StaircaseWithLinks = WithLinks<Staircase>
+export type ResidenceWithLinks = WithLinks<Residence>
+export type RoomWithLinks = WithLinks<Room>
+export type ComponentWithLinks = WithLinks<Component>
