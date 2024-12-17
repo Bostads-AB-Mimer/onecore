@@ -8,15 +8,10 @@ import { propertyService } from '@/services/api'
 
 interface PropertyNavigationProps {
   property: PropertyWithLinks
-  selected: string | null
-  onSelect: (property: PropertyWithLinks) => void
 }
 
-export function PropertyNavigation({
-  property,
-  selected,
-  onSelect,
-}: PropertyNavigationProps) {
+export function PropertyNavigation({ property }: PropertyNavigationProps) {
+  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const { data: buildings, isLoading, error } = useQuery({

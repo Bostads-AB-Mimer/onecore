@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { Search, Settings, User2 } from 'lucide-react'
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { NavigationProvider } from './hooks/use-navigation-context'
 import {
   CommandPaletteProvider,
   useCommandPalette,
@@ -157,7 +158,8 @@ function AppContent() {
       </nav>
 
       {/* Sidebar */}
-      <SidebarProvider defaultOpen>
+      <NavigationProvider>
+        <SidebarProvider defaultOpen>
         <Sidebar>
           <SidebarContent>
             <SidebarGroup>
@@ -167,7 +169,8 @@ function AppContent() {
             </SidebarGroup>
           </SidebarContent>
         </Sidebar>
-      </SidebarProvider>
+        </SidebarProvider>
+      </NavigationProvider>
 
       {/* Main Content */}
       <main className="pl-64 pt-14">

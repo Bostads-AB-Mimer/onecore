@@ -7,11 +7,10 @@ import { useQuery } from '@tanstack/react-query'
 
 interface StaircaseNavigationProps {
   staircase: StaircaseWithLinks
-  selected: string | null
-  onSelect: (staircase: StaircaseWithLinks) => void
 }
 
-export function StaircaseNavigation({ staircase, selected, onSelect }: StaircaseNavigationProps) {
+export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
+  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const { data: residences, isLoading, error } = useQuery({

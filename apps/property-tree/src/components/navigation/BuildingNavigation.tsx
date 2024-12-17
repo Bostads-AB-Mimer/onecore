@@ -8,11 +8,10 @@ import { buildingService } from '@/services/api'
 
 interface BuildingNavigationProps {
   building: BuildingWithLinks
-  selected: string | null
-  onSelect: (building: BuildingWithLinks) => void
 }
 
-export function BuildingNavigation({ building, selected, onSelect }: BuildingNavigationProps) {
+export function BuildingNavigation({ building }: BuildingNavigationProps) {
+  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const { data: staircases, isLoading, error } = useQuery({

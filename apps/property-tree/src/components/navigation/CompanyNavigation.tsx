@@ -8,15 +8,10 @@ import { companyService } from '@/services/api'
 
 interface CompanyNavigationProps {
   company: CompanyWithLinks
-  selected: string | null
-  onSelect: (company: CompanyWithLinks) => void
 }
 
-export function CompanyNavigation({
-  company,
-  selected,
-  onSelect,
-}: CompanyNavigationProps) {
+export function CompanyNavigation({ company }: CompanyNavigationProps) {
+  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const {

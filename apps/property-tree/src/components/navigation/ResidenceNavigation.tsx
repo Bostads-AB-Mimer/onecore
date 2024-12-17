@@ -5,11 +5,10 @@ import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 
 interface ResidenceNavigationProps {
   residence: ResidenceWithLinks
-  selected: string | null
-  onSelect: (residence: ResidenceWithLinks) => void
 }
 
-export function ResidenceNavigation({ residence, selected, onSelect }: ResidenceNavigationProps) {
+export function ResidenceNavigation({ residence }: ResidenceNavigationProps) {
+  const { selectedId, selectItem } = useNavigation()
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
