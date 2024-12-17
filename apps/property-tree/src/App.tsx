@@ -30,26 +30,30 @@ import {
   SidebarProvider,
 } from './components/ui/sidebar'
 import { CompanyNavigation } from './components/navigation/CompanyNavigation'
-import { useAsync } from './hooks/use-async'
+import { useQuery } from '@tanstack/react-query'
 import { companyService } from './services/api'
 import { NavigationItem } from './services/types'
+
 function CompanyNavigationLoader() {
   const {
     data: companies,
-    loading,
+    isLoading,
     error,
-  } = useAsync<NavigationItem[]>(async () => {
-    const response = await companyService.getAll()
-    return response.map((company) => ({
-      id: company.id,
-      name: company.name,
-      type: 'company' as const,
-      _links: company._links,
-      children: [],
-    }))
+  } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const response = await companyService.getAll()
+      return response.map((company) => ({
+        id: company.id,
+        name: company.name,
+        type: 'company' as const,
+        _links: company._links,
+        children: [],
+      }))
+    },
   })
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
