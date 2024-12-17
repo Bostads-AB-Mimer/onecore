@@ -1,5 +1,5 @@
 import React from 'react'
-import { CompanyWithLinks, PropertyWithLinks } from '@/services/types'
+import { CompanyWithLinks } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { PropertyNavigation } from './PropertyNavigation'
@@ -19,7 +19,11 @@ export function CompanyNavigation({
 }: CompanyNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: properties, isLoading, error } = useQuery({
+  const {
+    data: properties,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['properties', company.id],
     queryFn: () => companyService.getCompanyProperties(company),
     enabled: isExpanded,
@@ -55,7 +59,7 @@ export function CompanyNavigation({
         tooltip={company.name}
       >
         <Building2 />
-        <span>{company.name}</span>
+        <span>{company.name.replace('** TEST **', '')}</span>
       </SidebarMenuButton>
       {isExpanded && properties && properties.length > 0 && (
         <SidebarMenu>
