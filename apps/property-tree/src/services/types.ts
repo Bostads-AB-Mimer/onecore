@@ -4,15 +4,10 @@ import type {
   Residence,
   Building as BaseBuilding,
   Property,
-  Staircase
+  Staircase,
 } from './api/schemas'
 
-export type {
-  Room,
-  Component,
-  Residence,
-  Staircase
-}
+export type { Room, Component, Residence, Staircase }
 
 // Common links interface
 export interface Links {
@@ -30,43 +25,7 @@ export interface Company {
   organizationNumber: string | null
 }
 
-export interface Property {
-  id: string
-  code: string
-  tract: string
-  propertyDesignation: {
-    propertyDesignationId: string
-    code: string
-    name: string
-    timestamp: string
-  }
-  propertyObject: {
-    deleted: boolean
-    timestamp: string
-    objectType: {
-      id: string
-      code: string
-      name: string
-    } | null
-    condition: string | null
-    conditionInspectionDate: string | null
-    energy: {
-      class: number | null
-      registered: string | null
-      received: string | null
-      index: number | null
-    }
-  } | null
-  statistics?: {
-    totalBuildings: number
-    totalResidences: number
-    occupiedResidences: number
-    totalArea: number
-    averageRent: number
-  }
-}
-
-export interface PropertyWithLinks extends Property {
+export interface PropertyLinks {
   _links: {
     self: { href: string }
     buildings: { href: string }
@@ -103,7 +62,7 @@ export interface Building extends BaseBuilding {
   }
 }
 
-export interface BuildingWithLinks extends Building {
+export interface BuildingLinks {
   _links: {
     self: { href: string }
     property: { href: string }
@@ -157,7 +116,7 @@ export interface NavigationItem {
 export type RoomWithLinks = Room & Links
 export type ComponentWithLinks = Component & Links
 export type ResidenceWithLinks = Residence & Links
-export type BuildingWithLinks = Building & Links
-export type PropertyWithLinks = Property & Links
+export type BuildingWithLinks = Building & BuildingLinks
+export type PropertyWithLinks = Property & PropertyLinks
 export type StaircaseWithLinks = Staircase & Links
 export type CompanyWithLinks = Company & Links

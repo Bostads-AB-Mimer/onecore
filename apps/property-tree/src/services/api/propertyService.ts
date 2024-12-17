@@ -2,7 +2,9 @@ import {
   Building,
   CompanyWithLinks,
   NavigationItem,
+  Property,
   PropertyWithLinks,
+  Residence,
   Staircase,
 } from '../types'
 import { fetchApi } from './baseApi'
@@ -16,7 +18,7 @@ interface PropertyListResponse {
 }
 
 interface PropertyDetailsResponse {
-  content: PropertyWithLinks
+  content: Property
 }
 
 interface BuildingListResponse {
@@ -43,10 +45,17 @@ export const propertyService = {
     return properties
   },
 
+  async getPropertyById(propertyId: string): Promise<PropertyWithLinks> {
+    const response = await fetchApi<PropertyDetailsResponse>(
+      `/properties/${propertyId}`
+    )
+    return response.content
+  },
+
   // Get property by using HATEOAS self link
-  async getProperty(property: PropertyWithLinks): Promise<PropertyWithLinks> {
+  async getProperty(property: PropertyWithLinks): Promise<Property> {
     if (!property._links || !property._links.self) {
-      throw new Error("Property does not have a self link");
+      throw new Error('Property does not have a self link')
     }
     const response = await fetchApi<PropertyDetailsResponse>(
       property._links.self.href
