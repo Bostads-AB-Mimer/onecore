@@ -7,7 +7,7 @@ import {
 } from '../types'
 import { fetchApi } from './baseApi'
 
-interface BuildingListResponse {
+interface BuildingResponse {
   content: BuildingWithLinks[]
 }
 
@@ -15,18 +15,18 @@ interface BuildingDetailsResponse {
   content: BuildingWithLinks
 }
 
-interface BuildingStaircasesResponse {
+interface StaircaseResponse {
   content: StaircaseWithLinks[]
 }
 
-interface BuildingResidencesResponse {
+interface ResidenceResponse {
   content: ResidenceWithLinks[]
 }
 
 export const buildingService = {
   // Get buildings by property code
   async getByPropertyCode(propertyCode: string): Promise<Building[]> {
-    const response = await fetchApi<BuildingListResponse>(
+    const response = await fetchApi<BuildingResponse>(
       `/buildings?propertyCode=${propertyCode}`
     )
     return response.content
@@ -38,30 +38,19 @@ export const buildingService = {
     return response.content
   },
 
-  // Get building staircases using HATEOAS link
+  // Get building staircases
   async getBuildingStaircases(building: BuildingWithLinks) {
-    const response = fetchApi<BuildingStaircasesResponse>(
-      building._links.staircases.href
+    const response = await fetchApi<StaircaseResponse>(
+      `/staircases?buildingCode=${building.code}`
     )
-    return (await response).content
+    return response.content
   },
 
-  // Get building residences using HATEOAS link
+  // Get building residences
   async getBuildingResidences(building: BuildingWithLinks) {
-    const response = fetchApi<BuildingResidencesResponse>(
-      building._links.residences.href
+    const response = await fetchApi<ResidenceResponse>(
+      `/residences?buildingCode=${building.code}`
     )
-    return (await response).content
-  },
-
-  // Get building statistics
-  async getBuildingStats(id: string) {
-    const response = await fetchApi<{
-      totalResidences: number
-      occupiedResidences: number
-      totalArea: number
-      averageRent: number
-    }>(`/buildings/${id}/statistics`)
-    return response
-  },
+    return response.content
+  }
 }
