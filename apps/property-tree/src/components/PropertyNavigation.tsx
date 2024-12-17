@@ -102,32 +102,100 @@ export function PropertyNavigation() {
     setSelected(item.id)
   }
 
-  // Rekursiv rendering av navigationsnoder
-  const renderItems = (items: NavigationItem[]) => {
-    return items.map(item => (
-      <SidebarMenuItem key={item.id}>
-        <SidebarMenuButton
-          onClick={() => {
-            handleExpand(item)
-            handleSelect(item)
-          }}
-          isActive={selected === item.id}
-        >
-          {item.type === 'company' && <Building2 />}
-          {item.type === 'property' && <Building />}
-          {item.type === 'building' && <Warehouse />}
-          {item.type === 'staircase' && <Home />}
-          {item.type === 'residence' && <Hotel />}
-          <span>{item.name}</span>
-        </SidebarMenuButton>
-        {expanded.has(item.id) && item.children && (
-          <SidebarMenu>
-            {renderItems(item.children)}
-          </SidebarMenu>
-        )}
-      </SidebarMenuItem>
-    ))
-  }
+  const renderCompanyItem = (item: NavigationItem) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        onClick={() => {
+          handleExpand(item)
+          handleSelect(item)
+        }}
+        isActive={selected === item.id}
+      >
+        <Building2 />
+        <span>{item.name}</span>
+      </SidebarMenuButton>
+      {expanded.has(item.id) && item.children && (
+        <SidebarMenu>
+          {item.children.map(renderPropertyItem)}
+        </SidebarMenu>
+      )}
+    </SidebarMenuItem>
+  )
+
+  const renderPropertyItem = (item: NavigationItem) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        onClick={() => {
+          handleExpand(item)
+          handleSelect(item)
+        }}
+        isActive={selected === item.id}
+      >
+        <Building />
+        <span>{item.name}</span>
+      </SidebarMenuButton>
+      {expanded.has(item.id) && item.children && (
+        <SidebarMenu>
+          {item.children.map(renderBuildingItem)}
+        </SidebarMenu>
+      )}
+    </SidebarMenuItem>
+  )
+
+  const renderBuildingItem = (item: NavigationItem) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        onClick={() => {
+          handleExpand(item)
+          handleSelect(item)
+        }}
+        isActive={selected === item.id}
+      >
+        <Warehouse />
+        <span>{item.name}</span>
+      </SidebarMenuButton>
+      {expanded.has(item.id) && item.children && (
+        <SidebarMenu>
+          {item.children.map(renderStaircaseItem)}
+        </SidebarMenu>
+      )}
+    </SidebarMenuItem>
+  )
+
+  const renderStaircaseItem = (item: NavigationItem) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        onClick={() => {
+          handleExpand(item)
+          handleSelect(item)
+        }}
+        isActive={selected === item.id}
+      >
+        <Home />
+        <span>{item.name}</span>
+      </SidebarMenuButton>
+      {expanded.has(item.id) && item.children && (
+        <SidebarMenu>
+          {item.children.map(renderResidenceItem)}
+        </SidebarMenu>
+      )}
+    </SidebarMenuItem>
+  )
+
+  const renderResidenceItem = (item: NavigationItem) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        onClick={() => {
+          handleExpand(item)
+          handleSelect(item)
+        }}
+        isActive={selected === item.id}
+      >
+        <Hotel />
+        <span>{item.name}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
 
   if (loading) {
     return (
@@ -157,7 +225,7 @@ export function PropertyNavigation() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {renderItems(items)}
+                {items.map(renderCompanyItem)}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
