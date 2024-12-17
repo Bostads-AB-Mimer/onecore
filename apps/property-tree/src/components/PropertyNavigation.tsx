@@ -88,25 +88,14 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <motion.button
+    <SidebarMenuItem>
+      <SidebarMenuButton
         onClick={handleClick}
-        className={clsx(
-          'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300',
-          'hover:bg-gray-50 dark:hover:bg-gray-800',
-          isSelected
-            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-            : 'text-gray-600 dark:text-gray-400',
-          'group relative'
+        className={cn(
+          isSelected && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+          !isSelected && "text-gray-600 dark:text-gray-400"
         )}
         style={{ paddingLeft: `${level * 12 + 12}px` }}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
       >
         <div className="flex items-center space-x-2 flex-1">
           <Icon
@@ -162,6 +151,17 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
     </motion.div>
   )
 }
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "./ui/sidebar"
 
 export function PropertyNavigation() {
   const [navigationItems, setNavigationItems] = React.useState<
@@ -275,20 +275,12 @@ export function PropertyNavigation() {
   }
 
   return (
-    <div className="p-4 space-y-2">
-      <div className="mb-6">
-        <h2 className="text-sm font-medium text-gray-400 dark:text-gray-500 mb-2">
-          Navigation
-        </h2>
-        <div className="h-px bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800" />
-      </div>
-
-      <motion.div
-        className="space-y-0.5"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
         {navigationItems.map((item) => (
           <NavigationItemComponent
             key={item.id}
@@ -300,7 +292,10 @@ export function PropertyNavigation() {
             onSelect={handleSelect}
           />
         ))}
-      </motion.div>
-    </div>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   )
 }
