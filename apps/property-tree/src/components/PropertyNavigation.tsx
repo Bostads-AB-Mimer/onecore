@@ -1,6 +1,6 @@
 import React from 'react'
-import { Building2, Loader2 } from 'lucide-react'
-import { PropertyItems } from './navigation/PropertyItems'
+import { Loader2 } from 'lucide-react'
+import { CompanyNavigation } from './navigation/CompanyNavigation'
 import { motion } from 'framer-motion'
 import {
   Sidebar,
@@ -103,31 +103,6 @@ export function PropertyNavigation() {
     setSelected(item.id)
   }
 
-  const renderCompanyItem = (item: NavigationItem) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
-        }}
-        isActive={selected === item.id}
-      >
-        <Building2 />
-        <span>{item.name}</span>
-      </SidebarMenuButton>
-      {expanded.has(item.id) && item.children && (
-        <SidebarMenu>
-          <PropertyItems
-            properties={item.children}
-            expanded={expanded}
-            selected={selected}
-            onExpand={handleExpand}
-            onSelect={handleSelect}
-          />
-        </SidebarMenu>
-      )}
-    </SidebarMenuItem>
-  )
 
 
   if (loading) {
@@ -158,7 +133,16 @@ export function PropertyNavigation() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map(renderCompanyItem)}
+                {items.map(item => (
+                  <CompanyNavigation
+                    key={item.id}
+                    item={item}
+                    expanded={expanded}
+                    selected={selected}
+                    onExpand={handleExpand}
+                    onSelect={handleSelect}
+                  />
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
