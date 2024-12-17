@@ -158,6 +158,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarProvider,
 } from "./ui/sidebar"
 import { cn } from "@/utils/cn"
 
