@@ -21,7 +21,13 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
     error,
   } = useQuery({
     queryKey: ['propertiesForCompanyId', company.id],
-    queryFn: () => companyService.getCompanyProperties(company),
+    queryFn: async () => {
+      const { data, error } = await GET('/companies/{id}/properties', {
+        params: { path: { id: company.id } }
+      })
+      if (error) throw error
+      return data?.content
+    }
   })
 
   if (isLoading && isExpanded) {
