@@ -46,6 +46,11 @@ export function CompanyNavigation({ company, expanded, selected, onExpand, onSel
   // Visa felmeddelande om något gick fel
   if (error) {
     console.error(`Failed to load properties for company ${company.id}:`, error)
+    return (
+      <SidebarMenuItem>
+        <div className="text-sm text-destructive px-2">Failed to load properties</div>
+      </SidebarMenuItem>
+    )
   }
 
   return (

@@ -3,6 +3,7 @@ import { NavigationItem } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton, SidebarMenu } from '../ui/sidebar'
 import { BuildingNavigation } from './BuildingNavigation'
+import { useAsync } from '@/hooks/use-async'
 import { fetchApi } from '@/services/api/baseApi'
 
 interface PropertyNavigationProps {
@@ -14,27 +15,33 @@ interface PropertyNavigationProps {
 }
 
 export function PropertyNavigation({ property, expanded, selected, onExpand, onSelect }: PropertyNavigationProps) {
-  const [buildings, setBuildings] = React.useState<NavigationItem[]>([])
-
-  React.useEffect(() => {
-    if (expanded.has(property.id) && buildings.length === 0) {
-      const loadBuildings = async () => {
-        try {
-          const response = await fetchApi<{ content: NavigationItem[] }>(property._links.buildings.href)
-          setBuildings(response.content.map(building => ({
-            id: building.id,
-            name: building.name || building.code,
-            type: 'building' as const,
-            _links: building._links,
-            children: []
-          })))
-        } catch (err) {
-          console.error(`Failed to load buildings for property ${property.id}:`, err)
-        }
-      }
-      loadBuildings()
+  const { data: buildings, loading, error } = useAsync(async () => {
+    if (expanded.has(property.id)) {
+      const response = await fetchApi<{ content: NavigationItem[] }>(property._links.buildings.href)
+      return response.content.map(building => ({
+        id: building.id,
+        name: building.name || building.code,
+        type: 'building' as const,
+        _links: building._links,
+        children: []
+      }))
     }
-  }, [property, expanded, buildings.length])
+    return []
+  }, [property.id, expanded])
+
+  // Visa laddningsindikator
+  if (loading && expanded.has(property.id)) {
+    return (
+      <SidebarMenuItem>
+        <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
+      </SidebarMenuItem>
+    )
+  }
+
+  // Visa felmeddelande om något gick fel
+  if (error) {
+    console.error(`Failed to load buildings for property ${property.id}:`, error)
+  }
 
   return (
     <SidebarMenuItem>
