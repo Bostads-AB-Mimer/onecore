@@ -23,8 +23,8 @@ export const companyService = {
 
   // Get properties for a company
   async getCompanyProperties(companyId: string) {
-    const { data, error } = await GET('/companies/{id}/properties', {
-      params: { path: { id: companyId } }
+    const { data, error } = await GET('/companies/{companyId}/properties', {
+      params: { path: { companyId } }
     })
     if (error) throw error
     return data?.content as Property[]
