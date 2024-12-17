@@ -225,7 +225,7 @@ export function PropertyNavigation() {
     setSelected(item.id)
 
     if (item.type === 'residence') {
-      let path = []
+      const path = [] as string[]
 
       const findPath = (items: NavigationItem[], target: string): boolean => {
         for (const item of items) {
