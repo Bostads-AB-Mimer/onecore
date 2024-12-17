@@ -10,7 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { propertyService } from '../../services/api'
-import { Property } from '../../services/types'
+import { Property, PropertyWithLinks } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/Card'
 import { Grid } from '../ui/Grid'
@@ -25,7 +25,7 @@ export function PropertyView() {
   React.useEffect(() => {
     const loadProperty = async () => {
       try {
-        const data = await propertyService.getProperty(propertyId!)
+        const data = await propertyService.getPropertyById(propertyId!)
         setProperty(data)
       } finally {
         setLoading(false)
@@ -72,8 +72,8 @@ export function PropertyView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={property.name}
-        subtitle={property.address}
+        title={property.propertyDesignation.name || ''}
+        subtitle={property.propertyDesignation.code || ''}
         type="Fastighet"
         icon={Building2}
       />

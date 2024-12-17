@@ -9,7 +9,10 @@ import { motion } from 'framer-motion'
 import { Search, Settings, User2 } from 'lucide-react'
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CommandPaletteProvider, useCommandPalette } from './hooks/useCommandPalette'
+import {
+  CommandPaletteProvider,
+  useCommandPalette,
+} from './hooks/useCommandPalette'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,20 +22,30 @@ const queryClient = new QueryClient({
     },
   },
 })
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarProvider } from './components/ui/sidebar'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarProvider,
+} from './components/ui/sidebar'
 import { CompanyNavigation } from './components/navigation/CompanyNavigation'
 import { useAsync } from './hooks/use-async'
 import { companyService } from './services/api'
 import { NavigationItem } from './services/types'
 function CompanyNavigationLoader() {
-  const { data: companies, loading, error } = useAsync<NavigationItem[]>(async () => {
+  const {
+    data: companies,
+    loading,
+    error,
+  } = useAsync<NavigationItem[]>(async () => {
     const response = await companyService.getAll()
-    return response.map(company => ({
+    return response.map((company) => ({
       id: company.id,
       name: company.name,
       type: 'company' as const,
       _links: company._links,
-      children: []
+      children: [],
     }))
   })
 
@@ -62,7 +75,7 @@ function CompanyNavigationLoader() {
 
   return (
     <>
-      {companies.map(company => (
+      {companies.map((company) => (
         <CompanyNavigation
           key={company.id}
           company={company}
