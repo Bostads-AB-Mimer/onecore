@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem } from '@/services/types'
+import { NavigationItem, PropertyWithLinks } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton, SidebarMenu } from '../ui/sidebar'
 import { BuildingNavigation } from './BuildingNavigation'
@@ -7,26 +7,38 @@ import { useAsync } from '@/hooks/use-async'
 import { fetchApi } from '@/services/api/baseApi'
 
 interface PropertyNavigationProps {
-  property: NavigationItem
+  property: PropertyWithLinks
   expanded: Set<string>
   selected: string | null
-  onExpand: (item: NavigationItem) => void
-  onSelect: (item: NavigationItem) => void
+  onExpand: (item: PropertyWithLinks) => void
+  onSelect: (item: PropertyWithLinks) => void
 }
 
-export function PropertyNavigation({ property, expanded, selected, onExpand, onSelect }: PropertyNavigationProps) {
-  const { data: buildings, loading, error } = useAsync(async () => {
+export function PropertyNavigation({
+  property,
+  expanded,
+  selected,
+  onExpand,
+  onSelect,
+}: PropertyNavigationProps) {
+  const {
+    data: buildings,
+    loading,
+    error,
+  } = useAsync(async () => {
     if (expanded.has(property.id)) {
       if (!property._links?.buildings?.href) {
         throw new Error('Property is missing buildings link')
       }
-      const response = await fetchApi<{ content: NavigationItem[] }>(property._links.buildings.href)
-      return response.content.map(building => ({
+      const response = await fetchApi<{ content: PropertyWithLinks[] }>(
+        property._links.buildings.href
+      )
+      return response.content.map((building) => ({
         id: building.id,
         name: building.name || building.code,
         type: 'building' as const,
         _links: building._links,
-        children: []
+        children: [],
       }))
     }
     return []
@@ -43,7 +55,10 @@ export function PropertyNavigation({ property, expanded, selected, onExpand, onS
 
   // Visa felmeddelande om något gick fel
   if (error) {
-    console.error(`Failed to load buildings for property ${property.id}:`, error)
+    console.error(
+      `Failed to load buildings for property ${property.id}:`,
+      error
+    )
   }
 
   return (
@@ -60,7 +75,7 @@ export function PropertyNavigation({ property, expanded, selected, onExpand, onS
       </SidebarMenuButton>
       {expanded.has(property.id) && buildings && buildings.length > 0 && (
         <SidebarMenu>
-          {buildings.map(building => (
+          {buildings.map((building) => (
             <BuildingNavigation
               key={building.id}
               building={building}
