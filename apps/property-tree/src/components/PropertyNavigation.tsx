@@ -1,183 +1,11 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { fetchApi } from '../services/api/baseApi'
 import {
-  Building2,
-  ChevronRight,
-  MapPin,
-  Home,
-  Layers,
-  Building,
-  DoorClosed,
-  Loader2,
-} from 'lucide-react'
-import clsx from 'clsx'
-import { NavigationItem } from '../services/types'
-import { propertyService } from '../services/api'
-
-const iconMap = {
-  area: MapPin,
-  property: Building2,
-  building: Building,
-  staircase: Layers,
-  residence: Home,
-  default: DoorClosed,
-}
-
-const routeMap = {
-  area: '/areas',
-  property: '/properties',
-  building: '/buildings',
-  staircase: '/staircases',
-  residence: '/residences',
-  tenant: '/tenants',
-}
-
-interface NavigationItemProps {
-  item: NavigationItem
-  level: number
-  expanded: Record<string, boolean>
-  selected: string | null
-  onToggle: (id: string) => void
-  onSelect: (item: NavigationItem) => void
-}
-
-const NavigationItemComponent: React.FC<NavigationItemProps> = ({
-  item,
-  level,
-  expanded,
-  selected,
-  onToggle,
-  onSelect,
-}) => {
-  const Icon = iconMap[item.type] || iconMap.default
-  const hasChildren = item.children && item.children.length > 0
-  const hasSingleChild = hasChildren && item.children?.length === 1
-  const isExpanded = expanded[item.id] || hasSingleChild
-  const isSelected = selected === item.id
-  const navigate = useNavigate()
-
-  // Auto-expand if this is the only child at this level
-  React.useEffect(() => {
-    if (hasSingleChild) {
-      switch (item.type) {
-        case 'company':
-          handleCompanyToggle(item.id)
-          break
-        case 'property':
-          handlePropertyToggle(item.id)
-          break
-        case 'building':
-          handleBuildingToggle(item.id)
-          break
-        case 'staircase':
-          handleStaircaseToggle(item.id)
-          break
-      }
-    }
-  }, [])
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-
-    // Always toggle expansion for companies
-    if (item.type === 'company') {
-      handleCompanyToggle(item.id)
-    }
-    // For other items with children, only toggle if not single child
-    else if (hasChildren && !hasSingleChild) {
-      if (item.type === 'property') {
-        handlePropertyToggle(item.id)
-      } else if (item.type === 'building') {
-        handleBuildingToggle(item.id)
-      } else if (item.type === 'staircase') {
-        handleStaircaseToggle(item.id)
-      }
-    }
-
-    onSelect(item)
-
-    // Navigate if it's not a company
-    if (item.type !== 'company') {
-      const basePath = routeMap[item.type]
-      if (basePath) {
-        navigate(`${basePath}/${item.id}`)
-      }
-    }
-  }
-
-  return (
-    <>
-      <SidebarMenuButton
-        onClick={handleClick}
-        isActive={isSelected}
-        className={cn('cursor-pointer w-full')}
-        style={{ paddingLeft: `${level * 12 + 12}px` }}
-      >
-        <div className="flex items-center space-x-2 flex-1">
-          <Icon
-            className={clsx(
-              'h-4 w-4 transition-colors duration-300',
-              isSelected
-                ? 'text-blue-500 dark:text-blue-400'
-                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-            )}
-          />
-          <span className="truncate">
-            {item.name.replace('** TEST **', '')}
-          </span>
-        </div>
-        {hasChildren && !hasSingleChild && (
-          <motion.div
-            animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </motion.div>
-        )}
-
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          layoutId={`hover-${item.id}`}
-        />
-      </SidebarMenuButton>
-
-      <AnimatePresence>
-        {isExpanded && item.children && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            {item.children.map((child) => (
-              <NavigationItemComponent
-                key={child.id}
-                item={child}
-                level={level + 1}
-                expanded={expanded}
-                selected={selected}
-                onToggle={
-                  item.type === 'company'
-                    ? handleCompanyToggle
-                    : item.type === 'property'
-                    ? handlePropertyToggle
-                    : item.type === 'building'
-                    ? handleBuildingToggle
-                    : handleStaircaseToggle
-                }
-                onSelect={onSelect}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  )
-}
-
+  BuildingWithLinks,
+  CompanyWithLinks,
+  NavigationItem,
+  PropertyWithLinks,
+  ResidenceWithLinks,
+  StaircaseWithLinks,
+} from '@/services/types'
 import {
   Sidebar,
   SidebarContent,
@@ -185,18 +13,27 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
   SidebarProvider,
 } from './ui/sidebar'
-import { cn } from '@/utils/cn'
+import { motion } from 'framer-motion'
+
+import {
+  Building,
+  Property,
+  Residence,
+  Staircase,
+} from '@/services/api/schemas'
+import React from 'react'
+import { fetchApi } from '@/services/api/baseApi'
+import { Loader2 } from 'lucide-react'
 
 export function PropertyNavigation() {
   interface NavigationState {
-    companies: Map<string, Company>
-    properties: Map<string, Property>
-    buildings: Map<string, Building>
-    staircases: Map<string, Staircase>
-    residences: Map<string, Residence>
+    companies: Map<string, CompanyWithLinks>
+    properties: Map<string, PropertyWithLinks>
+    buildings: Map<string, BuildingWithLinks>
+    staircases: Map<string, StaircaseWithLinks>
+    residences: Map<string, ResidenceWithLinks>
   }
 
   const [navigationState, setNavigationState] = React.useState<NavigationState>(
@@ -362,20 +199,13 @@ export function PropertyNavigation() {
     }
   }
 
-  const handleToggle = (id: string, type: string) => {
-    switch (type) {
-      case 'company':
-        handleCompanyToggle(id)
-        break
-      case 'property':
-        handlePropertyToggle(id)
-        break
-      case 'building':
-        handleBuildingToggle(id)
-        break
-      case 'staircase':
-        handleStaircaseToggle(id)
-        break
+  const handleResidenceToggle = (id: string) => {
+    const residence = navigationState.residences.get(id)
+    if (residence) {
+      setExpanded((prev) => ({
+        ...prev,
+        [id]: !prev[id],
+      }))
     }
   }
 
@@ -478,7 +308,7 @@ export function PropertyNavigation() {
                                   level={1}
                                   expanded={expanded}
                                   selected={selected}
-                                  onToggle={handleToggle}
+                                  onToggle={handlePropertyToggle}
                                   onSelect={handleSelect}
                                 >
                                   {expanded[property.id] &&
@@ -504,7 +334,7 @@ export function PropertyNavigation() {
                                             level={2}
                                             expanded={expanded}
                                             selected={selected}
-                                            onToggle={handleToggle}
+                                            onToggle={handleBuildingToggle}
                                             onSelect={handleSelect}
                                           >
                                             {expanded[building.id] &&
@@ -534,7 +364,9 @@ export function PropertyNavigation() {
                                                       level={3}
                                                       expanded={expanded}
                                                       selected={selected}
-                                                      onToggle={handleToggle}
+                                                      onToggle={
+                                                        handleStaircaseToggle
+                                                      }
                                                       onSelect={handleSelect}
                                                     >
                                                       {expanded[staircase.id] &&
@@ -571,7 +403,7 @@ export function PropertyNavigation() {
                                                                   selected
                                                                 }
                                                                 onToggle={
-                                                                  handleToggle
+                                                                  handleResidenceToggle
                                                                 }
                                                                 onSelect={
                                                                   handleSelect
