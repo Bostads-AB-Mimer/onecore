@@ -1,120 +1,68 @@
 import React from 'react'
 import { NavigationItem } from '@/services/types'
-import { Building2, Loader2 } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
-import { PropertyItems } from './PropertyItems'
-import { motion } from 'framer-motion'
+import { Building2 } from 'lucide-react'
+import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
+import { PropertyNavigation } from './PropertyNavigation'
 import { fetchApi } from '@/services/api/baseApi'
 
-export function CompanyNavigation() {
-  const [items, setItems] = React.useState<NavigationItem[]>([])
-  const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
-  const [selected, setSelected] = React.useState<string | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+interface CompanyNavigationProps {
+  company: NavigationItem
+  expanded: Set<string>
+  selected: string | null
+  onExpand: (item: NavigationItem) => void
+  onSelect: (item: NavigationItem) => void
+}
 
-  // Load companies when component mounts
+export function CompanyNavigation({ company, expanded, selected, onExpand, onSelect }: CompanyNavigationProps) {
+  const [properties, setProperties] = React.useState<NavigationItem[]>([])
+
+  // Load properties when company is expanded
   React.useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        const response = await fetchApi<{ content: NavigationItem[] }>('/companies')
-        setItems(response.content)
-      } catch (err) {
-        setError('Kunde inte ladda företag')
-        console.error(err)
-      } finally {
-        setLoading(false)
+    if (expanded.has(company.id) && properties.length === 0) {
+      const loadProperties = async () => {
+        try {
+          const response = await fetchApi<{ content: NavigationItem[] }>(company._links.properties.href)
+          setProperties(response.content.map(property => ({
+            id: property.id,
+            name: property.propertyDesignation?.name || property.code,
+            type: 'property' as const,
+            _links: property._links,
+            children: []
+          })))
+        } catch (err) {
+          console.error(`Failed to load properties for company ${company.id}:`, err)
+        }
       }
+      loadProperties()
     }
-    loadCompanies()
-  }, [])
+  }, [company, expanded, properties.length])
 
-  // Handle expanding/collapsing nodes
-  const handleExpand = async (item: NavigationItem) => {
-    if (!expanded.has(item.id)) {
-      try {
-        const response = await fetchApi<{ content: NavigationItem[] }>(item._links.properties.href)
-        setItems(current => {
-          const updateChildren = (items: NavigationItem[]): NavigationItem[] => {
-            return items.map(i => {
-              if (i.id === item.id) {
-                return { 
-                  ...i, 
-                  children: response.content.map(property => ({
-                    id: property.id,
-                    name: property.propertyDesignation?.name || property.code,
-                    type: 'property' as const,
-                    _links: property._links,
-                    children: []
-                  }))
-                }
-              }
-              if (i.children) {
-                return { ...i, children: updateChildren(i.children) }
-              }
-              return i
-            })
-          }
-          return updateChildren(current)
-        })
-      } catch (err) {
-        console.error(`Failed to load properties for company ${item.id}:`, err)
-      }
-    }
-    
-    setExpanded(current => {
-      const next = new Set(current)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        next.add(item.id)
-      }
-      return next
-    })
-  }
-
-  const handleSelect = (item: NavigationItem) => {
-    setSelected(item.id)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-2">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        >
-          <Loader2 className="h-4 w-4 text-muted-foreground" />
-        </motion.div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return <div className="px-2 py-1 text-sm text-destructive">{error}</div>
-  }
-
-  return items.map(item => (
-    <SidebarMenuItem key={item.id}>
+  return (
+    <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
-          handleExpand(item)
-          handleSelect(item)
+          onExpand(company)
+          onSelect(company)
         }}
-        isActive={selected === item.id}
+        isActive={selected === company.id}
       >
         <Building2 />
-        <span>{item.name}</span>
+        <span>{company.name}</span>
       </SidebarMenuButton>
-      {expanded.has(item.id) && item.children && (
-        <PropertyItems
-          properties={item.children}
-          expanded={expanded}
-          selected={selected}
-          onExpand={handleExpand}
-          onSelect={handleSelect}
-        />
+      {expanded.has(company.id) && properties.length > 0 && (
+        <SidebarMenu>
+          {properties.map(property => (
+            <PropertyNavigation
+              key={property.id}
+              property={property}
+              expanded={expanded}
+              selected={selected}
+              onExpand={onExpand}
+              onSelect={onSelect}
+            />
+          ))}
+        </SidebarMenu>
       )}
     </SidebarMenuItem>
-  ))
+  )
 }
