@@ -9,11 +9,11 @@ import { fetchApi } from './baseApi'
 import { Property } from './schemas'
 
 interface CompanyResponse {
-  content: (Company & CompanyLinks)[]
+  content: CompanyWithLinks[]
 }
 
 interface CompanyDetailsResponse {
-  content: CompanyDetails & CompanyLinks
+  content: CompanyWithLinks
 }
 
 interface CompanyPropertiesResponse {
@@ -24,7 +24,10 @@ export const companyService = {
   // Get all companies
   async getAll(): Promise<CompanyWithLinks[]> {
     const response = await fetchApi<CompanyResponse>('/companies/')
-    return response.content
+    return response.content.map(company => ({
+      ...company,
+      id: company.propertyObjectId // Map propertyObjectId to id for compatibility
+    }))
   },
 
   // Get company by ID
