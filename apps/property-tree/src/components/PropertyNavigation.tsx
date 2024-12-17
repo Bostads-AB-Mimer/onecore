@@ -61,20 +61,42 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   // Auto-expand if this is the only child at this level
   React.useEffect(() => {
     if (hasSingleChild) {
-      onToggle(item.id, item.type)
+      switch (item.type) {
+        case 'company':
+          handleCompanyToggle(item.id)
+          break
+        case 'property':
+          handlePropertyToggle(item.id)
+          break
+        case 'building':
+          handleBuildingToggle(item.id)
+          break
+        case 'staircase':
+          handleStaircaseToggle(item.id)
+          break
+      }
     }
   }, [])
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
 
-    // Always toggle expansion for companies
-    if (item.type === 'company') {
-      onToggle(item.id)
-    }
-    // For other items with children, only toggle if not single child
-    else if (hasChildren && !hasSingleChild) {
-      onToggle(item.id)
+    // Handle toggle based on item type
+    if (hasChildren && !hasSingleChild) {
+      switch (item.type) {
+        case 'company':
+          handleCompanyToggle(item.id)
+          break
+        case 'property':
+          handlePropertyToggle(item.id)
+          break
+        case 'building':
+          handleBuildingToggle(item.id)
+          break
+        case 'staircase':
+          handleStaircaseToggle(item.id)
+          break
+      }
     }
 
     onSelect(item)
