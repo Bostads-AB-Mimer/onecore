@@ -12,31 +12,23 @@ export function useNavigation(onItemSelected?: (item: NavigationItem) => void) {
 
   const handleExpand = useCallback(async (item: NavigationItem) => {
     if (!expanded.has(item.id)) {
-      try {
-        let childrenUrl: string | undefined
+      const linkMap = {
+        company: 'properties',
+        property: 'buildings',
+        building: 'staircases',
+        staircase: 'residences'
+      } as const
 
-        switch (item.type) {
-          case 'company':
-            childrenUrl = item._links?.properties?.href
-            break
-          case 'property':
-            childrenUrl = item._links?.buildings?.href
-            break
-          case 'building':
-            childrenUrl = item._links?.staircases?.href
-            break
-          case 'staircase':
-            childrenUrl = item._links?.residences?.href
-            break
-        }
-
-        if (childrenUrl) {
-          const response = await fetchApi<{ content: NavigationItem[] }>(childrenUrl)
+      const childrenLink = item._links?.[linkMap[item.type]]?.href
+      
+      if (childrenLink) {
+        try {
+          const response = await fetchApi<{ content: NavigationItem[] }>(childrenLink)
           return response.content
+        } catch (err) {
+          console.error(`Kunde inte ladda ${linkMap[item.type]} för ${item.type} ${item.id}:`, err)
+          throw new Error(`Failed to load ${linkMap[item.type]}`)
         }
-      } catch (err) {
-        console.error(`Kunde inte ladda barn för ${item.type} ${item.id}:`, err)
-        throw err
       }
     }
     return []

@@ -11,7 +11,10 @@ import { fetchApi } from './baseApi'
 import { Cache } from '../../utils/cache'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const propertiesCache = new Cache<PropertyWithLinks[]>(CACHE_TTL)
+const propertiesCache = new Cache<string, PropertyWithLinks[]>({ 
+  ttl: CACHE_TTL,
+  maxEntries: 100
+})
 
 interface PropertyListResponse {
   content: PropertyWithLinks[]
@@ -36,7 +39,7 @@ interface ResidenceListResponse {
 export const propertyService = {
   // Get all properties using HATEOAS link
   async getAll(company: CompanyWithLinks): Promise<PropertyWithLinks[]> {
-    const properties = await propertiesCache.get(async () => {
+    const properties = await propertiesCache.get(company.id, async () => {
       const response = await fetchApi<PropertyListResponse>(
         company._links.properties.href
       )

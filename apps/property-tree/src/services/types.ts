@@ -9,6 +9,17 @@ import type {
 
 export type { Room, Component, Residence, Staircase }
 
+export interface Issue {
+  id: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  status: 'pending' | 'in-progress' | 'resolved'
+  room: string
+  feature: string
+  date: string
+  residenceId: string
+}
+
 // Common links interface
 export interface Links {
   _links: {

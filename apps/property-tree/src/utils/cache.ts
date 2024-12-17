@@ -1,42 +1,66 @@
-type CacheEntry<T> = {
+interface CacheEntry<T> {
   data: T
   timestamp: number
 }
 
-export class Cache<T> {
-  private cache: CacheEntry<T> | null = null
-  private updatePromise: Promise<void> | null = null
-  private ttl: number
+interface CacheOptions {
+  ttl: number
+  maxEntries?: number
+}
 
-  constructor(ttlMs: number) {
-    this.ttl = ttlMs
+export class Cache<K, T> {
+  private cache: Map<K, CacheEntry<T>> = new Map()
+  private updatePromises: Map<K, Promise<void>> = new Map()
+  private options: CacheOptions
+
+  constructor(options: CacheOptions) {
+    this.options = options
   }
 
-  async get(fetchFn: () => Promise<T>): Promise<T> {
+  async get(key: K, fetchFn: () => Promise<T>): Promise<T> {
     const now = Date.now()
+    const entry = this.cache.get(key)
 
-    if (!this.cache || now - this.cache.timestamp > this.ttl) {
-      if (!this.updatePromise) {
-        this.updatePromise = (async () => {
+    if (!entry || now - entry.timestamp > this.options.ttl) {
+      let updatePromise = this.updatePromises.get(key)
+      
+      if (!updatePromise) {
+        updatePromise = (async () => {
           try {
             const data = await fetchFn()
-            this.cache = {
-              data,
-              timestamp: now,
+            this.cache.set(key, { data, timestamp: now })
+            
+            // Enforce max entries limit if set
+            if (this.options.maxEntries && this.cache.size > this.options.maxEntries) {
+              const oldestKey = Array.from(this.cache.entries())
+                .sort(([, a], [, b]) => a.timestamp - b.timestamp)[0][0]
+              this.cache.delete(oldestKey)
             }
           } finally {
-            this.updatePromise = null
+            this.updatePromises.delete(key)
           }
         })()
+        
+        this.updatePromises.set(key, updatePromise)
       }
-      await this.updatePromise
+      
+      await updatePromise
     }
 
-    return this.cache!.data
+    return this.cache.get(key)!.data
   }
 
-  clear(): void {
-    this.cache = null
-    this.updatePromise = null
+  clear(key?: K): void {
+    if (key) {
+      this.cache.delete(key)
+      this.updatePromises.delete(key)
+    } else {
+      this.cache.clear()
+      this.updatePromises.clear()
+    }
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key)
   }
 }
