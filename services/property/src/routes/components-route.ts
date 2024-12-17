@@ -49,7 +49,12 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/Component'
+   *                     allOf:
+   *                       - $ref: '#/components/schemas/Component'
+   *                       - type: object
+   *                         properties:
+   *                           _links:
+   *                             $ref: '#/components/schemas/ComponentLinks'
    *       400:
    *         description: Invalid maintenance unit code provided
    *       404:
@@ -97,6 +102,7 @@ export const routes = (router: KoaRouter) => {
           _links: ComponentLinksSchema.parse({
             self: { href: `/components/${component.id}` },
             maintenanceUnit: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
+            parent: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
           }),
         }
       })
