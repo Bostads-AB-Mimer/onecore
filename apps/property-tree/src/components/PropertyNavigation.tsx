@@ -88,12 +88,10 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   }
 
   return (
-    <SidebarItem
+    <SidebarMenuButton
       onClick={handleClick}
-      title={item.name.replace('** TEST **', '')}
-      icon={<Icon className="h-4 w-4" />}
       isActive={isSelected}
-      className={cn("cursor-pointer")}
+      className={cn("cursor-pointer w-full")}
       style={{ paddingLeft: `${level * 12 + 12}px` }}
     >
         <div className="flex items-center space-x-2 flex-1">
@@ -122,9 +120,9 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           layoutId={`hover-${item.id}`}
         />
-      </motion.button>
+    </SidebarMenuButton>
 
-      <AnimatePresence>
+    <AnimatePresence>
         {isExpanded && item.children && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -153,10 +151,14 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
 
 import {
   Sidebar,
-  SidebarSection,
-  SidebarNav,
-  SidebarItem,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
 } from "./ui/sidebar"
+import { cn } from "@/utils/cn"
 
 export function PropertyNavigation() {
   const [navigationItems, setNavigationItems] = React.useState<
@@ -271,21 +273,26 @@ export function PropertyNavigation() {
 
   return (
     <Sidebar className="w-full">
-      <SidebarSection title="Navigation">
-        <SidebarNav>
-        {navigationItems.map((item) => (
-          <NavigationItemComponent
-            key={item.id}
-            item={item}
-            level={0}
-            expanded={expanded}
-            selected={selected}
-            onToggle={handleToggle}
-            onSelect={handleSelect}
-          />
-        ))}
-        </SidebarNav>
-      </SidebarSection>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigationItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <NavigationItemComponent
+                    item={item}
+                    level={0}
+                    expanded={expanded}
+                    selected={selected}
+                    onToggle={handleToggle}
+                    onSelect={handleSelect}
+                  />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
     </Sidebar>
   )
 }
