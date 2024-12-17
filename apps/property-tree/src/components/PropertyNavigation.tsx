@@ -88,41 +88,42 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   }
 
   return (
-    <SidebarMenuButton
-      onClick={handleClick}
-      isActive={isSelected}
-      className={cn("cursor-pointer w-full")}
-      style={{ paddingLeft: `${level * 12 + 12}px` }}
-    >
-        <div className="flex items-center space-x-2 flex-1">
-          <Icon
-            className={clsx(
-              'h-4 w-4 transition-colors duration-300',
-              isSelected
-                ? 'text-blue-500 dark:text-blue-400'
-                : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-            )}
-          />
-          <span className="truncate">
-            {item.name.replace('** TEST **', '')}
-          </span>
-        </div>
-        {hasChildren && !hasSingleChild && (
+    <>
+      <SidebarMenuButton
+        onClick={handleClick}
+        isActive={isSelected}
+        className={cn("cursor-pointer w-full")}
+        style={{ paddingLeft: `${level * 12 + 12}px` }}
+      >
+          <div className="flex items-center space-x-2 flex-1">
+            <Icon
+              className={clsx(
+                'h-4 w-4 transition-colors duration-300',
+                isSelected
+                  ? 'text-blue-500 dark:text-blue-400'
+                  : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+              )}
+            />
+            <span className="truncate">
+              {item.name.replace('** TEST **', '')}
+            </span>
+          </div>
+          {hasChildren && !hasSingleChild && (
+            <motion.div
+              animate={{ rotate: isExpanded ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </motion.div>
+          )}
+
           <motion.div
-            animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </motion.div>
-        )}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            layoutId={`hover-${item.id}`}
+          />
+      </SidebarMenuButton>
 
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/0 to-blue-50/0 dark:via-blue-900/0 dark:to-blue-900/0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          layoutId={`hover-${item.id}`}
-        />
-    </SidebarMenuButton>
-
-    <AnimatePresence>
+      <AnimatePresence>
         {isExpanded && item.children && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -145,7 +146,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </>
   )
 }
 
