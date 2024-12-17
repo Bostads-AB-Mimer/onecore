@@ -17,6 +17,9 @@ interface PropertyNavigationProps {
 export function PropertyNavigation({ property, expanded, selected, onExpand, onSelect }: PropertyNavigationProps) {
   const { data: buildings, loading, error } = useAsync(async () => {
     if (expanded.has(property.id)) {
+      if (!property._links?.buildings?.href) {
+        throw new Error('Property is missing buildings link')
+      }
       const response = await fetchApi<{ content: NavigationItem[] }>(property._links.buildings.href)
       return response.content.map(building => ({
         id: building.id,

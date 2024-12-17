@@ -22,6 +22,9 @@ export function CompanyNavigation({ company, expanded, selected, onExpand, onSel
   // Använd useAsync för att hantera laddning av properties
   const { data: properties, loading, error } = useAsync(async () => {
     if (expanded.has(company.id)) {
+      if (!company._links?.properties?.href) {
+        throw new Error('Company is missing properties link')
+      }
       const response = await fetchApi<{ content: NavigationItem[] }>(company._links.properties.href)
       return response.content.map(property => ({
         id: property.id,

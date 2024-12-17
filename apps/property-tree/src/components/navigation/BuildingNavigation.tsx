@@ -18,6 +18,9 @@ export function BuildingNavigation({ building, expanded, selected, onExpand, onS
   // Använd useAsync för att hantera laddning av staircases
   const { data: staircases, loading, error } = useAsync(async () => {
     if (expanded.has(building.id)) {
+      if (!building._links?.staircases?.href) {
+        throw new Error('Building is missing staircases link')
+      }
       const response = await fetchApi<{ content: NavigationItem[] }>(building._links.staircases.href)
       return response.content.map(staircase => ({
         id: staircase.id,

@@ -18,6 +18,9 @@ export function StaircaseNavigation({ staircase, expanded, selected, onExpand, o
   // Använd useAsync för att hantera laddning av residences
   const { data: residences, loading, error } = useAsync(async () => {
     if (expanded.has(staircase.id)) {
+      if (!staircase._links?.residences?.href) {
+        throw new Error('Staircase is missing residences link')
+      }
       const response = await fetchApi<{ content: NavigationItem[] }>(staircase._links.residences.href)
       return response.content.map(residence => ({
         id: residence.id,
