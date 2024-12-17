@@ -3,8 +3,10 @@ import {
   CompanyDetails,
   CompanyLinks,
   CompanyWithLinks,
+  PropertyWithLinks,
 } from '../types'
 import { fetchApi } from './baseApi'
+import { Property } from './schemas'
 
 interface CompanyResponse {
   content: (Company & CompanyLinks)[]
@@ -12,6 +14,10 @@ interface CompanyResponse {
 
 interface CompanyDetailsResponse {
   content: CompanyDetails & CompanyLinks
+}
+
+interface CompanyPropertiesResponse {
+  content: PropertyWithLinks[]
 }
 
 export const companyService = {
@@ -29,6 +35,11 @@ export const companyService = {
 
   // Get properties for a company using the HATEOAS link
   async getCompanyProperties(company: CompanyWithLinks) {
-    return fetchApi(company._links.properties.href)
+    console.log('getting company properties', company)
+    const response = await fetchApi<CompanyPropertiesResponse>(
+      company._links.properties.href
+    )
+    console.log('response', response)
+    return response.content
   },
 }

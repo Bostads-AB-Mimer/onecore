@@ -20,9 +20,8 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['properties', company.id],
+    queryKey: ['propertiesForCompanyId', company.id],
     queryFn: () => companyService.getCompanyProperties(company),
-    enabled: isExpanded,
   })
 
   if (isLoading && isExpanded) {
@@ -57,15 +56,10 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
         <Building2 />
         <span>{company.name.replace('** TEST **', '')}</span>
       </SidebarMenuButton>
-      {isExpanded && properties && properties.length > 0 && (
+      {properties && isExpanded && (
         <SidebarMenu>
           {properties.map((property) => (
-            <PropertyNavigation
-              key={property.id}
-              property={property}
-              selected={selected}
-              onSelect={onSelect}
-            />
+            <PropertyNavigation key={property.id} property={property} />
           ))}
         </SidebarMenu>
       )}

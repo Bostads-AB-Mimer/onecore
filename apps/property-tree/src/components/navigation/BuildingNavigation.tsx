@@ -1,5 +1,5 @@
 import React from 'react'
-import { BuildingWithLinks, StaircaseWithLinks } from '@/services/types'
+import { BuildingWithLinks } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { StaircaseNavigation } from './StaircaseNavigation'
@@ -11,23 +11,19 @@ interface BuildingNavigationProps {
 }
 
 export function BuildingNavigation({ building }: BuildingNavigationProps) {
-  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: staircases, isLoading, error } = useQuery({
+  const {
+    data: staircases,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['staircases', building.id],
     queryFn: () => buildingService.getBuildingStaircases(building),
     enabled: isExpanded,
-    select: (response) => response.content.map(staircase => ({
-      id: staircase.id,
-      name: staircase.name || staircase.code,
-      type: 'staircase' as const,
-      _links: staircase._links,
-      children: []
-    }))
   })
 
-  if (isLoading && isExpanded) {
+  if ((isLoading && isExpanded) || !staircases) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
@@ -36,10 +32,15 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
   }
 
   if (error) {
-    console.error(`Failed to load staircases for building ${building.id}:`, error)
+    console.error(
+      `Failed to load staircases for building ${building.id}:`,
+      error
+    )
     return (
       <SidebarMenuItem>
-        <div className="text-sm text-destructive px-2">Failed to load staircases</div>
+        <div className="text-sm text-destructive px-2">
+          Failed to load staircases
+        </div>
       </SidebarMenuItem>
     )
   }
@@ -49,23 +50,16 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect(building)
         }}
-        isActive={selected === building.id}
         tooltip={building.name}
       >
         <Warehouse />
         <span>{building.name}</span>
       </SidebarMenuButton>
-      {isExpanded && staircases && staircases.length > 0 && (
+      {isExpanded && (
         <SidebarMenu>
-          {staircases.map(staircase => (
-            <StaircaseNavigation
-              key={staircase.id}
-              staircase={staircase}
-              selected={selected}
-              onSelect={onSelect}
-            />
+          {staircases.map((staircase) => (
+            <StaircaseNavigation key={staircase.id} staircase={staircase} />
           ))}
         </SidebarMenu>
       )}

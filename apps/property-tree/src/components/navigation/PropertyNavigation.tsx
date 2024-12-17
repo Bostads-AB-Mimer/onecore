@@ -1,20 +1,22 @@
 import React from 'react'
-import { BuildingWithLinks, PropertyWithLinks } from '@/services/types'
+import { PropertyWithLinks } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton, SidebarMenu } from '../ui/sidebar'
 import { BuildingNavigation } from './BuildingNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { propertyService } from '@/services/api'
-
 interface PropertyNavigationProps {
   property: PropertyWithLinks
 }
 
 export function PropertyNavigation({ property }: PropertyNavigationProps) {
-  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: buildings, isLoading, error } = useQuery({
+  const {
+    data: buildings,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['buildings', property.id],
     queryFn: () => propertyService.getPropertyBuildings(property),
     enabled: isExpanded,
@@ -41,22 +43,15 @@ export function PropertyNavigation({ property }: PropertyNavigationProps) {
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect(property)
         }}
-        isActive={selected === property.id}
       >
         <Building />
-        <span>{property.name}</span>
+        <span>{property.designation?.name || property.code}</span>
       </SidebarMenuButton>
       {isExpanded && buildings && buildings.length > 0 && (
         <SidebarMenu>
           {buildings.map((building) => (
-            <BuildingNavigation
-              key={building.id}
-              building={building}
-              selected={selected}
-              onSelect={onSelect}
-            />
+            <BuildingNavigation key={building.id} building={building} />
           ))}
         </SidebarMenu>
       )}
