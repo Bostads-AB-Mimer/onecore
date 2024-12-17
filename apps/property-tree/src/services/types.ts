@@ -1,16 +1,20 @@
 import type { paths } from './api/generated/api-types'
 
 // Extract response types from the generated paths
-type ApiResponse<T> = T extends { responses: { 200: { content: { 'application/json': infer R } } } } ? R : never
+type ApiResponse<T> = T extends {
+  responses: { 200: { content: { 'application/json': infer R } } }
+}
+  ? R
+  : never
 
 // Extract common types from the API responses
-export type Company = ApiResponse<paths['/companies']['get']>['content'][number]
-export type Property = ApiResponse<paths['/properties']['get']>['content'][number]
-export type Building = ApiResponse<paths['/buildings']['get']>['content'][number]
-export type Staircase = ApiResponse<paths['/staircases']['get']>['content'][number]
-export type Residence = ApiResponse<paths['/residences']['get']>['content'][number]
-export type Room = ApiResponse<paths['/rooms']['get']>['content'][number]
-export type Component = ApiResponse<paths['/components']['get']>['content'][number]
+export type Company = ApiResponse<paths['/companies/']['get']>['content']
+export type Property = ApiResponse<paths['/properties']['get']>['content']
+export type Building = ApiResponse<paths['/buildings']['get']>['content']
+export type Staircase = ApiResponse<paths['/staircases']['get']>['content']
+export type Residence = ApiResponse<paths['/residences']['get']>['content']
+export type Room = ApiResponse<paths['/rooms']['get']>['content']
+export type Component = ApiResponse<paths['/components']['get']>['content']
 
 // Custom types that aren't in the API
 export interface Issue {
