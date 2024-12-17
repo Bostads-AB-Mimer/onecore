@@ -13,8 +13,10 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarMenuButton,
   SidebarProvider,
 } from './ui/sidebar'
+import { Building2, Building, Home, Hotel, Warehouse } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import {
@@ -273,20 +275,21 @@ export function PropertyNavigation() {
                 {Array.from(navigationState.companies.values()).map(
                   (company) => (
                     <SidebarMenuItem key={company.id}>
-                      <NavigationItemComponent
-                        item={{
-                          id: company.id,
-                          name: company.name,
-                          type: 'company',
-                          _links: company._links,
-                          hasChildren: true,
+                      <SidebarMenuButton
+                        onClick={() => {
+                          handleCompanyToggle(company.id)
+                          handleSelect({
+                            id: company.id,
+                            name: company.name,
+                            type: 'company',
+                            _links: company._links,
+                          })
                         }}
-                        level={0}
-                        expanded={expanded}
-                        selected={selected}
-                        onToggle={handleCompanyToggle}
-                        onSelect={handleSelect}
+                        isActive={selected === company.id}
                       >
+                        <Building2 />
+                        <span>{company.name}</span>
+                      </SidebarMenuButton>
                         {expanded[company.id] &&
                           Array.from(navigationState.properties.values())
                             .filter(
@@ -295,22 +298,21 @@ export function PropertyNavigation() {
                             )
                             .map((property) => (
                               <SidebarMenuItem key={property.id}>
-                                <NavigationItemComponent
-                                  item={{
-                                    id: property.id,
-                                    name:
-                                      property.propertyDesignation?.name ||
-                                      property.code,
-                                    type: 'property',
-                                    _links: property._links,
-                                    hasChildren: true,
+                                <SidebarMenuButton
+                                  onClick={() => {
+                                    handlePropertyToggle(property.id)
+                                    handleSelect({
+                                      id: property.id,
+                                      name: property.propertyDesignation?.name || property.code,
+                                      type: 'property',
+                                      _links: property._links,
+                                    })
                                   }}
-                                  level={1}
-                                  expanded={expanded}
-                                  selected={selected}
-                                  onToggle={handlePropertyToggle}
-                                  onSelect={handleSelect}
+                                  isActive={selected === property.id}
                                 >
+                                  <Building />
+                                  <span>{property.propertyDesignation?.name || property.code}</span>
+                                </SidebarMenuButton>
                                   {expanded[property.id] &&
                                     Array.from(
                                       navigationState.buildings.values()
@@ -322,21 +324,21 @@ export function PropertyNavigation() {
                                       )
                                       .map((building) => (
                                         <SidebarMenuItem key={building.id}>
-                                          <NavigationItemComponent
-                                            item={{
-                                              id: building.id,
-                                              name:
-                                                building.name || building.code,
-                                              type: 'building',
-                                              _links: building._links,
-                                              hasChildren: true,
+                                          <SidebarMenuButton
+                                            onClick={() => {
+                                              handleBuildingToggle(building.id)
+                                              handleSelect({
+                                                id: building.id,
+                                                name: building.name || building.code,
+                                                type: 'building',
+                                                _links: building._links,
+                                              })
                                             }}
-                                            level={2}
-                                            expanded={expanded}
-                                            selected={selected}
-                                            onToggle={handleBuildingToggle}
-                                            onSelect={handleSelect}
+                                            isActive={selected === building.id}
                                           >
+                                            <Warehouse />
+                                            <span>{building.name || building.code}</span>
+                                          </SidebarMenuButton>
                                             {expanded[building.id] &&
                                               Array.from(
                                                 navigationState.staircases.values()
@@ -350,25 +352,21 @@ export function PropertyNavigation() {
                                                   <SidebarMenuItem
                                                     key={staircase.id}
                                                   >
-                                                    <NavigationItemComponent
-                                                      item={{
-                                                        id: staircase.id,
-                                                        name:
-                                                          staircase.name ||
-                                                          staircase.code,
-                                                        type: 'staircase',
-                                                        _links:
-                                                          staircase._links,
-                                                        hasChildren: true,
+                                                    <SidebarMenuButton
+                                                      onClick={() => {
+                                                        handleStaircaseToggle(staircase.id)
+                                                        handleSelect({
+                                                          id: staircase.id,
+                                                          name: staircase.name || staircase.code,
+                                                          type: 'staircase',
+                                                          _links: staircase._links,
+                                                        })
                                                       }}
-                                                      level={3}
-                                                      expanded={expanded}
-                                                      selected={selected}
-                                                      onToggle={
-                                                        handleStaircaseToggle
-                                                      }
-                                                      onSelect={handleSelect}
+                                                      isActive={selected === staircase.id}
                                                     >
+                                                      <Home />
+                                                      <span>{staircase.name || staircase.code}</span>
+                                                    </SidebarMenuButton>
                                                       {expanded[staircase.id] &&
                                                         Array.from(
                                                           navigationState.residences.values()
@@ -383,32 +381,21 @@ export function PropertyNavigation() {
                                                             <SidebarMenuItem
                                                               key={residence.id}
                                                             >
-                                                              <NavigationItemComponent
-                                                                item={{
-                                                                  id: residence.id,
-                                                                  name:
-                                                                    residence.name ||
-                                                                    residence.code,
-                                                                  type: 'residence',
-                                                                  _links:
-                                                                    residence._links,
-                                                                  hasChildren:
-                                                                    false,
+                                                              <SidebarMenuButton
+                                                                onClick={() => {
+                                                                  handleResidenceToggle(residence.id)
+                                                                  handleSelect({
+                                                                    id: residence.id,
+                                                                    name: residence.name || residence.code,
+                                                                    type: 'residence',
+                                                                    _links: residence._links,
+                                                                  })
                                                                 }}
-                                                                level={4}
-                                                                expanded={
-                                                                  expanded
-                                                                }
-                                                                selected={
-                                                                  selected
-                                                                }
-                                                                onToggle={
-                                                                  handleResidenceToggle
-                                                                }
-                                                                onSelect={
-                                                                  handleSelect
-                                                                }
-                                                              />
+                                                                isActive={selected === residence.id}
+                                                              >
+                                                                <Hotel />
+                                                                <span>{residence.name || residence.code}</span>
+                                                              </SidebarMenuButton>
                                                             </SidebarMenuItem>
                                                           ))}
                                                     </NavigationItemComponent>
