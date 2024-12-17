@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client'
+import { map } from 'lodash'
 const prisma = new PrismaClient({})
 
 export type PropertyWithObject = Prisma.PropertyGetPayload<{
@@ -6,29 +7,13 @@ export type PropertyWithObject = Prisma.PropertyGetPayload<{
     propertyObject: true
   }
 }>
-
-export type PropertyBasicInfo = Prisma.PropertyStructureGetPayload<{
-  select: {
-    id: true
-    companyId: true
-    companyName: true
-    name: true
-    code: true
-    propertyId: true //this is a cmobj pointing to bafst. you would join on keycmobj in bafst to get actual property data.
-  }
-}>
-
+//todo: use actual type and mapper
 const getPropertyById = async (
-  propertyId: string
+  id: string
 ): Promise<PropertyWithObject | null> => {
-  //todo: /properties/ returns a list of properties from babuf
-  //todo: the are 2 ids in each element: id and propertyId
-  //todo: id is the babuf id and propertyId is the cmobj id
-  //todo: this endpoint relies on propertyId
-  //todo: we need to make this clear in the docs/endpoint or map propertyId in babuf to id
   const response = await prisma.property.findUnique({
     where: {
-      propertyObjectId: propertyId,
+      id: id,
     },
     include: {
       propertyObject: {
@@ -54,55 +39,47 @@ const getPropertyById = async (
   return response
 }
 
+export type Property = Prisma.PropertyStructureGetPayload<{
+  select: {
+    id: true
+    companyId: true
+    companyName: true
+    name: true
+    code: true
+    tract: true
+    propertyId: true
+  }
+}>
+
+//todo: use actual type and mapper
 const getProperties = async (
   companyCode: string,
   tract: string | undefined
-): Promise<PropertyBasicInfo[]> => {
-  // ideally we would like to look up every actual property
-  // but that would require a join with bafst based on the result of below query
-  // the join would be performed on keyobjfst
-  // we could then get the actual property data from bafst
-  if (tract) {
-    return prisma.propertyStructure.findMany({
-      where: {
-        name: { contains: tract },
-        companyCode: companyCode,
-        propertyId: { not: null },
-        buildingId: null,
-        managementUnitId: null,
-        landAreaId: null,
-        roomId: null,
-        maintenanceUnitId: null,
-        systemId: null,
-      },
-      select: {
-        id: true,
-        companyId: true,
-        companyName: true,
-        name: true,
-        code: true,
-        propertyId: true,
-      },
-    })
+): Promise<any[]> => {
+  const whereClause: Record<string, any> = {
+    companyCode,
+    propertyId: { not: null },
+    buildingId: null,
+    managementUnitId: null,
+    landAreaId: null,
+    roomId: null,
+    maintenanceUnitId: null,
+    systemId: null,
   }
-  return prisma.propertyStructure.findMany({
+
+  if (tract) {
+    whereClause.name = { contains: tract }
+  }
+
+  const propertyStructures = await prisma.propertyStructure.findMany({
+    where: whereClause,
+  })
+
+  return prisma.property.findMany({
     where: {
-      companyCode: companyCode,
-      propertyId: { not: null },
-      buildingId: null,
-      managementUnitId: null,
-      landAreaId: null,
-      roomId: null,
-      maintenanceUnitId: null,
-      systemId: null,
-    },
-    select: {
-      id: true,
-      companyId: true,
-      companyName: true,
-      name: true,
-      code: true,
-      propertyId: true,
+      propertyObjectId: {
+        in: map(propertyStructures, 'propertyObjectId'),
+      },
     },
   })
 }

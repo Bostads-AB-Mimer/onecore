@@ -1,5 +1,4 @@
 import { Prisma, PrismaClient } from '@prisma/client'
-import { PropertyBasicInfo } from './property-adapter'
 
 const prisma = new PrismaClient({})
 
