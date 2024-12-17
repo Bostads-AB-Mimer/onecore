@@ -2,6 +2,7 @@ import React from 'react'
 import { CompanyWithLinks } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
+import { useNavigation } from '@/hooks/use-navigation-context'
 import { PropertyNavigation } from './PropertyNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from '@/services/api'
@@ -11,7 +12,7 @@ interface CompanyNavigationProps {
 }
 
 export function CompanyNavigation({ company }: CompanyNavigationProps) {
-  const { selectedId, selectItem } = useNavigation()
+  const { selectedId: selected, selectItem: onSelect } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const {
