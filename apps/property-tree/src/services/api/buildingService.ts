@@ -1,4 +1,10 @@
-import { Building, BuildingWithLinks } from '../types'
+import {
+  Building,
+  BuildingWithLinks,
+  ResidenceWithLinks,
+  Staircase,
+  StaircaseWithLinks,
+} from '../types'
 import { fetchApi } from './baseApi'
 
 interface BuildingListResponse {
@@ -9,10 +15,20 @@ interface BuildingDetailsResponse {
   content: BuildingWithLinks
 }
 
+interface BuildingStaircasesResponse {
+  content: StaircaseWithLinks[]
+}
+
+interface BuildingResidencesResponse {
+  content: ResidenceWithLinks[]
+}
+
 export const buildingService = {
   // Get buildings by property code
   async getByPropertyCode(propertyCode: string): Promise<Building[]> {
-    const response = await fetchApi<BuildingListResponse>(`/buildings?propertyCode=${propertyCode}`)
+    const response = await fetchApi<BuildingListResponse>(
+      `/buildings?propertyCode=${propertyCode}`
+    )
     return response.content
   },
 
@@ -24,12 +40,18 @@ export const buildingService = {
 
   // Get building staircases using HATEOAS link
   async getBuildingStaircases(building: BuildingWithLinks) {
-    return fetchApi(building._links.staircases.href)
+    const response = fetchApi<BuildingStaircasesResponse>(
+      building._links.staircases.href
+    )
+    return (await response).content
   },
 
   // Get building residences using HATEOAS link
   async getBuildingResidences(building: BuildingWithLinks) {
-    return fetchApi(building._links.residences.href)
+    const response = fetchApi<BuildingResidencesResponse>(
+      building._links.residences.href
+    )
+    return (await response).content
   },
 
   // Get building statistics
@@ -41,5 +63,5 @@ export const buildingService = {
       averageRent: number
     }>(`/buildings/${id}/statistics`)
     return response
-  }
+  },
 }
