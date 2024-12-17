@@ -28,12 +28,12 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarMenu,
   SidebarProvider,
 } from './components/ui/sidebar'
 import { CompanyNavigation } from './components/navigation/CompanyNavigation'
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from './services/api'
-import { NavigationItem } from './services/types'
 
 function CompanyNavigationLoader() {
   const {
@@ -43,14 +43,7 @@ function CompanyNavigationLoader() {
   } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      const response = await companyService.getAll()
-      return response.map((company) => ({
-        id: company.id,
-        name: company.name,
-        type: 'company' as const,
-        _links: company._links,
-        children: [],
-      }))
+      return companyService.getAll()
     },
   })
 
@@ -81,14 +74,7 @@ function CompanyNavigationLoader() {
   return (
     <>
       {companies.map((company) => (
-        <CompanyNavigation
-          key={company.id}
-          company={company}
-          expanded={new Set()}
-          selected={null}
-          onExpand={() => {}}
-          onSelect={() => {}}
-        />
+        <CompanyNavigation key={company.id} company={company} />
       ))}
     </>
   )
@@ -160,15 +146,17 @@ function AppContent() {
       {/* Sidebar */}
       <NavigationProvider>
         <SidebarProvider defaultOpen>
-        <Sidebar>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <CompanyNavigationLoader />
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
+          <Sidebar>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <CompanyNavigationLoader />
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
         </SidebarProvider>
       </NavigationProvider>
 

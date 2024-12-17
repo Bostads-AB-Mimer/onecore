@@ -1,27 +1,22 @@
-import { Company, CompanyDetails } from '../types'
+import {
+  Company,
+  CompanyDetails,
+  CompanyLinks,
+  CompanyWithLinks,
+} from '../types'
 import { fetchApi } from './baseApi'
 
 interface CompanyResponse {
-  content: (Company & {
-    _links: {
-      self: { href: string }
-      properties: { href: string }
-    }
-  })[]
+  content: (Company & CompanyLinks)[]
 }
 
 interface CompanyDetailsResponse {
-  content: CompanyDetails & {
-    _links: {
-      self: { href: string }
-      properties: { href: string }
-    }
-  }
+  content: CompanyDetails & CompanyLinks
 }
 
 export const companyService = {
   // Get all companies
-  async getAll(): Promise<Company[]> {
+  async getAll(): Promise<CompanyWithLinks[]> {
     const response = await fetchApi<CompanyResponse>('/companies/')
     return response.content
   },
@@ -33,7 +28,7 @@ export const companyService = {
   },
 
   // Get properties for a company using the HATEOAS link
-  async getCompanyProperties(company: Company & { _links: { properties: { href: string } } }) {
+  async getCompanyProperties(company: CompanyWithLinks) {
     return fetchApi(company._links.properties.href)
-  }
+  },
 }

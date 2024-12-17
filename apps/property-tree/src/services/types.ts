@@ -36,6 +36,13 @@ export interface Company {
   organizationNumber: string | null
 }
 
+export interface CompanyLinks {
+  _links: {
+    self: { href: string }
+    properties: { href: string }
+  }
+}
+
 export interface PropertyLinks {
   _links: {
     self: { href: string }
