@@ -1,61 +1,76 @@
+"use client"
+
 import * as React from "react"
-import { cn } from "../../utils/cn"
+import { cn } from "@/lib/utils"
 
-export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-export function Sidebar({ className, ...props }: SidebarProps) {
+export function Sidebar({ className, children, ...props }: SidebarProps) {
   return (
-    <div className={cn("pb-12 w-full", className)} {...props} />
+    <div className={cn("pb-12", className)} {...props}>
+      {children}
+    </div>
   )
 }
 
-export function SidebarContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+interface SidebarSectionProps extends React.HTMLAttributes<HTMLDivElement> {
+  title?: string
+}
+
+export function SidebarSection({
+  className,
+  children,
+  title,
+  ...props
+}: SidebarSectionProps) {
   return (
-    <div className={cn("space-y-4 py-4", className)} {...props} />
+    <div className={cn("pb-8", className)} {...props}>
+      {title && (
+        <h2 className="mb-4 px-2 text-lg font-semibold tracking-tight">
+          {title}
+        </h2>
+      )}
+      {children}
+    </div>
   )
 }
 
-export function SidebarGroup({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("px-3 py-2", className)} {...props} />
-  )
+interface SidebarItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  icon?: React.ReactNode
+  title: string
+  isActive?: boolean
 }
 
-export function SidebarGroupLabel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarItem({
+  className,
+  children,
+  icon,
+  title,
+  isActive,
+  ...props
+}: SidebarItemProps) {
   return (
-    <h2 className={cn("mb-2 px-4 text-sm font-semibold tracking-tight text-gray-500 dark:text-gray-400", className)} {...props} />
-  )
-}
-
-export function SidebarGroupContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("space-y-1", className)} {...props} />
-  )
-}
-
-export function SidebarMenu({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <nav className={cn("space-y-0.5", className)} {...props} />
-  )
-}
-
-export function SidebarMenuItem({ className, ...props }: React.HTMLAttributes<HTMLLIElement>) {
-  return (
-    <li className={cn("list-none", className)} {...props} />
-  )
-}
-
-export function SidebarMenuButton({ className, asChild = false, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }) {
-  const Comp = asChild ? "a" : "button"
-  return (
-    <Comp
+    <div
       className={cn(
-        "w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        "hover:bg-gray-100 dark:hover:bg-gray-800",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+        "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+        isActive && "bg-accent",
         className
       )}
       {...props}
-    />
+    >
+      {icon && <span className="mr-2 h-4 w-4">{icon}</span>}
+      <span>{title}</span>
+      {children}
+    </div>
+  )
+}
+
+interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function SidebarNav({ className, children, ...props }: SidebarNavProps) {
+  return (
+    <nav className={cn("grid items-start gap-2", className)} {...props}>
+      {children}
+    </nav>
   )
 }

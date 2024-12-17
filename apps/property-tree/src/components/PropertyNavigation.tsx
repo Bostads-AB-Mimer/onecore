@@ -88,15 +88,14 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   }
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        onClick={handleClick}
-        className={cn(
-          isSelected && "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
-          !isSelected && "text-gray-600 dark:text-gray-400"
-        )}
-        style={{ paddingLeft: `${level * 12 + 12}px` }}
-      >
+    <SidebarItem
+      onClick={handleClick}
+      title={item.name.replace('** TEST **', '')}
+      icon={<Icon className="h-4 w-4" />}
+      isActive={isSelected}
+      className={cn("cursor-pointer")}
+      style={{ paddingLeft: `${level * 12 + 12}px` }}
+    >
         <div className="flex items-center space-x-2 flex-1">
           <Icon
             className={clsx(
@@ -154,13 +153,9 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
 
 import {
   Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
+  SidebarSection,
+  SidebarNav,
+  SidebarItem,
 } from "./ui/sidebar"
 
 export function PropertyNavigation() {
@@ -275,12 +270,9 @@ export function PropertyNavigation() {
   }
 
   return (
-    <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
+    <Sidebar className="w-full">
+      <SidebarSection title="Navigation">
+        <SidebarNav>
         {navigationItems.map((item) => (
           <NavigationItemComponent
             key={item.id}
@@ -292,10 +284,8 @@ export function PropertyNavigation() {
             onSelect={handleSelect}
           />
         ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+        </SidebarNav>
+      </SidebarSection>
     </Sidebar>
   )
 }
