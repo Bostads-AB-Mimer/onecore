@@ -163,9 +163,21 @@ import {
 import { cn } from "@/utils/cn"
 
 export function PropertyNavigation() {
-  const [navigationItems, setNavigationItems] = React.useState<
-    NavigationItem[]
-  >([])
+  interface NavigationState {
+    companies: Map<string, Company>
+    properties: Map<string, Property>
+    buildings: Map<string, Building>
+    staircases: Map<string, Staircase>
+    residences: Map<string, Residence>
+  }
+
+  const [navigationState, setNavigationState] = React.useState<NavigationState>({
+    companies: new Map(),
+    properties: new Map(),
+    buildings: new Map(),
+    staircases: new Map(),
+    residences: new Map(),
+  })
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({})
   const [selected, setSelected] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -174,19 +186,100 @@ export function PropertyNavigation() {
   React.useEffect(() => {
     const loadNavigation = async () => {
       try {
-        const data = await propertyService.getNavigationTree(
-          Object.keys(expanded).filter((key) => expanded[key])
+        // Always load companies first
+        const companiesResponse = await fetchApi<{ content: CompanyWithLinks[] }>('/companies')
+        const companiesMap = new Map(
+          companiesResponse.content.map(company => [company.id, company])
         )
-        console.log(data)
-        setNavigationItems(data)
+        
+        // For expanded companies, load their properties
+        const expandedCompanies = Object.keys(expanded).filter(id => 
+          expanded[id] && companiesMap.has(id)
+        )
+        
+        const propertiesMap = new Map()
+        const buildingsMap = new Map()
+        const staircasesMap = new Map()
+        const residencesMap = new Map()
 
-        // Auto-expand root level if there's only one item
-        if (data.length === 1) {
-          setExpanded((prev) => ({
+        // Load properties for expanded companies
+        for (const companyId of expandedCompanies) {
+          const company = companiesMap.get(companyId)
+          if (company?._links?.properties) {
+            const propertiesResponse = await fetchApi<{ content: PropertyWithLinks[] }>(
+              company._links.properties.href
+            )
+            propertiesResponse.content.forEach(property => {
+              propertiesMap.set(property.id, property)
+            })
+          }
+        }
+
+        // Load buildings for expanded properties
+        const expandedProperties = Object.keys(expanded).filter(id => 
+          expanded[id] && propertiesMap.has(id)
+        )
+        for (const propertyId of expandedProperties) {
+          const property = propertiesMap.get(propertyId)
+          if (property?._links?.buildings) {
+            const buildingsResponse = await fetchApi<{ content: Building[] }>(
+              property._links.buildings.href
+            )
+            buildingsResponse.content.forEach(building => {
+              buildingsMap.set(building.id, building)
+            })
+          }
+        }
+
+        // Load staircases for expanded buildings
+        const expandedBuildings = Object.keys(expanded).filter(id => 
+          expanded[id] && buildingsMap.has(id)
+        )
+        for (const buildingId of expandedBuildings) {
+          const building = buildingsMap.get(buildingId)
+          if (building?._links?.staircases) {
+            const staircasesResponse = await fetchApi<{ content: Staircase[] }>(
+              building._links.staircases.href
+            )
+            staircasesResponse.content.forEach(staircase => {
+              staircasesMap.set(staircase.id, staircase)
+            })
+          }
+        }
+
+        // Load residences for expanded staircases
+        const expandedStaircases = Object.keys(expanded).filter(id => 
+          expanded[id] && staircasesMap.has(id)
+        )
+        for (const staircaseId of expandedStaircases) {
+          const staircase = staircasesMap.get(staircaseId)
+          if (staircase?._links?.residences) {
+            const residencesResponse = await fetchApi<{ content: Residence[] }>(
+              staircase._links.residences.href
+            )
+            residencesResponse.content.forEach(residence => {
+              residencesMap.set(residence.id, residence)
+            })
+          }
+        }
+
+        setNavigationState({
+          companies: companiesMap,
+          properties: propertiesMap,
+          buildings: buildingsMap,
+          staircases: staircasesMap,
+          residences: residencesMap,
+        })
+
+        // Auto-expand if there's only one company
+        if (companiesMap.size === 1) {
+          const [firstCompanyId] = companiesMap.keys()
+          setExpanded(prev => ({
             ...prev,
-            [data[0].id]: true,
+            [firstCompanyId]: true,
           }))
         }
+
       } catch (err) {
         setError('Kunde inte ladda navigationsdata')
         console.error(err)
@@ -196,7 +289,7 @@ export function PropertyNavigation() {
     }
 
     loadNavigation()
-  }, [expanded]) // Re-run when expanded state changes
+  }, [expanded])
 
   const handleToggle = (id: string) => {
     // Only allow toggle if the item has more than one child
@@ -280,16 +373,107 @@ export function PropertyNavigation() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navigationItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
+                {/* Companies */}
+                {Array.from(navigationState.companies.values()).map((company) => (
+                  <SidebarMenuItem key={company.id}>
                     <NavigationItemComponent
-                      item={item}
+                      item={{
+                        id: company.id,
+                        name: company.name,
+                        type: 'company',
+                        _links: company._links,
+                        hasChildren: true
+                      }}
                       level={0}
                       expanded={expanded}
                       selected={selected}
                       onToggle={handleToggle}
                       onSelect={handleSelect}
-                    />
+                    >
+                      {expanded[company.id] && Array.from(navigationState.properties.values())
+                        .filter(property => property.links.company === company.id)
+                        .map(property => (
+                          <SidebarMenuItem key={property.id}>
+                            <NavigationItemComponent
+                              item={{
+                                id: property.id,
+                                name: property.propertyDesignation?.name || property.code,
+                                type: 'property',
+                                _links: property._links,
+                                hasChildren: true
+                              }}
+                              level={1}
+                              expanded={expanded}
+                              selected={selected}
+                              onToggle={handleToggle}
+                              onSelect={handleSelect}
+                            >
+                              {expanded[property.id] && Array.from(navigationState.buildings.values())
+                                .filter(building => building.links.property === property.id)
+                                .map(building => (
+                                  <SidebarMenuItem key={building.id}>
+                                    <NavigationItemComponent
+                                      item={{
+                                        id: building.id,
+                                        name: building.name || building.code,
+                                        type: 'building',
+                                        _links: building._links,
+                                        hasChildren: true
+                                      }}
+                                      level={2}
+                                      expanded={expanded}
+                                      selected={selected}
+                                      onToggle={handleToggle}
+                                      onSelect={handleSelect}
+                                    >
+                                      {expanded[building.id] && Array.from(navigationState.staircases.values())
+                                        .filter(staircase => staircase.links.building === building.id)
+                                        .map(staircase => (
+                                          <SidebarMenuItem key={staircase.id}>
+                                            <NavigationItemComponent
+                                              item={{
+                                                id: staircase.id,
+                                                name: staircase.name || staircase.code,
+                                                type: 'staircase',
+                                                _links: staircase._links,
+                                                hasChildren: true
+                                              }}
+                                              level={3}
+                                              expanded={expanded}
+                                              selected={selected}
+                                              onToggle={handleToggle}
+                                              onSelect={handleSelect}
+                                            >
+                                              {expanded[staircase.id] && Array.from(navigationState.residences.values())
+                                                .filter(residence => residence.links.staircase === staircase.id)
+                                                .map(residence => (
+                                                  <SidebarMenuItem key={residence.id}>
+                                                    <NavigationItemComponent
+                                                      item={{
+                                                        id: residence.id,
+                                                        name: residence.name || residence.code,
+                                                        type: 'residence',
+                                                        _links: residence._links,
+                                                        hasChildren: false
+                                                      }}
+                                                      level={4}
+                                                      expanded={expanded}
+                                                      selected={selected}
+                                                      onToggle={handleToggle}
+                                                      onSelect={handleSelect}
+                                                    />
+                                                  </SidebarMenuItem>
+                                                ))}
+                                            </NavigationItemComponent>
+                                          </SidebarMenuItem>
+                                        ))}
+                                    </NavigationItemComponent>
+                                  </SidebarMenuItem>
+                                ))}
+                            </NavigationItemComponent>
+                          </SidebarMenuItem>
+                        ))}
+                    </NavigationItemComponent>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
