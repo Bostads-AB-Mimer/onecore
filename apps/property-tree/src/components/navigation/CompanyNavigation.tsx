@@ -12,15 +12,26 @@ interface CompanyNavigationProps {
   onSelect: (company: CompanyWithLinks) => void
 }
 
-export function CompanyNavigation({ company, selected, onSelect }: CompanyNavigationProps) {
+export function CompanyNavigation({
+  company,
+  selected,
+  onSelect,
+}: CompanyNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: properties, loading, error } = useAsync(async () => {
+  const {
+    data: properties,
+    loading,
+    error,
+  } = useAsync(async () => {
     if (isExpanded) {
       if (!company._links?.properties?.href) {
         throw new Error('Company is missing properties link')
       }
-      const response = await fetchApi<{ content: PropertyWithLinks[] }>(company._links.properties.href)
+      const response = await fetchApi<{ content: PropertyWithLinks[] }>(
+        company._links.properties.href
+      )
+      console.log('response', response)
       return response.content
     }
     return []
@@ -38,7 +49,9 @@ export function CompanyNavigation({ company, selected, onSelect }: CompanyNaviga
     console.error(`Failed to load properties for company ${company.id}:`, error)
     return (
       <SidebarMenuItem>
-        <div className="text-sm text-destructive px-2">Failed to load properties</div>
+        <div className="text-sm text-destructive px-2">
+          Failed to load properties
+        </div>
       </SidebarMenuItem>
     )
   }
@@ -58,7 +71,7 @@ export function CompanyNavigation({ company, selected, onSelect }: CompanyNaviga
       </SidebarMenuButton>
       {isExpanded && properties && properties.length > 0 && (
         <SidebarMenu>
-          {properties.map(property => (
+          {properties.map((property) => (
             <PropertyNavigation
               key={property.id}
               property={property}
