@@ -16,7 +16,7 @@ import {
   SidebarMenuButton,
   SidebarProvider,
 } from './ui/sidebar'
-import { Building2, Building, Home, Hotel, Warehouse } from 'lucide-react'
+import { Building2, Building as BuildingIcon, Home, Hotel, Warehouse } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import {
@@ -294,7 +294,7 @@ export function PropertyNavigation() {
                           Array.from(navigationState.properties.values())
                             .filter(
                               (property) =>
-                                property.links.company === company.id
+                                property._links.company === company.id
                             )
                             .map((property) => (
                               <SidebarMenuItem key={property.id}>
@@ -310,7 +310,7 @@ export function PropertyNavigation() {
                                   }}
                                   isActive={selected === property.id}
                                 >
-                                  <Building />
+                                  <BuildingIcon />
                                   <span>{property.propertyDesignation?.name || property.code}</span>
                                 </SidebarMenuButton>
                                   {expanded[property.id] &&
