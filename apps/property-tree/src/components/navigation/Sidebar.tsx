@@ -10,33 +10,32 @@ import {
   SidebarMenu,
   SidebarProvider,
 } from '../ui/sidebar'
-import { fetchApi } from '@/services/api/baseApi'
-
-interface NavigationItem {
-  id: string
-  name: string
-  type: 'company' | 'property' | 'building' | 'staircase' | 'residence'
-  _links: Record<string, { href: string }>
-  children?: NavigationItem[]
-}
+import { useNavigation } from '@/hooks/use-navigation'
+import { companyService } from '@/services/api'
+import { NavigationItem } from '@/services/types'
 
 export function PropertyNavigation() {
   const [items, setItems] = React.useState<NavigationItem[]>([])
-  const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
-  const [selected, setSelected] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const { expanded, selected, handleExpand, handleSelect } = useNavigation()
 
-  // Ladda företag när komponenten monteras
+  // Load companies when component mounts
   React.useEffect(() => {
     const loadCompanies = async () => {
       try {
-        const response = await fetchApi<{ content: NavigationItem[] }>(
-          '/companies'
+        const companies = await companyService.getAll()
+        setItems(
+          companies.map(company => ({
+            id: company.id,
+            name: company.name,
+            type: 'company' as const,
+            _links: company._links,
+            children: []
+          }))
         )
-        setItems(response.content)
       } catch (err) {
-        setError('Kunde inte ladda företag')
+        setError('Could not load companies')
         console.error(err)
       } finally {
         setLoading(false)
@@ -44,68 +43,6 @@ export function PropertyNavigation() {
     }
     loadCompanies()
   }, [])
-
-  // Ladda underliggande nivå när en nod expanderas
-  const handleExpand = async (item: NavigationItem) => {
-    if (!expanded.has(item.id)) {
-      try {
-        let childrenUrl: string | undefined
-
-        switch (item.type) {
-          case 'company':
-            childrenUrl = item._links.properties?.href
-            break
-          case 'property':
-            childrenUrl = item._links.buildings?.href
-            break
-          case 'building':
-            childrenUrl = item._links.staircases?.href
-            break
-          case 'staircase':
-            childrenUrl = item._links.residences?.href
-            break
-        }
-
-        if (childrenUrl) {
-          const response = await fetchApi<{ content: NavigationItem[] }>(
-            childrenUrl
-          )
-          setItems((current) => {
-            const updateChildren = (
-              items: NavigationItem[]
-            ): NavigationItem[] => {
-              return items.map((i) => {
-                if (i.id === item.id) {
-                  return { ...i, children: response.content }
-                }
-                if (i.children) {
-                  return { ...i, children: updateChildren(i.children) }
-                }
-                return i
-              })
-            }
-            return updateChildren(current)
-          })
-        }
-      } catch (err) {
-        console.error(`Kunde inte ladda barn för ${item.type} ${item.id}:`, err)
-      }
-    }
-
-    setExpanded((current) => {
-      const next = new Set(current)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        next.add(item.id)
-      }
-      return next
-    })
-  }
-
-  const handleSelect = (item: NavigationItem) => {
-    setSelected(item.id)
-  }
 
   if (loading) {
     return (
@@ -135,10 +72,10 @@ export function PropertyNavigation() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map((item) => (
+                {items.map(company => (
                   <CompanyNavigation
-                    key={item.id}
-                    item={item}
+                    key={company.id}
+                    company={company}
                     expanded={expanded}
                     selected={selected}
                     onExpand={handleExpand}
