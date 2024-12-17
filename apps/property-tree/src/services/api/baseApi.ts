@@ -1,12 +1,15 @@
-// Base configuration for API calls
+import createClient from 'openapi-fetch'
+import type { paths } from './generated/api-types'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050'
 
-// Common headers for API requests
-const defaultHeaders = {
-  'Content-Type': 'application/json',
-}
+export const { GET, POST, PUT, DELETE, PATCH } = createClient<paths>({
+  baseUrl: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
 
-// Generic API error class
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -15,25 +18,4 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
-}
-
-// Base fetch function with error handling
-export async function fetchApi<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    console.error(`API request failed: ${response.url} - ${response.status} ${response.statusText}`)
-    throw new ApiError(response.status, response.statusText)
-  }
-
-  return response.json()
 }
