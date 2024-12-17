@@ -1,6 +1,5 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
-import { healthCheck as odooHealthCheck } from '../ticketing-service/adapters/odoo-adapter'
 import {
   loggedAxios as axios,
   setAxiosExclusionFilters,
@@ -101,10 +100,10 @@ const subsystems = [
   },
   {
     probe: async (): Promise<SystemHealth> => {
-      return await probe(
-        config.health.odoo.systemName,
-        config.health.odoo.minimumMinutesBetweenRequests,
-        odooHealthCheck
+      return await oneCoreServiceProbe(
+        config.health.workOrder.systemName,
+        config.health.workOrder.minimumMinutesBetweenRequests,
+        config.workOrderService.url + '/health'
       )
     },
   },

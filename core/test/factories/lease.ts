@@ -36,5 +36,5 @@ export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
   tenantContactIds: ['P12345'],
   tenants: undefined,
   terminationDate: undefined,
-  type: '',
+  type: 'Bostadskontrakt',
 }))
