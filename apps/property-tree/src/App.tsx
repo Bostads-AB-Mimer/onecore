@@ -7,12 +7,65 @@ import {
 } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, Settings, User2 } from 'lucide-react'
-import { PropertyNavigation } from './components/PropertyNavigation'
 import { CommandPalette } from './components/CommandPalette'
-import {
-  CommandPaletteProvider,
-  useCommandPalette,
-} from './hooks/useCommandPalette'
+import { CommandPaletteProvider, useCommandPalette } from './hooks/useCommandPalette'
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarProvider } from './components/ui/sidebar'
+import { CompanyNavigation } from './components/navigation/CompanyNavigation'
+import { useAsync } from './hooks/use-async'
+import { companyService } from './services/api'
+import { NavigationItem } from './services/types'
+function CompanyNavigationLoader() {
+  const { data: companies, loading, error } = useAsync<NavigationItem[]>(async () => {
+    const response = await companyService.getAll()
+    return response.map(company => ({
+      id: company.id,
+      name: company.name,
+      type: 'company' as const,
+      _links: company._links,
+      children: []
+    }))
+  })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-destructive text-center">
+        <p>Failed to load companies</p>
+      </div>
+    )
+  }
+
+  if (!companies?.length) {
+    return (
+      <div className="p-4 text-muted-foreground text-center">
+        <p>No companies found</p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {companies.map(company => (
+        <CompanyNavigation
+          key={company.id}
+          company={company}
+          expanded={new Set()}
+          selected={null}
+          onExpand={() => {}}
+          onSelect={() => {}}
+        />
+      ))}
+    </>
+  )
+}
+
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
 import { BuildingView } from './components/views/BuildingView'
@@ -77,9 +130,17 @@ function AppContent() {
       </nav>
 
       {/* Sidebar */}
-      <aside className="fixed top-14 left-0 w-64 h-[calc(100vh-3.5rem)] border-r bg-white dark:bg-gray-900 dark:border-gray-800">
-        <PropertyNavigation />
-      </aside>
+      <SidebarProvider defaultOpen>
+        <Sidebar>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <CompanyNavigationLoader />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
+      </SidebarProvider>
 
       {/* Main Content */}
       <main className="pl-64 pt-14">
