@@ -61,7 +61,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
   // Auto-expand if this is the only child at this level
   React.useEffect(() => {
     if (hasSingleChild) {
-      onToggle(item.id)
+      onToggle(item.id, item.type)
     }
   }, [])
 
@@ -292,19 +292,60 @@ export function PropertyNavigation() {
     loadNavigation()
   }, [expanded])
 
-  const handleToggle = (id: string) => {
-    // Check if the item exists in any of our maps
-    const item = navigationState.companies.get(id) ||
-                 navigationState.properties.get(id) ||
-                 navigationState.buildings.get(id) ||
-                 navigationState.staircases.get(id) ||
-                 navigationState.residences.get(id)
-
-    if (item) {
+  const handleCompanyToggle = (id: string) => {
+    const company = navigationState.companies.get(id)
+    if (company) {
       setExpanded((prev) => ({
         ...prev,
         [id]: !prev[id],
       }))
+    }
+  }
+
+  const handlePropertyToggle = (id: string) => {
+    const property = navigationState.properties.get(id)
+    if (property) {
+      setExpanded((prev) => ({
+        ...prev,
+        [id]: !prev[id],
+      }))
+    }
+  }
+
+  const handleBuildingToggle = (id: string) => {
+    const building = navigationState.buildings.get(id)
+    if (building) {
+      setExpanded((prev) => ({
+        ...prev,
+        [id]: !prev[id],
+      }))
+    }
+  }
+
+  const handleStaircaseToggle = (id: string) => {
+    const staircase = navigationState.staircases.get(id)
+    if (staircase) {
+      setExpanded((prev) => ({
+        ...prev,
+        [id]: !prev[id],
+      }))
+    }
+  }
+
+  const handleToggle = (id: string, type: string) => {
+    switch (type) {
+      case 'company':
+        handleCompanyToggle(id)
+        break
+      case 'property':
+        handlePropertyToggle(id)
+        break
+      case 'building':
+        handleBuildingToggle(id)
+        break
+      case 'staircase':
+        handleStaircaseToggle(id)
+        break
     }
   }
 
