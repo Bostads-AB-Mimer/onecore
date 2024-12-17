@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem, PropertyWithLinks } from '@/services/types'
+import { BuildingWithLinks, PropertyWithLinks } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton, SidebarMenu } from '../ui/sidebar'
 import { BuildingNavigation } from './BuildingNavigation'
@@ -8,44 +8,35 @@ import { fetchApi } from '@/services/api/baseApi'
 
 interface PropertyNavigationProps {
   property: PropertyWithLinks
-  expanded: Set<string>
   selected: string | null
-  onExpand: (item: PropertyWithLinks) => void
   onSelect: (item: PropertyWithLinks) => void
 }
 
 export function PropertyNavigation({
   property,
-  expanded,
   selected,
-  onExpand,
   onSelect,
 }: PropertyNavigationProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+
   const {
     data: buildings,
     loading,
     error,
   } = useAsync(async () => {
-    if (expanded.has(property.id)) {
+    if (isExpanded) {
       if (!property._links?.buildings?.href) {
         throw new Error('Property is missing buildings link')
       }
-      const response = await fetchApi<{ content: PropertyWithLinks[] }>(
+      const response = await fetchApi<{ content: BuildingWithLinks[] }>(
         property._links.buildings.href
       )
-      return response.content.map((building) => ({
-        id: building.id,
-        name: building.name || building.code,
-        type: 'building' as const,
-        _links: building._links,
-        children: [],
-      }))
+      return response.content
     }
     return []
-  }, [property.id, expanded])
+  }, [isExpanded])
 
-  // Visa laddningsindikator
-  if (loading && expanded.has(property.id)) {
+  if (loading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
@@ -53,7 +44,6 @@ export function PropertyNavigation({
     )
   }
 
-  // Visa felmeddelande om något gick fel
   if (error) {
     console.error(
       `Failed to load buildings for property ${property.id}:`,
@@ -65,7 +55,7 @@ export function PropertyNavigation({
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
-          onExpand(property)
+          setIsExpanded(!isExpanded)
           onSelect(property)
         }}
         isActive={selected === property.id}
@@ -73,15 +63,13 @@ export function PropertyNavigation({
         <Building />
         <span>{property.name}</span>
       </SidebarMenuButton>
-      {expanded.has(property.id) && buildings && buildings.length > 0 && (
+      {isExpanded && buildings && buildings.length > 0 && (
         <SidebarMenu>
           {buildings.map((building) => (
             <BuildingNavigation
               key={building.id}
               building={building}
-              expanded={expanded}
               selected={selected}
-              onExpand={onExpand}
               onSelect={onSelect}
             />
           ))}

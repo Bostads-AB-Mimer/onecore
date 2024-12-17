@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavigationItem } from '@/services/types'
+import { NavigationItem, PropertyWithLinks } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { PropertyNavigation } from './PropertyNavigation'
@@ -8,37 +8,25 @@ import { fetchApi } from '@/services/api/baseApi'
 
 interface CompanyNavigationProps {
   company: NavigationItem
-  expanded: Set<string>
   selected: string | null
-  onExpand: (item: NavigationItem) => void
   onSelect: (item: NavigationItem) => void
 }
 
-/**
- * Komponent för att visa företagsnivån i navigeringen
- * Hanterar lazy loading av properties när företaget expanderas
- */
-export function CompanyNavigation({ company, expanded, selected, onExpand, onSelect }: CompanyNavigationProps) {
-  // Använd useAsync för att hantera laddning av properties
+export function CompanyNavigation({ company, selected, onSelect }: CompanyNavigationProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+
   const { data: properties, loading, error } = useAsync(async () => {
-    if (expanded.has(company.id)) {
+    if (isExpanded) {
       if (!company._links?.properties?.href) {
         throw new Error('Company is missing properties link')
       }
-      const response = await fetchApi<{ content: NavigationItem[] }>(company._links.properties.href)
-      return response.content.map(property => ({
-        id: property.id,
-        name: property.propertyDesignation?.name || property.code,
-        type: 'property' as const,
-        _links: property._links,
-        children: []
-      }))
+      const response = await fetchApi<{ content: PropertyWithLinks[] }>(company._links.properties.href)
+      return response.content
     }
     return []
-  }, [company.id, expanded])
+  }, [isExpanded])
 
-  // Visa laddningsindikator
-  if (loading && expanded.has(company.id)) {
+  if (loading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
@@ -46,7 +34,6 @@ export function CompanyNavigation({ company, expanded, selected, onExpand, onSel
     )
   }
 
-  // Visa felmeddelande om något gick fel
   if (error) {
     console.error(`Failed to load properties for company ${company.id}:`, error)
     return (
@@ -60,7 +47,7 @@ export function CompanyNavigation({ company, expanded, selected, onExpand, onSel
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
-          onExpand(company)
+          setIsExpanded(!isExpanded)
           onSelect(company)
         }}
         isActive={selected === company.id}
@@ -69,15 +56,13 @@ export function CompanyNavigation({ company, expanded, selected, onExpand, onSel
         <Building2 />
         <span>{company.name}</span>
       </SidebarMenuButton>
-      {expanded.has(company.id) && properties && properties.length > 0 && (
+      {isExpanded && properties && properties.length > 0 && (
         <SidebarMenu>
           {properties.map(property => (
             <PropertyNavigation
               key={property.id}
               property={property}
-              expanded={expanded}
               selected={selected}
-              onExpand={onExpand}
               onSelect={onSelect}
             />
           ))}
