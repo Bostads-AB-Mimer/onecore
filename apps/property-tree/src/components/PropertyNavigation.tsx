@@ -293,20 +293,14 @@ export function PropertyNavigation() {
   }, [expanded])
 
   const handleToggle = (id: string) => {
-    // Only allow toggle if the item has more than one child
-    const findItem = (items: NavigationItem[]): NavigationItem | null => {
-      for (const item of items) {
-        if (item.id === id) return item
-        if (item.children) {
-          const found = findItem(item.children)
-          if (found) return found
-        }
-      }
-      return null
-    }
+    // Check if the item exists in any of our maps
+    const item = navigationState.companies.get(id) ||
+                 navigationState.properties.get(id) ||
+                 navigationState.buildings.get(id) ||
+                 navigationState.staircases.get(id) ||
+                 navigationState.residences.get(id)
 
-    const item = findItem(navigationItems)
-    if (item && (!item.children || item.children.length > 1)) {
+    if (item) {
       setExpanded((prev) => ({
         ...prev,
         [id]: !prev[id],
