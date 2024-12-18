@@ -127,6 +127,7 @@ export async function create(
       },
     }
   } catch (err) {
+    console.log('err: ', err)
     logger.error(err, 'Error creating offer')
     return { ok: false, err: 'unknown' }
   }
@@ -147,9 +148,10 @@ type GetOffersForContactQueryResult = Array<
 >
 
 export async function getOffersForContact(
-  contactCode: string
+  contactCode: string,
+  dbConnection = db
 ): Promise<Array<OfferWithRentalObjectCode>> {
-  const rows = await db
+  const rows = await dbConnection
     .select<GetOffersForContactQueryResult>(
       'offer.*',
       'listing.RentalObjectCode',
@@ -206,9 +208,10 @@ export async function getOffersForContact(
 
 export async function getOfferByContactCodeAndOfferId(
   contactCode: string,
-  offerId: number
+  offerId: number,
+  dbConnection: Knex = db
 ): Promise<DetailedOffer | undefined> {
-  const row = await db
+  const row = await dbConnection
     .select(
       'offer.Id',
       'offer.SentAt',
@@ -274,10 +277,11 @@ export async function getOfferByContactCodeAndOfferId(
 }
 
 export async function getOfferByOfferId(
-  offerId: number
+  offerId: number,
+  dbConnection = db
 ): Promise<AdapterResult<DetailedOffer, 'not-found' | 'unknown'>> {
   try {
-    const row = await db
+    const row = await dbConnection
       .select(
         'offer.Id',
         'offer.SentAt',

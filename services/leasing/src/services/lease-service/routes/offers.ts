@@ -298,7 +298,7 @@ export const routes = (router: KoaRouter) => {
       }
     }
 
-    const result = await offerService.acceptOffer({
+    const result = await offerService.acceptOffer(db, {
       listingId: offer.data.listingId,
       applicantId: offer.data.offeredApplicant.id,
       offerId: offer.data.id,
@@ -359,7 +359,7 @@ export const routes = (router: KoaRouter) => {
       }
     }
 
-    const result = await offerService.denyOffer({
+    const result = await offerService.denyOffer(db, {
       applicantId: offer.data.offeredApplicant.id,
       offerId: offer.data.id,
       listingId: offer.data.listingId,

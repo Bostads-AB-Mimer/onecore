@@ -1,4 +1,5 @@
 import { Listing, ListingStatus } from 'onecore-types'
+import { Knex } from 'knex'
 import { z } from 'zod'
 
 import * as xpandSoapAdapter from './adapters/xpand/xpand-soap-adapter'
@@ -65,9 +66,9 @@ const ValidInternalParkingSpace = z.object({
  *   The ones who succeeded goes into an insertions.inserted array and the ones
  *   who failed goes into an insertions.failed array.
  */
-export async function syncInternalParkingSpaces(): Promise<
-  AdapterResult<ServiceSuccessData, ServiceError>
-> {
+export async function syncInternalParkingSpaces(
+  db: Knex
+): Promise<AdapterResult<ServiceSuccessData, ServiceError>> {
   const result = await xpandSoapAdapter.getPublishedInternalParkingSpaces()
 
   if (!result.ok) {
@@ -92,6 +93,7 @@ export async function syncInternalParkingSpaces(): Promise<
   }
 
   const insertions = await insertListings(
+    db,
     patchParkingSpacesWithResidentialAreaResult.data
   )
 
@@ -106,11 +108,11 @@ export async function syncInternalParkingSpaces(): Promise<
   }
 }
 
-function insertListings(items: Array<CreateListingData>) {
+function insertListings(db: Knex, items: Array<CreateListingData>) {
   return Promise.all(
     items.map(async (listing) => ({
       listing,
-      insertionResult: await listingAdapter.createListing(listing),
+      insertionResult: await listingAdapter.createListing(listing, db),
     }))
   )
 }

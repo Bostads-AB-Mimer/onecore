@@ -1,16 +1,18 @@
 import { Knex } from 'knex'
 import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
 
-import { db } from './adapters/db'
 import * as listingAdapter from './adapters/listing-adapter'
 import * as offerAdapter from './adapters/offer-adapter'
 import { AdapterResult } from './adapters/types'
 
-export const acceptOffer = async (params: {
-  applicantId: number
-  listingId: number
-  offerId: number
-}): Promise<
+export const acceptOffer = async (
+  db: Knex,
+  params: {
+    applicantId: number
+    listingId: number
+    offerId: number
+  }
+): Promise<
   AdapterResult<
     null,
     | 'update-listing'
@@ -65,11 +67,14 @@ export const acceptOffer = async (params: {
   }
 }
 
-export const denyOffer = async (params: {
-  applicantId: number
-  offerId: number
-  listingId: number
-}): Promise<
+export const denyOffer = async (
+  db: Knex,
+  params: {
+    applicantId: number
+    offerId: number
+    listingId: number
+  }
+): Promise<
   AdapterResult<
     null,
     'update-applicant' | 'update-offer' | 'update-offer-applicant' | 'unknown'

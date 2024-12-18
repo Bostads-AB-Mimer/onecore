@@ -97,9 +97,12 @@ describe('GET /listings-with-applicants', () => {
     const res = await request(app.callback()).get(
       '/listings-with-applicants?type=published'
     )
-    expect(getListingsWithApplicantsSpy).toHaveBeenCalledWith({
-      by: { type: 'published' },
-    })
+    expect(getListingsWithApplicantsSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        by: { type: 'published' },
+      }
+    )
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: expect.any(Number) })],
@@ -116,7 +119,10 @@ describe('GET /listings-with-applicants', () => {
       '/listings-with-applicants?type=invalid-value'
     )
 
-    expect(getListingsWithApplicantsSpy).toHaveBeenCalledWith(undefined)
+    expect(getListingsWithApplicantsSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      undefined
+    )
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: expect.any(Number) })],

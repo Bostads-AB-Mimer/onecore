@@ -7,11 +7,11 @@
     "node": "20.*"
   },
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv/config node_modules/jest/bin/jest --config jest.config.js",
+    "test:watch": "DOTENV_CONFIG_PATH=.env.test jest --watch",
     "build": "tsc",
-    "start": "npm run migrate:up && node index",
-    "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
+    "start": "npm run migrate:up && node -r dotenv/config index",
+    "dev": "DOTENV_CONFIG_PATH=.env npm run migrate:up && nodemon -e ts,js --exec ts-node -r dotenv/config src/index ",
     "lint": "eslint src/",
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
@@ -19,7 +19,7 @@
     "seed": "knex seed:run --env dev",
     "script:expire-listings": "node scripts/expire-listings.js",
     "ts:watch": "tsc --watch --noEmit",
-    "test:ci": "NODE_ENV=test-ci jest --silent",
+    "test:ci": "DOTENV_CONFIG_PATH=.env.ci node -r dotenv/config node_modules/jest/bin/jest --config jest.config.js",
     "ts:ci": "tsc --noEmit"
   },
   "author": "",
