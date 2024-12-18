@@ -18,6 +18,7 @@ import {
   ComponentLinksSchema,
 } from '../types/links'
 import zodToJsonSchema from 'zod-to-json-schema'
+import { ConstructionPartSchema } from '../types/construction-parts'
 
 const schemas = {
   ...zodToJsonSchema(ResidenceSchema, {
@@ -54,6 +55,10 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(CompanyDetailsSchema, {
     name: 'CompanyDetails',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(ConstructionPartSchema, {
+    name: 'ConstructionPart',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(CompanyLinksSchema, {

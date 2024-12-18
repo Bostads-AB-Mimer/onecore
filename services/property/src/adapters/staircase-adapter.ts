@@ -6,7 +6,7 @@ const prisma = new PrismaClient({})
 
 //todo: add types
 
-async function getStaircasesByBuildingCode(buildingCode: string) {
+export const getStaircasesByBuildingCode = async (buildingCode: string) => {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
       buildingCode: {
@@ -45,5 +45,3 @@ async function getStaircasesByBuildingCode(buildingCode: string) {
     timestamp: staircase.timestamp,
   }))
 }
-
-export { getStaircasesByBuildingCode }

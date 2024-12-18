@@ -30,6 +30,12 @@ export const StaircaseLinksSchema = BaseLinksSchema.extend({
   parent: LinkSchema,
 })
 
+export const ConstructionPartLinksSchema = BaseLinksSchema.extend({
+  building: LinkSchema,
+  residences: LinkSchema,
+  parent: LinkSchema,
+})
+
 export const ResidenceListLinksSchema = BaseLinksSchema.extend({
   components: LinkSchema,
   parent: LinkSchema,
