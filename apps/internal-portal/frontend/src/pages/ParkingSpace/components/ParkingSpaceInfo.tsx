@@ -16,7 +16,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
 
   const getMapImageUrl = (rentalObjectCodes: string) => {
     const identifier = rentalObjectCodes.slice(0, 7)
-    return `https://pub.mimer.nu/bofaktablad/mediabank/byggnad/${identifier}_1.jpg`
+    return `https://pub.mimer.nu/bofaktablad/mediabank/Bilplatser/${identifier}.jpg`
   }
 
   return (
