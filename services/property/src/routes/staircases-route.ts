@@ -77,7 +77,6 @@ export const routes = (router: KoaRouter) => {
             href: `/residences?buildingCode=${staircase.buildingCode}`,
           },
           parent: { href: `/buildings/${staircase.buildingCode}` },
-          components: { href: `/components?maintenanceUnit=${staircase.code}` },
         })
 
         return {
@@ -96,7 +95,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
-
-  //todo: add staircases details GET
-  //todo: the details data will be quote identical to the one in the list GET because of the data model
 }

@@ -1,85 +1,42 @@
 import { PrismaClient } from '@prisma/client'
+import { map } from 'lodash'
 
 const prisma = new PrismaClient({})
 
 //todo: add types
-
-export const getComponentByMaintenanceUnitCode = async (
-  maintenanceUnitCode: string
+export const getComponents = async (
+  buildingCode: string,
+  floorCode: string,
+  residenceCode: string,
+  roomCode: string
 ) => {
-  const response = await prisma.component.findMany({
+  const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
-      propertyStructures: {
-        some: {
-          maintenanceUnitByCode: {
-            code: maintenanceUnitCode,
-          },
-        },
+      buildingCode: {
+        contains: buildingCode,
       },
+      floorCode: floorCode,
+      residenceCode: residenceCode,
+      roomCode: roomCode,
+      NOT: {
+        componentId: null,
+      },
+      localeId: null,
     },
-    orderBy: {
-      installationDate: 'desc',
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      manufacturer: true,
-      typeDesignation: true,
-      installationDate: true,
-      warrantyEndDate: true,
-      componentType: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      componentCategory: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      propertyStructures: {
-        select: {
-          maintenanceUnitByCode: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-        },
+  })
+  return prisma.component.findMany({
+    where: {
+      propertyObjectId: {
+        in: map(propertyStructures, 'propertyObjectId'),
       },
     },
   })
+}
 
-  return response.map((component) => ({
-    id: component.id,
-    code: component.code,
-    name: component.name,
-    details: {
-      manufacturer: component.manufacturer,
-      typeDesignation: component.typeDesignation,
+export const getComponentById = async (id: string) => {
+  return prisma.component.findUnique({
+    where: {
+      id: id,
     },
-    dates: {
-      installation: component.installationDate,
-      warrantyEnd: component.warrantyEndDate,
-    },
-    classification: {
-      componentType: {
-        code: component.componentType?.code ?? '',
-        name: component.componentType?.name ?? '',
-      },
-      category: {
-        code: component.componentCategory?.code ?? '',
-        name: component.componentCategory?.name ?? '',
-      },
-    },
-    maintenanceUnits: component.propertyStructures.map((ps) => ({
-      id: ps.maintenanceUnitByCode?.id ?? '',
-      code: ps.maintenanceUnitByCode?.code ?? '',
-      name: ps.maintenanceUnitByCode?.name ?? '',
-    })),
-  }))
+  })
 }
