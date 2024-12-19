@@ -11,9 +11,9 @@ import { fetchApi } from './baseApi'
 import { Cache } from '../../utils/cache'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const propertiesCache = new Cache<string, PropertyWithLinks[]>({ 
+const propertiesCache = new Cache<string, PropertyWithLinks[]>({
   ttl: CACHE_TTL,
-  maxEntries: 100
+  maxEntries: 100,
 })
 
 interface PropertyListResponse {
@@ -68,12 +68,16 @@ export const propertyService = {
 
   // Get buildings for a property using HATEOAS link
   async getPropertyBuildings(property: PropertyWithLinks) {
-    return fetchApi<BuildingListResponse>(property._links.buildings.href)
+    return (
+      await fetchApi<BuildingListResponse>(property._links.buildings.href)
+    ).content
   },
 
   // Get residences for a property using HATEOAS link
   async getPropertyResidences(property: PropertyWithLinks) {
-    return fetchApi<BuildingListResponse>(property._links.residences.href)
+    return (
+      await fetchApi<BuildingListResponse>(property._links.residences.href)
+    ).content
   },
 
   // Get all buildings for a property
