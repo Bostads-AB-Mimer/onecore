@@ -1,5 +1,4 @@
 import { Infobip, AuthType } from '@infobip-api/sdk'
-import striptags from 'striptags'
 import config from '../../../common/config'
 import {
   Email,
@@ -9,6 +8,7 @@ import {
   WorkOrderSms,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
+import striptags from 'striptags'
 
 const infobip = new Infobip({
   baseUrl: config.infobip.baseUrl,
@@ -20,6 +20,7 @@ const AdditionalParkingSpaceOfferTemplateId = 200000000092027
 const NewParkingSpaceOfferSmsTemplateId = 200000000094113
 const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
+const WorkOrderEmailTemplateId = 200000000146435
 
 export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
@@ -138,6 +139,33 @@ export const sendParkingSpaceAssignedToOther = async (
       to: toField,
       templateId: ParkingSpaceAssignedToOtherTemplateId,
       subject: 'Ej erbjuden parkeringsplats',
+    })
+    if (response.status === 200) {
+      return response.data
+    } else {
+      throw new Error(response.body)
+    }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendWorkOrderEmail = async (email: Email) => {
+  logger.info('Sending work order email', config.infobip.baseUrl)
+  try {
+    const toField = JSON.stringify({
+      to: email.to,
+      placeholders: {
+        message: email.text,
+      },
+    })
+    const response = await infobip.channels.email.send({
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
+      to: toField,
+      templateId: WorkOrderEmailTemplateId,
+      subject: email.subject,
+      text: email.text,
     })
     if (response.status === 200) {
       return response.data

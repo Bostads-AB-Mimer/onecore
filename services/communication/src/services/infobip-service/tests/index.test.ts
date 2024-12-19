@@ -92,15 +92,19 @@ describe('/sendWorkOrderSms', () => {
 })
 
 describe('/sendWorkOrderEmail', () => {
-  let sendEmailSpy: jest.SpyInstance<Promise<any>, [message: Email], any>
+  let sendWorkOrderEmailSpy: jest.SpyInstance<
+    Promise<any>,
+    [message: Email],
+    any
+  >
 
   beforeEach(() => {
-    sendEmailSpy = jest.spyOn(infobipAdapter, 'sendEmail')
-    sendEmailSpy.mockReset()
+    sendWorkOrderEmailSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderEmail')
+    sendWorkOrderEmailSpy.mockReset()
   })
 
   it('should return 200', async () => {
-    sendEmailSpy.mockResolvedValue({})
+    sendWorkOrderEmailSpy.mockResolvedValue({})
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'hello@example.com',
@@ -109,7 +113,7 @@ describe('/sendWorkOrderEmail', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(sendEmailSpy).toHaveBeenCalledWith({
+    expect(sendWorkOrderEmailSpy).toHaveBeenCalledWith({
       to: 'hello@example.com',
       subject: 'subject',
       text: 'hello',
@@ -117,18 +121,18 @@ describe('/sendWorkOrderEmail', () => {
   })
 
   it('should return 400 for invalid request body', async () => {
-    sendEmailSpy.mockResolvedValue({})
+    sendWorkOrderEmailSpy.mockResolvedValue({})
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       text: 'hello',
     })
 
     expect(res.status).toBe(400)
-    expect(sendEmailSpy).not.toHaveBeenCalled()
+    expect(sendWorkOrderEmailSpy).not.toHaveBeenCalled()
   })
 
   it('should return 400 for invalid email', async () => {
-    sendEmailSpy.mockResolvedValue({})
+    sendWorkOrderEmailSpy.mockResolvedValue({})
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'hello',
@@ -137,7 +141,7 @@ describe('/sendWorkOrderEmail', () => {
     })
 
     expect(res.status).toBe(400)
-    expect(sendEmailSpy).not.toHaveBeenCalled()
+    expect(sendWorkOrderEmailSpy).not.toHaveBeenCalled()
   })
 })
 

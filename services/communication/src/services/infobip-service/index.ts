@@ -7,6 +7,7 @@ import {
   sendParkingSpaceAssignedToOther,
   sendParkingSpaceOfferSms,
   sendWorkOrderSms,
+  sendWorkOrderEmail,
 } from './adapters/infobip-adapter'
 import {
   Email,
@@ -159,7 +160,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
     try {
-      const result = await sendEmail(emailData)
+      const result = await sendWorkOrderEmail(emailData)
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error: any) {
@@ -190,7 +191,7 @@ export const isParkingSpaceOfferEmail = (
     typeof emailData.type === 'string' &&
     typeof emailData.parkingSpaceId === 'string' &&
     typeof emailData.objectId === 'string' &&
-    typeof emailData.applicationType === 'string'&&
+    typeof emailData.applicationType === 'string' &&
     typeof emailData.offerURL === 'string'
   )
 }
