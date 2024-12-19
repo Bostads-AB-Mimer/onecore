@@ -48,7 +48,6 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect(company)
         }}
         isActive={selected === company.id}
         tooltip={company.name}

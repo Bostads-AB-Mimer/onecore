@@ -6,6 +6,6 @@ export const companyService = {
   async getAll(): Promise<Company[]> {
     const { data, error } = await GET('/companies')
     if (error) throw error
-    return data?.content || []
+    return data.content || []
   },
 }

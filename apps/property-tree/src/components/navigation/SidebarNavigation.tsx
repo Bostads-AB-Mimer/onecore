@@ -1,4 +1,5 @@
 import {
+  Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -8,7 +9,6 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from '@/services/api'
 import { CompanyNavigation } from './CompanyNavigation'
-import { Sidebar } from 'lucide-react'
 
 function CompanyNavigationLoader() {
   const {

@@ -38,7 +38,6 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-gray-900">
       <CommandPalette />
-
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 h-14 border-b bg-white dark:bg-gray-900 dark:border-gray-800 z-40">
         <div className="h-full px-4 flex items-center justify-between">
@@ -86,12 +85,11 @@ function AppContent() {
           </div>
         </div>
       </nav>
-
+      hej hejf
       {/* Sidebar */}
       <NavigationProvider>
         <SidebarNavigation />
       </NavigationProvider>
-
       {/* Main Content */}
       <main className="pl-64 pt-14">
         <Routes>

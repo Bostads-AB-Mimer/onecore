@@ -204,9 +204,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: (components["schemas"]["Property"] & {
-                  _links?: components["schemas"]["PropertyLinks"];
-                })[];
+              content?: components["schemas"]["Property"];
             };
           };
         };
@@ -367,9 +365,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: (components["schemas"]["Company"] & {
-                  _links?: components["schemas"]["CompanyLinks"];
-                })[];
+              content?: components["schemas"]["Company"][];
             };
           };
         };

@@ -52,7 +52,7 @@ export function PropertyNavigation({ property }: PropertyNavigationProps) {
       {isExpanded && buildings && buildings.length > 0 && (
         <SidebarMenu>
           {buildings.map((building) => (
-            <BuildingNavigation key={building.id} building={building} />
+            <BuildingNavigation key={building.code} building={building} />
           ))}
         </SidebarMenu>
       )}

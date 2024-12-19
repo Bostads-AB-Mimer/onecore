@@ -21,13 +21,13 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
     queryKey: ['staircases', building.id],
     queryFn: () =>
       GET('/staircases', {
-        params: { query: { buildingCode: building.code } },
+        params: { query: { buildingCode: building.code.trim() } },
       }),
     enabled: isExpanded,
     select: (response) => response.data?.content,
   })
 
-  if ((isLoading && isExpanded) || !staircases) {
+  if (isLoading && isExpanded) {
     return (
       <SidebarMenuItem>
         <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
@@ -55,10 +55,10 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
         onClick={() => {
           setIsExpanded(!isExpanded)
         }}
-        tooltip={building.name}
+        tooltip={building.code}
       >
         <Warehouse />
-        <span>{building.name}</span>
+        <span>{building.code}</span>
       </SidebarMenuButton>
       {isExpanded && (
         <SidebarMenu>
