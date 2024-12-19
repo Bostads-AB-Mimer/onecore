@@ -1,15 +1,16 @@
 import { Residence } from '../types'
-import { fetchApi } from './baseApi'
+import { GET } from './baseApi'
 
 export const residenceService = {
   async getByBuildingId(buildingId: string): Promise<Residence[]> {
-    const response = await fetchApi<{ content: Residence[] }>(
-      `/buildings/${buildingId}/residences`
-    )
-    return response.content
+    const { data, error } = await GET(`/buildings/${buildingId}/residences`)
+    if (error) throw error
+    return data?.content as Residence[]
   },
 
   async getById(id: string): Promise<Residence> {
-    return fetchApi<Residence>(`/residences/${id}`)
+    const { data, error } = await GET(`/residences/${id}`)
+    if (error) throw error
+    return data as Residence
   },
 }

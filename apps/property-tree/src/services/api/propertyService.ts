@@ -7,7 +7,7 @@ import {
   Residence,
   Staircase,
 } from '../types'
-import { fetchApi } from './baseApi'
+import { GET } from './baseApi'
 import { Cache } from '../../utils/cache'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -40,19 +40,17 @@ export const propertyService = {
   // Get all properties using HATEOAS link
   async getAll(company: CompanyWithLinks): Promise<PropertyWithLinks[]> {
     const properties = await propertiesCache.get(company.id, async () => {
-      const response = await fetchApi<PropertyListResponse>(
-        company._links.properties.href
-      )
-      return response.content
+      const { data, error } = await GET(company._links.properties.href)
+      if (error) throw error
+      return data?.content as PropertyWithLinks[]
     })
     return properties
   },
 
   async getPropertyById(propertyId: string): Promise<PropertyWithLinks> {
-    const response = await fetchApi<PropertyDetailsResponse>(
-      `/properties/${propertyId}`
-    )
-    return response.content
+    const { data, error } = await GET(`/properties/${propertyId}`)
+    if (error) throw error
+    return data?.content as PropertyWithLinks
   },
 
   // Get property by using HATEOAS self link
@@ -60,38 +58,37 @@ export const propertyService = {
     if (!property._links || !property._links.self) {
       throw new Error('Property does not have a self link')
     }
-    const response = await fetchApi<PropertyDetailsResponse>(
-      property._links.self.href
-    )
-    return response.content
+    const { data, error } = await GET(property._links.self.href)
+    if (error) throw error
+    return data?.content as Property
   },
 
   // Get buildings for a property using HATEOAS link
   async getPropertyBuildings(property: PropertyWithLinks) {
-    return (
-      await fetchApi<BuildingListResponse>(property._links.buildings.href)
-    ).content
+    const { data, error } = await GET(property._links.buildings.href)
+    if (error) throw error
+    return data?.content as Building[]
   },
 
   // Get residences for a property using HATEOAS link
   async getPropertyResidences(property: PropertyWithLinks) {
-    return (
-      await fetchApi<BuildingListResponse>(property._links.residences.href)
-    ).content
+    const { data, error } = await GET(property._links.residences.href)
+    if (error) throw error
+    return data?.content as Residence[]
   },
 
   // Get all buildings for a property
   async getBuildingsByPropertyCode(propertyCode: string): Promise<Building[]> {
-    const response = await fetchApi<Building[]>(`/buildings/${propertyCode}/`)
-    return response
+    const { data, error } = await GET(`/buildings/${propertyCode}/`)
+    if (error) throw error
+    return data?.content as Building[]
   },
 
   // Get building by building code
   async getBuildingByCode(buildingCode: string): Promise<Building> {
-    const response = await fetchApi<Building>(
-      `/buildings/buildingCode/${buildingCode}/`
-    )
-    return response
+    const { data, error } = await GET(`/buildings/buildingCode/${buildingCode}/`)
+    if (error) throw error
+    return data?.content as Building
   },
 
   // Get navigation tree with lazy loading
@@ -100,16 +97,14 @@ export const propertyService = {
   ): Promise<NavigationItem[]> {
     try {
       // First get companies
-      const companies = await fetchApi<{ content: CompanyWithLinks[] }>(
-        '/companies'
-      )
+      const { data: companies, error } = await GET('/companies')
+      if (error) throw error
 
       // Map companies to navigation items and immediately load their properties
       const navigationItems: NavigationItem[] = await Promise.all(
         companies.content.map(async (company) => {
-          const properties = await fetchApi<PropertyListResponse>(
-            company._links.properties.href
-          )
+          const { data: properties, error } = await GET(company._links.properties.href)
+          if (error) throw error
           return {
             type: 'company' as const,
             children: await Promise.all(
@@ -143,9 +138,8 @@ export const propertyService = {
                 try {
                   switch (item.type) {
                     case 'company': {
-                      const properties = await fetchApi<PropertyListResponse>(
-                        item._links.properties.href
-                      )
+                      const { data: properties, error } = await GET(item._links.properties.href)
+                      if (error) throw error
                       item.children = properties.content.map((property) => ({
                         id: property.id,
                         name:
@@ -157,9 +151,8 @@ export const propertyService = {
                       break
                     }
                     case 'property': {
-                      const buildings = await fetchApi<BuildingListResponse>(
-                        item._links.buildings.href
-                      )
+                      const { data: buildings, error } = await GET(item._links.buildings.href)
+                      if (error) throw error
                       item.children = buildings.content.map((building) => ({
                         id: building.id,
                         name: building.name || building.code,
@@ -170,9 +163,8 @@ export const propertyService = {
                       break
                     }
                     case 'building': {
-                      const staircases = await fetchApi<StaircaseListResponse>(
-                        item._links.staircases.href
-                      )
+                      const { data: staircases, error } = await GET(item._links.staircases.href)
+                      if (error) throw error
                       item.children = staircases.content.map((staircase) => ({
                         id: staircase.code,
                         name: staircase.name || staircase.code,
@@ -183,9 +175,8 @@ export const propertyService = {
                       break
                     }
                     case 'staircase': {
-                      const residences = await fetchApi<ResidenceListResponse>(
-                        item._links.residences.href
-                      )
+                      const { data: residences, error } = await GET(item._links.residences.href)
+                      if (error) throw error
                       item.children = residences.content.map((residence) => ({
                         id: residence.code,
                         name: residence.name || residence.code,
