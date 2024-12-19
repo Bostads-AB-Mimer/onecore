@@ -6,6 +6,6 @@ export const companyService = {
     const { data, error } = await GET('/companies')
     if (error) throw error
     console.log('companies', data)
-    return data?.content
+    return data?.content || []
   },
 }
