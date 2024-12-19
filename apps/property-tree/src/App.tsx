@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,7 +8,6 @@ import { motion } from 'framer-motion'
 import { Search, Settings, User2 } from 'lucide-react'
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NavigationProvider } from './hooks/use-navigation-context'
 import {
   CommandPaletteProvider,
   useCommandPalette,
@@ -23,62 +21,6 @@ const queryClient = new QueryClient({
     },
   },
 })
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarProvider,
-} from './components/ui/sidebar'
-import { CompanyNavigation } from './components/navigation/CompanyNavigation'
-import { useQuery } from '@tanstack/react-query'
-import { companyService } from './services/api'
-
-function CompanyNavigationLoader() {
-  const {
-    data: companies,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      return companyService.getAll()
-    },
-  })
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 text-destructive text-center">
-        <p>Failed to load companies</p>
-      </div>
-    )
-  }
-
-  if (!companies?.length) {
-    return (
-      <div className="p-4 text-muted-foreground text-center">
-        <p>No companies found</p>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      {companies.map((company) => (
-        <CompanyNavigation key={company.id} company={company} />
-      ))}
-    </>
-  )
-}
 
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
@@ -87,6 +29,8 @@ import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
+import SidebarNavigation from './components/navigation/SidebarNavigation'
+import { NavigationProvider } from './hooks/use-navigation-context'
 
 function AppContent() {
   const { open: openCommandPalette } = useCommandPalette()
@@ -145,19 +89,7 @@ function AppContent() {
 
       {/* Sidebar */}
       <NavigationProvider>
-        <SidebarProvider defaultOpen>
-          <Sidebar>
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <CompanyNavigationLoader />
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-          </Sidebar>
-        </SidebarProvider>
+        <SidebarNavigation />
       </NavigationProvider>
 
       {/* Main Content */}

@@ -1,13 +1,13 @@
 import React from 'react'
-import { BuildingWithLinks } from '@/services/types'
+import { Building } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { StaircaseNavigation } from './StaircaseNavigation'
 import { useQuery } from '@tanstack/react-query'
-import { buildingService } from '@/services/api'
+import { GET } from '@/services/api/baseApi'
 
 interface BuildingNavigationProps {
-  building: BuildingWithLinks
+  building: Building
 }
 
 export function BuildingNavigation({ building }: BuildingNavigationProps) {
@@ -19,8 +19,12 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
     error,
   } = useQuery({
     queryKey: ['staircases', building.id],
-    queryFn: () => buildingService.getBuildingStaircases(building),
+    queryFn: () =>
+      GET('/staircases', {
+        params: { query: { buildingCode: building.code } },
+      }),
     enabled: isExpanded,
+    select: (response) => response.data?.content,
   })
 
   if ((isLoading && isExpanded) || !staircases) {

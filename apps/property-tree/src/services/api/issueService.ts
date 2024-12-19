@@ -1,5 +1,4 @@
 import { Issue } from '../types'
-import { fetchApi } from './baseApi'
 
 const mockIssues = {
   'residence-1': [

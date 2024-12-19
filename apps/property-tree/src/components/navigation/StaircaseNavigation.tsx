@@ -1,29 +1,37 @@
 import React from 'react'
-import { StaircaseWithLinks, ResidenceWithLinks } from '@/services/types'
+import { Staircase } from '@/services/types'
 import { Home } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { ResidenceNavigation } from './ResidenceNavigation'
 import { useQuery } from '@tanstack/react-query'
+import { GET } from '@/services/api/baseApi'
 
 interface StaircaseNavigationProps {
-  staircase: StaircaseWithLinks
+  staircase: Staircase
 }
 
 export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
-  const { selectedId, selectItem } = useNavigation()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
-  const { data: residences, isLoading, error } = useQuery({
+  const {
+    data: residences,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['residences', staircase.id],
-    queryFn: () => fetchApi<{ content: NavigationItem[] }>(staircase._links.residences.href),
+    queryFn: () =>
+      GET('/residences', {
+        params: { query: { staircaseCode: staircase.code } },
+      }),
     enabled: isExpanded && !!staircase._links?.residences?.href,
-    select: (response) => response.content.map(residence => ({
-      id: residence.id,
-      name: residence.name || residence.code,
-      type: 'residence' as const,
-      _links: residence._links,
-      children: []
-    }))
+    select: (response) =>
+      response.content.map((residence) => ({
+        id: residence.id,
+        name: residence.name || residence.code,
+        type: 'residence' as const,
+        _links: residence._links,
+        children: [],
+      })),
   })
 
   if (isLoading && isExpanded) {
@@ -35,10 +43,15 @@ export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
   }
 
   if (error) {
-    console.error(`Failed to load residences for staircase ${staircase.id}:`, error)
+    console.error(
+      `Failed to load residences for staircase ${staircase.id}:`,
+      error
+    )
     return (
       <SidebarMenuItem>
-        <div className="text-sm text-destructive px-2">Failed to load residences</div>
+        <div className="text-sm text-destructive px-2">
+          Failed to load residences
+        </div>
       </SidebarMenuItem>
     )
   }
@@ -58,7 +71,7 @@ export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
       </SidebarMenuButton>
       {isExpanded && residences && residences.length > 0 && (
         <SidebarMenu>
-          {residences.map(residence => (
+          {residences.map((residence) => (
             <ResidenceNavigation
               key={residence.id}
               residence={residence}

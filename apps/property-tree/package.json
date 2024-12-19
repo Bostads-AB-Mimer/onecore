@@ -1,5 +1,5 @@
 {
-  "name": "onecore-real-estate",
+  "name": "onecore-property-tree",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "format": "prettier --write .",
     "start:server": "node --import tsx src/server/api.ts",
     "start": "vite",
-    "generate-api-types": "tsx scripts/generate-api-types.ts"
+    "generate-api-types": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/services/api/generated/api-types.ts"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
@@ -44,7 +44,7 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
-    "openapi-fetch": "^0.9.1",
+    "openapi-fetch": "^0.9.8",
     "openapi-typescript": "^6.7.6",
     "postcss": "^8.4.35",
     "prettier": "^3.0.0",
