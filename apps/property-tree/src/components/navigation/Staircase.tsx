@@ -1,16 +1,22 @@
 import React from 'react'
-import { Staircase } from '@/services/types'
-import { Home } from 'lucide-react'
+import { Building, Company, Property, Staircase } from '@/services/types'
+import { GitGraph, Home } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
-import { ResidenceNavigation } from './ResidenceNavigation'
+import { ResidenceNavigation } from './Residence'
 import { useQuery } from '@tanstack/react-query'
 import { GET } from '@/services/api/baseApi'
 
 interface StaircaseNavigationProps {
   staircase: Staircase
+  company: Company
+  building: Building
+  property: Property
 }
 
-export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
+export function StaircaseNavigation({
+  staircase,
+  building,
+}: StaircaseNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const {
@@ -21,17 +27,10 @@ export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
     queryKey: ['residences', staircase.id],
     queryFn: () =>
       GET('/residences', {
-        params: { query: { staircaseCode: staircase.code } },
+        params: { query: { buildingCode: building.code } },
       }),
-    enabled: isExpanded && !!staircase._links?.residences?.href,
-    select: (response) =>
-      response.content.map((residence) => ({
-        id: residence.id,
-        name: residence.name || residence.code,
-        type: 'residence' as const,
-        _links: residence._links,
-        children: [],
-      })),
+    select: (response) => response.data?.content,
+    enabled: isExpanded,
   })
 
   if (isLoading && isExpanded) {
@@ -61,23 +60,15 @@ export function StaircaseNavigation({ staircase }: StaircaseNavigationProps) {
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect(staircase)
         }}
-        isActive={selected === staircase.id}
-        tooltip={staircase.name}
       >
-        <Home />
-        <span>{staircase.name}</span>
+        <GitGraph />
+        <span>{staircase.code}</span>
       </SidebarMenuButton>
       {isExpanded && residences && residences.length > 0 && (
         <SidebarMenu>
           {residences.map((residence) => (
-            <ResidenceNavigation
-              key={residence.id}
-              residence={residence}
-              selected={selected}
-              onSelect={onSelect}
-            />
+            <ResidenceNavigation key={residence.id} residence={residence} />
           ))}
         </SidebarMenu>
       )}

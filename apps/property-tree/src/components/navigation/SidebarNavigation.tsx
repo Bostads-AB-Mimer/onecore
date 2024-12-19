@@ -8,7 +8,7 @@ import {
 } from '../ui/sidebar'
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from '@/services/api'
-import { CompanyNavigation } from './CompanyNavigation'
+import { CompanyNavigation } from './Company'
 
 function CompanyNavigationLoader() {
   const {

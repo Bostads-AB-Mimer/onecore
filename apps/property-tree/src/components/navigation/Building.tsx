@@ -1,16 +1,22 @@
 import React from 'react'
-import { Building } from '@/services/types'
+import { Building, Company, Property } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
-import { StaircaseNavigation } from './StaircaseNavigation'
+import { StaircaseNavigation } from './Staircase'
 import { useQuery } from '@tanstack/react-query'
 import { GET } from '@/services/api/baseApi'
 
 interface BuildingNavigationProps {
   building: Building
+  property: Property
+  company: Company
 }
 
-export function BuildingNavigation({ building }: BuildingNavigationProps) {
+export function BuildingNavigation({
+  building,
+  company,
+  property,
+}: BuildingNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   const {
@@ -62,8 +68,14 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
       </SidebarMenuButton>
       {isExpanded && (
         <SidebarMenu>
-          {staircases.map((staircase) => (
-            <StaircaseNavigation key={staircase.id} staircase={staircase} />
+          {staircases?.map((staircase) => (
+            <StaircaseNavigation
+              key={staircase.id}
+              staircase={staircase}
+              building={building}
+              company={company}
+              property={property}
+            />
           ))}
         </SidebarMenu>
       )}

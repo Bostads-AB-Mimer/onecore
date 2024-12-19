@@ -386,6 +386,7 @@ export interface components {
       id: string;
       code: string;
       name: string;
+      buildingCode: string;
       deleted: boolean;
       validityPeriod: {
         /** Format: date-time */
@@ -457,6 +458,7 @@ export interface components {
       valueAreaId: string | null;
       code: string;
       designation: string;
+      /** @description Kommun */
       municipality: string;
       tract: string;
       block: string;
@@ -494,6 +496,7 @@ export interface components {
       valueAreaId: string | null;
       code: string;
       designation: string;
+      /** @description Municipality=kommun */
       municipality: string;
       tract: string;
       block: string;
