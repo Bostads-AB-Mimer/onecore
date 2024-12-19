@@ -58,7 +58,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get(['(.*)/residences', '(.*)/residences/'], async (ctx) => {
+  router.get(['(.*)/residences'], async (ctx) => {
     const queryParams = residencesQueryParamsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
@@ -101,6 +101,7 @@ export const routes = (router: KoaRouter) => {
           code: residence.code,
           name: residence.name || '',
           deleted: Boolean(residence.deleted),
+          buildingCode: buildingCode,
           validityPeriod: {
             fromDate: residence.fromDate,
             toDate: residence.toDate,
@@ -168,6 +169,7 @@ export const routes = (router: KoaRouter) => {
       const parsedResidence = ResidenceDetailedSchema.parse({
         id: residence.id,
         code: residence.code,
+        buildingCode: residence.propertyObject.building?.buildingCode,
         name: residence.name || '',
         location: residence.location || '',
         accessibility: {

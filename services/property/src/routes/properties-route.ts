@@ -55,13 +55,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   type: array
-   *                   items:
-   *                     allOf:
-   *                       - $ref: '#/components/schemas/Property'
-   *                       - type: object
-   *                         properties:
-   *                           _links:
-   *                             $ref: '#/components/schemas/PropertyLinks'
+   *                   $ref: '#/components/schemas/Property'
    *       400:
    *         description: Invalid query parameters.
    *       500:

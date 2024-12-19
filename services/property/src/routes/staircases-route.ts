@@ -53,7 +53,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get(['(.*)/staircases', '(.*)/staircases/'], async (ctx) => {
+  router.get(['(.*)/staircases'], async (ctx) => {
     const queryParams = staircasesQueryParamsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
@@ -70,18 +70,16 @@ export const routes = (router: KoaRouter) => {
     try {
       const response = await getStaircasesByBuildingCode(buildingCode)
       const responseContent = response.map((staircase) => {
-        const _links = StaircaseLinksSchema.parse({
-          self: { href: `/staircases/${staircase.id}` },
-          building: { href: `/buildings/${staircase.buildingCode}` },
-          residences: {
-            href: `/residences?buildingCode=${staircase.buildingCode}`,
-          },
-          parent: { href: `/buildings/${staircase.buildingCode}` },
-        })
-
         return {
           ...staircase,
-          _links,
+          _links: {
+            self: { href: `/staircases/${staircase.id}` },
+            building: { href: `/buildings/${staircase.buildingCode}` },
+            residences: {
+              href: `/residences?buildingCode=${staircase.buildingCode}`,
+            },
+            parent: { href: `/buildings/${staircase.buildingCode}` },
+          },
         }
       })
 

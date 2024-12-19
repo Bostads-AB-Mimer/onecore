@@ -3,8 +3,8 @@ import { z } from 'zod'
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
     .string({
-      required_error: "buildingCode query parameter is required",
-      invalid_type_error: "buildingCode must be a string"
+      required_error: 'buildingCode query parameter is required',
+      invalid_type_error: 'buildingCode must be a string',
     })
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
   floorCode: z.string().optional(),
@@ -14,6 +14,7 @@ export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
+  buildingCode: z.string(),
   deleted: z.boolean(),
   validityPeriod: z.object({
     fromDate: z.date(),
@@ -25,6 +26,7 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
   id: z.string(),
   code: z.string(),
   name: z.string(),
+  buildingCode: z.string(),
   location: z.string().optional(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),
