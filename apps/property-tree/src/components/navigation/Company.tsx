@@ -1,71 +1,34 @@
 import React from 'react'
 import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
-import { useNavigation } from '@/hooks/use-navigation-context'
-import { PropertyNavigation } from './Property'
-import { useQuery } from '@tanstack/react-query'
-import { propertyService } from '@/services/api/propertyService'
+import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
+import { PropertyList } from './PropertyList'
+import { useNavigation } from '@/contexts/NavigationContext'
 
 interface CompanyNavigationProps {
   company: Company
+  onSelect: () => void
 }
 
-export function CompanyNavigation({ company }: CompanyNavigationProps) {
-  const { selectedId: selected } = useNavigation()
+export function CompanyNavigation({ company, onSelect }: CompanyNavigationProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
-
-  const {
-    data: properties,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['propertiesForCompanyId', company.id],
-    queryFn: async () => propertyService.getFromCompany(company),
-  })
-
-  if (isLoading && isExpanded) {
-    return (
-      <SidebarMenuItem>
-        <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
-      </SidebarMenuItem>
-    )
-  }
-
-  if (error) {
-    console.error(`Failed to load properties for company ${company.id}:`, error)
-    return (
-      <SidebarMenuItem>
-        <div className="text-sm text-destructive px-2">
-          Failed to load properties
-        </div>
-      </SidebarMenuItem>
-    )
-  }
+  const { selectedCompany } = useNavigation()
+  const isSelected = selectedCompany?.id === company.id
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
+          onSelect()
         }}
-        isActive={selected === company.id}
+        isActive={isSelected}
         tooltip={company.name}
       >
         <Building2 />
         <span>{company.name.replace('** TEST **', '')}</span>
       </SidebarMenuButton>
-      {properties && isExpanded && (
-        <SidebarMenu>
-          {properties.map((property) => (
-            <PropertyNavigation
-              key={property.id}
-              property={property}
-              company={company}
-            />
-          ))}
-        </SidebarMenu>
-      )}
+      {isExpanded && <PropertyList company={company} />}
     </SidebarMenuItem>
   )
 }

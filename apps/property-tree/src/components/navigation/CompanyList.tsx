@@ -1,14 +1,12 @@
 import React from 'react'
-import { SidebarMenu } from '../ui/sidebar'
-import { CompanyNavigation } from './Company'
 import { useQuery } from '@tanstack/react-query'
 import { companyService } from '@/services/api'
+import { CompanyNavigation } from './Company'
+import { useNavigation } from '@/contexts/NavigationContext'
 
-interface CompanyListProps {
-  onCompanySelect?: (companyId: string) => void
-}
-
-export function CompanyList({ onCompanySelect }: CompanyListProps) {
+export function CompanyList() {
+  const { setSelectedCompany, clearSelection } = useNavigation()
+  
   const {
     data: companies,
     isLoading,
@@ -34,14 +32,17 @@ export function CompanyList({ onCompanySelect }: CompanyListProps) {
   }
 
   return (
-    <SidebarMenu>
+    <>
       {companies?.map((company) => (
         <CompanyNavigation
           key={company.id}
           company={company}
-          onSelect={() => onCompanySelect?.(company.id)}
+          onSelect={() => {
+            clearSelection()
+            setSelectedCompany(company)
+          }}
         />
       ))}
-    </SidebarMenu>
+    </>
   )
 }
