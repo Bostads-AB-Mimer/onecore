@@ -4,13 +4,15 @@ import { SidebarMenu } from '../ui/sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
 import { propertyService } from '@/services/api'
+import { useNavigation } from '@/contexts/NavigationContext'
 
 interface PropertyListProps {
   company: Company
-  onPropertySelect?: (propertyId: string) => void
 }
 
-export function PropertyList({ company, onPropertySelect }: PropertyListProps) {
+export function PropertyList({ company }: PropertyListProps) {
+  const { setSelectedProperty, setSelectedBuilding, setSelectedStaircase, setSelectedResidence } = useNavigation()
+  
   const {
     data: properties,
     isLoading,
@@ -41,7 +43,12 @@ export function PropertyList({ company, onPropertySelect }: PropertyListProps) {
         <PropertyNavigation
           key={property.id}
           property={property}
-          onSelect={() => onPropertySelect?.(property.id)}
+          onSelect={() => {
+            setSelectedProperty(property)
+            setSelectedBuilding(null)
+            setSelectedStaircase(null)
+            setSelectedResidence(null)
+          }}
         />
       ))}
     </SidebarMenu>
