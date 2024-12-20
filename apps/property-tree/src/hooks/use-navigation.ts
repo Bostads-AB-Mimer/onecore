@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { NavigationItem } from '@/services/types'
 import { fetchApi } from '@/services/api/baseApi'
 
@@ -7,6 +8,7 @@ import { fetchApi } from '@/services/api/baseApi'
  * @param onItemSelected Callback som körs när en item väljs
  */
 export function useNavigation(onItemSelected?: (item: NavigationItem) => void) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -57,7 +59,8 @@ export function useNavigation(onItemSelected?: (item: NavigationItem) => void) {
         staircaseId: item.metadata?.staircaseId || item.id,
       },
     })
-  }, [onItemSelected])
+    navigate(`/${item.type}s/${item.id}`)
+  }, [onItemSelected, navigate])
 
   return {
     expanded,
