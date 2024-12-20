@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Building } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
+import { StaircaseList } from './StaircaseList'
 
 interface BuildingNavigationProps {
   building: Building
