@@ -18,7 +18,6 @@ export const propertyService = {
     if (error) throw error
     return data?.content
   },
-  },
 
   // Get company by ID
   async getCompany(companyId: string): Promise<CompanyDetails> {
