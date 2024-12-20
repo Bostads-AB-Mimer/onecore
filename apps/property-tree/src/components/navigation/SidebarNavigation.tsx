@@ -2,14 +2,19 @@ import React from 'react'
 import {
   Sidebar,
   SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
   SidebarProvider,
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
 } from '../ui/sidebar'
 import { ChevronRight } from 'lucide-react'
 import { NavigationProvider } from '@/contexts/NavigationContext'
 import { CompanyList } from './CompanyList'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible'
 
 export default function SidebarNavigation() {
   return (
