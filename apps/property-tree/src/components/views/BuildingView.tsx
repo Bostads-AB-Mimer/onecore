@@ -1,4 +1,4 @@
-import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
@@ -12,23 +12,18 @@ import { Grid } from '../ui/grid'
 export function BuildingView() {
   const { buildingId } = useParams()
   const navigate = useNavigate()
-  const [building, setBuilding] = React.useState<BuildingType | null>(null)
+  
+  const {
+    data: building,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['building', buildingId],
+    queryFn: () => buildingService.getById(buildingId!),
+    enabled: !!buildingId,
+  })
 
-  const [loading, setLoading] = React.useState(true)
-
-  React.useEffect(() => {
-    const loadBuilding = async () => {
-      try {
-        const data = await buildingService.getById(buildingId!)
-        setBuilding(data)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadBuilding()
-  }, [buildingId])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
@@ -53,7 +48,7 @@ export function BuildingView() {
     )
   }
 
-  if (!building) {
+  if (error || !building) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
