@@ -1,4 +1,3 @@
-import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -11,7 +10,6 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { propertyService } from '../../services/api'
-import { Property, PropertyWithLinks } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/Card'
 import { Grid } from '../ui/Grid'
@@ -20,9 +18,16 @@ import { StatCard } from '../shared/StatCard'
 export function PropertyView() {
   const { propertyId } = useParams()
   const navigate = useNavigate()
-  const { data: property, isLoading, error } = useQuery({
+  const {
+    data: property,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['property', propertyId],
-    queryFn: () => propertyService.getPropertyById(propertyId!),
+    queryFn: () => {
+      debugger
+      return propertyService.getPropertyById(propertyId!)
+    },
   })
 
   if (isLoading) {
