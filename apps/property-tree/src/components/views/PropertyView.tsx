@@ -1,4 +1,5 @@
 import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -19,22 +20,12 @@ import { StatCard } from '../shared/StatCard'
 export function PropertyView() {
   const { propertyId } = useParams()
   const navigate = useNavigate()
-  const [property, setProperty] = React.useState<Property | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const { data: property, isLoading, error } = useQuery(
+    ['property', propertyId],
+    () => propertyService.getPropertyById(propertyId!)
+  )
 
-  React.useEffect(() => {
-    const loadProperty = async () => {
-      try {
-        const data = await propertyService.getPropertyById(propertyId!)
-        setProperty(data)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadProperty()
-  }, [propertyId])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
@@ -59,7 +50,7 @@ export function PropertyView() {
     )
   }
 
-  if (!property) {
+  if (error || !property) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
