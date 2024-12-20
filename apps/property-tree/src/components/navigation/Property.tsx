@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Property } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
@@ -11,6 +12,7 @@ interface PropertyNavigationProps {
 }
 
 export function PropertyNavigation({ property, onSelect }: PropertyNavigationProps) {
+  const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
   const { selectedProperty } = useNavigation()
   const isSelected = selectedProperty?.id === property.id
@@ -21,6 +23,7 @@ export function PropertyNavigation({ property, onSelect }: PropertyNavigationPro
         onClick={() => {
           setIsExpanded(!isExpanded)
           onSelect()
+          navigate(`/properties/${property.id}`)
         }}
         isActive={isSelected}
         tooltip={property.designation}

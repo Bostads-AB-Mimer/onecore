@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
@@ -11,6 +12,7 @@ interface CompanyNavigationProps {
 }
 
 export function CompanyNavigation({ company, onSelect }: CompanyNavigationProps) {
+  const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
   const { selectedCompany } = useNavigation()
   const isSelected = selectedCompany?.id === company.id
@@ -21,6 +23,7 @@ export function CompanyNavigation({ company, onSelect }: CompanyNavigationProps)
         onClick={() => {
           setIsExpanded(!isExpanded)
           onSelect()
+          navigate(`/companies/${company.id}`)
         }}
         isActive={isSelected}
         tooltip={company.name}
