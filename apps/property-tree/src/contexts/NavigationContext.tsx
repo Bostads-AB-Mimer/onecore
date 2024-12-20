@@ -33,13 +33,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setSelectedResidence(null)
   }, [])
 
-  const setSelectedCompany = useCallback((company: Company | null) => {
-    setSelectedCompany(company)
-    if (!company) {
-      clearSelection()
-    }
-  }, [clearSelection])
-
   const setSelectedProperty = useCallback((property: Property | null) => {
     setSelectedProperty(property)
     if (!property) {
