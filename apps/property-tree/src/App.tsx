@@ -94,6 +94,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Navigate to="/companies" replace />} />
             <Route path="/companies/:companyId" element={<CompanyView />} />
+            <Route path="/properties" element={<PropertyView />} />
             <Route path="/properties/:propertyId" element={<PropertyView />} />
             <Route path="/buildings/:buildingId" element={<BuildingView />} />
             <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
