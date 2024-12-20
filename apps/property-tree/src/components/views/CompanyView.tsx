@@ -11,22 +11,17 @@ import { CompanyDetails } from '@/services/types'
 
 export function CompanyView() {
   const { companyId } = useParams()
-  const [company, setCompany] = React.useState<CompanyDetails>()
-  const [loading, setLoading] = React.useState(true)
+  const {
+    data: company,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['company', companyId],
+    queryFn: () => companyService.getById(companyId!),
+    enabled: !!companyId,
+  })
 
-  React.useEffect(() => {
-    const loadCompany = async () => {
-      try {
-        const data = await companyService.getById(companyId!)
-        setCompany(data)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadCompany()
-  }, [companyId])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
@@ -44,7 +39,7 @@ export function CompanyView() {
     )
   }
 
-  if (!company) {
+  if (error || !company) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
