@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -16,7 +17,7 @@ import { Grid } from '../ui/Grid'
 import { StatCard } from '../shared/StatCard'
 
 export function PropertyView() {
-  const { propertyId } = useParams()
+  const { propertyId } = useParams<{ propertyId: string }>()
   const navigate = useNavigate()
   const {
     data: property,

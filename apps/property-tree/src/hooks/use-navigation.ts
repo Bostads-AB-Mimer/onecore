@@ -50,15 +50,7 @@ export function useNavigation(onItemSelected?: (item: NavigationItem) => void) {
 
   const handleSelect = useCallback((item: NavigationItem) => {
     setSelected(item.id)
-    onItemSelected?.({
-      ...item,
-      metadata: {
-        ...item.metadata,
-        propertyId: item.metadata?.propertyId || item.id,
-        buildingId: item.metadata?.buildingId || item.id,
-        staircaseId: item.metadata?.staircaseId || item.id,
-      },
-    })
+    onItemSelected?.(item)
     navigate(`/${item.type}s/${item.id}`)
   }, [onItemSelected, navigate])
 
