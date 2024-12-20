@@ -30,7 +30,7 @@ import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
 import SidebarNavigation from './components/navigation/SidebarNavigation'
-import { NavigationProvider } from './hooks/use-navigation-context'
+import { NavigationProvider } from '@/contexts/NavigationContext'
 
 function AppContent() {
   const { open: openCommandPalette } = useCommandPalette()
@@ -90,19 +90,21 @@ function AppContent() {
       <SidebarNavigation />
       {/* Main Content */}
       <main className="pl-64 pt-14">
-        <Routes>
-          <Route path="/" element={<Navigate to="/companies" replace />} />
-          <Route path="/companies/:companyId" element={<CompanyView />} />
-          <Route path="/properties/:propertyId" element={<PropertyView />} />
-          <Route path="/buildings/:buildingId" element={<BuildingView />} />
-          <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
-          <Route path="/residences/:residenceId" element={<ResidenceView />} />
-          <Route
-            path="/residences/:residenceId/rooms/:roomId"
-            element={<RoomView />}
-          />
-          <Route path="/tenants/:tenantId" element={<TenantView />} />
-        </Routes>
+        <NavigationProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/companies" replace />} />
+            <Route path="/companies/:companyId" element={<CompanyView />} />
+            <Route path="/properties/:propertyId" element={<PropertyView />} />
+            <Route path="/buildings/:buildingId" element={<BuildingView />} />
+            <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
+            <Route path="/residences/:residenceId" element={<ResidenceView />} />
+            <Route
+              path="/residences/:residenceId/rooms/:roomId"
+              element={<RoomView />}
+            />
+            <Route path="/tenants/:tenantId" element={<TenantView />} />
+          </Routes>
+        </NavigationProvider>
       </main>
     </div>
   )
