@@ -2,7 +2,8 @@ import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
-import { buildingService, propertyService } from '../../services/api'
+import { buildingService } from '../../services/api'
+import { useNavigation } from '@/contexts/NavigationContext'
 import { Building as BuildingType } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
@@ -12,7 +13,15 @@ import { Grid } from '../ui/Grid'
 export function BuildingView() {
   const { buildingId } = useParams()
   const navigate = useNavigate()
+  const { selectedProperty } = useNavigation()
   const [building, setBuilding] = React.useState<BuildingType | null>(null)
+
+  React.useEffect(() => {
+    if (!selectedProperty) {
+      navigate('/properties')
+      return
+    }
+  }, [selectedProperty, navigate])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
