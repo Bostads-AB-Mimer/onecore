@@ -20,10 +20,10 @@ import { StatCard } from '../shared/StatCard'
 export function PropertyView() {
   const { propertyId } = useParams()
   const navigate = useNavigate()
-  const { data: property, isLoading, error } = useQuery(
-    ['property', propertyId],
-    () => propertyService.getPropertyById(propertyId!)
-  )
+  const { data: property, isLoading, error } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: () => propertyService.getPropertyById(propertyId!),
+  })
 
   if (isLoading) {
     return (
