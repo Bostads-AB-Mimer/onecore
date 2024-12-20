@@ -1,4 +1,5 @@
 import { Infobip, AuthType } from '@infobip-api/sdk'
+import striptags from 'striptags'
 import config from '../../../common/config'
 import {
   Email,
@@ -150,13 +151,17 @@ export const sendParkingSpaceAssignedToOther = async (
 }
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
+  const message = striptags(sms.message.replace(/<br\s*\/?>/gi, '\n'))
+  const noreply =
+    'Detta sms går ej att svara på. Det går bra att återkoppla i ärendet på "Mina sidor".'
+
   try {
     const response = await infobip.channels.sms.send({
       messages: [
         {
           destinations: [{ to: sms.phoneNumber }],
           from: 'Mimer',
-          text: sms.message,
+          text: `${message}\n\n${noreply}`,
         },
       ],
     })
