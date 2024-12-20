@@ -24,9 +24,8 @@ export function PropertyView() {
     error,
   } = useQuery({
     queryKey: ['property', propertyId],
-    queryFn: () => {
-      return propertyService.getPropertyById(propertyId!)
-    },
+    queryFn: () => propertyService.getPropertyById(propertyId!),
+    enabled: !!propertyId,
   })
 
   if (isLoading) {
