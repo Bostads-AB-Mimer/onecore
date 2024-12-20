@@ -13,7 +13,7 @@ import { CompanyList } from './CompanyList'
 export default function SidebarNavigation() {
   return (
     <NavigationProvider>
-      <SidebarProvider defaultOpen>
+      <SidebarProvider defaultOpen className="flex-shrink-0">
         <Sidebar>
           <SidebarContent>
             <SidebarGroup>

@@ -89,7 +89,7 @@ function AppContent() {
       {/* Sidebar */}
       <SidebarNavigation />
       {/* Main Content */}
-      <main className="pl-64 pt-14">
+      <main className="flex-1 pt-14 ml-64">
         <NavigationProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/companies" replace />} />
