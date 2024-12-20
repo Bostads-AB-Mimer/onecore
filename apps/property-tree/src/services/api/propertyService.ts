@@ -1,4 +1,4 @@
-import { Company, Property } from '../types'
+import { Company, Property, CompanyDetails } from '../types'
 import { GET } from './baseApi'
 
 export const propertyService = {
@@ -18,4 +18,11 @@ export const propertyService = {
     if (error) throw error
     return data?.content
   },
-}
+  },
+
+  // Get company by ID
+  async getCompany(companyId: string): Promise<CompanyDetails> {
+    const { data, error } = await GET(`/companies/${companyId}`)
+    if (error) throw error
+    return data as CompanyDetails
+  },
