@@ -1,15 +1,7 @@
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  Home,
-  ChefHat,
-  GitGraph,
-  CalendarClock,
-  FileText,
-  Settings,
-  AlertCircle,
-} from 'lucide-react'
+import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
 import { propertyService } from '../../services/api/propertyService'
 import { Residence } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
@@ -101,19 +93,17 @@ export function ResidenceView() {
           icon={Home}
           subtitle="Antal rum"
         />
-        <StatCard 
+        <StatCard
           title="Kök"
           value={residence.residenceType.kitchen}
           icon={ChefHat}
         />
-        <StatCard
-          title="Uppgång"
-          value={residence.entrance}
-          icon={GitGraph}
-        />
+        <StatCard title="Uppgång" value={residence.entrance} icon={GitGraph} />
         <StatCard
           title="Giltighet"
-          value={new Date(residence.validityPeriod.fromDate).toLocaleDateString()}
+          value={new Date(
+            residence.validityPeriod.fromDate
+          ).toLocaleDateString()}
           icon={CalendarClock}
           subtitle={`Till ${new Date(residence.validityPeriod.toDate).toLocaleDateString()}`}
         />
@@ -132,44 +122,76 @@ export function ResidenceView() {
                 <h3 className="font-medium mb-2">Tillgänglighet</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Rullstolsanpassad</span>
-                    <Badge variant={residence.accessibility.wheelchairAccessible ? 'success' : 'default'}>
-                      {residence.accessibility.wheelchairAccessible ? 'Ja' : 'Nej'}
+                    <span className="text-sm text-gray-500">
+                      Rullstolsanpassad
+                    </span>
+                    <Badge
+                      variant={
+                        residence.accessibility.wheelchairAccessible
+                          ? 'success'
+                          : 'default'
+                      }
+                    >
+                      {residence.accessibility.wheelchairAccessible
+                        ? 'Ja'
+                        : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Bostadsanpassad</span>
-                    <Badge variant={residence.accessibility.residenceAdapted ? 'success' : 'default'}>
+                    <span className="text-sm text-gray-500">
+                      Bostadsanpassad
+                    </span>
+                    <Badge
+                      variant={
+                        residence.accessibility.residenceAdapted
+                          ? 'success'
+                          : 'default'
+                      }
+                    >
                       {residence.accessibility.residenceAdapted ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Hiss</span>
-                    <Badge variant={residence.accessibility.elevator ? 'success' : 'default'}>
+                    <Badge
+                      variant={
+                        residence.accessibility.elevator ? 'success' : 'default'
+                      }
+                    >
                       {residence.accessibility.elevator ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <h3 className="font-medium mb-2">Faciliteter</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Extra toalett</span>
-                    <Badge variant={residence.features.extraToilet ? 'success' : 'default'}>
+                    <Badge
+                      variant={
+                        residence.features.extraToilet ? 'success' : 'default'
+                      }
+                    >
                       {residence.features.extraToilet ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Bastu</span>
-                    <Badge variant={residence.features.sauna ? 'success' : 'default'}>
+                    <Badge
+                      variant={residence.features.sauna ? 'success' : 'default'}
+                    >
                       {residence.features.sauna ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Delat kök</span>
-                    <Badge variant={residence.features.sharedKitchen ? 'success' : 'default'}>
+                    <Badge
+                      variant={
+                        residence.features.sharedKitchen ? 'success' : 'default'
+                      }
+                    >
                       {residence.features.sharedKitchen ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
@@ -185,32 +207,54 @@ export function ResidenceView() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Rökfri</span>
-                    <Badge variant={residence.features.smokeFree ? 'success' : 'default'}>
+                    <Badge
+                      variant={
+                        residence.features.smokeFree ? 'success' : 'default'
+                      }
+                    >
                       {residence.features.smokeFree ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Asbest</span>
-                    <Badge variant={residence.features.asbestos ? 'warning' : 'success'}>
+                    <Badge
+                      variant={
+                        residence.features.asbestos ? 'warning' : 'success'
+                      }
+                    >
                       {residence.features.asbestos ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <h3 className="font-medium mb-2">Allergianpassning</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Pälsdjursfri</span>
-                    <Badge variant={residence.features.petAllergyFree ? 'success' : 'default'}>
+                    <Badge
+                      variant={
+                        residence.features.petAllergyFree
+                          ? 'success'
+                          : 'default'
+                      }
+                    >
                       {residence.features.petAllergyFree ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Elanpassad</span>
-                    <Badge variant={residence.features.electricAllergyIntolerance ? 'success' : 'default'}>
-                      {residence.features.electricAllergyIntolerance ? 'Ja' : 'Nej'}
+                    <Badge
+                      variant={
+                        residence.features.electricAllergyIntolerance
+                          ? 'success'
+                          : 'default'
+                      }
+                    >
+                      {residence.features.electricAllergyIntolerance
+                        ? 'Ja'
+                        : 'Nej'}
                     </Badge>
                   </div>
                 </div>
@@ -226,7 +270,8 @@ export function ResidenceView() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Energiklass</span>
                   <span className="text-sm font-medium">
-                    {residence.propertyObject.energy.energyClass || 'Ej angiven'}
+                    {residence.propertyObject.energy.energyClass ||
+                      'Ej angiven'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
@@ -235,7 +280,9 @@ export function ResidenceView() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">Typ</span>
-                  <span className="text-sm font-medium">{residence.residenceType.code.trim()}</span>
+                  <span className="text-sm font-medium">
+                    {residence.residenceType.code.trim()}
+                  </span>
                 </div>
               </div>
             </div>
