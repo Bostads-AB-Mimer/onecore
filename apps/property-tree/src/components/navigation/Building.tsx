@@ -6,7 +6,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 
 interface BuildingNavigationProps {
   building: Building
-  onSelect?: () => void
+  onSelect: () => void
 }
 
 export function BuildingNavigation({
@@ -14,11 +14,14 @@ export function BuildingNavigation({
   onSelect,
 }: BuildingNavigationProps) {
   const navigate = useNavigate()
+  const [isExpanded, setIsExpanded] = React.useState(false)
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         onClick={() => {
-          onSelect?.()
+          setIsExpanded(!isExpanded)
+          onSelect()
           navigate(`/buildings/${building.id}`)
         }}
         tooltip={building.code}
@@ -26,6 +29,7 @@ export function BuildingNavigation({
         <Warehouse />
         <span>{building.code}</span>
       </SidebarMenuButton>
+      {isExpanded && <StaircaseList building={building} />}
     </SidebarMenuItem>
   )
 }
