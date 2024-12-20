@@ -5,13 +5,13 @@ import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { BuildingList } from './BuildingList'
 import { useNavigation } from '@/contexts/NavigationContext'
+import { Avatar } from '../ui/avatar'
 
 interface PropertyNavigationProps {
   property: Property
-  onSelect: () => void
 }
 
-export function PropertyNavigation({ property, onSelect }: PropertyNavigationProps) {
+export function PropertyNavigation({ property }: PropertyNavigationProps) {
   const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
   const { selectedProperty } = useNavigation()
@@ -22,7 +22,6 @@ export function PropertyNavigation({ property, onSelect }: PropertyNavigationPro
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect()
           navigate(`/properties/${property.id}`)
         }}
         isActive={isSelected}

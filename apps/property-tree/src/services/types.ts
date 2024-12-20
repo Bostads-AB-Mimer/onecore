@@ -2,6 +2,7 @@ import type { components } from './api/generated/api-types'
 
 // Extract types from the generated schemas
 export type Company = components['schemas']['Company']
+export type CompanyDetails = components['schemas']['CompanyDetails']
 export type Property = components['schemas']['Property']
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']

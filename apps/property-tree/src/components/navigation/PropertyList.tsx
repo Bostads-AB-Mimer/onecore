@@ -11,8 +11,6 @@ interface PropertyListProps {
 }
 
 export function PropertyList({ company }: PropertyListProps) {
-  const { setSelectedProperty, setSelectedBuilding, setSelectedStaircase, setSelectedResidence } = useNavigation()
-  
   const {
     data: properties,
     isLoading,
@@ -23,9 +21,7 @@ export function PropertyList({ company }: PropertyListProps) {
   })
 
   if (isLoading) {
-    return (
-      <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
-    )
+    return <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
   }
 
   if (error) {
@@ -40,16 +36,7 @@ export function PropertyList({ company }: PropertyListProps) {
   return (
     <SidebarMenu>
       {properties?.map((property) => (
-        <PropertyNavigation
-          key={property.id}
-          property={property}
-          onSelect={() => {
-            setSelectedProperty(property)
-            setSelectedBuilding(null)
-            setSelectedStaircase(null)
-            setSelectedResidence(null)
-          }}
-        />
+        <PropertyNavigation key={property.id} property={property} />
       ))}
     </SidebarMenu>
   )

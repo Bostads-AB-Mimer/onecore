@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { NavigationItem } from '../services/types'
 import { propertyService } from '../services/api'
-import { useCommandPalette } from '../hooks/useCommandPalette'
+import { useCommandPalette } from './hooks/useCommandPalette'
 
 const routeMap = {
   area: '/areas',

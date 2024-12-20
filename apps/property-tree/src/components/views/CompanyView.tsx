@@ -2,21 +2,22 @@ import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building2, Users, Home, Wallet } from 'lucide-react'
-import { propertyService } from '../../services/api'
+import { companyService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/Card'
-import { Grid } from '../ui/Grid'
+import { Card } from '../ui/card'
+import { Grid } from '../ui/grid'
 import { StatCard } from '../shared/StatCard'
+import { CompanyDetails } from '@/services/types'
 
 export function CompanyView() {
   const { companyId } = useParams()
-  const [company, setCompany] = React.useState<any>(null)
+  const [company, setCompany] = React.useState<CompanyDetails>()
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadCompany = async () => {
       try {
-        const data = await propertyService.getCompany(companyId!)
+        const data = await companyService.getById(companyId!)
         setCompany(data)
       } finally {
         setLoading(false)
@@ -120,14 +121,18 @@ export function CompanyView() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Uthyrningsgrad</span>
                   <span className="text-sm font-medium text-green-500">
-                    {Math.round((company.occupiedApartments / company.totalApartments) * 100)}%
+                    {Math.round(
+                      (company.occupiedApartments / company.totalApartments) *
+                        100
+                    )}
+                    %
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
-                    style={{ 
-                      width: `${Math.round((company.occupiedApartments / company.totalApartments) * 100)}%` 
+                    style={{
+                      width: `${Math.round((company.occupiedApartments / company.totalApartments) * 100)}%`,
                     }}
                   />
                 </div>

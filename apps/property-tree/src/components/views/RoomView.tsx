@@ -16,10 +16,10 @@ import {
 } from 'lucide-react'
 import { Room, Component, Issue } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/Card'
-import { Grid } from '../ui/Grid'
-import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
+import { Card } from '../ui/card'
+import { Grid } from '../ui/grid'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
 import { ComponentList } from '../shared/ComponentList'
 import { ActiveIssues } from '../shared/ActiveIssues'
 
@@ -126,13 +126,13 @@ export function RoomView() {
       try {
         // In a real app, these would be actual API calls
         const roomData = await fetch(`/api/rooms/${roomId}`).then((res) =>
-          res.json(),
+          res.json()
         )
         const componentsData = await fetch(
-          `/api/rooms/${roomId}/components`,
+          `/api/rooms/${roomId}/components`
         ).then((res) => res.json())
         const issuesData = await fetch(`/api/rooms/${roomId}/issues`).then(
-          (res) => res.json(),
+          (res) => res.json()
         )
 
         setRoom(roomData)

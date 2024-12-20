@@ -11,7 +11,7 @@ import {
   Settings,
   Hash,
 } from 'lucide-react'
-import { Button } from '../ui/Button'
+import { Button } from '../ui/button'
 
 interface ComponentFormData {
   name: string

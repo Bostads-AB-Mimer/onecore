@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -12,8 +11,8 @@ import {
 } from 'lucide-react'
 import { propertyService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/Card'
-import { Grid } from '../ui/Grid'
+import { Card } from '../ui/card'
+import { Grid } from '../ui/grid'
 import { StatCard } from '../shared/StatCard'
 
 export function PropertyView() {
@@ -26,7 +25,6 @@ export function PropertyView() {
   } = useQuery({
     queryKey: ['property', propertyId],
     queryFn: () => {
-      debugger
       return propertyService.getPropertyById(propertyId!)
     },
   })

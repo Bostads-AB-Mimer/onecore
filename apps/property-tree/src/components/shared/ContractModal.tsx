@@ -1,8 +1,8 @@
 import React from 'react'
-import { Modal } from '../ui/Modal'
+import { Modal } from '../ui/modal'
 import { InfoItem } from '../ui/InfoItem'
 import { Calendar, Home, FileText, User2, CreditCard } from 'lucide-react'
-import { Button } from '../ui/Button'
+import { Button } from '../ui/button'
 
 interface ContractModalProps {
   isOpen: boolean

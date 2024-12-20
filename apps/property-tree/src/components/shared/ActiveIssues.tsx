@@ -2,8 +2,8 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { AlertCircle, ArrowRight } from 'lucide-react'
 import { Issue } from '../../services/types'
-import { Card } from '../ui/Card'
-import { Badge } from '../ui/Badge'
+import { Card } from '../ui/card'
+import { Badge } from '../ui/badge'
 
 interface ActiveIssuesProps {
   issues: Issue[]

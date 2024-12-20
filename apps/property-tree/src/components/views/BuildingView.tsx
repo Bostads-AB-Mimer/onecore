@@ -7,8 +7,8 @@ import { useNavigation } from '@/contexts/NavigationContext'
 import { Building as BuildingType } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/Card'
-import { Grid } from '../ui/Grid'
+import { Card } from '../ui/card'
+import { Grid } from '../ui/grid'
 
 export function BuildingView() {
   const { buildingId } = useParams()

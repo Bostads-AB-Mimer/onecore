@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   CommandPaletteProvider,
   useCommandPalette,
-} from './hooks/useCommandPalette'
+} from './components/hooks/useCommandPalette'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,8 +97,14 @@ function AppContent() {
             <Route path="/properties" element={<PropertyView />} />
             <Route path="/properties/:propertyId" element={<PropertyView />} />
             <Route path="/buildings/:buildingId" element={<BuildingView />} />
-            <Route path="/staircases/:staircaseId" element={<StaircaseView />} />
-            <Route path="/residences/:residenceId" element={<ResidenceView />} />
+            <Route
+              path="/staircases/:staircaseId"
+              element={<StaircaseView />}
+            />
+            <Route
+              path="/residences/:residenceId"
+              element={<ResidenceView />}
+            />
             <Route
               path="/residences/:residenceId/rooms/:roomId"
               element={<RoomView />}
