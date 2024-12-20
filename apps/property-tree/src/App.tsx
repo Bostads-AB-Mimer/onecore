@@ -74,7 +74,7 @@ function AppContent() {
               />
               <Route path="/buildings/:buildingId" element={<BuildingView />} />
               <Route
-                path="/staircases/:staircaseId"
+                path="/staircases/:buildingId/:staircaseId"
                 element={<StaircaseView />}
               />
               <Route

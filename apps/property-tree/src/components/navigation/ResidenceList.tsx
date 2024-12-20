@@ -1,5 +1,5 @@
 import React from 'react'
-import { Building } from '@/services/types'
+import { Building, Staircase } from '@/services/types'
 import { Skeleton } from '../ui/skeleton'
 import { SidebarMenu } from '../ui/sidebar'
 import { ResidenceNavigation } from './Residence'
@@ -8,17 +8,17 @@ import { residenceService } from '@/services/api'
 
 interface ResidenceListProps {
   building: Building
-  onResidenceSelect?: (residenceId: string) => void
+  staircase: Staircase
 }
 
-export function ResidenceList({ building, onResidenceSelect }: ResidenceListProps) {
+export function ResidenceList({ building, staircase }: ResidenceListProps) {
   const {
     data: residences,
     isLoading,
     error,
   } = useQuery({
     queryKey: ['residences', building.id],
-    queryFn: () => residenceService.getByBuildingId(building.id),
+    queryFn: () => residenceService.getByBuildingCode(building.code),
   })
 
   if (isLoading) {
@@ -31,7 +31,10 @@ export function ResidenceList({ building, onResidenceSelect }: ResidenceListProp
   }
 
   if (error) {
-    console.error(`Failed to load residences for building ${building.id}:`, error)
+    console.error(
+      `Failed to load residences for building ${building.id}:`,
+      error
+    )
     return (
       <div className="text-sm text-destructive px-2">
         Failed to load residences
@@ -42,11 +45,7 @@ export function ResidenceList({ building, onResidenceSelect }: ResidenceListProp
   return (
     <SidebarMenu>
       {residences?.map((residence) => (
-        <ResidenceNavigation
-          key={residence.id}
-          residence={residence}
-          onSelect={() => onResidenceSelect?.(residence.id)}
-        />
+        <ResidenceNavigation key={residence.id} residence={residence} />
       ))}
     </SidebarMenu>
   )

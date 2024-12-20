@@ -5,17 +5,18 @@ import {
   Layers,
   Home,
   Users,
-  Building,
+  Building as BuildingIcon,
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { residenceService } from '../../services/api'
-import { Staircase } from '../../services/types'
+import { buildingService, residenceService } from '../../services/api'
+import { Building, Issue, Residence, Staircase } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
 import { Grid } from '../ui/grid'
 import { Badge } from '../ui/badge'
+import { staircaseService } from '@/services/api/staircaseService'
 
 function LoadingSkeleton() {
   return (
@@ -62,32 +63,30 @@ const statusLabels = {
 }
 
 export function StaircaseView() {
-  const { staircaseId } = useParams()
+  const { staircaseId, buildingId } = useParams()
   const navigate = useNavigate()
   const [staircase, setStaircase] = React.useState<Staircase | null>(null)
+  const [building, setBuilding] = React.useState<Building | null>(null)
+  const [residences, setResidences] = React.useState<Residence[]>([])
   const [allIssues, setAllIssues] = React.useState<Issue[]>([])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const staircaseData = await staircaseService.getById(staircaseId!)
-        setStaircase(staircaseData)
-
-        // Load all residences and their issues
-        const residencePromises = staircaseData.residences.map((id) =>
-          residenceService.getById(id)
+        if (!staircaseId || !buildingId) return
+        const building = await buildingService.getById(buildingId)
+        const staircase = await staircaseService.getByBuildingCodeAndId(
+          building.code,
+          staircaseId
         )
-        const residences = await Promise.all(residencePromises)
-
-        // Collect all issues and add residence information
-        const issues = residences.flatMap((residence) =>
-          residence.activeIssues.map((issue) => ({
-            ...issue,
-            residenceId: residence.id,
-            residenceName: `Lägenhet ${residence.id}`,
-          }))
+        const residences = await residenceService.getByBuildingCode(
+          building.code
         )
+        setStaircase(staircase)
+        setResidences(residences)
+
+        const issues = [] as Issue[]
 
         setAllIssues(issues)
       } finally {
@@ -95,7 +94,7 @@ export function StaircaseView() {
       }
     }
     loadData()
-  }, [staircaseId])
+  }, [staircaseId, buildingId])
 
   if (loading) {
     return <LoadingSkeleton />
@@ -114,8 +113,8 @@ export function StaircaseView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={staircase.name}
-        subtitle={`Byggnad ${staircase.buildingId}`}
+        title={building.name}
+        subtitle={`Byggnad ${staircase.name}`}
         type="Uppgång"
         icon={Layers}
       />
@@ -135,7 +134,7 @@ export function StaircaseView() {
         <StatCard
           title="Våningar"
           value={Math.ceil(staircase.totalResidences / 2)}
-          icon={Building}
+          icon={BuildingIcon}
         />
       </Grid>
 

@@ -21,6 +21,7 @@ import { ActiveIssues } from '../shared/ActiveIssues'
 import { StatCard } from '../shared/StatCard'
 import { Button } from '../ui/button'
 import { ContractModal } from '../shared/ContractModal'
+import { residenceService } from '@/services/api'
 
 function LoadingSkeleton() {
   return (
@@ -65,7 +66,7 @@ export function ResidenceView() {
   React.useEffect(() => {
     const loadResidence = async () => {
       try {
-        const data = await propertyService.getResidence(residenceId!)
+        const data = await residenceService.getById(residenceId!)
         setResidence(data)
       } finally {
         setLoading(false)
@@ -111,7 +112,7 @@ export function ResidenceView() {
         />
         <StatCard
           title="Inflyttning"
-          value={residence.tenant.moveInDate}
+          value={residence.tenant?.moveInDate}
           icon={CalendarClock}
         />
       </Grid>
@@ -125,7 +126,7 @@ export function ResidenceView() {
         <div className="lg:col-span-2 space-y-6">
           <Card title="Rum och ytor">
             <Grid cols={2}>
-              {residence.rooms.map((room) => (
+              {residence.rooms?.map((room) => (
                 <RoomCard
                   key={room.id}
                   room={room}
@@ -135,7 +136,7 @@ export function ResidenceView() {
             </Grid>
           </Card>
 
-          {residence.activeIssues.length > 0 && (
+          {residence.activeIssues?.name.length > 0 && (
             <ActiveIssues issues={residence.activeIssues} />
           )}
         </div>
@@ -147,10 +148,10 @@ export function ResidenceView() {
                 whileHover={{ scale: 1.05 }}
                 className="h-12 w-12 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/20"
               >
-                {residence.tenant.name.charAt(0)}
+                {residence.tenant?.name.charAt(0)}
               </motion.div>
               <div>
-                <p className="font-medium">{residence.tenant.name}</p>
+                <p className="font-medium">{residence.tenant?.name}</p>
                 <p className="text-sm text-gray-500">Nuvarande hyresgäst</p>
               </div>
             </div>
@@ -161,7 +162,7 @@ export function ResidenceView() {
                 <div>
                   <p className="text-sm text-gray-500">Inflyttningsdatum</p>
                   <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant.moveInDate}
+                    {residence.tenant?.moveInDate}
                   </p>
                 </div>
               </div>
@@ -171,7 +172,7 @@ export function ResidenceView() {
                 <div>
                   <p className="text-sm text-gray-500">E-post</p>
                   <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant.email}
+                    {residence.tenant?.email}
                   </p>
                 </div>
               </div>
@@ -181,7 +182,7 @@ export function ResidenceView() {
                 <div>
                   <p className="text-sm text-gray-500">Telefon</p>
                   <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant.phone}
+                    {residence.tenant?.phone}
                   </p>
                 </div>
               </div>
@@ -201,12 +202,14 @@ export function ResidenceView() {
         </div>
       </motion.div>
 
-      <ContractModal
-        isOpen={showContract}
-        onClose={() => setShowContract(false)}
-        tenant={residence.tenant}
-        residence={residence}
-      />
+      {residence.tenant && (
+        <ContractModal
+          isOpen={showContract}
+          onClose={() => setShowContract(false)}
+          tenant={residence.tenant}
+          residence={residence}
+        />
+      )}
     </div>
   )
 }

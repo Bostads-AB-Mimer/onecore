@@ -8,13 +8,11 @@ import { ResidenceList } from './ResidenceList'
 interface StaircaseNavigationProps {
   staircase: Staircase
   building: Building
-  onSelect?: () => void
 }
 
 export function StaircaseNavigation({
   staircase,
   building,
-  onSelect,
 }: StaircaseNavigationProps) {
   const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
@@ -24,15 +22,16 @@ export function StaircaseNavigation({
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect?.()
-          navigate(`/staircases/${staircase.id}`)
+          navigate(`/staircases/${building.code}/${staircase.id}`)
         }}
         tooltip={staircase.name || staircase.code}
       >
         <GitGraph />
         <span>{staircase.code}</span>
       </SidebarMenuButton>
-      {isExpanded && <ResidenceList building={building} />}
+      {isExpanded && (
+        <ResidenceList building={building} staircase={staircase} />
+      )}
     </SidebarMenuItem>
   )
 }

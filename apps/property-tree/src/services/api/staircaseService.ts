@@ -12,9 +12,13 @@ export const staircaseService = {
   },
 
   // Get staircase by ID
-  async getById(id: string): Promise<Staircase> {
-    const { data, error } = await GET(`/staircases/${id}`)
-    if (error) throw error
-    return data as Staircase
-  }
+  async getByBuildingCodeAndId(
+    buildingCode: string,
+    id: string
+  ): Promise<Staircase> {
+    const staircases = await this.getByBuildingCode(buildingCode)
+    const staircase = staircases.find((staircase) => staircase.id === id)
+    if (!staircase) throw new Error('Staircase not found')
+    return staircase
+  },
 }
