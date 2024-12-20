@@ -88,32 +88,45 @@ function AppContent() {
       </nav>
       hej hejf
       <NavigationProvider>
-        {/* Sidebar */}
-        <SidebarNavigation />
-        {/* Main Content */}
-        <main className="flex-1 pt-14 ml-64">
-          <Routes>
-            <Route path="/" element={<Navigate to="/companies" replace />} />
-            <Route path="/page" element={<Page />} />
-            <Route path="/companies/:companyId" element={<CompanyView />} />
-            <Route path="/properties" element={<PropertyView />} />
-            <Route path="/properties/:propertyId" element={<PropertyView />} />
-            <Route path="/buildings/:buildingId" element={<BuildingView />} />
-            <Route
-              path="/staircases/:staircaseId"
-              element={<StaircaseView />}
-            />
-            <Route
-              path="/residences/:residenceId"
-              element={<ResidenceView />}
-            />
-            <Route
-              path="/residences/:residenceId/rooms/:roomId"
-              element={<RoomView />}
-            />
-            <Route path="/tenants/:tenantId" element={<TenantView />} />
-          </Routes>
-        </main>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <header className="flex sticky top-0 bg-background h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Navigation Overview</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </header>
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Navigate to="/companies" replace />} />
+                <Route path="/page" element={<Page />} />
+                <Route path="/companies/:companyId" element={<CompanyView />} />
+                <Route path="/properties" element={<PropertyView />} />
+                <Route path="/properties/:propertyId" element={<PropertyView />} />
+                <Route path="/buildings/:buildingId" element={<BuildingView />} />
+                <Route
+                  path="/staircases/:staircaseId"
+                  element={<StaircaseView />}
+                />
+                <Route
+                  path="/residences/:residenceId"
+                  element={<ResidenceView />}
+                />
+                <Route
+                  path="/residences/:residenceId/rooms/:roomId"
+                  element={<RoomView />}
+                />
+                <Route path="/tenants/:tenantId" element={<TenantView />} />
+              </Routes>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
       </NavigationProvider>
     </div>
   )
