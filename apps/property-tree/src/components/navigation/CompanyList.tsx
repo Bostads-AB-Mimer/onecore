@@ -7,7 +7,7 @@ import { useNavigation } from '@/contexts/NavigationContext'
 
 export function CompanyList() {
   const { setSelectedCompany, clearSelection } = useNavigation()
-  
+
   const {
     data: companies,
     isLoading,
