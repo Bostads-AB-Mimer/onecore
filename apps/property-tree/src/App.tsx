@@ -86,11 +86,11 @@ function AppContent() {
         </div>
       </nav>
       hej hejf
-      {/* Sidebar */}
-      <SidebarNavigation />
-      {/* Main Content */}
-      <main className="flex-1 pt-14 ml-64">
-        <NavigationProvider>
+      <NavigationProvider>
+        {/* Sidebar */}
+        <SidebarNavigation />
+        {/* Main Content */}
+        <main className="flex-1 pt-14 ml-64">
           <Routes>
             <Route path="/" element={<Navigate to="/companies" replace />} />
             <Route path="/companies/:companyId" element={<CompanyView />} />
@@ -111,8 +111,8 @@ function AppContent() {
             />
             <Route path="/tenants/:tenantId" element={<TenantView />} />
           </Routes>
-        </NavigationProvider>
-      </main>
+        </main>
+      </NavigationProvider>
     </div>
   )
 }
