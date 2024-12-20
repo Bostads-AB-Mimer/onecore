@@ -5,12 +5,16 @@ import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 
 interface ResidenceNavigationProps {
   residence: Residence
+  onSelect?: () => void
 }
 
-export function ResidenceNavigation({ residence }: ResidenceNavigationProps) {
+export function ResidenceNavigation({ residence, onSelect }: ResidenceNavigationProps) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton tooltip={residence.name}>
+      <SidebarMenuButton 
+        onClick={onSelect}
+        tooltip={residence.name}
+      >
         <Hotel />
         <span>LGH-{residence.code}</span>
       </SidebarMenuButton>
