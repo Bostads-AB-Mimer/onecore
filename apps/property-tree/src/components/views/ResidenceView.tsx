@@ -22,6 +22,7 @@ import { StatCard } from '../shared/StatCard'
 import { Button } from '../ui/button'
 import { ContractModal } from '../shared/ContractModal'
 import { residenceService } from '@/services/api'
+import { useQuery } from '@tanstack/react-query'
 
 function LoadingSkeleton() {
   return (
@@ -60,7 +61,7 @@ function LoadingSkeleton() {
 export function ResidenceView() {
   const { residenceId } = useParams()
   const [showContract, setShowContract] = React.useState(false)
-  
+
   const {
     data: residence,
     isLoading,
