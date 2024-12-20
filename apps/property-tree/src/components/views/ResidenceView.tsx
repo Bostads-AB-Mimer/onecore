@@ -2,7 +2,7 @@ import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
-import { propertyService } from '../../services/api/propertyService'
+import { propertyService, roomService } from '../../services/api'
 import { Residence } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
@@ -13,7 +13,7 @@ import { StatCard } from '../shared/StatCard'
 import { Button } from '../ui/button'
 import { ContractModal } from '../shared/ContractModal'
 import { residenceService } from '@/services/api'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 
 function LoadingSkeleton() {
   return (
@@ -53,11 +53,33 @@ export function ResidenceView() {
   const { residenceId } = useParams()
   const [showContract, setShowContract] = React.useState(false)
 
-  const {
-    data: residence,
-    isLoading,
-    error,
-  } = useQuery({
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: ['residence', residenceId],
+        queryFn: () => residenceService.getById(residenceId!),
+        enabled: !!residenceId,
+      },
+      {
+        queryKey: ['rooms', residenceId],
+        queryFn: async () => {
+          const residence = await residenceService.getById(residenceId!)
+          return roomService.getByBuildingAndFloorAndResidence(
+            residence.buildingCode,
+            residence.floorCode,
+            residence.code
+          )
+        },
+        enabled: !!residenceId,
+      },
+    ],
+  })
+
+  const [residenceQuery, roomsQuery] = queries
+  const isLoading = queries.some((q) => q.isLoading)
+  const error = queries.some((q) => q.error)
+  const residence = residenceQuery.data
+  const rooms = roomsQuery.data
     queryKey: ['residence', residenceId],
     queryFn: () => residenceService.getById(residenceId!),
     enabled: !!residenceId,
@@ -259,6 +281,18 @@ export function ResidenceView() {
                   </div>
                 </div>
               </div>
+            </Grid>
+          </Card>
+
+          <Card title="Rum">
+            <Grid cols={2}>
+              {rooms?.map((room) => (
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  residenceId={residence.id}
+                />
+              ))}
             </Grid>
           </Card>
         </div>
