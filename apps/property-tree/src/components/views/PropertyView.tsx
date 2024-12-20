@@ -72,8 +72,8 @@ export function PropertyView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={property.propertyDesignation.name || ''}
-        subtitle={property.propertyDesignation.code || ''}
+        title={property.designation}
+        subtitle={`${property.municipality}, ${property.tract}`}
         type="Fastighet"
         icon={Building2}
       />
@@ -91,17 +91,15 @@ export function PropertyView() {
           icon={Building2}
         />
         <StatCard
-          title="Byggår"
-          value={property.constructionYear}
+          title="Registreringsdatum"
+          value={property.registrationDate || 'Ej angivet'}
           icon={Calendar}
         />
-        {property.lastRenovation && (
-          <StatCard
-            title="Senaste renovering"
-            value={property.lastRenovation}
-            icon={Wrench}
-          />
-        )}
+        <StatCard
+          title="Fastighetsnummer"
+          value={property.propertyTaxNumber || 'Ej angivet'}
+          icon={Wrench}
+        />
       </Grid>
 
       <motion.div
