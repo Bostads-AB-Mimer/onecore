@@ -33,15 +33,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setSelectedResidence(null)
   }, [])
 
-  const setSelectedProperty = useCallback((property: Property | null) => {
-    setSelectedProperty(property)
-    if (!property) {
-      setSelectedBuilding(null)
-      setSelectedStaircase(null)
-      setSelectedResidence(null)
-    }
-  }, [])
-
   const setSelectedBuilding = useCallback((building: Building | null) => {
     setSelectedBuilding(building)
     if (!building) {
