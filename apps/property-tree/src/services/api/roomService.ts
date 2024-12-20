@@ -2,40 +2,31 @@ import { Room } from '../types'
 import { GET } from './baseApi'
 
 export const roomService = {
-  // Get all rooms for a residence
-  async getByFloorCodeAndBuildingCodeAndResidenceCode(
-    floorCode: string,
+  // Get rooms by building, floor and residence codes
+  async getByBuildingAndFloorAndResidence(
     buildingCode: string,
+    floorCode: string,
     residenceCode: string
   ): Promise<Room[]> {
     const { data, error } = await GET('/rooms', {
       params: {
         query: {
-          residenceCode: residenceCode,
-          floorCode: floorCode,
-          buildingCode: buildingCode,
+          buildingCode,
+          floorCode,
+          residenceCode,
         },
       },
     })
     if (error) throw error
-    return data?.content as Room[]
+    return data?.content || []
   },
 
   // Get room by ID
-  async getById(residenceId: string, roomId: string): Promise<Room> {
+  async getById(id: string): Promise<Room> {
     const { data, error } = await GET('/rooms/{id}', {
-      params: { path: { id: roomId } },
+      params: { path: { id } },
     })
     if (error) throw error
-    return data as Room
-  },
-
-  // Get rooms by type
-  async getByType(residenceId: string, roomType: string): Promise<Room[]> {
-    const { data, error } = await GET('/rooms', {
-      params: { query: { buildingCode: residenceId, floorCode: roomType } },
-    })
-    if (error) throw error
-    return data?.content as Room[]
+    return data?.content
   },
 }
