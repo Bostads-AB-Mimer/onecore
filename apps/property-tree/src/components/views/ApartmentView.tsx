@@ -11,7 +11,7 @@ import {
   Mail,
   Phone,
 } from 'lucide-react'
-import { propertyService } from '../../services/api'
+import { propertyService, residenceService } from '../../services/api'
 import { Apartment } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
@@ -31,7 +31,7 @@ export function ApartmentView() {
   React.useEffect(() => {
     const loadApartment = async () => {
       try {
-        const data = await propertyService.getApartment(apartmentId!)
+        const data = await residenceService.getById(apartmentId!)
         setApartment(data)
       } finally {
         setLoading(false)

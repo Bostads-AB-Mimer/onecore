@@ -8,10 +8,9 @@ import { buildingService } from '@/services/api'
 
 interface BuildingListProps {
   property: Property
-  onBuildingSelect?: (buildingId: string) => void
 }
 
-export function BuildingList({ property, onBuildingSelect }: BuildingListProps) {
+export function BuildingList({ property }: BuildingListProps) {
   const {
     data: buildings,
     isLoading,
@@ -31,7 +30,10 @@ export function BuildingList({ property, onBuildingSelect }: BuildingListProps) 
   }
 
   if (error) {
-    console.error(`Failed to load buildings for property ${property.id}:`, error)
+    console.error(
+      `Failed to load buildings for property ${property.id}:`,
+      error
+    )
     return (
       <div className="text-sm text-destructive px-2">
         Failed to load buildings
@@ -42,11 +44,7 @@ export function BuildingList({ property, onBuildingSelect }: BuildingListProps) 
   return (
     <SidebarMenu>
       {buildings?.map((building) => (
-        <BuildingNavigation
-          key={building.code}
-          building={building}
-          onSelect={() => onBuildingSelect?.(building.id)}
-        />
+        <BuildingNavigation key={building.code} building={building} />
       ))}
     </SidebarMenu>
   )

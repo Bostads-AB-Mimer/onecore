@@ -4,21 +4,14 @@ import { ChevronRight } from 'lucide-react'
 import { Skeleton } from '../ui/skeleton'
 import { companyService } from '@/services/api'
 import { CompanyNavigation } from './Company'
-import { useNavigation } from '@/contexts/NavigationContext'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../ui/collapsible'
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-} from '../ui/sidebar'
+import { SidebarGroup, SidebarGroupContent, SidebarMenu } from '../ui/sidebar'
 
 export function CompanyList() {
-  const { setSelectedCompany, clearSelection } = useNavigation()
-
   const {
     data: companies,
     isLoading,
@@ -58,14 +51,7 @@ export function CompanyList() {
           <SidebarGroupContent>
             <SidebarMenu>
               {companies?.map((company) => (
-                <CompanyNavigation
-                  key={company.id}
-                  company={company}
-                  onSelect={() => {
-                    clearSelection()
-                    setSelectedCompany(company)
-                  }}
-                />
+                <CompanyNavigation key={company.id} company={company} />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>

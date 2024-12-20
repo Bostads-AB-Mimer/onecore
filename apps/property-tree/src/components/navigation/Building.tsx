@@ -7,13 +7,9 @@ import { StaircaseList } from './StaircaseList'
 
 interface BuildingNavigationProps {
   building: Building
-  onSelect: () => void
 }
 
-export function BuildingNavigation({
-  building,
-  onSelect,
-}: BuildingNavigationProps) {
+export function BuildingNavigation({ building }: BuildingNavigationProps) {
   const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
@@ -22,7 +18,6 @@ export function BuildingNavigation({
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)
-          onSelect()
           navigate(`/buildings/${building.id}`)
         }}
         tooltip={building.code}

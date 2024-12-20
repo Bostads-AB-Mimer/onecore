@@ -5,6 +5,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
 } from '../ui/sidebar'
 import { ChevronRight } from 'lucide-react'
@@ -13,11 +14,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../ui/collapsible'
+import { SearchForm } from '../search-form'
 
 export default function SidebarNavigation() {
   return (
     <Sidebar>
-      <SidebarContent>
+      <SidebarHeader>
+        <SearchForm />
+      </SidebarHeader>
+      <SidebarContent className="gap-0">
         <Collapsible
           key="companies"
           title="Companies"

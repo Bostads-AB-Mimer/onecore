@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
 import { buildingService } from '../../services/api'
-import { useNavigation } from '@/contexts/NavigationContext'
 import { Building as BuildingType } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
@@ -13,15 +12,8 @@ import { Grid } from '../ui/grid'
 export function BuildingView() {
   const { buildingId } = useParams()
   const navigate = useNavigate()
-  const { selectedProperty } = useNavigation()
   const [building, setBuilding] = React.useState<BuildingType | null>(null)
 
-  React.useEffect(() => {
-    if (!selectedProperty) {
-      navigate('/properties')
-      return
-    }
-  }, [selectedProperty, navigate])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
@@ -89,7 +81,7 @@ export function BuildingView() {
         />
         <StatCard
           title="Uppgångar"
-          value={building.entrances.length}
+          value={building.entrances?.length}
           icon={DoorClosed}
         />
         <StatCard
@@ -108,7 +100,7 @@ export function BuildingView() {
         <div className="lg:col-span-2">
           <Card title="Uppgångar" icon={DoorClosed}>
             <Grid cols={2}>
-              {building.entrances.map((entranceId) => (
+              {building.entrances?.map((entranceId) => (
                 <motion.div
                   key={entranceId}
                   whileHover={{ scale: 1.02 }}

@@ -5,7 +5,6 @@ import { SidebarMenu } from '../ui/sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
 import { propertyService } from '@/services/api'
-import { useNavigation } from '@/contexts/NavigationContext'
 
 interface PropertyListProps {
   company: Company
