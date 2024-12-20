@@ -62,12 +62,14 @@ export function ResidenceView() {
   const roomsQuery = useQuery({
     queryKey: ['rooms', residenceId],
     queryFn: async () => {
-      if (!residenceQuery.data) return null
-      return roomService.getByBuildingAndFloorAndResidence(
-        residenceQuery.data.buildingCode,
-        residenceQuery.data.floorCode,
-        residenceQuery.data.code
+      const residence = residenceQuery?.data
+      if (!residence) return null
+      const rooms = await roomService.getByBuildingAndFloorAndResidence(
+        residence.buildingCode,
+        residence.floorCode,
+        residence.code
       )
+      return Promise.all(rooms.map((room) => await roomService.getById(room.id)))
     },
     enabled: !!residenceQuery.data,
   })
