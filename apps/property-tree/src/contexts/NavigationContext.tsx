@@ -13,6 +13,7 @@ interface NavigationContextType {
   setSelectedStaircase: (staircase: Staircase | null) => void
   setSelectedResidence: (residence: Residence | null) => void
   clearSelection: () => void
+  clearSelection: () => void
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined)
@@ -25,6 +26,47 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const [selectedResidence, setSelectedResidence] = useState<Residence | null>(null)
 
   const clearSelection = useCallback(() => {
+    setSelectedCompany(null)
+    setSelectedProperty(null)
+    setSelectedBuilding(null)
+    setSelectedStaircase(null)
+    setSelectedResidence(null)
+  }, [])
+
+  const setSelectedCompany = useCallback((company: Company | null) => {
+    setSelectedCompany(company)
+    if (!company) {
+      clearSelection()
+    }
+  }, [clearSelection])
+
+  const setSelectedProperty = useCallback((property: Property | null) => {
+    setSelectedProperty(property)
+    if (!property) {
+      setSelectedBuilding(null)
+      setSelectedStaircase(null)
+      setSelectedResidence(null)
+    }
+  }, [])
+
+  const setSelectedBuilding = useCallback((building: Building | null) => {
+    setSelectedBuilding(building)
+    if (!building) {
+      setSelectedStaircase(null)
+      setSelectedResidence(null)
+    }
+  }, [])
+
+  const setSelectedStaircase = useCallback((staircase: Staircase | null) => {
+    setSelectedStaircase(staircase)
+    if (!staircase) {
+      setSelectedResidence(null)
+    }
+  }, [])
+
+  const setSelectedResidence = useCallback((residence: Residence | null) => {
+    setSelectedResidence(residence)
+  }, [])
     setSelectedCompany(null)
     setSelectedProperty(null)
     setSelectedBuilding(null)
