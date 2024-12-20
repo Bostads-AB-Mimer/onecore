@@ -36,6 +36,9 @@ export interface NavigationItem {
   children?: NavigationItem[]
   metadata?: {
     residenceId?: string
+    propertyId?: string
+    buildingId?: string
+    staircaseId?: string
   }
   _links?: {
     [key: string]: {
