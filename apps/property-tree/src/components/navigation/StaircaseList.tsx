@@ -11,7 +11,10 @@ interface StaircaseListProps {
   onStaircaseSelect?: (staircaseId: string) => void
 }
 
-export function StaircaseList({ building, onStaircaseSelect }: StaircaseListProps) {
+export function StaircaseList({
+  building,
+  onStaircaseSelect,
+}: StaircaseListProps) {
   const {
     data: staircases,
     isLoading,
@@ -37,7 +40,10 @@ export function StaircaseList({ building, onStaircaseSelect }: StaircaseListProp
   }
 
   if (error) {
-    console.error(`Failed to load staircases for building ${building.id}:`, error)
+    console.error(
+      `Failed to load staircases for building ${building.id}:`,
+      error
+    )
     return (
       <div className="text-sm text-destructive px-2">
         Failed to load staircases
@@ -52,7 +58,6 @@ export function StaircaseList({ building, onStaircaseSelect }: StaircaseListProp
           key={staircase.id}
           staircase={staircase}
           building={building}
-          onSelect={() => onStaircaseSelect?.(staircase.id)}
         />
       ))}
     </SidebarMenu>

@@ -4,6 +4,7 @@ import { Building } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
 import { StaircaseList } from './StaircaseList'
+import { ResidenceList } from './ResidenceList'
 
 interface BuildingNavigationProps {
   building: Building
@@ -25,7 +26,7 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
         <Warehouse />
         <span>{building.code}</span>
       </SidebarMenuButton>
-      {isExpanded && <StaircaseList building={building} />}
+      {isExpanded && <ResidenceList building={building} />}
     </SidebarMenuItem>
   )
 }

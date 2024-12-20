@@ -101,7 +101,11 @@ export interface paths {
         /** @description Successfully retrieved the residence */
         200: {
           content: {
-            "application/json": components["schemas"]["Residence"];
+            "application/json": {
+              content?: components["schemas"]["ResidenceDetails"] & {
+                _links?: components["schemas"]["ResidenceLinks"];
+              };
+            };
           };
         };
         /** @description Residence not found */
@@ -376,6 +380,40 @@ export interface paths {
       };
     };
   };
+  "/companies/{id}": {
+    /**
+     * Get detailed information about a specific company
+     * @description Retrieves comprehensive information about a company using its unique identifier.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the company. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the company. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CompanyDetails"] & {
+                _links?: components["schemas"]["CompanyLinks"];
+              };
+            };
+          };
+        };
+        /** @description Company not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -386,13 +424,78 @@ export interface components {
       id: string;
       code: string;
       name: string;
-      buildingCode: string;
       deleted: boolean;
       validityPeriod: {
         /** Format: date-time */
         fromDate: string;
         /** Format: date-time */
         toDate: string;
+      };
+    };
+    ResidenceDetails: {
+      id: string;
+      code: string;
+      name: string;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
+      location?: string;
+      accessibility: {
+        wheelchairAccessible: boolean;
+        residenceAdapted: boolean;
+        elevator: boolean;
+      };
+      features: {
+        balcony1?: {
+          location: string;
+          type: string;
+        };
+        balcony2?: {
+          location: string;
+          type: string;
+        };
+        patioLocation?: string;
+        hygieneFacility: string;
+        sauna: boolean;
+        extraToilet: boolean;
+        sharedKitchen: boolean;
+        petAllergyFree: boolean;
+        /** @description Is the apartment checked for electric allergy intolerance? */
+        electricAllergyIntolerance: boolean;
+        smokeFree: boolean;
+        asbestos: boolean;
+      };
+      entrance: string;
+      partNo?: number | null;
+      part?: string | null;
+      residenceType: {
+        residenceTypeId: string;
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
+        systemStandard: number;
+        checklistId: string | null;
+        componentTypeActionId: string | null;
+        statisticsGroupSCBId: string | null;
+        statisticsGroup2Id: string | null;
+        statisticsGroup3Id: string | null;
+        statisticsGroup4Id: string | null;
+        timestamp: string;
+      };
+      propertyObject: {
+        energy: {
+          energyClass: number;
+          /** Format: date-time */
+          energyRegistered?: string;
+          /** Format: date-time */
+          energyReceived?: string;
+          energyIndex?: number;
+        };
       };
     };
     Building: {

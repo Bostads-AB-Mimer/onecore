@@ -15,6 +15,7 @@ import { Button } from '../ui/button'
 import { ContractModal } from '../shared/ContractModal'
 import { residenceService } from '@/services/api'
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { Badge } from '../ui/badge'
 
 function LoadingSkeleton() {
   return (
@@ -59,14 +60,11 @@ export function ResidenceView() {
     queryFn: () => residenceService.getById(residenceId!),
     enabled: !!residenceId,
   })
+  console.log('data', residenceQuery.data)
 
   const isLoading = residenceQuery.isLoading
   const error = residenceQuery.error
   const residence = residenceQuery.data
-    queryKey: ['residence', residenceId],
-    queryFn: () => residenceService.getById(residenceId!),
-    enabled: !!residenceId,
-  })
 
   if (isLoading) {
     return <LoadingSkeleton />
@@ -85,7 +83,7 @@ export function ResidenceView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={`${residence.residenceType.name.trim()}, ${residence.code}`}
+        title={`${residence.residenceType?.name}, ${residence.code}`}
         subtitle={residence.name}
         type="Bostad"
         icon={Home}
@@ -94,23 +92,23 @@ export function ResidenceView() {
       <Grid cols={4} className="mb-8">
         <StatCard
           title="Rum"
-          value={residence.residenceType.roomCount}
+          value={residence.residenceType?.roomCount}
           icon={Home}
           subtitle="Antal rum"
         />
         <StatCard
           title="Kök"
-          value={residence.residenceType.kitchen}
+          value={residence.residenceType?.kitchen}
           icon={ChefHat}
         />
         <StatCard title="Uppgång" value={residence.entrance} icon={GitGraph} />
         <StatCard
           title="Giltighet"
           value={new Date(
-            residence.validityPeriod.fromDate
+            residence.validityPeriod?.fromDate
           ).toLocaleDateString()}
           icon={CalendarClock}
-          subtitle={`Till ${new Date(residence.validityPeriod.toDate).toLocaleDateString()}`}
+          subtitle={`Till ${new Date(residence.validityPeriod?.toDate).toLocaleDateString()}`}
         />
       </Grid>
 
@@ -132,12 +130,12 @@ export function ResidenceView() {
                     </span>
                     <Badge
                       variant={
-                        residence.accessibility.wheelchairAccessible
+                        residence.accessibility?.wheelchairAccessible
                           ? 'success'
                           : 'default'
                       }
                     >
-                      {residence.accessibility.wheelchairAccessible
+                      {residence.accessibility?.wheelchairAccessible
                         ? 'Ja'
                         : 'Nej'}
                     </Badge>
@@ -148,22 +146,24 @@ export function ResidenceView() {
                     </span>
                     <Badge
                       variant={
-                        residence.accessibility.residenceAdapted
+                        residence.accessibility?.residenceAdapted
                           ? 'success'
                           : 'default'
                       }
                     >
-                      {residence.accessibility.residenceAdapted ? 'Ja' : 'Nej'}
+                      {residence.accessibility?.residenceAdapted ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Hiss</span>
                     <Badge
                       variant={
-                        residence.accessibility.elevator ? 'success' : 'default'
+                        residence.accessibility?.elevator
+                          ? 'success'
+                          : 'default'
                       }
                     >
-                      {residence.accessibility.elevator ? 'Ja' : 'Nej'}
+                      {residence.accessibility?.elevator ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                 </div>
@@ -176,28 +176,32 @@ export function ResidenceView() {
                     <span className="text-sm text-gray-500">Extra toalett</span>
                     <Badge
                       variant={
-                        residence.features.extraToilet ? 'success' : 'default'
+                        residence.features?.extraToilet ? 'success' : 'default'
                       }
                     >
-                      {residence.features.extraToilet ? 'Ja' : 'Nej'}
+                      {residence.features?.extraToilet ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Bastu</span>
                     <Badge
-                      variant={residence.features.sauna ? 'success' : 'default'}
+                      variant={
+                        residence.features?.sauna ? 'success' : 'default'
+                      }
                     >
-                      {residence.features.sauna ? 'Ja' : 'Nej'}
+                      {residence.features?.sauna ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Delat kök</span>
                     <Badge
                       variant={
-                        residence.features.sharedKitchen ? 'success' : 'default'
+                        residence.features?.sharedKitchen
+                          ? 'success'
+                          : 'default'
                       }
                     >
-                      {residence.features.sharedKitchen ? 'Ja' : 'Nej'}
+                      {residence.features?.sharedKitchen ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                 </div>
@@ -214,20 +218,20 @@ export function ResidenceView() {
                     <span className="text-sm text-gray-500">Rökfri</span>
                     <Badge
                       variant={
-                        residence.features.smokeFree ? 'success' : 'default'
+                        residence.features?.smokeFree ? 'success' : 'default'
                       }
                     >
-                      {residence.features.smokeFree ? 'Ja' : 'Nej'}
+                      {residence.features?.smokeFree ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Asbest</span>
                     <Badge
                       variant={
-                        residence.features.asbestos ? 'warning' : 'success'
+                        residence.features?.asbestos ? 'warning' : 'success'
                       }
                     >
-                      {residence.features.asbestos ? 'Ja' : 'Nej'}
+                      {residence.features?.asbestos ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                 </div>
@@ -240,24 +244,24 @@ export function ResidenceView() {
                     <span className="text-sm text-gray-500">Pälsdjursfri</span>
                     <Badge
                       variant={
-                        residence.features.petAllergyFree
+                        residence.features?.petAllergyFree
                           ? 'success'
                           : 'default'
                       }
                     >
-                      {residence.features.petAllergyFree ? 'Ja' : 'Nej'}
+                      {residence.features?.petAllergyFree ? 'Ja' : 'Nej'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Elanpassad</span>
                     <Badge
                       variant={
-                        residence.features.electricAllergyIntolerance
+                        residence.features?.electricAllergyIntolerance
                           ? 'success'
                           : 'default'
                       }
                     >
-                      {residence.features.electricAllergyIntolerance
+                      {residence.features?.electricAllergyIntolerance
                         ? 'Ja'
                         : 'Nej'}
                     </Badge>
@@ -282,7 +286,7 @@ export function ResidenceView() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Energiklass</span>
                   <span className="text-sm font-medium">
-                    {residence.propertyObject.energy.energyClass ||
+                    {residence.propertyObject?.energy.energyClass ||
                       'Ej angiven'}
                   </span>
                 </div>
@@ -293,7 +297,7 @@ export function ResidenceView() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">Typ</span>
                   <span className="text-sm font-medium">
-                    {residence.residenceType.code.trim()}
+                    {residence.residenceType?.code.trim()}
                   </span>
                 </div>
               </div>

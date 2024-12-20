@@ -8,6 +8,7 @@ import { Card } from '../ui/card'
 import { Grid } from '../ui/grid'
 import { StatCard } from '../shared/StatCard'
 import { CompanyDetails } from '@/services/types'
+import { useQuery } from '@tanstack/react-query'
 
 export function CompanyView() {
   const { companyId } = useParams()
@@ -53,7 +54,7 @@ export function CompanyView() {
     <div className="p-8 animate-in">
       <ViewHeader
         title={company.name}
-        subtitle={`${company.properties.length} fastigheter`}
+        subtitle={`${company.properties?.length} fastigheter`}
         type="Företag"
         icon={Building2}
       />
@@ -61,7 +62,7 @@ export function CompanyView() {
       <Grid cols={4} className="mb-8">
         <StatCard
           title="Fastigheter"
-          value={company.properties.length}
+          value={company.properties?.length}
           icon={Building2}
         />
         <StatCard
@@ -77,7 +78,7 @@ export function CompanyView() {
         />
         <StatCard
           title="Årshyra"
-          value={`${company.yearlyRent.toLocaleString()} kr`}
+          value={`${company.yearlyRent?.toLocaleString()} kr`}
           icon={Wallet}
         />
       </Grid>
@@ -91,7 +92,7 @@ export function CompanyView() {
         <div className="lg:col-span-2">
           <Card title="Fastigheter" icon={Building2}>
             <Grid cols={2}>
-              {company.properties.map((property) => (
+              {company.properties?.map((property) => (
                 <motion.div
                   key={property.id}
                   whileHover={{ scale: 1.02 }}

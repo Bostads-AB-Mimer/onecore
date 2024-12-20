@@ -27,6 +27,6 @@ export const roomService = {
       params: { path: { id } },
     })
     if (error) throw error
-    return data?.content
+    return data
   },
 }

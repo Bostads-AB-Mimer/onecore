@@ -8,10 +8,9 @@ import { residenceService } from '@/services/api'
 
 interface ResidenceListProps {
   building: Building
-  staircase: Staircase
 }
 
-export function ResidenceList({ building, staircase }: ResidenceListProps) {
+export function ResidenceList({ building }: ResidenceListProps) {
   const {
     data: residences,
     isLoading,
