@@ -4,6 +4,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarInset,
   SidebarMenu,
   SidebarProvider,
 } from '../ui/sidebar'
@@ -15,11 +16,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../ui/collapsible'
+import { AppSidebar } from '../app-sidebar'
 
 export default function SidebarNavigation() {
   return (
     <NavigationProvider>
       <SidebarProvider defaultOpen className="flex-shrink-0">
+        <AppSidebar />
         <Sidebar>
           <SidebarContent>
             <Collapsible

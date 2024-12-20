@@ -31,6 +31,7 @@ import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
 import SidebarNavigation from './components/navigation/SidebarNavigation'
 import { NavigationProvider } from '@/contexts/NavigationContext'
+import Page from './app/dashboard/page'
 
 function AppContent() {
   const { open: openCommandPalette } = useCommandPalette()
@@ -93,6 +94,7 @@ function AppContent() {
         <main className="flex-1 pt-14 ml-64">
           <Routes>
             <Route path="/" element={<Navigate to="/companies" replace />} />
+            <Route path="/page" element={<Page />} />
             <Route path="/companies/:companyId" element={<CompanyView />} />
             <Route path="/properties" element={<PropertyView />} />
             <Route path="/properties/:propertyId" element={<PropertyView />} />
