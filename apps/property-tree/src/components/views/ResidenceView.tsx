@@ -3,13 +3,12 @@ import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Home,
-  Square,
-  BedDouble,
-  Wallet,
+  ChefHat,
+  GitGraph,
   CalendarClock,
   FileText,
-  Mail,
-  Phone,
+  Settings,
+  AlertCircle,
 } from 'lucide-react'
 import { propertyService } from '../../services/api/propertyService'
 import { Residence } from '../../services/types'
@@ -89,28 +88,34 @@ export function ResidenceView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={`${residence.bedrooms} rum och kök, ${residence.id}`}
-        subtitle={residence.address}
+        title={`${residence.residenceType.name.trim()}, ${residence.code}`}
+        subtitle={residence.name}
         type="Bostad"
         icon={Home}
       />
 
       <Grid cols={4} className="mb-8">
         <StatCard
-          title="Storlek"
-          value={`${residence.size} m²`}
-          icon={Square}
+          title="Rum"
+          value={residence.residenceType.roomCount}
+          icon={Home}
+          subtitle="Antal rum"
         />
-        <StatCard title="Sovrum" value={residence.bedrooms} icon={BedDouble} />
-        <StatCard
-          title="Hyra"
-          value={`${residence.rent} kr/mån`}
-          icon={Wallet}
+        <StatCard 
+          title="Kök"
+          value={residence.residenceType.kitchen}
+          icon={ChefHat}
         />
         <StatCard
-          title="Inflyttning"
-          value={residence.tenant?.moveInDate}
+          title="Uppgång"
+          value={residence.entrance}
+          icon={GitGraph}
+        />
+        <StatCard
+          title="Giltighet"
+          value={new Date(residence.validityPeriod.fromDate).toLocaleDateString()}
           icon={CalendarClock}
+          subtitle={`Till ${new Date(residence.validityPeriod.toDate).toLocaleDateString()}`}
         />
       </Grid>
 
@@ -121,78 +126,117 @@ export function ResidenceView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2 space-y-6">
-          <Card title="Rum och ytor">
+          <Card title="Egenskaper">
             <Grid cols={2}>
-              {residence.rooms?.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  residenceId={residence.id}
-                />
-              ))}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <h3 className="font-medium mb-2">Tillgänglighet</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Rullstolsanpassad</span>
+                    <Badge variant={residence.accessibility.wheelchairAccessible ? 'success' : 'default'}>
+                      {residence.accessibility.wheelchairAccessible ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Bostadsanpassad</span>
+                    <Badge variant={residence.accessibility.residenceAdapted ? 'success' : 'default'}>
+                      {residence.accessibility.residenceAdapted ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Hiss</span>
+                    <Badge variant={residence.accessibility.elevator ? 'success' : 'default'}>
+                      {residence.accessibility.elevator ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <h3 className="font-medium mb-2">Faciliteter</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Extra toalett</span>
+                    <Badge variant={residence.features.extraToilet ? 'success' : 'default'}>
+                      {residence.features.extraToilet ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Bastu</span>
+                    <Badge variant={residence.features.sauna ? 'success' : 'default'}>
+                      {residence.features.sauna ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Delat kök</span>
+                    <Badge variant={residence.features.sharedKitchen ? 'success' : 'default'}>
+                      {residence.features.sharedKitchen ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
             </Grid>
           </Card>
 
-          {residence.activeIssues?.name.length > 0 && (
-            <ActiveIssues issues={residence.activeIssues} />
-          )}
+          <Card title="Särskilda egenskaper">
+            <Grid cols={2}>
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <h3 className="font-medium mb-2">Miljö</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Rökfri</span>
+                    <Badge variant={residence.features.smokeFree ? 'success' : 'default'}>
+                      {residence.features.smokeFree ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Asbest</span>
+                    <Badge variant={residence.features.asbestos ? 'warning' : 'success'}>
+                      {residence.features.asbestos ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <h3 className="font-medium mb-2">Allergianpassning</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Pälsdjursfri</span>
+                    <Badge variant={residence.features.petAllergyFree ? 'success' : 'default'}>
+                      {residence.features.petAllergyFree ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Elanpassad</span>
+                    <Badge variant={residence.features.electricAllergyIntolerance ? 'success' : 'default'}>
+                      {residence.features.electricAllergyIntolerance ? 'Ja' : 'Nej'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Grid>
+          </Card>
         </div>
 
         <div className="space-y-6">
-          <Card title="Hyresgästinformation">
-            <div className="flex items-center space-x-4 mb-6">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="h-12 w-12 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/20"
-              >
-                {residence.tenant?.name.charAt(0)}
-              </motion.div>
-              <div>
-                <p className="font-medium">{residence.tenant?.name}</p>
-                <p className="text-sm text-gray-500">Nuvarande hyresgäst</p>
-              </div>
-            </div>
-
+          <Card title="Teknisk information">
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-all duration-300">
-                <CalendarClock className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                <div>
-                  <p className="text-sm text-gray-500">Inflyttningsdatum</p>
-                  <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant?.moveInDate}
-                  </p>
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-500">Energiklass</span>
+                  <span className="text-sm font-medium">
+                    {residence.propertyObject.energy.energyClass || 'Ej angiven'}
+                  </span>
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-3 group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-all duration-300">
-                <Mail className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                <div>
-                  <p className="text-sm text-gray-500">E-post</p>
-                  <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant?.email}
-                  </p>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-500">Lägenhetsnummer</span>
+                  <span className="text-sm font-medium">{residence.code}</span>
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-3 group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded-lg transition-all duration-300">
-                <Phone className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                <div>
-                  <p className="text-sm text-gray-500">Telefon</p>
-                  <p className="font-medium group-hover:text-blue-500 transition-colors">
-                    {residence.tenant?.phone}
-                  </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Typ</span>
+                  <span className="text-sm font-medium">{residence.residenceType.code.trim()}</span>
                 </div>
-              </div>
-
-              <div className="pt-4 border-t dark:border-gray-700">
-                <Button
-                  variant="primary"
-                  icon={FileText}
-                  className="w-full"
-                  onClick={() => setShowContract(true)}
-                >
-                  Visa kontrakt
-                </Button>
               </div>
             </div>
           </Card>
