@@ -110,8 +110,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   allOf:
-   *                    - $ref: '#/components/schemas/CompanyDetails'
-   *                    - type: object
+   *                     - $ref: '#/components/schemas/CompanyDetails'
+   *                     - type: object
    *                       properties:
    *                         _links:
    *                           $ref: '#/components/schemas/CompanyLinks'
