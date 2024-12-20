@@ -2,7 +2,8 @@ import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
-import { propertyService, roomService } from '../../services/api'
+import { propertyService } from '../../services/api'
+import { ResidenceRooms } from '../shared/ResidenceRooms'
 import { Residence } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
@@ -59,25 +60,9 @@ export function ResidenceView() {
     enabled: !!residenceId,
   })
 
-  const roomsQuery = useQuery({
-    queryKey: ['rooms', residenceId],
-    queryFn: async () => {
-      const residence = residenceQuery?.data
-      if (!residence) return null
-      const rooms = await roomService.getByBuildingAndFloorAndResidence(
-        residence.buildingCode,
-        residence.floorCode,
-        residence.code
-      )
-      return Promise.all(rooms.map((room) => await roomService.getById(room.id)))
-    },
-    enabled: !!residenceQuery.data,
-  })
-
-  const isLoading = residenceQuery.isLoading || roomsQuery.isLoading
-  const error = residenceQuery.error || roomsQuery.error
+  const isLoading = residenceQuery.isLoading
+  const error = residenceQuery.error
   const residence = residenceQuery.data
-  const rooms = roomsQuery.data
     queryKey: ['residence', residenceId],
     queryFn: () => residenceService.getById(residenceId!),
     enabled: !!residenceId,
@@ -282,17 +267,12 @@ export function ResidenceView() {
             </Grid>
           </Card>
 
-          <Card title="Rum">
-            <Grid cols={2}>
-              {rooms?.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  residenceId={residence.id}
-                />
-              ))}
-            </Grid>
-          </Card>
+          <ResidenceRooms
+            residenceId={residence.id}
+            buildingCode={residence.buildingCode}
+            floorCode={residence.floorCode}
+            residenceCode={residence.code}
+          />
         </div>
 
         <div className="space-y-6">
