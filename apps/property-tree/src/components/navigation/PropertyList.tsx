@@ -1,5 +1,6 @@
 import React from 'react'
 import { Company } from '@/services/types'
+import { Skeleton } from '../ui/skeleton'
 import { SidebarMenu } from '../ui/sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
@@ -21,7 +22,12 @@ export function PropertyList({ company }: PropertyListProps) {
   })
 
   if (isLoading) {
-    return <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
+    return (
+      <>
+        <Skeleton className="h-8 mx-2 mb-2" />
+        <Skeleton className="h-8 mx-2" />
+      </>
+    )
   }
 
   if (error) {

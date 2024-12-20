@@ -1,5 +1,6 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Skeleton } from '../ui/skeleton'
 import { companyService } from '@/services/api'
 import { CompanyNavigation } from './Company'
 import { useNavigation } from '@/contexts/NavigationContext'
@@ -18,7 +19,11 @@ export function CompanyList() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
+      <>
+        <Skeleton className="h-8 mx-2 mb-2" />
+        <Skeleton className="h-8 mx-2 mb-2" />
+        <Skeleton className="h-8 mx-2" />
+      </>
     )
   }
 

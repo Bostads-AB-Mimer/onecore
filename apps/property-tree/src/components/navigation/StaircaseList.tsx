@@ -1,5 +1,6 @@
 import React from 'react'
 import { Building } from '@/services/types'
+import { Skeleton } from '../ui/skeleton'
 import { SidebarMenu } from '../ui/sidebar'
 import { StaircaseNavigation } from './Staircase'
 import { useQuery } from '@tanstack/react-query'
@@ -28,7 +29,10 @@ export function StaircaseList({ building, onStaircaseSelect }: StaircaseListProp
 
   if (isLoading) {
     return (
-      <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
+      <>
+        <Skeleton className="h-8 mx-2 mb-2" />
+        <Skeleton className="h-8 mx-2" />
+      </>
     )
   }
 

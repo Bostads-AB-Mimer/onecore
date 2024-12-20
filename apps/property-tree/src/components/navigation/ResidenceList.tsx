@@ -1,5 +1,6 @@
 import React from 'react'
 import { Building } from '@/services/types'
+import { Skeleton } from '../ui/skeleton'
 import { SidebarMenu } from '../ui/sidebar'
 import { ResidenceNavigation } from './Residence'
 import { useQuery } from '@tanstack/react-query'
@@ -22,7 +23,10 @@ export function ResidenceList({ building, onResidenceSelect }: ResidenceListProp
 
   if (isLoading) {
     return (
-      <div className="animate-pulse h-8 bg-sidebar-accent/10 rounded-md" />
+      <>
+        <Skeleton className="h-8 mx-2 mb-2" />
+        <Skeleton className="h-8 mx-2" />
+      </>
     )
   }
 
