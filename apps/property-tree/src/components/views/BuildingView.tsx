@@ -2,7 +2,7 @@ import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
-import { propertyService } from '../../services/api'
+import { buildingService, propertyService } from '../../services/api'
 import { Building as BuildingType } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
@@ -18,7 +18,7 @@ export function BuildingView() {
   React.useEffect(() => {
     const loadBuilding = async () => {
       try {
-        const data = await propertyService.getBuilding(buildingId!)
+        const data = await buildingService.getById(buildingId!)
         setBuilding(data)
       } finally {
         setLoading(false)
