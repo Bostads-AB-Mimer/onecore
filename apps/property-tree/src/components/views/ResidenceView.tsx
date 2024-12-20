@@ -59,27 +59,23 @@ function LoadingSkeleton() {
 
 export function ResidenceView() {
   const { residenceId } = useParams()
-  const [residence, setResidence] = React.useState<Residence | null>(null)
-  const [loading, setLoading] = React.useState(true)
   const [showContract, setShowContract] = React.useState(false)
+  
+  const {
+    data: residence,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['residence', residenceId],
+    queryFn: () => residenceService.getById(residenceId!),
+    enabled: !!residenceId,
+  })
 
-  React.useEffect(() => {
-    const loadResidence = async () => {
-      try {
-        const data = await residenceService.getById(residenceId!)
-        setResidence(data)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadResidence()
-  }, [residenceId])
-
-  if (loading) {
+  if (isLoading) {
     return <LoadingSkeleton />
   }
 
-  if (!residence) {
+  if (error || !residence) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
