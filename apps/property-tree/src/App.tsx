@@ -87,12 +87,11 @@ function AppContent() {
       </nav>
       hej hejf
       {/* Sidebar */}
-      <NavigationProvider>
-        <SidebarNavigation />
-      </NavigationProvider>
+      <SidebarNavigation />
       {/* Main Content */}
       <main className="pl-64 pt-14">
-        <Routes>
+        <NavigationProvider>
+          <Routes>
           <Route path="/" element={<Navigate to="/companies" replace />} />
           <Route path="/companies/:companyId" element={<CompanyView />} />
           <Route path="/properties/:propertyId" element={<PropertyView />} />
@@ -104,7 +103,8 @@ function AppContent() {
             element={<RoomView />}
           />
           <Route path="/tenants/:tenantId" element={<TenantView />} />
-        </Routes>
+          </Routes>
+        </NavigationProvider>
       </main>
     </div>
   )
