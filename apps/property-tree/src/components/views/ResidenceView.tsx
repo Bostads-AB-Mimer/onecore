@@ -53,31 +53,27 @@ export function ResidenceView() {
   const { residenceId } = useParams()
   const [showContract, setShowContract] = React.useState(false)
 
-  const queries = useQueries({
-    queries: [
-      {
-        queryKey: ['residence', residenceId],
-        queryFn: () => residenceService.getById(residenceId!),
-        enabled: !!residenceId,
-      },
-      {
-        queryKey: ['rooms', residenceId],
-        queryFn: async () => {
-          const residence = await residenceService.getById(residenceId!)
-          return roomService.getByBuildingAndFloorAndResidence(
-            residence.buildingCode,
-            residence.floorCode,
-            residence.code
-          )
-        },
-        enabled: !!residenceId,
-      },
-    ],
+  const residenceQuery = useQuery({
+    queryKey: ['residence', residenceId],
+    queryFn: () => residenceService.getById(residenceId!),
+    enabled: !!residenceId,
   })
 
-  const [residenceQuery, roomsQuery] = queries
-  const isLoading = queries.some((q) => q.isLoading)
-  const error = queries.some((q) => q.error)
+  const roomsQuery = useQuery({
+    queryKey: ['rooms', residenceId],
+    queryFn: async () => {
+      if (!residenceQuery.data) return null
+      return roomService.getByBuildingAndFloorAndResidence(
+        residenceQuery.data.buildingCode,
+        residenceQuery.data.floorCode,
+        residenceQuery.data.code
+      )
+    },
+    enabled: !!residenceQuery.data,
+  })
+
+  const isLoading = residenceQuery.isLoading || roomsQuery.isLoading
+  const error = residenceQuery.error || roomsQuery.error
   const residence = residenceQuery.data
   const rooms = roomsQuery.data
     queryKey: ['residence', residenceId],
