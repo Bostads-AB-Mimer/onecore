@@ -9,6 +9,7 @@ import {
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import striptags from 'striptags'
+import he from 'he'
 
 const infobip = new Infobip({
   baseUrl: config.infobip.baseUrl,
@@ -179,7 +180,9 @@ export const sendWorkOrderEmail = async (email: Email) => {
 }
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
-  const message = striptags(sms.message.replace(/<br\s*\/?>/gi, '\n'))
+  const message = he.decode(
+    striptags(sms.message.replace(/<br\s*\/?>/gi, '\n'))
+  )
   const noreply =
     'Detta sms går ej att svara på. Det går bra att återkoppla i ärendet på "Mina sidor".'
 
