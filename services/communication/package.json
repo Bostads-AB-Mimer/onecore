@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/he": "^1.2.3",
     "@types/jest": "29.5.1",
     "@types/koa": "2.15.0",
     "@types/koa__cors": "^5.0.0",
@@ -46,6 +47,7 @@
     "@koa/router": "^12.0.1",
     "@sendgrid/mail": "^8.1.1",
     "dotenv": "^16.4.4",
+    "he": "^1.2.0",
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
