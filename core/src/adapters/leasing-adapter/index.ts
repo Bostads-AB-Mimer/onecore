@@ -1,6 +1,7 @@
 import { loggedAxios as axios, logger } from 'onecore-utilities'
 import { AxiosError } from 'axios'
 import dayjs from 'dayjs'
+import querystring from 'querystring'
 import {
   ConsumerReport,
   Contact,
@@ -61,11 +62,12 @@ const getLeasesForPropertyId = async (
   includeTerminatedLeases: string | string[] | undefined,
   includeContacts: string | string[] | undefined
 ): Promise<Lease[]> => {
+  const query = querystring.stringify({
+    includeTerminatedLeases,
+    includeContacts,
+  })
   const leasesResponse = await axios(
-    tenantsLeasesServiceUrl +
-      '/leases/for/propertyId/' +
-      propertyId +
-      (includeContacts ? '?includeContacts=true' : '')
+    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${query}`
   )
   return leasesResponse.data.content
 }

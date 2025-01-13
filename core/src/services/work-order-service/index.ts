@@ -120,7 +120,7 @@ export const routes = (router: KoaRouter) => {
       rentalObjectId: async () => {
         const leases = await leasingAdapter.getLeasesForPropertyId(
           ctx.params.identifier,
-          undefined,
+          ctx.query['includeTerminatedLeases'],
           'true'
         )
         if (leases) {
