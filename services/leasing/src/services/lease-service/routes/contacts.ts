@@ -583,7 +583,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const [profile, operation] = result.data
+      const [operation, profile] = result.data
       ctx.status = operation === 'created' ? 201 : 200
       ctx.body = {
         content: profile satisfies CreateOrUpdateApplicationProfileResponseData,
