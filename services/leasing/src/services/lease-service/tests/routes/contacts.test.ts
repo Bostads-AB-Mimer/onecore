@@ -9,6 +9,7 @@ import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
 import * as applicationProfileService from '../../update-or-create-application-profile'
+import * as factories from '../../tests/factories'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -18,6 +19,7 @@ app.use(router.routes())
 
 jest.mock('axios')
 
+beforeEach(jest.resetAllMocks)
 describe('GET /contacts/search', () => {
   it('responds with 400 if query param is missing', async () => {
     const res = await request(app.callback()).get('/contacts/search')
@@ -163,14 +165,7 @@ describe('GET /contacts/:contactCode/application-profile', () => {
       .spyOn(applicationProfileAdapter, 'getByContactCode')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          contactCode: '1234',
-          createdAt: new Date(),
-          expiresAt: null,
-          id: 1,
-          numAdults: 0,
-          numChildren: 0,
-        },
+        data: factories.applicationProfile.build(),
       })
 
     const res = await request(app.callback()).get(
@@ -198,26 +193,20 @@ describe('POST /contacts/:contactCode/application-profile', () => {
       .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
-        data: [
-          {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-            housingType: undefined,
-            housingTypeDescription: undefined,
-            landlord: undefined,
-            housingReference: undefined,
-          },
-          'updated',
-        ],
+        data: ['updated', factories.applicationProfile.build()],
       })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
-      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+      .send({
+        expiresAt: null,
+        numAdults: 0,
+        numChildren: 0,
+        housingType: 'RENTAL',
+        housingTypeDescription: null,
+        landlord: null,
+        housingReference: factories.applicationProfileHousingReference.build(),
+      })
 
     expect(res.status).toBe(200)
     expect(() =>
@@ -232,26 +221,20 @@ describe('POST /contacts/:contactCode/application-profile', () => {
       .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
-        data: [
-          {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-            housingType: undefined,
-            housingTypeDescription: undefined,
-            landlord: undefined,
-            housingReference: undefined,
-          },
-          'created',
-        ],
+        data: ['created', factories.applicationProfile.build()],
       })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
-      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+      .send({
+        expiresAt: null,
+        numAdults: 0,
+        numChildren: 0,
+        housingType: 'RENTAL',
+        housingTypeDescription: null,
+        landlord: null,
+        housingReference: factories.applicationProfileHousingReference.build(),
+      })
 
     expect(res.status).toBe(201)
     expect(() =>
