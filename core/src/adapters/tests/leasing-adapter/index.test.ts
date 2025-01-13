@@ -1,6 +1,7 @@
 import { HttpStatusCode } from 'axios'
 import assert from 'node:assert'
 import nock from 'nock'
+import { leasing, WaitingListType } from 'onecore-types'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
@@ -10,7 +11,6 @@ import {
   mockedProblematicInvoices,
 } from './mocks'
 import * as factory from '../../../../test/factories'
-import { leasing, WaitingListType } from 'onecore-types'
 
 describe('leasing-adapter', () => {
   describe(leasingAdapter.getInternalCreditInformation, () => {
@@ -231,7 +231,16 @@ describe('leasing-adapter', () => {
       const result =
         await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
           '123',
-          { expiresAt: new Date(), numAdults: 0, numChildren: 0 }
+          {
+            expiresAt: new Date(),
+            numAdults: 0,
+            numChildren: 0,
+            housingType: 'RENTAL',
+            housingTypeDescription: null,
+            landlord: null,
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+          }
         )
 
       expect(result).toEqual({ ok: false, err: 'bad-params' })
@@ -245,7 +254,16 @@ describe('leasing-adapter', () => {
       const result =
         await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
           '123',
-          { expiresAt: new Date(), numAdults: 0, numChildren: 0 }
+          {
+            expiresAt: new Date(),
+            numAdults: 0,
+            numChildren: 0,
+            housingType: 'RENTAL',
+            housingTypeDescription: null,
+            landlord: null,
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+          }
         )
 
       expect(result).toEqual({ ok: false, err: 'unknown' })
@@ -255,20 +273,22 @@ describe('leasing-adapter', () => {
       nock(config.tenantsLeasesService.url)
         .post('/contacts/123/application-profile')
         .reply(200, {
-          content: {
-            contactCode: '1234',
-            numChildren: 0,
-            numAdults: 0,
-            expiresAt: null,
-            id: 1,
-            createdAt: new Date(),
-          },
+          content: factory.applicationProfile.build(),
         })
 
       const result =
         await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
           '123',
-          { expiresAt: new Date(), numAdults: 0, numChildren: 0 }
+          {
+            expiresAt: new Date(),
+            numAdults: 0,
+            numChildren: 0,
+            housingType: 'RENTAL',
+            housingTypeDescription: null,
+            landlord: null,
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+          }
         )
 
       assert(result.ok)

@@ -9,53 +9,22 @@ export const UpdateApplicationProfileRequestParams =
     housingTypeDescription: true,
   }).extend({
     housingReference:
-      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.shape.housingReference
-        .unwrap()
-        .pick({ email: true, phone: true })
-        .optional(),
+      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.shape.housingReference.pick(
+        {
+          email: true,
+          phone: true,
+          reviewStatus: true,
+          comment: true,
+          lastAdminUpdatedAt: true,
+          lastApplicantUpdatedAt: true,
+          reasonRejected: true,
+          expiresAt: true,
+        }
+      ),
   })
 
 export const UpdateApplicationProfileResponseData =
-  leasing.CreateOrUpdateApplicationProfileResponseDataSchema.pick({
-    id: true,
-    contactCode: true,
-    expiresAt: true,
-    housingTypeDescription: true,
-    housingType: true,
-    landlord: true,
-    numAdults: true,
-    numChildren: true,
-  }).extend({
-    housingReference:
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.shape.housingReference
-        .unwrap()
-        .pick({
-          email: true,
-          phone: true,
-          expiresAt: true,
-        })
-        .optional(),
-  })
+  leasing.CreateOrUpdateApplicationProfileResponseDataSchema
 
 export const GetApplicationProfileResponseData =
-  leasing.GetApplicationProfileResponseDataSchema.pick({
-    contactCode: true,
-    createdAt: true,
-    expiresAt: true,
-    housingType: true,
-    housingTypeDescription: true,
-    id: true,
-    landlord: true,
-    numAdults: true,
-    numChildren: true,
-  }).extend({
-    housingReference:
-      leasing.GetApplicationProfileResponseDataSchema.shape.housingReference
-        .unwrap()
-        .pick({
-          email: true,
-          phone: true,
-          expiresAt: true,
-        })
-        .optional(),
-  })
+  leasing.GetApplicationProfileResponseDataSchema

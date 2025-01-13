@@ -1587,38 +1587,28 @@ export const routes = (router: KoaRouter) => {
       }
 
       const expiresAt = dayjs(new Date()).add(6, 'months').toDate()
-      const housingReferenceParams: leasingAdapter.CreateOrUpdateApplicationProfileRequestParams['housingReference'] =
-        body.housingReference
-          ? {
-              email: body.housingReference.email,
-              expiresAt,
-              phone: body.housingReference.phone,
-              ...(getApplicationProfile.ok &&
-              getApplicationProfile.data.housingReference
-                ? {
-                    reviewStatus:
-                      getApplicationProfile.data.housingReference.reviewStatus,
-                    reviewStatusReason:
-                      getApplicationProfile.data.housingReference
-                        .reviewStatusReason,
-                    reviewedAt:
-                      getApplicationProfile.data.housingReference.reviewedAt,
-                  }
-                : {
-                    reviewStatus: 'pending',
-                    reviewStatusReason: null,
-                    reviewedAt: null,
-                  }),
-            }
-          : undefined
 
       const createOrUpdate =
         await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
           ctx.params.contactCode,
           {
-            ...body,
             expiresAt,
-            housingReference: housingReferenceParams,
+            numChildren: body.numChildren,
+            numAdults: body.numAdults,
+            housingType: body.housingType,
+            landlord: body.landlord,
+            housingTypeDescription: body.housingTypeDescription,
+            housingReference: {
+              comment: body.housingReference.comment,
+              email: body.housingReference.email,
+              phone: body.housingReference.phone,
+              lastAdminUpdatedAt: body.housingReference.lastAdminUpdatedAt,
+              lastApplicantUpdatedAt:
+                body.housingReference.lastApplicantUpdatedAt,
+              reasonRejected: body.housingReference.reasonRejected,
+              reviewStatus: body.housingReference.reviewStatus,
+              expiresAt: body.housingReference.expiresAt,
+            },
           }
         )
 
