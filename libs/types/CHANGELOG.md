@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.6.1...v3.0.0) (2025-01-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* UTH-164 - Add types for housingType and reviewStatus#136 ([#142](https://github.com/Bostads-AB-Mimer/onecore-types/issues/142))
+
+### Features
+
+* UTH-164 - Add types for housingType and reviewStatus[#136](https://github.com/Bostads-AB-Mimer/onecore-types/issues/136) ([#142](https://github.com/Bostads-AB-Mimer/onecore-types/issues/142)) ([67b3883](https://github.com/Bostads-AB-Mimer/onecore-types/commit/67b388363532ba4e9ebaebeff36258449a7a477c))
+
 ## [2.6.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.6.0...v2.6.1) (2024-12-12)
 
 
