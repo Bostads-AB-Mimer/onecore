@@ -373,6 +373,7 @@ export const routes = (router: KoaRouter) => {
         RentalObjectCode,
         Rows,
         AccessOptions,
+        HearingImpaired,
         Pet,
         Images,
       } = ctx.request.body
@@ -458,6 +459,7 @@ export const routes = (router: KoaRouter) => {
             ContactCode,
             RentalObjectCode,
             AccessOptions,
+            HearingImpaired,
             Pet,
             Images,
             Rows: [workOrderRequest],
