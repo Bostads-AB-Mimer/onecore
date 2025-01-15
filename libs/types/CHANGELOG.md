@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.0.0...v3.1.0) (2025-01-15)
+
+
+### Features
+
+* Add HearingImpaired to CreateWorkOrderDetails (empty commit to trigger release) ([41f2600](https://github.com/Bostads-AB-Mimer/onecore-types/commit/41f2600f0e686bb58b48ee513f2dc97714c99f49))
+
 ## [3.0.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v2.6.1...v3.0.0) (2025-01-13)
 
 
