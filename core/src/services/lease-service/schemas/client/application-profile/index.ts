@@ -9,7 +9,7 @@ export const UpdateApplicationProfileRequestParams =
     housingTypeDescription: true,
   }).extend({
     housingReference:
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.shape.housingReference.pick(
+      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.shape.housingReference.pick(
         {
           email: true,
           phone: true,
