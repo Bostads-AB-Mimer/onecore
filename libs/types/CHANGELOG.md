@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.1.0...v3.2.0) (2025-01-15)
+
+
+### Features
+
+* make housing type nullable ([#144](https://github.com/Bostads-AB-Mimer/onecore-types/issues/144)) ([0619226](https://github.com/Bostads-AB-Mimer/onecore-types/commit/061922640a1c60dfbb3d607cc820291ef70e00c6))
+
 ## [3.1.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.0.0...v3.1.0) (2025-01-15)
 
 
