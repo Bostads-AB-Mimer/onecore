@@ -46,6 +46,7 @@ interface CreateWorkOrderDetails {
     Email: string
     CallBetween: string
   }
+  HearingImpaired: boolean
   Pet: boolean
   Rows: CreateWorkOrderRow[]
   Images: CreateWorkOrderImage[]
