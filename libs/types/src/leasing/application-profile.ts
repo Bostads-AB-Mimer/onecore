@@ -10,10 +10,10 @@ export const CreateOrUpdateApplicationProfileRequestParamsSchema =
     numAdults: true,
     numChildren: true,
     expiresAt: true,
-    housingType: true,
     housingTypeDescription: true,
     landlord: true,
   }).extend({
+    housingType: ApplicationProfileSchema.shape.housingType.unwrap(),
     housingReference: ApplicationProfileHousingReferenceSchema.pick({
       email: true,
       expiresAt: true,
