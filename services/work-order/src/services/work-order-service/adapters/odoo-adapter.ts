@@ -265,7 +265,7 @@ const createWorkOrderRecord = async (
       lease_id: leaseRecord.toString(),
       tenant_id: tenantRecord.toString(),
       maintenance_unit_id: maintenanceUnitRecord.toString(),
-      hearing_impaired: !!details.AccessOptions.Email,
+      hearing_impaired: details.HearingImpaired,
       call_between: details.AccessOptions.CallBetween,
       pet: details.Pet,
       space_code: details.Rows[0].LocationCode,

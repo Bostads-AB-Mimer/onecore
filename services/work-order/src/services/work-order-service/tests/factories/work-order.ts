@@ -58,6 +58,7 @@ export const CreateWorkOrderDetailsFactory =
       PhoneNumber: '070000000',
       CallBetween: '08:00 - 17:00',
     },
+    HearingImpaired: false,
     Pet: false,
     Rows: [
       {
