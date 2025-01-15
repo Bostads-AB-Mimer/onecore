@@ -47,7 +47,7 @@ export const ApplicationProfileSchema = z.object({
   contactCode: z.string(),
   numAdults: z.number(),
   numChildren: z.number(),
-  housingType: ApplicationProfileHousingTypeSchema,
+  housingType: ApplicationProfileHousingTypeSchema.nullable(),
   housingTypeDescription: z.string().nullable(),
   landlord: z.string().nullable(),
   housingReference: ApplicationProfileHousingReferenceSchema,
