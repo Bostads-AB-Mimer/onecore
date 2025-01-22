@@ -3,6 +3,9 @@
     "@iteam/eslint-config-react/typescript",
     "plugin:import/recommended"
   ],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "rules": {
     "react/prop-types": "off",
     "@typescript-eslint/no-explicit-any": "off",
@@ -20,9 +23,16 @@
       {
         "newlines-between": "always",
         "groups": [
-          ["external", "builtin"],
+          [
+            "external",
+            "builtin"
+          ],
           "internal",
-          ["index", "sibling", "parent"]
+          [
+            "index",
+            "sibling",
+            "parent"
+          ]
         ]
       }
     ]

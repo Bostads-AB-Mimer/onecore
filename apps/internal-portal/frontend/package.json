@@ -10,6 +10,7 @@
     "test:ui": "vitest --ui",
     "preview": "vite preview"
   },
+  "type": "module",
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
@@ -18,9 +19,11 @@
     "@mui/material": "^5.15.14",
     "@mui/styled-engine-sc": "^6.0.0-alpha.18",
     "@mui/x-data-grid": "^6.19.6",
+    "@mui/x-date-pickers": "^7.23.6",
     "@tanstack/react-query": "^5.31.0",
     "@tanstack/react-query-devtools": "^5.31.0",
     "axios": "^1.6.5",
+    "dayjs": "^1.11.13",
     "material-ui-popup-state": "^5.0.10",
     "react": "18.2.0",
     "react-dom": "18.2.0",

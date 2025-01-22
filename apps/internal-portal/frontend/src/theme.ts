@@ -91,6 +91,7 @@ const theme = createTheme({
     warmGrey: {
       main: 'rgba(73, 72, 69, 1)',
     },
+    primary: { main: '#000000' },
   },
   typography: {
     title: {
@@ -148,9 +149,9 @@ export const mdTheme = createTheme(theme, {
     MuiRadio: {
       styleOverrides: {
         root: {
-          color: 'black',
+          color: '#007BC4',
           [`&.${radioClasses.checked}`]: {
-            color: 'black',
+            color: '#007BC4',
           },
         },
       },
@@ -182,51 +183,7 @@ export const mdTheme = createTheme(theme, {
       },
     },
     MuiButton: {
-      defaultProps: {
-        disableElevation: true,
-      },
-      styleOverrides: {
-        root: {
-          textTransform: 'initial',
-          backgroundColor: 'black',
-          fontFamily: 'graphikRegular',
-          fontSize: 14,
-          fontWeight: 500,
-        },
-      },
-      variants: [
-        {
-          props: { variant: 'dark' },
-          style: {
-            borderRadius: '6px',
-            textTransform: 'none',
-            fontWeight: 700,
-            backgrund: 'rgba(0, 0, 0, 1)',
-            color: 'rgba(255, 255, 255, 1)',
-            transition: 'none',
-            ':hover': {
-              background: 'black',
-            },
-            ':disabled': {
-              background: 'rgba(0, 0, 0, 0.2)',
-            },
-          },
-        },
-        {
-          props: { variant: 'dark-outlined' },
-          style: {
-            borderRadius: '6px',
-            textTransform: 'none',
-            border: '2px solid black',
-            fontWeight: 700,
-            color: 'rgba(0, 0, 0, 1)',
-            background: 'white',
-            ':hover': {
-              background: 'white',
-            },
-          },
-        },
-      ],
+      defaultProps: {},
     },
     MuiLink: {
       styleOverrides: {
@@ -287,6 +244,16 @@ export const mdTheme = createTheme(theme, {
         root: {
           paddingTop: 5,
           justifyContent: 'right',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          borderBottom: 'none',
+          padding: 8,
+          paddingLeft: 0,
+          paddingRight: 0,
         },
       },
     },

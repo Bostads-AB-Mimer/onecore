@@ -9,27 +9,28 @@ import { useState, useMemo, useCallback } from 'react'
 
 import * as utils from '../../../../utils'
 import { useSearchContacts } from '../../hooks/useSearchContacts'
-import { mdTheme } from '../../../../theme'
 import { ContactSearchData } from './types'
 
-export const SearchContact = (props: {
-  onSelect: (contact: ContactSearchData | null) => void
-  contact: ContactSearchData | null
-}) => {
+type SearchContactProps = {
+  placeholder?: string
+  onSelect: (contact: ContactSearchData | undefined) => void
+  contact?: ContactSearchData
+}
+
+export const SearchContact = ({
+  onSelect,
+  contact,
+  placeholder = 'Sök boende',
+}: SearchContactProps) => {
   const [searchString, setSearchString] = useState<string>('')
   const contactsQuery = useSearchContacts(searchString)
 
   const onSetSearchString = useMemo(
-    () => utils.debounce((value: string) => setSearchString(value), 500),
+    () => utils.debounce(setSearchString, 500),
     []
   )
 
-  const handleSearch = useCallback(
-    (v: string) => {
-      onSetSearchString(v)
-    },
-    [onSetSearchString]
-  )
+  const handleSearch = useCallback(onSetSearchString, [onSetSearchString])
 
   if (contactsQuery.error) {
     return (
@@ -48,9 +49,9 @@ export const SearchContact = (props: {
         filterOptions={(v) => v}
         options={contactsQuery.data ?? []}
         onInputChange={(_, v) => handleSearch(v)}
-        onChange={(_, v) => props.onSelect(v)}
+        onChange={(_, v) => onSelect(v || undefined)}
         getOptionKey={(v) => v.contactCode}
-        value={props.contact}
+        value={contact}
         ListboxProps={{ style: { maxHeight: 125 } }}
         noOptionsText="Inga boende hittades..."
         loading={contactsQuery.fetchStatus === 'fetching'}
@@ -64,31 +65,8 @@ export const SearchContact = (props: {
             {...params}
             size="small"
             variant="outlined"
-            placeholder="Sök boende"
+            placeholder={placeholder}
             fullWidth
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                fontSize: '16px',
-                paddingTop: '2px',
-                paddingBottom: '2px',
-                color: '#000',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: mdTheme.palette.warmGrey.main,
-                  borderRadius: '6px',
-                  borderWidth: '1.5px',
-                },
-                '&.Mui-focused': {
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderWidth: '1.5px',
-                    borderColor: '#2e2e2e',
-                  },
-                },
-                '& .MuiInputLabel-outlined': {
-                  color: '#2e2e2e',
-                  '&.Mui-focused': {},
-                },
-              },
-            }}
           />
         )}
       />

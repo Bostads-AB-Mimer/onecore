@@ -9,6 +9,8 @@ import {
 import { AxiosError } from 'axios'
 import { ErrorBoundary } from 'react-error-boundary'
 import { ToastContainer } from 'react-toastify'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 import Home from './pages/Home/Home'
 import SiteHeader from './components/SiteHeader'
@@ -17,6 +19,7 @@ import MaterialChoiceDetails from './pages/MaterialChoiceDetails/MaterialChoiceD
 import ParkingSpaces from './pages/ParkingSpaces'
 import ParkingSpace from './pages/ParkingSpace'
 import { mdTheme } from './theme'
+import Residences from './pages/Residences/Residences'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,32 +49,35 @@ const PageBase = () => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastContainer />
-      <ThemeProvider theme={mdTheme}>
-        <CssBaseline />
-        <Grid container sx={{ marginBottom: 2, marginTop: 0 }}>
-          <Grid item xs={0.5} />
-          <Grid item xs={11}>
-            <SiteHeader />
-            <Routes>
-              <Route element={<PageBase />}>
-                <Route path="/" element={<ParkingSpaces />} />
-                <Route path="/parkingspaces" element={<ParkingSpaces />} />
-                <Route path="/parkingspace/:id" element={<ParkingSpace />} />
-                <Route path="/materialval" element={<Home />} />
-                <Route
-                  path="/materialval/utskrift"
-                  element={<MaterialChoiceDetails />}
-                />
-                <Route path="/logout" element={<Login />} />
-              </Route>
-            </Routes>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <QueryClientProvider client={queryClient}>
+        <ToastContainer />
+        <ThemeProvider theme={mdTheme}>
+          <CssBaseline />
+          <Grid container sx={{ marginBottom: 2, marginTop: 0 }}>
+            <Grid item xs={0.5} />
+            <Grid item xs={11}>
+              <SiteHeader />
+              <Routes>
+                <Route element={<PageBase />}>
+                  <Route path="/" element={<ParkingSpaces />} />
+                  <Route path="/parkingspaces" element={<ParkingSpaces />} />
+                  <Route path="/parkingspace/:id" element={<ParkingSpace />} />
+                  <Route path="/materialval" element={<Home />} />
+                  <Route
+                    path="/materialval/utskrift"
+                    element={<MaterialChoiceDetails />}
+                  />
+                  <Route path="/bostader" element={<Residences />} />
+                  <Route path="/logout" element={<Login />} />
+                </Route>
+              </Routes>
+            </Grid>
+            <Grid item xs={0.5} />
           </Grid>
-          <Grid item xs={0.5} />
-        </Grid>
-      </ThemeProvider>
-    </QueryClientProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </LocalizationProvider>
   )
 }
 

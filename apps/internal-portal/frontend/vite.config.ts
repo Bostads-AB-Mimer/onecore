@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 /// <reference types="vite/client" />
 import { defineConfig } from 'vite'
-
 import react from '@vitejs/plugin-react'
 import eslintPlugin from '@nabla/vite-plugin-eslint'
 
@@ -16,7 +15,7 @@ export default defineConfig({
     port: 7003,
     proxy: {
       '/api': {
-        target: 'http://localhost:7000',
+        target: `http://localhost:${process.env.PROXY_TARGET_PORT || 7000}`,
         changeOrigin: true,
         secure: false,
       },

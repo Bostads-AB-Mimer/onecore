@@ -57,9 +57,9 @@ export const SyncInternalParkingSpaces = () => {
             <Box paddingX="0.5rem">
               <Typography variant="body1">
                 Här kan du hämta alla <i>publicerade</i> bilplatser som finns i
-                Xpand. När du trycker på "Hämta publicerade bilplatser" så
-                hämtas alla bilplatser från XPand och sen läggs de in i OneCores
-                databas.
+                Xpand. När du trycker på &quot;Hämta publicerade
+                bilplatser&quot; så hämtas alla bilplatser från XPand och sen
+                läggs de in i OneCores databas.
               </Typography>
               <Typography>
                 Om en bilplats som ligger inne i OneCore tas bort från XPand så
