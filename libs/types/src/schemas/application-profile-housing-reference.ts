@@ -23,10 +23,10 @@ export const ApplicationProfileHousingReferenceSchema = z.object({
   reviewStatus: HousingReferenceReviewStatusSchema,
   comment: z.string().nullable(),
   reasonRejected: HousingReferenceReasonRejectedSchema.nullable(),
-  lastAdminUpdatedAt: z.coerce.date().nullable(),
+  lastAdminUpdatedAt: z.union([z.null(), z.coerce.date()]),
   lastAdminUpdatedBy: z.string().nullable(),
-  lastApplicantUpdatedAt: z.coerce.date().nullable(),
+  lastApplicantUpdatedAt: z.union([z.null(), z.coerce.date()]),
 
-  expiresAt: z.coerce.date(),
+  expiresAt: z.union([z.null(), z.coerce.date()]),
   createdAt: z.coerce.date(),
 })

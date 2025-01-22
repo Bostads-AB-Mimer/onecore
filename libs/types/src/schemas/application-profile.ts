@@ -22,6 +22,6 @@ export const ApplicationProfileSchema = z.object({
   housingTypeDescription: z.string().nullable(),
   landlord: z.string().nullable(),
   housingReference: ApplicationProfileHousingReferenceSchema,
-  expiresAt: z.coerce.date().nullable(),
+  expiresAt: z.union([z.null(), z.coerce.date()]),
   createdAt: z.coerce.date(),
 })
