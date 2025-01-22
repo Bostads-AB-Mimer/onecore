@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.2.0...v3.3.0) (2025-01-22)
+
+
+### Features
+
+* allow housing reference expiresAt to be null ([#148](https://github.com/Bostads-AB-Mimer/onecore-types/issues/148)) ([f5a34fe](https://github.com/Bostads-AB-Mimer/onecore-types/commit/f5a34febfb82eb5f91d6caa2c87ca75c152a7d8e))
+
 ## [3.2.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.1.0...v3.2.0) (2025-01-15)
 
 
