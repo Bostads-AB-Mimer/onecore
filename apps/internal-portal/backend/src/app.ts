@@ -12,7 +12,7 @@ const app = new Koa()
 
 app.keys = ['some secret hurr']
 
-const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
+const CONFIG: Partial<session.opts<DefaultState, DefaultContext, unknown>> = {
   key: 'koa.sess' /** (string) cookie key (default is koa.sess) */,
   /** (number || 'session') maxAge in ms (default is 1 day) */
   /** 'session' will result in a cookie that expires when session/browser is closed */
@@ -33,6 +33,10 @@ const CONFIG: Partial<session.opts<DefaultState, DefaultContext, any>> = {
 app.use(session(CONFIG, app))
 
 app.use(async (ctx, next) => {
+  if (process.env.DISABLE_AUTHENTICATION) {
+    return next()
+  }
+
   if (ctx.request.path.match('(.*)/auth/')) {
     return next()
   } else {
@@ -41,6 +45,7 @@ app.use(async (ctx, next) => {
     } else {
       return next()
     }
+    return next()
   }
 })
 
