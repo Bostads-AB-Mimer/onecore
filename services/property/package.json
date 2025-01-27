@@ -1,5 +1,5 @@
 {
-  "name": "property-base",
+  "name": "base",
   "version": "1.0.0",
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
   "main": "index.ts",
