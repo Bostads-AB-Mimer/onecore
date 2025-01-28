@@ -25,7 +25,11 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
         <Building2 />
         <span>{company.name.replace('** TEST **', '')}</span>
       </SidebarMenuButton>
-      {isExpanded && <PropertyList company={company} />}
+      {isExpanded && (
+        <div className="pl-4 mt-1">
+          <PropertyList company={company} />
+        </div>
+      )}
     </SidebarMenuItem>
   )
 }

@@ -4,6 +4,7 @@ import {
   Route,
   Navigate,
 } from 'react-router-dom'
+import { useBreadcrumb } from './components/hooks/useBreadcrumb'
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -43,12 +44,10 @@ const queryClient = new QueryClient({
 })
 
 function AppContent() {
-  const { open: openCommandPalette } = useCommandPalette()
-
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-gray-900">
-      <CommandPalette />
       <SidebarProvider>
+        <CommandPalette />
         <SidebarNavigation />
         <SidebarInset>
           <header className="flex sticky top-0 bg-background h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -56,9 +55,13 @@ function AppContent() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Navigation Overview</BreadcrumbPage>
-                </BreadcrumbItem>
+                {useBreadcrumb().items.map((item, index) => (
+                  <BreadcrumbItem key={item.href}>
+                    <BreadcrumbPage href={item.href}>
+                      {item.label}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                ))}
               </BreadcrumbList>
             </Breadcrumb>
           </header>

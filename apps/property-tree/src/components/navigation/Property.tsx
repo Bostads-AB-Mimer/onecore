@@ -25,7 +25,11 @@ export function PropertyNavigation({ property }: PropertyNavigationProps) {
         <Building />
         <span>{property.designation}</span>
       </SidebarMenuButton>
-      {isExpanded && <BuildingList property={property} />}
+      {isExpanded && (
+        <div className="pl-4 mt-1">
+          <BuildingList property={property} />
+        </div>
+      )}
     </SidebarMenuItem>
   )
 }

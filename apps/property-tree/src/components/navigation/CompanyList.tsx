@@ -41,22 +41,10 @@ export function CompanyList() {
   }
 
   return (
-    <Collapsible defaultOpen className="group/collapsible">
-      <SidebarGroup>
-        <CollapsibleTrigger className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-          Companies
-          <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {companies?.map((company) => (
-                <CompanyNavigation key={company.id} company={company} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </CollapsibleContent>
-      </SidebarGroup>
-    </Collapsible>
+    <SidebarMenu>
+      {companies?.map((company) => (
+        <CompanyNavigation key={company.id} company={company} />
+      ))}
+    </SidebarMenu>
   )
 }

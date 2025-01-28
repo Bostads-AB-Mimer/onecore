@@ -26,7 +26,11 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
         <Warehouse />
         <span>{building.code}</span>
       </SidebarMenuButton>
-      {isExpanded && <ResidenceList building={building} />}
+      {isExpanded && (
+        <div className="pl-4 mt-1">
+          <ResidenceList building={building} />
+        </div>
+      )}
     </SidebarMenuItem>
   )
 }

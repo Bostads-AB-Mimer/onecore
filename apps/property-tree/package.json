@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "property-tree",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,9 @@
     "generate-api-types": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/services/api/generated/api-types.ts"
   },
   "dependencies": {
+    "@deck.gl/core": "^9.0.38",
+    "@deck.gl/layers": "^9.0.38",
+    "@deck.gl/react": "^9.0.38",
     "@headlessui/react": "^1.7.18",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-collapsible": "^1.1.2",
@@ -25,13 +28,16 @@
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "deck.gl": "^9.0.38",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "framer-motion": "^11.0.8",
     "http-proxy-middleware": "^3.0.3",
     "lucide-react": "^0.344.0",
+    "maplibre-gl": "^5.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-map-gl": "^7.1.8",
     "react-router-dom": "^6.22.2",
     "tailwind-merge": "^2.5.5",
     "zod": "^3.23.8"
@@ -43,7 +49,6 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
-    "concurrently": "^9.1.2",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",

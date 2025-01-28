@@ -10,17 +10,16 @@ import {
   ArrowRight,
   User2,
 } from 'lucide-react'
+import { useSearch } from './hooks/useSearch'
 import { NavigationItem } from '../services/types'
 import { propertyService } from '../services/api'
 import { useCommandPalette } from './hooks/useCommandPalette'
 
 const routeMap = {
-  area: '/areas',
   property: '/properties',
   building: '/buildings',
-  entrance: '/entrances',
-  apartment: '/apartments',
-  tenant: '/tenants',
+  staircase: '/staircases',
+  residence: '/residences'
 }
 
 const iconMap = {
@@ -36,27 +35,17 @@ export function CommandPalette() {
   const navigate = useNavigate()
   const { isOpen, close } = useCommandPalette()
   const [query, setQuery] = React.useState('')
-  const [results, setResults] = React.useState<NavigationItem[]>([])
   const [selectedIndex, setSelectedIndex] = React.useState(0)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const { results, isLoading } = useSearch(query)
 
   React.useEffect(() => {
-    const search = async () => {
-      if (query.trim()) {
-        const searchResults = await propertyService.searchProperties(query)
-        setResults(searchResults)
-        setSelectedIndex(0)
-      } else {
-        setResults([])
-      }
-    }
-    search()
+    setSelectedIndex(0)
   }, [query])
 
   React.useEffect(() => {
     if (isOpen) {
       setQuery('')
-      setResults([])
       setSelectedIndex(0)
       requestAnimationFrame(() => {
         inputRef.current?.focus()

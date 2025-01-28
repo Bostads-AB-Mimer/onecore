@@ -208,7 +208,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Property"];
+              content?: components["schemas"]["Property"][];
             };
           };
         };

@@ -2,12 +2,14 @@ import { Company } from '../types'
 import { GET } from './baseApi'
 
 export const propertyService = {
+  // Get all properties
+
   async getFromCompany(company: Company) {
     const { data, error } = await GET('/properties', {
       params: { query: { companyCode: company.code } },
     })
     if (error) throw error
-    return data.content
+    return data?.content
   },
 
   async getPropertyById(propertyId: string) {

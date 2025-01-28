@@ -1,8 +1,10 @@
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Building2, Users, Home, Wallet } from 'lucide-react'
-import { companyService } from '../../services/api'
+import { Building2, Users, Home, Wallet, MapPin } from 'lucide-react'
+import { PropertyMap } from '../shared/PropertyMap'
+import { PropertyList } from '../shared/PropertyList'
+import { companyService, propertyService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
 import { Grid } from '../ui/grid'
@@ -12,15 +14,21 @@ import { useQuery } from '@tanstack/react-query'
 
 export function CompanyView() {
   const { companyId } = useParams()
-  const {
-    data: company,
-    isLoading,
-    error,
-  } = useQuery({
+  const companyQuery = useQuery({
     queryKey: ['company', companyId],
     queryFn: () => companyService.getById(companyId!),
     enabled: !!companyId,
   })
+
+  const propertiesQuery = useQuery({
+    queryKey: ['properties', companyId],
+    queryFn: () => propertyService.getFromCompany(companyQuery.data!),
+    enabled: !!companyQuery.data,
+  })
+
+  const isLoading = companyQuery.isLoading || propertiesQuery.isLoading
+  const error = companyQuery.error || propertiesQuery.error
+  const company = companyQuery.data
 
   if (isLoading) {
     return (
@@ -40,12 +48,29 @@ export function CompanyView() {
     )
   }
 
-  if (error || !company) {
+  if (error) {
+    console.error('Failed to load company:', error)
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Företag hittades inte
+          Ett fel uppstod när företaget skulle hämtas
         </h2>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Försök igen senare eller kontakta support om problemet kvarstår
+        </p>
+      </div>
+    )
+  }
+
+  if (!company) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          Företaget kunde inte hittas
+        </h2>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Kontrollera att företags-ID är korrekt
+        </p>
       </div>
     )
   }
@@ -54,7 +79,7 @@ export function CompanyView() {
     <div className="p-8 animate-in">
       <ViewHeader
         title={company.name}
-        subtitle={`${company.properties?.length} fastigheter`}
+        subtitle={`${propertiesQuery.data?.length} fastigheter`}
         type="Företag"
         icon={Building2}
       />
@@ -62,7 +87,7 @@ export function CompanyView() {
       <Grid cols={4} className="mb-8">
         <StatCard
           title="Fastigheter"
-          value={company.properties?.length}
+          value={propertiesQuery.data?.length || '0'}
           icon={Building2}
         />
         <StatCard
@@ -90,30 +115,19 @@ export function CompanyView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2">
-          <Card title="Fastigheter" icon={Building2}>
-            <Grid cols={2}>
-              {company.properties?.map((property) => (
-                <motion.div
-                  key={property.id}
-                  whileHover={{ scale: 1.02 }}
-                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                >
-                  <h3 className="font-medium">{property.name}</h3>
-                  <p className="text-sm text-gray-500">{property.address}</p>
-                  <div className="mt-2 flex items-center text-sm text-gray-500">
-                    <Home className="h-4 w-4 mr-1" />
-                    <span>{property.totalApartments} lägenheter</span>
-                  </div>
-                </motion.div>
-              ))}
-            </Grid>
-          </Card>
+          <PropertyList properties={propertiesQuery.data || []} />
         </div>
 
         <div className="space-y-6">
+          <Card title="Karta" icon={MapPin}>
+            <PropertyMap
+              properties={propertiesQuery.data || []}
+              companyName={company.name}
+            />
+          </Card>
           <Card title="Status" icon={Building2}>
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg opacity-50">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Uthyrningsgrad</span>
                   <span className="text-sm font-medium text-green-500">

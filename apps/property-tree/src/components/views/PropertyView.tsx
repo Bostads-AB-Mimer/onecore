@@ -9,7 +9,8 @@ import {
   Users,
   ArrowRight,
 } from 'lucide-react'
-import { propertyService } from '../../services/api'
+import { BuildingList } from '../shared/BuildingList'
+import { propertyService, buildingService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../ui/card'
 import { Grid } from '../ui/grid'
@@ -18,17 +19,19 @@ import { StatCard } from '../shared/StatCard'
 export function PropertyView() {
   const { propertyId } = useParams<{ propertyId: string }>()
   const navigate = useNavigate()
-  const {
-    data: property,
-    isLoading,
-    error,
-  } = useQuery({
+  const propertyQuery = useQuery({
     queryKey: ['property', propertyId],
     queryFn: () => propertyService.getPropertyById(propertyId!),
     enabled: !!propertyId,
   })
 
-  if (isLoading) {
+  const buildingsQuery = useQuery({
+    queryKey: ['buildings', propertyQuery.data?.code],
+    queryFn: () => buildingService.getByPropertyCode(propertyQuery.data!.code),
+    enabled: !!propertyQuery.data?.code,
+  })
+
+  if (propertyQuery.isLoading || buildingsQuery.isLoading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
@@ -53,7 +56,7 @@ export function PropertyView() {
     )
   }
 
-  if (error || !property) {
+  if (propertyQuery.error || !propertyQuery.data) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -66,8 +69,8 @@ export function PropertyView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={property.designation}
-        subtitle={`${property.municipality}, ${property.tract}`}
+        title={propertyQuery.data.designation}
+        subtitle={`${propertyQuery.data.municipality}, ${propertyQuery.data.congregation}`}
         type="Fastighet"
         icon={Building2}
       />
@@ -75,23 +78,23 @@ export function PropertyView() {
       <Grid cols={4} className="mb-8">
         <StatCard
           title="Lägenheter"
-          value={property.totalApartments}
+          value={propertyQuery.data.totalApartments}
           icon={Home}
-          subtitle={`${property.occupiedApartments} uthyrda`}
+          subtitle={`${propertyQuery.data.occupiedApartments} uthyrda`}
         />
         <StatCard
           title="Byggnader"
-          value={property._links?.buildings ? '1+' : '0'}
+          value={buildingsQuery.data?.length || 0}
           icon={Building2}
         />
         <StatCard
           title="Registreringsdatum"
-          value={property.registrationDate || 'Ej angivet'}
+          value={propertyQuery.data.registrationDate || 'Ej angivet'}
           icon={Calendar}
         />
         <StatCard
           title="Fastighetsnummer"
-          value={property.propertyTaxNumber || 'Ej angivet'}
+          value={propertyQuery.data.propertyIndexNumber || 'Ej angivet'}
           icon={Wrench}
         />
       </Grid>
@@ -103,11 +106,10 @@ export function PropertyView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2 space-y-6">
-          <Card title="Byggnader" icon={Building2}>
-            <div className="p-4 text-sm text-gray-500">
-              Klicka på fastigheten i sidomenyn för att visa byggnader
-            </div>
-          </Card>
+          <BuildingList
+            buildings={buildingsQuery.data || []}
+            icon={Building2}
+          />
 
           <Card title="Historik" icon={Calendar}>
             <div className="space-y-4">
@@ -125,7 +127,7 @@ export function PropertyView() {
             <div className="space-y-4">
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group opacity-50"
                 onClick={() => navigate('/tenants/tenant-1')}
               >
                 <div className="flex items-center space-x-3">

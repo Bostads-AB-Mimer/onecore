@@ -6,27 +6,12 @@ import { roomService } from '@/services/api'
 
 interface ResidenceRoomsProps {
   residenceId: string
-  buildingCode: string
-  floorCode: string
-  residenceCode: string
 }
 
-export function ResidenceRooms({
-  residenceId,
-  buildingCode,
-  floorCode,
-  residenceCode,
-}: ResidenceRoomsProps) {
+export function ResidenceRooms({ residenceId }: ResidenceRoomsProps) {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms', residenceId],
-    queryFn: async () => {
-      const rooms = await roomService.getByBuildingAndFloorAndResidence(
-        buildingCode,
-        floorCode,
-        residenceCode
-      )
-      return Promise.all(rooms.map((room) => roomService.getById(room.id)))
-    },
+    queryFn: () => roomService.getByResidenceId(residenceId),
   })
 
   if (isLoading) {

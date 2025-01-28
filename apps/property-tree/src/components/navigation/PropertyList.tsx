@@ -5,6 +5,13 @@ import { SidebarMenu } from '../ui/sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
 import { propertyService } from '@/services/api'
+import { MapPin } from 'lucide-react'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible'
+import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from '../ui/sidebar'
 
 interface PropertyListProps {
   company: Company
@@ -38,11 +45,39 @@ export function PropertyList({ company }: PropertyListProps) {
     )
   }
 
+  // Group properties by congregation
+  const propertiesByCongregation = properties?.reduce((acc, property) => {
+    const congregation = property.congregation || 'Övriga'
+    if (!acc[congregation]) {
+      acc[congregation] = []
+    }
+    acc[congregation].push(property)
+    return acc
+  }, {} as Record<string, typeof properties>)
+
   return (
-    <SidebarMenu>
-      {properties?.map((property) => (
-        <PropertyNavigation key={property.id} property={property} />
+    <div className="space-y-2">
+      {propertiesByCongregation && Object.entries(propertiesByCongregation).map(([congregation, congregationProperties]) => (
+        <Collapsible key={congregation} defaultOpen>
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                {congregation}
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {congregationProperties.map((property) => (
+                    <PropertyNavigation key={property.id} property={property} />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
       ))}
-    </SidebarMenu>
+    </div>
   )
 }
