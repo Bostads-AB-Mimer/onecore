@@ -5,7 +5,6 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { generateMetaLinks } from '../utils/links'
 import { getCompanies, getCompany } from '../adapters/company-adapter'
 import { HttpStatusCode } from 'axios'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
