@@ -58,9 +58,7 @@ const getProperties = async (
 ): Promise<any[]> => {
   const whereClause: Record<string, any> = {
     companyCode,
-    NOT: {
-      propertyId: null,
-    },
+    propertyId: { not: null },
     buildingId: null,
     managementUnitId: null,
     landAreaId: null,

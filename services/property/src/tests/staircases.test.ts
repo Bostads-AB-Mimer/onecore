@@ -17,9 +17,6 @@ describe('Staircases API', () => {
       .get('/staircases')
       .query({ buildingCode })
 
-    if (response.status === 500) {
-      console.error('Test failed with reason:', response.body.reason)
-    }
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
     expect(Array.isArray(response.body.content)).toBe(true)
@@ -42,8 +39,5 @@ describe('Staircases API', () => {
 
     expect(response.status).toBe(400)
     expect(response.body.errors).toBeDefined()
-    if (response.status === 500) {
-      console.error('Test failed with reason:', response.body.reason)
-    }
   })
 })

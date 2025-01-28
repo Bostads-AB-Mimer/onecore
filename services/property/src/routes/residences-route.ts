@@ -92,7 +92,6 @@ export const routes = (router: KoaRouter) => {
       const responseContent = dbResidences.map((residence) => {
         const links = ResidenceListLinksSchema.parse({
           self: { href: `/residences/${residence.id}` },
-          parent: { href: `/buildings/${buildingCode}` },
           components: { href: `/components?residenceCode=${residence.code}` },
         })
 
@@ -145,7 +144,15 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Residence'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/ResidenceDetails'
+   *                     - type: object
+   *                       properties:
+   *                         _links:
+   *                           $ref: '#/components/schemas/ResidenceLinks'
    *       404:
    *         description: Residence not found
    *       500:
@@ -166,10 +173,11 @@ export const routes = (router: KoaRouter) => {
       // TODO: find out why building is null in residence
       //const building = await getBuildingByCode(residence.buildingCode)
 
+      console.log('residence', residence)
+
       const parsedResidence = ResidenceDetailedSchema.parse({
         id: residence.id,
         code: residence.code,
-        buildingCode: residence.propertyObject.building?.buildingCode,
         name: residence.name || '',
         location: residence.location || '',
         accessibility: {

@@ -18,7 +18,7 @@ describe('Properties API', () => {
     const property = response.body.content[0]
     expect(property.id).toBeDefined()
     expect(property.code).toBeDefined()
-    expect(property.designation).toBeDefined() // Changed from name to designation
+    expect(property.propertyDesignationId).toBeDefined()
     expect(property._links).toBeDefined()
     expect(property._links.self).toBeDefined()
     expect(property._links.buildings).toBeDefined()
@@ -35,7 +35,7 @@ describe('Properties API', () => {
     expect(response.body.content.length).toBeGreaterThan(0)
 
     const property = response.body.content[0]
-    expect(property.designation).toContain(testTract)
+    expect(property.tract).toContain(testTract)
   })
 
   it('should return property details by ID', async () => {
@@ -45,6 +45,7 @@ describe('Properties API', () => {
       .query({ companyCode: testCompany })
 
     const propertyId = propertiesResponse.body.content[0].id
+    expect(propertiesResponse.status).toBe(200)
 
     const response = await request(app.callback()).get(
       `/properties/${propertyId}`
@@ -65,8 +66,5 @@ describe('Properties API', () => {
       '/properties/nonexistent'
     )
     expect(response.status).toBe(404)
-    if (response.status === 500) {
-      console.error('Test failed with reason:', response.body.reason)
-    }
   })
 })

@@ -47,7 +47,9 @@ describe('API Navigation Tests', () => {
     expect(propertyDetailsResponse.body.content).toBeDefined()
 
     const propertyDetails = propertyDetailsResponse.body.content
-    expect(propertyDetails.id.trim()).toBe(property.id.trim())
+    expect(propertyDetails.propertyObjectId.trim()).toBe(
+      property.propertyObjectId.trim()
+    )
     expect(propertyDetails.code).toBe(property.code)
   })
 

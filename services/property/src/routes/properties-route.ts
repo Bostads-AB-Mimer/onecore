@@ -5,6 +5,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { etagMiddleware } from '../middleware/etag'
 import { getProperties, getPropertyById } from '../adapters/property-adapter'
 import { generateMetaLinks } from '../utils/links'
 import {
@@ -22,6 +23,7 @@ import { PropertyLinksSchema } from '../types/links'
  *     description: Operations related to properties
  */
 export const routes = (router: KoaRouter) => {
+  router.use(etagMiddleware())
   /**
    * @swagger
    * /properties:
@@ -55,7 +57,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   type: array
-   *                   $ref: '#/components/schemas/Property'
+   *                   items:
+   *                     $ref: '#/components/schemas/Property'
    *       400:
    *         description: Invalid query parameters.
    *       500:
@@ -85,16 +88,14 @@ export const routes = (router: KoaRouter) => {
         return {
           ...property,
           _links: PropertyLinksSchema.parse({
-            self: { href: `/properties/${property.id}` },
+            self: { href: `/properties/${property.propertyId}` },
             buildings: { href: `/buildings?propertyCode=${property.code}` },
           }),
         }
       })
 
       ctx.body = {
-        content: responseContent,
-        ...metadata,
-        _links: generateMetaLinks(ctx, '/properties'),
+        content: responseContent
       }
     } catch (err) {
       ctx.status = 500

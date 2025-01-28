@@ -5,6 +5,7 @@ const prisma = new PrismaClient({})
 
 //todo: add types
 
+//todo: we might be able to skip using floorCode
 export const getRooms = async (
   buildingCode: string,
   floorCode: string,

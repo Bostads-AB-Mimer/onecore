@@ -41,8 +41,5 @@ describe('Companies API', () => {
   it('should return 404 for non-existent company ID', async () => {
     const response = await request(app.callback()).get('/companies/nonexistent')
     expect(response.status).toBe(404)
-    if (response.status === 500) {
-      console.error('Test failed with reason:', response.body.reason)
-    }
   })
 })

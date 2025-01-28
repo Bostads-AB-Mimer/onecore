@@ -5,12 +5,8 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getComponentById, getComponents } from '../adapters/component-adapter'
-import {
-  ComponentSchema,
-  componentsQueryParamsSchema,
-} from '../types/component'
-import { generateMetaLinks } from '../utils/links'
+import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
+import { componentsQueryParamsSchema, ComponentSchema } from '../types/component'
 import { ComponentLinksSchema } from '../types/links'
 
 /**
@@ -25,38 +21,26 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /components:
    *   get:
-   *     summary: Get components by building code, floor code, residence code, and room code.
-   *     description: Returns all components belonging to a specific room.
+   *     summary: Gets a list of components for a maintenance unit
+   *     description: |
+   *       Retrieves all components associated with a specific maintenance unit code.
+   *       Components are returned ordered by installation date (newest first).
+   *       Each component includes details about its type, category, manufacturer,
+   *       and associated maintenance unit information.
    *     tags:
    *       - Components
    *     parameters:
    *       - in: query
-   *         name: buildingCode
+   *         name: maintenanceUnit
    *         required: true
    *         schema:
    *           type: string
-   *         description: The building code of the building for the components.
-   *       - in: query
-   *         name: floorCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The floor code of the staircase for the building.
-   *       - in: query
-   *         name: residenceCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The residence code where the components are located.
-   *       - in: query
-   *         name: roomCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The room code where the components are located.
+   *         description: The unique code identifying the maintenance unit.
    *     responses:
    *       200:
-   *         description: Successfully retrieved the components.
+   *         description: |
+   *           Successfully retrieved the components list. Returns an array of component objects
+   *           containing details like ID, code, name, manufacturer, installation date, etc.
    *         content:
    *           application/json:
    *             schema:
@@ -67,13 +51,24 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     allOf:
    *                       - $ref: '#/components/schemas/Component'
+   *                       - type: object
+   *                         properties:
+   *                           _links:
+   *                             $ref: '#/components/schemas/ComponentLinks'
    *       400:
-   *         description: Invalid query parameters.
+   *         description: Invalid maintenance unit code provided
+   *       404:
+   *         description: No components found for the specified maintenance unit
    *       500:
-   *         description: Internal server error.
+   *         description: Internal server error
    */
   router.get('(.*)/components', async (ctx) => {
-    const queryParams = componentsQueryParamsSchema.safeParse(ctx.query)
+    // Add default type=residence if residenceCode is provided
+    const queryWithType = ctx.query.residenceCode 
+      ? { ...ctx.query, type: 'residence' }
+      : ctx.query;
+      
+    const queryParams = componentsQueryParamsSchema.safeParse(queryWithType)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -81,22 +76,22 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { buildingCode, floorCode, residenceCode, roomCode } =
-      queryParams.data
-
     const metadata = generateRouteMetadata(ctx)
-    logger.info(
-      `GET /components?buildingCode=${buildingCode}&floorCode=${floorCode}&residenceCode=${residenceCode}&roomCode=${roomCode}`,
-      metadata
-    )
-
+    
     try {
-      const components = await getComponents(
-        buildingCode,
-        floorCode,
-        residenceCode,
-        roomCode
-      )
+      let components;
+      if (queryParams.data.type === 'maintenance') {
+        logger.info(`GET /components?type=maintenance&maintenanceUnit=${queryParams.data.maintenanceUnit}`, metadata)
+        components = await getComponentByMaintenanceUnitCode(queryParams.data.maintenanceUnit)
+      } else {
+        logger.info(`GET /components?type=residence&residenceCode=${queryParams.data.residenceCode}`, metadata)
+        components = await getComponentByMaintenanceUnitCode(queryParams.data.residenceCode) // TODO: Implement getComponentByResidenceCode
+      }
+
+      if (!components) {
+        ctx.status = 404
+        return
+      }
 
       const responseContent = components.map((component) => {
         const parsedComponent = ComponentSchema.parse({
@@ -106,70 +101,15 @@ export const routes = (router: KoaRouter) => {
           ...parsedComponent,
           _links: ComponentLinksSchema.parse({
             self: { href: `/components/${component.id}` },
-            parent: {
-              href: `/residences/${residenceCode}`,
-            },
-            residence: { href: `/residences/${residenceCode}` },
+            maintenanceUnit: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
+            parent: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
           }),
         }
       })
+
       ctx.body = {
         content: responseContent,
         ...metadata,
-      }
-    } catch (err) {
-      console.log(err)
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /components/{id}:
-   *   get:
-   *     summary: Get a component by ID
-   *     description: Returns a component with the specified ID
-   *     tags:
-   *       - Components
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the component
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the component
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Component'
-   *       404:
-   *         description: Component not found
-   *       500:
-   *         description: Internal server error
-   */
-  router.get('(.*)/components/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const id = ctx.params.id
-    logger.info(`GET /components/${id}`, metadata)
-
-    try {
-      const component = await getComponentById(id)
-      if (!component) {
-        ctx.status = 404
-        return
-      }
-
-      ctx.body = {
-        content: component,
-        ...metadata,
-        _links: generateMetaLinks(ctx, '/components', {
-          id: ctx.params.response,
-        }),
       }
     } catch (err) {
       ctx.status = 500

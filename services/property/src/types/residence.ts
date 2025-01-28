@@ -14,7 +14,6 @@ export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  buildingCode: z.string(),
   deleted: z.boolean(),
   validityPeriod: z.object({
     fromDate: z.date(),
@@ -26,7 +25,6 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  buildingCode: z.string(),
   location: z.string().optional(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),

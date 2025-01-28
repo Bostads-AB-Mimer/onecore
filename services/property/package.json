@@ -1,5 +1,5 @@
 {
-  "name": "base",
+  "name": "property-base",
   "version": "1.0.0",
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
   "main": "index.ts",
@@ -8,7 +8,6 @@
     "build": "tsc",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
-    "generate": "npx prisma generate",
     "force-generate": "rm -rf node_modules && npm install && npx prisma generate"
   },
   "repository": {
@@ -39,7 +38,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "@types/koa": "2.13.6",
+    "@types/koa": "^2.13.6",
     "@types/koa__cors": "^5.0.0",
     "@types/koa__router": "12.0.4",
     "@types/lodash": "^4.17.9",

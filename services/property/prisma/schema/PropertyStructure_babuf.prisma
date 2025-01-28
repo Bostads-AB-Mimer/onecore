@@ -7,7 +7,7 @@ model PropertyStructure {
   buildingId               String?  @map("keyobjbyg") @db.Char(15)
   landAreaId               String?  @map("keyobjyta") @db.Char(15)
   leaseObjectId            String?  @map("keyobjaob") @db.Char(15)
-  constructionPartId       String?  @map("keyobjbdl") @db.Char(15)
+  buildingPartId           String?  @map("keyobjbdl") @db.Char(15)
   floorId                  String?  @map("keyobjvan") @db.Char(15)
   systemId                 String?  @map("keyobjsys") @db.Char(15)
   localeId                 String?  @map("keyobjlok") @db.Char(15)
@@ -34,8 +34,8 @@ model PropertyStructure {
   landAreaName             String?  @map("ytacaption") @db.VarChar(30)
   leaseObjectCode          String?  @map("aobcode") @db.VarChar(30)
   leaseObjectName          String?  @map("aobcaption") @db.VarChar(30)
-  constructionPartCode     String?  @map("bdlcode") @db.VarChar(30)
-  constructionPartName     String?  @map("bdlcaption") @db.VarChar(30)
+  buildingPartCode         String?  @map("bdlcode") @db.VarChar(30)
+  buildingPartName         String?  @map("bdlcaption") @db.VarChar(30)
   floorCode                String?  @map("vancode") @db.VarChar(30)
   floorName                String?  @map("vancaption") @db.VarChar(30)
   systemCode               String?  @map("syscode") @db.VarChar(30)
@@ -73,7 +73,7 @@ model PropertyStructure {
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")
-  @@index([constructionPartId], map: "fkbabufobjbdl")
+  @@index([buildingPartId], map: "fkbabufobjbdl")
   @@index([parkingSpaceId], map: "fkbabufobjbps")
   @@index([buildingId], map: "fkbabufobjbyg")
   @@index([companyId], map: "fkbabufobjcmp")
