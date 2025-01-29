@@ -471,7 +471,7 @@ export const routes = (router: KoaRouter) => {
    */
 
   type GetApplicationProfileResponseData = z.infer<
-    typeof leasing.GetApplicationProfileResponseDataSchema
+    typeof leasing.v1.GetApplicationProfileResponseDataSchema
   >
 
   router.get('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
@@ -560,13 +560,13 @@ export const routes = (router: KoaRouter) => {
    */
 
   type CreateOrUpdateApplicationProfileResponseData = z.infer<
-    typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+    typeof leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema
   >
 
   router.post(
     '(.*)/contacts/:contactCode/application-profile',
     parseRequestBody(
-      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+      leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
     ),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)

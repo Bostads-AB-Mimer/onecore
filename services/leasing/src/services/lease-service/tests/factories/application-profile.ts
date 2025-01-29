@@ -1,8 +1,11 @@
 import { Factory } from 'fishery'
-import {
-  ApplicationProfile,
-  ApplicationProfileHousingReference,
-} from 'onecore-types'
+import { schemas } from 'onecore-types'
+import { z } from 'zod'
+
+type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
+type ApplicationProfileHousingReference = z.infer<
+  typeof schemas.v1.ApplicationProfileHousingReferenceSchema
+>
 
 export const ApplicationProfileFactory = Factory.define<ApplicationProfile>(
   ({ sequence }) => ({

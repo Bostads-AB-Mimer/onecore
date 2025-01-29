@@ -15,7 +15,7 @@ jobs:
           ACCEPT_EULA: Y
         ports:
           - "1433:1433"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

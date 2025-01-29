@@ -1,4 +1,4 @@
-import { ApplicationProfile, leasing } from 'onecore-types'
+import { schemas, leasing } from 'onecore-types'
 import { Knex } from 'knex'
 import { z } from 'zod'
 
@@ -6,8 +6,10 @@ import { AdapterResult } from './adapters/types'
 import * as applicationProfileAdapter from './adapters/application-profile-adapter'
 
 type Params = z.infer<
-  typeof leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+  typeof leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
 >
+
+type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
 
 export async function updateOrCreateApplicationProfile(
   db: Knex,
