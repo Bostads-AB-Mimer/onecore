@@ -1,7 +1,7 @@
 import { leasing } from 'onecore-types'
 
 export const UpdateApplicationProfileRequestParams =
-  leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.pick({
+  leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema.pick({
     numChildren: true,
     numAdults: true,
     landlord: true,
@@ -9,7 +9,7 @@ export const UpdateApplicationProfileRequestParams =
     housingTypeDescription: true,
   }).extend({
     housingReference:
-      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.shape.housingReference.pick(
+      leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema.shape.housingReference.pick(
         {
           email: true,
           phone: true,
@@ -24,7 +24,7 @@ export const UpdateApplicationProfileRequestParams =
   })
 
 export const UpdateApplicationProfileResponseData =
-  leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+  leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema
 
 export const GetApplicationProfileResponseData =
-  leasing.GetApplicationProfileResponseDataSchema
+  leasing.v1.GetApplicationProfileResponseDataSchema

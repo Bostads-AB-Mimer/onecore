@@ -518,7 +518,7 @@ const validatePropertyRentalRules = async (
 }
 
 type GetApplicationProfileResponseData = z.infer<
-  typeof leasing.GetApplicationProfileResponseDataSchema
+  typeof leasing.v1.GetApplicationProfileResponseDataSchema
 >
 
 async function getApplicationProfileByContactCode(
@@ -547,11 +547,11 @@ async function getApplicationProfileByContactCode(
 }
 
 type CreateOrUpdateApplicationProfileResponseData = z.infer<
-  typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+  typeof leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema
 >
 
 export type CreateOrUpdateApplicationProfileRequestParams = z.infer<
-  typeof leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+  typeof leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
 >
 
 async function createOrUpdateApplicationProfileByContactCode(
