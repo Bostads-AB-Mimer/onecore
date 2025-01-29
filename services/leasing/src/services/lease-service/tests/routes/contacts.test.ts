@@ -174,7 +174,7 @@ describe('GET /contacts/:contactCode/application-profile', () => {
 
     expect(res.status).toBe(200)
     expect(() =>
-      leasing.GetApplicationProfileResponseDataSchema.parse(res.body.content)
+      leasing.v1.GetApplicationProfileResponseDataSchema.parse(res.body.content)
     ).not.toThrow()
   })
 })
@@ -210,7 +210,7 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
     expect(res.status).toBe(200)
     expect(() =>
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+      leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
         res.body.content
       )
     ).not.toThrow()
@@ -238,7 +238,7 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
     expect(res.status).toBe(201)
     expect(() =>
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+      leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
         res.body.content
       )
     ).not.toThrow()
