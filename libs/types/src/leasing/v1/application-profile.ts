@@ -1,31 +1,30 @@
 import {
   ApplicationProfileHousingReferenceSchema,
   ApplicationProfileSchema,
-} from '../schemas'
+} from '../../schemas/v1'
 
-/** @deprecated */
 export const GetApplicationProfileResponseDataSchema = ApplicationProfileSchema
 
-/** @deprecated */
 export const CreateOrUpdateApplicationProfileRequestParamsSchema =
   ApplicationProfileSchema.pick({
     numAdults: true,
     numChildren: true,
     expiresAt: true,
-    housingType: true,
     housingTypeDescription: true,
     landlord: true,
   }).extend({
+    housingType: ApplicationProfileSchema.shape.housingType.unwrap(),
     housingReference: ApplicationProfileHousingReferenceSchema.pick({
       email: true,
       expiresAt: true,
       phone: true,
       reviewStatus: true,
-      reviewStatusReason: true,
-      reviewedAt: true,
-    }).optional(),
+      comment: true,
+      reasonRejected: true,
+      lastAdminUpdatedAt: true,
+      lastApplicantUpdatedAt: true,
+    }),
   })
 
-/** @deprecated */
 export const CreateOrUpdateApplicationProfileResponseDataSchema =
   ApplicationProfileSchema
