@@ -140,7 +140,7 @@ export const createOfferForInternalParkingSpace = async (
     }
     const offer = await leasingAdapter.createOffer({
       applicantId: eligibleApplicant.id,
-      expiresAt: utils.date.addBusinessDays(new Date(), 2),
+      expiresAt: utils.date.addBusinessDays(new Date(), 3),
       listingId: listing.id,
       status: OfferStatus.Active,
       selectedApplicants: [updatedApplicant, ...activeApplicants].map(
