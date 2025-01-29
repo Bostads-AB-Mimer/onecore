@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.1...v3.3.2) (2025-01-29)
+
+
+### Bug Fixes
+
+* export schemas ([38a5860](https://github.com/Bostads-AB-Mimer/onecore-types/commit/38a5860cd3bedf40eb0636c7d072e68fe4457942))
+
 ## [3.3.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.0...v3.3.1) (2025-01-29)
 
 
