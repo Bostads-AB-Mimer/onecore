@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.0...v3.3.1) (2025-01-29)
+
+
+### Bug Fixes
+
+* migrate breaking changes from application profile to v1 directory ([#150](https://github.com/Bostads-AB-Mimer/onecore-types/issues/150)) ([443424c](https://github.com/Bostads-AB-Mimer/onecore-types/commit/443424c23805dbb0eb3c534872d8ea48838b6541))
+
 ## [3.3.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.2.0...v3.3.0) (2025-01-22)
 
 
