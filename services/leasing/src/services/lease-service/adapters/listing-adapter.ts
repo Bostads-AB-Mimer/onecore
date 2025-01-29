@@ -287,6 +287,7 @@ const getListingsWithApplicants = async (
             SELECT 1
             FROM applicant a
             WHERE a.ListingId = l.Id
+            AND a.Status = ?
           )
           AND NOT EXISTS (
             SELECT 1
@@ -294,7 +295,7 @@ const getListingsWithApplicants = async (
             WHERE o.ListingId = l.Id
           )
           `,
-          [ListingStatus.Expired]
+          [ListingStatus.Expired, ApplicantStatus.Active]
         )
       )
       .with({ type: 'offered' }, () =>
