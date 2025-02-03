@@ -99,7 +99,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrderData/:identifier', async (ctx: any) => {
+  router.get('(.*)/workOrderData/:identifier', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['handler'])
     const responseData: any = []
 
@@ -120,7 +120,7 @@ export const routes = (router: KoaRouter) => {
       rentalObjectId: async () => {
         const leases = await leasingAdapter.getLeasesForPropertyId(
           ctx.params.identifier,
-          undefined,
+          ctx.query['includeTerminatedLeases'],
           'true'
         )
         if (leases) {
@@ -179,7 +179,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const handler = handlers[ctx.query.handler]
+      const handlerParam = Array.isArray(ctx.query.handler)
+        ? ctx.query.handler[0]
+        : ctx.query.handler
+      const handler = handlers[handlerParam ?? '']
+
       if (handler) {
         await handler()
       } else {
@@ -247,7 +251,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/contactCode/:contactCode', async (ctx: any) => {
+  router.get('(.*)/workOrders/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const result = await workOrderAdapter.getWorkOrdersByContactCode(
