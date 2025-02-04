@@ -551,6 +551,53 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /listing/{listingId}/applicants/details:
+   *   get:
+   *     summary: Get listing by ID with detailed applicants
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves a listing by ID along with detailed information about its applicants.
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the listing to fetch along with detailed applicant information.
+   *     responses:
+   *       '200':
+   *         description: Successful retrieval of the listing with detailed applicant information.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/listing/:listingId/applicants/details', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getDetailedApplicantsByListingId(
+      Number(ctx.params.listingId)
+    )
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Listing not found', ...metadata }
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /listing/{id}:
    *   get:
    *     summary: Get listing by ID
@@ -1121,53 +1168,6 @@ export const routes = (router: KoaRouter) => {
       )
 
     ctx.body = { content: responseData, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /listing/{listingId}/applicants/details:
-   *   get:
-   *     summary: Get listing by ID with detailed applicants
-   *     tags:
-   *       - Lease service
-   *     description: Retrieves a listing by ID along with detailed information about its applicants.
-   *     parameters:
-   *       - in: path
-   *         name: listingId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the listing to fetch along with detailed applicant information.
-   *     responses:
-   *       '200':
-   *         description: Successful retrieval of the listing with detailed applicant information.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/listing/:listingId/applicants/details', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.getDetailedApplicantsByListingId(
-      Number(ctx.params.listingId)
-    )
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Listing not found', ...metadata }
-        return
-      } else {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
   })
 
   /**
