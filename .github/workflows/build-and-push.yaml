@@ -1,0 +1,122 @@
+name: Build and Push Images
+
+on:
+  push:
+    branches:
+      - main
+      - feat/k8s*
+    tags:
+      - production*
+      - staging*
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yaml
+
+  prepare-version:
+    needs: [lint]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Calculate next version
+        id: version
+        run: |
+          # Determine version bump based on ref
+          if [[ $GITHUB_REF == refs/tags/production* ]]; then
+            npm version major -no-git-tag-version
+          elif [[ $GITHUB_REF == refs/tags/staging* ]]; then
+            npm version minor -no-git-tag-version
+          else
+            npm version patch -no-git-tag-version
+          fi
+
+          # Get the new version
+          VERSION=$(npm pkg get version | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: prepare-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [property-base, property-tree]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.package }}
+          tags: |
+            type=raw,value=${{ needs.prepare-version.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./packages/${{ matrix.package }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.package }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+
+  commit-version:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Update version
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # Get current branch name
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+
+          # Update version in package.json
+          npm version ${{ needs.prepare-version.outputs.version }} -no-git-tag-version
+
+          # Commit and push the version change
+          git add package.json
+          git commit -m "chore: bump version to ${{ needs.prepare-version.outputs.version }} [skip ci]"
+          git tag "v${{ needs.prepare-version.outputs.version }}"
+          git push origin HEAD:$BRANCH_NAME --follow-tags
