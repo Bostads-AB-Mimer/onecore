@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { ListingStatus, OfferStatus } from 'onecore-types'
+import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'
 import * as offerAdapter from '../../../adapters/offer-adapter'
@@ -371,6 +371,42 @@ describe(listingAdapter.getListingsWithApplicants, () => {
 
         expect(listings.data).toEqual([
           expect.objectContaining({ id: needsRepublishListing.data.id }),
+        ])
+      }))
+
+    it('needs-republish should return listings whos applicants were removed', () =>
+      withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listing.build({
+            rentalObjectCode: '1',
+            status: ListingStatus.NoApplicants,
+          }),
+          ctx.db
+        )
+
+        assert(listing.ok)
+        const applicant = await listingAdapter.createApplication(
+          factory.applicant.build({ listingId: listing.data.id }),
+          ctx.db
+        )
+
+        assert(applicant)
+        await listingAdapter.updateApplicantStatus(
+          applicant.id,
+          ApplicantStatus.WithdrawnByUser,
+          ctx.db
+        )
+
+        const listings = await listingAdapter.getListingsWithApplicants(
+          ctx.db,
+          {
+            by: { type: 'needs-republish' },
+          }
+        )
+
+        assert(listings.ok)
+        expect(listings.data).toEqual([
+          expect.objectContaining({ id: listing.data.id }),
         ])
       }))
   })
