@@ -295,7 +295,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('/offers/listing-id/:listingId', async (ctx) => {
+  router.get('(.*)/offers/listing-id/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getOffersByListingId(
       Number.parseInt(ctx.params.listingId)
@@ -335,7 +335,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('/offers/listing-id/:listingId/active', async (ctx) => {
+  router.get('(.*)/offers/listing-id/:listingId/active', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getActiveOfferByListingId(
       Number.parseInt(ctx.params.listingId)
@@ -614,7 +614,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
 
-  router.get('/listings-with-applicants', async (ctx) => {
+  router.get('(.*)/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getListingsWithApplicants(
       ctx.querystring
@@ -808,7 +808,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
+  router.post('(.*)/listings/sync-internal-from-xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.syncInternalParkingSpacesFromXpand()
 
@@ -847,7 +847,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/applicants/:contactCode', async (ctx) => {
+  router.get('(.*)/applicants/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getApplicantsByContactCode(
       ctx.params.contactCode
@@ -1113,7 +1113,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/applicants-with-listings/:contactCode', async (ctx) => {
+  router.get('(.*)/applicants-with-listings/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData =
       await leasingAdapter.getApplicantsAndListingByContactCode(
@@ -1148,7 +1148,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/listing/:listingId/applicants/details', async (ctx) => {
+  router.get('(.*)/listing/:listingId/applicants/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getDetailedApplicantsByListingId(
       Number(ctx.params.listingId)
@@ -1312,7 +1312,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/applicants/:contactCode/:listingId', async (ctx) => {
+  router.get('(.*)/applicants/:contactCode/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { contactCode, listingId } = ctx.params
     const responseData =
@@ -1363,7 +1363,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
+  router.delete('(.*)/applicants/:applicantId/by-manager', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.withdrawApplicantByManager(
       ctx.params.applicantId
@@ -1427,7 +1427,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.delete(
-    '/applicants/:applicantId/by-user/:contactCode',
+    '(.*)/applicants/:applicantId/by-user/:contactCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const responseData = await leasingAdapter.withdrawApplicantByUser(
