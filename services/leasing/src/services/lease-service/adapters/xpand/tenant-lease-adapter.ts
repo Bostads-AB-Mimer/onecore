@@ -531,15 +531,13 @@ const shouldIncludeTerminatedLeases = (
 }
 
 const isLeaseActive = (lease: Lease | PartialLease): boolean => {
+  const { leaseStartDate, lastDebitDate, terminationDate } = lease
   const currentDate = new Date()
-  const leaseStartDate = new Date(lease.leaseStartDate)
-  const lastDebitDate = lease.lastDebitDate
-    ? new Date(lease.lastDebitDate)
-    : null
 
   return (
     leaseStartDate < currentDate &&
-    (!lastDebitDate || currentDate < lastDebitDate)
+    (!lastDebitDate || currentDate < lastDebitDate) &&
+    (!terminationDate || currentDate < terminationDate)
   )
 }
 
