@@ -11,7 +11,7 @@ import {
   Settings,
   Hash,
 } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Button } from '@/components/ui/Button'
 
 interface ComponentFormData {
   name: string
@@ -286,7 +286,7 @@ export function ComponentForm({
         >
           Avbryt
         </Button>
-        <Button type="submit" variant="primary" disabled={isSubmitting}>
+        <Button type="submit" variant="default" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />

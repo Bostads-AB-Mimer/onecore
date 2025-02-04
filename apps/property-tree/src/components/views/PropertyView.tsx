@@ -12,8 +12,8 @@ import {
 import { BuildingList } from '../shared/BuildingList'
 import { propertyService, buildingService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
+import { Card } from '../../components/ui/Card'
+import { Grid } from '../../components/ui/Grid'
 import { StatCard } from '../shared/StatCard'
 
 export function PropertyView() {
@@ -77,10 +77,10 @@ export function PropertyView() {
 
       <Grid cols={4} className="mb-8">
         <StatCard
-          title="Lägenheter"
-          value={propertyQuery.data.totalApartments}
+          title="Byggnader"
+          value={buildingsQuery.data?.length || 0}
           icon={Home}
-          subtitle={`${propertyQuery.data.occupiedApartments} uthyrda`}
+          subtitle={`?st uthyrda`}
         />
         <StatCard
           title="Byggnader"

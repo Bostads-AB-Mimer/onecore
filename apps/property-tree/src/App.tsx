@@ -4,13 +4,9 @@ import {
   Route,
   Navigate,
 } from 'react-router-dom'
-import { useBreadcrumb } from './components/hooks/useBreadcrumb'
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  CommandPaletteProvider,
-  useCommandPalette,
-} from './components/hooks/useCommandPalette'
+import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
 
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
@@ -32,6 +28,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbItem,
+  BreadcrumbLink,
 } from './components/ui/breadcrumb'
 
 const queryClient = new QueryClient({
@@ -55,13 +52,21 @@ function AppContent() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                {useBreadcrumb().items.map((item, index) => (
-                  <BreadcrumbItem key={item.href}>
-                    <BreadcrumbPage href={item.href}>
-                      {item.label}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                ))}
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Hem</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Företag</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Fastighet</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Byggnad</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Våning</BreadcrumbLink>
+                </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </header>

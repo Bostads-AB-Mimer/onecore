@@ -6,10 +6,9 @@ import { PropertyMap } from '../shared/PropertyMap'
 import { PropertyList } from '../shared/PropertyList'
 import { companyService, propertyService } from '../../services/api'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
 import { StatCard } from '../shared/StatCard'
-import { CompanyDetails } from '@/services/types'
 import { useQuery } from '@tanstack/react-query'
 
 export function CompanyView() {
@@ -92,20 +91,12 @@ export function CompanyView() {
         />
         <StatCard
           title="Lägenheter"
-          value={company.totalApartments}
+          value={'? st'}
           icon={Home}
-          subtitle={`${company.occupiedApartments} uthyrda`}
+          subtitle={`? st uthyrda`}
         />
-        <StatCard
-          title="Hyresgäster"
-          value={company.occupiedApartments}
-          icon={Users}
-        />
-        <StatCard
-          title="Årshyra"
-          value={`${company.yearlyRent?.toLocaleString()} kr`}
-          icon={Wallet}
-        />
+        <StatCard title="Hyresgäster" value={'?'} icon={Users} />
+        <StatCard title="Årshyra" value={`? kr`} icon={Wallet} />
       </Grid>
 
       <motion.div
@@ -131,18 +122,14 @@ export function CompanyView() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">Uthyrningsgrad</span>
                   <span className="text-sm font-medium text-green-500">
-                    {Math.round(
-                      (company.occupiedApartments / company.totalApartments) *
-                        100
-                    )}
-                    %
+                    ? %
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{
-                      width: `${Math.round((company.occupiedApartments / company.totalApartments) * 100)}%`,
+                      width: `? %`,
                     }}
                   />
                 </div>

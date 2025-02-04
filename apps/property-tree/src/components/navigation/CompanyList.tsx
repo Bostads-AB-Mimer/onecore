@@ -1,15 +1,19 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
-import { Skeleton } from '../ui/skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { companyService } from '@/services/api'
 import { CompanyNavigation } from './Company'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '../ui/collapsible'
-import { SidebarGroup, SidebarGroupContent, SidebarMenu } from '../ui/sidebar'
+} from '@/components/ui/collapsible'
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+} from '@/components/ui/sidebar'
 
 export function CompanyList() {
   const {

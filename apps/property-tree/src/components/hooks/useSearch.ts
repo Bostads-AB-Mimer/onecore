@@ -11,17 +11,18 @@ export function useSearch(query: string) {
   const prefetchQuery = useQuery({
     queryKey: ['searchItems'],
     queryFn: async () => {
-      const [/*properties, */ buildings, residences] = await Promise.all([
-        //propertyService.getAll(),
-        Promise.resolve([]),
+      /*const [
+        properties, buildings, residences
+      ] = await Promise.all([
+        propertyService.getAll(),
         buildingService.getAll(),
         residenceService.getAll(),
-      ])
+      ])*/
 
       return {
-        properties,
-        buildings,
-        residences,
+        properties: [], // TODO: activate search
+        buildings: [],
+        residences: [],
       }
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes

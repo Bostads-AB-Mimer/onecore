@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -16,10 +17,10 @@ import {
 } from 'lucide-react'
 import { Room, Component, Issue } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { ComponentList } from '../shared/ComponentList'
 import { ActiveIssues } from '../shared/ActiveIssues'
 
@@ -151,7 +152,7 @@ export function RoomView() {
   if (loading) return <LoadingSkeleton />
   if (!room) return <div>Room not found</div>
 
-  const Icon = roomIcons[room.type] || Home
+  const Icon = roomIcons[room.roomType.name] || Home
 
   const handleAddComponent = async (data: any) => {
     // Implementation for adding a component
@@ -184,7 +185,7 @@ export function RoomView() {
               <Maximize2 className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Storlek</p>
-                <p className="font-medium">{room.size} m²</p>
+                <p className="font-medium">{room.roomType.name} ?</p>
               </div>
             </div>
           </div>
@@ -196,7 +197,7 @@ export function RoomView() {
               <DoorOpen className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Fönster</p>
-                <p className="font-medium">{room.windows} st</p>
+                <p className="font-medium">? st</p>
               </div>
             </div>
           </div>
@@ -208,7 +209,9 @@ export function RoomView() {
               <Wrench className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Funktioner</p>
-                <p className="font-medium">{room.features.length} st</p>
+                <p className="font-medium">
+                  {Object.values(room.features).filter(Boolean).length} st
+                </p>
               </div>
             </div>
           </div>
@@ -224,7 +227,7 @@ export function RoomView() {
         <div className="lg:col-span-2 space-y-6">
           <Card title="Funktioner" icon={Settings}>
             <div className="flex flex-wrap gap-2">
-              {room.features.map((feature, index) => (
+              {Object.entries(room.features).map((feature, index) => (
                 <Badge
                   key={index}
                   icon={AlertCircle}
@@ -236,7 +239,6 @@ export function RoomView() {
               ))}
               <Button
                 variant="outline"
-                icon={Plus}
                 onClick={() => console.log('Add feature')}
               >
                 Lägg till
@@ -259,8 +261,7 @@ export function RoomView() {
           <Card title="Åtgärder" icon={Wrench}>
             <div className="space-y-3">
               <Button
-                variant="primary"
-                icon={Plus}
+                variant="link"
                 className="w-full"
                 onClick={() => console.log('Add issue')}
               >
@@ -268,7 +269,6 @@ export function RoomView() {
               </Button>
               <Button
                 variant="secondary"
-                icon={Wrench}
                 className="w-full"
                 onClick={() => console.log('Plan maintenance')}
               >
@@ -276,7 +276,6 @@ export function RoomView() {
               </Button>
               <Button
                 variant="secondary"
-                icon={Settings}
                 className="w-full"
                 onClick={() => console.log('Room settings')}
               >

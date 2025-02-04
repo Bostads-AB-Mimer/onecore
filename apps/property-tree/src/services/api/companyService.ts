@@ -4,7 +4,11 @@ import { GET } from './baseApi'
 export const companyService = {
   // Get all companies
   async getAll(): Promise<Company[]> {
-    const { data, error } = await GET('/companies')
+    const { data, error } = await GET('/companies', {
+      params: {
+        query: { limit: 100 },
+      },
+    })
     if (error) throw error
     return data.content || []
   },

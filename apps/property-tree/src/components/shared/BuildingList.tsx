@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { Building } from '@/services/types'
 import { useNavigate } from 'react-router-dom'
-import { Card } from '../ui/card'
+import { Card } from '@/components/ui/Card'
 
 interface BuildingListProps {
   buildings: Building[]
@@ -11,7 +11,11 @@ interface BuildingListProps {
   icon?: React.ComponentType
 }
 
-export function BuildingList({ buildings, title = "Byggnader", icon }: BuildingListProps) {
+export function BuildingList({
+  buildings,
+  title = 'Byggnader',
+  icon,
+}: BuildingListProps) {
   const navigate = useNavigate()
 
   return (

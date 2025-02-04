@@ -10,8 +10,6 @@ import {
   FileText,
   MessageSquare,
 } from 'lucide-react'
-import { propertyService } from '../../services/api'
-import { Tenant } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 
 export function TenantView() {
@@ -30,7 +28,7 @@ export function TenantView() {
           email: 'anna.svensson@example.com',
           phone: '070-123 45 67',
           moveInDate: '2021-01-01',
-          apartmentId: '101',
+          residenceId: '101',
         })
       } finally {
         setLoading(false)
@@ -46,7 +44,7 @@ export function TenantView() {
     <div className="p-8 animate-in">
       <ViewHeader
         title={tenant.name}
-        subtitle={`Lägenhet ${tenant.apartmentId}`}
+        subtitle={`Lägenhet ${tenant.residenceId}`}
         type="Hyresgäst"
         icon={User2}
       />
@@ -92,7 +90,7 @@ export function TenantView() {
                   <Home className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Lägenhet</p>
-                    <p className="font-medium">{tenant.apartmentId}</p>
+                    <p className="font-medium">{tenant.residenceId}</p>
                   </div>
                 </div>
               </div>

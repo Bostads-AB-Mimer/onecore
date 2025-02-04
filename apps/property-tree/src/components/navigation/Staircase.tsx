@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building, Staircase } from '@/services/types'
 import { GitGraph } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '../ui/sidebar'
+import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar'
 import { ResidenceList } from './ResidenceList'
 
 interface StaircaseNavigationProps {

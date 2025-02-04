@@ -1,21 +1,16 @@
 import React from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
-import { propertyService } from '../../services/api'
 import { ResidenceRooms } from '../shared/ResidenceRooms'
-import { Residence } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
-import { RoomCard } from '../shared/RoomCard'
-import { ActiveIssues } from '../shared/ActiveIssues'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
 import { StatCard } from '../shared/StatCard'
-import { Button } from '../ui/button'
 import { ContractModal } from '../shared/ContractModal'
 import { residenceService } from '@/services/api'
-import { useQueries, useQuery } from '@tanstack/react-query'
-import { Badge } from '../ui/badge'
+import { useQuery } from '@tanstack/react-query'
+import { Badge } from '@/components/ui/Badge'
 
 function LoadingSkeleton() {
   return (
@@ -53,6 +48,7 @@ function LoadingSkeleton() {
 
 export function ResidenceView() {
   const { residenceId } = useParams()
+  const { state } = useLocation()
   const [showContract, setShowContract] = React.useState(false)
 
   const residenceQuery = useQuery({
@@ -60,7 +56,9 @@ export function ResidenceView() {
     queryFn: () => residenceService.getById(residenceId!),
     enabled: !!residenceId,
   })
-  console.log('data', residenceQuery.data)
+
+  const buildingCode = state?.buildingCode
+  const floorCode = state?.floorCode
 
   const isLoading = residenceQuery.isLoading
   const error = residenceQuery.error
@@ -119,7 +117,11 @@ export function ResidenceView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2 space-y-6">
-          <ResidenceRooms residenceId={residence.id} />
+          <ResidenceRooms
+            buildingCode={buildingCode}
+            floorCode={floorCode}
+            residenceId={residenceId}
+          />
 
           <Card title="Egenskaper">
             <Grid cols={2}>
@@ -275,9 +277,8 @@ export function ResidenceView() {
 
           <ResidenceRooms
             residenceId={residence.id}
-            buildingCode={residence.buildingCode}
-            floorCode={residence.floorCode}
-            residenceCode={residence.code}
+            buildingCode={buildingCode}
+            floorCode={floorCode}
           />
         </div>
 
@@ -308,14 +309,14 @@ export function ResidenceView() {
         </div>
       </motion.div>
 
-      {residence.tenant && (
+      {/*residence.tenant && (
         <ContractModal
           isOpen={showContract}
           onClose={() => setShowContract(false)}
           tenant={residence.tenant}
           residence={residence}
         />
-      )}
+      )*/}
     </div>
   )
 }

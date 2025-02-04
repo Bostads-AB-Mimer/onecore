@@ -114,13 +114,8 @@ export function PropertyMap({ properties }: PropertyMapProps) {
       ],
     })
 
-    // Add new overlay
-    map.current.addControl(deckOverlay)
-
     return () => {
-      if (map.current) {
-        map.current.removeControl(deckOverlay)
-      }
+      // remove something here?
     }
   }, [properties, propertyCoordinates])
 

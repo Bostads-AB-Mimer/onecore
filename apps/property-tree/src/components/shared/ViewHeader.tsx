@@ -1,11 +1,11 @@
 import React from 'react'
-import { LucideIcon } from 'lucide-react'
+import { LucideProps } from 'lucide-react'
 
 interface ViewHeaderProps {
   title: string
   subtitle: string
   type: string
-  icon: LucideIcon
+  icon: React.ComponentType<LucideProps>
 }
 
 export function ViewHeader({

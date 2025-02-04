@@ -1,16 +1,9 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import {
-  Settings,
-  Building,
-  Package,
-  Wrench,
-  Plus,
-  ArrowRight,
-} from 'lucide-react'
+import { Settings, Building, Package, Wrench, ArrowRight } from 'lucide-react'
 import { Component } from '../../services/types'
-import { Card } from '../ui/card'
-import { Button } from '../ui/button'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { ComponentModal } from './ComponentModal'
 
 interface ComponentListProps {
@@ -34,6 +27,13 @@ const statusColors = {
   broken: 'text-red-500',
 }
 
+const getComponentType = (component: Component) =>
+  component.classification.componentType.code
+const getComponentStatus = (component: Component) =>
+  component.details.typeDesignation || 'operational'
+const getComponentRoom = (component: Component) =>
+  component.maintenanceUnits[0] || 'Okänd plats'
+
 export function ComponentList({
   components,
   rooms,
@@ -45,12 +45,12 @@ export function ComponentList({
   const [editingComponent, setEditingComponent] =
     React.useState<Component | null>(null)
 
-  const handleAddSubmit = async (data: any) => {
+  const handleAddSubmit = async (data: Component) => {
     await onAddComponent(data)
     setShowAddModal(false)
   }
 
-  const handleEditSubmit = async (data: any) => {
+  const handleEditSubmit = async (data: Component) => {
     if (editingComponent) {
       await onEditComponent(editingComponent.id, data)
       setEditingComponent(null)
@@ -62,18 +62,14 @@ export function ComponentList({
       <Card title="Komponenter">
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setShowAddModal(true)}
-            >
+            <Button variant="default" onClick={() => setShowAddModal(true)}>
               Lägg till komponent
             </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {components.map((component) => {
-              const Icon = typeIcons[component.type]
+              const Icon = typeIcons[getComponentType(component)]
               return (
                 <motion.div
                   key={component.id}
@@ -90,18 +86,18 @@ export function ComponentList({
                         <h3 className="font-medium group-hover:text-blue-500 transition-colors">
                           {component.name}
                         </h3>
-                        <p className="text-sm text-gray-500">
-                          {component.room}
-                        </p>
+                        <p className="text-sm text-gray-500">? plats</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <span
-                        className={`text-sm ${statusColors[component.status]}`}
+                        className={`text-sm ${statusColors[getComponentStatus(component)]}`}
                       >
-                        {component.status === 'operational' && 'OK'}
-                        {component.status === 'needs-service' && 'Service'}
-                        {component.status === 'broken' && 'Trasig'}
+                        {getComponentStatus(component) === 'operational' &&
+                          'OK'}
+                        {getComponentStatus(component) === 'needs-service' &&
+                          'Service'}
+                        {getComponentStatus(component) === 'broken' && 'Trasig'}
                       </span>
                       <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
                     </div>

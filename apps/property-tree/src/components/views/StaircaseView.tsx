@@ -1,6 +1,7 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import {
   Layers,
   Home,
@@ -10,12 +11,35 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { buildingService, residenceService } from '../../services/api'
-import { Building, Issue, Residence, Staircase } from '../../services/types'
+import { Issue } from '@/services/types'
+
+const mockIssues: Issue[] = [
+  {
+    id: 'issue-1',
+    description: 'Läckande kran i köket',
+    priority: 'high',
+    status: 'in-progress',
+    room: 'Kök',
+    feature: 'Vattenkran',
+    date: '2024-02-01',
+    residenceId: 'residence-1',
+  },
+  {
+    id: 'issue-2',
+    description: 'Trasig dörrhandtag',
+    priority: 'medium',
+    status: 'pending',
+    room: 'Hall',
+    feature: 'Ytterdörr',
+    date: '2024-02-02',
+    residenceId: 'residence-2',
+  },
+]
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
-import { Badge } from '../ui/badge'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
+import { Badge } from '@/components/ui/Badge'
 import { staircaseService } from '@/services/api/staircaseService'
 
 function LoadingSkeleton() {
@@ -43,13 +67,6 @@ function LoadingSkeleton() {
   )
 }
 
-const priorityColors = {
-  low: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-  medium:
-    'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-  high: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
-}
-
 const priorityLabels = {
   low: 'Låg',
   medium: 'Medium',
@@ -65,42 +82,37 @@ const statusLabels = {
 export function StaircaseView() {
   const { staircaseId, buildingId } = useParams()
   const navigate = useNavigate()
-  const [staircase, setStaircase] = React.useState<Staircase | null>(null)
-  const [building, setBuilding] = React.useState<Building | null>(null)
-  const [residences, setResidences] = React.useState<Residence[]>([])
-  const [allIssues, setAllIssues] = React.useState<Issue[]>([])
-  const [loading, setLoading] = React.useState(true)
+  const buildingQuery = useQuery({
+    queryKey: ['building', buildingId],
+    queryFn: () => buildingService.getById(buildingId!),
+    enabled: !!buildingId,
+  })
 
-  React.useEffect(() => {
-    const loadData = async () => {
-      try {
-        if (!staircaseId || !buildingId) return
-        const building = await buildingService.getById(buildingId)
-        const staircase = await staircaseService.getByBuildingCodeAndId(
-          building.code,
-          staircaseId
-        )
-        const residences = await residenceService.getByBuildingCode(
-          building.code
-        )
-        setStaircase(staircase)
-        setResidences(residences)
+  const staircaseQuery = useQuery({
+    queryKey: ['staircase', buildingId, staircaseId],
+    queryFn: () =>
+      staircaseService.getByBuildingCodeAndId(
+        buildingQuery.data.code,
+        staircaseId
+      ),
+    enabled: !!buildingId && !!staircaseId && !!buildingQuery.data?.code,
+  })
 
-        const issues = [] as Issue[]
+  const residencesQuery = useQuery({
+    queryKey: ['residences', buildingQuery.data?.code],
+    queryFn: () => residenceService.getByBuildingCode(buildingQuery.data.code),
+    enabled: !!buildingQuery.data?.code,
+  })
 
-        setAllIssues(issues)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [staircaseId, buildingId])
-
-  if (loading) {
+  if (
+    buildingQuery.isLoading ||
+    staircaseQuery.isLoading ||
+    residencesQuery.isLoading
+  ) {
     return <LoadingSkeleton />
   }
 
-  if (!staircase) {
+  if (!staircaseQuery.data) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -113,8 +125,8 @@ export function StaircaseView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={building.name}
-        subtitle={`Byggnad ${staircase.name}`}
+        title={buildingQuery.data?.name}
+        subtitle={`Byggnad ${staircaseQuery.data?.name}`}
         type="Uppgång"
         icon={Layers}
       />
@@ -122,18 +134,14 @@ export function StaircaseView() {
       <Grid cols={3} className="mb-8">
         <StatCard
           title="Bostäder"
-          value={staircase.totalResidences}
+          value={residencesQuery.data?.length || 0}
           icon={Home}
-          subtitle={`${staircase.occupiedResidences} uthyrda`}
+          subtitle={`? st uthyrda`}
         />
-        <StatCard
-          title="Uthyrningsgrad"
-          value={`${Math.round((staircase.occupiedResidences / staircase.totalResidences) * 100)}%`}
-          icon={Users}
-        />
+        <StatCard title="Uthyrningsgrad" value={`? %`} icon={Users} />
         <StatCard
           title="Våningar"
-          value={Math.ceil(staircase.totalResidences / 2)}
+          value={Math.ceil((residencesQuery.data?.length || 0) / 2)}
           icon={BuildingIcon}
         />
       </Grid>
@@ -147,17 +155,24 @@ export function StaircaseView() {
         <div className="lg:col-span-2 space-y-6">
           <Card title="Bostäder" icon={Home}>
             <Grid cols={2}>
-              {staircase.residences.map((residenceId) => (
+              {residencesQuery.data?.map((residence) => (
                 <motion.div
-                  key={residenceId}
+                  key={residence.id}
                   whileHover={{ scale: 1.02 }}
-                  onClick={() => navigate(`/residences/${residenceId}`)}
+                  onClick={() =>
+                    navigate(`/residences/${residence.id}`, {
+                      state: {
+                        buildingCode: buildingQuery.data?.code,
+                        floorCode: residence.code.substring(2, 4),
+                      },
+                    })
+                  }
                   className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium group-hover:text-blue-500 transition-colors">
-                        Lägenhet {residenceId}
+                        Lägenhet {residence.code}
                       </h3>
                       <p className="text-sm text-gray-500">
                         3 rum och kök, 75m²
@@ -170,10 +185,10 @@ export function StaircaseView() {
             </Grid>
           </Card>
 
-          {allIssues.length > 0 && (
+          {mockIssues.length > 0 && (
             <Card title="Pågående ärenden" icon={AlertCircle}>
               <div className="space-y-4">
-                {allIssues.map((issue) => (
+                {mockIssues.map((issue) => (
                   <motion.div
                     key={issue.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -185,11 +200,15 @@ export function StaircaseView() {
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <Badge variant={issue.priority as any}>
+                          <Badge
+                            variant={
+                              issue.priority === 'high' ? 'error' : 'default'
+                            }
+                          >
                             {priorityLabels[issue.priority]}
                           </Badge>
                           <Badge>{statusLabels[issue.status]}</Badge>
-                          <Badge variant="default">{issue.residenceName}</Badge>
+                          <Badge variant="default">{issue.residenceId}</Badge>
                         </div>
                         <p className="font-medium group-hover:text-blue-500 transition-colors">
                           {issue.description}
@@ -229,7 +248,9 @@ export function StaircaseView() {
                   <span className="text-sm text-gray-500">
                     Senaste inspektion
                   </span>
-                  <span className="text-sm font-medium opacity-50">2024-02-15</span>
+                  <span className="text-sm font-medium opacity-50">
+                    2024-02-15
+                  </span>
                 </div>
               </div>
 

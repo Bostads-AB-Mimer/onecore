@@ -1,11 +1,11 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
+import { LucideProps } from 'lucide-react'
 
 interface StatCardProps {
   title: string
   value: string | number
-  icon: LucideIcon
+  icon: React.ComponentType<LucideProps>
   subtitle?: string
 }
 

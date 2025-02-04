@@ -32,7 +32,7 @@ export function RoomCard({ room, residenceId }: RoomCardProps) {
   const navigate = useNavigate()
   const Icon = roomIcons[room.usage.spaceType] || Home
   const [selectedFeature, setSelectedFeature] = React.useState<string | null>(
-    null,
+    null
   )
 
   const handleFeatureClick = (e: React.MouseEvent, feature: string) => {
@@ -78,24 +78,30 @@ export function RoomCard({ room, residenceId }: RoomCardProps) {
               <DoorOpen className="h-4 w-4 mr-2" />
               <span>Användning</span>
             </div>
-            <span className="font-medium">{room.usage.shared ? 'Delat' : 'Privat'}</span>
+            <span className="font-medium">
+              {room.usage.shared ? 'Delat' : 'Privat'}
+            </span>
           </div>
 
-          {Object.entries(room.features).filter(([_, value]) => value === true).length > 0 && (
+          {Object.entries(room.features).filter(([_, value]) => value === true)
+            .length > 0 && (
             <div className="pt-3 border-t dark:border-gray-700">
               <div className="flex flex-wrap gap-2">
-                {Object.entries(room.features).map(([feature, value]) => value === true && (
-                  <motion.div
-                    key={index}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={(e) => handleFeatureClick(e, feature)}
-                    className="flex items-center space-x-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>{feature}</span>
-                  </motion.div>
-                ))}
+                {Object.entries(room.features).map(
+                  ([feature, value]) =>
+                    value === true && (
+                      <motion.div
+                        key={index}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => handleFeatureClick(e, feature)}
+                        className="flex items-center space-x-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>{feature}</span>
+                      </motion.div>
+                    )
+                )}
               </div>
             </div>
           )}

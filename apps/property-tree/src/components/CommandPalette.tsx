@@ -19,7 +19,7 @@ const routeMap = {
   property: '/properties',
   building: '/buildings',
   staircase: '/staircases',
-  residence: '/residences'
+  residence: '/residences',
 }
 
 const iconMap = {

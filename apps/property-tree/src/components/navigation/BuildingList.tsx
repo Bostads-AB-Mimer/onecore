@@ -1,7 +1,7 @@
 import React from 'react'
 import { Property } from '@/services/types'
-import { Skeleton } from '../ui/skeleton'
-import { SidebarMenu } from '../ui/sidebar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { SidebarMenu } from '@/components/ui/sidebar'
 import { BuildingNavigation } from './Building'
 import { useQuery } from '@tanstack/react-query'
 import { buildingService } from '@/services/api'
@@ -44,7 +44,11 @@ export function BuildingList({ property }: BuildingListProps) {
   return (
     <SidebarMenu>
       {buildings?.map((building) => (
-        <BuildingNavigation key={building.code} building={building} />
+        <BuildingNavigation
+          key={building.code}
+          property={property}
+          building={building}
+        />
       ))}
     </SidebarMenu>
   )

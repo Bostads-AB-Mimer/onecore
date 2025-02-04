@@ -13,11 +13,11 @@ class GeocodingQueue {
     address: string,
     onResult: (result: [number, number]) => void,
     onError: (error: Error) => void
-  ): void {
-    this.queue.push({ 
-      address, 
-      resolve: onResult, 
-      reject: onError 
+  ): Promise<void> {
+    this.queue.push({
+      address,
+      resolve: onResult,
+      reject: onError,
     })
     this.processQueue()
   }
@@ -38,7 +38,7 @@ class GeocodingQueue {
       }
 
       // Wait before processing next request
-      await new Promise(resolve => setTimeout(resolve, this.delay))
+      await new Promise((resolve) => setTimeout(resolve, this.delay))
     }
 
     this.processing = false

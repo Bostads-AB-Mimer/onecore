@@ -1,26 +1,34 @@
 import { useQuery } from '@tanstack/react-query'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
 import {
   buildingService,
   residenceService,
   staircaseService,
+  propertyService,
 } from '../../services/api'
-import { Building as BuildingType } from '../../services/types'
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
 
 export function BuildingView() {
   const { buildingId } = useParams()
   const navigate = useNavigate()
+  const { state } = useLocation()
+  const propertyId = state?.propertyId
 
   const buildingQuery = useQuery({
     queryKey: ['building', buildingId],
     queryFn: () => buildingService.getById(buildingId!),
     enabled: !!buildingId,
+  })
+
+  const propertyQuery = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: () => propertyService.getPropertyById(propertyId),
+    enabled: !!propertyId,
   })
 
   const residencesQuery = useQuery({
@@ -38,10 +46,15 @@ export function BuildingView() {
   const isLoading =
     buildingQuery.isLoading ||
     residencesQuery.isLoading ||
-    staircasesQuery.isLoading
+    staircasesQuery.isLoading ||
+    propertyQuery.isLoading
   const error =
-    buildingQuery.error || residencesQuery.error || staircasesQuery.error
+    buildingQuery.error ||
+    residencesQuery.error ||
+    staircasesQuery.error ||
+    propertyQuery.error
   const building = buildingQuery.data
+  const property = propertyQuery.data
 
   if (isLoading) {
     return (
@@ -82,7 +95,7 @@ export function BuildingView() {
     <div className="p-8 animate-in">
       <ViewHeader
         title={building.name}
-        subtitle={`Fastighet ${building.propertyId}`}
+        subtitle={`Fastighet ${property?.designation}`}
         type="Byggnad"
         icon={Building}
       />
@@ -160,7 +173,15 @@ export function BuildingView() {
                   <motion.div
                     key={residence.id}
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => navigate(`/residences/${residence.id}`)}
+                    onClick={() =>
+                      navigate(`/residences/${residence.id}`, {
+                        state: {
+                          buildingCode: building.code,
+                          floorCode: residence.code.substring(2, 4),
+                          propertyId: propertyQuery.data?.id,
+                        },
+                      })
+                    }
                     className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">

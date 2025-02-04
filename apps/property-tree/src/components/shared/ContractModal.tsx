@@ -1,8 +1,8 @@
 import React from 'react'
-import { Modal } from '../ui/modal'
-import { InfoItem } from '../ui/InfoItem'
+import { Modal } from '@/components/ui/Modal'
+import { InfoItem } from '@/components/ui/InfoItem'
 import { Calendar, Home, FileText, User2, CreditCard } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Button } from '@/components/ui/Button'
 
 interface ContractModalProps {
   isOpen: boolean
@@ -37,9 +37,7 @@ export function ContractModal({
           <Button variant="secondary" onClick={onClose}>
             Stäng
           </Button>
-          <Button variant="primary" icon={FileText}>
-            Ladda ner kontrakt
-          </Button>
+          <Button variant="default">Ladda ner kontrakt</Button>
         </div>
       }
     >

@@ -7,13 +7,13 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-} from '../ui/sidebar'
+} from '@/components/ui/sidebar'
 import { ChevronRight } from 'lucide-react'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '../ui/collapsible'
+} from '@/components/ui/collapsible'
 import { SearchForm } from '../search-form'
 
 export default function SidebarNavigation() {

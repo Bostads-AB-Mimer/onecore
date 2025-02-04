@@ -1,17 +1,28 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card } from '../ui/card'
-import { Grid } from '../ui/grid'
+import { Card } from '@/components/ui/Card'
+import { Grid } from '@/components/ui/Grid'
 import { RoomCard } from './RoomCard'
 import { roomService } from '@/services/api'
 
 interface ResidenceRoomsProps {
   residenceId: string
+  buildingCode: string
+  floorCode: string
 }
 
-export function ResidenceRooms({ residenceId }: ResidenceRoomsProps) {
+export function ResidenceRooms({
+  residenceId,
+  buildingCode,
+  floorCode,
+}: ResidenceRoomsProps) {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms', residenceId],
-    queryFn: () => roomService.getByResidenceId(residenceId),
+    queryFn: () =>
+      roomService.getByBuildingAndFloorAndResidence(
+        buildingCode,
+        floorCode,
+        residenceId
+      ),
   })
 
   if (isLoading) {

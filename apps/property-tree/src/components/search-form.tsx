@@ -1,13 +1,13 @@
-import { Search } from "lucide-react"
-import { useCommandPalette } from "@/components/hooks/useCommandPalette"
-import { Label } from "@/components/ui/label"
+import { Search } from 'lucide-react'
+import { useCommandPalette } from '@/components/hooks/useCommandPalette'
+import { Label } from '@/components/ui/label'
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarInput,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar'
 
-export function SearchForm({ ...props }: React.ComponentProps<"form">) {
+export function SearchForm({ ...props }: React.ComponentProps<'form'>) {
   const { open } = useCommandPalette()
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
