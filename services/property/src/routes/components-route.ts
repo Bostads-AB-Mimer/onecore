@@ -6,7 +6,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
-import { componentsQueryParamsSchema, ComponentSchema } from '../types/component'
+import {
+  componentsQueryParamsSchema,
+  ComponentSchema,
+} from '../types/component'
 import { ComponentLinksSchema } from '../types/links'
 
 /**
@@ -64,10 +67,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/components', async (ctx) => {
     // Add default type=residence if residenceCode is provided
-    const queryWithType = ctx.query.residenceCode 
+    const queryWithType = ctx.query.residenceCode
       ? { ...ctx.query, type: 'residence' }
-      : ctx.query;
-      
+      : ctx.query
+
     const queryParams = componentsQueryParamsSchema.safeParse(queryWithType)
 
     if (!queryParams.success) {
@@ -77,15 +80,25 @@ export const routes = (router: KoaRouter) => {
     }
 
     const metadata = generateRouteMetadata(ctx)
-    
+
     try {
-      let components;
+      let components
       if (queryParams.data.type === 'maintenance') {
-        logger.info(`GET /components?type=maintenance&maintenanceUnit=${queryParams.data.maintenanceUnit}`, metadata)
-        components = await getComponentByMaintenanceUnitCode(queryParams.data.maintenanceUnit)
+        logger.info(
+          `GET /components?type=maintenance&maintenanceUnit=${queryParams.data.maintenanceUnit}`,
+          metadata
+        )
+        components = await getComponentByMaintenanceUnitCode(
+          queryParams.data.maintenanceUnit
+        )
       } else {
-        logger.info(`GET /components?type=residence&residenceCode=${queryParams.data.residenceCode}`, metadata)
-        components = await getComponentByMaintenanceUnitCode(queryParams.data.residenceCode) // TODO: Implement getComponentByResidenceCode
+        logger.info(
+          `GET /components?type=residence&residenceCode=${queryParams.data.residenceCode}`,
+          metadata
+        )
+        components = await getComponentByMaintenanceUnitCode(
+          queryParams.data.residenceCode
+        ) // TODO: Implement getComponentByResidenceCode
       }
 
       if (!components) {
@@ -101,8 +114,12 @@ export const routes = (router: KoaRouter) => {
           ...parsedComponent,
           _links: ComponentLinksSchema.parse({
             self: { href: `/components/${component.id}` },
-            maintenanceUnit: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
-            parent: { href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}` },
+            maintenanceUnit: {
+              href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}`,
+            },
+            parent: {
+              href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}`,
+            },
           }),
         }
       })

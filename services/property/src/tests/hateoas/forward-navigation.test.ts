@@ -21,7 +21,7 @@ describe('HATEOAS Forward Navigation', () => {
     const company = companiesResponse.body.content[0]
     const propertiesUrl = company._links.properties.href
     const propertiesResponse = await request(app.callback()).get(propertiesUrl)
-    
+
     const property = propertiesResponse.body.content[0]
     expect(property._links.buildings).toBeDefined()
 
@@ -39,7 +39,7 @@ describe('HATEOAS Forward Navigation', () => {
     const property = propertiesResponse.body.content[0]
     const buildingsUrl = property._links.buildings.href
     const buildingsResponse = await request(app.callback()).get(buildingsUrl)
-    
+
     const building = buildingsResponse.body.content[0]
     expect(building._links.staircases).toBeDefined()
     expect(building._links.residences).toBeDefined()

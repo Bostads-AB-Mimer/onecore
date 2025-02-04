@@ -1,11 +1,10 @@
 import { map } from 'lodash'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient({
   log: ['query'],
 })
 
-//todo: add types
 export const getConstructionPartsByBuildingCode = async (
   buildingCode: string
 ) => {
@@ -13,9 +12,6 @@ export const getConstructionPartsByBuildingCode = async (
     where: {
       buildingCode: {
         contains: buildingCode,
-      },
-      NOT: {
-        constructionPartId: null,
       },
       residenceId: null,
       localeId: null,

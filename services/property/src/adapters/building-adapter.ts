@@ -17,7 +17,9 @@ export type BuildingWithRelations = Prisma.BuildingGetPayload<{
   }
 }>
 
-const getBuildings = async (propertyCode: string): Promise<BuildingWithRelations[]> => {
+const getBuildings = async (
+  propertyCode: string
+): Promise<BuildingWithRelations[]> => {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
       propertyCode: {
@@ -43,14 +45,16 @@ const getBuildings = async (propertyCode: string): Promise<BuildingWithRelations
       propertyDesignation: true,
       propertyObject: {
         include: {
-          property: true
-        }
-      }
+          property: true,
+        },
+      },
     },
   })
 }
 
-const getBuildingById = async (id: string): Promise<BuildingWithRelations | null> => {
+const getBuildingById = async (
+  id: string
+): Promise<BuildingWithRelations | null> => {
   return prisma.building.findFirst({
     where: {
       id: id,
@@ -62,9 +66,9 @@ const getBuildingById = async (id: string): Promise<BuildingWithRelations | null
       district: true,
       propertyObject: {
         include: {
-          property: true
-        }
-      }
+          property: true,
+        },
+      },
     },
   })
 }

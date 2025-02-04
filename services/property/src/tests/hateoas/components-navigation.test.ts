@@ -20,7 +20,9 @@ describe('HATEOAS Components Navigation', () => {
       expect(residence._links.components).toBeDefined()
 
       const componentsUrl = residence._links.components.href
-      const componentsResponse = await request(app.callback()).get(componentsUrl)
+      const componentsResponse = await request(app.callback()).get(
+        componentsUrl
+      )
       expect(componentsResponse.status).toBe(200)
     }
   })

@@ -24,7 +24,9 @@ describe('Companies API', () => {
     const companiesResponse = await request(app.callback()).get('/companies')
     const companyId = companiesResponse.body.content[0].id
 
-    const response = await request(app.callback()).get(`/companies/${companyId}`)
+    const response = await request(app.callback()).get(
+      `/companies/${companyId}`
+    )
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
 

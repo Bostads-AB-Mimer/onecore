@@ -95,7 +95,7 @@ export const routes = (router: KoaRouter) => {
       })
 
       ctx.body = {
-        content: responseContent
+        content: responseContent,
       }
     } catch (err) {
       ctx.status = 500

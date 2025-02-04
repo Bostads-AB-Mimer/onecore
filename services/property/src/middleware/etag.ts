@@ -11,10 +11,7 @@ export const etagMiddleware = () => {
 
     // Generate ETag from response body
     const content = JSON.stringify(ctx.body)
-    const etag = crypto
-      .createHash('md5')
-      .update(content)
-      .digest('hex')
+    const etag = crypto.createHash('md5').update(content).digest('hex')
 
     // Set ETag header
     ctx.set('ETag', `"${etag}"`)

@@ -16,7 +16,7 @@ describe('Buildings API', () => {
     const response = await request(app.callback())
       .get('/buildings')
       .query({ propertyCode })
-    
+
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
     expect(Array.isArray(response.body.content)).toBe(true)
@@ -38,10 +38,12 @@ describe('Buildings API', () => {
     const buildingsResponse = await request(app.callback())
       .get('/buildings')
       .query({ propertyCode })
-    
+
     const buildingId = buildingsResponse.body.content[0].id
 
-    const response = await request(app.callback()).get(`/buildings/${buildingId}`)
+    const response = await request(app.callback()).get(
+      `/buildings/${buildingId}`
+    )
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
 
