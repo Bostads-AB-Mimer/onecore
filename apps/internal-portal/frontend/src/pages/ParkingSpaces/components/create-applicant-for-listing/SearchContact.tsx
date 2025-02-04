@@ -14,8 +14,8 @@ import { mdTheme } from '../../../../theme'
 
 type SearchContactProps = {
   placeholder?: string
-  onSelect: (contact: ContactSearchData | undefined) => void
-  contact?: ContactSearchData
+  onSelect: (contact: ContactSearchData | null) => void
+  contact: ContactSearchData | null
 }
 
 export const SearchContact = ({
@@ -50,7 +50,7 @@ export const SearchContact = ({
         filterOptions={(v) => v}
         options={contactsQuery.data ?? []}
         onInputChange={(_, v) => handleSearch(v)}
-        onChange={(_, v) => onSelect(v || undefined)}
+        onChange={(_, v) => onSelect(v || null)}
         getOptionKey={(v) => v.contactCode}
         value={contact}
         ListboxProps={{ style: { maxHeight: 125 } }}

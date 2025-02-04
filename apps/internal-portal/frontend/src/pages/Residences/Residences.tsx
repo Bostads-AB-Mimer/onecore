@@ -18,9 +18,8 @@ import AdditionalNotesForm from './components/AdditionalNotesForm'
 import CustomerReference from './components/CustomerReference'
 
 const ResidencesPage: React.FC = () => {
-  const [selectedContact, setSelectedContact] = useState<
-    ContactSearchData | undefined
-  >(undefined)
+  const [selectedContact, setSelectedContact] =
+    useState<ContactSearchData | null>(null)
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
