@@ -105,13 +105,18 @@ export const routes = (router: KoaRouter) => {
 
     const getRentalPropertyInfoWithLeases = async (leases: Lease[]) => {
       for (const lease of leases) {
+        let leaseIsActive = true
         const rentalPropertyInfo =
           await propertyManagementAdapter.getRentalPropertyInfo(
             lease.rentalPropertyId
           )
+        if (lease.noticeDate && new Date(lease.noticeDate) < new Date()) {
+          leaseIsActive = false
+        }
+
         responseData.push({
           ...rentalPropertyInfo,
-          leases: [lease],
+          leases: leaseIsActive ? [lease] : [],
         } as RentalPropertyInfoWithLeases)
       }
     }
@@ -123,8 +128,19 @@ export const routes = (router: KoaRouter) => {
           ctx.query['includeTerminatedLeases'],
           'true'
         )
-        if (leases) {
+        if (leases && leases.length > 0) {
           await getRentalPropertyInfoWithLeases(leases)
+        } else {
+          const rentalPropertyInfo =
+            await propertyManagementAdapter.getRentalPropertyInfo(
+              ctx.params.identifier
+            )
+          if (rentalPropertyInfo) {
+            responseData.push({
+              ...rentalPropertyInfo,
+              leases: [],
+            } as RentalPropertyInfoWithLeases)
+          }
         }
       },
       leaseId: async () => {
