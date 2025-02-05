@@ -228,9 +228,14 @@ const parseLeasesForHousingContracts = (
   | undefined => {
   const currentDate = new Date()
   const housingContracts: Lease[] = []
+
   for (const lease of leases) {
-    //use startsWith to handle whitespace issues from xpand
-    if (lease.type.includes(leaseTypes.housingContract)) {
+    const isHousingContract = [
+      leaseTypes.housingContract,
+      leaseTypes.cooperativeTenancyContract,
+    ].some((v) => lease.type.includes(v))
+
+    if (isHousingContract) {
       housingContracts.push(lease)
     }
   }
@@ -246,12 +251,12 @@ const parseLeasesForHousingContracts = (
 
   //applicant have 1 active and 1 upcoming contract
   if (housingContracts.length == 2) {
-    const currentActiveLease = leases.find((lease) => {
-      const lastDebitDateNotSet =
-        lease.lastDebitDate === null || lease.lastDebitDate === undefined
+    const currentActiveLease = housingContracts.find((lease) => {
+      const compatibleLastDebitDate =
+        !lease.lastDebitDate || lease.lastDebitDate > currentDate
       const hasLeaseStarted = lease.leaseStartDate <= currentDate
 
-      return lastDebitDateNotSet && hasLeaseStarted
+      return hasLeaseStarted && compatibleLastDebitDate
     })
 
     if (currentActiveLease == undefined) {
@@ -261,7 +266,7 @@ const parseLeasesForHousingContracts = (
       throw new Error('could not find any active lease')
     }
 
-    const upcomingLease = leases.find((lease) => {
+    const upcomingLease = housingContracts.find((lease) => {
       const lastDebitDateNotSet =
         lease.lastDebitDate === null || lease.lastDebitDate === undefined
       const isLeaseUpcoming = lease.leaseStartDate > currentDate
