@@ -109,6 +109,7 @@ export const routes = (router: KoaRouter) => {
           await propertyManagementAdapter.getRentalPropertyInfo(
             lease.rentalPropertyId
           )
+
         responseData.push({
           ...rentalPropertyInfo,
           leases: [lease],
@@ -123,8 +124,19 @@ export const routes = (router: KoaRouter) => {
           ctx.query['includeTerminatedLeases'],
           'true'
         )
-        if (leases) {
+        if (leases && leases.length > 0) {
           await getRentalPropertyInfoWithLeases(leases)
+        } else {
+          const rentalPropertyInfo =
+            await propertyManagementAdapter.getRentalPropertyInfo(
+              ctx.params.identifier
+            )
+          if (rentalPropertyInfo) {
+            responseData.push({
+              ...rentalPropertyInfo,
+              leases: [],
+            } as RentalPropertyInfoWithLeases)
+          }
         }
       },
       leaseId: async () => {
