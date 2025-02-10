@@ -4,6 +4,20 @@ dotenv.config()
 
 export interface Config {
   port: number
+  xpandDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
+  economyDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
   xledger: {
     url: string
     apiToken: string
@@ -19,7 +33,13 @@ export interface Config {
 const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
-    port: 5040,
+    port: 5080,
+    xpandDatabase: {
+      port: 1433,
+    },
+    economyDatabase: {
+      port: 1438,
+    },
     xledger: {
       url: 'https://www.xledger.net/graphql',
       apiToken: '',
@@ -35,6 +55,8 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
+  xpandDatabase: config.get('xpandDatabase'),
+  economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
   health: config.get('health'),
 } as Config
