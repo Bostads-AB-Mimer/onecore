@@ -105,18 +105,14 @@ export const routes = (router: KoaRouter) => {
 
     const getRentalPropertyInfoWithLeases = async (leases: Lease[]) => {
       for (const lease of leases) {
-        let leaseIsActive = true
         const rentalPropertyInfo =
           await propertyManagementAdapter.getRentalPropertyInfo(
             lease.rentalPropertyId
           )
-        if (lease.noticeDate && new Date(lease.noticeDate) < new Date()) {
-          leaseIsActive = false
-        }
 
         responseData.push({
           ...rentalPropertyInfo,
-          leases: leaseIsActive ? [lease] : [],
+          leases: [lease],
         } as RentalPropertyInfoWithLeases)
       }
     }
