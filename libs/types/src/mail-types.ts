@@ -20,6 +20,11 @@ interface ParkingSpaceOfferSms extends Sms {
 
 interface WorkOrderSms extends Sms {
   message: string
+  useTemplate: boolean
+}
+
+interface WorkOrderEmail extends Email {
+  useTemplate: boolean
 }
 
 // Can be used for both positive and negative notifications
@@ -33,4 +38,5 @@ export type {
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
   WorkOrderSms,
+  WorkOrderEmail,
 }
