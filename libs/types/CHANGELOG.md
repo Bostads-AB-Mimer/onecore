@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.2...v3.4.0) (2025-02-11)
+
+
+### Features
+
+* adds useTemplate to workOrderSms + mail ([e8ab009](https://github.com/Bostads-AB-Mimer/onecore-types/commit/e8ab0094f23e07ef667f5702a3cfbc9a224ae4c8))
+
 ## [3.3.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.1...v3.3.2) (2025-01-29)
 
 
