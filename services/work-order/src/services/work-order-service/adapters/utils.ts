@@ -30,7 +30,7 @@ export const transformEquipmentCode = (equipment_code: string): string => {
   return equipmentCodes[equipment_code] || ''
 }
 
-export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder) => {
+export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
   const spaceCode = transformSpaceCode(odooWorkOrder.space_code)
   const equipmentCode = transformEquipmentCode(odooWorkOrder.equipment_code)
   const description = removePTags(odooWorkOrder.description)
@@ -73,14 +73,16 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder) => {
         EquipmentCode: equipmentCode,
       },
     ],
-  } as WorkOrder
+  }
 }
 
-export const transformMessages = (messages: OdooWorkOrderMessage[] = []) =>
+export const transformMessages = (
+  messages: OdooWorkOrderMessage[] = []
+): WorkOrderMessage[] =>
   messages.map((message) => ({
     id: message.id,
     body: striptags(message.body, ['br']).replaceAll('<br>', '\n'),
     messageType: message.message_type,
-    author: last(message.author_id[1].split(', ')), // author name is in format "YourCompany, Mitchell Admin"
+    author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
     createDate: message.create_date,
-  })) as WorkOrderMessage[]
+  }))
