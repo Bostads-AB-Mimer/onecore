@@ -13,34 +13,32 @@ const CustomerReferenceForm = ({
   housingReferenceUpdatedAt,
   updatedBy,
   validUntil,
-}: CustomerReferenceFormProps) => {
-  return (
-    <Table>
-      <TableBody>
-        <TableRow>
-          <TableCell>Referensuppgifter från kund</TableCell>
-          <TableCell align="right">{customerReferenceReceivedAt}</TableCell>
-        </TableRow>
+}: CustomerReferenceFormProps) => (
+  <Table>
+    <TableBody>
+      <TableRow>
+        <TableCell>Referensuppgifter från kund</TableCell>
+        <TableCell align="right">{customerReferenceReceivedAt}</TableCell>
+      </TableRow>
 
-        <TableRow>
-          <TableCell>Boendereferens hanterad/uppdaterad</TableCell>
-          <TableCell align="right">{housingReferenceUpdatedAt}</TableCell>
-        </TableRow>
+      <TableRow>
+        <TableCell>Boendereferens hanterad/uppdaterad</TableCell>
+        <TableCell align="right">{housingReferenceUpdatedAt}</TableCell>
+      </TableRow>
 
-        <TableRow>
-          <TableCell>Senast uppdaterad av</TableCell>
-          <TableCell align="right">{updatedBy}</TableCell>
-        </TableRow>
+      <TableRow>
+        <TableCell>Senast uppdaterad av</TableCell>
+        <TableCell align="right">{updatedBy}</TableCell>
+      </TableRow>
 
-        {validUntil && (
-          <TableRow>
-            <TableCell>Giltig till</TableCell>
-            <TableCell align="right">{validUntil}</TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  )
-}
+      {validUntil && (
+        <TableRow>
+          <TableCell>Giltig till</TableCell>
+          <TableCell align="right">{validUntil}</TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+)
 
 export default CustomerReferenceForm

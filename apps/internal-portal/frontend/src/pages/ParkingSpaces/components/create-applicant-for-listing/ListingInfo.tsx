@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import { Listing } from 'onecore-types'
+
 import { printVacantFrom } from '../../../../common/formattingUtils'
 
 export const ListingInfo = (props: { listing: Listing }) => {

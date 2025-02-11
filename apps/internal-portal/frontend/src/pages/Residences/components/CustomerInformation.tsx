@@ -20,7 +20,7 @@ const CustomerInformationForm = ({
   customerNumber,
   phoneNumber,
 }: CustomerInformationFormProps) => (
-  <>
+  <React.Fragment>
     <Typography variant="h1">Kundinformation</Typography>
     <Table>
       <TableBody>
@@ -42,7 +42,7 @@ const CustomerInformationForm = ({
         </TableRow>
       </TableBody>
     </Table>
-  </>
+  </React.Fragment>
 )
 
 export default CustomerInformationForm
