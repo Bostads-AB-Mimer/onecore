@@ -7,8 +7,6 @@ import {
 } from '@mui/material'
 import { Controller, useFormContext } from 'react-hook-form'
 
-import { RejectedReasons } from '../../constants'
-
 const RejectedReason = () => {
   const { control } = useFormContext()
 
@@ -37,12 +35,10 @@ const RejectedReason = () => {
               Välj ur lista
             </MenuItem>
 
-            <MenuItem value={RejectedReasons.DEBT_TO_LANDLORD}>Skuld</MenuItem>
-            <MenuItem value={RejectedReasons.DISTURBANCE}>Störningar</MenuItem>
-            <MenuItem value={RejectedReasons.LATE_RENT_PAYMENT}>
-              Sena betalningar
-            </MenuItem>
-            <MenuItem value={RejectedReasons.MISMANAGEMENT}>Vanvård</MenuItem>
+            <MenuItem value="DEBT_TO_LANDLORD">Skuld</MenuItem>
+            <MenuItem value="DISTURBANCE">Störningar</MenuItem>
+            <MenuItem value="LATE_RENT_PAYMENT">Sena betalningar</MenuItem>
+            <MenuItem value="MISMANAGEMENT">Vanvård</MenuItem>
           </Select>
 
           <FormHelperText>{fieldState.error?.message}</FormHelperText>

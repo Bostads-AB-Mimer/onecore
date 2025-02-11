@@ -8,8 +8,6 @@ import {
 } from '@mui/material'
 import { Controller, useFormContext } from 'react-hook-form'
 
-import { HousingTypes } from '../../constants'
-
 const HousingType = () => {
   const { control } = useFormContext()
 
@@ -38,16 +36,14 @@ const HousingType = () => {
               Välj ur lista
             </MenuItem>
 
-            <MenuItem value={HousingTypes.RENTAL}>Hyresrätt</MenuItem>
-            <MenuItem value={HousingTypes.SUB_RENTAL}>Andrahand</MenuItem>
-            <MenuItem value={HousingTypes.LIVES_WITH_FAMILY}>
-              Bor hos förälder
-            </MenuItem>
-            <MenuItem value={HousingTypes.LODGER}>Inneboende</MenuItem>
-            <MenuItem value={HousingTypes.OWNS_HOUSE}>Äger villa</MenuItem>
-            <MenuItem value={HousingTypes.OWNS_FLAT}>Äger bostadsrätt</MenuItem>
-            <MenuItem value={HousingTypes.OWNS_ROW_HOUSE}>Äger radhus</MenuItem>
-            <MenuItem value={HousingTypes.OTHER}>Övrigt/annat</MenuItem>
+            <MenuItem value="RENTAL">Hyresrätt</MenuItem>
+            <MenuItem value="SUB_RENTAL">Andrahand</MenuItem>
+            <MenuItem value="LIVES_WITH_FAMILY">Bor hos förälder</MenuItem>
+            <MenuItem value="LODGER">Inneboende</MenuItem>
+            <MenuItem value="OWNS_HOUSE">Äger villa</MenuItem>
+            <MenuItem value="OWNS_FLAT">Äger bostadsrätt</MenuItem>
+            <MenuItem value="OWNS_ROW_HOUSE">Äger radhus</MenuItem>
+            <MenuItem value="OTHER">Övrigt/annat</MenuItem>
           </Select>
 
           <FormHelperText>{fieldState.error?.message}</FormHelperText>

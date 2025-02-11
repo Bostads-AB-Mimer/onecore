@@ -9,8 +9,6 @@ import {
 } from '@mui/material'
 import { Controller, useFormContext } from 'react-hook-form'
 
-import { ReviewStatus as ReviewStatusEnum } from '../../constants'
-
 const ReviewStatus = () => {
   const { control } = useFormContext()
 
@@ -21,29 +19,29 @@ const ReviewStatus = () => {
       name="housingReference.reviewStatus"
       control={control}
       shouldUnregister
-      defaultValue={ReviewStatusEnum.REJECTED}
+      defaultValue="REJECTED"
       render={({ field }) => (
         <FormControl fullWidth>
           <Typography variant="h2">Ange status boendereferens *</Typography>
 
           <RadioGroup row={isMinWidth600} {...field}>
             <FormControlLabel
-              value={ReviewStatusEnum.APPROVED}
+              value="APPROVED"
               control={<Radio />}
               label="Godkänd"
             />
             <FormControlLabel
-              value={ReviewStatusEnum.REJECTED}
+              value="REJECTED"
               control={<Radio />}
               label="Ej godkänd"
             />
             <FormControlLabel
-              value={ReviewStatusEnum.CONTACTED_UNREACHABLE}
+              value="CONTACTED_UNREACHABLE"
               control={<Radio />}
               label="Kontaktad - ej svar"
             />
             <FormControlLabel
-              value={ReviewStatusEnum.REFERENCE_NOT_REQUIRED}
+              value="REFERENCE_NOT_REQUIRED"
               control={<Radio />}
               label="Referens krävs ej"
             />
