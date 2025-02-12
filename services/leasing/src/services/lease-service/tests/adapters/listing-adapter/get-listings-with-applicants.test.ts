@@ -391,11 +391,10 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         )
 
         assert(applicant)
-        await listingAdapter.updateApplicantStatus(
-          applicant.id,
-          ApplicantStatus.WithdrawnByUser,
-          ctx.db
-        )
+        await listingAdapter.updateApplicantStatus(ctx.db, {
+          applicantId: applicant.id,
+          status: ApplicantStatus.WithdrawnByUser,
+        })
 
         const listings = await listingAdapter.getListingsWithApplicants(
           ctx.db,

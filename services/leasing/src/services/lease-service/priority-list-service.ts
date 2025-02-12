@@ -227,21 +227,19 @@ const parseLeasesForHousingContracts = (
     ]
   | undefined => {
   const currentDate = new Date()
-  const housingContracts: Lease[] = []
 
-  for (const lease of leases) {
-    const isHousingContract = [
-      leaseTypes.housingContract,
-      leaseTypes.cooperativeTenancyContract,
-    ].some((v) => lease.type.includes(v))
+  const isHousingContract = (lease: Lease) =>
+    [leaseTypes.housingContract, leaseTypes.cooperativeTenancyContract].some(
+      (v) => lease.type.includes(v)
+    )
 
-    if (isHousingContract) {
-      housingContracts.push(lease)
-    }
+  const housingContracts = leases.filter(isHousingContract)
+
+  if (!housingContracts.length) {
+    return undefined
   }
 
-  //only 1 active housing contract found
-  if (housingContracts.length == 1) {
+  if (housingContracts.length === 1) {
     const lease = housingContracts[0]
     const hasLeaseStarted = lease.leaseStartDate <= currentDate
 
@@ -249,42 +247,48 @@ const parseLeasesForHousingContracts = (
     return hasLeaseStarted ? [lease, undefined] : [undefined, lease]
   }
 
-  //applicant have 1 active and 1 upcoming contract
-  if (housingContracts.length == 2) {
-    const currentActiveLease = housingContracts.find((lease) => {
-      const compatibleLastDebitDate =
-        !lease.lastDebitDate || lease.lastDebitDate > currentDate
-      const hasLeaseStarted = lease.leaseStartDate <= currentDate
+  if (housingContracts.length === 2) {
+    const activeLease = housingContracts.find((l) =>
+      isActiveLease(l, currentDate)
+    )
 
-      return hasLeaseStarted && compatibleLastDebitDate
-    })
+    const upcomingLease = housingContracts.find((l) =>
+      isUpcomingLease(l, currentDate)
+    )
 
-    if (currentActiveLease == undefined) {
+    if (!activeLease) {
       logger.error(
         'Could not find active lease in parseLeasesForHousingContracts'
       )
+
       throw new Error('could not find any active lease')
     }
-
-    const upcomingLease = housingContracts.find((lease) => {
-      const lastDebitDateNotSet =
-        lease.lastDebitDate === null || lease.lastDebitDate === undefined
-      const isLeaseUpcoming = lease.leaseStartDate > currentDate
-
-      return lastDebitDateNotSet && isLeaseUpcoming
-    })
 
     if (upcomingLease == undefined) {
       logger.error(
         'Could not find any pending lease in parseLeasesForHousingContracts'
       )
+
       throw new Error('Could not find any pending lease')
     }
 
-    return [currentActiveLease, upcomingLease]
+    return [activeLease, upcomingLease]
   }
+}
 
-  return undefined
+const isActiveLease = (lease: Lease, currentDate: Date) => {
+  const compatibleLastDebitDate =
+    !lease.lastDebitDate || lease.lastDebitDate > currentDate
+  const hasLeaseStarted = lease.leaseStartDate <= currentDate
+
+  return hasLeaseStarted && compatibleLastDebitDate
+}
+const isUpcomingLease = (lease: Lease, currentDate: Date) => {
+  const lastDebitDateNotSet =
+    lease.lastDebitDate === null || lease.lastDebitDate === undefined
+  const isLeaseUpcoming = lease.leaseStartDate > currentDate
+
+  return lastDebitDateNotSet && isLeaseUpcoming
 }
 
 const parseLeasesForParkingSpaces = (

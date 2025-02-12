@@ -18,6 +18,7 @@ import {
   isListingInAreaWithSpecificRentalRules,
 } from '../residential-area-rental-rules-validator'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { db } from '../adapters/db'
 
 /**
  * @swagger
@@ -190,6 +191,9 @@ export const routes = (router: KoaRouter) => {
   const updateApplicantStatusParams = z.object({
     status: z.nativeEnum(ApplicantStatus),
     contactCode: z.string().optional(),
+    applicationType: z
+      .union([z.literal('Replace'), z.literal('Additional')])
+      .optional(),
   })
 
   /**
@@ -213,6 +217,10 @@ export const routes = (router: KoaRouter) => {
    *               contactCode:
    *                 type: string
    *                 description: The contact code of the applicant. Required if status is WithdrawnByUser.
+   *               applicationType:
+   *                 required: false
+   *                 type: string
+   *                 description: Type of application. 'Replace' | 'Additional'.
    *     parameters:
    *       - in: path
    *         name: id
@@ -262,7 +270,7 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { id } = ctx.params
-      const { status, contactCode } = ctx.request.body
+      const { status, contactCode, applicationType } = ctx.request.body
 
       try {
         //if the applicant is withdrawn by the user, make sure the application belongs to that particular user
@@ -278,7 +286,12 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const applicantUpdated = await updateApplicantStatus(Number(id), status)
+        const applicantUpdated = await updateApplicantStatus(db, {
+          applicantId: Number(id),
+          status,
+          applicationType,
+        })
+
         if (!applicantUpdated.ok) {
           if (applicantUpdated.err === 'no-update') {
             ctx.status = 404

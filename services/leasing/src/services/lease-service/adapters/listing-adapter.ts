@@ -239,15 +239,21 @@ const createApplication = async (
 }
 
 const updateApplicantStatus = async (
-  applicantId: number,
-  status: ApplicantStatus,
-  dbConnection: Knex<any, unknown[]> = db
+  dbConnection: Knex<any, unknown[]>,
+  params: {
+    applicantId: number
+    status: ApplicantStatus
+    applicationType?: string
+  }
 ): Promise<AdapterResult<null, 'no-update' | 'unknown'>> => {
   try {
     const query = await dbConnection('applicant')
-      .where('Id', applicantId)
+      .where('Id', params.applicantId)
       .update({
-        Status: status,
+        Status: params.status,
+        ApplicationType: dbConnection.raw('COALESCE(?, "ApplicationType")', [
+          params.applicationType ?? null,
+        ]),
       })
     if (!query) {
       return { ok: false, err: 'no-update' }

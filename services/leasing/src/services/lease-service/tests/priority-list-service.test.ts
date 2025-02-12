@@ -1,4 +1,5 @@
 import { Lease, LeaseStatus } from 'onecore-types'
+import assert from 'node:assert'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
@@ -117,12 +118,14 @@ describe('parseLeasesForHousingContract', () => {
     const result = parseLeasesForHousingContracts(filteredLeases)
 
     expect(filteredLeases).toHaveLength(3)
+    assert(result)
+    const [current, upcoming] = result
 
-    expect(result).toBeDefined()
-    if (result) {
-      expect(result[0]).toBeDefined()
-      expect(result[1]).toBeDefined()
-    }
+    assert(current)
+    assert(upcoming)
+
+    expect(result[0]).toBeDefined()
+    expect(result[1]).toBeDefined()
   })
 
   it('should return empty active housing contract and 1 upcoming housing contract', async () => {

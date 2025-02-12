@@ -139,11 +139,10 @@ const updateApplicant = async (
   applicantId: number,
   applicantStatus: ApplicantStatus
 ) => {
-  const updateApplicant = await listingAdapter.updateApplicantStatus(
+  const updateApplicant = await listingAdapter.updateApplicantStatus(trx, {
     applicantId,
-    applicantStatus,
-    trx
-  )
+    status: applicantStatus,
+  })
 
   if (!updateApplicant.ok) {
     throw 'update-applicant'
