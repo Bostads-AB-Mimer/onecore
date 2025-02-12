@@ -300,7 +300,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
           await setApplicantStatusActive(
             applicantResponse.data.content.id,
-            applicantResponse.data.content.contactCode
+            applicantResponse.data.content.contactCode,
+            applicationType
           )
 
           logger.debug(log)

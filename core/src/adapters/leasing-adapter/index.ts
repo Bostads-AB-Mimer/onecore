@@ -343,12 +343,17 @@ const getDetailedApplicantsByListingId = async (
 
 const setApplicantStatusActive = async (
   applicantId: string,
-  contactCode: string
+  contactCode: string,
+  applicationType?: 'Replace' | 'Additional'
 ): Promise<any> => {
   try {
     const response = await axios.patch(
       `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status: ApplicantStatus.Active, contactCode: contactCode }
+      {
+        status: ApplicantStatus.Active,
+        contactCode: contactCode,
+        applicationType,
+      }
     )
     return response.data
   } catch (error) {
