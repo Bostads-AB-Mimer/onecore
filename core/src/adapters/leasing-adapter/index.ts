@@ -45,15 +45,18 @@ const getLease = async (
 
 const getLeasesForPnr = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: string | string[] | undefined,
-  includeContacts: string | string[] | undefined
+  includeTerminatedLeases: boolean,
+  includeContacts: boolean
 ): Promise<Lease[]> => {
-  const leasesResponse = await axios(
-    tenantsLeasesServiceUrl +
-      '/leases/for/nationalRegistrationNumber/' +
-      nationalRegistrationNumber +
-      (includeContacts ? '?includeContacts=true' : '')
+  const queryParams = new URLSearchParams({
+    includeTerminatedLeases: includeTerminatedLeases.toString(),
+    includeContacts: includeContacts.toString(),
+  })
+
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/for/nationalRegistrationNumber/${nationalRegistrationNumber}?${queryParams.toString()}`
   )
+
   return leasesResponse.data.content
 }
 

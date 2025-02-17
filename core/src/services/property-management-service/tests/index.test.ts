@@ -150,8 +150,8 @@ describe('rental-property-service index', () => {
       expect(getContactSpy).toHaveBeenCalledWith('P965339')
       expect(getLeasesForPnrSpy).toHaveBeenCalledWith(
         '199404084924',
-        'false',
-        'false'
+        false,
+        false
       )
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'

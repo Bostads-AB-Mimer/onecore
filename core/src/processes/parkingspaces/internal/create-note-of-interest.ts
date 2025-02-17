@@ -90,8 +90,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesForPnr(
       applicantContact.nationalRegistrationNumber,
-      undefined,
-      undefined
+      true,
+      false
     )
     if (leases.length < 1) {
       return endFailingProcess(

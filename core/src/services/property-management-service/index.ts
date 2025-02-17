@@ -695,8 +695,8 @@ export const routes = (router: KoaRouter) => {
 
       const leases = await leasingAdapter.getLeasesForPnr(
         contactResult.data.nationalRegistrationNumber,
-        'false',
-        'false'
+        false,
+        false
       )
       const promises = leases
         .filter(
