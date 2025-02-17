@@ -35,8 +35,9 @@ async function fetchTenant(params: {
 }): Promise<AdapterResult<Tenant, GetTenantError>> {
   const contact = await tenantLeaseAdapter.getContactByContactCode(
     params.contactCode,
-    'false'
+    true
   )
+
   if (!contact.ok) {
     return { ok: false, err: 'get-contact' }
   }
@@ -51,8 +52,8 @@ async function fetchTenant(params: {
 
   const leases = await tenantLeaseAdapter.getLeasesForContactCode(
     contact.data.contactCode,
-    'true',
-    undefined
+    true,
+    false
   )
 
   if (!leases.ok) {

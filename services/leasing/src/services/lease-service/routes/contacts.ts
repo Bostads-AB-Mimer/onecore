@@ -117,11 +117,28 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve contact information.
    */
+
+  const getContactByPnrQueryParamSchema = z
+    .object({
+      includeTerminatedLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
+    })
+    .default({ includeTerminatedLeases: 'false' })
+
   router.get('(.*)/contact/nationalRegistrationNumber/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+    const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
     const responseData = await getContactByNationalRegistrationNumber(
       ctx.params.pnr,
-      ctx.query.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases
     )
 
     ctx.status = 200
@@ -164,11 +181,31 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve contact information.
    */
+
+  const getContactByContactCodeQueryParamSchema = z
+    .object({
+      includeTerminatedLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
+    })
+    .default({ includeTerminatedLeases: 'false' })
+
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+
+    const queryParams = getContactByContactCodeQueryParamSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
     const result = await getContactByContactCode(
       ctx.params.contactCode,
-      ctx.query.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases
     )
 
     if (!result.ok) {
@@ -271,11 +308,30 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve contact information.
    */
+
+  const getContactByPhoneNumberQueryParamSchema = z
+    .object({
+      includeTerminatedLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
+    })
+    .default({ includeTerminatedLeases: 'false' })
+
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    const queryParams = getContactByPhoneNumberQueryParamSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
     const responseData = await getContactByPhoneNumber(
       ctx.params.phoneNumber,
-      ctx.query.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases
     )
 
     ctx.status = 200

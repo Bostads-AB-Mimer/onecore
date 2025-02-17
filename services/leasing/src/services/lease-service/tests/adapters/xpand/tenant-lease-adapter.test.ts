@@ -51,7 +51,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
   it('returns a contact with trimmed string fields', async () => {
     const contact = await tenantLeaseAdapter.getContactByContactCode(
       'P123456',
-      undefined
+      false
     )
 
     expect(contact).toStrictEqual({
