@@ -1,6 +1,7 @@
 import { WaitingListType } from 'onecore-types'
 import { sub } from 'date-fns'
 
+import { lease } from '../../factories'
 import * as tenantLeaseAdapter from '../../../adapters/xpand/tenant-lease-adapter'
 
 jest.mock('knex', () => () => ({
@@ -87,5 +88,65 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         },
       },
     })
+  })
+})
+
+describe('isLeaseActive', () => {
+  const futureDate = new Date()
+  futureDate.setDate(futureDate.getDate() + 1)
+  const pastDate = new Date()
+  pastDate.setDate(pastDate.getDate() - 1)
+
+  it('should return true if lease is active', () => {
+    const activeContract = lease
+      .params({
+        leaseStartDate: pastDate,
+        lastDebitDate: futureDate,
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
+  })
+
+  it('should return false if lease start date is in the future', () => {
+    const upcomingContract = lease
+      .params({
+        leaseStartDate: futureDate,
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActive(upcomingContract)).toBe(false)
+  })
+
+  it('should return true if lease has last debit date today', () => {
+    const activeContract = lease
+      .params({
+        leaseStartDate: pastDate,
+        lastDebitDate: new Date(),
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
+  })
+
+  it('should return false if lease has a termination date in the past', () => {
+    const terminatedContract = lease
+      .params({
+        terminationDate: pastDate,
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActive(terminatedContract)).toBe(false)
+  })
+
+  it('should return true if termination date is in the future', () => {
+    const activeContract = lease
+      .params({
+        leaseStartDate: pastDate,
+        terminationDate: futureDate,
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
   })
 })
