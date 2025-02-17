@@ -55,6 +55,7 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@urql/core": "^5.1.0",
     "axios": "^1.7.2",
     "axios-logger": "^2.8.0",
     "date-holidays": "^3.23.12",

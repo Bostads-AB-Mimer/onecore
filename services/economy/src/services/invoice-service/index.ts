@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { getInvoicesByContactCode } from './adapters/xledger-adapter'
+import { getInvoicesByContactCode } from '../invoice-data-service/adapters/xledger-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {

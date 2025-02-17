@@ -16,10 +16,17 @@ const db = knex({
   client: 'mssql',
 })
 
-export const saveInvoiceRows = async (rows: InvoiceDataRow[]) => {
+export const createBatch = async () => {
   const batchResult = await db('invoice_batch').insert({}).returning('Id')
   const batchId = batchResult[0].Id
 
+  return batchId
+}
+
+export const saveInvoiceRows = async (
+  rows: InvoiceDataRow[],
+  batchId: string
+) => {
   const dbRows = rows.map((row): InvoiceDataRow => {
     return {
       ...row,
@@ -49,7 +56,24 @@ export const saveInvoiceRows = async (rows: InvoiceDataRow[]) => {
   return null
 }
 
-export const saveContacts = async (contacts: Contact[]) => {
+export const saveContacts = async (contacts: Contact[], batchId: string) => {
   for (const contact of contacts) {
+    await db('invoice_contact').insert({
+      batchId,
+      contactCode: contact.contactCode,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      fullName: contact.fullName,
+      nationalRegistrationNumber: contact.nationalRegistrationNumber,
+      emailAddress: contact.emailAddress,
+      street: contact.address?.street,
+      streetNumber: contact.address?.number,
+      postalCode: contact.address?.postalCode,
+      city: contact.address?.city,
+    })
   }
+}
+
+export const getContacts = async (batchId: string) => {
+  return await db('invoice_contact').where('batchId', batchId)
 }
