@@ -88,3 +88,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.package }}
           cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+
+      - name: Commit version
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          npm version ${{ needs.prepare-version.outputs.version }}
+          git push origin HEAD:$BRANCH_NAME --follow-tags
