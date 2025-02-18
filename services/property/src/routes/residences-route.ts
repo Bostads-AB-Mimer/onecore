@@ -10,7 +10,6 @@ import {
   ResidenceSchema,
   ResidenceDetailedSchema,
 } from '../types/residence'
-import { ResidenceLinksSchema, ResidenceListLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -89,28 +88,7 @@ export const routes = (router: KoaRouter) => {
         dbResidences = await getResidencesByBuildingCode(buildingCode)
       }
 
-      const responseContent = dbResidences.map((residence) => {
-        const links = ResidenceListLinksSchema.parse({
-          self: { href: `/residences/${residence.id}` },
-          components: { href: `/components?residenceCode=${residence.code}` },
-        })
-
-        const parsedResidence = ResidenceSchema.parse({
-          id: residence.id,
-          code: residence.code,
-          name: residence.name || '',
-          deleted: Boolean(residence.deleted),
-          buildingCode: buildingCode,
-          validityPeriod: {
-            fromDate: residence.fromDate,
-            toDate: residence.toDate,
-          },
-        })
-        return {
-          ...parsedResidence,
-          _links: links,
-        }
-      })
+      const responseContent = ResidenceSchema.array().parse(dbResidences)
 
       ctx.body = {
         content: responseContent,
@@ -147,12 +125,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   allOf:
-   *                     - $ref: '#/components/schemas/ResidenceDetails'
-   *                     - type: object
-   *                       properties:
-   *                         _links:
-   *                           $ref: '#/components/schemas/ResidenceLinks'
+   *                   $ref: '#/components/schemas/ResidenceDetails'
    *       404:
    *         description: Residence not found
    *       500:
@@ -246,28 +219,9 @@ export const routes = (router: KoaRouter) => {
         },
       })
 
-      const _links = ResidenceLinksSchema.parse({
-        self: { href: `/residences/${residence.id}` },
-        building: {
-          href: `/buildings/${residence.propertyObject.building?.buildingCode}`, // TODO: check why building is null here sometimes
-        },
-        property: {
-          href: `/properties/${residence.propertyObject.property?.id}`,
-        },
-        rooms: {
-          href: `/rooms?buildingCode=${residence.propertyObject.building?.buildingCode}&residenceCode=${residence.code}`,
-        },
-        components: { href: `/components?residenceCode=${residence.code}` },
-        parent: {
-          href: `/buildings/${residence.propertyObject.building?.buildingCode}`,
-        },
-      })
-
       ctx.body = {
-        content: {
-          ...parsedResidence,
-          _links,
-        },
+        content: parsedResidence,
+
         ...metadata,
       }
     } catch (err) {

@@ -7,13 +7,10 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { etagMiddleware } from '../middleware/etag'
 import { getProperties, getPropertyById } from '../adapters/property-adapter'
-import { generateMetaLinks } from '../utils/links'
 import {
   propertiesQueryParamsSchema,
-  PropertySchema,
   PropertyDetailsSchema,
 } from '../types/property'
-import { PropertyLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -84,16 +81,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const properties = await getProperties(companyCode, tract)
 
-      const responseContent = properties.map((property) => {
-        return {
-          ...property,
-          _links: PropertyLinksSchema.parse({
-            self: { href: `/properties/${property.propertyId}` },
-            buildings: { href: `/buildings?propertyCode=${property.code}` },
-          }),
-        }
-      })
-
+      const responseContent = properties
       ctx.body = {
         content: responseContent,
       }
@@ -131,12 +119,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   allOf:
-   *                     - $ref: '#/components/schemas/PropertyDetails'
-   *                     - type: object
-   *                       properties:
-   *                         _links:
-   *                           $ref: '#/components/schemas/PropertyLinks'
+   *                   $ref: '#/components/schemas/PropertyDetails'
    *       404:
    *         description: Property not found
    *       500:
@@ -155,16 +138,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const parsedPropertyDetails = PropertyDetailsSchema.parse({
-        ...property,
-        _links: PropertyLinksSchema.parse({
-          self: { href: `/properties/${property.propertyObjectId}` },
-          buildings: { href: `/buildings?propertyCode=${property.code}` },
-        }),
-      })
-
       ctx.body = {
-        content: parsedPropertyDetails,
+        content: PropertyDetailsSchema.parse(property),
         ...metadata,
       }
     } catch (err) {

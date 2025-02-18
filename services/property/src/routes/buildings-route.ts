@@ -7,7 +7,6 @@ import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getBuildingById, getBuildings } from '../adapters/building-adapter'
 import { buildingsQueryParamsSchema, BuildingSchema } from '../types/building'
-import { BuildingLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -70,18 +69,6 @@ export const routes = (router: KoaRouter) => {
       const buildings = await getBuildings(propertyCode)
 
       const responseContent = buildings.map((building) => {
-        const links = BuildingLinksSchema.parse({
-          self: { href: `/buildings/${building.id}` },
-          property: { href: `/properties/${propertyCode}` },
-          residences: {
-            href: `/residences?buildingCode=${building.buildingCode}`,
-          },
-          staircases: {
-            href: `/staircases?buildingCode=${building.buildingCode}`,
-          },
-          parent: { href: `/properties/${propertyCode}` },
-        })
-
         const parsedBuilding = BuildingSchema.parse({
           id: building.id,
           code: building.buildingCode,
@@ -106,10 +93,8 @@ export const routes = (router: KoaRouter) => {
           },
           deleted: Boolean(building.deleteMark),
         })
-        return {
-          ...parsedBuilding,
-          _links: links,
-        }
+
+        return parsedBuilding
       })
 
       ctx.body = {
@@ -196,20 +181,7 @@ export const routes = (router: KoaRouter) => {
       })
 
       ctx.body = {
-        content: {
-          ...parsedBuilding,
-          _links: BuildingLinksSchema.parse({
-            self: { href: `/buildings/${building.id}` },
-            property: { href: `/properties/${building.propertyObject.id}` },
-            residences: {
-              href: `/residences?buildingCode=${building.buildingCode}`,
-            },
-            staircases: {
-              href: `/staircases?buildingCode=${building.buildingCode}`,
-            },
-            parent: { href: `/properties/${building.propertyObject.id}` },
-          }),
-        },
+        content: parsedBuilding,
         ...metadata,
       }
     } catch (err) {

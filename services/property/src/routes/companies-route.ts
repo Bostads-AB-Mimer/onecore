@@ -8,8 +8,6 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getCompanies, getCompany } from '../adapters/company-adapter'
 import { HttpStatusCode } from 'axios'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
-import { CompanyLinksSchema } from '../types/links'
-import { z } from 'zod'
 
 /**
  * @swagger
@@ -55,23 +53,9 @@ export const routes = (router: KoaRouter) => {
         return (ctx.status = HttpStatusCode.NotFound)
       }
 
-      // Create a temporary schema that extends CompanySchema with _links
-      const CompanyResponseSchema = z.object({
-        ...CompanySchema.shape,
-        _links: CompanyLinksSchema,
-      })
-
       const responseContent = companies.map((company) => {
-        return CompanyResponseSchema.parse({
+        return CompanySchema.parse({
           ...CompanySchema.parse(company),
-          _links: {
-            self: {
-              href: `/companies/{companyId}`,
-              useParams: true,
-              params: { companyId: company.id },
-            },
-            properties: { href: `/properties?companyCode=${company.code}` },
-          },
         })
       })
 
@@ -108,12 +92,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   allOf:
-   *                     - $ref: '#/components/schemas/CompanyDetails'
-   *                     - type: object
-   *                       properties:
-   *                         _links:
-   *                           $ref: '#/components/schemas/CompanyLinks'
+   *                   $ref: '#/components/schemas/CompanyDetails'
    *       404:
    *         description: Company not found
    *       500:
@@ -136,16 +115,8 @@ export const routes = (router: KoaRouter) => {
         ...company,
       })
 
-      const content = {
-        ...parsedCompanyDetails,
-        _links: CompanyLinksSchema.parse({
-          self: { href: `/companies/${company.id}` },
-          properties: { href: `/properties?companyCode=${company.code}` },
-        }),
-      }
-
       ctx.body = {
-        content,
+        content: parsedCompanyDetails,
         ...metadata,
       }
     } catch (err) {

@@ -8,15 +8,6 @@ import { PropertySchema, PropertyDetailsSchema } from '../types/property'
 import { StaircaseSchema } from '../types/staircase'
 import { RoomSchema } from '../types/room'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
-import {
-  CompanyLinksSchema,
-  PropertyLinksSchema,
-  BuildingLinksSchema,
-  StaircaseLinksSchema,
-  ResidenceLinksSchema,
-  RoomLinksSchema,
-  ComponentLinksSchema,
-} from '../types/links'
 import zodToJsonSchema from 'zod-to-json-schema'
 
 const schemas = {
@@ -59,34 +50,6 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(CompanyDetailsSchema, {
     name: 'CompanyDetails',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(CompanyLinksSchema, {
-    name: 'CompanyLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(PropertyLinksSchema, {
-    name: 'PropertyLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(BuildingLinksSchema, {
-    name: 'BuildingLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(StaircaseLinksSchema, {
-    name: 'StaircaseLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(ResidenceLinksSchema, {
-    name: 'ResidenceLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(RoomLinksSchema, {
-    name: 'RoomLinks',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(ComponentLinksSchema, {
-    name: 'ComponentLinks',
     target: 'openApi3',
   }).definitions,
 }

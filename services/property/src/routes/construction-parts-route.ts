@@ -6,12 +6,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import {
-  ConstructionPartResponseSchema,
   ConstructionPartSchema,
   constructionPartsQueryParamsSchema,
 } from '../types/construction-parts'
 import { getConstructionPartsByBuildingCode } from '../adapters/construction-part-adapter'
-import { ConstructionPartLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -77,21 +75,7 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const response = await getConstructionPartsByBuildingCode(buildingCode)
-        const responseContent = response.map((constructionPart) => {
-          return ConstructionPartResponseSchema.parse({
-            ...ConstructionPartSchema.parse(constructionPart),
-            _links: {
-              ...ConstructionPartLinksSchema.parse({
-                building: { href: 'NOT_IMPLEMENTED' },
-                residences: {
-                  href: 'NOT_IMPLEMENTED',
-                },
-                parent: { href: 'NOT_IMPLEMENTED' },
-                self: { href: 'NOT_IMPLEMENTED' },
-              }),
-            },
-          })
-        })
+        const responseContent = ConstructionPartSchema.array().parse(response)
 
         ctx.body = {
           content: responseContent,

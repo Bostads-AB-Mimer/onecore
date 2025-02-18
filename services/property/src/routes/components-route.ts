@@ -10,7 +10,6 @@ import {
   componentsQueryParamsSchema,
   ComponentSchema,
 } from '../types/component'
-import { ComponentLinksSchema } from '../types/links'
 
 /**
  * @swagger
@@ -52,12 +51,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     allOf:
-   *                       - $ref: '#/components/schemas/Component'
-   *                       - type: object
-   *                         properties:
-   *                           _links:
-   *                             $ref: '#/components/schemas/ComponentLinks'
+   *                     $ref: '#/components/schemas/Component'
    *       400:
    *         description: Invalid maintenance unit code provided
    *       404:
@@ -106,26 +100,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const responseContent = components.map((component) => {
-        const parsedComponent = ComponentSchema.parse({
-          ...component,
-        })
-        return {
-          ...parsedComponent,
-          _links: ComponentLinksSchema.parse({
-            self: { href: `/components/${component.id}` },
-            maintenanceUnit: {
-              href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}`,
-            },
-            parent: {
-              href: `/maintenanceUnits/${component.maintenanceUnits[0]?.code}`,
-            },
-          }),
-        }
-      })
-
       ctx.body = {
-        content: responseContent,
+        content: ComponentSchema.array().parse(components),
         ...metadata,
       }
     } catch (err) {

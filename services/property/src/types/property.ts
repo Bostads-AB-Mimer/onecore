@@ -100,14 +100,6 @@ export const PropertyDetailsSchema = z.object({
     energyIndex: z.string().nullable(),
     heatingNature: z.number().int(),
   }),
-  _links: z.object({
-    self: z.object({
-      href: z.string(),
-    }),
-    buildings: z.object({
-      href: z.string(),
-    }),
-  }),
 })
 
 export type PropertyDesignation = z.infer<typeof PropertyDesignationSchema>

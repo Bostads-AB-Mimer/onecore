@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { ConstructionPartLinksSchema } from './links'
 
 export const constructionPartsQueryParamsSchema = z.object({
   buildingCode: z
@@ -19,9 +18,4 @@ export const ConstructionPartSchema = z.object({
   fromDate: z.date().nullable(),
   toDate: z.date().nullable(),
   timestamp: z.string().trim(),
-})
-
-export const ConstructionPartResponseSchema = z.object({
-  ...ConstructionPartSchema.shape,
-  _links: ConstructionPartLinksSchema,
 })
