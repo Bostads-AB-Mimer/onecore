@@ -1,7 +1,6 @@
-import React from 'react'
 import { Building } from '@/services/types'
-import { Skeleton } from '@/components/ui/skeleton'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { SidebarMenu } from '@/components/ui/Sidebar'
 import { StaircaseNavigation } from './Staircase'
 import { useQuery } from '@tanstack/react-query'
 import { GET } from '@/services/api/baseApi'
@@ -11,10 +10,7 @@ interface StaircaseListProps {
   onStaircaseSelect?: (staircaseId: string) => void
 }
 
-export function StaircaseList({
-  building,
-  onStaircaseSelect,
-}: StaircaseListProps) {
+export function StaircaseList({ building }: StaircaseListProps) {
   const {
     data: staircases,
     isLoading,

@@ -31,8 +31,6 @@ const getComponentType = (component: Component) =>
   component.classification.componentType.code
 const getComponentStatus = (component: Component) =>
   component.details.typeDesignation || 'operational'
-const getComponentRoom = (component: Component) =>
-  component.maintenanceUnits[0] || 'Okänd plats'
 
 export function ComponentList({
   components,

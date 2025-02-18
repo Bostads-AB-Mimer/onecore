@@ -1,4 +1,3 @@
-import React from 'react'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,
@@ -7,14 +6,14 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/Sidebar'
 import { ChevronRight } from 'lucide-react'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import { SearchForm } from '../search-form'
+} from '@/components/ui/Collapsible'
+import { SearchForm } from '../SearchForm'
 
 export default function SidebarNavigation() {
   return (

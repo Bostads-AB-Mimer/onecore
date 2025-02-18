@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar'
+import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { PropertyList } from './PropertyList'
 
 interface CompanyNavigationProps {

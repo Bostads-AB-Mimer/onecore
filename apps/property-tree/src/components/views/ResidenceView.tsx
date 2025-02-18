@@ -1,4 +1,3 @@
-import React from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
@@ -7,7 +6,6 @@ import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
 import { Grid } from '@/components/ui/Grid'
 import { StatCard } from '../shared/StatCard'
-import { ContractModal } from '../shared/ContractModal'
 import { residenceService } from '@/services/api'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/Badge'
@@ -49,7 +47,6 @@ function LoadingSkeleton() {
 export function ResidenceView() {
   const { residenceId } = useParams()
   const { state } = useLocation()
-  const [showContract, setShowContract] = React.useState(false)
 
   const residenceQuery = useQuery({
     queryKey: ['residence', residenceId],

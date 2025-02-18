@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building2, Home } from 'lucide-react'
 import { Property } from '@/services/types'

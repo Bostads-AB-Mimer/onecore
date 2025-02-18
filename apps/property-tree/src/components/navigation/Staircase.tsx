@@ -1,8 +1,9 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building, Staircase } from '@/services/types'
 import { GitGraph } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar'
+
+import { Building, Staircase } from '@/services/types'
+import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
 
 interface StaircaseNavigationProps {
@@ -31,7 +32,7 @@ export function StaircaseNavigation({
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <ResidenceList building={building} staircase={staircase} />
+          <ResidenceList building={building} />
         </div>
       )}
     </SidebarMenuItem>

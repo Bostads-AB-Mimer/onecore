@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -22,7 +22,7 @@ export function Map({ locations, center }: MapProps) {
     if (!mapContainer.current) return
 
     const MAPTILER_KEY = 'PG6pJ2mVQ5TkHGTIkrfq'
-    
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: `https://api.maptiler.com/maps/basic-v2/style.json?key=${MAPTILER_KEY}`,
@@ -32,7 +32,7 @@ export function Map({ locations, center }: MapProps) {
       bearing: -17.6,
       maxZoom: 19,
       minZoom: 14,
-      canvasContextAttributes: { antialias: true }
+      canvasContextAttributes: { antialias: true },
     })
 
     map.current.on('load', () => {
@@ -42,7 +42,11 @@ export function Map({ locations, center }: MapProps) {
       const layers = map.current.getStyle().layers
       let labelLayerId
       for (let i = 0; i < layers.length; i++) {
-        if (layers[i].type === 'symbol' && layers[i].layout && 'text-field' in layers[i].layout) {
+        if (
+          layers[i].type === 'symbol' &&
+          layers[i].layout &&
+          'text-field' in layers[i].layout
+        ) {
           labelLayerId = layers[i].id
           break
         }
@@ -57,20 +61,23 @@ export function Map({ locations, center }: MapProps) {
       // Add 3D building layer
       map.current.addLayer(
         {
-          'id': '3d-buildings',
-          'source': 'openmaptiles',
+          id: '3d-buildings',
+          source: 'openmaptiles',
           'source-layer': 'building',
-          'type': 'fill-extrusion',
-          'minzoom': 15,
-          'filter': ['!=', ['get', 'hide_3d'], true],
-          'paint': {
+          type: 'fill-extrusion',
+          minzoom: 15,
+          filter: ['!=', ['get', 'hide_3d'], true],
+          paint: {
             'fill-extrusion-color': [
               'interpolate',
               ['linear'],
               ['get', 'render_height'],
-              0, 'lightgray',
-              200, 'royalblue',
-              400, 'lightblue'
+              0,
+              'lightgray',
+              200,
+              'royalblue',
+              400,
+              'lightblue',
             ],
             'fill-extrusion-height': [
               'interpolate',
@@ -79,15 +86,15 @@ export function Map({ locations, center }: MapProps) {
               15,
               0,
               16,
-              ['get', 'render_height']
+              ['get', 'render_height'],
             ],
             'fill-extrusion-base': [
               'case',
               ['>=', ['get', 'zoom'], 16],
               ['get', 'render_min_height'],
-              0
-            ]
-          }
+              0,
+            ],
+          },
         },
         labelLayerId
       )
@@ -103,7 +110,7 @@ export function Map({ locations, center }: MapProps) {
       el.style.borderRadius = '50%'
       el.style.border = '2px solid white'
       el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-      
+
       const floorHeight = location.floor || 0
       const heightOffset = floorHeight * 0.0001 // Adjust this value to change vertical spacing
 
@@ -118,7 +125,9 @@ export function Map({ locations, center }: MapProps) {
         .setPopup(
           new maplibregl.Popup().setHTML(
             `<h3 class="text-sm font-semibold">${location.name}</h3>` +
-            (location.floor ? `<p class="text-xs">Floor: ${location.floor}</p>` : '')
+              (location.floor
+                ? `<p class="text-xs">Floor: ${location.floor}</p>`
+                : '')
           )
         )
         .addTo(map.current)

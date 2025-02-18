@@ -1,9 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  propertyService,
-  buildingService,
-  residenceService,
-} from '@/services/api'
 import { NavigationItem } from '@/services/types'
 
 export function useSearch(query: string) {

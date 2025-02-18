@@ -76,7 +76,7 @@ export function IssueForm({ featureName, onSubmit, onCancel }: IssueFormProps) {
                 onClick={() =>
                   setFormData((prev) => ({
                     ...prev,
-                    priority: priority.value as any,
+                    priority: priority.value as IssueFormData['priority'],
                   }))
                 }
                 className={`
@@ -114,7 +114,7 @@ export function IssueForm({ featureName, onSubmit, onCancel }: IssueFormProps) {
                 onClick={() =>
                   setFormData((prev) => ({
                     ...prev,
-                    category: category.value as any,
+                    category: category.value as IssueFormData['category'],
                   }))
                 }
                 className={`

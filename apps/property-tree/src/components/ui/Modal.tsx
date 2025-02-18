@@ -1,6 +1,5 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
 import { Button } from './Button'
 
 interface ModalProps {
@@ -52,21 +51,11 @@ export function Modal({
             }}
             className="relative w-full max-w-lg max-h-[90vh] overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl mx-4"
           >
-            {/* Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
               <h2 className="text-xl font-semibold">{title}</h2>
-              <Button
-                variant="secondary"
-                icon={X}
-                onClick={onClose}
-                className="!p-2"
-              />
+              <Button variant="secondary" onClick={onClose} className="!p-2" />
             </div>
-
-            {/* Content */}
             <div className="p-6">{children}</div>
-
-            {/* Footer */}
             {footer && (
               <div className="sticky bottom-0 p-6 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                 {footer}

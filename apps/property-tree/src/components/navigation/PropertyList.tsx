@@ -1,7 +1,6 @@
-import React from 'react'
 import { Company } from '@/services/types'
-import { Skeleton } from '@/components/ui/skeleton'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { SidebarMenu } from '@/components/ui/Sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
 import { propertyService } from '@/services/api'
@@ -10,12 +9,12 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+} from '@/components/ui/Collapsible'
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/Sidebar'
 
 interface PropertyListProps {
   company: Company

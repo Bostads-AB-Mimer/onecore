@@ -1,6 +1,6 @@
 import { Residence } from '@/services/types'
 import { Hotel } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar'
+import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { useNavigate } from 'react-router-dom'
 
 interface ResidenceNavigationProps {

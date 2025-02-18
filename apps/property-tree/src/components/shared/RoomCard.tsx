@@ -88,7 +88,7 @@ export function RoomCard({ room, residenceId }: RoomCardProps) {
             <div className="pt-3 border-t dark:border-gray-700">
               <div className="flex flex-wrap gap-2">
                 {Object.entries(room.features).map(
-                  ([feature, value]) =>
+                  ([feature, value], index) =>
                     value === true && (
                       <motion.div
                         key={index}

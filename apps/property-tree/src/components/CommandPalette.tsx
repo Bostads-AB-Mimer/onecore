@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Command,
-  Search,
   Building2,
   MapPin,
   Home,
@@ -11,8 +10,6 @@ import {
   User2,
 } from 'lucide-react'
 import { useSearch } from './hooks/useSearch'
-import { NavigationItem } from '../services/types'
-import { propertyService } from '../services/api'
 import { useCommandPalette } from './hooks/useCommandPalette'
 
 const routeMap = {
@@ -37,7 +34,7 @@ export function CommandPalette() {
   const [query, setQuery] = React.useState('')
   const [selectedIndex, setSelectedIndex] = React.useState(0)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const { results, isLoading } = useSearch(query)
+  const { results } = useSearch(query)
 
   React.useEffect(() => {
     setSelectedIndex(0)

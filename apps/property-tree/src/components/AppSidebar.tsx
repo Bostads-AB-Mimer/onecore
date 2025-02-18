@@ -1,12 +1,12 @@
 import * as React from 'react'
 import { ChevronRight } from 'lucide-react'
 
-import { SearchForm } from '@/components/search-form'
+import { SearchForm } from '@/components/SearchForm'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+} from '@/components/ui/Collapsible'
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/Sidebar'
 
 // This is sample data.
 const data = {

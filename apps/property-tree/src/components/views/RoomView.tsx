@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -11,7 +10,6 @@ import {
   Maximize2,
   DoorOpen,
   Wrench,
-  Plus,
   Settings,
   AlertCircle,
 } from 'lucide-react'
@@ -154,12 +152,12 @@ export function RoomView() {
 
   const Icon = roomIcons[room.roomType.name] || Home
 
-  const handleAddComponent = async (data: any) => {
+  const handleAddComponent = async (data: unknown) => {
     // Implementation for adding a component
     console.log('Adding component:', data)
   }
 
-  const handleEditComponent = async (id: string, data: any) => {
+  const handleEditComponent = async (id: string, data: unknown) => {
     // Implementation for editing a component
     console.log('Editing component:', id, data)
   }

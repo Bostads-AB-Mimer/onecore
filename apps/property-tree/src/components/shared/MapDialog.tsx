@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
-import { Dialog } from '@/components/ui/dialog'
+import { useState } from 'react'
+import { Dialog } from '@/components/ui/Dialog'
 import { Map } from '@/components/shared/Map'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/Button'
 import { MapIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { geocodingService } from '@/services/api/geocodingService'
@@ -22,7 +22,9 @@ export function MapDialog({ residences }: MapDialogProps) {
     queryKey: ['coordinates', residenceAddresses],
     queryFn: async () => {
       const coords = await Promise.all(
-        residenceAddresses.map((address) => geocodingService.searchAddress(address))
+        residenceAddresses.map((address) =>
+          geocodingService.searchAddress(address)
+        )
       )
       return coords.filter((coord): coord is [number, number] => coord !== null)
     },
@@ -47,7 +49,11 @@ export function MapDialog({ residences }: MapDialogProps) {
       <Button variant="outline" size="icon" onClick={() => setIsOpen(true)}>
         <MapIcon className="h-4 w-4" />
       </Button>
-      <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} className="sm:max-w-[800px]">
+      <Dialog
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        className="sm:max-w-[800px]"
+      >
         {locations.length > 0 ? (
           <Map locations={locations} center={locations[0].coordinates} />
         ) : (

@@ -1,12 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { geocodingQueue } from '@/utils/geocodingQueue'
+import { useEffect, useRef, useState } from 'react'
 import { Map as GeoMap } from 'maplibre-gl'
 import { Expand, Minimize2 } from 'lucide-react'
-import { MapboxOverlay } from '@deck.gl/mapbox'
-import { ScatterplotLayer } from '@deck.gl/layers'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { Property } from '@/services/types'
+import { geocodingQueue } from '@/utils/geocodingQueue'
 
 interface PropertyMapProps {
   properties: Property[]
@@ -17,7 +15,7 @@ export function PropertyMap({ properties }: PropertyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<GeoMap | null>(null)
 
-  const [propertyCoordinates, setPropertyCoordinates] = useState<
+  const [_propertyCoordinates, setPropertyCoordinates] = useState<
     Map<string, [number, number]>
   >(new Map())
   const [isExpanded, setIsExpanded] = useState(false)
@@ -83,41 +81,7 @@ export function PropertyMap({ properties }: PropertyMapProps) {
         map.current = null
       }
     }
-  }, [mapContainer.current])
-
-  useEffect(() => {
-    if (!map.current) return
-
-    const points = properties
-      .filter((property) => propertyCoordinates.has(property.id))
-      .map((property) => ({
-        position: propertyCoordinates.get(property.id)!,
-        property: property,
-      }))
-
-    const deckOverlay = new MapboxOverlay({
-      interleaved: true,
-      layers: [
-        new ScatterplotLayer({
-          id: 'properties',
-          data: points,
-          getPosition: (d) => d.position,
-          getFillColor: [65, 105, 225], // Royal blue
-          getRadius: 300,
-          pickable: true,
-          onClick: (info) => {
-            if (info.object && info.object.property) {
-              console.log('Clicked property:', info.object.property.designation)
-            }
-          },
-        }),
-      ],
-    })
-
-    return () => {
-      // remove something here?
-    }
-  }, [properties, propertyCoordinates])
+  }, [])
 
   return (
     <div className="relative">

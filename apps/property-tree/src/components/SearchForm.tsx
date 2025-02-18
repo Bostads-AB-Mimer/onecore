@@ -1,11 +1,11 @@
 import { Search } from 'lucide-react'
 import { useCommandPalette } from '@/components/hooks/useCommandPalette'
-import { Label } from '@/components/ui/label'
+import { Label } from '@/components/ui/Label'
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarInput,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/Sidebar'
 
 export function SearchForm({ ...props }: React.ComponentProps<'form'>) {
   const { open } = useCommandPalette()

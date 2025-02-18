@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { AlertCircle, ArrowRight } from 'lucide-react'
 import { Issue } from '../../services/types'
@@ -7,13 +6,6 @@ import { Badge } from '@/components/ui/Badge'
 
 interface ActiveIssuesProps {
   issues: Issue[]
-}
-
-const priorityColors = {
-  low: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-  medium:
-    'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-  high: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
 }
 
 const priorityLabels = {
@@ -45,6 +37,7 @@ export function ActiveIssues({ issues }: ActiveIssuesProps) {
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
+                  {/* TODO: Map priority to badge variant */}
                   <Badge variant={issue.priority as any}>
                     {priorityLabels[issue.priority]}
                   </Badge>

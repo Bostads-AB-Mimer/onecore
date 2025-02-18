@@ -11,14 +11,6 @@ export type ResidenceDetails = components['schemas']['ResidenceDetails']
 export type Room = components['schemas']['Room']
 export type Component = components['schemas']['Component']
 
-export type PropertyLinks = components['schemas']['PropertyLinks']
-export type BuildingLinks = components['schemas']['BuildingLinks']
-export type CompanyLinks = components['schemas']['CompanyLinks']
-export type StaircaseLinks = components['schemas']['StaircaseLinks']
-export type ResidenceLinks = components['schemas']['ResidenceLinks']
-export type RoomLinks = components['schemas']['RoomLinks']
-export type ComponentLinks = components['schemas']['ComponentLinks']
-
 // Custom types that aren't in the API
 export interface Issue {
   id: string
@@ -48,12 +40,3 @@ export interface NavigationItem {
     }
   }
 }
-
-// Extend base types with links
-export type CompanyWithLinks = Company & CompanyLinks
-export type PropertyWithLinks = Property & PropertyLinks
-export type BuildingWithLinks = Building & BuildingLinks
-export type StaircaseWithLinks = Staircase & StaircaseLinks
-export type ResidenceWithLinks = Residence & ResidenceLinks
-export type RoomWithLinks = Room & RoomLinks
-export type ComponentWithLinks = Component & ComponentLinks

@@ -1,6 +1,5 @@
-import React from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, LucideIcon } from 'lucide-react'
 import { Building } from '@/services/types'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
@@ -8,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 interface BuildingListProps {
   buildings: Building[]
   title?: string
-  icon?: React.ComponentType
+  icon?: LucideIcon
 }
 
 export function BuildingList({
@@ -21,7 +20,7 @@ export function BuildingList({
   return (
     <Card title={title} icon={icon}>
       <div className="space-y-4">
-        {buildings?.map((building) => (
+        {buildings.map((building) => (
           <motion.div
             key={building.id}
             whileHover={{ scale: 1.02 }}

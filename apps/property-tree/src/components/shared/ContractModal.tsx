@@ -1,7 +1,6 @@
-import React from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { InfoItem } from '@/components/ui/InfoItem'
-import { Calendar, Home, FileText, User2, CreditCard } from 'lucide-react'
+import { Calendar, Home, User2, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface ContractModalProps {

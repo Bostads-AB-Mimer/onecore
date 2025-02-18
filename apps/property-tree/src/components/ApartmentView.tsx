@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import {
   BedDouble,
@@ -6,7 +5,6 @@ import {
   Mail,
   Phone,
   Square,
-  User2,
   CalendarClock,
   Building2,
   ArrowUpRight,

@@ -1,16 +1,16 @@
-import { AppSidebar } from '@/components/app-sidebar'
+import { AppSidebar } from '@/components/AppSidebar'
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from '@/components/ui/breadcrumb'
-import { Separator } from '@/components/ui/separator'
+} from '@/components/ui/Breadcrumb'
+import { Separator } from '@/components/ui/Separator'
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/Sidebar'
 
 import { CompanyList } from '@/components/navigation/CompanyList'
 

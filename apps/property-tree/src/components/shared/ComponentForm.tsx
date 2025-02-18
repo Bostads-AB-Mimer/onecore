@@ -1,16 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import {
-  Calendar,
-  Package,
-  Wrench,
-  Loader2,
-  Building,
-  Tag,
-  FileText,
-  Settings,
-  Hash,
-} from 'lucide-react'
+import { Package, Wrench, Loader2, Building, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface ComponentFormData {
@@ -125,7 +115,10 @@ export function ComponentForm({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() =>
-                  setFormData((prev) => ({ ...prev, type: type.value as any }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: type.value as ComponentFormData['type'],
+                  }))
                 }
                 className={`
                   px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300

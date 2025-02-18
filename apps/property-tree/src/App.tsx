@@ -16,20 +16,19 @@ import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
 import SidebarNavigation from './components/navigation/SidebarNavigation'
-import Page from './app/dashboard/page'
+import Page from './app/dashboard/Page'
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from './components/ui/sidebar'
+} from './components/ui/Sidebar'
 import { Separator } from '@radix-ui/react-separator'
 import {
   Breadcrumb,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbItem,
   BreadcrumbLink,
-} from './components/ui/breadcrumb'
+} from './components/ui/Breadcrumb'
 
 const queryClient = new QueryClient({
   defaultOptions: {
