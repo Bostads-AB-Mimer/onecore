@@ -46,4 +46,4 @@ export const columnNames: string[] = [
   'sumRow',
 ]
 
-export type InvoiceDataRow = Record<string, string>
+export type InvoiceDataRow = Record<string, string | number>

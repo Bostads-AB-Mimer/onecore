@@ -42,11 +42,12 @@ const getAdditionalColumns = async (
   const contractCode = row.contractCode
   const additionalColumns: InvoiceDataRow = {}
   let rentArticleResult: any[]
+  const year = (row.invoiceFromDate as string).substring(0, 4)
 
   if ('Öresutjämning' == row.invoiceRowText) {
     rentArticleResult = await db('repsk')
       .where('keycode', 'ORESUTJ')
-      .andWhere('year', '2024')
+      .andWhere('year', year)
       .distinct()
   } else {
     rentArticleResult = await db('cmart')
@@ -54,7 +55,7 @@ const getAdditionalColumns = async (
       .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
       .where('code', rentArticleName)
       .andWhere('keyrektk', 'INTAKT')
-      .andWhere('year', '2024')
+      .andWhere('year', year)
       .andWhere('keycmuni', 'month')
       .distinct()
   }
@@ -72,10 +73,9 @@ const getAdditionalColumns = async (
       const propertyRulesResult = await db('repsk')
         .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
         .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
-        .innerJoin('hyinf', 'hyinf.keycmobj', 'babuf.keyobjlgh')
-        .where('year', '2024')
+        .where('year', year)
         .andWhere('keyrektk', 'INTAKT')
-        .andWhere('hyinf.hyresid', contractCode.toString().split('/')[0])
+        .andWhere('hyresid', contractCode.toString().split('/')[0])
         .distinct()
 
       if (propertyRulesResult && propertyRulesResult[0]) {
