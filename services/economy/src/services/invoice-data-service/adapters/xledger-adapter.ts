@@ -9,6 +9,7 @@ import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
 import { getContacts } from './invoice-data-db-adapter'
 import { gql } from '@urql/core'
+import { InvoiceDataRow } from '../types'
 
 const axiosOptions = {
   method: 'POST',
@@ -258,6 +259,126 @@ export const syncContact = async (dbContact: any) => {
   }
 
   return xledgerContact
+}
+
+const accountJobIds: Record<string, string> = {}
+
+const getAccountDbId = async (account: string) => {
+  if (accountJobIds[account]) {
+    return accountJobIds[account]
+  } else {
+    const accountQuery = {
+      query: `query {
+        accounts(last: 10000, filter: { chartOfAccountDbId: 3 }, objectStatus: OPEN) {
+          edges {
+            node {
+              code
+              dbId
+            }
+          }
+        }
+      }`,
+    }
+
+    const result = await axios(`${config.xledger.url}`, {
+      data: accountQuery,
+      ...axiosOptions,
+    })
+
+    result.data.data.accounts.edges.forEach((edge: any) => {
+      accountJobIds[edge.node.code] = edge.node.dbId
+    })
+
+    return accountJobIds[account]
+  }
+}
+
+const createLedgerTransactionQuery = (
+  invoiceDataRow: InvoiceDataRow,
+  accountJobId: string,
+  batchNum: string
+): string => {
+  return `{
+    node: {
+      postedDate: "${invoiceDataRow.invoiceFromDate}"
+      dueDate: "${invoiceDataRow.invoiceFromDate}"
+      account: { code: "1510" }
+      transactionSource: { code: "AR" }
+      invoiceAmount: 6387
+      subledger: { code: "P019430" }
+      extIdentifier: "OCR-numret"
+      invoiceNumber: "OCR-numret"
+      jobLevel: { dbId: 14502 }
+      trRegNumber: 20250201
+    }
+  }`
+}
+
+const createCustomerTransaction = async (
+  accountJobId: string,
+  batchId: string,
+  customerCode: string,
+  postedDate: string,
+  dueDate: string,
+  amount: number,
+  ocr: string
+) => {
+  const customerTransactionQuery = {
+    query: `mutation {
+      addGLImportItems(
+        inputs: [{
+          node: {
+            postedDate: "${postedDate}"
+            dueDate: "${dueDate}"
+            account: { dbId: ${accountJobId}" }
+            transactionSource: { code: "AR" }
+            invoiceAmount: ${amount}
+            subledger: { code: "${customerCode}" }
+            extIdentifier: "${ocr}"
+            invoiceNumber: "${ocr}"
+            jobLevel: { dbId: 14502 }
+            trRegNumber: ${batchId}
+          }
+        }]
+      ) {
+        edges {
+          node {
+            dbId
+          }
+        }
+      }
+    }`,
+  }
+
+  const result = await axios(`${config.xledger.url}`, {
+    data: customerTransactionQuery,
+    ...axiosOptions,
+  })
+
+  return result.data.data.addGLImportItems.edges
+}
+
+export const updateCustomerInvoiceData = async (
+  invoiceDataRows: InvoiceDataRow[],
+  batchId: string
+) => {
+  const accountJobId = await getAccountDbId('1510')
+
+  let customerInvoiceAmount = 0
+
+  invoiceDataRows.forEach((row) => {
+    customerInvoiceAmount += row.totalAmount as number
+  })
+
+  await createCustomerTransaction(
+    accountJobId,
+    batchId,
+    invoiceDataRows[0].customerCode as string,
+    invoiceDataRows[0].invoiceFromDate as string,
+    invoiceDataRows[0].invoiceToDate as string,
+    customerInvoiceAmount,
+    'ocr'
+  )
 }
 
 export const healthCheck = async () => {

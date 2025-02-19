@@ -2,6 +2,7 @@ import { InvoiceDataRow } from '../types'
 import knex from 'knex'
 import config from '../../../common/config'
 import { Contact, Invoice } from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 console.log(config)
 
@@ -75,5 +76,38 @@ export const saveContacts = async (contacts: Contact[], batchId: string) => {
 }
 
 export const getContacts = async (batchId: string) => {
-  return await db('invoice_contact').where('batchId', batchId)
+  return await db('invoice_contact')
+    .where('batchId', batchId)
+    .whereNull('importStatus')
+}
+
+export const getContracts = async (batchId: string) => {
+  return await db('invoice_data')
+    .select('contractCode')
+    .distinct()
+    .where('batchId', batchId)
+    .whereNull('importStatus')
+}
+
+export const getInvoiceRows = async (contractCode: string, batchId: string) => {
+  logger.info(
+    { contractCode, type: typeof contractCode, batchId },
+    'Getting invoice rows'
+  )
+  return await db('invoice_data')
+    .where('batchId', batchId)
+    .where('contractCode', contractCode as string)
+}
+
+export const markInvoiceRowsAsImported = async (
+  invoiceRows: InvoiceDataRow[],
+  batchId: string
+) => {
+  for (const row of invoiceRows) {
+    await db('invoice_data').update(['ImportStatus'], 'true').where({
+      batchId,
+      contractCode: row.contractCode,
+      account: row.account,
+    })
+  }
 }

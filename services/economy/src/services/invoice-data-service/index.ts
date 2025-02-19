@@ -1,13 +1,19 @@
 import KoaRouter from '@koa/router'
 import { enrichInvoiceRows } from './adapters/xpand-db-adapter'
 import {
+  getInvoiceRows,
   saveInvoiceRows,
+  markInvoiceRowsAsImported,
   saveContacts,
   createBatch,
   getContacts,
+  getContracts,
 } from './adapters/invoice-data-db-adapter'
 import { InvoiceDataRow } from './types'
-import { syncContact } from './adapters/xledger-adapter'
+import {
+  syncContact,
+  updateCustomerInvoiceData,
+} from './adapters/xledger-adapter'
 import { logger } from 'onecore-utilities'
 
 /**
@@ -105,13 +111,49 @@ export const routes = (router: KoaRouter) => {
 
       for (const contact of contacts) {
         await syncContact(contact)
-        await sleep(100)
+        await sleep(200)
       }
 
       ctx.status = 200
       ctx.body = { result: true }
     } catch (error: any) {
       logger.error(error, 'Error updating contacts')
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/invoice-data/update-invoices', async (ctx) => {
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms))
+    }
+
+    console.log('update-invoices')
+
+    try {
+      const batchId = ctx.request.body['batchId']
+
+      // Get aggregated rows for account/projectCode/costCode combos
+
+      // Get rows for a specific contract
+      const contractCodes = await getContracts(batchId)
+
+      for (const contractCode of contractCodes) {
+        const contractInvoiceRows = await getInvoiceRows(
+          contractCode as string,
+          batchId
+        )
+        await updateCustomerInvoiceData(contractInvoiceRows, batchId)
+        await markInvoiceRowsAsImported(contractInvoiceRows, batchId)
+        await sleep(100)
+      }
+
+      ctx.status = 200
+      ctx.body = { result: true }
+    } catch (error: any) {
+      logger.error(error, 'Error updating invoices')
       ctx.status = 500
       ctx.body = {
         message: error.message,
