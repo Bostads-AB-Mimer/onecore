@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from 'onecore-utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
+import { LeaseStatus } from 'onecore-types'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/listings-with-applicants', async (ctx) => {
@@ -136,7 +137,11 @@ export const routes = (router: KoaRouter) => {
 
         if (
           getTenant.data.parkingSpaceContracts &&
-          getTenant.data.parkingSpaceContracts.length > 0
+          getTenant.data.parkingSpaceContracts.filter(
+            (l) =>
+              l.status == LeaseStatus.Current ||
+              l.status == LeaseStatus.Upcoming
+          ).length > 0
         )
           return {
             ok: true,
