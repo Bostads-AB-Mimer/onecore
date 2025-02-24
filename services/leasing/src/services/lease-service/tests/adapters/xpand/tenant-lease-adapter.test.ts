@@ -31,6 +31,7 @@ jest.mock('knex', () => () => ({
           contactKey: '_ADBAEC',
           queueName: 'Bilplats (intern)',
           queueTime: sub(new Date(), { days: 366 }),
+          protectedIdentity: null,
         },
       ])
     )

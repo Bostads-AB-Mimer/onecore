@@ -62,16 +62,19 @@ const transformFromDbContact = (
   leases: any
 ): Contact => {
   const row = trimRow(rows[0])
+  const protectedIdentity = row.protectedIdentity !== null
 
   const contact = {
     contactCode: row.contactCode,
     contactKey: row.contactKey,
-    firstName: row.firstName,
-    lastName: row.lastName,
-    fullName: row.fullName,
+    firstName: protectedIdentity ? undefined : row.firstName,
+    lastName: protectedIdentity ? undefined : row.lastName,
+    fullName: protectedIdentity ? undefined : row.fullName,
     leaseIds: leases,
-    nationalRegistrationNumber: row.nationalRegistrationNumber,
-    birthDate: row.birthDate,
+    nationalRegistrationNumber: protectedIdentity
+      ? undefined
+      : row.nationalRegistrationNumber,
+    birthDate: protectedIdentity ? undefined : row.birthDate,
     address: {
       street: row.street,
       number: '',
@@ -81,7 +84,7 @@ const transformFromDbContact = (
     phoneNumbers: phoneNumbers,
     emailAddress:
       process.env.NODE_ENV === 'production'
-        ? row.emailAddress == null
+        ? row.emailAddress == null || protectedIdentity
           ? undefined
           : row.emailAddress
         : 'redacted',
@@ -409,7 +412,8 @@ const getContactQuery = () => {
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'bkkty.bkktyben as queueName',
-      'bkqte.quetime as queueTime'
+      'bkqte.quetime as queueTime',
+      'cmctc.lagsokt as protectedIdentity'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
