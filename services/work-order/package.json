@@ -63,6 +63,7 @@
     "onecore-types": "^3.1.0",
     "onecore-utilities": "^1.1.0",
     "striptags": "^3.2.0",
-    "swagger-jsdoc": "^6.2.8"
+    "swagger-jsdoc": "^6.2.8",
+    "zod": "^3.24.1"
   }
 }

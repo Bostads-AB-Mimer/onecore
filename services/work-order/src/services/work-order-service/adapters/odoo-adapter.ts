@@ -1,6 +1,7 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
 import { groupBy } from 'lodash'
+import z from 'zod'
 import Config from '../../../common/config'
 import {
   ApartmentInfo,
@@ -260,6 +261,25 @@ const createWorkOrderRecord = async (
   details: CreateWorkOrderDetails
 ): Promise<number> => {
   try {
+    const supportedLocationCodes = z.enum(['TV', 'BWC', 'KÖ'])
+    const locationCodeParseResult = supportedLocationCodes.safeParse(
+      details.Rows[0].LocationCode
+    )
+    if (!locationCodeParseResult.success) {
+      throw new Error('Unsupported location code')
+    }
+
+    const locationCode = locationCodeParseResult.data
+    const captionForLocation: Record<
+      z.infer<typeof supportedLocationCodes>,
+      string
+    > = {
+      TV: 'Tvättstuga',
+      BWC: 'Lägenhet',
+      KÖ: 'Lägenhet',
+    }
+    const caption = captionForLocation[locationCode]
+
     return await odoo.create('maintenance.request', {
       rental_property_id: rentalPropertyRecord.toString(),
       lease_id: leaseRecord.toString(),
@@ -268,15 +288,13 @@ const createWorkOrderRecord = async (
       hearing_impaired: details.HearingImpaired,
       call_between: details.AccessOptions.CallBetween,
       pet: details.Pet,
-      space_code: details.Rows[0].LocationCode,
+      space_code: locationCode,
       equipment_code: details.Rows[0].PartOfBuildingCode,
       description: details.Rows[0].Description,
       images: details.Images,
-      name:
-        'Felanmäld tvättstuga - ' +
-        transformEquipmentCode(details.Rows[0].PartOfBuildingCode),
+      name: `Felanmäld ${caption.toLowerCase()} - ${transformEquipmentCode(details.Rows[0].PartOfBuildingCode)}`,
       master_key: details.AccessOptions.Type === 0,
-      space_caption: 'Tvättstuga',
+      space_caption: caption,
       maintenance_team_id: maintenanceTeamId,
       creation_origin: 'mimer-nu',
     })

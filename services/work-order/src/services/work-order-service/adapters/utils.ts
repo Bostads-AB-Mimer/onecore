@@ -20,6 +20,11 @@ const equipmentCodes: Record<string, string> = {
   TS: 'Torkskåp',
   MA: 'Mangel',
   TÅ: 'Torkskåp',
+  SP: 'Spis/ugn',
+  KY: 'Kyl',
+  FR: 'Frys',
+  KF: 'Kyl/frys',
+  MU: 'Microvågsugn',
 }
 
 export const transformSpaceCode = (space_code: string): string => {
