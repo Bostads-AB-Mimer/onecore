@@ -113,9 +113,9 @@ describe('work-order-service index', () => {
       const getContactByPhoneNumberSpy = jest
         .spyOn(tenantLeaseAdapter, 'getContactByPhoneNumber')
         .mockResolvedValue(contactMock)
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValue(leaseMock)
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
@@ -127,18 +127,19 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getContactByPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
-      expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        'P158770',
+        false,
+        false
+      )
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
 
     it('should handle contactCode case', async () => {
-      const getContactByContactCodeSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: contactMock })
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValue(leaseMock)
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
@@ -149,8 +150,11 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getContactByContactCodeSpy).toHaveBeenCalledWith('P965339')
-      expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        'P965339',
+        false,
+        true
+      )
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
