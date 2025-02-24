@@ -5,7 +5,7 @@
  */
 
 import { logger } from 'onecore-utilities'
-import { DetailedApplicant, Lease, Listing } from 'onecore-types'
+import { DetailedApplicant, Lease, LeaseStatus, Listing } from 'onecore-types'
 
 import { leaseTypes } from '../../constants/leaseTypes'
 
@@ -78,8 +78,12 @@ const assignPriorityToApplicantBasedOnRentalRules = (
       priority: null,
     }
   }
+  const activeParkingspaceContracts = applicant.parkingSpaceContracts?.filter(
+    (l) => l.status === LeaseStatus.Current || l.status === LeaseStatus.Upcoming
+  )
 
-  if (!applicant.parkingSpaceContracts?.length) {
+  //todo: filter out terminated leases from parkingSpaceContracts so that an applicant with a terminated lease is prioritized correctly
+  if (!activeParkingspaceContracts?.length) {
     //priority  1
 
     //Applicant has no active parking space contract and is tenant in same area as listing
@@ -137,7 +141,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has 1 active parking space contract and wishes to rent an additional parking space
   if (
-    applicant.parkingSpaceContracts?.length === 1 &&
+    activeParkingspaceContracts?.length === 1 &&
     applicant.applicationType === 'Additional'
   ) {
     logger.info(
@@ -152,8 +156,8 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has more than 1 active parking space contract and wishes to replace 1 parking space contract
   if (
-    applicant.parkingSpaceContracts &&
-    applicant.parkingSpaceContracts.length > 1 &&
+    activeParkingspaceContracts &&
+    activeParkingspaceContracts.length > 1 &&
     applicant.applicationType === 'Replace'
   ) {
     logger.info(
@@ -169,10 +173,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   //priority 3
 
   //Applicant has 2 or more active parking space and wishes to rent an additional parking space
-  if (
-    applicant.parkingSpaceContracts &&
-    applicant.parkingSpaceContracts.length >= 2
-  ) {
+  if (activeParkingspaceContracts && activeParkingspaceContracts.length >= 2) {
     logger.info(
       applicant.name +
         ': priority 3 - Applicant has 2 or more active parking space and wishes to rent an additional parking space'

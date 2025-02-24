@@ -131,7 +131,6 @@ async function fetchTenant(params: {
   const parkingSpaceContracts = priorityListService.parseLeasesForParkingSpaces(
     leasesWithPropertyType.data
   )
-
   return {
     ok: true,
     data: {
