@@ -79,7 +79,15 @@ const getInvoicesByContactCode = async (
     .orderBy('krfkh.fromdate', 'desc')
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows
-      .filter((row) => row.invoiceId)
+      .filter((row) => {
+        // Only include invoices with invoiceIds
+        // that have not been deleted (debitStatus 6 = makulerad)
+        if (row.invoiceId && row.debitStatus !== 6) {
+          return true
+        } else {
+          return false
+        }
+      })
       .map(transformFromDbInvoice)
     logger.info(
       { contactCode: contactKey },

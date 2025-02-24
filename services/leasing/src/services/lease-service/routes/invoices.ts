@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
 
 import * as invoicesAdapter from '../adapters/xpand/invoices-adapter'
 
@@ -44,13 +44,18 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/contact/invoices/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await invoicesAdapter.getInvoicesByContactCode(
-      ctx.params.contactCode
-    )
+    try {
+      const responseData = await invoicesAdapter.getInvoicesByContactCode(
+        ctx.params.contactCode
+      )
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
+      ctx.body = {
+        content: responseData,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting invoices by contact code')
+      throw error
     }
   })
 
