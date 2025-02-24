@@ -394,17 +394,17 @@ export const routes = (router: KoaRouter) => {
         Images,
       } = ctx.request.body
 
-      // Filter out workOrders that are not related to laundry rooms
-      const laundryRoomWorkOrderRequests = Rows.filter(
-        (workOrder: any) => workOrder.LocationCode === 'TV'
+      // Filter out workOrders that are not handled by onecore
+      const onecoreWorkOrderRequests = Rows.filter((workOrder: any) =>
+        ['TV', 'BWC', 'KÖ'].includes(workOrder.LocationCode)
       )
 
       const reason = !ContactCode
         ? 'ContactCode is missing'
         : !RentalObjectCode
           ? 'RentalObjectCode is missing'
-          : laundryRoomWorkOrderRequests.length === 0
-            ? 'No work orders on laundry rooms found in request'
+          : onecoreWorkOrderRequests.length === 0
+            ? 'No supported work orders found in request'
             : null
 
       if (reason) {
@@ -423,20 +423,6 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 404
         ctx.body = {
           reason: 'Rental property not found',
-          ...metadata,
-        }
-        return
-      }
-
-      // Check if rental property has laundry room access
-      const propertyHasLaundryRoomAccess =
-        rentalPropertyInfo.maintenanceUnits?.find(
-          (unit) => unit.type.toUpperCase() === 'TVÄTTSTUGA'
-        )
-      if (!propertyHasLaundryRoomAccess) {
-        ctx.status = 404
-        ctx.body = {
-          reason: 'No laundry room found for rental property',
           ...metadata,
         }
         return
@@ -466,34 +452,39 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      for (let workOrderRequest of laundryRoomWorkOrderRequests) {
-        workOrderRequest = {
-          rentalPropertyInfo: rentalPropertyInfo,
-          tenant: tenant.data,
-          lease: lease,
-          details: {
-            ContactCode,
-            RentalObjectCode,
-            AccessOptions,
-            HearingImpaired,
-            Pet,
-            Images,
-            Rows: [workOrderRequest],
-          },
-        }
-        workOrderAdapter.createWorkOrder(workOrderRequest)
-      }
+      const results = await Promise.all(
+        onecoreWorkOrderRequests.map((workOrderRequest: any) =>
+          workOrderAdapter.createWorkOrder({
+            rentalPropertyInfo: rentalPropertyInfo,
+            tenant: tenant.data,
+            lease: lease,
+            details: {
+              ContactCode,
+              RentalObjectCode,
+              AccessOptions,
+              HearingImpaired,
+              Pet,
+              Images,
+              Rows: [workOrderRequest],
+            },
+          })
+        )
+      )
 
       ctx.status = 200
       ctx.body = {
-        message: `Work order created`,
+        message: `Work orders created`,
+        // TODO better handling/response when there is an error with creating one or more work orders in the batch
+        errors: results
+          .filter((result) => !result.ok)
+          .map((result) => result.err),
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Error creating new work order')
+      logger.error(error, 'Error creating new work orders')
       ctx.status = 500
       ctx.body = {
-        error: 'Failed to create a new work order',
+        error: 'Failed to create new work orders',
         ...metadata,
       }
     }
