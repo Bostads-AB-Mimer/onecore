@@ -100,13 +100,7 @@ const getColumns = (expiresAt: Date): Array<GridColDef> => {
     {
       field: 'hasParkingSpace',
       headerName: 'Har bilplats (G/K)',
-      valueFormatter: (v) =>
-        v.value.filter(
-          (l: any) =>
-            l.status == LeaseStatus.Current || l.status == LeaseStatus.Upcoming
-        ).length
-          ? 'Ja'
-          : 'Nej',
+      valueFormatter: (v) => (v.value ? 'Ja' : 'Nej'),
       ...sharedProps,
       flex: 1,
     },
