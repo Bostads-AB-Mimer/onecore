@@ -281,7 +281,12 @@ function mapDetailedApplicantsToCreateOfferSelectedApplicants(
       ? (a.applicationType as 'Replace' | 'Additional')
       : 'Additional', //TODO: Fix this
     queuePoints: a.queuePoints,
-    hasParkingSpace: Boolean(a.parkingSpaceContracts?.length),
+    hasParkingSpace: Boolean(
+      a.parkingSpaceContracts?.filter(
+        (l: any) =>
+          l.status == LeaseStatus.Current || l.status == LeaseStatus.Upcoming
+      ).length
+    ),
     // TODO: Ended is not a good fallback here
     // because if the applicant doesnt have at least one current or upcoming
     // contract they can't apply in the first place.
