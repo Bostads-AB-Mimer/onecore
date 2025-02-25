@@ -60,6 +60,23 @@ const getLeasesForPnr = async (
   return leasesResponse.data.content
 }
 
+const getLeasesForContactCode = async (
+  contactCode: string,
+  includeTerminatedLeases: boolean,
+  includeContacts: boolean
+): Promise<Lease[]> => {
+  const queryParams = new URLSearchParams({
+    includeTerminatedLeases: includeTerminatedLeases.toString(),
+    includeContacts: includeContacts.toString(),
+  })
+
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/for/contactCode/${contactCode}?${queryParams.toString()}`
+  )
+
+  return leasesResponse.data.content
+}
+
 const getLeasesForPropertyId = async (
   propertyId: string,
   includeTerminatedLeases: string | string[] | undefined,
@@ -591,6 +608,7 @@ export {
   getInternalCreditInformation,
   getLease,
   getLeasesForPnr,
+  getLeasesForContactCode,
   getLeasesForPropertyId,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
