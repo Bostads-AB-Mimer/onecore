@@ -256,14 +256,14 @@ describe('work-order-service index', () => {
       expect(res.body.reason).toBe('RentalObjectCode is missing')
     })
 
-    it('should return 400 if no supported work orders found in request', async () => {
+    it('should return 400 if no work orders found in request', async () => {
       createWorkOrderDetailsMock.Rows = []
       const res = await request(app.callback())
         .post('/api/workOrders')
         .send(createWorkOrderDetailsMock)
 
       expect(res.status).toBe(400)
-      expect(res.body.reason).toBe('No supported work orders found in request')
+      expect(res.body.reason).toBe('No work orders found in request')
     })
 
     it('should return 404 if rental property not found', async () => {
