@@ -261,24 +261,55 @@ const createWorkOrderRecord = async (
   details: CreateWorkOrderDetails
 ): Promise<number> => {
   try {
-    const supportedLocationCodes = z.enum(['TV', 'BWC', 'KÖ'])
-    const locationCodeParseResult = supportedLocationCodes.safeParse(
-      details.Rows[0].LocationCode
-    )
-    if (!locationCodeParseResult.success) {
-      throw new Error('Unsupported location code')
-    }
-
-    const locationCode = locationCodeParseResult.data
-    const captionForLocation: Record<
-      z.infer<typeof supportedLocationCodes>,
+    const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ'])
+    const captionForSpace: Record<
+      z.infer<typeof supportedSpaceCodes>,
       string
     > = {
       TV: 'Tvättstuga',
       BWC: 'Lägenhet',
       KÖ: 'Lägenhet',
     }
-    const caption = captionForLocation[locationCode]
+
+    const uniqueSpaceCodes: z.infer<typeof supportedSpaceCodes>[] = []
+    const uniqueSpaceCaptions: string[] = []
+    const uniqueEquipmentCodes: string[] = []
+    const descriptions: string[] = []
+
+    details.Rows.forEach((row) => {
+      const spaceCodeParseResult = supportedSpaceCodes.safeParse(
+        row.LocationCode
+      )
+      if (!spaceCodeParseResult.success) {
+        throw new Error('Unsupported location code')
+      }
+
+      const spaceCode = spaceCodeParseResult.data
+      if (!uniqueSpaceCodes.includes(spaceCode)) {
+        uniqueSpaceCodes.push(spaceCode)
+
+        if (!uniqueSpaceCaptions.includes(captionForSpace[spaceCode])) {
+          uniqueSpaceCaptions.push(captionForSpace[spaceCode])
+        }
+      }
+
+      if (!uniqueEquipmentCodes.includes(row.PartOfBuildingCode)) {
+        uniqueEquipmentCodes.push(row.PartOfBuildingCode)
+      }
+
+      if (details.Rows.length > 1) {
+        descriptions.push(
+          `${transformEquipmentCode(row.PartOfBuildingCode)}: ${row.Description}`
+        )
+      } else {
+        descriptions.push(row.Description)
+      }
+    })
+
+    const name =
+      uniqueEquipmentCodes.length > 1
+        ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
+        : `Felanmäld ${captionForSpace[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
 
     return await odoo.create('maintenance.request', {
       rental_property_id: rentalPropertyRecord.toString(),
@@ -288,13 +319,13 @@ const createWorkOrderRecord = async (
       hearing_impaired: details.HearingImpaired,
       call_between: details.AccessOptions.CallBetween,
       pet: details.Pet,
-      space_code: locationCode,
-      equipment_code: details.Rows[0].PartOfBuildingCode,
-      description: details.Rows[0].Description,
+      space_code: uniqueSpaceCodes.join(', '),
+      equipment_code: uniqueEquipmentCodes.join(', '),
+      description: descriptions.join('<br>'),
       images: details.Images,
-      name: `Felanmäld ${caption.toLowerCase()} - ${transformEquipmentCode(details.Rows[0].PartOfBuildingCode)}`,
+      name,
       master_key: details.AccessOptions.Type === 0,
-      space_caption: caption,
+      space_caption: uniqueSpaceCaptions.join(', '),
       maintenance_team_id: maintenanceTeamId,
       creation_origin: 'mimer-nu',
     })
