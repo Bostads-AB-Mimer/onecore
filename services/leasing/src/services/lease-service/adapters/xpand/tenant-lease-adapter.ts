@@ -544,4 +544,5 @@ export {
   isLeaseActive,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
+  transformFromDbContact,
 }

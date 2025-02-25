@@ -1,4 +1,4 @@
-import { WaitingListType } from 'onecore-types'
+import { WaitingListType, Contact, Lease } from 'onecore-types'
 import { sub } from 'date-fns'
 
 import { lease } from '../../factories'
@@ -149,5 +149,44 @@ describe('isLeaseActive', () => {
       .build()
 
     expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
+  })
+})
+
+describe('transformFromDbContact', () => {
+  it('should handle protected identity correctly', () => {
+    const rows = [
+      {
+        contactCode: 'P123456',
+        contactKey: '_ADBAEC',
+        firstName: 'Test',
+        lastName: 'Testman',
+        fullName: 'Test Testman',
+        nationalRegistrationNumber: '121212121212',
+        birthDate: '1212-12-12',
+        street: 'Gatvägen 12',
+        postalCode: '12345',
+        city: 'Test City',
+        emailAddress: 'noreply@mimer.nu',
+        protectedIdentity: true,
+      },
+    ]
+    const phoneNumbers: {
+      phoneNumber: string
+      type: string
+      isMainNumber: boolean
+    }[] = []
+    const leases: Lease[] = []
+
+    const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leases
+    )
+
+    expect(contact.firstName).toBeUndefined()
+    expect(contact.lastName).toBeUndefined()
+    expect(contact.fullName).toBeUndefined()
+    expect(contact.nationalRegistrationNumber).toBeUndefined()
+    expect(contact.birthDate).toBeUndefined()
   })
 })
