@@ -75,8 +75,8 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     WorkOrderRows: [
       {
         Description: odooWorkOrder.description,
-        LocationCode: spaceCode,
-        EquipmentCode: equipmentCode,
+        LocationCode: odooWorkOrder.space_code,
+        EquipmentCode: odooWorkOrder.equipment_code,
       },
     ],
   }
