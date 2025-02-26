@@ -293,7 +293,7 @@ describe('leasing-adapter', () => {
 
       assert(result.ok)
       expect(() =>
-        leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+        leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
           result.data
         )
       ).not.toThrow()
