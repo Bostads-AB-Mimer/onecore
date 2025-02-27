@@ -198,11 +198,10 @@ describe('listing-adapter', () => {
           ctx.db
         )
 
-        const result = await listingAdapter.updateApplicantStatus(
-          insertedApplicant.id,
-          ApplicantStatus.OfferAccepted,
-          ctx.db
-        )
+        const result = await listingAdapter.updateApplicantStatus(ctx.db, {
+          applicantId: insertedApplicant.id,
+          status: ApplicantStatus.OfferAccepted,
+        })
         expect(result.ok).toBe(true)
         const updatedApplicant = await listingAdapter.getApplicantById(
           insertedApplicant.id,

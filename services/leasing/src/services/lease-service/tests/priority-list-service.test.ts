@@ -1,4 +1,5 @@
 import { Lease, LeaseStatus } from 'onecore-types'
+import assert from 'node:assert'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
@@ -117,12 +118,14 @@ describe('parseLeasesForHousingContract', () => {
     const result = parseLeasesForHousingContracts(filteredLeases)
 
     expect(filteredLeases).toHaveLength(3)
+    assert(result)
+    const [current, upcoming] = result
 
-    expect(result).toBeDefined()
-    if (result) {
-      expect(result[0]).toBeDefined()
-      expect(result[1]).toBeDefined()
-    }
+    assert(current)
+    assert(upcoming)
+
+    expect(result[0]).toBeDefined()
+    expect(result[1]).toBeDefined()
   })
 
   it('should return empty active housing contract and 1 upcoming housing contract', async () => {
@@ -254,6 +257,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
         residentialArea: {
           code: 'ABC',
         },
+        status: LeaseStatus.Upcoming,
       })
       .build()
 
@@ -284,13 +288,85 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should get priority 1 if has active parking space contract and applicationType equals Replace', () => {
     const listing = factory.listing.build()
 
-    const parkingSpaceContract = factory.lease.build()
+    const parkingSpaceContract = factory.lease.build({
+      status: LeaseStatus.Current,
+    })
 
     const applicant = factory.detailedApplicant
       .params({
         applicationType: 'Replace', //todo: add as enum
         parkingSpaceContracts: [parkingSpaceContract],
         currentHousingContract: factory.lease.params({}).build(),
+        listingId: listing.id,
+      })
+      .build()
+
+    const result = assignPriorityToApplicantBasedOnRentalRules(
+      listing,
+      applicant
+    )
+
+    expect(result.priority).toBe(1)
+  })
+
+  it('applicant should get priority 1 if they only have parking space contracts that are about to end and valid housing contract in same residential area as listing', async () => {
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
+
+    const currentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
+
+    const parkingSpaceContract = factory.lease.build({
+      status: LeaseStatus.AboutToEnd,
+    })
+
+    const applicant = factory.detailedApplicant
+      .params({
+        currentHousingContract: currentHousingContract,
+        parkingSpaceContracts: [parkingSpaceContract],
+        listingId: listing.id,
+      })
+      .build()
+
+    const result = assignPriorityToApplicantBasedOnRentalRules(
+      listing,
+      applicant
+    )
+
+    expect(result.priority).toBe(1)
+  })
+
+  it('applicant should get priority 1 if they only have terminated parking spaces and valid housing contract in same residential area as listing', async () => {
+    const listing = factory.listing
+      .params({
+        districtCode: 'XYZ',
+      })
+      .build()
+
+    const currentHousingContract = factory.lease
+      .params({
+        residentialArea: {
+          code: 'XYZ',
+        },
+      })
+      .build()
+
+    const parkingSpaceContract = factory.lease.build({
+      status: LeaseStatus.Ended,
+    })
+
+    const applicant = factory.detailedApplicant
+      .params({
+        currentHousingContract: currentHousingContract,
+        parkingSpaceContracts: [parkingSpaceContract],
         listingId: listing.id,
       })
       .build()

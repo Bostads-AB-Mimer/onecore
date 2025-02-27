@@ -62,16 +62,19 @@ const transformFromDbContact = (
   leases: any
 ): Contact => {
   const row = trimRow(rows[0])
+  const protectedIdentity = row.protectedIdentity !== null
 
   const contact = {
     contactCode: row.contactCode,
     contactKey: row.contactKey,
-    firstName: row.firstName,
-    lastName: row.lastName,
-    fullName: row.fullName,
+    firstName: protectedIdentity ? undefined : row.firstName,
+    lastName: protectedIdentity ? undefined : row.lastName,
+    fullName: protectedIdentity ? undefined : row.fullName,
     leaseIds: leases,
-    nationalRegistrationNumber: row.nationalRegistrationNumber,
-    birthDate: row.birthDate,
+    nationalRegistrationNumber: protectedIdentity
+      ? undefined
+      : row.nationalRegistrationNumber,
+    birthDate: protectedIdentity ? undefined : row.birthDate,
     address: {
       street: row.street,
       number: '',
@@ -81,7 +84,7 @@ const transformFromDbContact = (
     phoneNumbers: phoneNumbers,
     emailAddress:
       process.env.NODE_ENV === 'production'
-        ? row.emailAddress == null
+        ? row.emailAddress == null || protectedIdentity
           ? undefined
           : row.emailAddress
         : 'redacted',
@@ -114,8 +117,8 @@ const getLease = async (
 
 const getLeasesForNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: string | string[] | undefined,
-  includeContacts: string | string[] | undefined
+  includeTerminatedLeases: boolean,
+  includeContacts: boolean
 ) => {
   logger.info('Getting leases for national registration number from Xpand DB')
   const contact = await db
@@ -134,7 +137,7 @@ const getLeasesForNationalRegistrationNumber = async (
       'Getting leases for national registration number from Xpand DB complete'
     )
 
-    if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+    if (includeTerminatedLeases) {
       return leases
     }
 
@@ -156,8 +159,8 @@ const getLeasesForNationalRegistrationNumber = async (
 
 const getLeasesForContactCode = async (
   contactCode: string,
-  includeTerminatedLeases: string | string[] | undefined,
-  includeContacts: string | string[] | undefined
+  includeTerminatedLeases: boolean,
+  includeContacts: boolean
 ): Promise<AdapterResult<Array<Lease>, unknown>> => {
   logger.info({ contactCode }, 'Getting leases for contact code from Xpand DB')
   try {
@@ -178,7 +181,7 @@ const getLeasesForContactCode = async (
       )
 
       const leases = await getLeasesByContactKey(contact[0].contactKey)
-      if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+      if (includeTerminatedLeases) {
         return { ok: true, data: leases }
       }
 
@@ -206,8 +209,8 @@ const getLeasesForContactCode = async (
 
 const getLeasesForPropertyId = async (
   propertyId: string,
-  includeTerminatedLeases: string | string[] | undefined,
-  includeContacts: string | string[] | undefined
+  includeTerminatedLeases: boolean,
+  includeContacts: boolean
 ) => {
   const leases: Lease[] = []
   const rows = await db
@@ -238,7 +241,7 @@ const getLeasesForPropertyId = async (
       leases.push(transformFromXPandDb.toLease(row, [], []))
     }
   }
-  if (shouldIncludeTerminatedLeases(includeTerminatedLeases)) {
+  if (includeTerminatedLeases) {
     return leases
   }
 
@@ -305,7 +308,7 @@ const getContactsDataBySearchQuery = async (
 
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: boolean
 ) => {
   const rows = await getContactQuery().where({
     persorgnr: nationalRegistrationNumber,
@@ -325,7 +328,7 @@ const getContactByNationalRegistrationNumber = async (
 
 const getContactByContactCode = async (
   contactKey: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: boolean
 ): Promise<AdapterResult<Contact | null, unknown>> => {
   try {
     const rows = await getContactQuery().where({ cmctckod: contactKey })
@@ -353,7 +356,7 @@ const getContactByContactCode = async (
 
 const getContactByPhoneNumber = async (
   phoneNumber: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: boolean
 ) => {
   const keycmobj = await getContactForPhoneNumber(phoneNumber)
   if (keycmobj && keycmobj.length > 0) {
@@ -409,7 +412,8 @@ const getContactQuery = () => {
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'bkkty.bkktyben as queueName',
-      'bkqte.quetime as queueTime'
+      'bkqte.quetime as queueTime',
+      'cmctc.lagsokt as protectedIdentity'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
@@ -446,11 +450,8 @@ const getContactForPhoneNumber = async (phoneNumber: string) => {
 //todo: be able to filter on active contracts
 const getLeaseIds = async (
   keycmctc: string,
-  includeTerminatedLeases: string | string[] | undefined
+  includeTerminatedLeases: boolean
 ) => {
-  includeTerminatedLeases = Array.isArray(includeTerminatedLeases)
-    ? includeTerminatedLeases[0]
-    : includeTerminatedLeases
   const rows = await db
     .from('hyavk')
     .select(
@@ -461,7 +462,7 @@ const getLeaseIds = async (
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ keycmctc: keycmctc })
 
-  if (!includeTerminatedLeases || includeTerminatedLeases === 'false') {
+  if (!includeTerminatedLeases) {
     return rows.filter(isLeaseActive).map((x) => x.leaseId)
   }
   return rows.map((x) => x.leaseId)
@@ -520,26 +521,14 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-const shouldIncludeTerminatedLeases = (
-  includeTerminatedLeases: string | string[] | undefined
-) => {
-  const queryParamResult = Array.isArray(includeTerminatedLeases)
-    ? includeTerminatedLeases[0]
-    : includeTerminatedLeases
-
-  return !(!queryParamResult || queryParamResult === 'false')
-}
-
 const isLeaseActive = (lease: Lease | PartialLease): boolean => {
+  const { leaseStartDate, lastDebitDate, terminationDate } = lease
   const currentDate = new Date()
-  const leaseStartDate = new Date(lease.leaseStartDate)
-  const lastDebitDate = lease.lastDebitDate
-    ? new Date(lease.lastDebitDate)
-    : null
 
   return (
     leaseStartDate < currentDate &&
-    (!lastDebitDate || currentDate < lastDebitDate)
+    (!lastDebitDate || currentDate <= lastDebitDate) &&
+    (!terminationDate || currentDate < terminationDate)
   )
 }
 
@@ -555,4 +544,5 @@ export {
   isLeaseActive,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
+  transformFromDbContact,
 }

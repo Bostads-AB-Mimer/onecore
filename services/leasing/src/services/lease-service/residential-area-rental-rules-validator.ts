@@ -27,39 +27,17 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
     'currentHousingContract' | 'upcomingHousingContract'
   >
 ): boolean => {
-  const currentHousingContractDistrictCode =
-    applicant.currentHousingContract?.residentialArea?.code
-  const upcomingHousingContractDistrictCode =
-    applicant.upcomingHousingContract?.residentialArea?.code
+  const { currentHousingContract, upcomingHousingContract } = applicant
 
-  //applicant has no housing contracts
-  if (
-    !currentHousingContractDistrictCode &&
-    !upcomingHousingContractDistrictCode
-  ) {
-    return false
+  if (upcomingHousingContract) {
+    return upcomingHousingContract.residentialArea?.code === districtCode
   }
 
-  //applicants current housing contract area does not match listings area
-  if (
-    currentHousingContractDistrictCode &&
-    currentHousingContractDistrictCode !== districtCode
-  ) {
-    return false
+  if (currentHousingContract) {
+    return currentHousingContract.residentialArea?.code === districtCode
   }
 
-  //applicant has no current housing contract, but an upcoming housing contract
-  if (
-    !currentHousingContractDistrictCode &&
-    upcomingHousingContractDistrictCode
-  ) {
-    //applicants upcoming housing contract area does not match listings area
-    if (currentHousingContractDistrictCode !== districtCode) {
-      return false
-    }
-  }
-
-  return true
+  return false
 }
 
 const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (

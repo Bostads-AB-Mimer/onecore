@@ -318,5 +318,12 @@ describe('lease-service', () => {
 
       expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(false)
     })
+
+    it('should return false if terminationDate is in the past', () => {
+      const lease = leaseMock[0]
+      lease.terminationDate = new Date(Date.now() - 1000 * 60 * 60 * 24)
+
+      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(false)
+    })
   })
 })

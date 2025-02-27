@@ -5,7 +5,7 @@
  */
 
 import { logger } from 'onecore-utilities'
-import { DetailedApplicant, Lease, Listing } from 'onecore-types'
+import { DetailedApplicant, Lease, LeaseStatus, Listing } from 'onecore-types'
 
 import { leaseTypes } from '../../constants/leaseTypes'
 
@@ -78,8 +78,12 @@ const assignPriorityToApplicantBasedOnRentalRules = (
       priority: null,
     }
   }
+  const activeParkingspaceContracts = applicant.parkingSpaceContracts?.filter(
+    (l) => l.status === LeaseStatus.Current || l.status === LeaseStatus.Upcoming
+  )
 
-  if (!applicant.parkingSpaceContracts?.length) {
+  //todo: filter out terminated leases from parkingSpaceContracts so that an applicant with a terminated lease is prioritized correctly
+  if (!activeParkingspaceContracts?.length) {
     //priority  1
 
     //Applicant has no active parking space contract and is tenant in same area as listing
@@ -137,7 +141,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has 1 active parking space contract and wishes to rent an additional parking space
   if (
-    applicant.parkingSpaceContracts?.length === 1 &&
+    activeParkingspaceContracts?.length === 1 &&
     applicant.applicationType === 'Additional'
   ) {
     logger.info(
@@ -152,8 +156,8 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has more than 1 active parking space contract and wishes to replace 1 parking space contract
   if (
-    applicant.parkingSpaceContracts &&
-    applicant.parkingSpaceContracts.length > 1 &&
+    activeParkingspaceContracts &&
+    activeParkingspaceContracts.length > 1 &&
     applicant.applicationType === 'Replace'
   ) {
     logger.info(
@@ -169,10 +173,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   //priority 3
 
   //Applicant has 2 or more active parking space and wishes to rent an additional parking space
-  if (
-    applicant.parkingSpaceContracts &&
-    applicant.parkingSpaceContracts.length >= 2
-  ) {
+  if (activeParkingspaceContracts && activeParkingspaceContracts.length >= 2) {
     logger.info(
       applicant.name +
         ': priority 3 - Applicant has 2 or more active parking space and wishes to rent an additional parking space'
@@ -227,16 +228,19 @@ const parseLeasesForHousingContracts = (
     ]
   | undefined => {
   const currentDate = new Date()
-  const housingContracts: Lease[] = []
-  for (const lease of leases) {
-    //use startsWith to handle whitespace issues from xpand
-    if (lease.type.includes(leaseTypes.housingContract)) {
-      housingContracts.push(lease)
-    }
+
+  const isHousingContract = (lease: Lease) =>
+    [leaseTypes.housingContract, leaseTypes.cooperativeTenancyContract].some(
+      (v) => lease.type.includes(v)
+    )
+
+  const housingContracts = leases.filter(isHousingContract)
+
+  if (!housingContracts.length) {
+    return undefined
   }
 
-  //only 1 active housing contract found
-  if (housingContracts.length == 1) {
+  if (housingContracts.length === 1) {
     const lease = housingContracts[0]
     const hasLeaseStarted = lease.leaseStartDate <= currentDate
 
@@ -244,42 +248,48 @@ const parseLeasesForHousingContracts = (
     return hasLeaseStarted ? [lease, undefined] : [undefined, lease]
   }
 
-  //applicant have 1 active and 1 upcoming contract
-  if (housingContracts.length == 2) {
-    const currentActiveLease = leases.find((lease) => {
-      const lastDebitDateNotSet =
-        lease.lastDebitDate === null || lease.lastDebitDate === undefined
-      const hasLeaseStarted = lease.leaseStartDate <= currentDate
+  if (housingContracts.length === 2) {
+    const activeLease = housingContracts.find((l) =>
+      isActiveLease(l, currentDate)
+    )
 
-      return lastDebitDateNotSet && hasLeaseStarted
-    })
+    const upcomingLease = housingContracts.find((l) =>
+      isUpcomingLease(l, currentDate)
+    )
 
-    if (currentActiveLease == undefined) {
+    if (!activeLease) {
       logger.error(
         'Could not find active lease in parseLeasesForHousingContracts'
       )
+
       throw new Error('could not find any active lease')
     }
-
-    const upcomingLease = leases.find((lease) => {
-      const lastDebitDateNotSet =
-        lease.lastDebitDate === null || lease.lastDebitDate === undefined
-      const isLeaseUpcoming = lease.leaseStartDate > currentDate
-
-      return lastDebitDateNotSet && isLeaseUpcoming
-    })
 
     if (upcomingLease == undefined) {
       logger.error(
         'Could not find any pending lease in parseLeasesForHousingContracts'
       )
+
       throw new Error('Could not find any pending lease')
     }
 
-    return [currentActiveLease, upcomingLease]
+    return [activeLease, upcomingLease]
   }
+}
 
-  return undefined
+const isActiveLease = (lease: Lease, currentDate: Date) => {
+  const compatibleLastDebitDate =
+    !lease.lastDebitDate || lease.lastDebitDate > currentDate
+  const hasLeaseStarted = lease.leaseStartDate <= currentDate
+
+  return hasLeaseStarted && compatibleLastDebitDate
+}
+const isUpcomingLease = (lease: Lease, currentDate: Date) => {
+  const lastDebitDateNotSet =
+    lease.lastDebitDate === null || lease.lastDebitDate === undefined
+  const isLeaseUpcoming = lease.leaseStartDate > currentDate
+
+  return lastDebitDateNotSet && isLeaseUpcoming
 }
 
 const parseLeasesForParkingSpaces = (

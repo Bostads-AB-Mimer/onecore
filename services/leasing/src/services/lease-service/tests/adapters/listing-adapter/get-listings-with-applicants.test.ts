@@ -374,40 +374,6 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         ])
       }))
 
-    it('ready-for-offer should not return listings whos applicants were removed', () =>
-      withContext(async (ctx) => {
-        const listing = await listingAdapter.createListing(
-          factory.listing.build({
-            rentalObjectCode: '1',
-            status: ListingStatus.Expired,
-          }),
-          ctx.db
-        )
-
-        assert(listing.ok)
-        const applicant = await listingAdapter.createApplication(
-          factory.applicant.build({ listingId: listing.data.id }),
-          ctx.db
-        )
-
-        assert(applicant)
-        await listingAdapter.updateApplicantStatus(
-          applicant.id,
-          ApplicantStatus.WithdrawnByUser,
-          ctx.db
-        )
-
-        const listings = await listingAdapter.getListingsWithApplicants(
-          ctx.db,
-          {
-            by: { type: 'ready-for-offer' },
-          }
-        )
-
-        assert(listings.ok)
-        expect(listings.data).toEqual([])
-      }))
-
     it('needs-republish should return listings whos applicants were removed', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
@@ -425,11 +391,10 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         )
 
         assert(applicant)
-        await listingAdapter.updateApplicantStatus(
-          applicant.id,
-          ApplicantStatus.WithdrawnByUser,
-          ctx.db
-        )
+        await listingAdapter.updateApplicantStatus(ctx.db, {
+          applicantId: applicant.id,
+          status: ApplicantStatus.WithdrawnByUser,
+        })
 
         const listings = await listingAdapter.getListingsWithApplicants(
           ctx.db,

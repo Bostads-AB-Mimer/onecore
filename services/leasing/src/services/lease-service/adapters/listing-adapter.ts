@@ -239,15 +239,21 @@ const createApplication = async (
 }
 
 const updateApplicantStatus = async (
-  applicantId: number,
-  status: ApplicantStatus,
-  dbConnection: Knex<any, unknown[]> = db
+  dbConnection: Knex<any, unknown[]>,
+  params: {
+    applicantId: number
+    status: ApplicantStatus
+    applicationType?: string
+  }
 ): Promise<AdapterResult<null, 'no-update' | 'unknown'>> => {
   try {
     const query = await dbConnection('applicant')
-      .where('Id', applicantId)
+      .where('Id', params.applicantId)
       .update({
-        Status: status,
+        Status: params.status,
+        ApplicationType: dbConnection.raw('COALESCE(?, "ApplicationType")', [
+          params.applicationType ?? null,
+        ]),
       })
     if (!query) {
       return { ok: false, err: 'no-update' }
@@ -287,7 +293,6 @@ const getListingsWithApplicants = async (
             SELECT 1
             FROM applicant a
             WHERE a.ListingId = l.Id
-            AND a.Status = ?
           )
           AND NOT EXISTS (
             SELECT 1
@@ -295,7 +300,7 @@ const getListingsWithApplicants = async (
             WHERE o.ListingId = l.Id
           )
           `,
-          [ListingStatus.Expired, ApplicantStatus.Active]
+          [ListingStatus.Expired]
         )
       )
       .with({ type: 'offered' }, () =>
