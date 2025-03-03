@@ -91,11 +91,14 @@ jobs:
   commit-version:
     needs: [build-and-push]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,15 +108,15 @@ jobs:
 
       - name: Update version
         run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
           # Get current branch name
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
 
           # Update version in package.json
-          npm version patch
-
+          npm version ${{ needs.prepare-version.outputs.version }} --no-git-tag-version
+          
           # Commit and push the version change
           git add package.json
           git commit -m "chore: bump version to ${{ needs.prepare-version.outputs.version }} [skip ci]"
