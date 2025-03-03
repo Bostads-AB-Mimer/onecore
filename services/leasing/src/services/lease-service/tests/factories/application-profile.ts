@@ -19,6 +19,7 @@ export const ApplicationProfileFactory = Factory.define<ApplicationProfile>(
     createdAt: new Date(),
     expiresAt: new Date(),
     housingReference: ApplicationProfileHousingReferenceFactory.build(),
+    lastUpdatedAt: new Date(),
   })
 )
 
@@ -30,9 +31,8 @@ export const ApplicationProfileHousingReferenceFactory =
     phone: 'phone',
     reviewStatus: 'PENDING',
     comment: 'comment',
-    lastAdminUpdatedAt: null,
-    lastAdminUpdatedBy: 'foo',
-    lastApplicantUpdatedAt: new Date(),
+    reviewedAt: null,
+    reviewedBy: 'foo',
     reasonRejected: null,
 
     expiresAt: new Date(),
