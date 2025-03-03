@@ -12,7 +12,6 @@ RUN npm ci --workspace packages/property-tree
 
 # Build
 WORKDIR /app/packages/property-tree
-
 RUN npm run build
 
 # Production image
