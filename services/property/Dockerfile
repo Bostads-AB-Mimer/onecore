@@ -1,9 +1,6 @@
-FROM node:22-alpine
+FROM node:22-slim
 
 WORKDIR /app
-
-# Install required dependencies for Prisma
-RUN apk add --no-cache openssl1.1-compat
 
 # Copy package files for dependency installation
 COPY package*.json ./
