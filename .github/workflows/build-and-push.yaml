@@ -88,10 +88,34 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.package }}
           cache-to: type=gha,mode=max,scope=${{ matrix.package }}
 
-      - name: Commit version
+  commit-version:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Update version
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-          npm version ${{ needs.prepare-version.outputs.version }}
-          git push origin main --follow-tags
+          # Get current branch name
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+
+          # Update version in package.json
+          npm version patch
+
+          # Commit and push the version change
+          git add package.json
+          git commit -m "chore: bump version to ${{ needs.prepare-version.outputs.version }} [skip ci]"
+          git tag "v${{ needs.prepare-version.outputs.version }}"
+          git push origin HEAD:$BRANCH_NAME --follow-tags
