@@ -12,18 +12,12 @@ jobs:
   lint:
     uses: ./.github/workflows/lint.yaml
 
-  prepare-version:
+  determine-version:
     needs: [lint]
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
       bump_type: ${{ steps.bump.outputs.type }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Determine version bump type
         id: bump
         run: |
@@ -35,14 +29,8 @@ jobs:
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
-      - name: Get current version
-        id: version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
   build-and-push:
-    needs: prepare-version
+    needs: determine-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -70,7 +58,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}/${{ matrix.package }}
           tags: |
-            type=semver,pattern={{version}},value=v${{ needs.prepare-version.outputs.version }}
+            type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
@@ -85,7 +74,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.package }}
 
   commit-version:
-    needs: [build-and-push, prepare-version]
+    needs: [build-and-push, determine-version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -110,5 +99,5 @@ jobs:
       - name: Update version
         run: |
           # Let npm handle version bump, commit, and tag creation
-          npm version ${{ needs.prepare-version.outputs.bump_type }} -m "chore: bump version to %s [skip ci]"
+          npm version ${{ needs.determine-version.outputs.bump_type }} -m "chore: bump version to %s [skip ci]"
           git push --follow-tags
