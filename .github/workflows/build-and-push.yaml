@@ -17,32 +17,28 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      bump_type: ${{ steps.bump.outputs.type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Calculate next version
-        id: version
+      - name: Determine version bump type
+        id: bump
         run: |
-          # Determine version bump based on ref
           if [[ $GITHUB_REF == refs/tags/production* ]]; then
-            npm version major -no-git-tag-version
+            echo "type=major" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF == refs/tags/staging* ]]; then
-            npm version minor -no-git-tag-version
+            echo "type=minor" >> $GITHUB_OUTPUT
           else
-            npm version patch -no-git-tag-version
+            echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
-          # Get the new version
-          VERSION=$(npm pkg get version | tr -d '"')
+      - name: Get current version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   build-and-push:
@@ -74,7 +70,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}/${{ matrix.package }}
           tags: |
-            type=raw,value=${{ needs.prepare-version.outputs.version }}
+            type=semver,pattern={{version}},value=v${{ needs.prepare-version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
@@ -89,7 +85,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.package }}
 
   commit-version:
-    needs: [build-and-push]
+    needs: [build-and-push, prepare-version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -106,19 +102,13 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Update version
+      - name: Configure Git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-          # Get current branch name
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-
-          # Update version in package.json
-          npm version ${{ needs.prepare-version.outputs.version }} --no-git-tag-version
-          
-          # Commit and push the version change
-          git add package.json
-          git commit -m "chore: bump version to ${{ needs.prepare-version.outputs.version }} [skip ci]"
-          git tag "v${{ needs.prepare-version.outputs.version }}"
-          git push origin HEAD:$BRANCH_NAME --follow-tags
+      - name: Update version
+        run: |
+          # Let npm handle version bump, commit, and tag creation
+          npm version ${{ needs.prepare-version.outputs.bump_type }} -m "chore: bump version to %s [skip ci]"
+          git push --follow-tags
