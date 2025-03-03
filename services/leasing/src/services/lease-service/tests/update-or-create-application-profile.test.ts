@@ -16,12 +16,13 @@ describe(updateOrCreateApplicationProfile.name, () => {
           housingType: 'RENTAL',
           landlord: 'baz',
           housingTypeDescription: 'qux',
+          lastUpdatedAt: new Date(),
           housingReference: {
             comment: null,
             email: null,
             expiresAt: new Date(),
-            lastAdminUpdatedAt: null,
-            lastApplicantUpdatedAt: new Date(),
+            reviewedAt: null,
+            reviewedBy: null,
             phone: null,
             reasonRejected: null,
             reviewStatus: 'PENDING',
@@ -65,6 +66,7 @@ describe(updateOrCreateApplicationProfile.name, () => {
             housingType: 'RENTAL',
             landlord: 'quux',
             housingTypeDescription: 'corge',
+            lastUpdatedAt: new Date(),
             housingReference: {
               ...existingProfile.data.housingReference,
               email: 'bar',

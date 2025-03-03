@@ -23,9 +23,8 @@ export const ApplicationProfileHousingReferenceSchema = z.object({
   reviewStatus: HousingReferenceReviewStatusSchema,
   comment: z.string().nullable(),
   reasonRejected: HousingReferenceReasonRejectedSchema.nullable(),
-  lastAdminUpdatedAt: z.coerce.date().nullable(),
-  lastAdminUpdatedBy: z.string().nullable(),
-  lastApplicantUpdatedAt: z.coerce.date().nullable(),
+  reviewedAt: z.coerce.date().nullable(),
+  reviewedBy: z.string().nullable(),
 
   expiresAt: z.union([z.null(), z.coerce.date()]),
   createdAt: z.coerce.date(),
@@ -51,6 +50,7 @@ export const ApplicationProfileSchema = z.object({
   housingTypeDescription: z.string().nullable(),
   landlord: z.string().nullable(),
   housingReference: ApplicationProfileHousingReferenceSchema,
-  expiresAt: z.coerce.date().nullable(),
+  expiresAt: z.union([z.null(), z.coerce.date()]),
   createdAt: z.coerce.date(),
+  lastUpdatedAt: z.union([z.null(), z.coerce.date()]),
 })

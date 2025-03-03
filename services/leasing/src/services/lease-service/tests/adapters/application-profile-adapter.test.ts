@@ -16,6 +16,7 @@ describe('application-profile-adapter', () => {
           housingTypeDescription: 'bar',
           landlord: 'baz',
           housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
         assert(profile.ok)
 
@@ -38,6 +39,7 @@ describe('application-profile-adapter', () => {
           housingTypeDescription: 'bar',
           landlord: 'baz',
           housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
 
         assert(profile.ok)
@@ -54,6 +56,7 @@ describe('application-profile-adapter', () => {
             landlord: 'baz',
             housingReference:
               factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
           }
         )
 
@@ -84,6 +87,8 @@ describe('application-profile-adapter', () => {
           housingTypeDescription: 'bar',
           landlord: 'baz',
           housingReference: factory.applicationProfileHousingReference.build(),
+
+          lastUpdatedAt: new Date(),
         })
 
         const result = await applicationProfileAdapter.getByContactCode(
@@ -120,6 +125,7 @@ describe('application-profile-adapter', () => {
             landlord: 'baz',
             housingReference:
               factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
           }
         )
 
@@ -136,6 +142,7 @@ describe('application-profile-adapter', () => {
           housingTypeDescription: 'bar',
           landlord: 'baz',
           housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
 
         assert(profile.ok)
@@ -151,6 +158,7 @@ describe('application-profile-adapter', () => {
             landlord: 'baz',
             housingReference:
               factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
           }
         )
 
