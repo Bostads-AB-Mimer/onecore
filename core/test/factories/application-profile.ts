@@ -18,6 +18,7 @@ export const ApplicationProfileFactory = Factory.define<ApplicationProfile>(
     housingTypeDescription: 'qux',
     createdAt: new Date(),
     expiresAt: new Date(),
+    lastUpdatedAt: new Date(),
     housingReference: ApplicationProfileHousingReferenceFactory.build(),
   })
 )
@@ -31,9 +32,8 @@ export const ApplicationProfileHousingReferenceFactory =
     reviewStatus: 'PENDING',
     reviewStatusReason: 'reason',
     comment: 'comment',
-    lastAdminUpdatedAt: null,
-    lastAdminUpdatedBy: 'foo',
-    lastApplicantUpdatedAt: new Date(),
+    reviewedAt: new Date(),
+    reviewedBy: 'foo',
     reasonRejected: null,
 
     expiresAt: new Date(),

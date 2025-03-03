@@ -517,7 +517,7 @@ const validatePropertyRentalRules = async (
   }
 }
 
-type GetApplicationProfileResponseData = z.infer<
+export type GetApplicationProfileResponseData = z.infer<
   typeof leasing.v1.GetApplicationProfileResponseDataSchema
 >
 

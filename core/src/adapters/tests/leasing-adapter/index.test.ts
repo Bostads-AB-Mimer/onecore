@@ -238,6 +238,7 @@ describe('leasing-adapter', () => {
             housingType: 'RENTAL',
             housingTypeDescription: null,
             landlord: null,
+            lastUpdatedAt: new Date(),
             housingReference:
               factory.applicationProfileHousingReference.build(),
           }
@@ -261,6 +262,7 @@ describe('leasing-adapter', () => {
             housingType: 'RENTAL',
             housingTypeDescription: null,
             landlord: null,
+            lastUpdatedAt: new Date(),
             housingReference:
               factory.applicationProfileHousingReference.build(),
           }
@@ -286,6 +288,7 @@ describe('leasing-adapter', () => {
             housingType: 'RENTAL',
             housingTypeDescription: null,
             landlord: null,
+            lastUpdatedAt: new Date(),
             housingReference:
               factory.applicationProfileHousingReference.build(),
           }
