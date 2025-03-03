@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "dev": "node --import tsx --watch index.ts",
+    "start": "node --import tsx index.ts",
     "build": "tsc",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
