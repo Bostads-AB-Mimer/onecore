@@ -91,12 +91,17 @@ export const getContracts = async (batchId: string) => {
 
 export const getInvoiceRows = async (contractCode: string, batchId: string) => {
   logger.info(
-    { contractCode, type: typeof contractCode, batchId },
+    {
+      contractCode,
+      type: typeof contractCode,
+      batchId,
+    },
     'Getting invoice rows'
   )
+
   return await db('invoice_data')
     .where('batchId', batchId)
-    .where('contractCode', contractCode as string)
+    .where('contractCode', contractCode)
 }
 
 export const markInvoiceRowsAsImported = async (
@@ -104,10 +109,52 @@ export const markInvoiceRowsAsImported = async (
   batchId: string
 ) => {
   for (const row of invoiceRows) {
-    await db('invoice_data').update(['ImportStatus'], 'true').where({
+    await db('invoice_data').update({ ImportStatus: true }).where({
       batchId,
-      contractCode: row.contractCode,
-      account: row.account,
+      contractCode: row.ContractCode,
+      account: row.Account,
     })
   }
+}
+
+export const getAggregatedInvoiceRows = async (
+  batchId: string
+): Promise<InvoiceDataRow[]> => {
+  const rows = await db('invoice_data')
+    .sum({ totalAmount: 'TotalAmount', totalVat: 'VAT' })
+    .select(
+      'RentArticle',
+      'Account',
+      'CostCode',
+      'Property',
+      'ProjectCode',
+      'FreeCode',
+      'InvoiceFromDate'
+    )
+    .groupBy(
+      'RentArticle',
+      'Account',
+      'CostCode',
+      'Property',
+      'ProjectCode',
+      'FreeCode',
+      'InvoiceFromDate'
+    )
+    .where('batchId', batchId)
+
+  const invoiceDataRows = rows.map((row: any): InvoiceDataRow => {
+    return {
+      totalAmount: row.totalAmount as number,
+      totalVat: row.totalVat as number,
+      rentArticle: row.RentArticle as string,
+      account: row.Account as string,
+      costCode: row.CostCode as string,
+      property: row.Property as string,
+      projectCode: row.ProjectCode as string,
+      freeCode: row.FreeCode as string,
+      invoiceFromDate: row.InvoiceFromDate as string,
+    }
+  })
+
+  return invoiceDataRows
 }
