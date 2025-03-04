@@ -1,15 +1,10 @@
 import config from '../../../common/config'
-import {
-  Invoice,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  PaymentStatus,
-} from 'onecore-types'
+import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
-import { getContacts } from './invoice-data-db-adapter'
-import { gql } from '@urql/core'
-import { InvoiceDataRow } from '../types'
+import { AdapterResult, InvoiceDataRow } from '../types'
+
+const TENANT_COMPANY_DB_ID = 44668660
 
 const axiosOptions = {
   method: 'POST',
@@ -17,6 +12,56 @@ const axiosOptions = {
     'Content-type': 'application/json',
     Authorization: 'token ' + config.xledger.apiToken,
   },
+}
+
+interface XledgerResponse {
+  status: 'ok' | 'retry' | 'error'
+  data: any
+}
+
+const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
+  function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  const result = await makeXledgerHttpRequest(query)
+
+  if (result.status === 'ok') {
+    return result.data
+  } else if (result.status === 'retry') {
+    await sleep(3000)
+    return await makeXledgerRequest(query)
+  } else {
+    logger.error(result.data, 'Error making Xledger request')
+    throw new Error(result.data)
+  }
+}
+
+const makeXledgerHttpRequest = async (query: {
+  query: string
+}): Promise<XledgerResponse> => {
+  const result = await axios(`${config.xledger.url}`, {
+    data: query,
+    ...axiosOptions,
+  })
+
+  console.log('Full result', result.status, result.data)
+
+  if (result.status === 200) {
+    if (result.data && result.data.errors) {
+      if (
+        result.data.errors[0].code === 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED'
+      ) {
+        return { status: 'retry', data: {} }
+      } else {
+        return { status: 'error', data: result.data.errors }
+      }
+    } else {
+      return { status: 'ok', data: result.data }
+    }
+  } else {
+    return { status: 'error', data: result.data.errors }
+  }
 }
 
 const dateFromString = (dateString: string): Date => {
@@ -76,8 +121,6 @@ const getContact = async (contactCode: string) => {
     }`,
   }
 
-  console.log('getContact', query)
-
   const result = await axios(`${config.xledger.url}`, {
     data: query,
     ...axiosOptions,
@@ -86,13 +129,12 @@ const getContact = async (contactCode: string) => {
   if (result.data.errors) {
     logger.error(result.data.errors[0], 'Error querying Xledger')
   }
-  console.log('result', result.data)
 
   return result.data.data.customers.edges?.[0]?.node
 }
 
 const addContact = async (contact: any) => {
-  let address = ''
+  /*let address = ''
 
   if (contact.Street && contact.PostalCode && contact.City) {
     address = `address: {
@@ -129,14 +171,14 @@ const addContact = async (contact: any) => {
 
   console.log(companyResult.data)
 
-  const companyDbId = companyResult.data.data.addCompanies.edges[0].node.dbId
+  const companyDbId = companyResult.data.data.addCompanies.edges[0].node.dbId*/
 
   const customerQuery = {
     query: `mutation AddCustomers {
       addCustomers(inputs:[
         {
           node: {
-            company:{dbId: ${companyDbId}},
+            company:{dbId: ${TENANT_COMPANY_DB_ID}},
             code:"${contact.ContactCode}",
             description:"${contact.FullName}",
             streetAddress:"${contact.StreetAddress}",
@@ -178,7 +220,7 @@ const contactHasChanged = (xledgerContact: any, dbContact: any) => {
 
 const updateContact = async (xledgerContact: any, dbContact: any) => {
   if (contactHasChanged(xledgerContact, dbContact)) {
-    const companyQuery = {
+    /*const companyQuery = {
       query: `mutation UpdateCompany {
         updateCompany(dbId: "${xledgerContact.companyDbId}", description: "${dbContact.FullName}") {
           description
@@ -193,7 +235,9 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 
     console.log(companyResult.data)
 
-    const companyDbId = companyResult.data.data.updateCompany.dbId
+    const companyDbId = companyResult.data.data.updateCompany.dbId*/
+
+    // Todo lookup/make sure tenant company exists.
 
     const customerQuery = {
       query: `mutation UpdateContact {
@@ -330,7 +374,7 @@ const createCustomerTransaction = async (
           node: {
             postedDate: "${postedDate}"
             dueDate: "${dueDate}"
-            account: { dbId: ${accountJobId}" }
+            account: { dbId: ${accountJobId} }
             transactionSource: { code: "AR" }
             invoiceAmount: ${amount}
             subledger: { code: "${customerCode}" }
@@ -350,12 +394,66 @@ const createCustomerTransaction = async (
     }`,
   }
 
-  const result = await axios(`${config.xledger.url}`, {
-    data: customerTransactionQuery,
-    ...axiosOptions,
-  })
+  console.log('Query', customerTransactionQuery)
 
-  return result.data.data.addGLImportItems.edges
+  try {
+    const result = await makeXledgerRequest(customerTransactionQuery)
+    console.log(
+      'Results from addGLImportItems',
+      result.data?.addGLImportItems?.edges
+    )
+    return result.data.addGLImportItems.edges
+  } catch (error) {
+    return
+  }
+}
+
+const createAggregatedTransaction = async (
+  account: string,
+  postedDate: string,
+  amount: number,
+  vatPercent: number,
+  batchId: string
+) => {
+  const accountJobId = await getAccountDbId(account)
+
+  if (!accountJobId) {
+    logger.error({ account }, 'Job id not found for account')
+    return
+  }
+  const taxRule = vatPercent == 25 ? 'taxRule:{code:"2"},' : ''
+
+  const transactionQuery = {
+    query: `mutation {
+      addGLImportItems(inputs: [
+        {
+          node: {
+            postedDate: "${postedDate}",
+            account: {dbId: ${accountJobId}},
+            transactionSource: {code: "AR"},
+            invoiceAmount: ${amount},
+            ${taxRule}
+            jobLevel: {dbId: 14502},
+            trRegNumber: ${batchId}
+          }
+        }
+      ]) {
+        edges { node {dbId} }
+      }
+    }`,
+  }
+
+  console.log('Query', transactionQuery)
+  try {
+    const result = await makeXledgerRequest(transactionQuery)
+    console.log(
+      'Results from addGLImportItems',
+      result.data?.addGLImportItems?.edges
+    )
+    return result.data.addGLImportItems.edges
+  } catch (error) {
+    return
+  }
 }
 
 export const updateCustomerInvoiceData = async (
@@ -367,18 +465,68 @@ export const updateCustomerInvoiceData = async (
   let customerInvoiceAmount = 0
 
   invoiceDataRows.forEach((row) => {
-    customerInvoiceAmount += row.totalAmount as number
+    customerInvoiceAmount += row.TotalAmount as number
   })
+
+  console.log('Invoicerow', invoiceDataRows[0])
 
   await createCustomerTransaction(
     accountJobId,
     batchId,
-    invoiceDataRows[0].customerCode as string,
-    invoiceDataRows[0].invoiceFromDate as string,
-    invoiceDataRows[0].invoiceToDate as string,
+    invoiceDataRows[0].ContactCode as string,
+    invoiceDataRows[0].InvoiceFromDate as string,
+    invoiceDataRows[0].InvoiceToDate as string,
     customerInvoiceAmount,
     'ocr'
   )
+}
+
+export const updateAggregatedInvoiceData = async (
+  invoiceDataRows: InvoiceDataRow[],
+  batchId: string
+): Promise<
+  AdapterResult<
+    { successfulRows: number; failedRows: number; errors: string[] },
+    string
+  >
+> => {
+  try {
+    const errors: string[] = []
+    let successfulRows = 0
+    let failedRows = 0
+
+    for (const row of invoiceDataRows) {
+      if (row.account) {
+        await createAggregatedTransaction(
+          row.account as string,
+          row.invoiceFromDate as string,
+          row.totalAmount as number,
+          row.vatPercent as number,
+          batchId
+        )
+        successfulRows++
+      } else {
+        failedRows++
+        logger.error(row, 'Account missing for aggregated row')
+        errors.push(`Account for article ${row.rentArticle} missing in Xpand`)
+      }
+    }
+
+    return {
+      ok: true,
+      data: {
+        successfulRows,
+        failedRows,
+        errors: errors,
+      },
+    }
+  } catch (error) {
+    logger.error(error, 'Error updating aggregated invoice data')
+    return {
+      ok: false,
+      err: 'aggregated-invoice-data-error',
+    }
+  }
 }
 
 export const healthCheck = async () => {

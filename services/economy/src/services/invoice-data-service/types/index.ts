@@ -47,3 +47,7 @@ export const columnNames: string[] = [
 ]
 
 export type InvoiceDataRow = Record<string, string | number>
+
+export type AdapterResult<T, E> =
+  | { ok: true; data: T; statusCode?: number }
+  | { ok: false; err: E; statusCode?: number }
