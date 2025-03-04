@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.4.0...v3.5.0) (2025-03-04)
+
+
+### Features
+
+* release ([092df97](https://github.com/Bostads-AB-Mimer/onecore-types/commit/092df970d0236caf7264d98ed60323cd74c68c71))
+
 ## [3.4.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.3.2...v3.4.0) (2025-02-11)
 
 
