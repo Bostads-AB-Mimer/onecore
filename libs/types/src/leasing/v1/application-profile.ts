@@ -12,6 +12,7 @@ export const CreateOrUpdateApplicationProfileRequestParamsSchema =
     expiresAt: true,
     housingTypeDescription: true,
     landlord: true,
+    lastUpdatedAt: true,
   }).extend({
     housingType: ApplicationProfileSchema.shape.housingType.unwrap(),
     housingReference: ApplicationProfileHousingReferenceSchema.pick({
@@ -21,8 +22,8 @@ export const CreateOrUpdateApplicationProfileRequestParamsSchema =
       reviewStatus: true,
       comment: true,
       reasonRejected: true,
-      lastAdminUpdatedAt: true,
-      lastApplicantUpdatedAt: true,
+      reviewedAt: true,
+      reviewedBy: true,
     }),
   })
 
