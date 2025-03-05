@@ -44,7 +44,7 @@ const processInvoiceRows = async (
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/invoice-data/enrich-invoice-data-rows', async (ctx) => {
-    console.log('process-excel')
+    console.log('enrich-invoice-data-rows')
     const contactCodes: string[] = []
 
     try {
@@ -81,17 +81,18 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoice-data/save-contacts', async (ctx) => {
     console.log('save-contacts')
+    const metadata = generateRouteMetadata(ctx)
 
     try {
       const contacts = ctx.request.body['contacts']
       const batchId = ctx.request.body['batchId']
 
-      await saveContacts(contacts, batchId)
+      const result = await saveContacts(contacts, batchId)
 
       ctx.status = 200
-      ctx.body = { result: true }
+      ctx.body = { content: result.ok ? result.data : {}, ...metadata }
     } catch (error: any) {
-      console.error('Error', error)
+      logger.error(error, 'Error saving contacts to invoice data database')
       ctx.status = 500
       ctx.body = {
         message: error.message,
@@ -100,6 +101,8 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/invoice-data/update-contacts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
     function sleep(ms: number) {
       return new Promise((resolve) => setTimeout(resolve, ms))
     }
@@ -110,14 +113,29 @@ export const routes = (router: KoaRouter) => {
       const batchId = ctx.request.body['batchId']
 
       const contacts = await getContacts(batchId)
+      console.log('contacts', contacts)
+
+      const errors: string[] = []
+      let successfulContacts = 0
+      let failedContacts = 0
 
       for (const contact of contacts) {
-        await syncContact(contact)
+        const result = await syncContact(contact)
+        console.log('sync', result)
+        if (!result.ok) {
+          errors.push('Error syncing contact: ' + result.err)
+          failedContacts++
+        } else {
+          successfulContacts++
+        }
         await sleep(200)
       }
 
       ctx.status = 200
-      ctx.body = { result: true }
+      ctx.body = {
+        content: { successfulContacts, failedContacts, errors },
+        ...metadata,
+      }
     } catch (error: any) {
       logger.error(error, 'Error updating contacts')
       ctx.status = 500
@@ -128,7 +146,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('(.*)/invoice-data/update-invoices', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx)
 
     function sleep(ms: number) {
       return new Promise((resolve) => setTimeout(resolve, ms))
@@ -151,24 +169,28 @@ export const routes = (router: KoaRouter) => {
 
       console.log(aggregatedRows)
 
-      const result = await updateAggregatedInvoiceData(aggregatedRows, batchId)
+      const aggregatedRowsResult = await updateAggregatedInvoiceData(
+        aggregatedRows,
+        batchId
+      )
 
       // Get rows for each contract
       const contractCodes = await getContracts(batchId)
 
-      /*for (const contractCode of contractCodes) {
+      for (const contractCode of contractCodes) {
         const contractInvoiceRows = await getInvoiceRows(
           contractCode.contractCode,
           batchId
         )
         await updateCustomerInvoiceData(contractInvoiceRows, batchId)
         await markInvoiceRowsAsImported(contractInvoiceRows, batchId)
-        await sleep(100)
-      }*/
+      }
 
       ctx.status = 200
       ctx.body = {
-        content: result.ok && result.data,
+        content: {
+          aggregatedRows: aggregatedRowsResult.ok && aggregatedRowsResult.data,
+        },
         ...metadata,
       }
     } catch (error: any) {
