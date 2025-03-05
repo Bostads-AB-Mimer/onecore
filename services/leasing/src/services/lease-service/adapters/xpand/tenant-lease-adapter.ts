@@ -419,6 +419,7 @@ const getContactQuery = () => {
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
     .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
     .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
+    .where('cmadr.tdate', null) //only get active addresss
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
