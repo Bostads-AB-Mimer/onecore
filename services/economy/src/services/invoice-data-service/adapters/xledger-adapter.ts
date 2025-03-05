@@ -121,58 +121,16 @@ const getContact = async (contactCode: string) => {
     }`,
   }
 
-  const result = await axios(`${config.xledger.url}`, {
-    data: query,
-    ...axiosOptions,
-  })
+  const result = await makeXledgerRequest(query)
 
   if (result.data.errors) {
     logger.error(result.data.errors[0], 'Error querying Xledger')
   }
 
-  return result.data.data.customers.edges?.[0]?.node
+  return result.data.customers.edges?.[0]?.node
 }
 
 const addContact = async (contact: any) => {
-  /*let address = ''
-
-  if (contact.Street && contact.PostalCode && contact.City) {
-    address = `address: {
-      streetAddress: "${contact.Street}"
-      zipCode: "${contact.PostalCode}"
-      country: "Sweden"
-      place: "${contact.City}"
-    }`
-  }
-
-  const companyQuery = {
-    query: `mutation AddCompanies {
-      addCompanies(inputs: {
-        node: { 
-          description: "${contact.FullName}"
-          ${address}
-        } 
-      }) {
-        edges {
-            node {
-                dbId
-            }
-        }
-      }
-    }`,
-  }
-
-  console.log(companyQuery)
-
-  const companyResult = await axios(`${config.xledger.url}`, {
-    data: companyQuery,
-    ...axiosOptions,
-  })
-
-  console.log(companyResult.data)
-
-  const companyDbId = companyResult.data.data.addCompanies.edges[0].node.dbId*/
-
   const customerQuery = {
     query: `mutation AddCustomers {
       addCustomers(inputs:[
@@ -192,14 +150,11 @@ const addContact = async (contact: any) => {
     }`,
   }
 
-  const customerResult = await axios(`${config.xledger.url}`, {
-    data: customerQuery,
-    ...axiosOptions,
-  })
+  const customerResult = await makeXledgerRequest(customerQuery)
 
   console.log(customerResult.data)
 
-  return customerResult.data.data.addCustomers.edges[0].node.dbId
+  return customerResult.data.addCustomers.edges[0].node.dbId
 }
 
 const contactHasChanged = (xledgerContact: any, dbContact: any) => {
@@ -220,25 +175,7 @@ const contactHasChanged = (xledgerContact: any, dbContact: any) => {
 
 const updateContact = async (xledgerContact: any, dbContact: any) => {
   if (contactHasChanged(xledgerContact, dbContact)) {
-    /*const companyQuery = {
-      query: `mutation UpdateCompany {
-        updateCompany(dbId: "${xledgerContact.companyDbId}", description: "${dbContact.FullName}") {
-          description
-        }
-      }`,
-    }
-
-    const companyResult = await axios(`${config.xledger.url}`, {
-      data: companyQuery,
-      ...axiosOptions,
-    })
-
-    console.log(companyResult.data)
-
-    const companyDbId = companyResult.data.data.updateCompany.dbId*/
-
     // Todo lookup/make sure tenant company exists.
-
     const customerQuery = {
       query: `mutation UpdateContact {
         updateCustomer(dbId: "${xledgerContact.dbId}", description: "${dbContact.FullName}", streetAddress: "${dbContact.Street}", zipCode: "${dbContact.PostalCode}", place: "${dbContact.City}") {
@@ -247,12 +184,9 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
       }`,
     }
 
-    const customerResult = await axios(`${config.xledger.url}`, {
-      data: customerQuery,
-      ...axiosOptions,
-    })
+    const customerResult = await makeXledgerRequest(customerQuery)
 
-    const customerDbId = customerResult.data.data.updateCustomer.dbId
+    const customerDbId = customerResult.data.updateCustomer.dbId
   } else {
     logger.info({}, `Contact ${dbContact.ContactCode} not changed, skipping`)
   }
@@ -262,12 +196,10 @@ const getContactDbId = async (contactCode: string): Promise<string> => {
   const query = {
     query: `{customers (first: 10000, filter: { code: "${contactCode}" }) { edges { node { code description dbId }}}}`,
   }
-  const result = await axios(`${config.xledger.url}`, {
-    data: query,
-    ...axiosOptions,
-  })
 
-  return result.data.data.customers.edges[0].node.dbId
+  const result = await makeXledgerRequest(query)
+
+  return result.data.customers.edges[0].node.dbId
 }
 
 export const getInvoicesByContactCode = async (contactCode: string) => {
@@ -279,30 +211,29 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
     query: `{arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) { edges { node { invoiceNumber invoiceRemaining invoiceAmount dueDate amount invoiceDate subledger { code description } period { fromDate toDate } slTransactionType { name } invoiceFile { url } } } }}`,
   }
 
-  const result = await axios(`${config.xledger.url}`, {
-    data: query,
-    ...axiosOptions,
-  })
+  const result = await makeXledgerRequest(query)
 
-  console.log(JSON.stringify(result.data.data.arTransactions.edges, null, 2))
+  console.log(JSON.stringify(result.data.arTransactions.edges, null, 2))
 
-  return transformToInvoice(result.data.data.arTransactions.edges)
+  return transformToInvoice(result.data.arTransactions.edges)
 }
 
-export const syncContact = async (dbContact: any) => {
-  console.log('updateContact', dbContact)
-
+export const syncContact = async (
+  dbContact: any
+): Promise<AdapterResult<any, string>> => {
   const xledgerContact = await getContact(dbContact.ContactCode)
 
-  console.log('xledgerContact', xledgerContact)
+  try {
+    if (!xledgerContact) {
+      await addContact(dbContact)
+    } else {
+      await updateContact(xledgerContact, dbContact)
+    }
 
-  if (!xledgerContact) {
-    await addContact(dbContact)
-  } else {
-    await updateContact(xledgerContact, dbContact)
+    return { ok: true, data: xledgerContact }
+  } catch (error) {
+    return { ok: false, err: (error as any).message }
   }
-
-  return xledgerContact
 }
 
 const accountJobIds: Record<string, string> = {}
@@ -324,12 +255,9 @@ const getAccountDbId = async (account: string) => {
       }`,
     }
 
-    const result = await axios(`${config.xledger.url}`, {
-      data: accountQuery,
-      ...axiosOptions,
-    })
+    const result = await makeXledgerRequest(accountQuery)
 
-    result.data.data.accounts.edges.forEach((edge: any) => {
+    result.data.accounts.edges.forEach((edge: any) => {
       accountJobIds[edge.node.code] = edge.node.dbId
     })
 
@@ -346,14 +274,14 @@ const createLedgerTransactionQuery = (
     node: {
       postedDate: "${invoiceDataRow.invoiceFromDate}"
       dueDate: "${invoiceDataRow.invoiceFromDate}"
-      account: { code: "1510" }
+      account: { dbId: ${accountJobId} }
       transactionSource: { code: "AR" }
-      invoiceAmount: 6387
-      subledger: { code: "P019430" }
+      invoiceAmount: ${invoiceDataRow.totalAmount}
+      subledger: { code: "${invoiceDataRow.contactCode}" }
       extIdentifier: "OCR-numret"
       invoiceNumber: "OCR-numret"
       jobLevel: { dbId: 14502 }
-      trRegNumber: 20250201
+      trRegNumber: ${batchNum}
     }
   }`
 }

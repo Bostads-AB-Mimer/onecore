@@ -1,4 +1,4 @@
-import { InvoiceDataRow } from '../types'
+import { AdapterResult, InvoiceDataRow } from '../types'
 import knex from 'knex'
 import config from '../../../common/config'
 import { Contact, Invoice } from 'onecore-types'
@@ -57,21 +57,50 @@ export const saveInvoiceRows = async (
   return null
 }
 
-export const saveContacts = async (contacts: Contact[], batchId: string) => {
+export const saveContacts = async (
+  contacts: Contact[],
+  batchId: string
+): Promise<
+  AdapterResult<
+    { successfulContacts: number; failedContacts: number; errors: string[] },
+    string
+  >
+> => {
+  const errors: string[] = []
+  let successfulContacts = 0
+  let failedContacts = 0
   for (const contact of contacts) {
-    await db('invoice_contact').insert({
-      batchId,
-      contactCode: contact.contactCode,
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      fullName: contact.fullName,
-      nationalRegistrationNumber: contact.nationalRegistrationNumber,
-      emailAddress: contact.emailAddress,
-      street: contact.address?.street,
-      streetNumber: contact.address?.number,
-      postalCode: contact.address?.postalCode,
-      city: contact.address?.city,
-    })
+    try {
+      await db('invoice_contact').insert({
+        batchId,
+        contactCode: contact.contactCode,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        fullName: contact.fullName,
+        nationalRegistrationNumber: contact.nationalRegistrationNumber,
+        emailAddress: contact.emailAddress,
+        street: contact.address?.street,
+        streetNumber: contact.address?.number,
+        postalCode: contact.address?.postalCode,
+        city: contact.address?.city,
+      })
+
+      successfulContacts++
+    } catch (error: any) {
+      failedContacts++
+      errors.push(
+        `Error saving contact ${contact.contactCode} to invoice data database`
+      )
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      successfulContacts,
+      failedContacts,
+      errors,
+    },
   }
 }
 
