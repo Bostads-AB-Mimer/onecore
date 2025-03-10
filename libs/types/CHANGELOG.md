@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.0...v3.5.1) (2025-03-10)
+
+
+### Features
+
+* UTH-216 Show Error Message When No Valid Housing Contract is Found ([#156](https://github.com/Bostads-AB-Mimer/onecore-types/issues/156)) ([5e56828](https://github.com/Bostads-AB-Mimer/onecore-types/commit/5e5682888054927f2b8b4c483762128987c54b75))
+
 ## [3.5.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.4.0...v3.5.0) (2025-03-04)
 
 
