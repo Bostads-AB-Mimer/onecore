@@ -119,7 +119,12 @@ const getContactsDataBySearchQuery = async (
 
 const getTenantByContactCode = async (
   contactCode: string
-): Promise<AdapterResult<Tenant, unknown>> => {
+): Promise<
+  AdapterResult<
+    Tenant,
+    unknown | 'no-valid-housing-contract' | 'contact-not-found'
+  >
+> => {
   try {
     const result = await getFromCore<{ content: Tenant }>({
       method: 'get',
@@ -128,6 +133,10 @@ const getTenantByContactCode = async (
 
     return { ok: true, data: result.content }
   } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 500) {
+      return { ok: false, err: err.response?.data?.type, statusCode: 500 }
+    }
+
     return { ok: false, err, statusCode: 500 }
   }
 }
