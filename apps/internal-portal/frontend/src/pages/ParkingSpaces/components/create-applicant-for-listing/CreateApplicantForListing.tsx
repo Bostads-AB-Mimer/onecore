@@ -75,6 +75,22 @@ export const CreateApplicantForListing = (props: Props) => {
   const handleChange = (_e: React.SyntheticEvent, tab: string) =>
     setSelectedTab(tab)
 
+  const renderTenantQueryError = (error: any) => {
+    if (!error) return null
+
+    if (error?.response?.data?.type === 'no-valid-housing-contract') {
+      return (
+        <Typography color="error">
+          Kunden saknar giltigt bostadskontrakt. Det går endast att söka
+          bilplats med gällande och kommande bostadskontrakt
+        </Typography>
+      )
+    }
+
+    return (
+      <Typography color="error">Något gick fel. Kontakta support.</Typography>
+    )
+  }
   return (
     <>
       <Button
@@ -152,11 +168,7 @@ export const CreateApplicantForListing = (props: Props) => {
                       <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
                     )}
                     {tenantQuery.isLoading && <ContactInfoLoading />}
-                    {tenantQuery.error && (
-                      <Typography color="error">
-                        Något gick fel. Kontakta support.
-                      </Typography>
-                    )}
+                    {renderTenantQueryError(tenantQuery.error)}
                     <Box>
                       <Divider />
                     </Box>

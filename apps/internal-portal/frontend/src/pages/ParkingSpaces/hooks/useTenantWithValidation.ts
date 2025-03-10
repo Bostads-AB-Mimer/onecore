@@ -41,7 +41,7 @@ export const useTenantWithValidation = (
         )
         .then((res) => res.data),
     retry: (failureCount: number, error: AxiosError) => {
-      if (error.response?.status === 401) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
         return false
       } else {
         return failureCount < 3
