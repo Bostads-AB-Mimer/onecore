@@ -8,6 +8,7 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import { leaseTypes } from '../../../constants/leaseTypes'
+import * as factory from './factories'
 
 const app = new Koa()
 const router = new KoaRouter()

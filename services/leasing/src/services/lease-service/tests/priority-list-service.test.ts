@@ -10,24 +10,23 @@ import {
 } from '../priority-list-service'
 import * as factory from './factories'
 import { leaseTypes } from '../../../constants/leaseTypes'
+import { addDays, parseISO } from 'date-fns'
 
 //dynamic dates for active and upcoming contracts
 const currentDate = new Date()
-const thirtyDaysInThePastDate = new Date()
-const thirtyDaysInTheFutureDate = new Date()
-thirtyDaysInThePastDate.setDate(currentDate.getDate() + 30)
-thirtyDaysInTheFutureDate.setDate(currentDate.getDate() + 30)
+const thirtyDaysInThePastDate = addDays(currentDate, -30)
+const thirtyDaysInTheFutureDate = addDays(currentDate, 30)
 
 describe('parseLeasesForHousingContract', () => {
   it('should return 1 housing contract if only 1 active housing contract', async () => {
     const terminatedHousingContract = factory.lease
       .params({
         type: leaseTypes.housingContract,
-        leaseStartDate: new Date('2011-01-01T00:00:00.000Z'),
-        noticeDate: new Date('2019-09-04T00:00:00.000Z'),
-        contractDate: new Date('2010-12-28T00:00:00.000Z'),
-        lastDebitDate: new Date('2019-09-30T00:00:00.000Z'),
-        approvalDate: new Date('2010-12-28T00:00:00.000Z'),
+        leaseStartDate: parseISO('2011-01-01T00:00:00.000Z'),
+        noticeDate: parseISO('2019-09-04T00:00:00.000Z'),
+        contractDate: parseISO('2010-12-28T00:00:00.000Z'),
+        lastDebitDate: parseISO('2019-09-30T00:00:00.000Z'),
+        approvalDate: parseISO('2010-12-28T00:00:00.000Z'),
         status: LeaseStatus.AboutToEnd,
       })
       .build()
@@ -35,9 +34,9 @@ describe('parseLeasesForHousingContract', () => {
     const activeHousingContract = factory.lease
       .params({
         type: leaseTypes.housingContract,
-        leaseStartDate: new Date('2019-10-01T00:00:00.000Z'),
-        contractDate: new Date('2019-09-04T00:00:00.000Z'),
-        approvalDate: new Date('2019-09-04T00:00:00.000Z'),
+        leaseStartDate: parseISO('2019-10-01T00:00:00.000Z'),
+        contractDate: parseISO('2019-09-04T00:00:00.000Z'),
+        approvalDate: parseISO('2019-09-04T00:00:00.000Z'),
         status: LeaseStatus.Current,
       })
       .build()
@@ -45,9 +44,9 @@ describe('parseLeasesForHousingContract', () => {
     const activParkingSpaceContract = factory.lease
       .params({
         type: leaseTypes.parkingspaceContract,
-        leaseStartDate: new Date('2022-06-29T00:00:00.000Z'),
-        contractDate: new Date('2022-06-29T00:00:00.000Z'),
-        approvalDate: new Date('2022-06-29T00:00:00.000Z'),
+        leaseStartDate: parseISO('2022-06-29T00:00:00.000Z'),
+        contractDate: parseISO('2022-06-29T00:00:00.000Z'),
+        approvalDate: parseISO('2022-06-29T00:00:00.000Z'),
         status: LeaseStatus.Current,
       })
       .build()
@@ -75,15 +74,15 @@ describe('parseLeasesForHousingContract', () => {
     const soonToBeTerminatedHousingContract = factory.lease
       .params({
         type: leaseTypes.housingContract,
-        leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
+        leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
         noticeGivenBy: 'G',
         noticeDate: thirtyDaysInThePastDate,
         noticeTimeTenant: '3',
         preferredMoveOutDate: thirtyDaysInTheFutureDate,
         terminationDate: thirtyDaysInTheFutureDate,
-        contractDate: new Date('2021-09-08T00:00:00.000Z'),
+        contractDate: parseISO('2021-09-08T00:00:00.000Z'),
         lastDebitDate: thirtyDaysInTheFutureDate,
-        approvalDate: new Date('2021-09-08T00:00:00.000Z'),
+        approvalDate: parseISO('2021-09-08T00:00:00.000Z'),
         status: LeaseStatus.Current,
       })
       .build()
@@ -92,8 +91,8 @@ describe('parseLeasesForHousingContract', () => {
       .params({
         type: leaseTypes.housingContract,
         leaseStartDate: thirtyDaysInTheFutureDate,
-        contractDate: new Date('2024-03-11T00:00:00.000Z'),
-        approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+        contractDate: parseISO('2024-03-11T00:00:00.000Z'),
+        approvalDate: parseISO('2024-03-11T00:00:00.000Z'),
         status: LeaseStatus.Upcoming,
       })
       .build()
@@ -101,9 +100,9 @@ describe('parseLeasesForHousingContract', () => {
     const parkingSpaceContract = factory.lease
       .params({
         type: leaseTypes.parkingspaceContract,
-        leaseStartDate: new Date('2022-02-01T00:00:00.000Z'),
-        contractDate: new Date('2021-12-02T00:00:00.000Z'),
-        approvalDate: new Date('2021-12-02T00:00:00.000Z'),
+        leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
+        contractDate: parseISO('2021-12-02T00:00:00.000Z'),
+        approvalDate: parseISO('2021-12-02T00:00:00.000Z'),
         status: LeaseStatus.Current,
       })
       .build()
@@ -121,6 +120,7 @@ describe('parseLeasesForHousingContract', () => {
     assert(result)
 
     expect(result[0]).toBeUndefined()
+    expect(result[0]).toBeUndefined()
     expect(result[1]).toBeDefined()
   })
 
@@ -129,8 +129,8 @@ describe('parseLeasesForHousingContract', () => {
       .params({
         type: leaseTypes.housingContract,
         leaseStartDate: thirtyDaysInTheFutureDate,
-        contractDate: new Date('2024-03-11T00:00:00.000Z'),
-        approvalDate: new Date('2024-03-11T00:00:00.000Z'),
+        contractDate: parseISO('2024-03-11T00:00:00.000Z'),
+        approvalDate: parseISO('2024-03-11T00:00:00.000Z'),
         status: LeaseStatus.Upcoming,
       })
       .build()
@@ -152,6 +152,75 @@ describe('parseLeasesForHousingContract', () => {
   it('should return undefined for leases without housing contract', async () => {
     const result = parseLeasesForHousingContracts([])
     expect(result).toBeUndefined()
+  })
+
+  it("shouldn't choose a housing contract that is about to end as currentHousingContract", async () => {
+    const soonToBeTerminatedHousingContract = factory.lease
+      .params({
+        leaseId: '211-141-02-1005/02',
+        leaseNumber: '02',
+        rentalPropertyId: '211-141-02-1005',
+        type: 'Bostadskontrakt               ',
+        leaseStartDate: parseISO('2024-07-01T00:00:00.000Z'),
+        leaseEndDate: undefined,
+        status: 2,
+        tenantContactIds: [],
+        tenants: [],
+        rentalProperty: undefined,
+        rentInfo: undefined,
+        address: undefined,
+        noticeGivenBy: 'G',
+        noticeDate: parseISO('2024-11-21T00:00:00.000Z'),
+        noticeTimeTenant: '3',
+        preferredMoveOutDate: parseISO('2025-01-31T00:00:00.000Z'),
+        terminationDate: undefined,
+        contractDate: parseISO('2024-04-10T00:00:00.000Z'),
+        lastDebitDate: addDays(currentDate, 3),
+        approvalDate: parseISO('2024-04-10T00:00:00.000Z'),
+        residentialArea: { code: 'BÄC', caption: 'Bäckby' },
+      })
+      .build()
+
+    const anotherActiveHousingContract = factory.lease
+      .params({
+        leaseId: '102-003-01-0403/08',
+        leaseNumber: '08',
+        rentalPropertyId: '102-003-01-0403',
+        type: 'Bostadskontrakt               ',
+        leaseStartDate: parseISO('2025-02-01T00:00:00.000Z'),
+        leaseEndDate: undefined,
+        status: 0,
+        tenantContactIds: [],
+        tenants: [],
+        rentalProperty: undefined,
+        rentInfo: undefined,
+        address: undefined,
+        noticeGivenBy: undefined,
+        noticeDate: undefined,
+        noticeTimeTenant: '3',
+        preferredMoveOutDate: undefined,
+        terminationDate: undefined,
+        contractDate: parseISO('2024-11-21T00:00:00.000Z'),
+        lastDebitDate: undefined,
+        approvalDate: parseISO('2024-11-21T00:00:00.000Z'),
+        residentialArea: { code: 'CEN', caption: 'Centrum' },
+      })
+      .build()
+
+    const leases = [
+      soonToBeTerminatedHousingContract,
+      anotherActiveHousingContract,
+    ]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
+    const result = parseLeasesForHousingContracts(filteredLeases)
+
+    expect(filteredLeases).toHaveLength(2)
+    assert(result)
+    const [current, upcoming] = result
+
+    expect(current?.leaseId).toBe('102-003-01-0403/08')
+    expect(upcoming).toBeUndefined()
   })
 
   it("shouldn't choose a housing contract that is about to end as currentHousingContract", async () => {

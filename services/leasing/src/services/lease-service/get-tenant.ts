@@ -13,12 +13,14 @@ type GetTenantError =
   | 'get-contact-leases'
   | 'contact-leases-not-found'
   | 'get-residential-area'
-  | 'housing-contracts-not-found'
+  | 'no-valid-housing-contract'
   | 'get-lease-property-info'
 
 type NonEmptyArray<T> = [T, ...T[]]
 
-export async function getTenant(params: { contactCode: string }) {
+export async function getTenant(params: {
+  contactCode: string
+}): Promise<AdapterResult<Tenant, GetTenantError>> {
   const result = await fetchTenant(params)
   if (!result.ok) {
     logger.error(
@@ -97,19 +99,17 @@ async function fetchTenant(params: {
   if (!leasesWithResidentialArea.ok) {
     return { ok: false, err: 'get-residential-area' }
   }
-
   const housingContracts = priorityListService.parseLeasesForHousingContracts(
     leasesWithResidentialArea.data
   )
-
   if (!housingContracts) {
-    return { ok: false, err: 'housing-contracts-not-found' }
+    return { ok: false, err: 'no-valid-housing-contract' }
   }
 
   const [currentHousingContract, upcomingHousingContract] = housingContracts
 
   if (!currentHousingContract && !upcomingHousingContract) {
-    return { ok: false, err: 'housing-contracts-not-found' }
+    return { ok: false, err: 'no-valid-housing-contract' }
   }
 
   const leasesWithPropertyType = await Promise.all(
@@ -131,6 +131,7 @@ async function fetchTenant(params: {
   const parkingSpaceContracts = priorityListService.parseLeasesForParkingSpaces(
     leasesWithPropertyType.data
   )
+
   return {
     ok: true,
     data: {
