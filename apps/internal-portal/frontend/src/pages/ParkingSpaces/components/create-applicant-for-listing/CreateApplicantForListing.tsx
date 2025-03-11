@@ -281,7 +281,10 @@ function translateValidationResult(
 
 function renderWarningIfDistrictsMismatch(listing: Listing, tenant: Tenant) {
   if (
-    listing.districtCode != tenant.currentHousingContract?.residentialArea?.code
+    tenant.upcomingHousingContract?.residentialArea?.code !==
+      listing.districtCode &&
+    tenant.currentHousingContract?.residentialArea?.code !==
+      listing.districtCode
   ) {
     return (
       <Box paddingBottom={'1rem'}>
