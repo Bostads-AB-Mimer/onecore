@@ -210,10 +210,6 @@ export const CreateApplicantForListing = (props: Props) => {
                     </Box>
                     <Box paddingX="0.5rem" paddingTop="0.5rem">
                       <Typography color="error">
-                        {renderWarningIfDistrictsMismatch(
-                          props.listing,
-                          tenantQuery?.data.tenant
-                        )}
                         <Box>
                           {translateValidationResult(
                             tenantQuery.data.validationResult
@@ -223,6 +219,16 @@ export const CreateApplicantForListing = (props: Props) => {
                     </Box>
                   </Box>
                 )}
+              {tenantQuery.data && (
+                <Box paddingX="0.5rem" paddingTop="1rem">
+                  <Typography color="error">
+                    {renderWarningIfDistrictsMismatch(
+                      props.listing,
+                      tenantQuery?.data.tenant
+                    )}
+                  </Typography>
+                </Box>
+              )}
               <Box
                 paddingTop="2rem"
                 display="flex"
@@ -234,7 +240,11 @@ export const CreateApplicantForListing = (props: Props) => {
                 {tenantQuery.data ? (
                   <LoadingButton
                     disabled={
-                      tenantQuery.data.validationResult === 'no-contract'
+                      tenantQuery.data.validationResult === 'no-contract' ||
+                      !tenantHasValidContractForTheDiscrict(
+                        tenantQuery.data.tenant,
+                        props.listing
+                      )
                     }
                     loading={createNoteOfInterest.isPending}
                     variant="dark"
@@ -279,13 +289,22 @@ function translateValidationResult(
   return translationMap[result]
 }
 
+function tenantHasValidContractForTheDiscrict(
+  tenant: Tenant,
+  listing: Listing
+) {
+  const hasUpComingContractInThisDistrict =
+    tenant.upcomingHousingContract?.residentialArea?.code ===
+    listing.districtCode
+  const hasCurrentContractInThisDistrict =
+    tenant.currentHousingContract?.residentialArea?.code ===
+    listing.districtCode
+
+  return hasCurrentContractInThisDistrict || hasUpComingContractInThisDistrict
+}
+
 function renderWarningIfDistrictsMismatch(listing: Listing, tenant: Tenant) {
-  if (
-    tenant.upcomingHousingContract?.residentialArea?.code !==
-      listing.districtCode &&
-    tenant.currentHousingContract?.residentialArea?.code !==
-      listing.districtCode
-  ) {
+  if (!tenantHasValidContractForTheDiscrict(tenant, listing)) {
     return (
       <Box paddingBottom={'1rem'}>
         {
