@@ -31,15 +31,17 @@ export const ContactInfo = (props: { tenant: Tenant | null }) => (
       label="Adress"
       value={
         <Typography>
-          {props.tenant?.contactCode} {props.tenant?.address?.number}
+          {props.tenant?.address?.street}, {props.tenant?.address?.postalCode}{' '}
+          {props.tenant?.address?.city}
         </Typography>
       }
     />
     <ContactInfoRow
-      label="Område"
+      label="Område bostadskontrakt"
       value={
         <Typography>
-          {props.tenant?.currentHousingContract?.residentialArea?.caption}
+          {props.tenant?.currentHousingContract?.residentialArea?.caption ||
+            props.tenant?.upcomingHousingContract?.residentialArea?.caption}
         </Typography>
       }
     />
