@@ -78,19 +78,16 @@ export const CreateApplicantForListing = (props: Props) => {
   const renderTenantQueryError = (error: any) => {
     if (!error) return null
 
-    if (error?.response?.data?.type === 'no-valid-housing-contract') {
-      return (
-        <Typography color="error">
-          Kunden saknar giltigt bostadskontrakt. Det går endast att söka
-          bilplats med gällande och kommande bostadskontrakt
-        </Typography>
-      )
+    if (
+      error?.response?.data?.type === 'no-valid-housing-contract' ||
+      error?.response?.data?.type === 'contact-not-tenant'
+    ) {
+      return <ValidLeaseMissingError />
     }
 
-    return (
-      <Typography color="error">Något gick fel. Kontakta support.</Typography>
-    )
+    return <DefaultError />
   }
+
   return (
     <>
       <Button
@@ -169,6 +166,11 @@ export const CreateApplicantForListing = (props: Props) => {
                     )}
                     {tenantQuery.isLoading && <ContactInfoLoading />}
                     {renderTenantQueryError(tenantQuery.error)}
+                    {tenantQuery.data &&
+                      tenantQuery.data.validationResult == 'ok' &&
+                      tenantQuery.data.tenant.isAboutToLeave && (
+                        <ValidLeaseMissingError />
+                      )}
                     <Box>
                       <Divider />
                     </Box>
@@ -338,4 +340,17 @@ const CreateApplicantError = (props: {
       </Button>
     </Box>
   </Box>
+)
+
+const ValidLeaseMissingError = () => (
+  <Typography color="error">
+    Kunden saknar giltigt bostadskontrakt. Det går endast att söka bilplats med
+    gällande och kommande bostadskontrakt
+  </Typography>
+)
+
+const DefaultError = () => (
+  <Typography color="error">
+    Något gick fel. Försök igen eller kontakta support
+  </Typography>
 )
