@@ -21,4 +21,5 @@ export const TenantFactory = Factory.define<Tenant>(() => ({
   parkingSpaceContracts: undefined,
   upcomingHousingContract: undefined,
   housingContracts: [LeaseFactory.build()],
+  isAboutToLeave: false,
 }))

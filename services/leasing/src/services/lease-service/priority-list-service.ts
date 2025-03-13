@@ -251,18 +251,28 @@ const parseLeasesForHousingContracts = (
 }
 
 const isCurrentLease = (lease: Lease, currentDate: Date) => {
-  const lastDebitDateNotSet =
-    lease.lastDebitDate === null || lease.lastDebitDate === undefined
+  const compatibleLastDebitDate =
+    !lease.lastDebitDate || lease.lastDebitDate > currentDate
   const hasLeaseStarted = lease.leaseStartDate <= currentDate
 
-  return hasLeaseStarted && lastDebitDateNotSet
+  return hasLeaseStarted && compatibleLastDebitDate
 }
+
 const isUpcomingLease = (lease: Lease, currentDate: Date) => {
   const lastDebitDateNotSet =
     lease.lastDebitDate === null || lease.lastDebitDate === undefined
   const isLeaseUpcoming = lease.leaseStartDate > currentDate
 
   return lastDebitDateNotSet && isLeaseUpcoming
+}
+
+const isLeaseAboutToEnd = (lease: Lease) => {
+  const currentDate = new Date()
+  const lastDebitDate = lease.lastDebitDate
+    ? new Date(lease.lastDebitDate)
+    : null
+
+  return !!lastDebitDate && currentDate <= lastDebitDate
 }
 
 const parseLeasesForParkingSpaces = (
@@ -278,4 +288,5 @@ export {
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
   isLeaseActiveOrUpcoming,
+  isLeaseAboutToEnd,
 }

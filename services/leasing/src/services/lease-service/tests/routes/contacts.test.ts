@@ -295,8 +295,6 @@ describe('GET /tenants/contactCode/:contactCode', () => {
     expect(res.body.type).toEqual('no-valid-housing-contract')
     expect(res.body.title).toEqual('No valid housing contract found')
     expect(res.body.status).toEqual(500)
-    expect(res.body.detail).toEqual(
-      'A housing contract needs to be current or upcoming to be a valid contract when applying for a parking space.'
-    )
+    expect(res.body.detail).toEqual('No active or upcoming contract found.')
   })
 })
