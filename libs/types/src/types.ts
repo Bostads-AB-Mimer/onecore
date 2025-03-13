@@ -42,6 +42,7 @@ export type Tenant = Omit<Contact, 'leases' | 'isTenant'> & {
   upcomingHousingContract?: Lease
   parkingSpaceContracts?: Lease[]
   housingContracts: NonEmptyArray<Lease>
+  isAboutToLeave: boolean
 }
 
 interface PhoneNumber {
