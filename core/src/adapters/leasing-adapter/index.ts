@@ -147,7 +147,10 @@ const getTenantByContactCode = async (
 ): Promise<
   AdapterResult<
     Tenant,
-    'unknown' | 'no-valid-housing-contract' | 'contact-not-found'
+    | 'unknown'
+    | 'no-valid-housing-contract'
+    | 'contact-not-found'
+    | 'contact-not-tenant'
   >
 > => {
   try {

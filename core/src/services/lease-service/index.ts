@@ -515,11 +515,22 @@ export const routes = (router: KoaRouter) => {
           type: res.err,
           title: 'No valid housing contract found',
           status: 500,
-          detail:
-            'A housing contract needs to be current or upcoming to be a valid contract when applying for a parking space.',
+          detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
 
+        return
+      }
+
+      if (res.err === 'contact-not-tenant') {
+        ctx.status = 500
+        ctx.body = {
+          type: res.err,
+          title: 'Contact is not a tenant',
+          status: 500,
+          detail: 'No active or upcoming contract found.',
+          ...metadata,
+        } satisfies RouteErrorResponse
         return
       }
 
