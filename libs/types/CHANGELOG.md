@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.1...v3.5.2) (2025-03-13)
+
+
+### Features
+
+* UTH-220 Handle Tenants with Leases that is About to End ([#158](https://github.com/Bostads-AB-Mimer/onecore-types/issues/158)) ([7a4fa9a](https://github.com/Bostads-AB-Mimer/onecore-types/commit/7a4fa9a6e85673b0f3aa21f7a2a3f726e84b94b7))
+
 ## [3.5.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.0...v3.5.1) (2025-03-10)
 
 
