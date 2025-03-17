@@ -90,6 +90,7 @@ const transformFromDbContact = (
         : 'redacted',
     isTenant: leases.length > 0,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
+    specialAttention: !!row.specialAttention,
   }
 
   return contact
@@ -413,7 +414,8 @@ const getContactQuery = () => {
       'cmctc.keycmctc as contactKey',
       'bkkty.bkktyben as queueName',
       'bkqte.quetime as queueTime',
-      'cmctc.lagsokt as protectedIdentity'
+      'cmctc.lagsokt as protectedIdentity',
+      'cmctc.utslag as specialAttention'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
