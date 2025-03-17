@@ -80,6 +80,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
             isMainNumber: true,
           },
         ],
+        specialAttention: false,
         emailAddress: 'redacted',
         isTenant: false,
         parkingSpaceWaitingList: {
