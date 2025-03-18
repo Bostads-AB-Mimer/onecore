@@ -208,6 +208,8 @@ const handleRedirect = (options: AuthOptions = defaultOptions) => {
         cryptoProvider.base64Decode(ctx.request.body.state)
       )
 
+      console.log('Login successful, redirecting to', state.successRedirect)
+
       return ctx.redirect(state.successRedirect)
     } catch (error) {
       console.log('error: ', error)
