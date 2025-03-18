@@ -327,6 +327,8 @@ const createWorkOrderRecord = async (
       master_key: details.AccessOptions.Type === 0,
       space_caption: uniqueSpaceCaptions.join(', '),
       maintenance_team_id: maintenanceTeamId,
+      maintenance_request_category_id:
+        await getMaintenanceRequestCategoryId(uniqueSpaceCaptions),
       creation_origin: 'mimer-nu',
     })
   } catch (error) {
@@ -348,6 +350,27 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
     return team[0]
   } catch (error) {
     console.error('Error getting maintenance team id:', error)
+    throw error
+  }
+}
+
+const getMaintenanceRequestCategoryId = async (
+  uniqueSpaceCaptions: string[]
+): Promise<number> => {
+  try {
+    if (uniqueSpaceCaptions.includes('Tvättstuga')) {
+      const categories = await odoo.search('maintenance.request.category', {
+        name: 'Tvättstuga',
+      })
+      return categories[0]
+    } else {
+      const categories = await odoo.search('maintenance.request.category', {
+        name: 'Vitvara',
+      })
+      return categories[0]
+    }
+  } catch (error) {
+    console.error('Error getting maintenance request category id:', error)
     throw error
   }
 }
