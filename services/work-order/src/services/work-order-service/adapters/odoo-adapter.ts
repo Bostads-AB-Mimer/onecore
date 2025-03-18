@@ -125,9 +125,7 @@ export const createWorkOrder = async (
       return { ok: false, err: 'No maintenance unit found' }
     }
     await odoo.connect()
-    const maintenanceTeamId = await getMaintenanceTeamId(
-      'Vitvarureperatör Mimer'
-    )
+    const maintenanceTeamId = await getMaintenanceTeamId('Kundcenter')
 
     // We're currently adding the address of the maintanance unit as the address of the rental property, not sure if this is correct
     const address = rentalPropertyInfo.maintenanceUnits[0].caption.replace(
