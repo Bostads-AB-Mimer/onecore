@@ -121,27 +121,21 @@ export const createWorkOrder = async (
   try {
     const { rentalPropertyInfo, tenant, lease, details } = createWorkOrder
 
-    if (!rentalPropertyInfo.maintenanceUnits) {
-      return { ok: false, err: 'No maintenance unit found' }
-    }
     await odoo.connect()
     const maintenanceTeamId = await getMaintenanceTeamId('Kundcenter')
 
-    // We're currently adding the address of the maintanance unit as the address of the rental property, not sure if this is correct
-    const address = rentalPropertyInfo.maintenanceUnits[0].caption.replace(
-      'TVÄTTSTUGA ',
-      ''
-    )
-    const newRentalPropertyRecord = await createRentalPropertyRecord(
-      rentalPropertyInfo,
-      address
-    )
+    const newRentalPropertyRecord =
+      await createRentalPropertyRecord(rentalPropertyInfo)
     const newLeaseRecord = await createLeaseRecord(lease)
     const newTenantRecord = await createTenantRecord(tenant, details)
-    const newMaintenanceUnitRecord = await createMaintenanceUnitRecord(
-      rentalPropertyInfo.maintenanceUnits[0],
-      details.Rows[0]
-    )
+
+    const newMaintenanceUnitRecord = rentalPropertyInfo.maintenanceUnits
+      ? await createMaintenanceUnitRecord(
+          rentalPropertyInfo.maintenanceUnits[0],
+          details.Rows[0]
+        )
+      : undefined
+
     const newWorkOrderId = await createWorkOrderRecord(
       newRentalPropertyRecord,
       newLeaseRecord,
@@ -159,8 +153,7 @@ export const createWorkOrder = async (
 }
 
 const createRentalPropertyRecord = async (
-  rentalPropertyInfo: RentalPropertyInfo,
-  address: string
+  rentalPropertyInfo: RentalPropertyInfo
 ): Promise<number> => {
   try {
     const apartmentProperty = rentalPropertyInfo.property as ApartmentInfo
@@ -168,7 +161,7 @@ const createRentalPropertyRecord = async (
       name: rentalPropertyInfo.id,
       rental_property_id: rentalPropertyInfo.id,
       property_type: rentalPropertyInfo.type,
-      address: address,
+      address: apartmentProperty.address,
       code: apartmentProperty.code,
       area: apartmentProperty.area,
       entrance: apartmentProperty.entrance,
@@ -254,7 +247,7 @@ const createWorkOrderRecord = async (
   rentalPropertyRecord: number,
   leaseRecord: number,
   tenantRecord: number,
-  maintenanceUnitRecord: number,
+  maintenanceUnitRecord: number | undefined,
   maintenanceTeamId: number,
   details: CreateWorkOrderDetails
 ): Promise<number> => {
@@ -313,7 +306,7 @@ const createWorkOrderRecord = async (
       rental_property_id: rentalPropertyRecord.toString(),
       lease_id: leaseRecord.toString(),
       tenant_id: tenantRecord.toString(),
-      maintenance_unit_id: maintenanceUnitRecord.toString(),
+      maintenance_unit_id: maintenanceUnitRecord?.toString() || false,
       hearing_impaired: details.HearingImpaired,
       call_between: details.AccessOptions.CallBetween,
       pet: details.Pet,
