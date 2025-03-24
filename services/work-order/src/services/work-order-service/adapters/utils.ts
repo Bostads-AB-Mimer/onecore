@@ -44,8 +44,7 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
   const isCommonSpace = Object.keys(spaceCodes).includes(
     odooWorkOrder.space_code
   )
-
-  const descriptionWithMoreInfo = `${description}${isCommonSpace ? '' : `\r\n Husdjur: ${odooWorkOrder.pet ? 'Ja' : 'Nej'}`}
+  const descriptionWithMoreInfo = `${description}${isCommonSpace ? '' : `\r\n Husdjur: ${odooWorkOrder.pet}`}
   ${odooWorkOrder.call_between ? `\r\n Kund nås enklast mellan ${odooWorkOrder.call_between} \r\n på telefonnummer: ${odooWorkOrder.phone_number}.` : ''}`
 
   return {
