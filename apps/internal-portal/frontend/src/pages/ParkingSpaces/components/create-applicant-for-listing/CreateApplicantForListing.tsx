@@ -167,8 +167,9 @@ export const CreateApplicantForListing = (props: Props) => {
                     {tenantQuery.isLoading && <ContactInfoLoading />}
                     {renderTenantQueryError(tenantQuery.error)}
                     {tenantQuery.data &&
-                      tenantQuery.data.validationResult == 'ok' && (
-                        /*tenantQuery.data.tenant.isAboutToLeave && */ <ValidLeaseMissingError />
+                      tenantQuery.data.validationResult == 'ok' &&
+                      tenantQuery.data.tenant.isAboutToLeave && (
+                        <ValidLeaseMissingError />
                       )}
                     <Box>
                       <Divider />
