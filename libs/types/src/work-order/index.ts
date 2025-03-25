@@ -9,7 +9,7 @@ interface WorkOrder {
   DetailsCaption: string
   ExternalResource: boolean
   Id: string
-  LastChange: string
+  LastChanged: string
   Priority: string
   Registered: string
   RentalObjectCode: string
