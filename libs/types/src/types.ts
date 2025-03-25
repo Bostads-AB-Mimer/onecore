@@ -30,6 +30,7 @@ interface Contact {
   emailAddress?: string
   isTenant: boolean
   parkingSpaceWaitingList?: WaitingList
+  specialAttention?: boolean
 }
 
 type NonEmptyArray<T> = [T, ...T[]]
