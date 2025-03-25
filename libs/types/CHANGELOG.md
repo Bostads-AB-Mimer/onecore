@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.2...v3.6.0) (2025-03-25)
+
+
+### Features
+
+* MIM-399: Add specialAttention flag to Contact ([8960d7a](https://github.com/Bostads-AB-Mimer/onecore-types/commit/8960d7a9d510f2ca09732228786f6b1aafd10d63))
+* MIM-435: Change WorkOrder LastChange to LastChanged ([a5c6152](https://github.com/Bostads-AB-Mimer/onecore-types/commit/a5c6152d51ec67af5a8ac36360cfa06a6c2ea339))
+
 ## [3.5.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.1...v3.5.2) (2025-03-13)
 
 
