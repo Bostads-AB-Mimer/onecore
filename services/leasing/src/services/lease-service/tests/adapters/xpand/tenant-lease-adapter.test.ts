@@ -80,6 +80,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
             isMainNumber: true,
           },
         ],
+        specialAttention: false,
         emailAddress: 'redacted',
         isTenant: false,
         parkingSpaceWaitingList: {
@@ -188,5 +189,39 @@ describe('transformFromDbContact', () => {
     expect(contact.fullName).toBeUndefined()
     expect(contact.nationalRegistrationNumber).toBeUndefined()
     expect(contact.birthDate).toBeUndefined()
+  })
+
+  it('should handle special attention correctly', () => {
+    const rows = [
+      {
+        contactCode: 'P123456',
+        contactKey: '_ADBAEC',
+        firstName: 'Test',
+        lastName: 'Testman',
+        fullName: 'Test Testman',
+        nationalRegistrationNumber: '121212121212',
+        birthDate: '1212-12-12',
+        street: 'Gatvägen 12',
+        postalCode: '12345',
+        city: 'Test City',
+        emailAddress: 'noreply@mimer.nu',
+        protectedIdentity: false,
+        specialAttention: '2025-01-01',
+      },
+    ]
+    const phoneNumbers: {
+      phoneNumber: string
+      type: string
+      isMainNumber: boolean
+    }[] = []
+    const leases: Lease[] = []
+
+    const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leases
+    )
+
+    expect(contact.specialAttention).toBe(true)
   })
 })
