@@ -65,7 +65,7 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
         : odooWorkOrder.name + `: ${description}`,
     ExternalResource: false,
     Id: odooWorkOrder.uuid,
-    LastChange: odooWorkOrder.write_date || odooWorkOrder.create_date,
+    LastChanged: odooWorkOrder.write_date || odooWorkOrder.create_date,
     Priority: odooWorkOrder.priority || '',
     Registered: odooWorkOrder.create_date,
     RentalObjectCode: odooWorkOrder.rental_property_id[1],

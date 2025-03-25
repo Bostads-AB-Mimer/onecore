@@ -17,7 +17,7 @@ describe('utils', () => {
       expect(result).toHaveProperty('DetailsCaption')
       expect(result).toHaveProperty('ExternalResource')
       expect(result).toHaveProperty('Id')
-      expect(result).toHaveProperty('LastChange')
+      expect(result).toHaveProperty('LastChanged')
       expect(result).toHaveProperty('Priority')
       expect(result).toHaveProperty('Registered')
       expect(result).toHaveProperty('RentalObjectCode')

@@ -60,7 +60,7 @@
     "koa2-swagger-ui": "^5.11.0",
     "lodash": "^4.17.21",
     "odoo-await": "^3.4.1",
-    "onecore-types": "^3.1.0",
+    "onecore-types": "^3.6.0",
     "onecore-utilities": "^1.1.0",
     "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
