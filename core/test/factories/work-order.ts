@@ -17,7 +17,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
   DetailsCaption: 'DetailsCaption',
   ExternalResource: false,
   Id: `WO${sequence}`,
-  LastChange: '2021-01-01',
+  LastChanged: '2021-01-01',
   Priority: 'Priority',
   Registered: '2021-01-01',
   RentalObjectCode: 'RentalObjectCode',
