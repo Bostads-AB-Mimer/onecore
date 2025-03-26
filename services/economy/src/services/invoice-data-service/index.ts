@@ -12,11 +12,15 @@ import {
 } from './adapters/invoice-data-db-adapter'
 import { InvoiceDataRow } from './types'
 import {
+  createCustomerLedgerRow,
   syncContact,
+  transformAggregatedInvoiceRow,
+  transformContact,
   updateAggregatedInvoiceData,
-  updateCustomerInvoiceData,
+  updateCustomerLedger,
 } from './adapters/xledger-adapter'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { start } from 'repl'
 
 /**
  * Parses excel file and enriches each row with accounting data from Xpand. Saves each
@@ -27,11 +31,17 @@ import { generateRouteMetadata, logger } from 'onecore-utilities'
  */
 const processInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[],
-  batchId: string
+  batchId: string,
+  invoiceDate: string,
+  invoiceDueDate: string
 ): Promise<string[]> => {
   const addedContactCodes: Record<string, boolean> = {}
 
-  const enrichedInvoiceRows = await enrichInvoiceRows(invoiceDataRows)
+  const enrichedInvoiceRows = await enrichInvoiceRows(
+    invoiceDataRows,
+    invoiceDate,
+    invoiceDueDate
+  )
 
   invoiceDataRows.forEach((row) => {
     addedContactCodes[row.contactCode] = true
@@ -50,8 +60,17 @@ export const routes = (router: KoaRouter) => {
     try {
       const invoiceDataRows = ctx.request.body['invoiceDataRows']
       const batchId = ctx.request.body['batchId']
+      const invoiceDate = ctx.request.body['invoiceDate']
+      const invoiceDueDate = ctx.request.body['invoiceDueDate']
 
-      contactCodes.push(...(await processInvoiceRows(invoiceDataRows, batchId)))
+      contactCodes.push(
+        ...(await processInvoiceRows(
+          invoiceDataRows,
+          batchId,
+          invoiceDate,
+          invoiceDueDate
+        ))
+      )
 
       ctx.status = 200
       ctx.body = contactCodes
@@ -64,7 +83,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/create-batch', async (ctx) => {
+  router.post('(.*)/invoice-data/batches', async (ctx) => {
     try {
       const batchId = await createBatch()
 
@@ -107,13 +126,12 @@ export const routes = (router: KoaRouter) => {
       return new Promise((resolve) => setTimeout(resolve, ms))
     }
 
-    console.log('save-contacts')
+    console.log('update-contacts')
 
     try {
       const batchId = ctx.request.body['batchId']
 
       const contacts = await getContacts(batchId)
-      console.log('contacts', contacts)
 
       const errors: string[] = []
       let successfulContacts = 0
@@ -121,7 +139,6 @@ export const routes = (router: KoaRouter) => {
 
       for (const contact of contacts) {
         const result = await syncContact(contact)
-        console.log('sync', result)
         if (!result.ok) {
           errors.push('Error syncing contact: ' + result.err)
           failedContacts++
@@ -145,7 +162,105 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/update-invoices', async (ctx) => {
+  router.get('(.*)/invoice-data/batches/:batchId/contacts', async (ctx) => {
+    console.log('get contacts', ctx.params.batchId)
+    const metadata = generateRouteMetadata(ctx)
+
+    const contacts = await getContacts(ctx.params.batchId)
+    const xledgerContacts = contacts.map(transformContact)
+
+    ctx.status = 200
+    ctx.body = {
+      content: xledgerContacts,
+      metadata,
+    }
+  })
+
+  router.get(
+    '(.*)/invoice-data/batches/:batchId/transaction-rows',
+    async (ctx) => {
+      ctx.request.socket.setTimeout(0)
+      const metadata = generateRouteMetadata(ctx)
+
+      console.log('get-transaction-rows')
+
+      try {
+        const batchId = ctx.params.batchId
+        const transactionRows: InvoiceDataRow[] = []
+
+        // Do transaction rows in chunks of contracts to get different
+        // voucher numbers.
+
+        const contractCodes = (await getContracts(batchId)).map(
+          (contract) => contract.contractCode as string
+        )
+        const CHUNK_SIZE = 500
+        let chunkNum = 0
+
+        while (CHUNK_SIZE * chunkNum < contractCodes.length) {
+          const startNum = chunkNum * CHUNK_SIZE
+          const endNum = Math.min(
+            (chunkNum + 1) * CHUNK_SIZE,
+            contractCodes.length
+          )
+
+          logger.info(
+            { startNum, endNum, contractCodes: contractCodes.length },
+            'Processing contracts'
+          )
+          const currentContractCodes = contractCodes.slice(startNum, endNum)
+          // Get aggregated rows for account/projectCode/costCode combos
+          const aggregatedDbRows = await getAggregatedInvoiceRows(
+            batchId,
+            currentContractCodes
+          )
+          const aggregatedRows = aggregatedDbRows.map((row) => {
+            return transformAggregatedInvoiceRow(row, chunkNum)
+          })
+          transactionRows.push(...aggregatedRows)
+          logger.info({}, 'Got aggregated rows')
+
+          for (const contractCode of currentContractCodes) {
+            const contractInvoiceRows = await getInvoiceRows(
+              contractCode,
+              batchId
+            )
+            const customerLedgerRow = await createCustomerLedgerRow(
+              contractInvoiceRows,
+              batchId,
+              chunkNum
+            )
+
+            if (customerLedgerRow.ok) {
+              transactionRows.push(customerLedgerRow.data)
+            } else {
+              logger.error(
+                customerLedgerRow.err,
+                `Error creating customer ledger row for contract ${contractCode}`
+              )
+              throw new Error('Error creating customer ledger row')
+            }
+          }
+
+          chunkNum++
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: transactionRows,
+          ...metadata,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting invoice transaction rows')
+        ctx.status = 500
+        ctx.body = {
+          message: error.message,
+        }
+      }
+    }
+  )
+
+  /*router.post('(.*)/invoice-data/update-invoices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     function sleep(ms: number) {
@@ -167,8 +282,6 @@ export const routes = (router: KoaRouter) => {
         }
       })
 
-      console.log(aggregatedRows)
-
       const aggregatedRowsResult = await updateAggregatedInvoiceData(
         aggregatedRows,
         batchId
@@ -176,20 +289,38 @@ export const routes = (router: KoaRouter) => {
 
       // Get rows for each contract
       const contractCodes = await getContracts(batchId)
+      const customerLedgerErrors: string[] = []
+      let successfulLedgers = 0
 
       for (const contractCode of contractCodes) {
         const contractInvoiceRows = await getInvoiceRows(
           contractCode.contractCode,
           batchId
         )
-        await updateCustomerInvoiceData(contractInvoiceRows, batchId)
-        await markInvoiceRowsAsImported(contractInvoiceRows, batchId)
+        const customerLedgerResult = await updateCustomerLedger(
+          contractInvoiceRows,
+          batchId
+        )
+
+        if (customerLedgerResult.ok) {
+          await markInvoiceRowsAsImported(contractInvoiceRows, batchId)
+          successfulLedgers++
+        } else {
+          customerLedgerErrors.push(
+            `Customer ledger could not be updated for contract ${contractCode.contractCode}`
+          )
+        }
       }
 
       ctx.status = 200
       ctx.body = {
         content: {
           aggregatedRows: aggregatedRowsResult.ok && aggregatedRowsResult.data,
+          customerLedgers: {
+            successfulLedgers,
+            failedLedgers: contractCodes.length - successfulLedgers,
+            errors: customerLedgerErrors,
+          },
         },
         ...metadata,
       }
@@ -200,5 +331,5 @@ export const routes = (router: KoaRouter) => {
         message: error.message,
       }
     }
-  })
+  })*/
 }

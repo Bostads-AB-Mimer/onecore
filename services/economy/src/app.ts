@@ -15,6 +15,10 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
+app.on('timeout', (err) => {
+  logger.error(err)
+})
+
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 

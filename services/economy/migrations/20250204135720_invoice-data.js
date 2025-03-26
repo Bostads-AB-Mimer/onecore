@@ -13,6 +13,8 @@ exports.up = function (knex) {
     table.string('ContractFromDate')
     table.string('InvoiceFromDate')
     table.string('InvoiceToDate')
+    table.string('InvoiceDate')
+    table.string('InvoiceDueDate')
     table.string('RentArticle')
     table.string('InvoiceRowText')
     table.string('ContractArea')

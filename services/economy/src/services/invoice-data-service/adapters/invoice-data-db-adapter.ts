@@ -1,10 +1,7 @@
 import { AdapterResult, InvoiceDataRow } from '../types'
 import knex from 'knex'
 import config from '../../../common/config'
-import { Contact, Invoice } from 'onecore-types'
-import { logger } from 'onecore-utilities'
-
-console.log(config)
+import { Contact } from 'onecore-types'
 
 const db = knex({
   connection: {
@@ -119,15 +116,6 @@ export const getContracts = async (batchId: string) => {
 }
 
 export const getInvoiceRows = async (contractCode: string, batchId: string) => {
-  logger.info(
-    {
-      contractCode,
-      type: typeof contractCode,
-      batchId,
-    },
-    'Getting invoice rows'
-  )
-
   return await db('invoice_data')
     .where('batchId', batchId)
     .where('contractCode', contractCode)
@@ -147,7 +135,8 @@ export const markInvoiceRowsAsImported = async (
 }
 
 export const getAggregatedInvoiceRows = async (
-  batchId: string
+  batchId: string,
+  contractCodes: string[]
 ): Promise<InvoiceDataRow[]> => {
   const rows = await db('invoice_data')
     .sum({ totalAmount: 'TotalAmount', totalVat: 'VAT' })
@@ -158,7 +147,11 @@ export const getAggregatedInvoiceRows = async (
       'Property',
       'ProjectCode',
       'FreeCode',
-      'InvoiceFromDate'
+      'InvoiceDate',
+      'InvoiceDueDate',
+      'InvoiceFromDate',
+      'InvoiceToDate',
+      'BatchId'
     )
     .groupBy(
       'RentArticle',
@@ -167,23 +160,14 @@ export const getAggregatedInvoiceRows = async (
       'Property',
       'ProjectCode',
       'FreeCode',
-      'InvoiceFromDate'
+      'InvoiceDate',
+      'InvoiceDueDate',
+      'InvoiceFromDate',
+      'InvoiceToDate',
+      'BatchId'
     )
     .where('batchId', batchId)
+    .whereIn('ContractCode', contractCodes)
 
-  const invoiceDataRows = rows.map((row: any): InvoiceDataRow => {
-    return {
-      totalAmount: row.totalAmount as number,
-      totalVat: row.totalVat as number,
-      rentArticle: row.RentArticle as string,
-      account: row.Account as string,
-      costCode: row.CostCode as string,
-      property: row.Property as string,
-      projectCode: row.ProjectCode as string,
-      freeCode: row.FreeCode as string,
-      invoiceFromDate: row.InvoiceFromDate as string,
-    }
-  })
-
-  return invoiceDataRows
+  return rows
 }
