@@ -93,42 +93,46 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
   })
 })
 
-describe('isLeaseActive', () => {
+describe('isLeaseActiveOrUpcoming', () => {
   const futureDate = new Date()
   futureDate.setDate(futureDate.getDate() + 1)
   const pastDate = new Date()
   pastDate.setDate(pastDate.getDate() - 1)
 
-  it('should return true if lease is active', () => {
+  it('should return false if lease has last debit date in the past', () => {
     const activeContract = lease
       .params({
-        leaseStartDate: pastDate,
-        lastDebitDate: futureDate,
+        lastDebitDate: pastDate,
       })
       .build()
 
-    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
-  })
-
-  it('should return false if lease start date is in the future', () => {
-    const upcomingContract = lease
-      .params({
-        leaseStartDate: futureDate,
-      })
-      .build()
-
-    expect(tenantLeaseAdapter.isLeaseActive(upcomingContract)).toBe(false)
+    expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
+      false
+    )
   })
 
   it('should return true if lease has last debit date today', () => {
     const activeContract = lease
       .params({
-        leaseStartDate: pastDate,
         lastDebitDate: new Date(),
       })
       .build()
 
-    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
+    expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
+      true
+    )
+  })
+
+  it('should return false if lease has a termination date that is today', () => {
+    const terminatedContract = lease
+      .params({
+        terminationDate: new Date(),
+      })
+      .build()
+
+    expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(terminatedContract)).toBe(
+      false
+    )
   })
 
   it('should return false if lease has a termination date in the past', () => {
@@ -138,18 +142,21 @@ describe('isLeaseActive', () => {
       })
       .build()
 
-    expect(tenantLeaseAdapter.isLeaseActive(terminatedContract)).toBe(false)
+    expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(terminatedContract)).toBe(
+      false
+    )
   })
 
   it('should return true if termination date is in the future', () => {
     const activeContract = lease
       .params({
-        leaseStartDate: pastDate,
         terminationDate: futureDate,
       })
       .build()
 
-    expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
+    expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
+      true
+    )
   })
 })
 
