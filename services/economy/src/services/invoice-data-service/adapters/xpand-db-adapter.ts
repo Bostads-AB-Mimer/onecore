@@ -92,7 +92,9 @@ const getAdditionalColumns = async (
 }
 
 export const enrichInvoiceRows = async (
-  invoiceDataRows: InvoiceDataRow[]
+  invoiceDataRows: InvoiceDataRow[],
+  invoiceDate: string,
+  invoiceDueDate: string
 ): Promise<InvoiceDataRow[]> => {
   let i = 1
 
@@ -104,7 +106,7 @@ export const enrichInvoiceRows = async (
       process.stdout.cursorTo(0)
       process.stdout.write('Enriching ' + (i++).toString())
 
-      return { ...row, ...additionalColumns }
+      return { ...row, ...additionalColumns, invoiceDate, invoiceDueDate }
     }
   )
 
