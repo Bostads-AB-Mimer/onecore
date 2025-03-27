@@ -149,7 +149,7 @@ const getLeasesForNationalRegistrationNumber = async (
       }
     }
 
-    return leases.filter(isLeaseActive)
+    return leases.filter(isLeaseActiveOrUpcoming)
   }
 
   logger.info(
@@ -193,7 +193,7 @@ const getLeasesForContactCode = async (
         }
       }
 
-      return { ok: true, data: leases.filter(isLeaseActive) }
+      return { ok: true, data: leases.filter(isLeaseActiveOrUpcoming) }
     }
 
     logger.info(
@@ -246,7 +246,7 @@ const getLeasesForPropertyId = async (
     return leases
   }
 
-  return leases.filter(isLeaseActive)
+  return leases.filter(isLeaseActiveOrUpcoming)
 }
 
 const getResidentialAreaByRentalPropertyId = async (
@@ -466,7 +466,7 @@ const getLeaseIds = async (
     .where({ keycmctc: keycmctc })
 
   if (!includeTerminatedLeases) {
-    return rows.filter(isLeaseActive).map((x) => x.leaseId)
+    return rows.filter(isLeaseActiveOrUpcoming).map((x) => x.leaseId)
   }
   return rows.map((x) => x.leaseId)
 }
@@ -524,12 +524,11 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-const isLeaseActive = (lease: Lease | PartialLease): boolean => {
-  const { leaseStartDate, lastDebitDate, terminationDate } = lease
+const isLeaseActiveOrUpcoming = (lease: Lease | PartialLease): boolean => {
+  const { lastDebitDate, terminationDate } = lease
   const currentDate = new Date()
 
   return (
-    leaseStartDate < currentDate &&
     (!lastDebitDate || currentDate <= lastDebitDate) &&
     (!terminationDate || currentDate < terminationDate)
   )
@@ -544,7 +543,7 @@ export {
   getContactByContactCode,
   getContactByPhoneNumber,
   getContactForPhoneNumber,
-  isLeaseActive,
+  isLeaseActiveOrUpcoming,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   transformFromDbContact,
