@@ -401,19 +401,19 @@ export const createCustomerLedgerRow = async (
     ok: true,
     data: {
       voucherType: 'AR',
-      voucherNo: batchId + '-' + chunkNumber.toString().padStart(3, '0'),
-      voucherDate: invoiceDataRows[0].InvoiceFromDate as string,
+      voucherNo:
+        '2' +
+        batchId.toString().padStart(5, '0') +
+        chunkNumber.toString().padStart(3, '0'),
+      voucherDate: invoiceDataRows[0].InvoiceDate as string,
       account: CUSTOMER_LEDGER_ACCOUNT,
       posting1: '',
       posting2: '',
       posting3: '',
       posting4: '',
       posting5: '',
-      periodStart: invoiceDataRows[0].InvoiceFromDate as string,
-      noOfPeriods: getPeriods(
-        invoiceDataRows[0].InvoiceFromDate as string,
-        invoiceDataRows[0].InvoiceToDate as string
-      ),
+      periodStart: '',
+      noOfPeriods: '',
       subledgerNo: invoiceDataRows[0].ContactCode as string,
       invoiceDate: invoiceDataRows[0].InvoiceDate as string,
       invoiceNo: `${invoiceDataRows[0].ContactCode}-${batchId}`,
@@ -580,8 +580,8 @@ export const transformAggregatedInvoiceRow = (
   const transformedRow = {
     voucherType: 'AR',
     voucherNo:
-      invoiceRow.InvoiceDate.toString().replaceAll('-', '') +
-      invoiceRow.BatchId.toString().padStart(6, '0') +
+      '1' +
+      invoiceRow.BatchId.toString().padStart(5, '0') +
       chunkNumber.toString().padStart(3, '0'),
     voucherDate: invoiceRow.InvoiceFromDate,
     account: invoiceRow.Account,
