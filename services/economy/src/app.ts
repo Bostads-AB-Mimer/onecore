@@ -8,6 +8,8 @@ import { logger, loggerMiddlewares } from 'onecore-utilities'
 
 const app = new Koa()
 
+const apiKey = 'AAAFefaer2552'
+
 app.use(cors())
 app.use(koaBody({ multipart: true, patchKoa: true }))
 
