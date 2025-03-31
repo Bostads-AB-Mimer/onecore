@@ -58,6 +58,10 @@ export const routes = (router: KoaRouter) => {
    */
 
   const getLeasesForPnrQueryParamSchema = z.object({
+    includeUpcomingLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
     includeTerminatedLeases: z
       .enum(['true', 'false'])
       .optional()
@@ -70,6 +74,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
     ])
@@ -82,8 +87,11 @@ export const routes = (router: KoaRouter) => {
 
     const responseData = await getLeasesForNationalRegistrationNumber(
       ctx.params.pnr,
-      queryParams.data.includeTerminatedLeases,
-      queryParams.data.includeContacts
+      {
+        includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
+        includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
+        includeContacts: queryParams.data.includeContacts,
+      }
     )
 
     ctx.body = {
@@ -134,6 +142,10 @@ export const routes = (router: KoaRouter) => {
    */
 
   const getLeasesForContactCodeQueryParamSchema = z.object({
+    includeUpcomingLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
     includeTerminatedLeases: z
       .enum(['true', 'false'])
       .optional()
@@ -146,6 +158,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
     ])
@@ -158,11 +171,11 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await getLeasesForContactCode(
-      ctx.params.pnr,
-      queryParams.data.includeTerminatedLeases,
-      queryParams.data.includeContacts
-    )
+    const result = await getLeasesForContactCode(ctx.params.pnr, {
+      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
+      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
+      includeContacts: queryParams.data.includeContacts,
+    })
     if (!result.ok) {
       ctx.status = 500
       ctx.body = {
@@ -221,6 +234,10 @@ export const routes = (router: KoaRouter) => {
    */
 
   const getLeasesForPropertyIdQueryParamSchema = z.object({
+    includeUpcomingLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
     includeTerminatedLeases: z
       .enum(['true', 'false'])
       .optional()
@@ -233,6 +250,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
     ])
@@ -245,11 +263,11 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const responseData = await getLeasesForPropertyId(
-      ctx.params.propertyId,
-      queryParams.data.includeTerminatedLeases,
-      queryParams.data.includeContacts
-    )
+    const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
+      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
+      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
+      includeContacts: queryParams.data.includeContacts,
+    })
 
     ctx.body = {
       content: responseData,
