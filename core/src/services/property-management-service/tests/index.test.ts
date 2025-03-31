@@ -143,11 +143,11 @@ describe('rental-property-service index', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
-      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
-        'P965339',
-        false,
-        false
-      )
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         leaseMock.rentalPropertyId
       )
@@ -165,11 +165,11 @@ describe('rental-property-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
       expect(res.body.reason).toBe('No maintenance units found')
-      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
-        'P965339',
-        false,
-        false
-      )
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      })
     })
   })
 })

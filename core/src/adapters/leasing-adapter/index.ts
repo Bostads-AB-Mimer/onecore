@@ -29,6 +29,12 @@ axios.defaults.validateStatus = function (status) {
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
+interface GetLeasesOptions {
+  includeUpcomingLeases: boolean
+  includeTerminatedLeases: boolean
+  includeContacts: boolean
+}
+
 const getLease = async (
   leaseId: string,
   includeContacts: string | string[] | undefined
@@ -45,12 +51,12 @@ const getLease = async (
 
 const getLeasesForPnr = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: boolean,
-  includeContacts: boolean
+  options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeTerminatedLeases: includeTerminatedLeases.toString(),
-    includeContacts: includeContacts.toString(),
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
   })
 
   const leasesResponse = await axios.get(
@@ -62,12 +68,12 @@ const getLeasesForPnr = async (
 
 const getLeasesForContactCode = async (
   contactCode: string,
-  includeTerminatedLeases: boolean,
-  includeContacts: boolean
+  options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeTerminatedLeases: includeTerminatedLeases.toString(),
-    includeContacts: includeContacts.toString(),
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
   })
 
   const leasesResponse = await axios.get(
@@ -79,15 +85,15 @@ const getLeasesForContactCode = async (
 
 const getLeasesForPropertyId = async (
   propertyId: string,
-  includeTerminatedLeases: string | string[] | undefined,
-  includeContacts: string | string[] | undefined
+  options: GetLeasesOptions
 ): Promise<Lease[]> => {
-  const query = querystring.stringify({
-    includeTerminatedLeases,
-    includeContacts,
+  const queryParams = new URLSearchParams({
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
   })
   const leasesResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${query}`
+    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
   )
   return leasesResponse.data.content
 }

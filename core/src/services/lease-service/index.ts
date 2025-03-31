@@ -33,8 +33,11 @@ const getLeasesWithRelatedEntitiesForPnr = async (
 ) => {
   const leases = await leasingAdapter.getLeasesForPnr(
     nationalRegistrationNumber,
-    false,
-    true
+    {
+      includeUpcomingLeases: false,
+      includeTerminatedLeases: false,
+      includeContacts: true,
+    }
   )
 
   return leases

@@ -31,6 +31,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
     },
   ],
   Messages: [],
+  LastChange: new Date().toISOString(),
 }))
 
 export const CreateWorkOrderFactory = Factory.define<CreateWorkOrder>(() => ({
