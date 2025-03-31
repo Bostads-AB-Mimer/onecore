@@ -1,5 +1,6 @@
 import { map } from 'lodash'
 import { PrismaClient, Prisma } from '@prisma/client'
+import { logger } from 'onecore-utilities'
 
 const prisma = new PrismaClient({})
 
@@ -73,4 +74,28 @@ const getBuildingById = async (
   })
 }
 
-export { getBuildings, getBuildingById }
+const searchBuildings = (q: string): Promise<BuildingWithRelations[]> => {
+  try {
+    return prisma.building.findMany({
+      where: {
+        name: { contains: q },
+      },
+      include: {
+        buildingType: true,
+        marketArea: true,
+        propertyDesignation: true,
+        district: true,
+        propertyObject: {
+          include: {
+            property: true,
+          },
+        },
+      },
+    })
+  } catch (err) {
+    logger.error({ err }, 'building-adapter.searchBuildings')
+    throw err
+  }
+}
+
+export { getBuildings, getBuildingById, searchBuildings }

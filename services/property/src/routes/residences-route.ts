@@ -1,5 +1,7 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { z } from 'zod'
+
 import {
   getResidenceById,
   getResidencesByBuildingCode,
@@ -57,6 +59,8 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
+
+  type Residence = z.infer<typeof ResidenceSchema>
   router.get(['(.*)/residences'], async (ctx) => {
     const queryParams = residencesQueryParamsSchema.safeParse(ctx.query)
 
@@ -88,13 +92,23 @@ export const routes = (router: KoaRouter) => {
         dbResidences = await getResidencesByBuildingCode(buildingCode)
       }
 
-      const responseContent = ResidenceSchema.array().parse(dbResidences)
+      const responseContent = dbResidences.map(
+        (v): Residence => ({
+          code: v.code,
+          id: v.id,
+          name: v.name || '',
+          deleted: Boolean(v.deleted),
+          validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
+        })
+      )
 
+      ctx.status = 200
       ctx.body = {
-        content: responseContent,
+        content: ResidenceSchema.array().parse(responseContent),
         ...metadata,
       }
     } catch (err) {
+      logger.error({ err }, 'residences route error')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
@@ -131,6 +145,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
+  type ResidenceDetails = z.infer<typeof ResidenceDetailedSchema>
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
@@ -145,8 +160,6 @@ export const routes = (router: KoaRouter) => {
 
       // TODO: find out why building is null in residence
       //const building = await getBuildingByCode(residence.buildingCode)
-
-      console.log('residence', residence)
 
       const parsedResidence = ResidenceDetailedSchema.parse({
         id: residence.id,
@@ -214,14 +227,13 @@ export const routes = (router: KoaRouter) => {
               residence.propertyObject?.energyRegistered || undefined,
             energyReceived:
               residence.propertyObject?.energyReceived || undefined,
-            energyIndex: residence.propertyObject?.energyIndex || undefined,
+            energyIndex: residence.propertyObject?.energyIndex?.toNumber(),
           },
         },
-      })
+      } satisfies ResidenceDetails)
 
       ctx.body = {
         content: parsedResidence,
-
         ...metadata,
       }
     } catch (err) {

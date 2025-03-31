@@ -5,7 +5,13 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getBuildingById, getBuildings } from '../adapters/building-adapter'
+import { z } from 'zod'
+
+import {
+  getBuildingById,
+  getBuildings,
+  searchBuildings,
+} from '../adapters/building-adapter'
 import { buildingsQueryParamsSchema, BuildingSchema } from '../types/building'
 
 /**
@@ -96,6 +102,96 @@ export const routes = (router: KoaRouter) => {
 
         return parsedBuilding
       })
+
+      ctx.body = {
+        content: responseContent,
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /buildings/search:
+   *   get:
+   *     summary: Search buildings
+   *     description: |
+   *       Retrieves all buildings associated with a given name.
+   *       Returns detailed information about each building including its code, name,
+   *       construction details, and associated property information.
+   *     tags:
+   *       - Buildings
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the buildings.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Building'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+
+  const BuildingSearchQueryParamsSchema = z.object({
+    q: z.string().min(3),
+  })
+
+  router.get('(.*)/buildings/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = BuildingSearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { errors: queryParams.error.errors }
+      return
+    }
+
+    try {
+      const buildings = await searchBuildings(queryParams.data.q)
+      const responseContent = buildings.map(
+        (b): z.infer<typeof BuildingSchema> => ({
+          id: b.id,
+          code: b.buildingCode,
+          name: b.name || '',
+          buildingType: {
+            id: b.buildingType?.id || '',
+            code: b.buildingType?.code || '',
+            name: b.buildingType?.name || '',
+          },
+          construction: {
+            constructionYear: b.constructionYear,
+            renovationYear: b.renovationYear,
+            valueYear: b.valueYear,
+          },
+          features: {
+            heating: b.heating || '',
+            fireRating: b.fireRating || '',
+          },
+          insurance: {
+            class: b.insuranceClass,
+            value: b.insuranceValue,
+          },
+          deleted: Boolean(b.deleteMark),
+        })
+      )
 
       ctx.body = {
         content: responseContent,

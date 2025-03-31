@@ -6,11 +6,17 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { etagMiddleware } from '../middleware/etag'
-import { getProperties, getPropertyById } from '../adapters/property-adapter'
+import {
+  getProperties,
+  getPropertyById,
+  searchProperties,
+} from '../adapters/property-adapter'
 import {
   propertiesQueryParamsSchema,
   PropertyDetailsSchema,
+  PropertySchema,
 } from '../types/property'
+import { z } from 'zod'
 
 /**
  * @swagger
@@ -84,6 +90,105 @@ export const routes = (router: KoaRouter) => {
       const responseContent = properties
       ctx.body = {
         content: responseContent,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /properties/search:
+   *   get:
+   *     summary: Search properties
+   *     description: |
+   *       Retrieves a list of all real estate properties by name.
+   *     tags:
+   *       - Properties
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: The search query.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved list of properties.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Property'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  const PropertySearchQueryParamsSchema = z.object({
+    q: z.string().min(3),
+  })
+
+  router.get('(.*)/properties/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = PropertySearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { errors: queryParams.error.errors }
+      return
+    }
+
+    try {
+      const properties = await searchProperties(queryParams.data.q)
+
+      const responseContent = properties.map(
+        (p): z.infer<typeof PropertySchema> => ({
+          id: p.id,
+          code: p.code,
+          designation: p.designation ?? '',
+          tract: p.tract ?? '',
+          municipality: p.municipality ?? '',
+          block: p.block ?? '',
+          sector: p.sector,
+          propertyIndexNumber: p.propertyIndexNumber,
+          congregation: p.congregation ?? '',
+          builtStatus: p.builtStatus,
+          separateAssessmentUnit: p.separateAssessmentUnit,
+          consolidationNumber: p.consolidationNumber ?? '',
+          ownershipType: p.ownershipType,
+          registrationDate: p.registrationDate?.toISOString() ?? null,
+          acquisitionDate: p.acquisitionDate?.toISOString() ?? null,
+          isLeasehold: p.isLeasehold,
+          area: p.area ?? '',
+          purpose: p.purpose ?? '',
+          buildingType: p.buildingType ?? '',
+          propertyTaxNumber: p.propertyTaxNumber ?? '',
+          mainPartAssessedValue: p.mainPartAssessedValue,
+          includeInAssessedValue: p.includeInAssessedValue,
+          grading: p.grading,
+          deleteMark: p.deleteMark,
+          fromDate: p.fromDate,
+          toDate: p.toDate,
+          timestamp: p.timestamp,
+          propertyObjectId: p.propertyObjectId,
+          marketAreaId: p.marketAreaId ?? '',
+          districtId: p.districtId ?? '',
+          propertyDesignationId: p.propertyDesignationId ?? '',
+          valueAreaId: p.valueAreaId,
+          leaseholdTerminationDate:
+            p.leaseholdTerminationDate?.toISOString() ?? null,
+        })
+      )
+
+      ctx.body = {
+        content: responseContent,
+        ...metadata,
       }
     } catch (err) {
       ctx.status = 500

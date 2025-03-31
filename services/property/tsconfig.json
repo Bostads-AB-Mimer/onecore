@@ -11,7 +11,8 @@
     "rootDir": "src",
     "typeRoots": ["../../node_modules/@types"],
     "types": ["jest", "node"],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "noErrorTruncation": true
   },
   "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist", "../../node_modules"]

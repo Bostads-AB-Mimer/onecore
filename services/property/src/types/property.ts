@@ -14,7 +14,7 @@ export const PropertyDesignationSchema = z.object({
   timestamp: z.string(),
 })
 
-export const PropertySchema = z.object<z.ZodRawShape>({
+export const PropertySchema = z.object({
   id: z.string().trim(),
   propertyObjectId: z.string().trim(),
   marketAreaId: z.string().trim(),
