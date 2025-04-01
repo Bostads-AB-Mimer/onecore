@@ -38,7 +38,7 @@ const getPaymentStatus = (paymentStatusNumber: number) => {
 function transformFromDbInvoice(row: any): Invoice {
   return {
     invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId.trim(),
+    leaseId: row.leaseId?.trim(),
     amount: row.amount,
     fromDate: row.fromDate,
     toDate: row.toDate,
