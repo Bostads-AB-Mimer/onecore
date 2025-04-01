@@ -2,8 +2,7 @@ import config from '../../../common/config'
 import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
-import { AdapterResult, InvoiceDataRow } from '../types'
-import { get } from 'http'
+import { AdapterResult, InvoiceDataRow, TOTAL_ACCOUNT } from '../types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 const CUSTOMER_LEDGER_ACCOUNT = '1530'
@@ -566,17 +565,25 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
   }
 }
 
-const getPeriods = (fromDate: string, toDate: string): number => {
-  const from = new Date(fromDate)
-  const to = new Date(toDate)
+const getPeriodInformation = (
+  invoiceRow: InvoiceDataRow
+): { periodStart: string; periods: string } => {
+  const from = new Date(invoiceRow.InvoiceFromDate as string)
+  const to = new Date(invoiceRow.InvoiceToDate as string)
+  const interval = to.getMonth() - from.getMonth()
 
-  return to.getMonth() - from.getMonth() + 1
+  return {
+    periodStart: interval == 0 ? '' : '1',
+    periods: interval == 0 ? '' : (interval + 1).toString(),
+  }
 }
 
 export const transformAggregatedInvoiceRow = (
   invoiceRow: InvoiceDataRow,
   chunkNumber: number
 ): InvoiceDataRow => {
+  const periodInformation = getPeriodInformation(invoiceRow)
+
   const transformedRow = {
     voucherType: 'AR',
     voucherNo:
@@ -590,11 +597,8 @@ export const transformAggregatedInvoiceRow = (
     posting3: invoiceRow.Property,
     posting4: invoiceRow.FreeCode,
     posting5: '',
-    periodStart: invoiceRow.InvoiceFromDate,
-    noOfPeriods: getPeriods(
-      invoiceRow.InvoiceFromDate as string,
-      invoiceRow.InvoiceToDate as string
-    ),
+    periodStart: periodInformation.periodStart,
+    noOfPeriods: periodInformation.periods,
     subledgerNo: '',
     invoiceDate: '',
     invoiceNo: '',
