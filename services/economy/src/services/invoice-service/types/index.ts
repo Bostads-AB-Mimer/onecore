@@ -1,3 +1,5 @@
+export const TOTAL_ACCOUNT = '2970'
+
 export const columnIndexes: Record<string, number> = {
   contractCode: 1,
   contactCode: 2,
@@ -47,6 +49,12 @@ export const columnNames: string[] = [
 ]
 
 export type InvoiceDataRow = Record<string, string | number>
+
+export type InvoiceContract = {
+  contractCode: string
+  invoiceFromDate: string
+  invoiceToDate: string
+}
 
 export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }

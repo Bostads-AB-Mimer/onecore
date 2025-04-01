@@ -107,12 +107,20 @@ export const getContacts = async (batchId: string) => {
     .whereNull('importStatus')
 }
 
+/**
+ * Gets all contracts for a batch, sorted by invoice from date
+ * and to date to group periods later.
+ *
+ * @param batchId
+ * @returns
+ */
 export const getContracts = async (batchId: string) => {
   return await db('invoice_data')
-    .select('contractCode')
+    .select('contractCode', 'invoiceFromDate', 'invoiceToDate')
     .distinct()
     .where('batchId', batchId)
     .whereNull('importStatus')
+    .orderBy(['invoiceFromDate', 'invoiceToDate'])
 }
 
 export const getInvoiceRows = async (contractCode: string, batchId: string) => {
