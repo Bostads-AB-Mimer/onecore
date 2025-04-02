@@ -121,8 +121,11 @@ export const routes = (router: KoaRouter) => {
       rentalObjectId: async () => {
         const leases = await leasingAdapter.getLeasesForPropertyId(
           ctx.params.identifier,
-          ctx.query['includeTerminatedLeases'],
-          'true'
+          {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: false,
+            includeContacts: true,
+          }
         )
         if (leases && leases.length > 0) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -151,8 +154,11 @@ export const routes = (router: KoaRouter) => {
       pnr: async () => {
         const leases = await leasingAdapter.getLeasesForPnr(
           ctx.params.identifier,
-          false,
-          true
+          {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: false,
+            includeContacts: true,
+          }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -165,8 +171,11 @@ export const routes = (router: KoaRouter) => {
         if (contact) {
           const leases = await leasingAdapter.getLeasesForContactCode(
             contact.contactCode,
-            false,
-            false
+            {
+              includeUpcomingLeases: true,
+              includeTerminatedLeases: false,
+              includeContacts: false,
+            }
           )
           if (leases) {
             await getRentalPropertyInfoWithLeases(leases)
@@ -176,8 +185,11 @@ export const routes = (router: KoaRouter) => {
       contactCode: async () => {
         const leases = await leasingAdapter.getLeasesForContactCode(
           ctx.params.identifier,
-          false,
-          true
+          {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: false,
+            includeContacts: true,
+          }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)
