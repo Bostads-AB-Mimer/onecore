@@ -2,10 +2,9 @@ import config from '../../../common/config'
 import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
-import { AdapterResult, InvoiceDataRow, TOTAL_ACCOUNT } from '../types'
+import { AdapterResult, InvoiceDataRow } from '../types'
 
 const TENANT_COMPANY_DB_ID = 44668660
-const CUSTOMER_LEDGER_ACCOUNT = '1530'
 
 const axiosOptions = {
   method: 'POST',
@@ -270,76 +269,6 @@ const getAccountDbId = async (account: string) => {
   }
 }
 
-/*const createLedgerTransactionQuery = (
-  invoiceDataRow: InvoiceDataRow,
-  accountJobId: string,
-  batchNum: string
-): string => {
-  return `{
-    node: {
-      postedDate: "${invoiceDataRow.invoiceFromDate}"
-      dueDate: "${invoiceDataRow.invoiceFromDate}"
-      account: { dbId: ${accountJobId} }
-      transactionSource: { code: "AR" }
-      invoiceAmount: ${invoiceDataRow.totalAmount}
-      subledger: { code: "${invoiceDataRow.contactCode}" }
-      extIdentifier: "OCR-numret"
-      invoiceNumber: "OCR-numret"
-      jobLevel: { dbId: 14502 }
-      trRegNumber: ${batchNum}
-    }
-  }`
-}*/
-
-const createCustomerTransaction = async (
-  accountJobId: string,
-  batchId: string,
-  customerCode: string,
-  postedDate: string,
-  dueDate: string,
-  amount: number,
-  ocr: string
-) => {
-  const customerTransactionQuery = {
-    query: `mutation {
-      addGLImportItems(
-        inputs: [{
-          node: {
-            postedDate: "${postedDate}"
-            dueDate: "${dueDate}"
-            account: { dbId: ${accountJobId} }
-            transactionSource: { code: "AR" }
-            invoiceAmount: ${amount}
-            subledger: { code: "${customerCode}" }
-            extIdentifier: "${ocr}"
-            invoiceNumber: "${ocr}"
-            jobLevel: { dbId: 14502 }
-            trRegNumber: ${batchId}
-          }
-        }]
-      ) {
-        edges {
-          node {
-            dbId
-          }
-        }
-      }
-    }`,
-  }
-
-  try {
-    const result = await makeXledgerRequest(customerTransactionQuery)
-
-    return result.data.addGLImportItems.edges
-  } catch (error) {
-    logger.error(
-      error,
-      `Error creating entry in customer ledger for contact ${customerCode}`
-    )
-    throw error
-  }
-}
-
 const createAggregatedTransaction = async (
   account: string,
   postedDate: string,
@@ -387,7 +316,7 @@ export const createCustomerLedgerRow = async (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,
   chunkNumber: number
-): Promise<AdapterResult<InvoiceDataRow, 'ledger-amount-zero'>> => {
+): Promise<InvoiceDataRow> => {
   let customerInvoiceAmount = 0
 
   invoiceDataRows.forEach((row) => {
@@ -397,143 +326,30 @@ export const createCustomerLedgerRow = async (
   customerInvoiceAmount = +customerInvoiceAmount.toFixed(2)
 
   return {
-    ok: true,
-    data: {
-      voucherType: 'AR',
-      voucherNo:
-        '2' +
-        batchId.toString().padStart(5, '0') +
-        chunkNumber.toString().padStart(3, '0'),
-      voucherDate: invoiceDataRows[0].InvoiceDate as string,
-      account: CUSTOMER_LEDGER_ACCOUNT,
-      posting1: '',
-      posting2: '',
-      posting3: '',
-      posting4: '',
-      posting5: '',
-      periodStart: '',
-      noOfPeriods: '',
-      subledgerNo: invoiceDataRows[0].ContactCode as string,
-      invoiceDate: invoiceDataRows[0].InvoiceDate as string,
-      invoiceNo: `${invoiceDataRows[0].ContactCode}-${batchId}`,
-      ocr: `${invoiceDataRows[0].ContactCode}-${batchId}`,
-      dueDate: invoiceDataRows[0].InvoiceDueDate as string,
-      text: '',
-      taxRule: '',
-      amount: customerInvoiceAmount,
-    },
-  }
-}
-
-export const updateCustomerLedger = async (
-  invoiceDataRows: InvoiceDataRow[],
-  batchId: string
-): Promise<
-  AdapterResult<
-    number,
-    'xledger-error' | 'account-not-found' | 'ledger-amount-zero'
-  >
-> => {
-  const accountJobId = await getAccountDbId(CUSTOMER_LEDGER_ACCOUNT)
-
-  if (!accountJobId) {
-    logger.error(
-      { account: CUSTOMER_LEDGER_ACCOUNT },
-      `Error updating customer ledger for contract ${invoiceDataRows[0]?.ContractCode}`
-    )
-    return { ok: false, err: 'account-not-found' }
-  }
-
-  let customerInvoiceAmount = 0
-
-  invoiceDataRows.forEach((row) => {
-    customerInvoiceAmount += row.TotalAmount as number
-  })
-
-  if (customerInvoiceAmount === 0) {
-    logger.error(
-      {},
-      `Error updating customer ledger for contract ${invoiceDataRows[0]?.ContractCode}: customer invoice total is 0 for contract`
-    )
-    return { ok: false, err: 'ledger-amount-zero' }
-  }
-
-  try {
-    const ledgerResult = await createCustomerTransaction(
-      accountJobId,
-      batchId,
-      invoiceDataRows[0].ContactCode as string,
-      invoiceDataRows[0].InvoiceFromDate as string,
-      invoiceDataRows[0].InvoiceToDate as string,
-      customerInvoiceAmount,
-      'ocr'
-    )
-
-    return { ok: true, data: customerInvoiceAmount }
-
-    /*    if (ledgerResult.ok) {
-      return { ok: true, data: customerInvoiceAmount }
-    } else {
-      logger.error(
-        { error: ledgerResult.err },
-        `Error updating customer ledger for ${invoiceDataRows[0]?.ContactCode}`
-      )
-      return { ok: false, err: 'xledger-error' }
-    }*/
-  } catch (error) {
-    logger.error(
-      error,
-      `Error updating customer ${invoiceDataRows[0]?.ContactCode} ledger for contract ${invoiceDataRows[0]?.ContractCode}`
-    )
-    return { ok: false, err: 'xledger-error' }
-  }
-}
-
-export const updateAggregatedInvoiceData = async (
-  invoiceDataRows: InvoiceDataRow[],
-  batchId: string
-): Promise<
-  AdapterResult<
-    { successfulRows: number; failedRows: number; errors: string[] },
-    string
-  >
-> => {
-  try {
-    const errors: string[] = []
-    let successfulRows = 0
-    let failedRows = 0
-
-    for (const row of invoiceDataRows) {
-      if (row.account) {
-        await createAggregatedTransaction(
-          row.account as string,
-          row.invoiceFromDate as string,
-          row.totalAmount as number,
-          row.vatPercent as number,
-          batchId
-        )
-        successfulRows++
-      } else {
-        failedRows++
-        logger.error(row, 'Account missing for aggregated row')
-        errors.push(`Account for article ${row.rentArticle} missing in Xpand`)
-      }
-    }
-
-    return {
-      ok: true,
-      data: {
-        successfulRows,
-        failedRows,
-        errors: errors,
-      },
-    }
-  } catch (error) {
-    logger.error(error, 'Error updating aggregated invoice data')
-    return {
-      ok: false,
-      err: 'aggregated-invoice-data-error',
-    }
+    voucherType: 'AR',
+    voucherNo:
+      '2' +
+      batchId.toString().padStart(5, '0') +
+      chunkNumber.toString().padStart(3, '0'),
+    voucherDate: invoiceDataRows[0].InvoiceDate as string,
+    account: invoiceDataRows[0].LedgerAccount,
+    posting1: '',
+    posting2: '',
+    posting3: '',
+    posting4: '',
+    posting5: '',
+    periodStart: '',
+    noOfPeriods: '',
+    subledgerNo: invoiceDataRows[0].ContactCode as string,
+    invoiceDate: invoiceDataRows[0].InvoiceDate as string,
+    invoiceNo: invoiceDataRows[0].InvoiceNumber,
+    ocr: invoiceDataRows[0].OCR,
+    dueDate: invoiceDataRows[0].InvoiceDueDate as string,
+    text: '',
+    taxRule: '',
+    amount: customerInvoiceAmount,
+    ledgerAccount: invoiceDataRows[0].LedgerAccount,
+    totalAccount: invoiceDataRows[0].TotalAccount,
   }
 }
 
@@ -573,7 +389,7 @@ const getPeriodInformation = (
   const interval = to.getMonth() - from.getMonth()
 
   return {
-    periodStart: interval == 0 ? '' : '1',
+    periodStart: interval == 0 ? '' : '0',
     periods: interval == 0 ? '' : (interval + 1).toString(),
   }
 }
@@ -610,6 +426,7 @@ export const transformAggregatedInvoiceRow = (
       invoiceRow.totalVat as number
     ).toString(),
     amount: -invoiceRow.totalAmount,
+    totalAccount: invoiceRow.TotalAccount,
   }
 
   return transformedRow
