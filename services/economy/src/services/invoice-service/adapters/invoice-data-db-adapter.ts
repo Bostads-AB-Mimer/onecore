@@ -1,4 +1,10 @@
-import { AdapterResult, InvoiceDataRow } from '../types'
+import {
+  AdapterResult,
+  CUSTOMER_LEDGER_ACCOUNT,
+  InvoiceContract,
+  InvoiceDataRow,
+  TOTAL_ACCOUNT,
+} from '../types'
 import knex from 'knex'
 import config from '../../../common/config'
 import { Contact } from 'onecore-types'
@@ -114,32 +120,32 @@ export const getContacts = async (batchId: string) => {
  * @param batchId
  * @returns
  */
-export const getContracts = async (batchId: string) => {
+export const getContracts = async (
+  batchId: string
+): Promise<InvoiceContract[]> => {
   return await db('invoice_data')
-    .select('contractCode', 'invoiceFromDate', 'invoiceToDate')
+    .select(
+      'contractCode',
+      'invoiceFromDate',
+      'invoiceToDate',
+      'ledgerAccount',
+      'totalAccount'
+    )
     .distinct()
     .where('batchId', batchId)
     .whereNull('importStatus')
-    .orderBy(['invoiceFromDate', 'invoiceToDate'])
+    .orderBy([
+      'invoiceFromDate',
+      'invoiceToDate',
+      'ledgerAccount',
+      'totalAccount',
+    ])
 }
 
 export const getInvoiceRows = async (contractCode: string, batchId: string) => {
   return await db('invoice_data')
     .where('batchId', batchId)
     .where('contractCode', contractCode)
-}
-
-export const markInvoiceRowsAsImported = async (
-  invoiceRows: InvoiceDataRow[],
-  batchId: string
-) => {
-  for (const row of invoiceRows) {
-    await db('invoice_data').update({ ImportStatus: true }).where({
-      batchId,
-      contractCode: row.ContractCode,
-      account: row.Account,
-    })
-  }
 }
 
 export const getAggregatedInvoiceRows = async (
@@ -159,7 +165,8 @@ export const getAggregatedInvoiceRows = async (
       'InvoiceDueDate',
       'InvoiceFromDate',
       'InvoiceToDate',
-      'BatchId'
+      'BatchId',
+      'TotalAccount'
     )
     .groupBy(
       'RentArticle',
@@ -172,10 +179,38 @@ export const getAggregatedInvoiceRows = async (
       'InvoiceDueDate',
       'InvoiceFromDate',
       'InvoiceToDate',
-      'BatchId'
+      'BatchId',
+      'TotalAccount'
     )
     .where('batchId', batchId)
     .whereIn('ContractCode', contractCodes)
 
   return rows
+}
+
+const getCounterPartCustomers = async () => {
+  const result = await db('invoice_counterpart')
+
+  return result
+}
+
+export const addAccountInformation = async (
+  invoiceDataRows: InvoiceDataRow[]
+): Promise<InvoiceDataRow[]> => {
+  const counterPartCustomers = await getCounterPartCustomers()
+  for (const row of invoiceDataRows) {
+    const counterPart = counterPartCustomers.find((counterPart) =>
+      (row.tenantName as string).startsWith(counterPart.CustomerName)
+    )
+
+    if (counterPart) {
+      row.ledgerAccount = counterPart.LedgerAccount
+      row.totalAccount = counterPart.TotalAccount
+    } else {
+      row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+      row.totalAccount = TOTAL_ACCOUNT
+    }
+  }
+
+  return invoiceDataRows
 }

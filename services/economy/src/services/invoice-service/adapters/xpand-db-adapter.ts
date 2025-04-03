@@ -85,6 +85,18 @@ const getAdditionalColumns = async (
       }
     }
 
+    const ocr = await db('krfkh')
+      .where('reference', row.contractCode)
+      .andWhere('fromdate', row.invoiceFromDate)
+      .andWhere('todate', row.invoiceToDate)
+    if (ocr && ocr[0]) {
+      const ocrResult = ocr[0]
+      additionalColumns['ocr'] = ocrResult['ocr']?.toString().trimEnd()
+      additionalColumns['invoiceNumber'] = ocrResult['invoice']
+        ?.toString()
+        .trimEnd()
+    }
+
     return additionalColumns
   } else {
     return {}
@@ -98,16 +110,18 @@ export const enrichInvoiceRows = async (
 ): Promise<InvoiceDataRow[]> => {
   let i = 1
 
-  const enrichedInvoiceRows = await invoiceDataRows.map(
-    async (row: InvoiceDataRow): Promise<InvoiceDataRow> => {
-      const additionalColumns = await getAdditionalColumns(row)
+  const enrichedInvoiceRows = await Promise.all(
+    invoiceDataRows.map(
+      async (row: InvoiceDataRow): Promise<InvoiceDataRow> => {
+        const additionalColumns = await getAdditionalColumns(row)
 
-      process.stdout.clearLine(0)
-      process.stdout.cursorTo(0)
-      process.stdout.write('Enriching ' + (i++).toString())
+        process.stdout.clearLine(0)
+        process.stdout.cursorTo(0)
+        process.stdout.write('Enriching ' + (i++).toString())
 
-      return { ...row, ...additionalColumns, invoiceDate, invoiceDueDate }
-    }
+        return { ...row, ...additionalColumns, invoiceDate, invoiceDueDate }
+      }
+    )
   )
 
   process.stdout.write('\n')

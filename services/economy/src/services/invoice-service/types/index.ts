@@ -1,4 +1,5 @@
 export const TOTAL_ACCOUNT = '2970'
+export const CUSTOMER_LEDGER_ACCOUNT = '1530'
 
 export const columnIndexes: Record<string, number> = {
   contractCode: 1,
@@ -54,6 +55,8 @@ export type InvoiceContract = {
   contractCode: string
   invoiceFromDate: string
   invoiceToDate: string
+  ledgerAccount: string
+  totalAccount: string
 }
 
 export type AdapterResult<T, E> =
