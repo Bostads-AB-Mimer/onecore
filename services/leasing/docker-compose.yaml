@@ -3,7 +3,7 @@ version: '3.8'
 services:
   sql:
     # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
-    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs and linux
     container_name: sql
     environment:
       - ACCEPT_EULA=Y
