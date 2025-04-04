@@ -28,6 +28,41 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('work-order-service index', () => {
+  describe('GET /workOrders/residenceId/{residenceId}', () => {
+    const residenceId = '123-123-123'
+    const workOrderMock: OdooWorkOrder[] = factory.odooWorkOrder.buildList(4, {
+      rental_property_id: residenceId,
+    })
+
+    beforeEach(() => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrderByResidenceId')
+        .mockResolvedValue(workOrderMock)
+    })
+
+    it('should return work orders for the given residence id', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/residenceId/${residenceId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.workOrders).toEqual(workOrderMock)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrderByResidenceId')
+        .mockRejectedValue(new Error('Internal server error'))
+
+      const res = await request(app.callback()).get(
+        `/workOrders/residenceId/${residenceId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
   describe('GET /workOrders/contactCode/{contactCode}', () => {
     const contactCode = 'P174958'
     const workOrderMock: OdooWorkOrder[] = factory.odooWorkOrder.buildList(4, {
