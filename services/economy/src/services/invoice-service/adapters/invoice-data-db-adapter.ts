@@ -8,6 +8,7 @@ import {
 import knex from 'knex'
 import config from '../../../common/config'
 import { Contact } from 'onecore-types'
+import { count } from 'console'
 
 const db = knex({
   connection: {
@@ -69,10 +70,16 @@ export const saveContacts = async (
     string
   >
 > => {
+  const counterPartCustomers = await getCounterPartCustomers()
+
   const errors: string[] = []
   let successfulContacts = 0
   let failedContacts = 0
   for (const contact of contacts) {
+    const counterPart = counterPartCustomers.find((counterPart) =>
+      (contact.fullName as string)?.startsWith(counterPart.CustomerName)
+    )
+
     try {
       await db('invoice_contact').insert({
         batchId,
@@ -86,6 +93,7 @@ export const saveContacts = async (
         streetNumber: contact.address?.number,
         postalCode: contact.address?.postalCode,
         city: contact.address?.city,
+        counterPart: counterPart ? counterPart.CounterpartCode : '',
       })
 
       successfulContacts++
@@ -188,7 +196,7 @@ export const getAggregatedInvoiceRows = async (
   return rows
 }
 
-const getCounterPartCustomers = async () => {
+export const getCounterPartCustomers = async () => {
   const result = await db('invoice_counterpart')
 
   return result

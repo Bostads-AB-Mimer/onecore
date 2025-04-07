@@ -1,18 +1,13 @@
-import { logger } from 'onecore-utilities'
 import {
   addAccountInformation,
   getAggregatedInvoiceRows,
   getContracts,
+  getCounterPartCustomers,
   getInvoiceRows,
   saveInvoiceRows,
 } from './adapters/invoice-data-db-adapter'
 import { enrichInvoiceRows } from './adapters/xpand-db-adapter'
-import {
-  CUSTOMER_LEDGER_ACCOUNT,
-  InvoiceContract,
-  InvoiceDataRow,
-  TOTAL_ACCOUNT,
-} from './types'
+import { InvoiceContract, InvoiceDataRow } from './types'
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
@@ -105,6 +100,7 @@ export const createLedgerRows = async (
     const currentContracts: InvoiceContract[] = []
     const ledgerAccount = contracts[currentStart].ledgerAccount
     const chunkContractRows: InvoiceDataRow[] = []
+    const counterPartCustomers = await getCounterPartCustomers()
 
     for (
       let currentContractIndex = currentStart;
@@ -133,10 +129,17 @@ export const createLedgerRows = async (
         batchId
       )
 
+      const counterPart = counterPartCustomers.find((counterPart) =>
+        (contractInvoiceRows[0].TenantName as string).startsWith(
+          counterPart.CustomerName
+        )
+      )
+
       const customerLedgerRow = await createCustomerLedgerRow(
         contractInvoiceRows,
         batchId,
-        chunkNum
+        chunkNum,
+        counterPart ? counterPart.CounterpartCode : ''
       )
 
       chunkContractRows.push(customerLedgerRow)
@@ -167,7 +170,7 @@ export const createAggregateTotalRow = (
     posting4: '',
     posting5: '',
     periodStart: aggregatedRows[0].periodStart,
-    noOfPeriods: '',
+    noOfPeriods: aggregatedRows[0].noOfPeriods,
     subledgerNo: '',
     invoiceDate: '',
     invoiceNo: '',

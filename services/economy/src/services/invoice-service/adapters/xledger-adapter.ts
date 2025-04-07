@@ -315,7 +315,8 @@ const createAggregatedTransaction = async (
 export const createCustomerLedgerRow = async (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,
-  chunkNumber: number
+  chunkNumber: number,
+  counterPartCode: string
 ): Promise<InvoiceDataRow> => {
   let customerInvoiceAmount = 0
 
@@ -337,7 +338,7 @@ export const createCustomerLedgerRow = async (
     posting2: '',
     posting3: '',
     posting4: '',
-    posting5: '',
+    posting5: counterPartCode,
     periodStart: '',
     noOfPeriods: '',
     subledgerNo: invoiceDataRows[0].ContactCode as string,
@@ -363,6 +364,7 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
     zipCode: contact.PostalCode,
     city: contact.City,
     invoiceDeliveryMethod: '',
+    counterPart: contact.CounterpartCode ?? '',
   }
 }
 
@@ -381,7 +383,7 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
   }
 }
 
-const getPeriodInformation = (
+export const getPeriodInformation = (
   invoiceRow: InvoiceDataRow
 ): { periodStart: string; periods: string } => {
   const from = new Date(invoiceRow.InvoiceFromDate as string)
@@ -409,7 +411,7 @@ export const transformAggregatedInvoiceRow = (
     voucherDate: invoiceRow.InvoiceFromDate,
     account: invoiceRow.Account,
     posting1: invoiceRow.CostCode,
-    posting2: '',
+    posting2: invoiceRow.ProjectCode,
     posting3: invoiceRow.Property,
     posting4: invoiceRow.FreeCode,
     posting5: '',
