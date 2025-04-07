@@ -364,7 +364,7 @@ const getContactByPhoneNumber = async (
   const keycmobj = await getContactForPhoneNumber(phoneNumber)
   if (keycmobj && keycmobj.length > 0) {
     const rows = await getContactQuery().where({
-      'cmobj.keycmobj': keycmobj[0].keycmobj,
+      'cmctc.keycmobj': keycmobj[0].keycmobj,
     })
 
     if (rows && rows.length > 0) {
