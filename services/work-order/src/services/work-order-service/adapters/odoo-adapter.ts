@@ -206,7 +206,10 @@ const createTenantRecord = async (
       details.AccessOptions
 
     return await odoo.create('maintenance.tenant', {
-      name: `${tenant.firstName} ${tenant.lastName}`,
+      // firstName/lastName will be undefined if the tenant has protected identity
+      name: tenant.firstName
+        ? `${tenant.firstName} ${tenant.lastName}`
+        : 'Namn saknas',
       contact_code: tenant.contactCode,
       contact_key: tenant.contactKey,
       national_registration_number: tenant.nationalRegistrationNumber,
