@@ -45,13 +45,13 @@ describe('/sendWorkOrderSms', () => {
 
     const res = await request(app.callback()).post('/sendWorkOrderSms').send({
       phoneNumber: '0701234567',
-      message: 'hello',
+      text: 'hello',
     })
 
     expect(res.status).toBe(200)
     expect(sendWorkOrderSmsSpy).toHaveBeenCalledWith({
       phoneNumber: '46701234567',
-      message: 'hello',
+      text: 'hello',
     })
   })
 
@@ -191,10 +191,10 @@ describe('isMessageEmail', () => {
 })
 
 describe('isValidWorkOrderSms', () => {
-  it('should return true for valid TicketMessageSms objects', () => {
+  it('should return true for valid WorkOrderSms objects', () => {
     const validSms = {
       phoneNumber: '1234567890',
-      message: 'hello',
+      text: 'hello',
     }
 
     expect(isValidWorkOrderSms(validSms)).toBe(true)

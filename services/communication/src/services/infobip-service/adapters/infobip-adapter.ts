@@ -5,6 +5,7 @@ import {
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
   ParkingSpaceOfferSms,
+  WorkOrderEmail,
   WorkOrderSms,
 } from 'onecore-types'
 import { logger } from 'onecore-utilities'
@@ -22,6 +23,7 @@ const NewParkingSpaceOfferSmsTemplateId = 200000000094113
 const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
+const WorkOrderExternalContractorEmailTemplateId = 200000000173744
 
 export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
@@ -152,22 +154,28 @@ export const sendParkingSpaceAssignedToOther = async (
   }
 }
 
-export const sendWorkOrderEmail = async (email: Email) => {
+export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
   logger.info('Sending work order email', config.infobip.baseUrl)
   try {
     const toField = JSON.stringify({
       to: email.to,
       placeholders: {
         message: email.text,
+        externalContractor: email.externalContractorName,
       },
     })
-    const response = await infobip.channels.email.send({
+    const emailPayload: any = {
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       to: toField,
-      templateId: WorkOrderEmailTemplateId,
       subject: email.subject,
       text: email.text,
-    })
+      templateId: email.externalContractorName
+        ? WorkOrderExternalContractorEmailTemplateId
+        : WorkOrderEmailTemplateId,
+    }
+
+    const response = await infobip.channels.email.send(emailPayload)
+
     if (response.status === 200) {
       return response.data
     } else {
@@ -180,11 +188,11 @@ export const sendWorkOrderEmail = async (email: Email) => {
 }
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
-  const message = he.decode(
-    striptags(sms.message.replace(/<br\s*\/?>/gi, '\n'))
-  )
-  const noreply =
-    'Detta sms går ej att svara på. Det går bra att återkoppla i ärendet på "Mina sidor".'
+  logger.info('Sending work order sms', config.infobip.baseUrl)
+  const message = he.decode(striptags(sms.text.replace(/<br\s*\/?>/gi, '\n')))
+  const noreply = sms.externalContractorName
+    ? `Hälsningar, ${sms.externalContractorName} i uppdrag från Mimer`
+    : 'Detta sms går ej att svara på. Det går bra att återkoppla i ärendet på "Mina sidor".'
 
   try {
     const response = await infobip.channels.sms.send({
