@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.6.0...v3.7.0) (2025-04-07)
+
+
+### Features
+
+* Update WorkOrderSms and WorkOrderEmail for sending messages from external contractors ([#165](https://github.com/Bostads-AB-Mimer/onecore-types/issues/165)) ([6e7b2a9](https://github.com/Bostads-AB-Mimer/onecore-types/commit/6e7b2a94a19f13c1dfaf9d04a13524e9c9ff4a4e))
+
 ## [3.6.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.5.2...v3.6.0) (2025-03-25)
 
 
