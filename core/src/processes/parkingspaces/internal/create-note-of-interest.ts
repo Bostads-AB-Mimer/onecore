@@ -91,8 +91,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     const leases = await getLeasesForPnr(
       applicantContact.nationalRegistrationNumber,
       {
-        includeUpcomingLeases: false,
-        includeTerminatedLeases: true,
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
         includeContacts: false,
       }
     )
