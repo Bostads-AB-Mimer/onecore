@@ -232,9 +232,7 @@ const parseLeasesForHousingContracts = (
     [leaseTypes.housingContract, leaseTypes.cooperativeTenancyContract].some(
       (v) => lease.type.includes(v)
     )
-
   const housingContracts = leases.filter(isHousingContract)
-
   if (!housingContracts.length) {
     return undefined
   }
@@ -254,8 +252,9 @@ const isCurrentLease = (lease: Lease, currentDate: Date) => {
   const compatibleLastDebitDate =
     !lease.lastDebitDate || lease.lastDebitDate > currentDate
   const hasLeaseStarted = lease.leaseStartDate <= currentDate
+  const isCurrentLeaseAboutToEnd = isLeaseAboutToEnd(lease)
 
-  return hasLeaseStarted && compatibleLastDebitDate
+  return hasLeaseStarted && compatibleLastDebitDate && !isCurrentLeaseAboutToEnd
 }
 
 const isUpcomingLease = (lease: Lease, currentDate: Date) => {
