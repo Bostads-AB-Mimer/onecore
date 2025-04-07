@@ -19,12 +19,12 @@ interface ParkingSpaceOfferSms extends Sms {
 }
 
 interface WorkOrderSms extends Sms {
-  message: string
-  useTemplate: boolean
+  text: string
+  externalContractorName?: string
 }
 
 interface WorkOrderEmail extends Email {
-  useTemplate: boolean
+  externalContractorName?: string
 }
 
 // Can be used for both positive and negative notifications
