@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.7.0...v3.7.1) (2025-04-08)
+
+
+### Features
+
+* UTH-212 Parking Spaces for Secret Identities ([#164](https://github.com/Bostads-AB-Mimer/onecore-types/issues/164)) ([bb7ea0f](https://github.com/Bostads-AB-Mimer/onecore-types/commit/bb7ea0f3ea52445998c356f715ccaddaf2fbe42f))
+
 ## [3.7.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.6.0...v3.7.0) (2025-04-07)
 
 
