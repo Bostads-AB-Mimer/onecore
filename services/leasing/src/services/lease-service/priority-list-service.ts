@@ -237,9 +237,14 @@ const parseLeasesForHousingContracts = (
     return undefined
   }
 
-  const activeLease = housingContracts.find((l) =>
+  const activeLeases = housingContracts.filter((l) =>
     isCurrentLease(l, currentDate)
   )
+
+  const activeLease =
+    activeLeases.length > 1
+      ? activeLeases.find((l) => !isLeaseAboutToEnd(l))
+      : activeLeases[0]
 
   const upcomingLease = housingContracts.find((l) =>
     isUpcomingLease(l, currentDate)
@@ -252,9 +257,8 @@ const isCurrentLease = (lease: Lease, currentDate: Date) => {
   const compatibleLastDebitDate =
     !lease.lastDebitDate || lease.lastDebitDate > currentDate
   const hasLeaseStarted = lease.leaseStartDate <= currentDate
-  const isCurrentLeaseAboutToEnd = isLeaseAboutToEnd(lease)
 
-  return hasLeaseStarted && compatibleLastDebitDate && !isCurrentLeaseAboutToEnd
+  return hasLeaseStarted && compatibleLastDebitDate
 }
 
 const isUpcomingLease = (lease: Lease, currentDate: Date) => {
