@@ -13,9 +13,24 @@ describe(isListingInAreaWithSpecificRentalRules, () => {
     expect(result).toBe(false)
   })
 
-  it('should return true if listing is in area with specific rental rules', () => {
+  it('should return true if listing is in area with specific rental rules (OXB)', () => {
     const result = isListingInAreaWithSpecificRentalRules('OXB')
     expect(result).toBe(true)
+  })
+
+  it('should return true if listing is in area with specific rental rules (CEN)', () => {
+    const result = isListingInAreaWithSpecificRentalRules('CEN')
+    expect(result).toBe(true)
+  })
+
+  it('should return true if listing is in area with specific rental rules (GRY)', () => {
+    const result = isListingInAreaWithSpecificRentalRules('GRY')
+    expect(result).toBe(true)
+  })
+
+  it('should return false if listing is not in area with specific rental rules (GRÄ)', () => {
+    const result = isListingInAreaWithSpecificRentalRules('GRÄ')
+    expect(result).toBe(false)
   })
 })
 
