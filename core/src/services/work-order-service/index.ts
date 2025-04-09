@@ -659,7 +659,7 @@ export const routes = (router: KoaRouter) => {
    *               phoneNumber:
    *                 type: string
    *                 description: The phone number to send the SMS to.
-   *               text:
+   *               message:
    *                 type: string
    *                 description: The message to be sent via SMS.
    *     responses:
@@ -698,23 +698,22 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/workOrders/sendSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { phoneNumber, text, externalContractorName } = ctx.request.body
+    const { phoneNumber, message } = ctx.request.body
 
-    if (!phoneNumber || !text) {
+    if (!phoneNumber || !message) {
       ctx.status = 400
       ctx.body = {
-        reason: 'Bad request: phoneNumber and text are required',
+        reason: 'Bad request: phoneNumber and message are required',
         ...metadata,
       }
       return
     }
 
     try {
-      const result = await communicationAdapter.sendWorkOrderSms({
+      const result = await communicationAdapter.sendWorkOrderSms(
         phoneNumber,
-        text,
-        externalContractorName,
-      })
+        message
+      )
 
       if (result.ok) {
         ctx.status = 200
@@ -795,7 +794,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 text:
+   *                 message:
    *                   type: string
    *                   example: "Failed to send email to {to}, status: {statusCode}"
    *     security:
@@ -803,9 +802,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/workOrders/sendEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { to, subject, text, externalContractorName } = ctx.request.body
+    const { to, subject, message } = ctx.request.body
 
-    if (to === undefined || subject === undefined || text === undefined) {
+    if (to === undefined || subject === undefined || message === undefined) {
       ctx.status = 400
       ctx.body = {
         reason: 'Bad request',
@@ -815,12 +814,11 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await communicationAdapter.sendWorkOrderEmail({
+    const result = await communicationAdapter.sendWorkOrderEmail(
       to,
       subject,
-      text,
-      externalContractorName,
-    })
+      message
+    )
 
     if (result.ok) {
       ctx.status = 200

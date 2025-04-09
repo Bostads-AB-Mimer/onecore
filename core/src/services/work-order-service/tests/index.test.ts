@@ -371,7 +371,7 @@ describe('work-order-service index', () => {
         .post('/api/workOrders/sendSms')
         .send({
           phoneNumber: '1234567890',
-          text: 'test',
+          message: 'test',
         })
 
       expect(res.status).toBe(200)
@@ -425,7 +425,7 @@ describe('work-order-service index', () => {
         .send({
           to: 'hello@example.com',
           subject: 'subject',
-          text: 'hello',
+          message: 'hello',
         })
 
       expect(res.status).toBe(200)
