@@ -1,3 +1,5 @@
+import { schemaRegistry } from './utils/openapi'
+
 const basePath = __dirname
 
 // apis: [
@@ -12,6 +14,9 @@ export const swaggerSpec = {
       title: 'onecore-core',
       version: '1.0.0',
     },
+    components: {
+      schemas: {},
+    },
   },
   apis: [
     `${basePath}/services/auth-service/*.{ts,js}`,
@@ -19,5 +24,13 @@ export const swaggerSpec = {
     `${basePath}/services/lease-service/*.{ts,js}`,
     `${basePath}/services/property-management-service/*.{ts,js}`,
     `${basePath}/services/work-order-service/*.{ts,js}`,
+    `${basePath}/services/search-service/*.{ts,js}`,
   ],
+}
+
+export function updateSwaggerSchemas() {
+  swaggerSpec.definition.components.schemas = {
+    ...swaggerSpec.definition.components.schemas,
+    ...schemaRegistry,
+  }
 }

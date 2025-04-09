@@ -17,7 +17,8 @@
     "lint": "eslint -c .eslintrc src/",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "TZ=UTC jest --silent",
-    "ts:ci": "tsc --noEmit"
+    "ts:ci": "tsc --noEmit",
+    "generate-types:property-base": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/adapters/property-base-adapter/generated/api-types.ts"
   },
   "author": "",
   "license": "MIT",
@@ -71,12 +72,14 @@
     "odoo-await": "^3.4.1",
     "onecore-types": "^3.6.0",
     "onecore-utilities": "^1.1.0",
+    "openapi-fetch": "^0.13.5",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.0.0",
     "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.24.5"
   }
 }

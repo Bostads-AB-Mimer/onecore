@@ -28,6 +28,9 @@ export interface Config {
   minaSidor: {
     url: string
   }
+  propertyBaseService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -81,6 +84,9 @@ const config = configPackage({
     minaSidor: {
       url: 'https://test.mimer.nu/',
     },
+    propertyBaseService: {
+      url: 'http://localhost:5050',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -122,4 +128,5 @@ export default {
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
   health: config.get('health'),
+  propertyBaseService: config.get('propertyBaseService'),
 } as Config
