@@ -55,8 +55,8 @@ async function fetchTenant(params: {
   const leases = await tenantLeaseAdapter.getLeasesForContactCode(
     contact.data.contactCode,
     {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: true,
+      includeUpcomingLeases: true,
+      includeTerminatedLeases: false,
       includeContacts: false,
     }
   )

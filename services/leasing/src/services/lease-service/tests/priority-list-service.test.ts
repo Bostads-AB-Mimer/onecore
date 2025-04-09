@@ -148,6 +148,81 @@ describe('parseLeasesForHousingContract', () => {
     }
   })
 
+  it('should return 1 housing contract out of 2 active contracts, the latest housing contract should be returned as active', async () => {
+    const activeHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: parseISO('2025-04-01T00:00:00.000Z'),
+        contractDate: parseISO('2024-12-04T00:00:00.000Z'),
+        approvalDate: parseISO('2024-12-04T00:00:00.000Z'),
+        status: LeaseStatus.Current,
+      })
+      .build()
+
+    const soonToBeTerminatedHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
+        noticeGivenBy: 'G',
+        noticeDate: thirtyDaysInThePastDate,
+        noticeTimeTenant: '3',
+        preferredMoveOutDate: thirtyDaysInTheFutureDate,
+        terminationDate: thirtyDaysInTheFutureDate,
+        contractDate: parseISO('2021-09-08T00:00:00.000Z'),
+        lastDebitDate: thirtyDaysInTheFutureDate,
+        approvalDate: parseISO('2021-09-08T00:00:00.000Z'),
+        status: LeaseStatus.Current,
+      })
+      .build()
+
+    const leases = [soonToBeTerminatedHousingContract, activeHousingContract]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
+    const result = parseLeasesForHousingContracts(filteredLeases)
+
+    expect(filteredLeases).toHaveLength(2)
+
+    expect(result).toBeDefined()
+    if (result) {
+      expect(result[0]).toBeDefined()
+      expect(result[0]?.leaseStartDate).toEqual(
+        activeHousingContract.leaseStartDate
+      )
+      expect(result[1]).toBeUndefined()
+    }
+  })
+
+  it('should return 1 housing contract that is soon to be terminated', async () => {
+    const soonToBeTerminatedHousingContract = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
+        noticeGivenBy: 'G',
+        noticeDate: thirtyDaysInThePastDate,
+        noticeTimeTenant: '3',
+        preferredMoveOutDate: thirtyDaysInTheFutureDate,
+        terminationDate: thirtyDaysInTheFutureDate,
+        contractDate: parseISO('2021-09-08T00:00:00.000Z'),
+        lastDebitDate: thirtyDaysInTheFutureDate,
+        approvalDate: parseISO('2021-09-08T00:00:00.000Z'),
+        status: LeaseStatus.Current,
+      })
+      .build()
+
+    const leases = [soonToBeTerminatedHousingContract]
+
+    const filteredLeases: Lease[] = leases.filter(isLeaseActiveOrUpcoming)
+    const result = parseLeasesForHousingContracts(filteredLeases)
+
+    expect(filteredLeases).toHaveLength(1)
+
+    expect(result).toBeDefined()
+    if (result) {
+      expect(result[0]).toBeDefined()
+      expect(result[1]).toBeUndefined()
+    }
+  })
+
   it('should return undefined for leases without housing contract', async () => {
     const result = parseLeasesForHousingContracts([])
     expect(result).toBeUndefined()

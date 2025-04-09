@@ -232,16 +232,19 @@ const parseLeasesForHousingContracts = (
     [leaseTypes.housingContract, leaseTypes.cooperativeTenancyContract].some(
       (v) => lease.type.includes(v)
     )
-
   const housingContracts = leases.filter(isHousingContract)
-
   if (!housingContracts.length) {
     return undefined
   }
 
-  const activeLease = housingContracts.find((l) =>
+  const activeLeases = housingContracts.filter((l) =>
     isCurrentLease(l, currentDate)
   )
+
+  const activeLease =
+    activeLeases.length > 1
+      ? activeLeases.find((l) => !isLeaseAboutToEnd(l))
+      : activeLeases[0]
 
   const upcomingLease = housingContracts.find((l) =>
     isUpcomingLease(l, currentDate)
