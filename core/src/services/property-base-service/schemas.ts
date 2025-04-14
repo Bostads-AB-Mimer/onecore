@@ -1,5 +1,41 @@
 import { z } from 'zod'
 
+export const PropertySchema = z.object({
+  id: z.string(),
+  propertyObjectId: z.string(),
+  marketAreaId: z.string(),
+  districtId: z.string(),
+  propertyDesignationId: z.string(),
+  valueAreaId: z.string().nullable(),
+  code: z.string(),
+  designation: z.string(),
+  municipality: z.string(),
+  tract: z.string(),
+  block: z.string(),
+  sector: z.string().nullable(),
+  propertyIndexNumber: z.string().nullable(),
+  congregation: z.string(),
+  builtStatus: z.number(),
+  separateAssessmentUnit: z.number(),
+  consolidationNumber: z.string(),
+  ownershipType: z.string(),
+  registrationDate: z.string().nullable(),
+  acquisitionDate: z.string().nullable(),
+  isLeasehold: z.number(),
+  leaseholdTerminationDate: z.string().nullable(),
+  area: z.string().nullable(),
+  purpose: z.string().nullable(),
+  buildingType: z.string().nullable(),
+  propertyTaxNumber: z.string().nullable(),
+  mainPartAssessedValue: z.number(),
+  includeInAssessedValue: z.number(),
+  grading: z.number(),
+  deleteMark: z.number(),
+  fromDate: z.string().datetime(),
+  toDate: z.string().datetime(),
+  timestamp: z.string(),
+})
+
 export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -82,5 +118,11 @@ export const GetResidencesQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
+export const GetPropertiesQueryParamsSchema = z.object({
+  companyCode: z.string(),
+  tract: z.string().optional(),
+})
+
+export type Property = z.infer<typeof PropertySchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>

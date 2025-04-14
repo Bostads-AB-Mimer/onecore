@@ -22,6 +22,7 @@ import * as schemas from './schemas'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
 
@@ -65,9 +66,9 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 error:
-   *                   type: object
-   *       '500':
+   *                   error:
+   *                     type: object
+   *        '500':
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -80,6 +81,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+
   router.get('(.*)/propertyBase/residences', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.GetResidencesQueryParamsSchema.safeParse(ctx.query)
@@ -104,6 +106,92 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies schemas.Residence[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+  /**
+   * @swagger
+   * /propertyBase/properties:
+   *   get:
+   *     summary: Get properties by company code and (optional) tract
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves properties by company code and (optional) tract
+   *     parameters:
+   *       - in: query
+   *         name: companyCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the company that owns the properties.
+   *       - in: query
+   *         name: tract
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Optional filter to get properties in a specific tract.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved properties
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Property'
+   *       '400':
+   *         description: Missing company code or invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: object
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+
+  router.get('(.*)/propertyBase/properties', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.GetPropertiesQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors }
+      return
+    }
+    const { companyCode, tract } = params.data
+
+    try {
+      const result = await propertyBaseAdapter.getProperties(companyCode, tract)
+
+      if (!result.ok) {
+        logger.error(result.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Property[],
         ...metadata,
       }
     } catch (error) {

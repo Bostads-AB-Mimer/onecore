@@ -8,7 +8,7 @@ import { routes } from '../index'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 
 import * as factory from '../../../../test/factories'
-import { ResidenceSchema } from '../schemas'
+import { PropertySchema, ResidenceSchema } from '../schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -18,13 +18,40 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('property-base-service', () => {
+  describe('GET /propertyBase/properties', () => {
+    it('returns 200 and a list of properties', async () => {
+      const propertiesMock = factory.property.buildList(3)
+      const getPropertiesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getProperties')
+        .mockResolvedValueOnce({ ok: true, data: propertiesMock })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/properties?companyCode=123`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getPropertiesSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(propertiesMock)
+      )
+      expect(() =>
+        z.array(PropertySchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 400 if company code is missing', async () => {
+      const res = await request(app.callback()).get(`/propertyBase/properties`)
+
+      expect(res.status).toBe(400)
+    })
+  })
+
   describe('GET /propertyBase/residences', () => {
     it('returns 200 and a list of residences', async () => {
       const residences = factory.residenceDetails.buildList(3)
       const getResidencesSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidences')
         .mockResolvedValueOnce({ ok: true, data: residences })
-
       const res = await request(app.callback()).get(
         `/propertyBase/residences?buildingCode=202-002`
       )

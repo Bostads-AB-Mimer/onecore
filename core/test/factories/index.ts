@@ -16,3 +16,4 @@ export { CreateWorkOrderDetailsFactory as createWorkOrderDetails } from './work-
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
 export { ResidenceFactory as residence } from './residence'
 export { ResidenceDetailsFactory as residenceDetails } from './residence-details'
+export { PropertyFactory as property } from './property'

@@ -30,7 +30,6 @@ describe('property-base-adapter', () => {
       )
 
       const result = await propertyBaseAdapter.getResidences('202-002')
-
       expect(result.ok).toBe(false)
       if (!result.ok) expect(result.err).toBe('unknown')
     })
@@ -53,6 +52,43 @@ describe('property-base-adapter', () => {
       expect(result).toMatchObject({
         ok: true,
         data: residencesMock,
+      })
+    })
+  })
+
+  describe('getProperties', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getProperties('001')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns properties', async () => {
+      const propertiesMock = factory.property.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/properties`, () =>
+          HttpResponse.json(
+            {
+              content: propertiesMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getProperties('001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: propertiesMock,
       })
     })
   })

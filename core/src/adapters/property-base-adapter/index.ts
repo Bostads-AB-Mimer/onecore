@@ -56,6 +56,28 @@ export async function searchBuildings(
   }
 }
 
+type GetPropertiesResponse = components['schemas']['Property'][]
+
+export async function getProperties(
+  companyCode: string,
+  tract?: string
+): Promise<AdapterResult<GetPropertiesResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/properties', {
+      params: { query: { companyCode, tract } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getProperties')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetResidencesResponse = components['schemas']['Residence'][]
 
 export async function getResidences(
@@ -98,7 +120,9 @@ export async function getResidenceDetails(
       return { ok: false, err: 'not-found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getResidenceDetails')
     return { ok: false, err: 'unknown' }
