@@ -8,7 +8,7 @@ import { routes } from '../index'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 
 import * as factory from '../../../../test/factories'
-import { PropertySchema, ResidenceSchema } from '../schemas'
+import { PropertySchema, ResidenceSchema, StaircaseSchema } from '../schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -104,6 +104,34 @@ describe('property-base-service', () => {
 
       expect(res.status).toBe(404)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /propertyBase/staircases', () => {
+    it('returns 200 and a list of staircases', async () => {
+      const staircasesMock = factory.staircase.buildList(3)
+      const getStaircasesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getStaircases')
+        .mockResolvedValueOnce({ ok: true, data: staircasesMock })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/staircases?buildingCode=002-002'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getStaircasesSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(staircasesMock)
+      )
+      expect(() =>
+        z.array(StaircaseSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 400 if buildingCode query parameter is missing', async () => {
+      const res = await request(app.callback()).get('/propertyBase/staircases')
+
+      expect(res.status).toBe(400)
     })
   })
 })

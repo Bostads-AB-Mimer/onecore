@@ -128,3 +128,24 @@ export async function getResidenceDetails(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetStaircasesResponse = components['schemas']['Staircase'][]
+
+export async function getStaircases(
+  buildingCode: string
+): Promise<AdapterResult<GetStaircasesResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/staircases', {
+      params: { query: { buildingCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getStaircases')
+    return { ok: false, err: 'unknown' }
+  }
+}

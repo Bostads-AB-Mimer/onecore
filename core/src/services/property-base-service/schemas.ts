@@ -113,6 +113,22 @@ export const ResidenceDetailsSchema = z.object({
   }),
 })
 
+export const StaircaseSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  features: z.object({
+    floorPlan: z.string().nullable(),
+    accessibleByElevator: z.boolean(),
+  }),
+  dates: z.object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+  }),
+  deleted: z.boolean(),
+  timestamp: z.string().datetime(),
+})
+
 export const GetResidencesQueryParamsSchema = z.object({
   buildingCode: z.string(),
   staircaseCode: z.string().optional(),
@@ -123,6 +139,13 @@ export const GetPropertiesQueryParamsSchema = z.object({
   tract: z.string().optional(),
 })
 
+export const StaircasesQueryParamsSchema = z.object({
+  buildingCode: z
+    .string()
+    .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
+})
+
 export type Property = z.infer<typeof PropertySchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
+export type Staircase = z.infer<typeof StaircaseSchema>

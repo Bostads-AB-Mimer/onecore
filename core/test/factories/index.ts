@@ -17,3 +17,4 @@ export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance
 export { ResidenceFactory as residence } from './residence'
 export { ResidenceDetailsFactory as residenceDetails } from './residence-details'
 export { PropertyFactory as property } from './property'
+export { StaircaseFactory as staircase } from './staircase'

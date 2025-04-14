@@ -25,6 +25,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
+  registerSchema('Staircase', schemas.StaircaseSchema)
 
   /**
    * @swagger
@@ -270,6 +271,88 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies schemas.ResidenceDetails,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /propertyBase/staircases:
+   *   get:
+   *     summary: Get staircases for a building
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves staircases for a building
+   *     parameters:
+   *       - in: query
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Code for the building to fetch staircases for
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved staircases.
+   *         content:
+   *           application/json:
+   *             schema:
+   *              type: array
+   *              items:
+   *                type: object
+   *                properties:
+   *                  content:
+   *                    $ref: '#/components/schemas/Staircase'
+   *       '400':
+   *         description: Missing buildingCode
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Missing buildingCode
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/staircases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = schemas.StaircasesQueryParamsSchema.safeParse(ctx.query)
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { errors: queryParams.error.errors }
+      return
+    }
+    const { buildingCode } = queryParams.data
+
+    try {
+      const result = await propertyBaseAdapter.getStaircases(
+        buildingCode as string
+      )
+      if (!result.ok) {
+        logger.error(result.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Staircase[],
         ...metadata,
       }
     } catch (error) {

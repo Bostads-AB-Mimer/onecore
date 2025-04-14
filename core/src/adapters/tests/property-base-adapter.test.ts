@@ -155,4 +155,41 @@ describe('property-base-adapter', () => {
       })
     })
   })
+
+  describe('getStaircases', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/staircases`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getStaircases('002-002')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns staircases', async () => {
+      const staircasesMock = factory.staircase.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/staircases`, () =>
+          HttpResponse.json(
+            {
+              content: staircasesMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getStaircases('002-002')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: staircasesMock,
+      })
+    })
+  })
 })
