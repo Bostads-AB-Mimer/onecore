@@ -8,7 +8,6 @@ import {
 import knex from 'knex'
 import config from '../../../common/config'
 import { Contact } from 'onecore-types'
-import { count } from 'console'
 
 const db = knex({
   connection: {
@@ -43,7 +42,7 @@ export const saveInvoiceRows = async (
 
   for (const row of dbRows) {
     try {
-      const rowResult = await db('invoice_data').insert(row)
+      await db('invoice_data').insert(row)
       process.stdout.clearLine(0)
       process.stdout.cursorTo(0)
       process.stdout.write('Saving ' + (i++).toString())
