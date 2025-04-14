@@ -56,6 +56,28 @@ export async function searchBuildings(
   }
 }
 
+type GetResidencesResponse = components['schemas']['Residence'][]
+
+export async function getResidences(
+  buildingCode: string,
+  staircaseCode?: string
+): Promise<AdapterResult<GetResidencesResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/residences', {
+      params: { query: { buildingCode, floorCode: staircaseCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getResidences')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
 
 export async function getResidenceDetails(
@@ -78,7 +100,7 @@ export async function getResidenceDetails(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getResidence')
+    logger.error({ err }, 'property-base-adapter.getResidenceDetails')
     return { ok: false, err: 'unknown' }
   }
 }

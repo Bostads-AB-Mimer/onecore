@@ -22,7 +22,96 @@ import * as schemas from './schemas'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
+
+  /**
+   * @swagger
+   * /propertyBase/residences:
+   *   get:
+   *     summary: Get residences by building code and (optional) staircase code
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves residences by building code and (optional) staircase code
+   *     parameters:
+   *       - in: query
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Code for the building to fetch residences from
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Code for the staircase to fetch residences from
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved residences
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Residence'
+   *       '400':
+   *         description: Missing building code or invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: object
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/residences', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.GetResidencesQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors }
+      return
+    }
+    const { buildingCode, staircaseCode } = params.data
+
+    try {
+      const result = await propertyBaseAdapter.getResidences(
+        buildingCode,
+        staircaseCode
+      )
+      if (!result.ok) {
+        logger.error(result.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Residence[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger
@@ -92,7 +181,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data,
+        content: result.data satisfies schemas.ResidenceDetails,
         ...metadata,
       }
     } catch (error) {

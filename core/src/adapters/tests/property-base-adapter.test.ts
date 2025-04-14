@@ -20,19 +20,56 @@ describe('property-base-adapter', () => {
     mockServer.close()
   })
 
+  describe('getResidences', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getResidences('202-002')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns residences', async () => {
+      const residencesMock = factory.residence.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/residences`, () =>
+          HttpResponse.json(
+            {
+              content: residencesMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getResidences('202-002')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residencesMock,
+      })
+    })
+  })
+
   describe('getResidenceDetails', () => {
     it('returns err if request fails', async () => {
-      const residenceMock = factory.residence.build()
+      const residenceDetailsMock = factory.residenceDetails.build()
 
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/${residenceMock.id}`,
+          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
           () => new HttpResponse(null, { status: 500 })
         )
       )
 
       const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceMock.id
+        residenceDetailsMock.id
       )
 
       expect(result.ok).toBe(false)
@@ -40,17 +77,17 @@ describe('property-base-adapter', () => {
     })
 
     it('returns not-found if residence is not found', async () => {
-      const residenceMock = factory.residence.build()
+      const residenceDetailsMock = factory.residenceDetails.build()
 
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/${residenceMock.id}`,
+          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
           () => new HttpResponse(null, { status: 404 })
         )
       )
 
       const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceMock.id
+        residenceDetailsMock.id
       )
 
       expect(result.ok).toBe(false)
@@ -58,14 +95,14 @@ describe('property-base-adapter', () => {
     })
 
     it('returns residence', async () => {
-      const residenceMock = factory.residence.build()
+      const residenceDetailsMock = factory.residenceDetails.build()
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/${residenceMock.id}`,
+          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
           () =>
             HttpResponse.json(
               {
-                content: residenceMock,
+                content: residenceDetailsMock,
               },
               { status: 200 }
             )
@@ -73,12 +110,12 @@ describe('property-base-adapter', () => {
       )
 
       const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceMock.id
+        residenceDetailsMock.id
       )
 
       expect(result).toMatchObject({
         ok: true,
-        data: residenceMock,
+        data: residenceDetailsMock,
       })
     })
   })
