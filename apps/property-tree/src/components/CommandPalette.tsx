@@ -132,7 +132,7 @@ export function CommandPalette() {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               )}
-              {searchQuery.data?.length > 0 && (
+              {searchQuery.data?.length && (
                 <div className="p-2">
                   {searchQuery.data.map((item, index) => {
                     const Icon = iconMap[item.type] || Home

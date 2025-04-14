@@ -4,51 +4,17 @@ import { Expand, Minimize2 } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { Property } from '@/services/types'
-import { geocodingQueue } from '@/utils/geocodingQueue'
 
 interface PropertyMapProps {
   properties: Property[]
   companyName?: string
 }
 
-export function PropertyMap({ properties }: PropertyMapProps) {
+export function PropertyMap(_props: PropertyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<GeoMap | null>(null)
 
-  const [_propertyCoordinates, setPropertyCoordinates] = useState<
-    Map<string, [number, number]>
-  >(new Map())
   const [isExpanded, setIsExpanded] = useState(false)
-
-  useEffect(() => {
-    const processedProperties = new Set<string>()
-
-    properties.forEach((property) => {
-      if (processedProperties.has(property.id)) return
-
-      const searchQuery = `${property.designation}, ${property.municipality}, Sweden`
-
-      geocodingQueue.add(
-        searchQuery,
-        (coords) => {
-          setPropertyCoordinates((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(property.id, coords)
-            return newMap
-          })
-        },
-        (error) =>
-          console.error(`Geocoding error for ${property.designation}:`, error)
-      )
-
-      processedProperties.add(property.id)
-    })
-
-    // Cleanup function to reset coordinates when properties change
-    return () => {
-      setPropertyCoordinates(new Map())
-    }
-  }, [properties])
 
   useEffect(() => {
     if (!mapContainer.current) return

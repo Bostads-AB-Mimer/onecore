@@ -109,12 +109,12 @@ export function BuildingView() {
         />
         <StatCard
           title="Byggår"
-          value={building.construction.constructionYear}
+          value={building.construction.constructionYear ?? ''}
           icon={DoorClosed}
         />
         <StatCard
           title="Senast renoverad"
-          value={building.construction.renovationYear}
+          value={building.construction.renovationYear ?? ''}
           subtitle={
             (building.construction.valueYear && ' (värdeår)') || undefined
           }

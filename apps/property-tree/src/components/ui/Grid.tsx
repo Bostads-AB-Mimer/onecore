@@ -2,7 +2,7 @@ import React from 'react'
 
 interface GridProps {
   children: React.ReactNode
-  cols?: number
+  cols?: 1 | 2 | 3 | 4
   gap?: number
   className?: string
 }

@@ -1,7 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Room } from '../../services/types'
 import {
   BedDouble,
   ChefHat,
@@ -13,7 +12,9 @@ import {
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react'
+
 import { FeatureModal } from './FeatureModal'
+import { Room } from '../../services/types'
 
 const roomIcons = {
   bedroom: BedDouble,
@@ -21,7 +22,7 @@ const roomIcons = {
   bathroom: ShowerHead,
   living: Sofa,
   other: Home,
-}
+} as const
 
 interface RoomCardProps {
   room: Room
@@ -30,7 +31,7 @@ interface RoomCardProps {
 
 export function RoomCard({ room, residenceId }: RoomCardProps) {
   const navigate = useNavigate()
-  const Icon = roomIcons[room.usage.spaceType] || Home
+  const Icon = roomIcons.other
   const [selectedFeature, setSelectedFeature] = React.useState<string | null>(
     null
   )

@@ -19,13 +19,13 @@ const typeIcons = {
   fixture: Building,
   furniture: Package,
   other: Wrench,
-}
+} as const
 
 const statusColors = {
   operational: 'text-green-500',
   'needs-service': 'text-yellow-500',
   broken: 'text-red-500',
-}
+} as const
 
 const getComponentType = (component: Component) =>
   component.classification.componentType.code
@@ -67,7 +67,24 @@ export function ComponentList({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {components.map((component) => {
-              const Icon = typeIcons[getComponentType(component)]
+              const componentType = getComponentType(component)
+              const Icon =
+                componentType === 'appliance'
+                  ? typeIcons.appliance
+                  : componentType === 'fixture'
+                    ? typeIcons.fixture
+                    : componentType === 'furniture'
+                      ? typeIcons.furniture
+                      : typeIcons.other
+
+              const componentStatus = getComponentStatus(component)
+              const statusColor =
+                componentStatus === 'operational'
+                  ? statusColors.operational
+                  : componentStatus === 'needs-service'
+                    ? statusColors['needs-service']
+                    : statusColors.broken
+
               return (
                 <motion.div
                   key={component.id}
@@ -88,14 +105,10 @@ export function ComponentList({
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span
-                        className={`text-sm ${statusColors[getComponentStatus(component)]}`}
-                      >
-                        {getComponentStatus(component) === 'operational' &&
-                          'OK'}
-                        {getComponentStatus(component) === 'needs-service' &&
-                          'Service'}
-                        {getComponentStatus(component) === 'broken' && 'Trasig'}
+                      <span className={`text-sm ${statusColor}`}>
+                        {componentStatus === 'operational' && 'OK'}
+                        {componentStatus === 'needs-service' && 'Service'}
+                        {componentStatus === 'broken' && 'Trasig'}
                       </span>
                       <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
                     </div>

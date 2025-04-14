@@ -70,13 +70,13 @@ const priorityLabels = {
   low: 'Låg',
   medium: 'Medium',
   high: 'Hög',
-}
+} as const
 
 const statusLabels = {
   pending: 'Väntar',
   'in-progress': 'Pågående',
   resolved: 'Åtgärdat',
-}
+} as const
 
 export function StaircaseView() {
   const { staircaseId, buildingId } = useParams()
@@ -91,15 +91,16 @@ export function StaircaseView() {
     queryKey: ['staircase', buildingId, staircaseId],
     queryFn: () =>
       staircaseService.getByBuildingCodeAndId(
-        buildingQuery.data.code,
-        staircaseId
+        buildingQuery.data?.code ?? '',
+        staircaseId ?? ''
       ),
     enabled: !!buildingId && !!staircaseId && !!buildingQuery.data?.code,
   })
 
   const residencesQuery = useQuery({
     queryKey: ['residences', buildingQuery.data?.code],
-    queryFn: () => residenceService.getByBuildingCode(buildingQuery.data.code),
+    queryFn: () =>
+      residenceService.getByBuildingCode(buildingQuery.data?.code ?? ''),
     enabled: !!buildingQuery.data?.code,
   })
 
@@ -124,7 +125,7 @@ export function StaircaseView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={buildingQuery.data?.name}
+        title={buildingQuery.data?.name ?? ''}
         subtitle={`Byggnad ${staircaseQuery.data?.name}`}
         type="Uppgång"
         icon={Layers}

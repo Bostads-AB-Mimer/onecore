@@ -42,11 +42,7 @@ export function Map({ locations, center }: MapProps) {
       const layers = map.current.getStyle().layers
       let labelLayerId
       for (let i = 0; i < layers.length; i++) {
-        if (
-          layers[i].type === 'symbol' &&
-          layers[i].layout &&
-          'text-field' in layers[i].layout
-        ) {
+        if (layers[i].type === 'symbol' && layers[i].layout) {
           labelLayerId = layers[i].id
           break
         }
@@ -102,6 +98,7 @@ export function Map({ locations, center }: MapProps) {
 
     // Add markers and popups for each location
     locations.forEach((location) => {
+      if (!map.current) return
       const el = document.createElement('div')
       el.className = 'marker'
       el.style.backgroundColor = location.color || '#4A5568'

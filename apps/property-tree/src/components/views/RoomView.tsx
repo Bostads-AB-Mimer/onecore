@@ -13,6 +13,7 @@ import {
   Settings,
   AlertCircle,
 } from 'lucide-react'
+
 import { Room, Component, Issue } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
@@ -28,7 +29,7 @@ const roomIcons = {
   bathroom: ShowerHead,
   living: Sofa,
   other: Home,
-}
+} as const
 
 function LoadingSkeleton() {
   return (
@@ -150,7 +151,14 @@ export function RoomView() {
   if (loading) return <LoadingSkeleton />
   if (!room) return <div>Room not found</div>
 
-  const Icon = roomIcons[room.roomType.name] || Home
+  const roomIconKey =
+    room.roomType?.name === 'Kök'
+      ? 'kitchen'
+      : room.roomType?.name === 'Badrum'
+        ? 'bathroom'
+        : 'other'
+
+  const Icon = roomIcons[roomIconKey]
 
   const handleAddComponent = async (data: unknown) => {
     // Implementation for adding a component
@@ -170,7 +178,7 @@ export function RoomView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={room.name}
+        title={room.name ?? ''}
         subtitle={`Lägenhet ${apartmentId}`}
         type="Rum"
         icon={Icon}
@@ -183,7 +191,7 @@ export function RoomView() {
               <Maximize2 className="h-5 w-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Storlek</p>
-                <p className="font-medium">{room.roomType.name} ?</p>
+                <p className="font-medium">{room.roomType?.name} ?</p>
               </div>
             </div>
           </div>
@@ -246,7 +254,7 @@ export function RoomView() {
 
           <ComponentList
             components={components}
-            rooms={[room.name]}
+            rooms={room.name ? [room.name] : []}
             onAddComponent={handleAddComponent}
             onEditComponent={handleEditComponent}
             onViewComponent={handleViewComponent}

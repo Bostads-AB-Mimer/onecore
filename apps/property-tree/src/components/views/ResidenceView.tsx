@@ -1,6 +1,7 @@
 import { useParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, ChefHat, GitGraph, CalendarClock } from 'lucide-react'
+
 import { ResidenceRooms } from '../shared/ResidenceRooms'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
@@ -87,7 +88,7 @@ export function ResidenceView() {
       <Grid cols={4} className="mb-8">
         <StatCard
           title="Rum"
-          value={residence.residenceType?.roomCount}
+          value={residence.residenceType.roomCount ?? ''}
           icon={Home}
           subtitle="Antal rum"
         />
@@ -117,7 +118,7 @@ export function ResidenceView() {
           <ResidenceRooms
             buildingCode={buildingCode}
             floorCode={floorCode}
-            residenceId={residenceId}
+            residenceId={residence.id}
           />
 
           <Card title="Egenskaper">
