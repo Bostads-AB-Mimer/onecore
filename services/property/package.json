@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "type:watch": "tsc --noEmit --watch",
     "generate": "npx prisma generate",
-    "force-generate": "rm -rf node_modules && npm install && npx prisma generate"
+    "force-generate": "rm -rf node_modules && npm install && npx prisma generate",
+    "prettier-check": "prettier --check ."
   },
   "repository": {
     "type": "git",
