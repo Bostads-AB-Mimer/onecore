@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wait-on http://localhost:5050/swagger && npm run generate-api-types && vite",
+    "dev": "wait-on http://localhost:5050/swagger && wait-on http://localhost:5010/swagger && npm run generate-api-types && npm run generate-api-types:core && vite",
     "format": "prettier --write .",
     "start:server": "node --import tsx src/server/api.ts",
     "type-check": "tsc --noEmit",
@@ -12,7 +12,9 @@
     "start": "vite",
     "build": "vite build",
     "generate-api-types": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/services/api/generated/api-types.ts",
-    "lint": "eslint src"
+    "generate-api-types:core": "npx openapi-typescript http://localhost:5010/swagger.json -o ./src/services/api/core/generated/api-types.ts",
+    "lint": "eslint src",
+    "prettier-check": "prettier --check ."
   },
   "dependencies": {
     "@deck.gl/core": "^9.0.38",
@@ -43,7 +45,7 @@
     "react-map-gl": "^7.1.8",
     "react-router-dom": "^6.22.2",
     "tailwind-merge": "^2.5.5",
-    "vite": "^5.4.2",
+    "vite": "^6.2.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -51,12 +53,13 @@
     "@types/express": "^5.0.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
+    "jwt-decode": "^4.0.0",
     "openapi-fetch": "^0.9.8",
     "openapi-typescript": "^6.7.6",
     "postcss": "^8.4.35",
