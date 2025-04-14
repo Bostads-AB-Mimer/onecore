@@ -1,6 +1,7 @@
 import knex from 'knex'
 import config from '../../../common/config'
 import { InvoiceDataRow } from '../types'
+import { logger } from 'onecore-utilities'
 
 const db = knex({
   connection: {
@@ -35,11 +36,52 @@ const columnIndex: Record<string, number> = {
   sumRow: 19,
 }
 
+const getSpecificRules = async (contractCode: string, year: string) => {
+  // Get specific rules from building or area
+  let specificRules = await db('repsk')
+    .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
+    .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
+    .where('year', year)
+    .andWhereLike('keyrektk', 'INTAKT%')
+    .andWhere('hyresid', contractCode.toString().split('/')[0])
+    .distinct()
+
+  if (!specificRules || !specificRules[0]) {
+    specificRules = await db('repsk')
+      .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
+      .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
+      .where('year', year)
+      .andWhereLike('keyrektk', 'INTAKT%')
+      .andWhere('hyresid', contractCode.toString().split('/')[0])
+      .distinct()
+  }
+
+  return specificRules
+}
+
+const getOcrAndInvoiceNumber = async (row: InvoiceDataRow) => {
+  let ocr = await db('krfkh')
+    .whereLike('reference', row.contractCode)
+    .andWhere('fromdate', row.invoiceFromDate)
+    .andWhere('todate', row.invoiceToDate)
+
+  if (!ocr || !ocr[0]) {
+    console.log('OCR fallback', row)
+    // Weird period, fall back to matching invoice date
+    // with invoice from date in the excel
+    ocr = await db('krfkh')
+      .whereLike('reference', row.contractCode)
+      .andWhere('invdate', row.invoiceFromDate)
+  }
+
+  return ocr
+}
+
 const getAdditionalColumns = async (
   row: InvoiceDataRow
 ): Promise<InvoiceDataRow> => {
   const rentArticleName = row.rentArticle
-  const contractCode = row.contractCode
+  const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
   let rentArticleResult: any[]
   const year = (row.invoiceFromDate as string).substring(0, 4)
@@ -70,31 +112,26 @@ const getAdditionalColumns = async (
     additionalColumns['SumRow'] = rentArticle['hysumben']?.toString().trimEnd()
 
     if (!additionalColumns['costCode'] && contractCode) {
-      const propertyRulesResult = await db('repsk')
-        .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
-        .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
-        .where('year', year)
-        .andWhere('keyrektk', 'INTAKT')
-        .andWhere('hyresid', contractCode.toString().split('/')[0])
-        .distinct()
-
-      if (propertyRulesResult && propertyRulesResult[0]) {
-        const propertyRules = propertyRulesResult[0]
-        additionalColumns['costCode'] = propertyRules['p2'].toString().trimEnd()
-        additionalColumns['property'] = propertyRules['p3'].toString().trimEnd()
+      const specificRules = await getSpecificRules(contractCode, year)
+      if (specificRules && specificRules[0]) {
+        const specificRule = specificRules[0]
+        additionalColumns['costCode'] = specificRule['p2'].toString().trimEnd()
+        additionalColumns['property'] = specificRule['p3'].toString().trimEnd()
+      } else {
+        logger.error(row, 'Could not find cost code and property')
       }
     }
 
-    const ocr = await db('krfkh')
-      .where('reference', row.contractCode)
-      .andWhere('fromdate', row.invoiceFromDate)
-      .andWhere('todate', row.invoiceToDate)
+    const ocr = await getOcrAndInvoiceNumber(row)
+
     if (ocr && ocr[0]) {
       const ocrResult = ocr[0]
       additionalColumns['ocr'] = ocrResult['ocr']?.toString().trimEnd()
       additionalColumns['invoiceNumber'] = ocrResult['invoice']
         ?.toString()
         .trimEnd()
+    } else {
+      logger.error({ row }, 'OCR information not found')
     }
 
     return additionalColumns

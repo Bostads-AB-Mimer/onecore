@@ -52,8 +52,6 @@ export const processInvoiceRows = async (
 export const createLedgerTotalRow = (
   ledgerRows: InvoiceDataRow[]
 ): InvoiceDataRow => {
-  console.log(ledgerRows[0])
-
   const accumulator = {
     voucherType: 'AR',
     voucherNo: ledgerRows[0].voucherNo,
