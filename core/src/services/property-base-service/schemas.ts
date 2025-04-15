@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+export const CompanySchema = z.object({
+  id: z.string(),
+  propertyObjectId: z.string(),
+  code: z.string(),
+  name: z.string(),
+  organizationNumber: z.string().nullable(),
+})
+
 export const PropertySchema = z.object({
   id: z.string(),
   propertyObjectId: z.string(),
@@ -145,6 +153,7 @@ export const StaircasesQueryParamsSchema = z.object({
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
 })
 
+export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>

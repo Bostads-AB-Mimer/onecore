@@ -83,6 +83,15 @@ const subsystems = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await oneCoreServiceProbe(
+        config.health.propertyBase.systemName,
+        config.health.propertyBase.minimumMinutesBetweenRequests,
+        config.propertyBaseService.url + '/health'
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await oneCoreServiceProbe(
         config.health.propertyManagement.systemName,
         config.health.propertyManagement.minimumMinutesBetweenRequests,
         config.propertyInfoService.url + '/health'

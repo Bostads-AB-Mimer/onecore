@@ -8,7 +8,12 @@ import { routes } from '../index'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 
 import * as factory from '../../../../test/factories'
-import { PropertySchema, ResidenceSchema, StaircaseSchema } from '../schemas'
+import {
+  CompanySchema,
+  PropertySchema,
+  ResidenceSchema,
+  StaircaseSchema,
+} from '../schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -18,6 +23,22 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('property-base-service', () => {
+  describe('GET /propertyBase/companies', () => {
+    it('returns 200 and a list of companies', async () => {
+      const companiesMock = factory.company.buildList(3)
+      const getCompaniesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getCompanies')
+        .mockResolvedValueOnce({ ok: true, data: companiesMock })
+      const res = await request(app.callback()).get('/propertyBase/companies')
+      expect(res.status).toBe(200)
+      expect(getCompaniesSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(companiesMock)
+      )
+      expect(() => z.array(CompanySchema).parse(res.body.content)).not.toThrow()
+    })
+  })
+
   describe('GET /propertyBase/properties', () => {
     it('returns 200 and a list of properties', async () => {
       const propertiesMock = factory.property.buildList(3)
