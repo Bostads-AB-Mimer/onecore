@@ -56,6 +56,28 @@ export async function searchBuildings(
   }
 }
 
+type GetCompaniesResponse = components['schemas']['Company'][]
+
+export async function getCompanies(): Promise<
+  AdapterResult<GetCompaniesResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/companies')
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data.content,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'property-base-adapter.getCompanies')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetPropertiesResponse = components['schemas']['Property'][]
 
 export async function getProperties(

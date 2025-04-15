@@ -22,10 +22,68 @@ import * as schemas from './schemas'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('Company', schemas.CompanySchema)
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
+
+  /**
+   * @swagger
+   * /propertyBase/companies:
+   *   get:
+   *     summary: Get all companies
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves companies from property base
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved companies
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Company'
+   *       500:
+   *          description: Internal server error
+   *          content:
+   *            application/json:
+   *              schema:
+   *                type: object
+   *                properties:
+   *                  error:
+   *                    type: string
+   *                    example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/companies', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const response = await propertyBaseAdapter.getCompanies()
+
+      if (!response.ok) {
+        logger.error(response.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: response.data satisfies schemas.Company[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger
