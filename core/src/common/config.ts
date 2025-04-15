@@ -47,6 +47,10 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    propertyBase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
     propertyManagement: {
       systemName: string
       minimumMinutesBetweenRequests: number
@@ -99,6 +103,10 @@ const config = configPackage({
     health: {
       leasing: {
         systemName: 'leasing',
+        minimumMinutesBetweenRequests: 1,
+      },
+      propertyBase: {
+        systemName: 'property-base',
         minimumMinutesBetweenRequests: 1,
       },
       propertyManagement: {
