@@ -165,12 +165,15 @@ describe('work-order-service index', () => {
   })
 
   describe('GET /workOrders/contactCode/:contactCode', () => {
-    const workOrderMock: WorkOrder = factory.workOrder.build()
+    const workOrderMock = factory.workOrder.build()
 
     it('should return work orders by contact code', async () => {
       const getWorkOrdersByContactCodeSpy = jest
         .spyOn(workOrderAdapter, 'getWorkOrdersByContactCode')
-        .mockResolvedValue({ ok: true, data: [workOrderMock] })
+        .mockResolvedValue({
+          ok: true,
+          data: [workOrderMock],
+        })
 
       const res = await request(app.callback()).get(
         '/api/workOrders/contactCode/P174958'
@@ -196,6 +199,48 @@ describe('work-order-service index', () => {
       expect(res.body).toHaveProperty('error')
       expect(res.body.error).toBe('Internal server error')
       expect(getWorkOrdersByContactCodeSpy).toHaveBeenCalledWith('P174958')
+    })
+  })
+
+  describe('GET /workOrders/rentalPropertyId/:rentalPropertyId', () => {
+    const workOrderMock = factory.workOrder.build()
+
+    it('should return work orders by rental property id', async () => {
+      const getWorkOrdersByRentalPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByRentalPropertyId')
+        .mockResolvedValue({
+          ok: true,
+          data: [workOrderMock],
+        })
+
+      const res = await request(app.callback()).get(
+        '/api/workOrders/rentalPropertyId/406-028-02-0101'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(1)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(1)
+      expect(getWorkOrdersByRentalPropertyIdSpy).toHaveBeenCalledWith(
+        '406-028-02-0101'
+      )
+    })
+    it('should return 500 if error', async () => {
+      const getWorkOrdersByRentalPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByRentalPropertyId')
+        .mockRejectedValue(new Error('error'))
+
+      const res = await request(app.callback()).get(
+        '/api/workOrders/rentalPropertyId/406-028-02-0101'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getWorkOrdersByRentalPropertyIdSpy).toHaveBeenCalledWith(
+        '406-028-02-0101'
+      )
     })
   })
 

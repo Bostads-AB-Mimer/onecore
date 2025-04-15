@@ -1,38 +1,36 @@
 import { Factory } from 'fishery'
-import {
-  WorkOrder,
-  CreateWorkOrderDetails,
-  CreateWorkOrder,
-} from 'onecore-types'
+import { CreateWorkOrderDetails, CreateWorkOrder } from 'onecore-types'
 import { RentalPropertyInfoFactory } from './rental-property-info'
 import { TenantFactory } from './tenant'
 import { LeaseFactory } from './lease'
+import { CoreWorkOrder } from '../../src/services/work-order-service/schemas'
 
-export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
-  AccessCaption: 'AccessCaption',
-  Caption: 'Caption',
-  Code: `WO${sequence}`,
-  ContactCode: `P${158769 + sequence}`,
-  Description: 'Description',
-  DetailsCaption: 'DetailsCaption',
-  ExternalResource: false,
-  Id: `WO${sequence}`,
-  LastChanged: '2021-01-01',
-  Priority: 'Priority',
-  Registered: '2021-01-01',
-  RentalObjectCode: 'RentalObjectCode',
-  Status: 'Status',
-  UseMasterKey: false,
-  WorkOrderRows: [
-    {
-      Description: 'Description',
-      LocationCode: 'LocationCode',
-      EquipmentCode: 'EquipmentCode',
-    },
-  ],
-  Messages: [],
-  LastChange: new Date().toISOString(),
-}))
+export const WorkOrderFactory = Factory.define<CoreWorkOrder>(
+  ({ sequence }) => ({
+    AccessCaption: 'AccessCaption',
+    Caption: 'Caption',
+    Code: `WO${sequence}`,
+    ContactCode: `P${158769 + sequence}`,
+    Description: 'Description',
+    DetailsCaption: 'DetailsCaption',
+    ExternalResource: false,
+    Id: `WO${sequence}`,
+    LastChanged: new Date(),
+    Priority: 'Priority',
+    Registered: new Date(),
+    RentalObjectCode: 'RentalObjectCode',
+    Status: 'Status',
+    UseMasterKey: false,
+    WorkOrderRows: [
+      {
+        Description: 'Description',
+        LocationCode: 'LocationCode',
+        EquipmentCode: 'EquipmentCode',
+      },
+    ],
+    Messages: [],
+  })
+)
 
 export const CreateWorkOrderFactory = Factory.define<CreateWorkOrder>(() => ({
   rentalPropertyInfo: RentalPropertyInfoFactory.build(),

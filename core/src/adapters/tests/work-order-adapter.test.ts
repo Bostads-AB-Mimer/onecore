@@ -3,11 +3,10 @@ import nock from 'nock'
 import config from '../../common/config'
 import * as workOrderAdapter from '../work-order-adapter'
 import * as factory from '../../../test/factories'
-import { CreateWorkOrder, WorkOrder } from 'onecore-types'
 
 describe('work-order-adapter', () => {
   describe(workOrderAdapter.getWorkOrdersByContactCode, () => {
-    const workOrderMock: WorkOrder = factory.workOrder.build()
+    const workOrderMock = factory.workOrder.build()
     it('returns err if request fails', async () => {
       nock(config.workOrderService.url)
         .get('/workOrders/contactCode/CC123')
@@ -16,8 +15,7 @@ describe('work-order-adapter', () => {
       const result = await workOrderAdapter.getWorkOrdersByContactCode('CC123')
 
       expect(result.ok).toBe(false)
-      if (!result.ok)
-        expect(result.err).toBe('Request failed with status code 500')
+      if (!result.ok) expect(result.err).toBe('unknown')
     })
 
     it('returns work order data', async () => {
@@ -37,7 +35,7 @@ describe('work-order-adapter', () => {
   })
 
   describe(workOrderAdapter.createWorkOrder, () => {
-    const createWorkOrderMock: CreateWorkOrder = factory.createWorkOrder.build()
+    const createWorkOrderMock = factory.createWorkOrder.build()
     it('returns err if request fails', async () => {
       nock(config.workOrderService.url).post('/workOrders').reply(500)
 

@@ -4,6 +4,8 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as workOrderAdapter from '../../adapters/work-order-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
+import * as schemas from './schemas'
+import { registerSchema } from '../../utils/openapi'
 
 import { Lease, RentalPropertyInfo } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
@@ -28,6 +30,8 @@ interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('WorkOrder', schemas.CoreWorkOrderSchema)
+
   /**
    * @swagger
    * /workOrderData/{identifier}:
@@ -254,9 +258,7 @@ export const routes = (router: KoaRouter) => {
    *                     workOrders:
    *                       type: array
    *                       items:
-   *                         type: object
-   *                         properties:
-   *                           # Add work order properties here
+   *                         $ref: '#/components/schemas/WorkOrder'
    *       '500':
    *         description: Internal server error. Failed to retrieve work orders.
    *         content:
@@ -281,7 +283,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data,
+            workOrders: result.data satisfies schemas.CoreWorkOrder[],
           },
           ...metadata,
         }
@@ -301,6 +303,86 @@ export const routes = (router: KoaRouter) => {
       return
     }
   })
+
+  /**
+   * @swagger
+   * /workOrders/rentalPropertyId/{rentalPropertyId}:
+   *   get:
+   *     summary: Get work orders by rental property id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided rental property id.
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental property id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/workOrders/rentalPropertyId/:rentalPropertyId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const result = await workOrderAdapter.getWorkOrdersByRentalPropertyId(
+          ctx.params.rentalPropertyId
+        )
+        if (result.ok) {
+          ctx.status = 200
+          ctx.body = {
+            content: {
+              totalCount: result.data.length,
+              workOrders: result.data satisfies schemas.CoreWorkOrder[],
+            },
+            ...metadata,
+          }
+        } else {
+          logger.error(
+            result.err,
+            'Error getting workOrders by rental property id',
+            metadata
+          )
+          ctx.status = result.statusCode || 500
+          ctx.body = { error: result.err, ...metadata }
+        }
+      } catch (error) {
+        logger.error(error, 'Error getting workOrders by rental property id')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
 
   /**
    * @swagger
