@@ -69,20 +69,19 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                   error:
    *                     type: object
-   *        '500':
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
+   *       '500':
+   *          description: Internal server error
+   *          content:
+   *            application/json:
+   *              schema:
+   *                type: object
+   *                properties:
+   *                  error:
+   *                    type: string
+   *                    example: Internal server error
    *     security:
    *       - bearerAuth: []
    */
-
   router.get('(.*)/propertyBase/residences', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.GetResidencesQueryParamsSchema.safeParse(ctx.query)
@@ -115,6 +114,7 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
   /**
    * @swagger
    * /propertyBase/properties:
@@ -170,7 +170,6 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-
   router.get('(.*)/propertyBase/properties', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.GetPropertiesQueryParamsSchema.safeParse(ctx.query)
@@ -301,11 +300,11 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *              type: array
-   *              items:
-   *                type: object
-   *                properties:
-   *                  content:
+   *              type: object
+   *              properties:
+   *                content:
+   *                  type: array
+   *                  items:
    *                    $ref: '#/components/schemas/Staircase'
    *       '400':
    *         description: Missing buildingCode
