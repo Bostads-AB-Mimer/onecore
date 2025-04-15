@@ -20,6 +20,39 @@ describe('property-base-adapter', () => {
     mockServer.close()
   })
 
+  describe('getCompanies', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/companies`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+      const result = await propertyBaseAdapter.getCompanies()
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns companies', async () => {
+      const companiesMock = factory.company.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/companies`, () =>
+          HttpResponse.json(
+            {
+              content: companiesMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+      const result = await propertyBaseAdapter.getCompanies()
+      expect(result).toMatchObject({
+        ok: true,
+        data: companiesMock,
+      })
+    })
+  })
+
   describe('getResidences', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
