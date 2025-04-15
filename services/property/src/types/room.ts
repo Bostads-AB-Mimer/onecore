@@ -4,7 +4,7 @@ export const roomsQueryParamsSchema = z.object({
   buildingCode: z
     .string()
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
-  floorCode: z.string().min(1, { message: 'floorCode is required.' }),
+  staircaseCode: z.string().min(1, { message: 'staircaseCode is required.' }),
   residenceCode: z.string().min(1, { message: 'residenceCode is required.' }),
 })
 

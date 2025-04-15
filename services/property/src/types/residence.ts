@@ -7,7 +7,7 @@ export const residencesQueryParamsSchema = z.object({
       invalid_type_error: 'buildingCode must be a string',
     })
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
-  floorCode: z.string().optional(),
+  staircaseCode: z.string().optional(),
 })
 
 export const ResidenceSchema = z.object({

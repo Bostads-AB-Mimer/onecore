@@ -5,7 +5,7 @@ import { z } from 'zod'
 import {
   getResidenceById,
   getResidencesByBuildingCode,
-  getResidencesByBuildingCodeAndFloorCode,
+  getResidencesByBuildingCodeAndStaircaseCode,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -25,8 +25,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /residences:
    *   get:
-   *     summary: Get residences by building code, optionally filtered by floor code.
-   *     description: Returns all residences belonging to a specific building, optionally filtered by floor code.
+   *     summary: Get residences by building code, optionally filtered by staircase code.
+   *     description: Returns all residences belonging to a specific building, optionally filtered by staircase code.
    *     tags:
    *       - Residences
    *     parameters:
@@ -37,11 +37,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The building code of the building.
    *       - in: query
-   *         name: floorCode
+   *         name: staircaseCode
    *         required: false
    *         schema:
    *           type: string
-   *         description: The floor code of the staircase (optional).
+   *         description: The code of the staircase (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved the residences.
@@ -70,12 +70,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { buildingCode, floorCode } = queryParams.data
+    const { buildingCode, staircaseCode } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
     logger.info(
       `GET /residences?buildingCode=${buildingCode}${
-        floorCode ? `&floorCode=${floorCode}` : ''
+        staircaseCode ? `&staircaseCode=${staircaseCode}` : ''
       }`,
       metadata
     )
@@ -83,10 +83,10 @@ export const routes = (router: KoaRouter) => {
     try {
       let dbResidences
 
-      if (floorCode) {
-        dbResidences = await getResidencesByBuildingCodeAndFloorCode(
+      if (staircaseCode) {
+        dbResidences = await getResidencesByBuildingCodeAndStaircaseCode(
           buildingCode,
-          floorCode
+          staircaseCode
         )
       } else {
         dbResidences = await getResidencesByBuildingCode(buildingCode)

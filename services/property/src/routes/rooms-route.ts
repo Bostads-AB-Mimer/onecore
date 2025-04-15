@@ -16,8 +16,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by building code, floor code, and residence code.
-   *     description: Returns all rooms belonging to a specific building, floor, and residence code.
+   *     summary: Get rooms by building code, staircase code, and residence code.
+   *     description: Returns all rooms belonging to a specific building, staircase, and residence code.
    *     tags:
    *       - Rooms
    *     parameters:
@@ -28,11 +28,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The building code of the building for the residence.
    *       - in: query
-   *         name: floorCode
+   *         name: staircaseCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The floor code of the staircase.
+   *         description: The code of the staircase.
    *       - in: query
    *         name: residenceCode
    *         required: true
@@ -65,16 +65,16 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { buildingCode, floorCode, residenceCode } = queryParams.data
+    const { buildingCode, staircaseCode, residenceCode } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
     logger.info(
-      `GET /rooms?buildingCode=${buildingCode}&floorCode=${floorCode}&residenceCode=${residenceCode}`,
+      `GET /rooms?buildingCode=${buildingCode}&staircaseCode=${staircaseCode}&residenceCode=${residenceCode}`,
       metadata
     )
 
     try {
-      const rooms = await getRooms(buildingCode, floorCode, residenceCode)
+      const rooms = await getRooms(buildingCode, staircaseCode, residenceCode)
 
       ctx.body = {
         content: rooms,

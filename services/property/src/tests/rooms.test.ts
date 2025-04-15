@@ -3,7 +3,7 @@ import app from '../app'
 
 describe('Rooms API', () => {
   let buildingCode: string
-  let floorCode: string
+  let staircaseCode: string
   let residenceCode: string
 
   beforeAll(async () => {
@@ -18,13 +18,13 @@ describe('Rooms API', () => {
       .query({ buildingCode })
     const residence = residencesResponse.body.content[0]
     residenceCode = residence.code
-    floorCode = '1' // Assuming floor code 1 exists
+    staircaseCode = '1' // Assuming staircase code 1 exists
   })
 
   it('should return rooms for a residence', async () => {
     const response = await request(app.callback())
       .get('/rooms')
-      .query({ buildingCode, floorCode, residenceCode })
+      .query({ buildingCode, staircaseCode, residenceCode })
 
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
@@ -54,7 +54,7 @@ describe('Rooms API', () => {
     // First get a room ID from the list
     const roomsResponse = await request(app.callback())
       .get('/rooms')
-      .query({ buildingCode, floorCode, residenceCode })
+      .query({ buildingCode, staircaseCode, residenceCode })
 
     if (roomsResponse.body.content.length > 0) {
       const roomId = roomsResponse.body.content[0].id

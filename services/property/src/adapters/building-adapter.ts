@@ -29,7 +29,7 @@ const getBuildings = async (
       NOT: {
         buildingId: null,
       },
-      floorId: null,
+      staircaseId: null,
     },
   })
 

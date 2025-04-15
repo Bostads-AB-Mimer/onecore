@@ -13,7 +13,7 @@ async function getStaircasesByBuildingCode(buildingCode: string) {
         contains: buildingCode,
       },
       NOT: {
-        floorId: null,
+        staircaseId: null,
       },
       residenceId: null,
       localeId: null,

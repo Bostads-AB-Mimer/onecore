@@ -67,7 +67,7 @@ export const getResidencesByBuildingCode = async (
         contains: buildingCode,
       },
       NOT: {
-        floorId: null,
+        staircaseId: null,
         residenceId: null,
       },
       localeId: null,
@@ -84,18 +84,18 @@ export const getResidencesByBuildingCode = async (
   })
 }
 
-export const getResidencesByBuildingCodeAndFloorCode = async (
+export const getResidencesByBuildingCodeAndStaircaseCode = async (
   buildingCode: string,
-  floorCode: string
+  staircaseCode: string
 ): Promise<Residence[]> => {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
       buildingCode: {
         contains: buildingCode,
       },
-      floorCode: floorCode,
+      staircaseCode: staircaseCode,
       NOT: {
-        floorId: null,
+        staircaseId: null,
         residenceId: null,
       },
       localeId: null,

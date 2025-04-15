@@ -5,10 +5,10 @@ const prisma = new PrismaClient({})
 
 //todo: add types
 
-//todo: we might be able to skip using floorCode
+//todo: we might be able to skip using staircaseCode
 export const getRooms = async (
   buildingCode: string,
-  floorCode: string,
+  staircaseCode: string,
   residenceCode: string
 ) => {
   const propertyStructures = await prisma.propertyStructure.findMany({
@@ -16,10 +16,10 @@ export const getRooms = async (
       buildingCode: {
         contains: buildingCode,
       },
-      floorCode: floorCode,
+      staircaseCode: staircaseCode,
       residenceCode: residenceCode,
       NOT: {
-        floorId: null,
+        staircaseId: null,
         residenceId: null,
         roomId: null,
       },
