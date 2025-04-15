@@ -1559,7 +1559,7 @@ export interface paths {
             /** @description The phone number to send the SMS to. */
             phoneNumber?: string;
             /** @description The message to be sent via SMS. */
-            message?: string;
+            text?: string;
           };
         };
       };
@@ -1636,7 +1636,177 @@ export interface paths {
           content: {
             "application/json": {
               /** @example Failed to send email to {to}, status: {statusCode} */
-              message?: string;
+              text?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/propertyBase/residences": {
+    /**
+     * Get residences by building code and (optional) staircase code
+     * @description Retrieves residences by building code and (optional) staircase code
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Code for the building to fetch residences from */
+          buildingCode: string;
+          /** @description Code for the staircase to fetch residences from */
+          staircaseCode?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved residences */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Residence"][];
+            };
+          };
+        };
+        /** @description Missing building code or invalid query parameters */
+        400: {
+          content: {
+            "application/json": {
+              error?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/propertyBase/properties": {
+    /**
+     * Get properties by company code and (optional) tract
+     * @description Retrieves properties by company code and (optional) tract
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The code of the company that owns the properties. */
+          companyCode: string;
+          /** @description Optional filter to get properties in a specific tract. */
+          tract?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved properties */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Property"][];
+            };
+          };
+        };
+        /** @description Missing company code or invalid query parameters */
+        400: {
+          content: {
+            "application/json": {
+              error?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/propertyBase/residence/{residenceId}": {
+    /**
+     * Get residence data by residenceId
+     * @description Retrieves residence data by residenceId
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Id for the residence to fetch */
+          residenceId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved residence. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceDetails"];
+            };
+          };
+        };
+        /** @description Residence not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Residence not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve residence data. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/propertyBase/staircases": {
+    /**
+     * Get staircases for a building
+     * @description Retrieves staircases for a building
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Code for the building to fetch staircases for */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved staircases. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Staircase"][];
+            };
+          };
+        };
+        /** @description Missing buildingCode */
+        400: {
+          content: {
+            "application/json": {
+              /** @example Missing buildingCode */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
             };
           };
         };
@@ -1681,6 +1851,138 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    Property: {
+      id: string;
+      propertyObjectId: string;
+      marketAreaId: string;
+      districtId: string;
+      propertyDesignationId: string;
+      valueAreaId: string | null;
+      code: string;
+      designation: string;
+      municipality: string;
+      tract: string;
+      block: string;
+      sector: string | null;
+      propertyIndexNumber: string | null;
+      congregation: string;
+      builtStatus: number;
+      separateAssessmentUnit: number;
+      consolidationNumber: string;
+      ownershipType: string;
+      registrationDate: string | null;
+      acquisitionDate: string | null;
+      isLeasehold: number;
+      leaseholdTerminationDate: string | null;
+      area: string | null;
+      purpose: string | null;
+      buildingType: string | null;
+      propertyTaxNumber: string | null;
+      mainPartAssessedValue: number;
+      includeInAssessedValue: number;
+      grading: number;
+      deleteMark: number;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string;
+      timestamp: string;
+    };
+    Residence: {
+      id: string;
+      code: string;
+      name: string;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
+    };
+    ResidenceDetails: {
+      id: string;
+      code: string;
+      name: string;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
+      location?: string;
+      accessibility: {
+        wheelchairAccessible: boolean;
+        residenceAdapted: boolean;
+        elevator: boolean;
+      };
+      features: {
+        balcony1?: {
+          location: string;
+          type: string;
+        };
+        balcony2?: {
+          location: string;
+          type: string;
+        };
+        patioLocation?: string;
+        hygieneFacility: string;
+        sauna: boolean;
+        extraToilet: boolean;
+        sharedKitchen: boolean;
+        petAllergyFree: boolean;
+        electricAllergyIntolerance: boolean;
+        smokeFree: boolean;
+        asbestos: boolean;
+      };
+      entrance: string;
+      partNo?: number | null;
+      part?: string | null;
+      residenceType: {
+        residenceTypeId: string;
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
+        systemStandard: number;
+        checklistId: string | null;
+        componentTypeActionId: string | null;
+        statisticsGroupSCBId: string | null;
+        statisticsGroup2Id: string | null;
+        statisticsGroup3Id: string | null;
+        statisticsGroup4Id: string | null;
+        timestamp: string;
+      };
+      propertyObject: {
+        energy: {
+          energyClass: number;
+          /** Format: date-time */
+          energyRegistered?: string;
+          /** Format: date-time */
+          energyReceived?: string;
+          energyIndex?: number;
+        };
+      };
+    };
+    Staircase: {
+      id: string;
+      code: string;
+      name: string | null;
+      features: {
+        floorPlan: string | null;
+        accessibleByElevator: boolean;
+      };
+      dates: {
+        /** Format: date-time */
+        from: string;
+        /** Format: date-time */
+        to: string;
+      };
+      deleted: boolean;
+      /** Format: date-time */
+      timestamp: string;
+    };
     SearchQueryParams: {
       /** @description The search query string used to find properties and buildings */
       q: string;
