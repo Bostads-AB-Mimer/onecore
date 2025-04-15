@@ -7,20 +7,20 @@ import { roomService } from '@/services/api'
 interface ResidenceRoomsProps {
   residenceId: string
   buildingCode: string
-  floorCode: string
+  staircaseCode: string
 }
 
 export function ResidenceRooms({
   residenceId,
   buildingCode,
-  floorCode,
+  staircaseCode,
 }: ResidenceRoomsProps) {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms', residenceId],
     queryFn: () =>
-      roomService.getByBuildingAndFloorAndResidence(
+      roomService.getByBuildingAndStaircaseAndResidence(
         buildingCode,
-        floorCode,
+        staircaseCode,
         residenceId
       ),
   })

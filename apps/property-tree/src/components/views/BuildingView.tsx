@@ -142,9 +142,7 @@ export function BuildingView() {
                     key={staircase.id}
                     whileHover={{ scale: 1.02 }}
                     onClick={() =>
-                      navigate(
-                        `/staircases/${building.code.trim()}/${staircase.id.trim()}`
-                      )
+                      navigate(`/staircases/${building.id}/${staircase.id}`)
                     }
                     className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
                   >
@@ -177,7 +175,7 @@ export function BuildingView() {
                       navigate(`/residences/${residence.id}`, {
                         state: {
                           buildingCode: building.code,
-                          floorCode: residence.code.substring(2, 4),
+                          staircaseCode: residence.code.substring(2, 4),
                           propertyId: propertyQuery.data?.id,
                         },
                       })

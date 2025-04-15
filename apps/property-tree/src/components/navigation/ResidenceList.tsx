@@ -60,7 +60,7 @@ export function ResidenceList({ building }: ResidenceListProps) {
             key={residence.id}
             residence={residence}
             buildingCode={building.code}
-            floorCode={residence.code.split('-')[0]} // Assuming floor code is first part of residence code
+            staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
           />
         ))}
       </SidebarMenu>

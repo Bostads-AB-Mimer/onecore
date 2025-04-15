@@ -6,13 +6,13 @@ import { useNavigate } from 'react-router-dom'
 interface ResidenceNavigationProps {
   residence: Residence
   buildingCode: string
-  floorCode: string
+  staircaseCode: string
 }
 
 export function ResidenceNavigation({
   residence,
   buildingCode,
-  floorCode,
+  staircaseCode,
 }: ResidenceNavigationProps) {
   const navigate = useNavigate()
 
@@ -23,7 +23,7 @@ export function ResidenceNavigation({
           navigate(`/residences/${residence.id}`, {
             state: {
               buildingCode,
-              floorCode,
+              staircaseCode,
             },
           })
         }}

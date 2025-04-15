@@ -9,17 +9,17 @@ export const roomService = {
   //   return data?.content || []
   // },
 
-  // Get rooms by building, floor and residence codes
-  async getByBuildingAndFloorAndResidence(
+  // Get rooms by building, staircase and residence codes
+  async getByBuildingAndStaircaseAndResidence(
     buildingCode: string,
-    floorCode: string,
+    staircaseCode: string,
     residenceCode: string
   ): Promise<Room[]> {
     const { data, error } = await GET('/rooms', {
       params: {
         query: {
           buildingCode,
-          floorCode,
+          staircaseCode,
           residenceCode,
         },
       },
@@ -40,12 +40,12 @@ export const roomService = {
   // Get rooms by residence ID
   async getByResidenceId(
     buildingCode: string,
-    floorCode: string,
+    staircaseCode: string,
     residenceCode: string
   ): Promise<Room[]> {
     const { data, error } = await GET('/rooms', {
       params: {
-        query: { buildingCode, floorCode, residenceCode },
+        query: { buildingCode, staircaseCode, residenceCode },
       },
     })
     if (error) throw error
