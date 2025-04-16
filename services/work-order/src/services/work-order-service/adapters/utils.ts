@@ -70,7 +70,8 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     Registered: odooWorkOrder.create_date,
     RentalObjectCode: odooWorkOrder.rental_property_id[1],
     Status: odooWorkOrder.stage_id[1],
-    UseMasterKey: true,
+    IsHiddenFromUser: odooWorkOrder.hidden_from_my_pages || false,
+    UseMasterKey: true, // NOTE: Should this always be true?
     WorkOrderRows: [
       {
         Description: odooWorkOrder.description,
