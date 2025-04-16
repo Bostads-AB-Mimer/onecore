@@ -1,7 +1,5 @@
 import { Company } from '../types'
 import { GET } from './core/base-api'
-// FIXME: There is currently no GET /propertyBase/properties/{id} in onecore-core
-import { GET as LegacyGET } from './baseApi'
 
 export const propertyService = {
   // Get all properties
@@ -15,8 +13,8 @@ export const propertyService = {
   },
 
   async getPropertyById(propertyId: string) {
-    const { data, error } = await LegacyGET(`/properties/{id}`, {
-      params: { path: { id: propertyId } },
+    const { data, error } = await GET(`/propertyBase/properties/{propertyId}`, {
+      params: { path: { propertyId } },
     })
     if (error) throw error
     return data?.content

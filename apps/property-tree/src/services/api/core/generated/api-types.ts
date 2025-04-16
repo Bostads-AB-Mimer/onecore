@@ -1729,6 +1729,48 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/properties/{propertyId}": {
+    /**
+     * Get property by property id
+     * @description Retrieves property by property id
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the property */
+          propertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved property */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Property"];
+            };
+          };
+        };
+        /** @description Property not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Property not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/propertyBase/residence/{residenceId}": {
     /**
      * Get residence data by residenceId
