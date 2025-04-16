@@ -25,6 +25,7 @@ export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
     create_date: new Date().toDateString(),
     write_date: new Date().toDateString(),
     stage_id: [1, 'Ny Begäran'],
+    hidden_from_my_pages: false,
     name: '',
   })
 )

@@ -22,6 +22,7 @@ describe('utils', () => {
       expect(result).toHaveProperty('Registered')
       expect(result).toHaveProperty('RentalObjectCode')
       expect(result).toHaveProperty('Status')
+      expect(result).toHaveProperty('IsHiddenFromUser')
       expect(result).toHaveProperty('UseMasterKey')
       expect(result).toHaveProperty('WorkOrderRows')
 
