@@ -44,6 +44,58 @@ export const PropertySchema = z.object({
   timestamp: z.string(),
 })
 
+export const PropertyDetailsSchema = z.object({
+  id: z.string(),
+  propertyObjectId: z.string(),
+  marketAreaId: z.string(),
+  districtId: z.string(),
+  propertyDesignationId: z.string(),
+  valueAreaId: z.string().nullable(),
+  code: z.string(),
+  designation: z.string(),
+  municipality: z.string(),
+  tract: z.string(),
+  block: z.string(),
+  sector: z.string().nullable(),
+  propertyIndexNumber: z.string().nullable(),
+  congregation: z.string(),
+  builtStatus: z.number(),
+  separateAssessmentUnit: z.number(),
+  consolidationNumber: z.string(),
+  ownershipType: z.string(),
+  registrationDate: z.string().nullable(),
+  acquisitionDate: z.string().nullable(),
+  isLeasehold: z.number(),
+  leaseholdTerminationDate: z.string().nullable(),
+  area: z.string().nullable(),
+  purpose: z.string().nullable(),
+  buildingType: z.string().nullable(),
+  propertyTaxNumber: z.string().nullable(),
+  mainPartAssessedValue: z.number(),
+  includeInAssessedValue: z.number(),
+  grading: z.number(),
+  deleteMark: z.number(),
+  fromDate: z.string().datetime(),
+  toDate: z.string().datetime(),
+  timestamp: z.string(),
+  propertyObject: z.object({
+    id: z.string(),
+    deleteMark: z.number(),
+    timestamp: z.string(),
+    objectTypeId: z.string(),
+    barcode: z.string().nullable(),
+    barcodeType: z.number(),
+    condition: z.number(),
+    conditionInspectionDate: z.string().nullable(),
+    vatAdjustmentPrinciple: z.number(),
+    energyClass: z.number(),
+    energyRegistered: z.string().nullable(),
+    energyReceived: z.string().nullable(),
+    energyIndex: z.string().nullable(),
+    heatingNature: z.number(),
+  }),
+})
+
 export const ResidenceSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -155,6 +207,7 @@ export const StaircasesQueryParamsSchema = z.object({
 
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
+export type PropertyDetails = z.infer<typeof PropertyDetailsSchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
 export type Staircase = z.infer<typeof StaircaseSchema>

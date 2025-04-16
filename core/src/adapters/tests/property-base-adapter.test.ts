@@ -126,6 +126,69 @@ describe('property-base-adapter', () => {
     })
   })
 
+  describe('getPropertyDetails', () => {
+    it('returns err if request fails', async () => {
+      const propertyDetailsMock = factory.propertyDetails.build()
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/${propertyDetailsMock.id}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getPropertyDetails(
+        propertyDetailsMock.id
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns not-found if property is not found', async () => {
+      const propertyDetailsMock = factory.propertyDetails.build()
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/${propertyDetailsMock.id}`,
+          () => new HttpResponse(null, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getPropertyDetails(
+        propertyDetailsMock.id
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('not-found')
+    })
+
+    it('returns property', async () => {
+      const propertyDetailsMock = factory.property.build()
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/${propertyDetailsMock.id}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: propertyDetailsMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getPropertyDetails(
+        propertyDetailsMock.id
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: propertyDetailsMock,
+      })
+    })
+  })
+
   describe('getResidenceDetails', () => {
     it('returns err if request fails', async () => {
       const residenceDetailsMock = factory.residenceDetails.build()

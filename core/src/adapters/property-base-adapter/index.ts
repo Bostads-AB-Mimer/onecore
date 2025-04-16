@@ -83,7 +83,7 @@ type GetPropertiesResponse = components['schemas']['Property'][]
 export async function getProperties(
   companyCode: string,
   tract?: string
-): Promise<AdapterResult<GetPropertiesResponse, 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<GetPropertiesResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/properties', {
       params: { query: { companyCode, tract } },
@@ -96,6 +96,33 @@ export async function getProperties(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getProperties')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetPropertyDetailsResponse = components['schemas']['PropertyDetails']
+
+export async function getPropertyDetails(
+  propertyId: string
+): Promise<AdapterResult<GetPropertyDetailsResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/properties/{id}', {
+      params: { path: { id: propertyId } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getPropertyDetails')
     return { ok: false, err: 'unknown' }
   }
 }

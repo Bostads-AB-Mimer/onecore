@@ -261,6 +261,85 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /propertyBase/properties/{propertyId}:
+   *   get:
+   *     summary: Get property by property id
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves property by property id
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the property
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved property
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Property'
+   *       '404':
+   *         description: Property not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Property not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/properties/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { propertyId } = ctx.params
+
+    try {
+      const result = await propertyBaseAdapter.getPropertyDetails(propertyId)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Property not found', ...metadata }
+          return
+        }
+
+        logger.error(result.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.PropertyDetails,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /propertyBase/residence/{residenceId}:
    *   get:
    *     summary: Get residence data by residenceId

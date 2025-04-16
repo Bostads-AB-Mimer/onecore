@@ -67,6 +67,39 @@ describe('property-base-service', () => {
     })
   })
 
+  describe('GET /propertyBase/properties/:propertyId', () => {
+    it('returns 200 and a property', async () => {
+      const propertyDetails = factory.propertyDetails.build()
+      const getPropertyDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getPropertyDetails')
+        .mockResolvedValueOnce({ ok: true, data: propertyDetails })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/properties/${propertyDetails.id}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getPropertyDetailsSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(propertyDetails)
+      )
+      expect(() => PropertySchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 404 if no property is found', async () => {
+      const getPropertyDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getPropertyDetails')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/properties/1234567890'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getPropertyDetailsSpy).toHaveBeenCalled()
+    })
+  })
+
   describe('GET /propertyBase/residences', () => {
     it('returns 200 and a list of residences', async () => {
       const residences = factory.residenceDetails.buildList(3)
