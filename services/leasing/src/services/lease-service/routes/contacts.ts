@@ -19,6 +19,7 @@ import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { updateOrCreateApplicationProfile } from '../update-or-create-application-profile'
+import { error } from 'node:console'
 
 /**
  * @swagger
@@ -382,18 +383,18 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contacts/{nationalRegistrationNumber}/waitingLists:
+   * /contacts/{contactCode}/waitingLists:
    *   post:
    *     summary: Add contact to waiting list in xpand
-   *     description: Add a contact to a waiting list by national registration number.
+   *     description: Add a contact to a waiting list by contact code.
    *     tags: [Contacts]
    *     parameters:
    *       - in: path
-   *         name: nationalRegistrationNumber
+   *         name: contactCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The national registration number (pnr) of the contact.
+   *           description: The contact code of the contact.
    *     requestBody:
    *       required: true
    *       content:
@@ -401,9 +402,6 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             properties:
-   *               contactCode:
-   *                 type: string
-   *                 description: The code of the contact to be added to the waiting list.
    *               waitingListType:
    *                 type: WaitingListType
    *                 description: The type of the waiting list.
@@ -413,51 +411,59 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to add contact to the waiting list.
    */
-  router.post(
-    '(.*)/contacts/:nationalRegistrationNumber/waitingLists',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const request = <CreateWaitingListRequest>ctx.request.body
-      try {
-        await addApplicantToToWaitingList(
-          ctx.params.nationalRegistrationNumber,
-          request.contactCode,
-          request.waitingListType
-        )
+  router.post('(.*)/contacts/:contactCode/waitingLists', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const request = <CreateWaitingListRequest>ctx.request.body
+    try {
+      const res = await addApplicantToToWaitingList(
+        ctx.params.contactCode,
+        request.waitingListType
+      )
 
-        ctx.status = 201
-        ctx.body = {
-          message: 'Applicant successfully added to waiting list',
-          ...metadata,
-        }
-      } catch (error: unknown) {
-        logger.error(error, 'Error adding contact to waitingList')
+      if (!res.ok && res.err == 'unknown') {
         ctx.status = 500
+        ctx.body = { error: 'Unknown error' }
+        return
+      }
 
-        if (error instanceof Error) {
-          ctx.body = {
-            error: error.message,
-            ...metadata,
-          }
+      if (!res.ok && res.err == 'waiting-list-type-not-implemented') {
+        ctx.status = 404
+        ctx.body = { error: 'Waiting List Type not Implemented' }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        message: 'Applicant successfully added to waiting list',
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      logger.error(error, 'Error adding contact to waitingList')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
         }
       }
     }
-  )
+  })
 
   /**
    * @swagger
-   * /contacts/{nationalRegistrationNumber}/waitingLists/reset:
+   * /contacts/{contactCode}/waitingLists/reset:
    *   post:
    *     summary: Reset a waiting list for a contact in XPand
-   *     description: Resets a waiting list for a contact by national registration number.
+   *     description: Resets a waiting list for a contact by contact code.
    *     tags: [Contacts]
    *     parameters:
    *       - in: path
-   *         name: nationalRegistrationNumber
+   *         name: contactCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The national registration number (pnr) of the contact.
+   *           description: The code of the contact whose waiting list should be reset.
    *     requestBody:
    *       required: true
    *       content:
@@ -465,9 +471,6 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             properties:
-   *               contactCode:
-   *                 type: string
-   *                 description: The code of the contact whose waiting list should be reset.
    *               waitingListType:
    *                 type: WaitingListType
    *                 description: The type of the waiting list.
@@ -477,57 +480,68 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to reset waiting list for contact.
    */
-  router.post(
-    '(.*)/contacts/:nationalRegistrationNumber/waitingLists/reset',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const request = <CreateWaitingListRequest>ctx.request.body
-      try {
-        //remove from waitinglist
-        const res = await removeApplicantFromWaitingList(
-          ctx.params.nationalRegistrationNumber,
-          request.contactCode,
-          request.waitingListType
-        )
+  router.post('(.*)/contacts/:contactCode/waitingLists/reset', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const request = <CreateWaitingListRequest>ctx.request.body
+    try {
+      //remove from waitinglist
+      const res = await removeApplicantFromWaitingList(
+        ctx.params.contactCode,
+        request.waitingListType
+      )
 
-        if (!res.ok) {
-          ctx.status = res.err == 'not-in-waiting-list' ? 404 : 500
-          ctx.body = {
-            error:
-              res.err == 'not-in-waiting-list'
-                ? 'Contact Not In Waiting List'
-                : 'Unknown error',
-          }
-          return
-        }
-
-        //add to waitinglist
-        await addApplicantToToWaitingList(
-          ctx.params.nationalRegistrationNumber,
-          request.contactCode,
-          request.waitingListType as WaitingListType
-        )
-
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            message: 'Waiting List time successfullt reset for applicant',
-          },
-          ...metadata,
-        }
-      } catch (error: unknown) {
-        logger.error(error, 'Error resetting waitingList for applicant')
+      if (!res.ok && res.err == 'unknown') {
         ctx.status = 500
+        ctx.body = { error: 'Unknown error' }
+        return
+      }
 
-        if (error instanceof Error) {
-          ctx.body = {
-            error: error.message,
-            ...metadata,
-          }
+      if (!res.ok && res.err == 'waiting-list-type-not-implemented') {
+        ctx.status = 404
+        ctx.body = { error: 'Waiting List Type not Implemented' }
+        return
+      }
+
+      //add to waitinglist
+      await addApplicantToToWaitingList(
+        ctx.params.contactCode,
+        request.waitingListType as WaitingListType
+      )
+
+      if (!res.ok && res.err == 'unknown') {
+        ctx.status = 500
+        ctx.body = { error: 'Unknown error' }
+        return
+      }
+
+      if (!res.ok && res.err == 'waiting-list-type-not-implemented') {
+        ctx.status = 404
+        ctx.body = { error: 'Waiting List Type not Implemented' }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          message: 'Waiting List time successfullt reset for applicant',
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      logger.error(
+        error,
+        `Error resetting waitingList ${WaitingListType} for applicant ${ctx.params.contactCode}`
+      )
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
         }
       }
     }
-  )
+  })
 
   /**
    * @swagger
