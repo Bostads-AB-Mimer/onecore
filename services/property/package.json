@@ -37,6 +37,7 @@
     "onecore-utilities": "^1.1.0",
     "prisma": "^5.21.1",
     "swagger-jsdoc": "^6.2.8",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.2",
     "zod": "^3.23.8",
     "zod-prisma-types": "^3.2.1",

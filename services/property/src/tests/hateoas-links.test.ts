@@ -1,6 +1,5 @@
 import request from 'supertest'
 import app from '../app'
-import exp from 'constants'
 
 describe('HATEOAS Links Navigation', () => {
   it('should be able to navigate from companies to components using only HATEOAS links', async () => {

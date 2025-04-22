@@ -1,6 +1,9 @@
 import { PrismaClient, Prisma } from '@prisma/client'
 import { map } from 'lodash'
 import { logger } from 'onecore-utilities'
+
+import { trimStrings } from '@src/utils/data-conversion'
+
 const prisma = new PrismaClient({})
 
 export type PropertyWithObject = Prisma.PropertyGetPayload<{
@@ -8,36 +11,43 @@ export type PropertyWithObject = Prisma.PropertyGetPayload<{
     propertyObject: true
   }
 }>
+
 //todo: use actual type and mapper
 const getPropertyById = async (
   id: string
 ): Promise<PropertyWithObject | null> => {
-  const response = await prisma.property.findUnique({
-    where: {
-      id: id,
-    },
-    include: {
-      propertyObject: {
-        select: {
-          id: true,
-          deleteMark: true,
-          timestamp: true,
-          objectTypeId: true,
-          barcode: true,
-          barcodeType: true,
-          condition: true,
-          conditionInspectionDate: true,
-          vatAdjustmentPrinciple: true,
-          energyClass: true,
-          energyRegistered: true,
-          energyReceived: true,
-          energyIndex: true,
-          heatingNature: true,
+  try {
+    const result = await prisma.property.findUnique({
+      where: {
+        id: id,
+      },
+      include: {
+        propertyObject: {
+          select: {
+            id: true,
+            deleteMark: true,
+            timestamp: true,
+            objectTypeId: true,
+            barcode: true,
+            barcodeType: true,
+            condition: true,
+            conditionInspectionDate: true,
+            vatAdjustmentPrinciple: true,
+            energyClass: true,
+            energyRegistered: true,
+            energyReceived: true,
+            energyIndex: true,
+            heatingNature: true,
+          },
         },
       },
-    },
-  })
-  return response
+    })
+
+    return trimStrings(result)
+  } catch (err) {
+    logger.error({ err }, 'property-adapter.getPropertyById')
+    throw err
+  }
 }
 
 export type Property = Prisma.PropertyStructureGetPayload<{
@@ -76,24 +86,28 @@ const getProperties = async (
     where: whereClause,
   })
 
-  return prisma.property.findMany({
-    where: {
-      propertyObjectId: {
-        in: map(propertyStructures, 'propertyObjectId'),
+  return prisma.property
+    .findMany({
+      where: {
+        propertyObjectId: {
+          in: map(propertyStructures, 'propertyObjectId'),
+        },
       },
-    },
-  })
+    })
+    .then(trimStrings)
 }
 
 const searchProperties = (
   q: string
 ): Promise<Prisma.PropertyGetPayload<undefined>[]> => {
   try {
-    return prisma.property.findMany({
-      where: {
-        designation: { contains: q },
-      },
-    })
+    return prisma.property
+      .findMany({
+        where: {
+          designation: { contains: q },
+        },
+      })
+      .then(trimStrings)
   } catch (err) {
     logger.error({ err }, 'property-adapter.searchProperties')
     throw err

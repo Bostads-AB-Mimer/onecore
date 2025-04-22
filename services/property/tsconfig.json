@@ -12,7 +12,10 @@
     "typeRoots": ["../../node_modules/@types"],
     "types": ["jest", "node"],
     "moduleResolution": "node",
-    "noErrorTruncation": true
+    "noErrorTruncation": true,
+    "paths": {
+      "@src/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist", "../../node_modules"]

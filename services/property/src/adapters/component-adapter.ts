@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client'
+import { trimStrings } from '@src/utils/data-conversion'
 
 const prisma = new PrismaClient({})
-
-//todo: add types
 
 export const getComponentByMaintenanceUnitCode = async (
   maintenanceUnitCode: string
@@ -54,32 +53,34 @@ export const getComponentByMaintenanceUnitCode = async (
     },
   })
 
-  return response.map((component) => ({
-    id: component.id,
-    code: component.code,
-    name: component.name,
-    details: {
-      manufacturer: component.manufacturer,
-      typeDesignation: component.typeDesignation,
-    },
-    dates: {
-      installation: component.installationDate,
-      warrantyEnd: component.warrantyEndDate,
-    },
-    classification: {
-      componentType: {
-        code: component.componentType?.code ?? '',
-        name: component.componentType?.name ?? '',
+  return response
+    .map((component) => ({
+      id: component.id,
+      code: component.code,
+      name: component.name,
+      details: {
+        manufacturer: component.manufacturer,
+        typeDesignation: component.typeDesignation,
       },
-      category: {
-        code: component.componentCategory?.code ?? '',
-        name: component.componentCategory?.name ?? '',
+      dates: {
+        installation: component.installationDate,
+        warrantyEnd: component.warrantyEndDate,
       },
-    },
-    maintenanceUnits: component.propertyStructures.map((ps) => ({
-      id: ps.maintenanceUnitByCode?.id ?? '',
-      code: ps.maintenanceUnitByCode?.code ?? '',
-      name: ps.maintenanceUnitByCode?.name ?? '',
-    })),
-  }))
+      classification: {
+        componentType: {
+          code: component.componentType?.code ?? '',
+          name: component.componentType?.name ?? '',
+        },
+        category: {
+          code: component.componentCategory?.code ?? '',
+          name: component.componentCategory?.name ?? '',
+        },
+      },
+      maintenanceUnits: component.propertyStructures.map((ps) => ({
+        id: ps.maintenanceUnitByCode?.id ?? '',
+        code: ps.maintenanceUnitByCode?.code ?? '',
+        name: ps.maintenanceUnitByCode?.name ?? '',
+      })),
+    }))
+    .map(trimStrings)
 }

@@ -53,14 +53,11 @@ export const routes = (router: KoaRouter) => {
         return (ctx.status = HttpStatusCode.NotFound)
       }
 
-      const responseContent = companies.map((company) => {
-        return CompanySchema.parse({
-          ...CompanySchema.parse(company),
-        })
-      })
+      const responseContent = CompanySchema.array().parse(companies)
 
       ctx.body = { content: responseContent }
     } catch (err) {
+      logger.error({ err }, 'Error fetching company')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
@@ -111,15 +108,14 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const parsedCompanyDetails = CompanyDetailsSchema.parse({
-        ...company,
-      })
+      const parsedCompanyDetails = CompanyDetailsSchema.parse(company)
 
       ctx.body = {
         content: parsedCompanyDetails,
         ...metadata,
       }
     } catch (err) {
+      logger.error({ err }, 'Error fetching company')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

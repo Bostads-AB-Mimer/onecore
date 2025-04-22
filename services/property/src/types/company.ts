@@ -34,7 +34,11 @@ export const CompanyDetailsSchema = z.object({
   errorReportAdministration: z.number(),
   mediaBilling: z.number(),
   ownResponsibilityForInternalMaintenance: z.number(),
-  subletPercentage: z.instanceof(Prisma.Decimal),
+  // Database returns Prisma.Decimal but we want to return a number to the client
+  subletPercentage: z.preprocess(
+    (val) => (val instanceof Prisma.Decimal ? val.toNumber() : val),
+    z.number()
+  ),
   subletFeeAmount: z.number(),
   disableQuantitiesBelowCompany: z.number(),
   timestamp: z.string(),

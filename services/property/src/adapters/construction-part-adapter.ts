@@ -1,5 +1,7 @@
 import { map } from 'lodash'
-import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+
+import { trimStrings } from '@src/utils/data-conversion'
 
 const prisma = new PrismaClient({
   log: ['query'],
@@ -18,11 +20,13 @@ export const getConstructionPartsByBuildingCode = async (
     },
   })
 
-  return prisma.constructionPart.findMany({
-    where: {
-      propertyObjectId: {
-        in: map(propertyStructures, 'propertyObjectId'),
+  return prisma.constructionPart
+    .findMany({
+      where: {
+        propertyObjectId: {
+          in: map(propertyStructures, 'propertyObjectId'),
+        },
       },
-    },
-  })
+    })
+    .then(trimStrings)
 }

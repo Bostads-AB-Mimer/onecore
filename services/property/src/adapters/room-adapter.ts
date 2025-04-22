@@ -1,5 +1,7 @@
-import { Prisma, PrismaClient, Room } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import { map } from 'lodash'
+
+import { trimStrings } from '@src/utils/data-conversion'
 
 const prisma = new PrismaClient({})
 
@@ -27,61 +29,65 @@ export const getRooms = async (
     },
   })
 
-  return prisma.room.findMany({
-    where: {
-      propertyObjectId: {
-        in: map(propertyStructures, 'propertyObjectId'),
+  return prisma.room
+    .findMany({
+      where: {
+        propertyObjectId: {
+          in: map(propertyStructures, 'propertyObjectId'),
+        },
       },
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      sharedUse: true,
-      sortingOrder: true,
-      allowPeriodicWorks: true,
-      spaceType: true,
-      hasToilet: true,
-      isHeated: true,
-      hasThermostatValve: true,
-      orientation: true,
-      installationDate: true,
-      deleteMark: true,
-      fromDate: true,
-      toDate: true,
-      availableFrom: true,
-      availableTo: true,
-      timestamp: true,
-      roomType: true,
-    },
-  })
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        sharedUse: true,
+        sortingOrder: true,
+        allowPeriodicWorks: true,
+        spaceType: true,
+        hasToilet: true,
+        isHeated: true,
+        hasThermostatValve: true,
+        orientation: true,
+        installationDate: true,
+        deleteMark: true,
+        fromDate: true,
+        toDate: true,
+        availableFrom: true,
+        availableTo: true,
+        timestamp: true,
+        roomType: true,
+      },
+    })
+    .then(trimStrings)
 }
 
 export const getRoomById = async (id: string) => {
-  return prisma.room.findUnique({
-    where: {
-      id: id,
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      sharedUse: true,
-      sortingOrder: true,
-      allowPeriodicWorks: true,
-      spaceType: true,
-      hasToilet: true,
-      isHeated: true,
-      hasThermostatValve: true,
-      orientation: true,
-      installationDate: true,
-      deleteMark: true,
-      fromDate: true,
-      toDate: true,
-      availableFrom: true,
-      availableTo: true,
-      timestamp: true,
-      roomType: true,
-    },
-  })
+  return prisma.room
+    .findUnique({
+      where: {
+        id: id,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        sharedUse: true,
+        sortingOrder: true,
+        allowPeriodicWorks: true,
+        spaceType: true,
+        hasToilet: true,
+        isHeated: true,
+        hasThermostatValve: true,
+        orientation: true,
+        installationDate: true,
+        deleteMark: true,
+        fromDate: true,
+        toDate: true,
+        availableFrom: true,
+        availableTo: true,
+        timestamp: true,
+        roomType: true,
+      },
+    })
+    .then(trimStrings)
 }

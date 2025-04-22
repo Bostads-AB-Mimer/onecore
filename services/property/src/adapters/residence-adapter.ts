@@ -1,6 +1,8 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { map } from 'lodash'
 
+import { trimStrings } from '@src/utils/data-conversion'
+
 const prisma = new PrismaClient({})
 
 //todo: add types
@@ -28,7 +30,7 @@ export type ResidenceWithRelations = Prisma.ResidenceGetPayload<{
   }
 }>
 
-const residenceSelect = {
+const residenceSelect: Prisma.ResidenceSelect = {
   id: true,
   code: true,
   name: true,
@@ -40,20 +42,22 @@ const residenceSelect = {
 export const getResidenceById = async (
   id: string
 ): Promise<ResidenceWithRelations | null> => {
-  const response = await prisma.residence.findFirst({
-    where: {
-      id: id,
-    },
-    include: {
-      residenceType: true,
-      propertyObject: {
-        include: {
-          property: true,
-          building: true,
+  const response = await prisma.residence
+    .findFirst({
+      where: {
+        id: id,
+      },
+      include: {
+        residenceType: true,
+        propertyObject: {
+          include: {
+            property: true,
+            building: true,
+          },
         },
       },
-    },
-  })
+    })
+    .then(trimStrings)
 
   return response
 }
@@ -74,14 +78,16 @@ export const getResidencesByBuildingCode = async (
     },
   })
 
-  return prisma.residence.findMany({
-    where: {
-      propertyObjectId: {
-        in: map(propertyStructures, 'propertyObjectId'),
+  return prisma.residence
+    .findMany({
+      where: {
+        propertyObjectId: {
+          in: map(propertyStructures, 'propertyObjectId'),
+        },
       },
-    },
-    select: residenceSelect,
-  })
+      select: residenceSelect,
+    })
+    .then(trimStrings)
 }
 
 export const getResidencesByBuildingCodeAndStaircaseCode = async (
@@ -102,11 +108,13 @@ export const getResidencesByBuildingCodeAndStaircaseCode = async (
     },
   })
 
-  return prisma.residence.findMany({
-    where: {
-      propertyObjectId: {
-        in: map(propertyStructures, 'propertyObjectId'),
+  return prisma.residence
+    .findMany({
+      where: {
+        propertyObjectId: {
+          in: map(propertyStructures, 'propertyObjectId'),
+        },
       },
-    },
-  })
+    })
+    .then(trimStrings)
 }

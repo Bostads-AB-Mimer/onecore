@@ -1,4 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client'
+import { logger } from 'onecore-utilities'
+
+import { trimStrings } from '@src/utils/data-conversion'
 
 const prisma = new PrismaClient({})
 
@@ -11,20 +14,23 @@ const companyBasicInfoSelect = {
   propertyObjectId: true,
   code: true,
   name: true,
+
   organizationNumber: true,
 }
 
 export const getCompanies = async (): Promise<CompanyBasicInfo[] | null> => {
-  return prisma.company.findMany({
-    select: companyBasicInfoSelect,
-  })
+  return prisma.company
+    .findMany({
+      select: companyBasicInfoSelect,
+    })
+    .then(trimStrings)
 }
 
 export type CompanyDetails = Prisma.CompanyGetPayload<{
   select: typeof companyDetailsSelect
 }>
 
-const companyDetailsSelect = {
+const companyDetailsSelect: Prisma.CompanySelect = {
   id: true,
   propertyObjectId: true,
   code: true,
@@ -51,14 +57,23 @@ const companyDetailsSelect = {
   subletPercentage: true,
   subletFeeAmount: true,
   disableQuantitiesBelowCompany: true,
+
   timestamp: true,
 }
 
 export const getCompany = async (
   id: string
 ): Promise<CompanyDetails | null> => {
-  return prisma.company.findUnique({
-    where: { id },
-    select: companyDetailsSelect,
-  })
+  try {
+    const row = await prisma.company.findUnique({
+      where: { id },
+      select: companyDetailsSelect,
+    })
+
+    if (!row) return null
+    return trimStrings(row)
+  } catch (err) {
+    logger.error({ err }, 'company-adapter.getCompany')
+    throw err
+  }
 }
