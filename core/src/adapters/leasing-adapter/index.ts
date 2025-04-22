@@ -250,26 +250,22 @@ const getInternalCreditInformation = async (
 }
 
 const addApplicantToWaitingList = async (
-  nationalRegistrationNumber: string,
   contactCode: string,
   waitingListType: WaitingListType
 ) => {
   const axiosOptions = {
     method: 'POST',
     data: {
-      contactCode: contactCode,
       waitingListType: waitingListType,
     },
   }
   return await axios(
-    tenantsLeasesServiceUrl +
-      `/contacts/${nationalRegistrationNumber}/waitingLists`,
+    tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists`,
     axiosOptions
   )
 }
 
 const resetWaitingList = async (
-  nationalRegistrationNumber: string,
   contactCode: string,
   waitingListType: WaitingListType
 ): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
@@ -277,13 +273,11 @@ const resetWaitingList = async (
     const axiosOptions = {
       method: 'POST',
       data: {
-        contactCode: contactCode,
         waitingListType: waitingListType,
       },
     }
     const res = await axios(
-      tenantsLeasesServiceUrl +
-        `/contacts/${nationalRegistrationNumber}/waitingLists/reset`,
+      tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists/reset`,
       axiosOptions
     )
 

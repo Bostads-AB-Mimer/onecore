@@ -105,7 +105,6 @@ export const acceptOffer = async (
 
     //Reset waiting list
     const waitingListResult = await leasingAdapter.resetWaitingList(
-      offer.offeredApplicant.nationalRegistrationNumber,
       offer.offeredApplicant.contactCode,
       WaitingListType.ParkingSpace
     )

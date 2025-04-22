@@ -173,7 +173,9 @@ export const createOfferForInternalParkingSpace = async (
         subject: 'Erbjudande om bilplats',
         text: 'Erbjudande om bilplats',
         address: listing.address,
-        firstName: extractApplicantFirstName(eligibleApplicant.name),
+        firstName: eligibleApplicant.name
+          ? extractApplicantFirstName(eligibleApplicant.name)
+          : '',
         availableFrom: new Date(listing.vacantFrom).toISOString(),
         deadlineDate: new Date(offer.data.expiresAt).toISOString(),
         rent: String(listing.monthlyRent),
