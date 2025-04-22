@@ -175,7 +175,7 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
             disabled={v.row.status !== ApplicantStatus.Active}
             listingId={listingId}
             applicantId={v.row.id}
-            applicantName={v.row.name}
+            applicantName={v.row.name ?? v.row.contactCode}
             listingAddress={address}
           />
         )

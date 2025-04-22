@@ -156,7 +156,11 @@ const getColumns = (expiresAt: Date): Array<GridColDef> => {
           <OfferRoundActions
             disabled={v.row.status !== ApplicantStatus.Offered}
             listingId={v.row.listingId}
-            applicantName={v.row.name}
+            applicantName={
+              v.row.name && v.row.name.length > -1
+                ? v.row.name
+                : v.row.contactCode
+            }
             offerId={v.row.offerId}
           />
         )
