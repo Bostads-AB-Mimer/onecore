@@ -2106,6 +2106,7 @@ export interface components {
           energyReceived?: string;
           energyIndex?: number;
         };
+        rentalId: string | null;
       };
     };
     Staircase: {

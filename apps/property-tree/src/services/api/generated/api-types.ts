@@ -592,6 +592,7 @@ export interface components {
           energyReceived?: string;
           energyIndex?: number;
         };
+        rentalId: string | null;
       };
     };
     Building: {
