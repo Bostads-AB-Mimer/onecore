@@ -1380,7 +1380,43 @@ export interface paths {
             "application/json": {
               content?: {
                 totalCount?: number;
-                workOrders?: Record<string, never>[];
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/workOrders/rentalPropertyId/{rentalPropertyId}": {
+    /**
+     * Get work orders by rental property id
+     * @description Retrieves work orders based on the provided rental property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental property id used to fetch work orders. */
+          rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["WorkOrder"][];
               };
             };
           };
@@ -1643,6 +1679,33 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/companies": {
+    /**
+     * Get all companies
+     * @description Retrieves companies from property base
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved companies */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Company"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/propertyBase/residences": {
     /**
      * Get residences by building code and (optional) staircase code
@@ -1893,6 +1956,44 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    WorkOrder: {
+      AccessCaption: string;
+      Caption: string;
+      Code: string;
+      ContactCode: string;
+      Description: string;
+      DetailsCaption: string;
+      ExternalResource: boolean;
+      Id: string;
+      /** Format: date-time */
+      LastChanged: string;
+      Priority: string;
+      /** Format: date-time */
+      Registered: string;
+      RentalObjectCode: string;
+      Status: string;
+      UseMasterKey: boolean;
+      WorkOrderRows: {
+          Description: string;
+          LocationCode: string;
+          EquipmentCode: string;
+        }[];
+      Messages?: {
+          id: number;
+          body: string;
+          messageType: string;
+          author: string;
+          /** Format: date-time */
+          createDate: string;
+        }[];
+    };
+    Company: {
+      id: string;
+      propertyObjectId: string;
+      code: string;
+      name: string;
+      organizationNumber: string | null;
+    };
     Property: {
       id: string;
       propertyObjectId: string;
