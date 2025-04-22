@@ -1,9 +1,9 @@
-import { Prisma, PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { logger } from 'onecore-utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
-const prisma = new PrismaClient({})
+import { prisma } from './db'
 
 export type CompanyBasicInfo = Prisma.CompanyGetPayload<{
   select: typeof companyBasicInfoSelect

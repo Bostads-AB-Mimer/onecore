@@ -1,11 +1,8 @@
 import { map } from 'lodash'
-import { PrismaClient } from '@prisma/client'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
-const prisma = new PrismaClient({
-  log: ['query'],
-})
+import { prisma } from './db'
 
 export const getConstructionPartsByBuildingCode = async (
   buildingCode: string

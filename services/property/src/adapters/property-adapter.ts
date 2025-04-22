@@ -1,10 +1,10 @@
-import { PrismaClient, Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { map } from 'lodash'
 import { logger } from 'onecore-utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
-const prisma = new PrismaClient({})
+import { prisma } from './db'
 
 export type PropertyWithObject = Prisma.PropertyGetPayload<{
   include: {

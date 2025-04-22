@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 
-const prisma = new PrismaClient({})
+import { prisma } from './db'
 
 export const getComponentByMaintenanceUnitCode = async (
   maintenanceUnitCode: string

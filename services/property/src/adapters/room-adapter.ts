@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client'
 import { map } from 'lodash'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
-const prisma = new PrismaClient({})
+import { prisma } from './db'
 
 //todo: add types
 
