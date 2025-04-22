@@ -51,5 +51,6 @@ export const ResidenceDetailsFactory = Factory.define<
     energy: {
       energyClass: 1,
     },
+    rentalId: null,
   },
 }))

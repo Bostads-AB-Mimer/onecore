@@ -99,16 +99,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get residences by building code, optionally filtered by floor code.
-         * @description Returns all residences belonging to a specific building, optionally filtered by floor code.
+         * Get residences by building code, optionally filtered by staircase code.
+         * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
          */
         get: {
             parameters: {
                 query: {
                     /** @description The building code of the building. */
                     buildingCode: string;
-                    /** @description The floor code of the staircase (optional). */
-                    floorCode?: string;
+                    /** @description The code of the staircase (optional). */
+                    staircaseCode?: string;
                 };
                 header?: never;
                 path?: never;
@@ -641,16 +641,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get rooms by building code, floor code, and residence code.
-         * @description Returns all rooms belonging to a specific building, floor, and residence code.
+         * Get rooms by building code, staircase code, and residence code.
+         * @description Returns all rooms belonging to a specific building, staircase, and residence code.
          */
         get: {
             parameters: {
                 query: {
                     /** @description The building code of the building for the residence. */
                     buildingCode: string;
-                    /** @description The floor code of the staircase. */
-                    floorCode: string;
+                    /** @description The code of the staircase. */
+                    staircaseCode: string;
                     /** @description The residence code where the rooms are located. */
                     residenceCode: string;
                 };
@@ -860,6 +860,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check system health status
+         * @description Retrieves the health status of the system and its subsystems.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response with system health status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /**
+                             * @description Name of the system.
+                             * @example core
+                             */
+                            name?: string;
+                            /**
+                             * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
+                             * @example active
+                             */
+                            status?: string;
+                            subsystems?: {
+                                /** @description Name of the subsystem. */
+                                name?: string;
+                                /**
+                                 * @description Status of the subsystem.
+                                 * @enum {string}
+                                 */
+                                status?: "active" | "impaired" | "failure" | "unknown";
+                                /** @description Additional details about the subsystem status. */
+                                details?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -940,6 +1001,7 @@ export interface components {
                     energyReceived?: string;
                     energyIndex?: number;
                 };
+                rentalId: string | null;
             };
         };
         Building: {
