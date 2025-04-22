@@ -10,6 +10,7 @@ import {
   constructionPartsQueryParamsSchema,
 } from '../types/construction-parts'
 import { getConstructionPartsByBuildingCode } from '../adapters/construction-part-adapter'
+import { parseRequest } from '../middleware/parse-request'
 
 /**
  * @swagger
@@ -54,18 +55,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get(
     ['(.*)/construction-parts', '(.*)/construction-parts/'],
+    parseRequest({ query: constructionPartsQueryParamsSchema }),
     async (ctx) => {
-      const queryParams = constructionPartsQueryParamsSchema.safeParse(
-        ctx.query
-      )
-
-      if (!queryParams.success) {
-        ctx.status = 400
-        ctx.body = { errors: queryParams.error.errors }
-        return
-      }
-
-      const { buildingCode } = queryParams.data
+      const { buildingCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
       logger.info(

@@ -5,6 +5,8 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { z } from 'zod'
+
 import { etagMiddleware } from '../middleware/etag'
 import {
   getProperties,
@@ -16,7 +18,7 @@ import {
   PropertyDetailsSchema,
   PropertySchema,
 } from '../types/property'
-import { z } from 'zod'
+import { parseRequest } from '../middleware/parse-request'
 
 /**
  * @swagger
@@ -67,36 +69,33 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('(.*)/properties', async (ctx) => {
-    const queryParams = propertiesQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    '(.*)/properties',
+    parseRequest({ query: propertiesQueryParamsSchema }),
+    async (ctx) => {
+      const { companyCode, tract } = ctx.request.parsedQuery
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
+      const metadata = generateRouteMetadata(ctx)
+      logger.info(
+        `GET /properties?companyCode=${companyCode}&tract=${tract}`,
+        metadata
+      )
 
-    const { companyCode, tract } = queryParams.data
+      try {
+        const properties = await getProperties(companyCode, tract)
 
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(
-      `GET /properties?companyCode=${companyCode}&tract=${tract}`,
-      metadata
-    )
-
-    try {
-      const properties = await getProperties(companyCode, tract)
-
-      const responseContent = properties
-      ctx.body = {
-        content: responseContent,
+        const responseContent = properties
+        ctx.body = {
+          content: responseContent,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -134,68 +133,67 @@ export const routes = (router: KoaRouter) => {
     q: z.string().min(3),
   })
 
-  router.get('(.*)/properties/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const queryParams = PropertySearchQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    '(.*)/properties/search',
+    parseRequest({ query: PropertySearchQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { q } = ctx.request.parsedQuery
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
+      try {
+        const properties = await searchProperties(q)
 
-    try {
-      const properties = await searchProperties(queryParams.data.q)
+        const responseContent = properties.map(
+          (p): z.infer<typeof PropertySchema> => ({
+            id: p.id,
+            code: p.code,
+            designation: p.designation ?? '',
+            tract: p.tract ?? '',
+            municipality: p.municipality ?? '',
+            block: p.block ?? '',
+            sector: p.sector,
+            propertyIndexNumber: p.propertyIndexNumber,
+            congregation: p.congregation ?? '',
+            builtStatus: p.builtStatus,
+            separateAssessmentUnit: p.separateAssessmentUnit,
+            consolidationNumber: p.consolidationNumber ?? '',
+            ownershipType: p.ownershipType,
+            registrationDate: p.registrationDate?.toISOString() ?? null,
+            acquisitionDate: p.acquisitionDate?.toISOString() ?? null,
+            isLeasehold: p.isLeasehold,
+            area: p.area ?? '',
+            purpose: p.purpose ?? '',
+            buildingType: p.buildingType ?? '',
+            propertyTaxNumber: p.propertyTaxNumber ?? '',
+            mainPartAssessedValue: p.mainPartAssessedValue,
+            includeInAssessedValue: p.includeInAssessedValue,
+            grading: p.grading,
+            deleteMark: p.deleteMark,
+            fromDate: p.fromDate,
+            toDate: p.toDate,
+            timestamp: p.timestamp,
+            propertyObjectId: p.propertyObjectId,
+            marketAreaId: p.marketAreaId ?? '',
+            districtId: p.districtId ?? '',
+            propertyDesignationId: p.propertyDesignationId ?? '',
+            valueAreaId: p.valueAreaId,
+            leaseholdTerminationDate:
+              p.leaseholdTerminationDate?.toISOString() ?? null,
+          })
+        )
 
-      const responseContent = properties.map(
-        (p): z.infer<typeof PropertySchema> => ({
-          id: p.id,
-          code: p.code,
-          designation: p.designation ?? '',
-          tract: p.tract ?? '',
-          municipality: p.municipality ?? '',
-          block: p.block ?? '',
-          sector: p.sector,
-          propertyIndexNumber: p.propertyIndexNumber,
-          congregation: p.congregation ?? '',
-          builtStatus: p.builtStatus,
-          separateAssessmentUnit: p.separateAssessmentUnit,
-          consolidationNumber: p.consolidationNumber ?? '',
-          ownershipType: p.ownershipType,
-          registrationDate: p.registrationDate?.toISOString() ?? null,
-          acquisitionDate: p.acquisitionDate?.toISOString() ?? null,
-          isLeasehold: p.isLeasehold,
-          area: p.area ?? '',
-          purpose: p.purpose ?? '',
-          buildingType: p.buildingType ?? '',
-          propertyTaxNumber: p.propertyTaxNumber ?? '',
-          mainPartAssessedValue: p.mainPartAssessedValue,
-          includeInAssessedValue: p.includeInAssessedValue,
-          grading: p.grading,
-          deleteMark: p.deleteMark,
-          fromDate: p.fromDate,
-          toDate: p.toDate,
-          timestamp: p.timestamp,
-          propertyObjectId: p.propertyObjectId,
-          marketAreaId: p.marketAreaId ?? '',
-          districtId: p.districtId ?? '',
-          propertyDesignationId: p.propertyDesignationId ?? '',
-          valueAreaId: p.valueAreaId,
-          leaseholdTerminationDate:
-            p.leaseholdTerminationDate?.toISOString() ?? null,
-        })
-      )
-
-      ctx.body = {
-        content: responseContent,
-        ...metadata,
+        ctx.body = {
+          content: responseContent,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger

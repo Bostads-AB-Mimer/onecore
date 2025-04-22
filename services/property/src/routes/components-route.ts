@@ -10,6 +10,8 @@ import {
   componentsQueryParamsSchema,
   ComponentSchema,
 } from '../types/component'
+import { parseRequest } from '../middleware/parse-request'
+import { z } from 'zod'
 
 /**
  * @swagger
@@ -59,55 +61,65 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/components', async (ctx) => {
-    // Add default type=residence if residenceCode is provided
-    const queryWithType = ctx.query.residenceCode
-      ? { ...ctx.query, type: 'residence' }
-      : ctx.query
+  router.get(
+    '(.*)/components',
+    parseRequest({
+      query: z
+        .object({
+          residenceCode: z.string(),
+        })
+        .or(
+          z.object({
+            maintenanceUnit: z.string(),
+          })
+        ),
+    }),
+    async (ctx) => {
+      // Add default type=residence if residenceCode is provided
+      const queryWithType =
+        'residenceCode' in ctx.request.parsedQuery
+          ? { ...ctx.request.parsedQuery, type: 'residence' }
+          : { ...ctx.request.parsedQuery, type: 'maintenance' }
 
-    const queryParams = componentsQueryParamsSchema.safeParse(queryWithType)
+      const queryParams = componentsQueryParamsSchema.parse(queryWithType)
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        let components
+        if (queryParams.type === 'maintenance') {
+          logger.info(
+            `GET /components?type=maintenance&maintenanceUnit=${queryParams.maintenanceUnit}`,
+            metadata
+          )
+          components = await getComponentByMaintenanceUnitCode(
+            queryParams.maintenanceUnit
+          )
+        } else {
+          logger.info(
+            `GET /components?type=residence&residenceCode=${queryParams.residenceCode}`,
+            metadata
+          )
+          components = await getComponentByMaintenanceUnitCode(
+            queryParams.residenceCode
+          ) // TODO: Implement getComponentByResidenceCode
+        }
+
+        if (!components) {
+          ctx.status = 404
+          return
+        }
+
+        ctx.body = {
+          content: ComponentSchema.array().parse(components),
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
     }
-
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      let components
-      if (queryParams.data.type === 'maintenance') {
-        logger.info(
-          `GET /components?type=maintenance&maintenanceUnit=${queryParams.data.maintenanceUnit}`,
-          metadata
-        )
-        components = await getComponentByMaintenanceUnitCode(
-          queryParams.data.maintenanceUnit
-        )
-      } else {
-        logger.info(
-          `GET /components?type=residence&residenceCode=${queryParams.data.residenceCode}`,
-          metadata
-        )
-        components = await getComponentByMaintenanceUnitCode(
-          queryParams.data.residenceCode
-        ) // TODO: Implement getComponentByResidenceCode
-      }
-
-      if (!components) {
-        ctx.status = 404
-        return
-      }
-
-      ctx.body = {
-        content: ComponentSchema.array().parse(components),
-        ...metadata,
-      }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
-    }
-  })
+  )
 }

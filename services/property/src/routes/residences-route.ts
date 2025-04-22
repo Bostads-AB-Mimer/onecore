@@ -12,6 +12,7 @@ import {
   ResidenceSchema,
   ResidenceDetailedSchema,
 } from '../types/residence'
+import { parseRequest } from '../middleware/parse-request'
 
 /**
  * @swagger
@@ -61,59 +62,56 @@ export const routes = (router: KoaRouter) => {
    */
 
   type Residence = z.infer<typeof ResidenceSchema>
-  router.get(['(.*)/residences'], async (ctx) => {
-    const queryParams = residencesQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    ['(.*)/residences'],
+    parseRequest({ query: residencesQueryParamsSchema }),
+    async (ctx) => {
+      const { buildingCode, staircaseCode } = ctx.request.parsedQuery
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
-
-    const { buildingCode, staircaseCode } = queryParams.data
-
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(
-      `GET /residences?buildingCode=${buildingCode}${
-        staircaseCode ? `&staircaseCode=${staircaseCode}` : ''
-      }`,
-      metadata
-    )
-
-    try {
-      let dbResidences
-
-      if (staircaseCode) {
-        dbResidences = await getResidencesByBuildingCodeAndStaircaseCode(
-          buildingCode,
-          staircaseCode
-        )
-      } else {
-        dbResidences = await getResidencesByBuildingCode(buildingCode)
-      }
-
-      const responseContent = dbResidences.map(
-        (v): Residence => ({
-          code: v.code,
-          id: v.id,
-          name: v.name || '',
-          deleted: Boolean(v.deleted),
-          validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
-        })
+      const metadata = generateRouteMetadata(ctx)
+      logger.info(
+        `GET /residences?buildingCode=${buildingCode}${
+          staircaseCode ? `&staircaseCode=${staircaseCode}` : ''
+        }`,
+        metadata
       )
 
-      ctx.status = 200
-      ctx.body = {
-        content: ResidenceSchema.array().parse(responseContent),
-        ...metadata,
+      try {
+        let dbResidences
+
+        if (staircaseCode) {
+          dbResidences = await getResidencesByBuildingCodeAndStaircaseCode(
+            buildingCode,
+            staircaseCode
+          )
+        } else {
+          dbResidences = await getResidencesByBuildingCode(buildingCode)
+        }
+
+        const responseContent = dbResidences.map(
+          (v): Residence => ({
+            code: v.code,
+            id: v.id,
+            name: v.name || '',
+            deleted: Boolean(v.deleted),
+            validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
+          })
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: ResidenceSchema.array().parse(responseContent),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'residences route error')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      logger.error({ err }, 'residences route error')
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger

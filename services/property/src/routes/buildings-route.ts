@@ -13,6 +13,7 @@ import {
   searchBuildings,
 } from '../adapters/building-adapter'
 import { buildingsQueryParamsSchema, BuildingSchema } from '../types/building'
+import { parseRequest } from '../middleware/parse-request'
 
 /**
  * @swagger
@@ -57,62 +58,61 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get(['(.*)/buildings', '(.*)/buildings/'], async (ctx) => {
-    const queryParams = buildingsQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    ['(.*)/buildings', '(.*)/buildings/'],
+    parseRequest({
+      query: buildingsQueryParamsSchema,
+    }),
+    async (ctx) => {
+      const { propertyCode } = ctx.request.parsedQuery
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
+      const metadata = generateRouteMetadata(ctx)
+      logger.info(`GET /buildings?propertyCode=${propertyCode}`, metadata)
 
-    const { propertyCode } = queryParams.data
+      try {
+        const buildings = await getBuildings(propertyCode)
 
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /buildings?propertyCode=${propertyCode}`, metadata)
+        const responseContent = buildings.map((building) => {
+          const parsedBuilding = BuildingSchema.parse({
+            id: building.id,
+            code: building.buildingCode,
+            name: building.name || '',
+            buildingType: {
+              id: building.buildingType?.id || '',
+              code: building.buildingType?.code || '',
+              name: building.buildingType?.name || '',
+            },
+            construction: {
+              constructionYear: building.constructionYear,
+              renovationYear: building.renovationYear,
+              valueYear: building.valueYear,
+            },
+            features: {
+              heating: building.heating || '',
+              fireRating: building.fireRating || '',
+            },
+            insurance: {
+              class: building.insuranceClass,
+              value: building.insuranceValue,
+            },
+            deleted: Boolean(building.deleteMark),
+          })
 
-    try {
-      const buildings = await getBuildings(propertyCode)
-
-      const responseContent = buildings.map((building) => {
-        const parsedBuilding = BuildingSchema.parse({
-          id: building.id,
-          code: building.buildingCode,
-          name: building.name || '',
-          buildingType: {
-            id: building.buildingType?.id || '',
-            code: building.buildingType?.code || '',
-            name: building.buildingType?.name || '',
-          },
-          construction: {
-            constructionYear: building.constructionYear,
-            renovationYear: building.renovationYear,
-            valueYear: building.valueYear,
-          },
-          features: {
-            heating: building.heating || '',
-            fireRating: building.fireRating || '',
-          },
-          insurance: {
-            class: building.insuranceClass,
-            value: building.insuranceValue,
-          },
-          deleted: Boolean(building.deleteMark),
+          return parsedBuilding
         })
 
-        return parsedBuilding
-      })
-
-      ctx.body = {
-        content: responseContent,
-        ...metadata,
+        ctx.body = {
+          content: responseContent,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -154,55 +154,52 @@ export const routes = (router: KoaRouter) => {
     q: z.string().min(3),
   })
 
-  router.get('(.*)/buildings/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const queryParams = BuildingSearchQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    '(.*)/buildings/search',
+    parseRequest({ query: BuildingSearchQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const buildings = await searchBuildings(ctx.request.parsedQuery.q)
+        const responseContent = buildings.map(
+          (b): z.infer<typeof BuildingSchema> => ({
+            id: b.id,
+            code: b.buildingCode,
+            name: b.name || '',
+            buildingType: {
+              id: b.buildingType?.id || '',
+              code: b.buildingType?.code || '',
+              name: b.buildingType?.name || '',
+            },
+            construction: {
+              constructionYear: b.constructionYear,
+              renovationYear: b.renovationYear,
+              valueYear: b.valueYear,
+            },
+            features: {
+              heating: b.heating || '',
+              fireRating: b.fireRating || '',
+            },
+            insurance: {
+              class: b.insuranceClass,
+              value: b.insuranceValue,
+            },
+            deleted: Boolean(b.deleteMark),
+          })
+        )
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
-
-    try {
-      const buildings = await searchBuildings(queryParams.data.q)
-      const responseContent = buildings.map(
-        (b): z.infer<typeof BuildingSchema> => ({
-          id: b.id,
-          code: b.buildingCode,
-          name: b.name || '',
-          buildingType: {
-            id: b.buildingType?.id || '',
-            code: b.buildingType?.code || '',
-            name: b.buildingType?.name || '',
-          },
-          construction: {
-            constructionYear: b.constructionYear,
-            renovationYear: b.renovationYear,
-            valueYear: b.valueYear,
-          },
-          features: {
-            heating: b.heating || '',
-            fireRating: b.fireRating || '',
-          },
-          insurance: {
-            class: b.insuranceClass,
-            value: b.insuranceValue,
-          },
-          deleted: Boolean(b.deleteMark),
-        })
-      )
-
-      ctx.body = {
-        content: responseContent,
-        ...metadata,
+        ctx.body = {
+          content: responseContent,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger

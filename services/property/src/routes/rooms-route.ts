@@ -3,6 +3,7 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { getRoomById, getRooms } from '../adapters/room-adapter'
 import { roomsQueryParamsSchema } from '../types/room'
 import { generateMetaLinks } from '../utils/links'
+import { parseRequest } from '../middleware/parse-request'
 
 /**
  * @swagger
@@ -56,36 +57,34 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get(['(.*)/rooms'], async (ctx) => {
-    const queryParams = roomsQueryParamsSchema.safeParse(ctx.query)
+  router.get(
+    ['(.*)/rooms'],
+    parseRequest({ query: roomsQueryParamsSchema }),
+    async (ctx) => {
+      const { buildingCode, staircaseCode, residenceCode } =
+        ctx.request.parsedQuery
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
-      return
-    }
+      const metadata = generateRouteMetadata(ctx)
+      logger.info(
+        `GET /rooms?buildingCode=${buildingCode}&staircaseCode=${staircaseCode}&residenceCode=${residenceCode}`,
+        metadata
+      )
 
-    const { buildingCode, staircaseCode, residenceCode } = queryParams.data
+      try {
+        const rooms = await getRooms(buildingCode, staircaseCode, residenceCode)
 
-    const metadata = generateRouteMetadata(ctx)
-    logger.info(
-      `GET /rooms?buildingCode=${buildingCode}&staircaseCode=${staircaseCode}&residenceCode=${residenceCode}`,
-      metadata
-    )
-
-    try {
-      const rooms = await getRooms(buildingCode, staircaseCode, residenceCode)
-
-      ctx.body = {
-        content: rooms,
-        ...metadata,
+        ctx.body = {
+          content: rooms,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
       }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
