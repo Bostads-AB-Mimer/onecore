@@ -86,6 +86,7 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
       energyReceived: z.date().optional(),
       energyIndex: z.number().optional(),
     }),
+    rentalId: z.string().nullable(),
   }),
 })
 
