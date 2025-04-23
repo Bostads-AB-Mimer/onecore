@@ -1,6 +1,6 @@
 import assert from 'node:assert'
 
-import { createOrUpdateApplicationProfile } from '../update-or-create-application-profile'
+import { createOrUpdateApplicationProfile } from '../create-or-update-application-profile'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import * as factory from './factories'
 import { withContext } from './testUtils'

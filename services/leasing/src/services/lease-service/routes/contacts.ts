@@ -18,7 +18,7 @@ import {
 import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { createOrUpdateApplicationProfile } from '../update-or-create-application-profile'
+import { createOrUpdateApplicationProfile } from '../create-or-update-application-profile'
 
 /**
  * @swagger
