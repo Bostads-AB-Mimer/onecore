@@ -831,7 +831,7 @@ export interface components {
       errorReportAdministration: number;
       mediaBilling: number;
       ownResponsibilityForInternalMaintenance: number;
-      subletPercentage: unknown;
+      subletPercentage: number;
       subletFeeAmount: number;
       disableQuantitiesBelowCompany: number;
       timestamp: string;

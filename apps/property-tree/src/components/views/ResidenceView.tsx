@@ -10,7 +10,7 @@ import { StatCard } from '../shared/StatCard'
 import { residenceService } from '@/services/api'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/Badge'
-import { workOrderService } from '@/services/api/core/workOrderService'
+import { ResidenceWorkOrders } from '../shared/ResidenceWorkOrders'
 
 function LoadingSkeleton() {
   return (
@@ -56,15 +56,6 @@ export function ResidenceView() {
     enabled: !!residenceId,
   })
 
-  const workOrdersQuery = useQuery({
-    queryKey: ['residence_work_orders', residenceId],
-    queryFn: () =>
-      workOrderService.getWorkOrdersForResidence(
-        residenceQuery.data!.propertyObject.rentalId!
-      ),
-    enabled: !!residenceQuery.data?.propertyObject.rentalId,
-  })
-
   const buildingCode = state?.buildingCode
   const staircaseCode = state?.staircaseCode
 
@@ -85,8 +76,6 @@ export function ResidenceView() {
       </div>
     )
   }
-
-  console.log(workOrdersQuery.data)
 
   return (
     <div className="p-8 animate-in">
@@ -289,6 +278,10 @@ export function ResidenceView() {
             buildingCode={buildingCode}
             staircaseCode={staircaseCode}
           />
+
+          {residence.propertyObject.rentalId && (
+            <ResidenceWorkOrders rentalId={residence.propertyObject.rentalId} />
+          )}
         </div>
 
         <div className="space-y-6">

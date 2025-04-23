@@ -1973,11 +1973,11 @@ export interface components {
       RentalObjectCode: string;
       Status: string;
       UseMasterKey: boolean;
-      WorkOrderRows: {
-          Description: string;
-          LocationCode: string;
-          EquipmentCode: string;
-        }[];
+      WorkOrderRows: ({
+          Description: string | null;
+          LocationCode: string | null;
+          EquipmentCode: string | null;
+        })[];
       Messages?: {
           id: number;
           body: string;
@@ -1986,6 +1986,7 @@ export interface components {
           /** Format: date-time */
           createDate: string;
         }[];
+      Url?: string;
     };
     Company: {
       id: string;
