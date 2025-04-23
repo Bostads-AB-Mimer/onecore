@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.7.1...v3.8.0) (2025-04-23)
+
+
+### Features
+
+* MIM-492: visa arenden for lagenhet i property tree ([#170](https://github.com/Bostads-AB-Mimer/onecore-types/issues/170)) ([b460a90](https://github.com/Bostads-AB-Mimer/onecore-types/commit/b460a90676f9e86289ffd9140321f8c68a54a977))
+
 ## [3.7.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.7.0...v3.7.1) (2025-04-08)
 
 
