@@ -24,16 +24,18 @@ export async function createOrUpdateApplicationProfile(
     contactCode
   )
 
-  if (params.housingReference.expiresAt === null) {
-    if (existingProfile.ok) {
-      if (
-        existingProfile.data.housingReference.reviewStatus !==
-          params.housingReference.reviewStatus ||
-        existingProfile.data.housingType !== params.housingType
-      ) {
-        params.housingReference.expiresAt = addMonths(new Date(), 6)
-      }
-    } else {
+  if (!existingProfile.ok) {
+    params.expiresAt = addMonths(new Date(), 6)
+    params.housingReference.expiresAt = addMonths(new Date(), 6)
+  } else {
+    const hasUpdatedHousingReferenceReviewStatus =
+      existingProfile.data.housingReference.reviewStatus !==
+      params.housingReference.reviewStatus
+
+    const hasUpdatedHousingType =
+      existingProfile.data.housingType !== params.housingType
+
+    if (hasUpdatedHousingReferenceReviewStatus || hasUpdatedHousingType) {
       params.housingReference.expiresAt = addMonths(new Date(), 6)
     }
   }
