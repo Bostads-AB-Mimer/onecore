@@ -12,7 +12,7 @@ type Params = z.infer<
 
 type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
 
-export async function updateOrCreateApplicationProfile(
+export async function createOrUpdateApplicationProfile(
   db: Knex,
   contactCode: string,
   params: Params

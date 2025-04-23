@@ -190,7 +190,7 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
   it('updates application profile', async () => {
     jest
-      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .spyOn(applicationProfileService, 'createOrUpdateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
         data: ['updated', factories.applicationProfile.build()],
@@ -219,7 +219,7 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
   it('creates if non-existent', async () => {
     jest
-      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .spyOn(applicationProfileService, 'createOrUpdateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
         data: ['created', factories.applicationProfile.build()],

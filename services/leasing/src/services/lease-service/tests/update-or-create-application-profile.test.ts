@@ -1,15 +1,15 @@
 import assert from 'node:assert'
 
-import { updateOrCreateApplicationProfile } from '../update-or-create-application-profile'
+import { createOrUpdateApplicationProfile } from '../update-or-create-application-profile'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import * as factory from './factories'
 import { withContext } from './testUtils'
 
-describe(updateOrCreateApplicationProfile.name, () => {
+describe(createOrUpdateApplicationProfile.name, () => {
   describe('when no profile exists ', () => {
     it('creates application profile and housing reference', () =>
       withContext(async ({ db }) => {
-        const res = await updateOrCreateApplicationProfile(db, '1234', {
+        const res = await createOrUpdateApplicationProfile(db, '1234', {
           expiresAt: new Date(),
           numAdults: 1,
           numChildren: 1,
@@ -56,7 +56,7 @@ describe(updateOrCreateApplicationProfile.name, () => {
         )
         assert(existingProfile.ok)
 
-        const res = await updateOrCreateApplicationProfile(
+        const res = await createOrUpdateApplicationProfile(
           db,
           existingProfile.data.contactCode,
           {
