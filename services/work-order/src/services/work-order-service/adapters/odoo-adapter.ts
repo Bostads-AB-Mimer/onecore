@@ -81,9 +81,12 @@ const MESSAGE_FIELDS: string[] = [
   'create_date',
 ]
 
+const WorkOrderUrl = (workOrderId: number): string =>
+  `${Config.odoo.url}/web#id=${workOrderId}&model=maintenance.request&view_type=form`
+
 export const getWorkOrderByResidenceId = async (
   residenceId: string
-): Promise<any> => {
+): Promise<WorkOrder[]> => {
   try {
     await odoo.connect()
 
@@ -106,6 +109,7 @@ export const getWorkOrderByResidenceId = async (
       Messages: transformMessages(
         messagesById[workOrder.id]
       ) as WorkOrderMessage[],
+      Url: WorkOrderUrl(workOrder.id),
     }))
 
     return workOrders

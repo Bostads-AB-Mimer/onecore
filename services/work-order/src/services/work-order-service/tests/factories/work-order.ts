@@ -4,10 +4,45 @@ import {
   CreateWorkOrderDetails,
   OdooWorkOrder,
   OdooWorkOrderMessage,
+  WorkOrder,
 } from 'onecore-types'
 import { RentalPropertyInfoFactory } from './rental-property-info'
 import { TenantFactory } from './tenant'
 import { LeaseFactory } from './lease'
+
+export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
+  AccessCaption: 'Huvudnyckel',
+  Caption: `Work Order ${sequence}`,
+  Code: `WO-${sequence}`,
+  ContactCode: `C-${sequence}`,
+  Description: 'This is a work order description.',
+  DetailsCaption: 'Details about the work order',
+  ExternalResource: false,
+  Id: `${sequence}`,
+  LastChanged: new Date().toISOString(),
+  Priority: 'High',
+  Registered: new Date().toISOString(),
+  RentalObjectCode: `RO-${sequence}`,
+  Status: 'Resurs tilldelad',
+  UseMasterKey: false,
+  WorkOrderRows: [
+    {
+      Description: 'Row description',
+      LocationCode: 'LOC1',
+      EquipmentCode: 'EQ1',
+    },
+  ],
+  Messages: [
+    {
+      id: sequence,
+      body: 'Message body',
+      author: 'Author Name',
+      messageType: 'from_tenant',
+      createDate: new Date().toISOString(),
+    },
+  ],
+  Url: `https://example.com/work-order/${sequence}`,
+}))
 
 export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
   ({ sequence }) => ({
