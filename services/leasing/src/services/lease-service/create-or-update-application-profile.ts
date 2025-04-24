@@ -25,18 +25,30 @@ export async function createOrUpdateApplicationProfile(
   )
 
   if (!existingProfile.ok) {
+    // A new profile is created with expiresAt set to 6 months from now
     params.expiresAt = addMonths(new Date(), 6)
     params.housingReference.expiresAt = addMonths(new Date(), 6)
   } else {
-    const hasUpdatedHousingReferenceReviewStatus =
+    const hasUpdatedHousingReference =
       existingProfile.data.housingReference.reviewStatus !==
-      params.housingReference.reviewStatus
-
-    const hasUpdatedHousingType =
+        params.housingReference.reviewStatus ||
       existingProfile.data.housingType !== params.housingType
 
-    if (hasUpdatedHousingReferenceReviewStatus || hasUpdatedHousingType) {
+    if (hasUpdatedHousingReference) {
       params.housingReference.expiresAt = addMonths(new Date(), 6)
+    }
+
+    const hasUpdatedApplicationProfile =
+      params.housingType !== existingProfile.data.housingType ||
+      params.housingTypeDescription !==
+        existingProfile.data.housingTypeDescription ||
+      params.landlord !== existingProfile.data.landlord ||
+      params.numAdults !== existingProfile.data.numAdults ||
+      params.numChildren !== existingProfile.data.numChildren ||
+      params.lastUpdatedAt !== existingProfile.data.lastUpdatedAt
+
+    if (hasUpdatedApplicationProfile) {
+      params.expiresAt = addMonths(new Date(), 6)
     }
   }
 
