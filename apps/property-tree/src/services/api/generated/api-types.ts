@@ -618,6 +618,11 @@ export interface components {
         value: number | null;
       };
       deleted: boolean;
+      property?: ({
+        name: string | null;
+        code: string;
+        id: string;
+      }) | null;
     };
     Component: {
       id: string;

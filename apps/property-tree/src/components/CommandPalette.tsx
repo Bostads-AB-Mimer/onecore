@@ -9,8 +9,9 @@ import {
   ArrowRight,
   User2,
   Loader2,
-  Building,
+  Building as BuildingIcon,
 } from 'lucide-react'
+import { match } from 'ts-pattern'
 
 import { useSearch } from './hooks/useSearch'
 import { useCommandPalette } from './hooks/useCommandPalette'
@@ -26,7 +27,7 @@ const routeMap = {
 const iconMap = {
   area: MapPin,
   property: Building2,
-  building: Building,
+  building: BuildingIcon,
   entrance: Home,
   apartment: Home,
   tenant: User2,
@@ -107,7 +108,7 @@ export function CommandPalette() {
                 type="text"
                 onChange={(e) => onSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Sök efter fastigheter, lägenheter eller hyresgäster..."
+                placeholder="Sök efter fastigheter, bostäder eller lägenheter..."
                 className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400"
               />
             </div>
@@ -134,35 +135,47 @@ export function CommandPalette() {
               )}
               {searchQuery.data?.length && (
                 <div className="p-2">
-                  {searchQuery.data.map((item, index) => {
-                    const Icon = iconMap[item.type] || Home
-                    return (
-                      <motion.button
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`
-                          w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm
-                          ${
+                  {searchQuery.data.map((item, index) =>
+                    match(item)
+                      .with({ type: 'building' }, (v) => (
+                        <Building
+                          key={v.id}
+                          name={v.name}
+                          property={v.property}
+                          className={
                             selectedIndex === index
                               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
-                        `}
-                        onClick={() => {
-                          const basePath = routeMap[item.type]
-                          if (basePath) {
-                            navigate(`${basePath}/${item.id}`)
-                            close()
+                          onClick={() => {
+                            const basePath = routeMap[v.type]
+                            if (basePath) {
+                              navigate(`${basePath}/${v.id}`)
+                              close()
+                            }
+                          }}
+                        />
+                      ))
+                      .with({ type: 'property' }, (v) => (
+                        <Property
+                          key={v.id}
+                          name={v.name}
+                          className={
+                            selectedIndex === index
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
-                        }}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="flex-1 text-left">{item.name}</span>
-                        <ArrowRight className="h-4 w-4 opacity-50" />
-                      </motion.button>
-                    )
-                  })}
+                          onClick={() => {
+                            const basePath = routeMap[v.type]
+                            if (basePath) {
+                              navigate(`${basePath}/${v.id}`)
+                              close()
+                            }
+                          }}
+                        />
+                      ))
+                      .exhaustive()
+                  )}
                 </div>
               )}
             </div>
@@ -170,5 +183,55 @@ export function CommandPalette() {
         </>
       )}
     </AnimatePresence>
+  )
+}
+
+function Building(props: {
+  name: string
+  property?: { id: string; name: string | null; code: string } | null
+  className?: string
+  onClick: () => void
+}) {
+  const Icon = iconMap.building
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`
+        w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm
+        ${props.className}
+      `}
+      onClick={props.onClick}
+    >
+      <Icon className="h-4 w-4" />
+      {props.property && (
+        <span className="text-xs text-gray-400">{props.property.name}</span>
+      )}
+      <span className="flex-1 text-left">{props.name}</span>
+      <ArrowRight className="h-4 w-4 opacity-50" />
+    </motion.button>
+  )
+}
+
+function Property(props: {
+  name: string
+  className?: string
+  onClick: () => void
+}) {
+  const Icon = iconMap.property
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`
+        w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm
+        ${props.className}
+      `}
+      onClick={props.onClick}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="flex-1 text-left">{props.name}</span>
+      <ArrowRight className="h-4 w-4 opacity-50" />
+    </motion.button>
   )
 }
