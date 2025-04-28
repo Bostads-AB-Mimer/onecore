@@ -66,7 +66,7 @@ export async function create(
           comment: params.housingReference.comment,
           reasonRejected: params.housingReference.reasonRejected,
           reviewedAt: params.housingReference.reviewedAt,
-          reviewedBy: 'not-implemented',
+          reviewedBy: params.housingReference.reviewedBy,
           expiresAt: params.housingReference.expiresAt,
         })
         .into('application_profile_housing_reference')
@@ -168,6 +168,7 @@ export async function update(
           comment: params.housingReference.comment,
           reasonRejected: params.housingReference.reasonRejected,
           reviewedAt: params.housingReference.reviewedAt,
+          reviewedBy: params.housingReference.reviewedBy,
           expiresAt: params.housingReference.expiresAt,
         })
         .where({ applicationProfileId: profile.id })
