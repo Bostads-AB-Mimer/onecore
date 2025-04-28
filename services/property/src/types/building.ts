@@ -29,6 +29,9 @@ export const BuildingSchema = z.object({
     value: z.number().nullable(),
   }),
   deleted: z.boolean(),
+  property: z
+    .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
+    .nullish(),
 })
 
 export type Building = z.infer<typeof BuildingSchema>

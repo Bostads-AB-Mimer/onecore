@@ -185,6 +185,7 @@ export const routes = (router: KoaRouter) => {
               value: b.insuranceValue,
             },
             deleted: Boolean(b.deleteMark),
+            property: b.property,
           })
         )
 
