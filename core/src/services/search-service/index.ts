@@ -100,6 +100,7 @@ export const routes = (router: KoaRouter) => {
         id: building.id,
         type: 'building',
         name: building.name,
+        property: building.property,
       })
     )
 

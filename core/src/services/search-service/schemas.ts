@@ -10,6 +10,16 @@ export const BuildingSearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('building').describe('Indicates this is a building result'),
   name: z.string().describe('Name of the building'),
+  property: z
+    .object({
+      name: z
+        .string()
+        .describe('Property associated with the building')
+        .nullable(),
+      id: z.string(),
+      code: z.string(),
+    })
+    .nullish(),
 })
 
 export const SearchResultSchema = z
