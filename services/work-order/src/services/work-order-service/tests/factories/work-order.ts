@@ -42,6 +42,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
     },
   ],
   Url: `https://example.com/work-order/${sequence}`,
+  HiddenFromMyPages: false,
 }))
 
 export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
@@ -60,6 +61,7 @@ export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
     create_date: new Date().toDateString(),
     write_date: new Date().toDateString(),
     stage_id: [1, 'Ny Begäran'],
+    hidden_from_my_pages: false,
     name: '',
   })
 )

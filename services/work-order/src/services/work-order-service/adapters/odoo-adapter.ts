@@ -51,6 +51,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'write_date',
   'stage_id',
   'phone_number',
+  'hidden_from_my_pages',
   'maintenance_unit_code',
   'maintenance_unit_caption',
 ]
