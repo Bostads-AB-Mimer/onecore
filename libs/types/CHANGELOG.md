@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.8.0...v3.9.0) (2025-04-29)
+
+
+### Features
+
+* MIM-422 - Add new field "hidden_from_my_pages" to OdooWorkOrder type ([#169](https://github.com/Bostads-AB-Mimer/onecore-types/issues/169)) ([cb7428c](https://github.com/Bostads-AB-Mimer/onecore-types/commit/cb7428c1e0c9630f7ddf3c2c1300469ab8643c8e))
+
 ## [3.8.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.7.1...v3.8.0) (2025-04-23)
 
 
