@@ -42,6 +42,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
     },
   ],
   Url: `https://example.com/work-order/${sequence}`,
+  HiddenFromMyPages: false,
 }))
 
 export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
