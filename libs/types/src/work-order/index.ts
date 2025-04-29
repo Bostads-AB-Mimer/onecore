@@ -21,6 +21,7 @@ interface WorkOrder {
     EquipmentCode: string | null
   }[]
   Messages?: WorkOrderMessage[]
+  HiddenFromMyPages: boolean
   Url?: string
 }
 
@@ -87,6 +88,7 @@ interface OdooWorkOrder {
   create_date: string
   write_date: string
   stage_id: [number, string]
+  hidden_from_my_pages: boolean
 }
 
 interface OdooWorkOrderMessage {
