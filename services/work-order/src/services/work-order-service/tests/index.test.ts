@@ -30,8 +30,8 @@ app.use(router.routes())
 describe('work-order-service index', () => {
   describe('GET /workOrders/residenceId/{residenceId}', () => {
     const residenceId = '123-123-123'
-    const workOrderMock: OdooWorkOrder[] = factory.odooWorkOrder.buildList(4, {
-      rental_property_id: residenceId,
+    const workOrderMock = factory.workOrder.buildList(4, {
+      RentalObjectCode: residenceId,
     })
 
     beforeEach(() => {

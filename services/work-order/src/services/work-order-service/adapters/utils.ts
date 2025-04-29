@@ -74,9 +74,9 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     UseMasterKey: true, // NOTE: Should this always be true?
     WorkOrderRows: [
       {
-        Description: odooWorkOrder.description,
-        LocationCode: odooWorkOrder.space_code,
-        EquipmentCode: odooWorkOrder.equipment_code,
+        Description: odooWorkOrder.description || null,
+        LocationCode: odooWorkOrder.space_code || null,
+        EquipmentCode: odooWorkOrder.equipment_code || null,
       },
     ],
   }
