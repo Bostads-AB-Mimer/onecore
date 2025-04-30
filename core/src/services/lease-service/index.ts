@@ -20,6 +20,8 @@ import { makeAdminApplicationProfileRequestParams } from './helpers/application-
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
+import { routes as applicationProfileRoutesOld } from './application-profile-old'
+
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
 
@@ -54,6 +56,10 @@ const getLeasesWithRelatedEntitiesForPnr = async (
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  // TODO: Remove this once all routes are migrated to the new application
+  // profile (with housing references)
+  applicationProfileRoutesOld(router)
+
   /**
    * @swagger
    * /leases/for/{pnr}:
