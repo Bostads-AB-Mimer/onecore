@@ -4,6 +4,7 @@ import { map } from 'lodash'
 import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
+import { logger } from 'onecore-utilities'
 
 //todo: add types
 
@@ -127,4 +128,65 @@ export const getResidencesByBuildingCodeAndStaircaseCode = async (
       },
     })
     .then(trimStrings)
+}
+
+export type ResidenceSearchResult = Prisma.ResidenceGetPayload<{
+  include: {
+    propertyObject: {
+      include: {
+        propertyStructures: {
+          select: {
+            rentalId: true
+            propertyCode: true
+            propertyName: true
+            buildingCode: true
+            buildingName: true
+          }
+        }
+      }
+    }
+  }
+}>
+
+export const searchResidences = async (
+  q: string
+): Promise<Array<ResidenceSearchResult>> => {
+  try {
+    const result = await prisma.residence.findMany({
+      where: {
+        propertyObject: {
+          propertyStructures: { every: { rentalId: { contains: q } } },
+        },
+      },
+      include: {
+        propertyObject: {
+          include: {
+            propertyStructures: {
+              select: {
+                rentalId: true,
+                propertyCode: true,
+                propertyName: true,
+                buildingCode: true,
+                buildingName: true,
+              },
+              where: {
+                NOT: {
+                  rentalId: null,
+                  propertyCode: null,
+                  propertyName: null,
+                  buildingCode: null,
+                  buildingName: null,
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return trimStrings(result)
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.searchResidences')
+    throw err
+  }
 }
