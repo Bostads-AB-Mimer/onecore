@@ -15,6 +15,10 @@ export { WorkOrderFactory as workOrder } from './work-order'
 export { CreateWorkOrderFactory as createWorkOrder } from './work-order'
 export { CreateWorkOrderDetailsFactory as createWorkOrderDetails } from './work-order'
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
+export {
+  ApplicationProfileFactory as applicationProfile,
+  ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
+} from './application-profile'
 export { ResidenceFactory as residence } from './residence'
 export { ResidenceDetailsFactory as residenceDetails } from './residence-details'
 export { PropertyFactory as property } from './property'

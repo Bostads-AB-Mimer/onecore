@@ -19,8 +19,11 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
+
+import { routes as applicationProfileRoutesOld } from './application-profile-old'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -59,6 +62,10 @@ const getLeasesWithRelatedEntitiesForPnr = async (
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  // TODO: Remove this once all routes are migrated to the new application
+  // profile (with housing references)
+  applicationProfileRoutesOld(router)
+
   /**
    * @swagger
    * /leases/for/{pnr}:
@@ -1591,7 +1598,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contacts/{contactCode}/application-profile:
+   * /contacts/{contactCode}/application-profile/admin:
    *   post:
    *     summary: Creates or updates an application profile by contact code
    *     description: Create or update application profile information by contact code.
@@ -1641,8 +1648,146 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to update application profile information.
    */
 
+  type UpdateAdminApplicationProfileRequestParams = z.infer<
+    typeof schemas.admin.applicationProfile.UpdateApplicationProfileRequestParams
+  >
+
   router.post(
-    '(.*)/contacts/:contactCode/application-profile',
+    '(.*)/contacts/:contactCode/application-profile/admin',
+    parseRequestBody(
+      schemas.admin.applicationProfile.UpdateApplicationProfileRequestParams
+    ),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      // TODO: Something wrong with parseRequestBody types.
+      // Body should be inferred from middleware
+      const body = ctx.request
+        .body as UpdateAdminApplicationProfileRequestParams
+
+      const getApplicationProfile =
+        await leasingAdapter.getApplicationProfileByContactCode(
+          ctx.params.contactCode
+        )
+
+      if (
+        !getApplicationProfile.ok &&
+        getApplicationProfile.err !== 'not-found'
+      ) {
+        ctx.status = 500
+        ctx.body = { error: 'unknown', ...metadata }
+        return
+      }
+
+      const createOrUpdate =
+        await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
+          ctx.params.contactCode,
+          makeAdminApplicationProfileRequestParams(
+            body,
+            getApplicationProfile.ok ? getApplicationProfile.data : undefined
+          )
+        )
+
+      if (!createOrUpdate.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'unknown', ...metadata }
+        return
+      }
+
+      ctx.status = createOrUpdate.statusCode ?? 200
+      ctx.body = {
+        content:
+          schemas.admin.applicationProfile.UpdateApplicationProfileResponseData.parse(
+            createOrUpdate.data
+          ),
+        ...metadata,
+      }
+    }
+  )
+
+  type UpdateClientApplicationProfileRequestParams = z.infer<
+    typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
+  >
+
+  function makeClientApplicationProfileRequestParams(
+    body: UpdateClientApplicationProfileRequestParams,
+    existingProfile?: leasingAdapter.GetApplicationProfileResponseData
+  ): leasingAdapter.CreateOrUpdateApplicationProfileRequestParams {
+    return {
+      expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
+      numChildren: body.numChildren,
+      numAdults: body.numAdults,
+      housingType: body.housingType,
+      landlord: body.landlord,
+      housingTypeDescription: body.housingTypeDescription,
+      lastUpdatedAt: new Date(),
+      housingReference: {
+        comment: existingProfile?.housingReference.comment ?? null,
+        email: body.housingReference.email,
+        phone: body.housingReference.phone,
+        reviewedAt: existingProfile?.housingReference.reviewedAt ?? null,
+        reviewedBy: existingProfile?.housingReference.reviewedBy ?? null,
+        reasonRejected:
+          existingProfile?.housingReference.reasonRejected ?? null,
+        reviewStatus:
+          existingProfile?.housingReference.reviewStatus ?? 'PENDING',
+        expiresAt: existingProfile?.housingReference.expiresAt ?? null,
+      },
+    }
+  }
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/application-profile/client:
+   *   post:
+   *     summary: Creates or updates an application profile by contact code
+   *     description: Create or update application profile information by contact code.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code associated with the application profile.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *       properties:
+   *         numAdults:
+   *           type: number
+   *           description: Number of adults in the current housing.
+   *         numChildren:
+   *           type: number
+   *           description: Number of children in the current housing.
+   *     responses:
+   *       200:
+   *         description: Successfully updated application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       201:
+   *         description: Successfully created application profile.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The application profile data.
+   *       500:
+   *         description: Internal server error. Failed to update application profile information.
+   */
+  router.post(
+    '(.*)/contacts/:contactCode/application-profile/client',
     parseRequestBody(
       schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
     ),
@@ -1666,56 +1811,30 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 500
         ctx.body = { error: 'unknown', ...metadata }
         return
-      }
+      } else {
+        const createOrUpdate =
+          await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
+            ctx.params.contactCode,
+            makeClientApplicationProfileRequestParams(
+              body,
+              getApplicationProfile.ok ? getApplicationProfile.data : undefined
+            )
+          )
 
-      const expiresAt = dayjs(new Date()).add(6, 'months').toDate()
-      const housingReferenceParams: leasingAdapter.CreateOrUpdateApplicationProfileRequestParams['housingReference'] =
-        body.housingReference
-          ? {
-              email: body.housingReference.email,
-              expiresAt,
-              phone: body.housingReference.phone,
-              ...(getApplicationProfile.ok &&
-              getApplicationProfile.data.housingReference
-                ? {
-                    reviewStatus:
-                      getApplicationProfile.data.housingReference.reviewStatus,
-                    reviewStatusReason:
-                      getApplicationProfile.data.housingReference
-                        .reviewStatusReason,
-                    reviewedAt:
-                      getApplicationProfile.data.housingReference.reviewedAt,
-                  }
-                : {
-                    reviewStatus: 'pending',
-                    reviewStatusReason: null,
-                    reviewedAt: null,
-                  }),
-            }
-          : undefined
+        if (!createOrUpdate.ok) {
+          ctx.status = 500
+          ctx.body = { error: 'unknown', ...metadata }
+          return
+        }
 
-      const createOrUpdate =
-        await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
-          ctx.params.contactCode,
-          {
-            ...body,
-            expiresAt,
-            housingReference: housingReferenceParams,
-          }
-        )
-
-      if (!createOrUpdate.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'unknown', ...metadata }
-        return
-      }
-
-      ctx.status = createOrUpdate.statusCode ?? 200
-      ctx.body = {
-        content: createOrUpdate.data satisfies z.infer<
-          typeof schemas.client.applicationProfile.UpdateApplicationProfileResponseData
-        >,
-        ...metadata,
+        ctx.status = createOrUpdate.statusCode ?? 200
+        ctx.body = {
+          content:
+            schemas.client.applicationProfile.UpdateApplicationProfileResponseData.parse(
+              createOrUpdate.data
+            ),
+          ...metadata,
+        }
       }
     }
   )

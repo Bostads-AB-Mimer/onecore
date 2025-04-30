@@ -543,14 +543,7 @@ describe('lease-service', () => {
         .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
         .mockResolvedValueOnce({
           ok: true,
-          data: {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-          },
+          data: factory.applicationProfile.build(),
         })
 
       const res = await request(app.callback()).get(
@@ -566,10 +559,11 @@ describe('lease-service', () => {
     })
   })
 
-  describe('POST /contacts/:contactCode/application-profile', () => {
+  describe('POST /contacts/:contactCode/application-profile/admin', () => {
+    beforeEach(jest.resetAllMocks)
     it('responds with 400 if bad params', async () => {
       const res = await request(app.callback()).post(
-        '/contacts/1234/application-profile'
+        '/contacts/1234/application-profile/admin'
       )
 
       expect(res.status).toBe(400)
@@ -580,14 +574,7 @@ describe('lease-service', () => {
         .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
         .mockResolvedValueOnce({
           ok: true,
-          data: {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-          },
+          data: factory.applicationProfile.build(),
         })
 
       jest
@@ -597,23 +584,179 @@ describe('lease-service', () => {
         )
         .mockResolvedValueOnce({
           ok: true,
-          data: {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-          },
+          data: factory.applicationProfile.build(),
         })
 
       const res = await request(app.callback())
-        .post('/contacts/1234/application-profile')
+        .post('/contacts/1234/application-profile/admin')
+        .send(factory.applicationProfile.build())
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.admin.applicationProfile.UpdateApplicationProfileResponseData.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+    })
+
+    it('when profile information is updated, application profile lastUpdatedAt and expiresAt are updated', async () => {
+      const existingProfile = factory.applicationProfile.build({
+        numAdults: 2,
+        lastUpdatedAt: new Date('2021-01-01'),
+        expiresAt: new Date('2021-01-01'),
+      })
+
+      const updatedProfile = factory.applicationProfile.build({
+        ...existingProfile,
+        numAdults: 3,
+      })
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      const adapterSpy = jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: existingProfile,
+        })
+
+      const res = await request(app.callback())
+        .post(
+          `/contacts/${existingProfile.contactCode}/application-profile/admin`
+        )
+        .send(updatedProfile)
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.admin.applicationProfile.UpdateApplicationProfileResponseData.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+
+      const [[, updateParams]] = adapterSpy.mock.calls
+      expect(updateParams.lastUpdatedAt?.getTime()).toBeGreaterThan(
+        existingProfile.lastUpdatedAt?.getTime() as number
+      )
+
+      expect(updateParams.expiresAt?.getTime()).toBeGreaterThan(
+        existingProfile.expiresAt?.getTime() as number
+      )
+    })
+
+    it('when reviewed, application profile housing reference reviewedAt and expiresAt are updated', async () => {
+      const existingProfile = factory.applicationProfile.build({
+        numAdults: 2,
+        lastUpdatedAt: new Date('2021-01-01'),
+        expiresAt: new Date('2021-01-01'),
+        housingReference: {
+          reviewedAt: new Date('2021-01-01'),
+          expiresAt: new Date('2021-01-01'),
+          reviewStatus: 'PENDING',
+        },
+      })
+
+      const updatedProfile = factory.applicationProfile.build({
+        ...existingProfile,
+        housingReference: {
+          ...existingProfile.housingReference,
+          reviewStatus: 'REJECTED',
+        },
+      })
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: existingProfile,
+        })
+
+      const adapterSpy = jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      const res = await request(app.callback())
+        .post(
+          `/contacts/${existingProfile.contactCode}/application-profile/admin`
+        )
+        .send(updatedProfile)
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.admin.applicationProfile.UpdateApplicationProfileResponseData.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+
+      const [[, updateParams]] = adapterSpy.mock.calls
+      expect(
+        updateParams.housingReference.reviewedAt?.getTime()
+      ).toBeGreaterThan(
+        existingProfile.housingReference.reviewedAt?.getTime() as number
+      )
+
+      expect(
+        updateParams.housingReference.expiresAt?.getTime()
+      ).toBeGreaterThan(
+        existingProfile.housingReference.expiresAt?.getTime() as number
+      )
+    })
+  })
+
+  describe('POST /contacts/:contactCode/application-profile/client', () => {
+    beforeEach(jest.resetAllMocks)
+    it('responds with 400 if bad params', async () => {
+      const res = await request(app.callback()).post(
+        '/contacts/1234/application-profile/client'
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 200 and application profile', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      const res = await request(app.callback())
+        .post('/contacts/1234/application-profile/client')
         .send({
           numAdults: 0,
           numChildren: 0,
-          housingType: 'foo',
+          housingType: 'RENTAL',
           housingTypeDescription: 'bar',
+          landlord: null,
+          housingReference: {
+            email: null,
+            phone: null,
+            comment: null,
+          },
         })
 
       expect(res.status).toBe(200)
@@ -622,6 +765,67 @@ describe('lease-service', () => {
           res.body.content
         )
       ).not.toThrow()
+    })
+
+    it('when profile updates, updates lastUpdatedAt and expiresAt', async () => {
+      const existingProfile = factory.applicationProfile.build({
+        numAdults: 2,
+        lastUpdatedAt: new Date('2021-01-01'),
+        expiresAt: new Date('2021-01-01'),
+      })
+
+      const updatedProfile = factory.applicationProfile.build({
+        ...existingProfile,
+        numAdults: 3,
+      })
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: existingProfile,
+        })
+
+      const adapterSpy = jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      const res = await request(app.callback())
+        .post('/contacts/1234/application-profile/client')
+        .send({
+          numAdults: 0,
+          numChildren: 0,
+          housingType: 'RENTAL',
+          housingTypeDescription: 'bar',
+          landlord: null,
+          housingReference: {
+            email: null,
+            phone: null,
+            comment: null,
+          },
+        })
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.client.applicationProfile.UpdateApplicationProfileResponseData.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+
+      const [[, updateParams]] = adapterSpy.mock.calls
+      expect(updateParams.lastUpdatedAt?.getTime()).toBeGreaterThan(
+        existingProfile.lastUpdatedAt?.getTime() as number
+      )
+
+      expect(updateParams.expiresAt?.getTime()).toBeGreaterThan(
+        existingProfile.expiresAt?.getTime() as number
+      )
     })
   })
 })
@@ -647,14 +851,7 @@ describe('GET /contacts/:contactCode/:rentalObjectCode/verify-application', () =
       .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          contactCode: 'foo',
-          createdAt: new Date(),
-          expiresAt: new Date(),
-          id: 1,
-          numAdults: 0,
-          numChildren: 0,
-        },
+        data: factory.applicationProfile.build(),
       })
 
     jest
@@ -676,14 +873,10 @@ describe('GET /contacts/:contactCode/:rentalObjectCode/verify-application', () =
       .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          contactCode: '1234',
-          createdAt: new Date(),
-          expiresAt: null,
-          id: 1,
-          numAdults: 2,
-          numChildren: 2,
-        },
+        data: factory.applicationProfile.build({
+          numAdults: 3,
+          numChildren: 3,
+        }),
       })
 
     jest
@@ -708,14 +901,7 @@ describe('GET /contacts/:contactCode/:rentalObjectCode/verify-application', () =
       .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          contactCode: '1234',
-          createdAt: new Date(),
-          expiresAt: null,
-          id: 1,
-          numAdults: 2,
-          numChildren: 2,
-        },
+        data: factory.applicationProfile.build(),
       })
 
     jest
