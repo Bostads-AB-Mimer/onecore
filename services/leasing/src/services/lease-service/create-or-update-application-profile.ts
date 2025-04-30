@@ -27,16 +27,17 @@ export async function createOrUpdateApplicationProfile(
   if (!existingProfile.ok) {
     // A new profile is created with expiresAt set to 6 months from now
     params.expiresAt = addMonths(new Date(), 6)
-    params.housingReference.expiresAt = addMonths(new Date(), 6)
+    if (!params.housingReference.expiresAt) {
+      params.housingReference.expiresAt = addMonths(new Date(), 6)
+    }
   } else {
+    // If the profile already exists, we need to check if the housing reference
+    // or the application profile has been updated and update the expiresAts
+    // accordingly
     const hasUpdatedHousingReference =
       existingProfile.data.housingReference.reviewStatus !==
         params.housingReference.reviewStatus ||
       existingProfile.data.housingType !== params.housingType
-
-    if (hasUpdatedHousingReference) {
-      params.housingReference.expiresAt = addMonths(new Date(), 6)
-    }
 
     const hasUpdatedApplicationProfile =
       params.housingType !== existingProfile.data.housingType ||
@@ -44,12 +45,21 @@ export async function createOrUpdateApplicationProfile(
         existingProfile.data.housingTypeDescription ||
       params.landlord !== existingProfile.data.landlord ||
       params.numAdults !== existingProfile.data.numAdults ||
-      params.numChildren !== existingProfile.data.numChildren ||
-      params.lastUpdatedAt !== existingProfile.data.lastUpdatedAt
+      params.numChildren !== existingProfile.data.numChildren
 
     if (hasUpdatedApplicationProfile) {
       params.expiresAt = addMonths(new Date(), 6)
     }
+
+    // If housingReference.expiresAt is not set and the housingReference
+    // has been updated, we set it to 6 months from now
+    if (!params.housingReference.expiresAt) {
+      if (hasUpdatedHousingReference) {
+        params.housingReference.expiresAt = addMonths(new Date(), 6)
+      }
+    }
+
+    params.lastUpdatedAt = new Date()
   }
 
   const update = await applicationProfileAdapter.update(db, contactCode, params)
