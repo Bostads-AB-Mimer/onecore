@@ -1921,12 +1921,12 @@ export interface paths {
   "/search": {
     /**
      * Omni-search for different entities
-     * @description Search for properties, buildings, and more.
+     * @description Search for properties, buildings, and residences.
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query string */
+          /** @description The search query string. Matches on property name, building name or residence rental object id */
           q: string;
         };
       };
@@ -2129,7 +2129,7 @@ export interface components {
       timestamp: string;
     };
     SearchQueryParams: {
-      /** @description The search query string used to find properties and buildings */
+      /** @description The search query string used to find properties, buildings and residences */
       q: string;
     };
     PropertySearchResult: {
@@ -2160,7 +2160,30 @@ export interface components {
         code: string;
       }) | null;
     };
-    /** @description A search result that can be either a property or a building */
+    ResidenceSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a residence result
+       * @enum {string}
+       */
+      type: "residence";
+      /** @description Name of the residence */
+      name: string | null;
+      /** @description Rental object ID of the residence */
+      rentalId: string | null;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the residence */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the residence */
+        name: string | null;
+      };
+    };
+    /** @description A search result that can be either a property, building or residence */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -2187,6 +2210,28 @@ export interface components {
         id: string;
         code: string;
       }) | null;
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a residence result
+       * @enum {string}
+       */
+      type: "residence";
+      /** @description Name of the residence */
+      name: string | null;
+      /** @description Rental object ID of the residence */
+      rentalId: string | null;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the residence */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the residence */
+        name: string | null;
+      };
     });
   };
   responses: never;

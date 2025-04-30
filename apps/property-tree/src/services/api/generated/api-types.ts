@@ -83,6 +83,38 @@ export interface paths {
       };
     };
   };
+  "/residences/search": {
+    /**
+     * Search residences
+     * @description Retrieves a list of all real estate residences by rental object id.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The search query. */
+          q?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved list of residences. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/{id}": {
     /**
      * Get a residence by ID
@@ -593,6 +625,27 @@ export interface components {
           energyIndex?: number;
         };
         rentalId: string | null;
+      };
+    };
+    ResidenceSearchResult: {
+      id: string;
+      code: string;
+      name: string | null;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
+      rentalId: string | null;
+      property: {
+        code: string | null;
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
       };
     };
     Building: {
