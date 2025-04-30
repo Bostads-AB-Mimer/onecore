@@ -10,9 +10,11 @@ import {
   OfferWithOfferApplicants,
   ReplyToOfferErrorCodes,
   Tenant,
+  leasing,
+  schemas,
 } from 'onecore-types'
 import { AxiosError, HttpStatusCode } from 'axios'
-
+import { z } from 'zod'
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
 
@@ -140,6 +142,21 @@ const getTenantByContactCode = async (
       return { ok: false, err: err.response?.data?.type, statusCode: 500 }
     }
 
+    return { ok: false, err, statusCode: 500 }
+  }
+}
+
+const getContactByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, unknown>> => {
+  try {
+    const result = await getFromCore<{ content: Contact }>({
+      method: 'get',
+      url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
+    }).then((res) => res.data)
+
+    return { ok: true, data: result.content }
+  } catch (err) {
     return { ok: false, err, statusCode: 500 }
   }
 }
@@ -403,12 +420,88 @@ const getActiveOfferByListingId = async (
   }
 }
 
+type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
+
+enum GetApplicationProfileByContactCodeErrorCodes {
+  NotFound = 'not-found',
+  Unknown = 'unknown',
+}
+
+const getApplicationProfileByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<ApplicationProfile, unknown>> => {
+  try {
+    const {
+      data: { content: applicationProfile },
+    } = await getFromCore<{
+      content: ApplicationProfile
+    }>({
+      method: 'get',
+      url: `${coreBaseUrl}/contacts/${contactCode}/application-profile`,
+    })
+
+    return {
+      ok: true,
+      data: applicationProfile,
+    }
+  } catch (error) {
+    if (!(error instanceof AxiosError)) {
+      return {
+        ok: false,
+        err: GetApplicationProfileByContactCodeErrorCodes.Unknown,
+        statusCode: 500,
+      }
+    }
+    if (error.response?.status === 404) {
+      return {
+        ok: false,
+        err: GetApplicationProfileByContactCodeErrorCodes.NotFound,
+        statusCode: 404,
+      }
+    } else {
+      return {
+        ok: false,
+        err: GetApplicationProfileByContactCodeErrorCodes.Unknown,
+        statusCode: 500,
+      }
+    }
+  }
+}
+
+type CreateOrUpdateApplicationProfileRequestParams = z.infer<
+  typeof leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
+>
+
+type CreateOrUpdateApplicationProfileResponseData = z.infer<
+  typeof leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema
+>
+
+const createOrUpdateApplicationProfile = async (
+  contactCode: string,
+  profileCommand: CreateOrUpdateApplicationProfileRequestParams
+): Promise<
+  AdapterResult<CreateOrUpdateApplicationProfileResponseData, unknown>
+> => {
+  try {
+    const response = await getFromCore<any>({
+      method: 'post',
+      url: `${coreBaseUrl}/contacts/${contactCode}/application-profile/admin`,
+      data: profileCommand,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   getListingsWithApplicants,
   getListingWithApplicants,
   removeApplicant,
   getContactsDataBySearchQuery,
   getTenantByContactCode,
+  getContactByContactCode,
   createNoteOfInterestForInternalParkingSpace,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
@@ -419,4 +512,6 @@ export {
   acceptOffer,
   denyOffer,
   getActiveOfferByListingId,
+  getApplicationProfileByContactCode,
+  createOrUpdateApplicationProfile,
 }

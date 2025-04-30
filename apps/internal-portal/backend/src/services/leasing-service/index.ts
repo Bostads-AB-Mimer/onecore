@@ -65,7 +65,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/contact/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await coreAdapter.getTenantByContactCode(
+    const result = await coreAdapter.getContactByContactCode(
       ctx.params.contactCode
     )
 
@@ -309,6 +309,70 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = result.statusCode
       ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  router.get('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q'])
+
+    const [applicationProfileResult, contactResult] = await Promise.all([
+      coreAdapter.getApplicationProfileByContactCode(ctx.params.contactCode),
+      coreAdapter.getContactByContactCode(ctx.params.contactCode),
+    ])
+
+    let applicationProfile = null
+
+    // FIXME: Should status 404 not be allowed to be "ok" ?
+    if (!applicationProfileResult.ok) {
+      if (applicationProfileResult.statusCode != 404) {
+        ctx.status = applicationProfileResult.statusCode
+        ctx.body = { error: applicationProfileResult.err, ...metadata }
+        return
+      }
+    } else {
+      applicationProfile = applicationProfileResult.data
+    }
+
+    if (!contactResult.ok) {
+      ctx.status = contactResult.statusCode
+      ctx.body = { error: contactResult.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: {
+        applicationProfile,
+        contact: contactResult.data,
+      },
+      ...metadata,
+    }
+  })
+
+  router.put('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q'])
+
+    const result = await coreAdapter.createOrUpdateApplicationProfile(
+      ctx.params.contactCode,
+      {
+        ...ctx.request.body,
+        housingReference: {
+          ...ctx.request.body.housingReference,
+          reviewedBy: ctx.session?.account.name,
+        },
+      }
+    )
+
+    if (!result.ok) {
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
     }
   })
 }
