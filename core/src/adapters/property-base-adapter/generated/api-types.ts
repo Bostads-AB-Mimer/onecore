@@ -151,6 +151,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/residences/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search residences
+         * @description Retrieves a list of all real estate residences by rental object id.
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The search query. */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of residences. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["ResidenceSearchResult"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/residences/{id}": {
         parameters: {
             query?: never;
@@ -1002,6 +1061,27 @@ export interface components {
                     energyIndex?: number;
                 };
                 rentalId: string | null;
+            };
+        };
+        ResidenceSearchResult: {
+            id: string;
+            code: string;
+            name: string | null;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
+            rentalId: string | null;
+            property: {
+                code: string | null;
+                name: string | null;
+            };
+            building: {
+                code: string | null;
+                name: string | null;
             };
         };
         Building: {

@@ -56,6 +56,27 @@ export async function searchBuildings(
   }
 }
 
+type SearchResidencesResponse = components['schemas']['ResidenceSearchResult'][]
+
+export async function searchResidences(
+  q: string
+): Promise<AdapterResult<SearchResidencesResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/residences/search', {
+      params: { query: { q } },
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data.content ?? [] }
+    }
+
+    throw { ok: false, err: 'missing response data invariant' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchResidences')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetCompaniesResponse = components['schemas']['Company'][]
 
 export async function getCompanies(): Promise<

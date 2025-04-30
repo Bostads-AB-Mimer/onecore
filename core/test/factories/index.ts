@@ -24,3 +24,4 @@ export { ResidenceDetailsFactory as residenceDetails } from './residence-details
 export { PropertyFactory as property } from './property'
 export { PropertyDetailsFactory as propertyDetails } from './property-details'
 export { StaircaseFactory as staircase } from './staircase'
+export { ResidenceSearchResultFactory as residenceSearchResult } from './residence-search-result'
