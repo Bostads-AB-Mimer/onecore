@@ -113,6 +113,11 @@ const theme = createTheme({
       fontFamily: 'bisonBold',
       fontWeight: 900,
       paddingTop: 10,
+      'form &': {
+        fontSize: 20,
+        paddingLeft: 4,
+        paddingBottom: 7,
+      },
     },
     h3: {
       fontSize: 14,
@@ -149,7 +154,7 @@ export const mdTheme = createTheme(theme, {
     MuiRadio: {
       styleOverrides: {
         root: {
-          color: '#007BC4',
+          color: 'black',
           [`&.${radioClasses.checked}`]: {
             color: '#007BC4',
           },
@@ -164,13 +169,37 @@ export const mdTheme = createTheme(theme, {
           { '@font-face': graphikRegular },
           { '@font-face': graphikBold },
         ],
+        fieldset: {
+          border: 'none',
+          margin: 0,
+          padding: 0,
+        },
+        textarea: {
+          resize: 'none',
+          overflow: 'auto',
+          fontFamily: 'graphikRegular',
+          fontSize: 14,
+          padding: '8.5px 14px',
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        input: {
+          paddingTop: 8.5,
+          paddingBottom: 8.5,
+        },
       },
     },
     MuiDivider: {
       styleOverrides: {
         root: {
-          paddingTop: 7,
-          paddingBottom: 7,
+          marginTop: 7,
+          marginBottom: 7,
+          'form &': {
+            marginTop: '20px',
+            marginBottom: '20px',
+          },
         },
       },
     },
@@ -298,6 +327,7 @@ export const mdTheme = createTheme(theme, {
           padding: 8,
           paddingLeft: 0,
           paddingRight: 0,
+          fontSize: 14,
         },
       },
     },

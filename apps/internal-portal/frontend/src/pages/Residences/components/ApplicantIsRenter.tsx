@@ -1,3 +1,4 @@
+import React from 'react'
 import { Grid } from '@mui/material'
 
 import Landlord from './Form/Landlord'
@@ -7,7 +8,7 @@ import HousingReferencePhone from './Form/HousingReferencePhone'
 import HousingReferenceEmail from './Form/HousingReferenceEmail'
 
 const ApplicantIsRenter: React.FC = () => (
-  <Grid container spacing={2}>
+  <React.Fragment>
     <Grid item xs={12}>
       <Landlord />
     </Grid>
@@ -27,7 +28,7 @@ const ApplicantIsRenter: React.FC = () => (
     <Grid item xs={12}>
       <HousingReferenceEmail />
     </Grid>
-  </Grid>
+  </React.Fragment>
 )
 
 export default ApplicantIsRenter

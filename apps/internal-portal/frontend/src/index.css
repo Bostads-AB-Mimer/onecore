@@ -16,3 +16,8 @@ a {
   text-decoration: inherit;
   color: inherit;
 }
+
+.form-field-group {
+  padding-top: 5px;
+  padding-bottom: 20px;
+}

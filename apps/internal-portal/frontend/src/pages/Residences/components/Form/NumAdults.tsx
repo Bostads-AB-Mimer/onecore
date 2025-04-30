@@ -12,7 +12,7 @@ const NumAdults: React.FC = () => {
       defaultValue={1}
       render={({ field }) => (
         <FormControl fullWidth>
-          <Typography paddingBottom={1} variant="h2">
+          <Typography variant="h2">
             Antal vuxna i hushåll *
           </Typography>
 
@@ -22,6 +22,7 @@ const NumAdults: React.FC = () => {
             size="small"
             InputProps={{ inputProps: { min: 1 } }}
             {...field}
+            onChange={({ target }) => field.onChange(parseInt(target.value))}
           />
         </FormControl>
       )}

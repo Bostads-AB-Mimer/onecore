@@ -1,3 +1,4 @@
+// TODO: rename this file to ContactInformationForm.tsx
 import {
   Table,
   TableBody,
@@ -7,34 +8,34 @@ import {
 } from '@mui/material'
 import React from 'react'
 
-type CustomerInformationFormProps = {
-  name: string
-  socialSecurityNumber: string
-  customerNumber: string
-  phoneNumber: string
+type ContactInformationFormProps = {
+  fullName?: string
+  nationalRegistrationNumber?: string
+  contactCode?: string
+  phoneNumber?: string
 }
 
-const CustomerInformationForm = ({
-  name,
-  socialSecurityNumber,
-  customerNumber,
+const ContactInformationForm = ({
+  fullName,
+  nationalRegistrationNumber,
+  contactCode,
   phoneNumber,
-}: CustomerInformationFormProps) => (
+}: ContactInformationFormProps) => (
   <React.Fragment>
     <Typography variant="h1">Kundinformation</Typography>
     <Table>
       <TableBody>
         <TableRow>
           <TableCell>Namn</TableCell>
-          <TableCell align="right">{name}</TableCell>
+          <TableCell align="right">{fullName}</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>Personnummer</TableCell>
-          <TableCell align="right">{socialSecurityNumber}</TableCell>
+          <TableCell align="right">{nationalRegistrationNumber}</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>Kundnummer</TableCell>
-          <TableCell align="right">{customerNumber}</TableCell>
+          <TableCell align="right">{contactCode}</TableCell>
         </TableRow>
         <TableRow>
           <TableCell>Telefonnummer</TableCell>
@@ -45,4 +46,4 @@ const CustomerInformationForm = ({
   </React.Fragment>
 )
 
-export default CustomerInformationForm
+export default ContactInformationForm

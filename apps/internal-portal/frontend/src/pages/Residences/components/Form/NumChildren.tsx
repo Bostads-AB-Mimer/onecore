@@ -22,6 +22,7 @@ const NumChildren: React.FC = () => {
             size="small"
             InputProps={{ inputProps: { min: 0 } }}
             {...field}
+            onChange={({ target }) => field.onChange(parseInt(target.value))}
           />
         </FormControl>
       )}

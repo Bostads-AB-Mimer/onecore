@@ -15,7 +15,6 @@ const RejectedReason = () => {
       name="housingReference.reasonRejected"
       control={control}
       shouldUnregister
-      defaultValue=""
       rules={{
         required: { value: true, message: 'Du behöver välja en anledning' },
       }}

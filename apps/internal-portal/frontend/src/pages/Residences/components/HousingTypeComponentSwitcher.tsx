@@ -25,7 +25,7 @@ const HousingTypeComponentSwitcher = () => {
     OTHER: <ApplicantIsOther />,
   }
 
-  return components[housingType]
+  return components[housingType] || <ApplicantIsOwner />
 }
 
 export default HousingTypeComponentSwitcher

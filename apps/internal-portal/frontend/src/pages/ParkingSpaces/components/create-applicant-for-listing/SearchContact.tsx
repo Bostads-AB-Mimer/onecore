@@ -33,16 +33,6 @@ export const SearchContact = ({
 
   const handleSearch = useCallback(onSetSearchString, [onSetSearchString])
 
-  if (contactsQuery.error) {
-    return (
-      <Box paddingTop="1rem">
-        <Typography color="error">
-          Något gick fel. Försök igen eller kontakta support
-        </Typography>
-      </Box>
-    )
-  }
-
   return (
     <Box paddingTop="1rem">
       <Autocomplete<ContactSearchData>
@@ -94,6 +84,11 @@ export const SearchContact = ({
           },
         }}
       />
+      {contactsQuery.error && (
+        <Typography color="error" paddingTop="1rem">
+          Något gick fel. Försök igen eller kontakta support
+        </Typography>
+      )}
     </Box>
   )
 }

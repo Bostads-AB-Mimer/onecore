@@ -339,7 +339,7 @@ const filterListings = (
     )
 
     const containsNationalRegistrationNumber = l.applicants.some((a) =>
-      a.nationalRegistrationNumber.includes(q)
+      a.nationalRegistrationNumber?.includes(q)
     )
 
     return containsContactCode || containsNationalRegistrationNumber
