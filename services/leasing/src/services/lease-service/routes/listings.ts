@@ -91,8 +91,8 @@ export const routes = (router: KoaRouter) => {
   })
 
   const CreateApplicantRequestParamsSchema = z.object({
-    name: z.string(),
-    nationalRegistrationNumber: z.string(),
+    name: z.string().optional(),
+    nationalRegistrationNumber: z.string().optional(),
     contactCode: z.string(),
     applicationDate: z.coerce.date(),
     applicationType: z.string().optional(),

@@ -12,6 +12,10 @@ const residentialAreasWithSpecificRentalRules: ResidentialArea[] = [
     code: 'OXB',
     caption: 'Oxbacken',
   },
+  {
+    code: 'GRY',
+    caption: 'Gryta',
+  },
 ]
 
 const isListingInAreaWithSpecificRentalRules = (districtCode: string) => {

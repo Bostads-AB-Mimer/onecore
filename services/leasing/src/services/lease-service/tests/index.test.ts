@@ -8,6 +8,7 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import { leaseTypes } from '../../../constants/leaseTypes'
+import * as factory from './factories'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -283,47 +284,6 @@ describe('lease-service', () => {
       expect(xpandAdapterSpy).toHaveBeenCalled()
 
       expect(result.body).toEqual({ error: 'Oh no' })
-    })
-  })
-
-  describe('isLeaseActive', () => {
-    it('should return true if leaseStartDate is in the past and no lastDebitDate', () => {
-      const lease = leaseMock[0]
-      lease.leaseStartDate = new Date(Date.now() - 1000 * 60 * 60 * 24)
-      lease.lastDebitDate = undefined
-
-      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(true)
-    })
-
-    it('should return true if leaseStartDate is in the past and lastDebitDate is in the future', () => {
-      const lease = leaseMock[0]
-      lease.leaseStartDate = new Date(Date.now() - 1000 * 60 * 60 * 24)
-      lease.lastDebitDate = new Date(Date.now() + 1000 * 60 * 60 * 24)
-
-      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(true)
-    })
-
-    it('should return false if leaseStartDate is in the future', () => {
-      const lease = leaseMock[0]
-      lease.leaseStartDate = new Date(Date.now() + 1000 * 60 * 60 * 24)
-      lease.lastDebitDate = new Date(Date.now() + 2000 * 60 * 60 * 24)
-
-      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(false)
-    })
-
-    it('should return false if lastDebitDate is in the past', () => {
-      const lease = leaseMock[0]
-      lease.leaseStartDate = new Date(Date.now() - 1000 * 60 * 60 * 24)
-      lease.lastDebitDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 2)
-
-      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(false)
-    })
-
-    it('should return false if terminationDate is in the past', () => {
-      const lease = leaseMock[0]
-      lease.terminationDate = new Date(Date.now() - 1000 * 60 * 60 * 24)
-
-      expect(tenantLeaseAdapter.isLeaseActive(lease)).toBe(false)
     })
   })
 })

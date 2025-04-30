@@ -1,9 +1,7 @@
 import { Factory } from 'fishery'
-import { Tenant } from 'onecore-types'
+import { Contact } from 'onecore-types'
 
-import { LeaseFactory } from './lease'
-
-export const TenantFactory = Factory.define<Tenant>(() => ({
+export const ContactFactory = Factory.define<Contact>(() => ({
   address: undefined,
   birthDate: new Date(),
   contactCode: '123',
@@ -17,9 +15,4 @@ export const TenantFactory = Factory.define<Tenant>(() => ({
   queuePoints: 0,
   phoneNumbers: undefined,
   leaseIds: undefined,
-  currentHousingContract: undefined,
-  parkingSpaceContracts: undefined,
-  upcomingHousingContract: undefined,
-  housingContracts: [LeaseFactory.build()],
-  isAboutToLeave: false,
 }))

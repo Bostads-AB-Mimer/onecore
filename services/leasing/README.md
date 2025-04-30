@@ -11,7 +11,12 @@ Microservice for tenants and leases in ONECore.
 5. Use required version of node `nvm use`
 6. Install packages: `npm run install`
 7. Start database engine (SQL Server): `docker compose up -d &`
-8. Create a database called `tenants-leases`
+8. Create a database called `tenants-leases`:
+
+   ```sh
+    $ docker compose exec -i sql /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P $LEASING_DATABASE__PASSWORD -Q "CREATE DATABASE [tenants-leases];"
+    ```
+
 9. Create database structure: `npm run migrate:up`
 10. Create test data: `npm run seed`
 

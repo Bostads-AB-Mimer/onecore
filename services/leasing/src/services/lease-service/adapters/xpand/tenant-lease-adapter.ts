@@ -11,6 +11,12 @@ const db = knex({
   connection: Config.xpandDatabase,
 })
 
+interface GetLeasesOptions {
+  includeUpcomingLeases: boolean
+  includeTerminatedLeases: boolean
+  includeContacts: boolean
+}
+
 type PartialLease = {
   leaseId: Lease['leaseId']
   leaseStartDate: Lease['leaseStartDate']
@@ -90,6 +96,7 @@ const transformFromDbContact = (
         : 'redacted',
     isTenant: leases.length > 0,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
+    specialAttention: !!row.specialAttention,
   }
 
   return contact
@@ -117,8 +124,7 @@ const getLease = async (
 
 const getLeasesForNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: boolean,
-  includeContacts: boolean
+  options: GetLeasesOptions
 ) => {
   logger.info('Getting leases for national registration number from Xpand DB')
   const contact = await db
@@ -130,25 +136,23 @@ const getLeasesForNationalRegistrationNumber = async (
     })
     .limit(1)
 
-  if (contact != undefined) {
-    const leases = await getLeasesByContactKey(contact[0].contactKey)
+  if (contact != undefined && contact.length > 0) {
+    let leases = await getLeasesByContactKey(contact[0].contactKey)
 
     logger.info(
       'Getting leases for national registration number from Xpand DB complete'
     )
 
-    if (includeTerminatedLeases) {
-      return leases
-    }
+    leases = filterLeasesByOptions(leases, options)
 
-    if (includeContacts) {
+    if (options.includeContacts) {
       for (const lease of leases) {
         const tenants = await getContactsByLeaseId(lease.leaseId)
         lease.tenants = tenants
       }
     }
 
-    return leases.filter(isLeaseActive)
+    return leases
   }
 
   logger.info(
@@ -159,8 +163,7 @@ const getLeasesForNationalRegistrationNumber = async (
 
 const getLeasesForContactCode = async (
   contactCode: string,
-  includeTerminatedLeases: boolean,
-  includeContacts: boolean
+  options: GetLeasesOptions
 ): Promise<AdapterResult<Array<Lease>, unknown>> => {
   logger.info({ contactCode }, 'Getting leases for contact code from Xpand DB')
   try {
@@ -180,19 +183,18 @@ const getLeasesForContactCode = async (
         'Getting leases for contact code from Xpand DB complete'
       )
 
-      const leases = await getLeasesByContactKey(contact[0].contactKey)
-      if (includeTerminatedLeases) {
-        return { ok: true, data: leases }
-      }
+      let leases = await getLeasesByContactKey(contact[0].contactKey)
 
-      if (includeContacts) {
+      leases = filterLeasesByOptions(leases, options)
+
+      if (options.includeContacts) {
         for (const lease of leases) {
           const tenants = await getContactsByLeaseId(lease.leaseId)
           lease.tenants = tenants
         }
       }
 
-      return { ok: true, data: leases.filter(isLeaseActive) }
+      return { ok: true, data: leases }
     }
 
     logger.info(
@@ -209,10 +211,9 @@ const getLeasesForContactCode = async (
 
 const getLeasesForPropertyId = async (
   propertyId: string,
-  includeTerminatedLeases: boolean,
-  includeContacts: boolean
+  options: GetLeasesOptions
 ) => {
-  const leases: Lease[] = []
+  let leases: Lease[] = []
   const rows = await db
     .from('hyavk')
     .select(
@@ -234,18 +235,20 @@ const getLeasesForPropertyId = async (
     .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
 
   for (const row of rows) {
-    if (includeContacts) {
-      const tenants = await getContactsByLeaseId(row.leaseId)
-      leases.push(transformFromXPandDb.toLease(row, [], tenants))
-    } else {
-      leases.push(transformFromXPandDb.toLease(row, [], []))
-    }
-  }
-  if (includeTerminatedLeases) {
-    return leases
+    const lease = transformFromXPandDb.toLease(row, [], [])
+    leases.push(lease)
   }
 
-  return leases.filter(isLeaseActive)
+  leases = filterLeasesByOptions(leases, options)
+
+  if (options.includeContacts) {
+    for (const lease of leases) {
+      const tenants = await getContactsByLeaseId(lease.leaseId)
+      lease.tenants = tenants
+    }
+  }
+
+  return leases
 }
 
 const getResidentialAreaByRentalPropertyId = async (
@@ -361,7 +364,7 @@ const getContactByPhoneNumber = async (
   const keycmobj = await getContactForPhoneNumber(phoneNumber)
   if (keycmobj && keycmobj.length > 0) {
     const rows = await getContactQuery().where({
-      'cmobj.keycmobj': keycmobj[0].keycmobj,
+      'cmctc.keycmobj': keycmobj[0].keycmobj,
     })
 
     if (rows && rows.length > 0) {
@@ -413,12 +416,14 @@ const getContactQuery = () => {
       'cmctc.keycmctc as contactKey',
       'bkkty.bkktyben as queueName',
       'bkqte.quetime as queueTime',
-      'cmctc.lagsokt as protectedIdentity'
+      'cmctc.lagsokt as protectedIdentity',
+      'cmctc.utslag as specialAttention'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
     .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
     .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
+    .where('cmadr.tdate', null) //only get active addresss
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
@@ -521,15 +526,75 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-const isLeaseActive = (lease: Lease | PartialLease): boolean => {
-  const { leaseStartDate, lastDebitDate, terminationDate } = lease
-  const currentDate = new Date()
+// const isLeaseActive = (lease: Lease | PartialLease): boolean => {
+//   const { leaseStartDate } = lease
+//   const currentDate = new Date()
 
-  return (
-    leaseStartDate < currentDate &&
-    (!lastDebitDate || currentDate <= lastDebitDate) &&
-    (!terminationDate || currentDate < terminationDate)
-  )
+//   return leaseStartDate < currentDate
+// }
+
+// const isLeaseActiveOrUpcoming = (lease: Lease | PartialLease): boolean => {
+//   const { lastDebitDate, terminationDate } = lease
+//   const currentDate = new Date()
+
+//   return (
+//     (!lastDebitDate || currentDate <= lastDebitDate) &&
+//     (!terminationDate || currentDate < terminationDate)
+//   )
+// }
+
+const filterLeasesByOptions = (
+  leases: Array<Lease>,
+  options: GetLeasesOptions
+) => {
+  return leases.filter((lease) => {
+    if (options.includeTerminatedLeases && options.includeUpcomingLeases) {
+      return true
+    }
+
+    if (!options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+      return isLeaseActive(lease)
+    }
+
+    if (options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+      return isLeaseActive(lease) || isLeaseTerminated(lease)
+    }
+
+    if (!options.includeTerminatedLeases && options.includeUpcomingLeases) {
+      return isLeaseActive(lease) || isLeaseUpcoming(lease)
+    }
+
+    return false
+  })
+}
+
+const isLeaseActive = (lease: Lease | PartialLease): boolean => {
+  return !isLeaseUpcoming(lease) && !isLeaseTerminated(lease)
+}
+
+const isLeaseUpcoming = (lease: Lease | PartialLease): boolean => {
+  const { leaseStartDate } = lease
+  const currentDate = formatDate(new Date())
+
+  return currentDate < formatDate(leaseStartDate)
+}
+
+const isLeaseTerminated = (lease: Lease | PartialLease): boolean => {
+  const { lastDebitDate, terminationDate } = lease
+  const currentDate = formatDate(new Date())
+
+  const isLastDebitDatePassed = lastDebitDate
+    ? currentDate > formatDate(lastDebitDate)
+    : false
+  const isTerminationDatePassed = terminationDate
+    ? currentDate > formatDate(terminationDate)
+    : false
+
+  return isLastDebitDatePassed || isTerminationDatePassed
+}
+
+const formatDate = (date: Date) => {
+  return date.toISOString().split('T')[0]
 }
 
 export {
@@ -541,7 +606,10 @@ export {
   getContactByContactCode,
   getContactByPhoneNumber,
   getContactForPhoneNumber,
+  filterLeasesByOptions,
   isLeaseActive,
+  isLeaseUpcoming,
+  isLeaseTerminated,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   transformFromDbContact,

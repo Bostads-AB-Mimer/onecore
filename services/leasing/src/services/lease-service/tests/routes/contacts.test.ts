@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { leasing, WaitingListType } from 'onecore-types'
+import { leasing, Tenant, WaitingListType } from 'onecore-types'
 
 import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
@@ -10,6 +10,8 @@ import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
 import * as applicationProfileService from '../../create-or-update-application-profile'
 import * as factories from '../../tests/factories'
+import * as tenants from '../../get-tenant'
+import * as factory from '../factories'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -60,7 +62,7 @@ describe('GET /contacts/search', () => {
         .mockResolvedValue({ ok: true, data: undefined })
       jest
         .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
-        .mockResolvedValue()
+        .mockResolvedValue({ ok: true, data: undefined })
 
       const res = await request(app.callback())
         .post('/contacts/1234567890/waitingLists/reset')
@@ -77,13 +79,37 @@ describe('GET /contacts/search', () => {
       })
     })
 
-    it('returns status 404 upon not-in-waiting-list error from removeApplicantFromWaitingList', async () => {
+    it('returns status 200 upon not-in-waiting-list error from removeApplicantFromWaitingList', async () => {
       jest
         .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')
         .mockResolvedValue({ ok: false, err: 'not-in-waiting-list' })
       jest
         .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
-        .mockResolvedValue()
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback())
+        .post('/contacts/1234567890/waitingLists/reset')
+        .send({
+          contactCode: '123',
+          waitingListType: WaitingListType.ParkingSpace,
+        })
+
+      expect(res.status).toBe(200)
+    })
+
+    it('returns status 404 upon waiting-list-type-not-implemented error from removeApplicantFromWaitingList', async () => {
+      jest
+        .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')
+        .mockResolvedValue({
+          ok: false,
+          err: 'waiting-list-type-not-implemented',
+        })
+      jest
+        .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
+        .mockResolvedValue({
+          ok: false,
+          err: 'waiting-list-type-not-implemented',
+        })
 
       const res = await request(app.callback())
         .post('/contacts/1234567890/waitingLists/reset')
@@ -94,7 +120,7 @@ describe('GET /contacts/search', () => {
 
       expect(res.status).toBe(404)
       expect(res.body).toEqual({
-        error: 'Contact Not In Waiting List',
+        error: 'Waiting List Type not Implemented',
       })
     })
 
@@ -104,7 +130,7 @@ describe('GET /contacts/search', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
       jest
         .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
-        .mockResolvedValue()
+        .mockResolvedValue({ ok: true, data: undefined })
 
       const res = await request(app.callback())
         .post('/contacts/1234567890/waitingLists/reset')
@@ -244,5 +270,40 @@ describe('POST /contacts/:contactCode/application-profile', () => {
         res.body.content
       )
     ).not.toThrow()
+  })
+})
+
+describe('GET /tenants/contactCode/:contactCode', () => {
+  it('responds with 200 and a tenant', async () => {
+    const tenant = factory.tenant.build()
+
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: true,
+      data: tenant,
+    })
+
+    const res = await request(app.callback()).get(
+      '/tenants/contactCode/1231234'
+    )
+    //Testa mot zod-schemat
+    expect(res.status).toBe(200)
+    expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(tenant))
+  })
+
+  it("responds with 500 and an error with the correct info when tenant doesn't have a valid housing contract", async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'no-valid-housing-contract',
+    })
+
+    const res = await request(app.callback()).get(
+      '/tenants/contactCode/1231234'
+    )
+
+    expect(res.status).toBe(500)
+    expect(res.body.type).toEqual('no-valid-housing-contract')
+    expect(res.body.title).toEqual('No valid housing contract found')
+    expect(res.body.status).toEqual(500)
+    expect(res.body.detail).toEqual('No active or upcoming contract found.')
   })
 })
