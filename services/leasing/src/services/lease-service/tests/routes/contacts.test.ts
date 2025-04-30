@@ -8,7 +8,8 @@ import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
-import * as applicationProfileService from '../../update-or-create-application-profile'
+import * as applicationProfileService from '../../create-or-update-application-profile'
+import * as factories from '../../tests/factories'
 import * as tenants from '../../get-tenant'
 import * as factory from '../factories'
 
@@ -20,6 +21,7 @@ app.use(router.routes())
 
 jest.mock('axios')
 
+beforeEach(jest.resetAllMocks)
 describe('GET /contacts/search', () => {
   it('responds with 400 if query param is missing', async () => {
     const res = await request(app.callback()).get('/contacts/search')
@@ -189,14 +191,7 @@ describe('GET /contacts/:contactCode/application-profile', () => {
       .spyOn(applicationProfileAdapter, 'getByContactCode')
       .mockResolvedValueOnce({
         ok: true,
-        data: {
-          contactCode: '1234',
-          createdAt: new Date(),
-          expiresAt: null,
-          id: 1,
-          numAdults: 0,
-          numChildren: 0,
-        },
+        data: factories.applicationProfile.build(),
       })
 
     const res = await request(app.callback()).get(
@@ -205,7 +200,7 @@ describe('GET /contacts/:contactCode/application-profile', () => {
 
     expect(res.status).toBe(200)
     expect(() =>
-      leasing.GetApplicationProfileResponseDataSchema.parse(res.body.content)
+      leasing.v1.GetApplicationProfileResponseDataSchema.parse(res.body.content)
     ).not.toThrow()
   })
 })
@@ -221,33 +216,28 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
   it('updates application profile', async () => {
     jest
-      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .spyOn(applicationProfileService, 'createOrUpdateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
-        data: [
-          {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-            housingType: undefined,
-            housingTypeDescription: undefined,
-            landlord: undefined,
-            housingReference: undefined,
-          },
-          'updated',
-        ],
+        data: ['updated', factories.applicationProfile.build()],
       })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
-      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+      .send({
+        expiresAt: null,
+        numAdults: 0,
+        numChildren: 0,
+        housingType: 'RENTAL',
+        housingTypeDescription: null,
+        landlord: null,
+        housingReference: factories.applicationProfileHousingReference.build(),
+        lastUpdatedAt: new Date(),
+      })
 
     expect(res.status).toBe(200)
     expect(() =>
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+      leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
         res.body.content
       )
     ).not.toThrow()
@@ -255,33 +245,28 @@ describe('POST /contacts/:contactCode/application-profile', () => {
 
   it('creates if non-existent', async () => {
     jest
-      .spyOn(applicationProfileService, 'updateOrCreateApplicationProfile')
+      .spyOn(applicationProfileService, 'createOrUpdateApplicationProfile')
       .mockResolvedValueOnce({
         ok: true,
-        data: [
-          {
-            contactCode: '1234',
-            createdAt: new Date(),
-            expiresAt: null,
-            id: 1,
-            numAdults: 0,
-            numChildren: 0,
-            housingType: undefined,
-            housingTypeDescription: undefined,
-            landlord: undefined,
-            housingReference: undefined,
-          },
-          'created',
-        ],
+        data: ['created', factories.applicationProfile.build()],
       })
 
     const res = await request(app.callback())
       .post('/contacts/1234/application-profile')
-      .send({ expiresAt: null, numAdults: 0, numChildren: 0 })
+      .send({
+        expiresAt: null,
+        numAdults: 0,
+        numChildren: 0,
+        housingType: 'RENTAL',
+        housingTypeDescription: null,
+        landlord: null,
+        housingReference: factories.applicationProfileHousingReference.build(),
+        lastUpdatedAt: new Date(),
+      })
 
     expect(res.status).toBe(201)
     expect(() =>
-      leasing.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
+      leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.parse(
         res.body.content
       )
     ).not.toThrow()

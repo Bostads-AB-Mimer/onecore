@@ -18,8 +18,7 @@ import {
 import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { updateOrCreateApplicationProfile } from '../update-or-create-application-profile'
-import { error } from 'node:console'
+import { createOrUpdateApplicationProfile } from '../create-or-update-application-profile'
 
 /**
  * @swagger
@@ -575,7 +574,7 @@ export const routes = (router: KoaRouter) => {
    */
 
   type GetApplicationProfileResponseData = z.infer<
-    typeof leasing.GetApplicationProfileResponseDataSchema
+    typeof leasing.v1.GetApplicationProfileResponseDataSchema
   >
 
   router.get('(.*)/contacts/:contactCode/application-profile', async (ctx) => {
@@ -664,18 +663,18 @@ export const routes = (router: KoaRouter) => {
    */
 
   type CreateOrUpdateApplicationProfileResponseData = z.infer<
-    typeof leasing.CreateOrUpdateApplicationProfileResponseDataSchema
+    typeof leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema
   >
 
   router.post(
     '(.*)/contacts/:contactCode/application-profile',
     parseRequestBody(
-      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema
+      leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
     ),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const result = await updateOrCreateApplicationProfile(
+      const result = await createOrUpdateApplicationProfile(
         db,
         ctx.params.contactCode,
         ctx.request.body
@@ -687,7 +686,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const [profile, operation] = result.data
+      const [operation, profile] = result.data
       ctx.status = operation === 'created' ? 201 : 200
       ctx.body = {
         content: profile satisfies CreateOrUpdateApplicationProfileResponseData,

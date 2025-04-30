@@ -1,20 +1,22 @@
 import assert from 'node:assert'
 
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
+import * as factory from '../factories'
 import { withContext } from '../testUtils'
 
 describe('application-profile-adapter', () => {
   describe(applicationProfileAdapter.create, () => {
     it('creates application profile', () =>
       withContext(async (ctx) => {
-        const profile = await applicationProfileAdapter.create(ctx.db, {
-          contactCode: '1234',
+        const profile = await applicationProfileAdapter.create(ctx.db, '1234', {
           expiresAt: new Date(),
           numAdults: 1,
           numChildren: 1,
-          housingType: 'foo',
+          housingType: 'RENTAL',
           housingTypeDescription: 'bar',
           landlord: 'baz',
+          housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
         assert(profile.ok)
 
@@ -29,21 +31,34 @@ describe('application-profile-adapter', () => {
 
     it('fails if existing profile for contact code already exists', () =>
       withContext(async (ctx) => {
-        const profile = await applicationProfileAdapter.create(ctx.db, {
-          contactCode: '1234',
+        const profile = await applicationProfileAdapter.create(ctx.db, '1234', {
           expiresAt: new Date(),
           numAdults: 1,
           numChildren: 1,
+          housingType: 'RENTAL',
+          housingTypeDescription: 'bar',
+          landlord: 'baz',
+          housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
 
         assert(profile.ok)
 
-        const duplicate = await applicationProfileAdapter.create(ctx.db, {
-          contactCode: '1234',
-          expiresAt: new Date(),
-          numAdults: 1,
-          numChildren: 1,
-        })
+        const duplicate = await applicationProfileAdapter.create(
+          ctx.db,
+          '1234',
+          {
+            expiresAt: new Date(),
+            numAdults: 1,
+            numChildren: 1,
+            housingType: 'RENTAL',
+            housingTypeDescription: 'bar',
+            landlord: 'baz',
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
+          }
+        )
 
         expect(duplicate).toMatchObject({
           ok: false,
@@ -64,11 +79,16 @@ describe('application-profile-adapter', () => {
 
     it('gets application profile', () =>
       withContext(async (ctx) => {
-        await applicationProfileAdapter.create(ctx.db, {
-          contactCode: '1234',
+        await applicationProfileAdapter.create(ctx.db, '1234', {
           expiresAt: new Date(),
           numAdults: 1,
           numChildren: 1,
+          housingType: 'RENTAL',
+          housingTypeDescription: 'bar',
+          landlord: 'baz',
+          housingReference: factory.applicationProfileHousingReference.build(),
+
+          lastUpdatedAt: new Date(),
         })
 
         const result = await applicationProfileAdapter.getByContactCode(
@@ -100,6 +120,12 @@ describe('application-profile-adapter', () => {
             expiresAt: new Date(),
             numAdults: 1,
             numChildren: 1,
+            housingType: 'RENTAL',
+            housingTypeDescription: 'bar',
+            landlord: 'baz',
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
           }
         )
 
@@ -108,11 +134,15 @@ describe('application-profile-adapter', () => {
 
     it('updates application profile', () =>
       withContext(async (ctx) => {
-        const profile = await applicationProfileAdapter.create(ctx.db, {
-          contactCode: '1234',
-          expiresAt: null,
+        const profile = await applicationProfileAdapter.create(ctx.db, '1234', {
+          expiresAt: new Date(),
           numAdults: 1,
           numChildren: 1,
+          housingType: 'RENTAL',
+          housingTypeDescription: 'bar',
+          landlord: 'baz',
+          housingReference: factory.applicationProfileHousingReference.build(),
+          lastUpdatedAt: new Date(),
         })
 
         assert(profile.ok)
@@ -123,6 +153,12 @@ describe('application-profile-adapter', () => {
             expiresAt: new Date(),
             numAdults: 2,
             numChildren: 2,
+            housingType: 'RENTAL',
+            housingTypeDescription: 'bar',
+            landlord: 'baz',
+            housingReference:
+              factory.applicationProfileHousingReference.build(),
+            lastUpdatedAt: new Date(),
           }
         )
 

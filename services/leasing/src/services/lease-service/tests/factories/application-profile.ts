@@ -1,8 +1,11 @@
 import { Factory } from 'fishery'
-import {
-  ApplicationProfile,
-  ApplicationProfileHousingReference,
-} from 'onecore-types'
+import { schemas } from 'onecore-types'
+import { z } from 'zod'
+
+type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
+type ApplicationProfileHousingReference = z.infer<
+  typeof schemas.v1.ApplicationProfileHousingReferenceSchema
+>
 
 export const ApplicationProfileFactory = Factory.define<ApplicationProfile>(
   ({ sequence }) => ({
@@ -10,12 +13,13 @@ export const ApplicationProfileFactory = Factory.define<ApplicationProfile>(
     contactCode: '12345',
     numAdults: 1,
     numChildren: 1,
-    housingType: 'foo',
+    housingType: 'RENTAL',
     landlord: 'baz',
     housingTypeDescription: 'qux',
     createdAt: new Date(),
     expiresAt: new Date(),
     housingReference: ApplicationProfileHousingReferenceFactory.build(),
+    lastUpdatedAt: new Date(),
   })
 )
 
@@ -24,11 +28,13 @@ export const ApplicationProfileHousingReferenceFactory =
     id: sequence,
     applicationProfileId: 1,
     email: 'email',
-    name: 'name',
     phone: 'phone',
-    reviewStatus: 'status',
-    reviewedAt: new Date(),
+    reviewStatus: 'PENDING',
+    comment: 'comment',
+    reviewedAt: null,
+    reviewedBy: 'foo',
+    reasonRejected: null,
+
     expiresAt: new Date(),
-    reviewStatusReason: 'reason',
     createdAt: new Date(),
   }))
