@@ -12,7 +12,7 @@ import { Controller, useFormContext } from 'react-hook-form'
 import HousingTypeComponentSwitcher from '../HousingTypeComponentSwitcher'
 
 const HousingType = () => {
-  const { control, disabled } = useFormContext()
+  const { control } = useFormContext()
 
   return (
     <Grid container columnSpacing={1} className="form-field-group">
@@ -36,7 +36,6 @@ const HousingType = () => {
 
               <Select
                 size="small"
-                disabled={disabled}
                 displayEmpty
                 error={fieldState.invalid}
                 {...field}
