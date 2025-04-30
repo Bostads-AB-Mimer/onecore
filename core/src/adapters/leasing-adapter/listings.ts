@@ -27,10 +27,7 @@ const getActiveListingByRentalObjectCode = async (
 
     return { ok: true, data: res.data.content }
   } catch (error) {
-    logger.error(
-      error,
-      'Error fetching active listing by rental object code:'
-    )
+    logger.error(error, 'Error fetching active listing by rental object code:')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -75,15 +72,31 @@ const createNewListing = async (
 
 const applyForListing = async (
   applicantData: Omit<Applicant, 'id'>
-): Promise<AdapterResult<Applicant, 'conflict' | 'unknown'>> => {
+): Promise<
+  AdapterResult<Applicant, 'conflict' | 'unknown' | 'bad-request'>
+> => {
   try {
     const res = await axios.post(
       `${tenantsLeasesServiceUrl}/listings/apply`,
       applicantData
     )
-
     if (res.status === HttpStatusCode.Conflict) {
       return { ok: false, err: 'conflict' }
+    }
+
+    if (res.status === HttpStatusCode.BadRequest) {
+      return { ok: false, err: 'bad-request' }
+    }
+
+    if (
+      res.status != HttpStatusCode.Ok &&
+      res.status != HttpStatusCode.Created
+    ) {
+      logger.error(
+        { status: res.status, data: res.data },
+        'Error applying for listing:' + applicantData.listingId
+      )
+      return { ok: false, err: 'unknown' }
     }
 
     return { ok: true, data: res.data.content }

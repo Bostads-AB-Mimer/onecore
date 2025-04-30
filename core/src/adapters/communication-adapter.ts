@@ -1,6 +1,11 @@
 import { loggedAxios as axios } from 'onecore-utilities'
 import config from '../common/config'
-import { Contact, ParkingSpaceOfferEmail } from 'onecore-types'
+import {
+  Contact,
+  ParkingSpaceOfferEmail,
+  WorkOrderEmail,
+  WorkOrderSms,
+} from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { AdapterResult } from './types'
 
@@ -114,10 +119,11 @@ export const sendParkingSpaceOfferEmail = async (
   }
 }
 
-export const sendWorkOrderSms = async (
-  phoneNumber: string,
-  message: string
-): Promise<AdapterResult<any, 'error'>> => {
+export const sendWorkOrderSms = async ({
+  phoneNumber,
+  text,
+  externalContractorName,
+}: WorkOrderSms): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
       method: 'POST',
@@ -130,7 +136,7 @@ export const sendWorkOrderSms = async (
       `${config.communicationService.url}/sendWorkOrderSms`,
       {
         ...axiosOptions,
-        data: { phoneNumber, message },
+        data: { phoneNumber, text, externalContractorName },
       }
     )
 
@@ -144,11 +150,12 @@ export const sendWorkOrderSms = async (
   }
 }
 
-export const sendWorkOrderEmail = async (
-  to: string,
-  subject: string,
-  message: string
-): Promise<AdapterResult<any, 'error'>> => {
+export const sendWorkOrderEmail = async ({
+  to,
+  subject,
+  text,
+  externalContractorName,
+}: WorkOrderEmail): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
       method: 'POST',
@@ -161,7 +168,7 @@ export const sendWorkOrderEmail = async (
       `${config.communicationService.url}/sendWorkOrderEmail`,
       {
         ...axiosOptions,
-        data: { to, subject, text: message },
+        data: { to, subject, text, externalContractorName },
       }
     )
 

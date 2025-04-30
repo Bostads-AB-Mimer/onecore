@@ -4,6 +4,7 @@ export { OfferFactory as offer } from './offer'
 export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from './offer'
 export { DetailedOfferFactory as detailedOffer } from './offer'
 export { ApplicantFactory as applicant } from './applicant'
+export { CompanyFactory as company } from './company'
 export { ContactFactory as contact } from './contact'
 export { LeaseFactory as lease } from './lease'
 export { WaitingListFactory as waitingList } from './waiting-list'
@@ -18,3 +19,8 @@ export {
   ApplicationProfileFactory as applicationProfile,
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
 } from './application-profile'
+export { ResidenceFactory as residence } from './residence'
+export { ResidenceDetailsFactory as residenceDetails } from './residence-details'
+export { PropertyFactory as property } from './property'
+export { PropertyDetailsFactory as propertyDetails } from './property-details'
+export { StaircaseFactory as staircase } from './staircase'
