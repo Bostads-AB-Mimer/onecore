@@ -342,6 +342,21 @@ interface ParkingSpaceInfo {
   code: string
 }
 
+interface VacantParkingSpace {
+  rentalObjectCode: string
+  address: Address
+  rent: number
+  districtCaption?: string
+  districtCode?: string
+  blockCaption?: string
+  blockCode?: string
+  vehicleSpaceTypeCaption?: string | undefined
+  vehicleSpaceTypeCode?: string | undefined
+  vehicleSpaceCaption?: string | undefined
+  vehicleSpaceCode?: string | undefined
+  status: string
+}
+
 interface MaintenanceUnitInfo {
   id: string
   rentalPropertyId: string
@@ -396,6 +411,7 @@ export type {
   ApartmentInfo,
   CommercialSpaceInfo,
   ParkingSpaceInfo,
+  VacantParkingSpace,
   MaintenanceUnitInfo,
   ResidentialArea,
   SystemHealth,
