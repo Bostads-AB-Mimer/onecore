@@ -195,7 +195,7 @@ const ResidencesPage: React.FC = () => {
 
   return (
     <Stack spacing={4} padding={0}>
-      <Typography variant="h1">Bostäder - sökandeuppgifter</Typography>
+      <Typography variant="h1">Sökandeprofil</Typography>
 
       <Container maxWidth="md" disableGutters>
         <Stack spacing={2}>

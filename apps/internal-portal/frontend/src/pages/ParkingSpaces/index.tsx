@@ -213,7 +213,7 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       flex: 0.5,
       disableColumnMenu: true,
       renderCell: (v) => (
-        <Link to={`/parkingspace/${v.id}`}>
+        <Link to={`/bilplatser/${v.id}`}>
           <IconButton sx={{ color: 'black' }}>
             <Chevron />
           </IconButton>
@@ -241,7 +241,7 @@ const getRepublishActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       flex: 0.5,
       disableColumnMenu: true,
       renderCell: (v) => (
-        <Link to={`/parkingspace/${v.id}`}>
+        <Link to={`/bilplatser/${v.id}`}>
           <IconButton sx={{ color: 'black' }}>
             <Chevron />
           </IconButton>

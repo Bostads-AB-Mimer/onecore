@@ -1,16 +1,8 @@
-import {
-  IconButton,
-  MenuItem,
-  Menu,
-  Typography,
-  Divider,
-  Backdrop,
-} from '@mui/material'
+import { IconButton, MenuItem, Menu, Typography, Backdrop } from '@mui/material'
 import PopupState, { bindTrigger, bindMenu } from 'material-ui-popup-state'
 import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
-
-import MenuLink from './MenuLink'
+import { Link } from 'react-router-dom'
 
 const SiteMenu = () => (
   <PopupState variant="popover" popupId="demo-popup-menu">
@@ -49,19 +41,23 @@ const SiteMenu = () => (
               <Typography variant="h1">Aktuellt</Typography>
             </MenuItem>
 
-            <MenuItem onClick={popupState.close}>
-              <MenuLink href="/parkingspaces" title="Parkeringsplatser" />
-            </MenuItem>
+            <Link to="/bilplatser">
+              <MenuItem onClick={popupState.close}>
+                <Typography>Bilplatser</Typography>
+              </MenuItem>
+            </Link>
 
-            <Divider />
+            <Link to="/materialval">
+              <MenuItem onClick={popupState.close}>
+                <Typography>Materialval</Typography>
+              </MenuItem>
+            </Link>
 
-            <MenuItem onClick={popupState.close}>
-              <MenuLink href="/materialval" title="Materialval" />
-            </MenuItem>
-
-            <MenuItem onClick={popupState.close}>
-              <MenuLink href="/bostader" title="Bostäder" />
-            </MenuItem>
+            <Link to="/sokandeprofil">
+              <MenuItem onClick={popupState.close}>
+                <Typography>Sökandeprofil</Typography>
+              </MenuItem>
+            </Link>
           </Menu>
         </Backdrop>
       </>

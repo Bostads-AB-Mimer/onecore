@@ -61,14 +61,14 @@ function App() {
               <Routes>
                 <Route element={<PageBase />}>
                   <Route path="/" element={<ParkingSpaces />} />
-                  <Route path="/parkingspaces" element={<ParkingSpaces />} />
-                  <Route path="/parkingspace/:id" element={<ParkingSpace />} />
+                  <Route path="/bilplatser" element={<ParkingSpaces />} />
+                  <Route path="/bilplatser/:id" element={<ParkingSpace />} />
                   <Route path="/materialval" element={<Home />} />
                   <Route
                     path="/materialval/utskrift"
                     element={<MaterialChoiceDetails />}
                   />
-                  <Route path="/bostader" element={<Residences />} />
+                  <Route path="/sokandeprofil" element={<Residences />} />
                   <Route path="/logout" element={<Login />} />
                 </Route>
               </Routes>
