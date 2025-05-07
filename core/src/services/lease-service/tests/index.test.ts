@@ -774,11 +774,6 @@ describe('lease-service', () => {
         expiresAt: new Date('2021-01-01'),
       })
 
-      const updatedProfile = factory.applicationProfile.build({
-        ...existingProfile,
-        numAdults: 3,
-      })
-
       jest
         .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
         .mockResolvedValueOnce({

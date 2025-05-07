@@ -219,3 +219,24 @@ export async function getStaircases(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetRoomsResponse = components['schemas']['Room'][]
+
+export async function getRooms(
+  residenceId: string
+): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/rooms', {
+      params: { query: { residenceId } },
+    })
+
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRooms')
+    return { ok: false, err: 'unknown' }
+  }
+}

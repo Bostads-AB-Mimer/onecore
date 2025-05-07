@@ -8,6 +8,7 @@ export const ResidenceDetailsFactory = Factory.define<
   code: `010${sequence}`,
   name: 'Adressgatan 123',
   deleted: false,
+  location: null,
   validityPeriod: {
     fromDate: '2024-10-01T00:00:00Z',
     toDate: '2025-10-01T00:00:00Z',
@@ -22,6 +23,7 @@ export const ResidenceDetailsFactory = Factory.define<
       location: 'S',
       type: 'V',
     },
+    patioLocation: 'S',
     hygieneFacility: 'B',
     sauna: false,
     extraToilet: false,
@@ -53,4 +55,6 @@ export const ResidenceDetailsFactory = Factory.define<
     },
     rentalId: null,
   },
+  property: { code: null, name: 'foo-property' },
+  building: { code: null, name: 'foo-building' },
 }))
