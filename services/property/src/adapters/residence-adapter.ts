@@ -24,11 +24,13 @@ export type ResidenceWithRelations = Prisma.ResidenceGetPayload<{
     residenceType: true
     propertyObject: {
       include: {
-        property: true
-        building: true
         propertyStructures: {
           select: {
             rentalId: true
+            propertyCode: true
+            propertyName: true
+            buildingCode: true
+            buildingName: true
           }
         }
       }
@@ -57,11 +59,13 @@ export const getResidenceById = async (
         residenceType: true,
         propertyObject: {
           include: {
-            property: true,
-            building: true,
             propertyStructures: {
               select: {
                 rentalId: true,
+                buildingCode: true,
+                buildingName: true,
+                propertyCode: true,
+                propertyName: true,
               },
             },
           },

@@ -1,9 +1,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import { getRoomById, getRooms } from '../adapters/room-adapter'
-import { roomsQueryParamsSchema } from '../types/room'
-import { generateMetaLinks } from '../utils/links'
-import { parseRequest } from '../middleware/parse-request'
+
+import { getRoomById, getRooms } from '@src/adapters/room-adapter'
+import { Room, roomsQueryParamsSchema } from '@src/types/room'
+import { generateMetaLinks } from '@src/utils/links'
+import { parseRequest } from '@src/middleware/parse-request'
 
 /**
  * @swagger
@@ -17,29 +18,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by building code, staircase code, and residence code.
-   *     description: Returns all rooms belonging to a specific building, staircase, and residence code.
+   *     summary: Get rooms by residence id.
+   *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Rooms
    *     parameters:
    *       - in: query
-   *         name: buildingCode
+   *         name: residenceId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The building code of the building for the residence.
-   *       - in: query
-   *         name: staircaseCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The code of the staircase.
-   *       - in: query
-   *         name: residenceCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The residence code where the rooms are located.
+   *         description: The id of the residence.
    *     responses:
    *       200:
    *         description: Successfully retrieved the rooms.
@@ -58,23 +47,42 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error.
    */
   router.get(
-    ['(.*)/rooms'],
+    '(.*)/rooms',
     parseRequest({ query: roomsQueryParamsSchema }),
     async (ctx) => {
-      const { buildingCode, staircaseCode, residenceCode } =
-        ctx.request.parsedQuery
+      const { residenceId } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(
-        `GET /rooms?buildingCode=${buildingCode}&staircaseCode=${staircaseCode}&residenceCode=${residenceCode}`,
-        metadata
-      )
+      logger.info(`GET /rooms?residenceId=${residenceId}`, metadata)
 
       try {
-        const rooms = await getRooms(buildingCode, staircaseCode, residenceCode)
-
+        const rooms = await getRooms(residenceId)
+        const mapped = rooms.map(
+          (v): Room => ({
+            ...v,
+            deleted: Boolean(v.deleteMark),
+            dates: {
+              availableFrom: v.availableFrom,
+              availableTo: v.availableTo,
+              from: v.fromDate,
+              to: v.toDate,
+              installation: v.installationDate,
+            },
+            features: {
+              hasThermostatValve: Boolean(v.hasThermostatValve),
+              hasToilet: Boolean(v.hasToilet),
+              isHeated: Boolean(v.isHeated),
+              orientation: v.orientation,
+            },
+            usage: {
+              allowPeriodicWorks: Boolean(v.allowPeriodicWorks),
+              shared: Boolean(v.sharedUse),
+              spaceType: v.spaceType,
+            },
+          })
+        )
         ctx.body = {
-          content: rooms,
+          content: mapped,
           ...metadata,
         }
       } catch (err) {

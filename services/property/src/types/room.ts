@@ -1,16 +1,12 @@
 import { z } from 'zod'
 
 export const roomsQueryParamsSchema = z.object({
-  buildingCode: z
-    .string()
-    .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
-  staircaseCode: z.string().min(1, { message: 'staircaseCode is required.' }),
-  residenceCode: z.string().min(1, { message: 'residenceCode is required.' }),
+  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
 })
 
 export const RoomTypeSchema = z.object({
-  roomTypeId: z.string(),
-  roomTypeCode: z.string(),
+  id: z.string(),
+  code: z.string(),
   name: z.string().nullable(),
   use: z.number(),
   optionAllowed: z.number(),

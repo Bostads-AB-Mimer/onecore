@@ -41,11 +41,11 @@ export const ResidenceSearchResultSchema = z.object({
   }),
 })
 
-export const ResidenceDetailedSchema = ResidenceSchema.extend({
+export const ResidenceDetailedSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
-  location: z.string().optional(),
+  name: z.string().nullable(),
+  location: z.string().nullable(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),
     residenceAdapted: z.boolean(),
@@ -64,8 +64,8 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
         type: z.string(),
       })
       .optional(),
-    patioLocation: z.string().optional(),
-    hygieneFacility: z.string(),
+    patioLocation: z.string().nullable(),
+    hygieneFacility: z.string().nullable(),
     sauna: z.boolean(),
     extraToilet: z.boolean(),
     sharedKitchen: z.boolean(),
@@ -76,7 +76,7 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
     smokeFree: z.boolean(),
     asbestos: z.boolean(),
   }),
-  entrance: z.string(),
+  entrance: z.string().nullable(),
   partNo: z.number().optional().nullable(),
   part: z.string().optional().nullable(),
   deleted: z.boolean(),
@@ -107,6 +107,14 @@ export const ResidenceDetailedSchema = ResidenceSchema.extend({
       energyIndex: z.number().optional(),
     }),
     rentalId: z.string().nullable(),
+  }),
+  property: z.object({
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  building: z.object({
+    name: z.string().nullable(),
+    code: z.string().nullable(),
   }),
 })
 

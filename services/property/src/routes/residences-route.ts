@@ -236,18 +236,21 @@ export const routes = (router: KoaRouter) => {
       }
 
       // TODO: find out why building is null in residence
-      //const building = await getBuildingByCode(residence.buildingCode)
 
       const rentalId =
         residence.propertyObject?.propertyStructures?.length > 0
           ? residence.propertyObject.propertyStructures[0].rentalId
           : null
 
-      const parsedResidence = ResidenceDetailedSchema.parse({
+      const mappedResidence = {
         id: residence.id,
         code: residence.code,
-        name: residence.name || '',
-        location: residence.location || '',
+        name: residence.name,
+        location: residence.location,
+        entrance: residence.entrance,
+        partNo: residence.partNo,
+        part: residence.part,
+        deleted: Boolean(residence.deleted),
         accessibility: {
           wheelchairAccessible: Boolean(residence.wheelchairAccessible),
           residenceAdapted: Boolean(residence.residenceAdapted),
@@ -266,8 +269,8 @@ export const routes = (router: KoaRouter) => {
                 type: residence.balcony2Type || '',
               }
             : undefined,
-          patioLocation: residence.patioLocation || undefined,
-          hygieneFacility: residence.hygieneFacility || '',
+          patioLocation: residence.patioLocation,
+          hygieneFacility: residence.hygieneFacility,
           sauna: Boolean(residence.sauna),
           extraToilet: Boolean(residence.extraToilet),
           sharedKitchen: Boolean(residence.sharedKitchen),
@@ -278,10 +281,6 @@ export const routes = (router: KoaRouter) => {
           smokeFree: Boolean(residence.smokeFree),
           asbestos: Boolean(residence.asbestos),
         },
-        entrance: residence.entrance || '',
-        partNo: residence.partNo,
-        part: residence.part,
-        deleted: Boolean(residence.deleted),
         validityPeriod: {
           fromDate: residence.fromDate,
           toDate: residence.toDate,
@@ -313,10 +312,19 @@ export const routes = (router: KoaRouter) => {
           },
           rentalId,
         },
-      } satisfies ResidenceDetails)
+        property: {
+          code: residence.propertyObject.propertyStructures[0].propertyCode,
+          name: residence.propertyObject.propertyStructures[0].propertyName,
+        },
+        building: {
+          code: residence.propertyObject.propertyStructures[0].buildingCode,
+          name: residence.propertyObject.propertyStructures[0].buildingName,
+        },
+      } satisfies ResidenceDetails
 
+      ctx.status = 200
       ctx.body = {
-        content: parsedResidence,
+        content: mappedResidence,
         ...metadata,
       }
     } catch (err) {

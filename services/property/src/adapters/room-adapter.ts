@@ -6,19 +6,36 @@ import { prisma } from './db'
 
 //todo: add types
 
-//todo: we might be able to skip using staircaseCode
-export const getRooms = async (
-  buildingCode: string,
-  staircaseCode: string,
-  residenceCode: string
-) => {
+export async function getRooms(residenceId: string) {
+  const residence = await prisma.residence
+    .findFirst({
+      where: {
+        id: residenceId,
+      },
+      include: {
+        residenceType: true,
+        propertyObject: {
+          include: {
+            property: true,
+            building: true,
+            propertyStructures: {
+              select: {
+                rentalId: true,
+              },
+            },
+          },
+        },
+      },
+    })
+    .then(trimStrings)
+
+  if (!residence) {
+    throw 'foo'
+  }
+
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
-      buildingCode: {
-        contains: buildingCode,
-      },
-      staircaseCode: staircaseCode,
-      residenceCode: residenceCode,
+      residenceId: residence.propertyObjectId,
       NOT: {
         staircaseId: null,
         residenceId: null,
