@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Tenant, LeaseStatus } from 'onecore-types'
+import { Tenant } from '../../schemas'
 
 export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
   contactCode: `P${158769 + sequence}`,
@@ -19,7 +19,7 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
     {
       phoneNumber: '070000000',
       type: 'mobil',
-      isMainNumber: true,
+      isMainNumber: 1,
     },
   ],
   emailAddress: 'test@mimer.nu',
@@ -55,7 +55,6 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       },
       futureRents: undefined,
     },
-    status: LeaseStatus.Current,
     tenantContactIds: [`P${158769 + sequence}`],
     tenants: undefined,
     terminationDate: undefined,
@@ -93,7 +92,6 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
         },
         futureRents: undefined,
       },
-      status: LeaseStatus.Current,
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,
@@ -132,7 +130,6 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
         },
         futureRents: undefined,
       },
-      status: LeaseStatus.Current,
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,

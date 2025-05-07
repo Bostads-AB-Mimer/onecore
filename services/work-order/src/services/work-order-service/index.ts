@@ -1,30 +1,33 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from 'onecore-utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
-import { CreateWorkOrder } from 'onecore-types'
+import { CreateWorkOrderBodySchema, WorkOrder } from './schemas'
 
 /**
  * @swagger
+ * openapi: 3.0.0
  * tags:
  *   - name: Work Order Service
  *     description: Operations related to work orders
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * security:
+ *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /(.*)/workOrders/contactCode/{contactCode}:
+   * /workOrders/contactCode/{contactCode}:
    *   get:
    *     summary: Get work orders by contact code
    *     tags:
    *       - Work Order Service
    *     description: Retrieves work orders based on the provided contact code.
    *     parameters:
-   *       - in: path
-   *         name: any
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Any path segment
    *       - in: path
    *         name: contactCode
    *         required: true
@@ -42,14 +45,10 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: object
    *                   properties:
-   *                     totalCount:
-   *                       type: integer
-   *                       description: Total number of work orders
    *                     workOrders:
    *                       type: array
    *                       items:
-   *                         type: object
-   *                         description: Work order details
+   *                         $ref: '#/components/schemas/WorkOrder'
    *                 metadata:
    *                   type: object
    *                   description: Route metadata
@@ -69,16 +68,17 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/contactCode/:contactCode', async (ctx: any) => {
+  router.get('(.*)/workOrders/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const workOrders = await odooAdapter.getWorkOrderByContactCode(
+      const workOrders = await odooAdapter.getWorkOrdersByContactCode(
         ctx.params.contactCode
       )
+
       ctx.status = 200
       ctx.body = {
         content: {
-          workOrders,
+          workOrders: workOrders satisfies WorkOrder[],
         },
         ...metadata,
       }
@@ -96,19 +96,13 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /(.*)/workOrders/residenceId/{residenceId}:
+   * /workOrders/residenceId/{residenceId}:
    *   get:
    *     summary: Get work orders by residence id
    *     tags:
    *       - Work Order Service
    *     description: Retrieves work orders based on the provided residence id.
    *     parameters:
-   *       - in: path
-   *         name: any
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Any path segment
    *       - in: path
    *         name: residenceId
    *         required: true
@@ -126,14 +120,10 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: object
    *                   properties:
-   *                     totalCount:
-   *                       type: integer
-   *                       description: Total number of work orders
    *                     workOrders:
    *                       type: array
    *                       items:
-   *                         type: object
-   *                         description: Work order details
+   *                         $ref: '#/components/schemas/WorkOrder'
    *                 metadata:
    *                   type: object
    *                   description: Route metadata
@@ -153,7 +143,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/residenceId/:residenceId', async (ctx: any) => {
+  router.get('(.*)/workOrders/residenceId/:residenceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const workOrders = await odooAdapter.getWorkOrderByResidenceId(
@@ -162,7 +152,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = {
         content: {
-          workOrders,
+          workOrders: workOrders satisfies WorkOrder[],
         },
         ...metadata,
       }
@@ -180,7 +170,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /(.*)/workOrders:
+   * /workOrders:
    *   post:
    *     summary: Create a new work order
    *     tags:
@@ -192,15 +182,7 @@ export const routes = (router: KoaRouter) => {
    *         application/json:
    *           schema:
    *             type: object
-   *             properties:
-   *               rentalPropertyInfo:
-   *                 $ref: '#/components/schemas/RentalPropertyInfo'
-   *               tenant:
-   *                 $ref: '#/components/schemas/Tenant'
-   *               lease:
-   *                 $ref: '#/components/schemas/Lease'
-   *               details:
-   *                 $ref: '#/components/schemas/CreateWorkOrderDetails'
+   *             $ref: '#/components/schemas/CreateWorkOrderBody'
    *     responses:
    *       '200':
    *         description: Work order created successfully
@@ -250,9 +232,24 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/workOrders', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const request = <CreateWorkOrder>ctx.request.body
+      const parsedBody = CreateWorkOrderBodySchema.safeParse(ctx.request.body)
+      if (!parsedBody.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: parsedBody.error,
+          ...metadata,
+        }
+        return
+      }
+      const { rentalProperty, tenant, lease, details } = parsedBody.data
 
-      const response = await odooAdapter.createWorkOrder(request)
+      const response = await odooAdapter.createWorkOrder(
+        rentalProperty,
+        tenant,
+        lease,
+        details
+      )
+      ctx.status = 200
       if (response.ok) {
         ctx.body = {
           content: { newWorkOrderId: response.data },
@@ -279,7 +276,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /(.*)/workOrders/{workOrderId}/update:
+   * /workOrders/{workOrderId}/update:
    *   post:
    *     summary: Add a message to a work order
    *     tags:
@@ -311,9 +308,12 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Message added to work order with ID {workOrderId}
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *                       example: Message added to work order with ID {workOrderId}
    *                 metadata:
    *                   type: object
    *                   description: Route metadata
@@ -361,9 +361,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      await odooAdapter.addMessageToWorkOrder(parseInt(workOrderId), {
-        body: message,
-      })
+      await odooAdapter.addMessageToWorkOrder(parseInt(workOrderId), message)
 
       ctx.status = 200
       ctx.body = {
@@ -384,7 +382,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /(.*)/workOrders/{workOrderId}/close:
+   * /workOrders/{workOrderId}/close:
    *   post:
    *     summary: Close a work order
    *     tags:
@@ -405,9 +403,12 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Work order with ID {workOrderId} updated successfully
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *                       example: Work order with ID {workOrderId} updated successfully
    *                 metadata:
    *                   type: object
    *                   description: Route metadata

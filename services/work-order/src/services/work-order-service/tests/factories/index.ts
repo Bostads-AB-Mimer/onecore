@@ -4,5 +4,5 @@ export { CreateWorkOrderDetailsFactory as CreateWorkOrderDetails } from './work-
 export { CreateWorkOrderFactory as CreateWorkOrder } from './work-order'
 export { WorkOrderFactory as workOrder } from './work-order'
 export { LeaseFactory as lease } from './lease'
-export { RentalPropertyInfoFactory as rentalProperty } from './rental-property-info'
+export { RentalPropertyFactory as rentalProperty } from './rental-property'
 export { TenantFactory as tenant } from './tenant'

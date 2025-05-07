@@ -1,14 +1,14 @@
 import { Factory } from 'fishery'
+import { RentalPropertyFactory } from './rental-property'
+import { TenantFactory } from './tenant'
+import { LeaseFactory } from './lease'
 import {
-  CreateWorkOrder,
+  CreateWorkOrderBody,
   CreateWorkOrderDetails,
   OdooWorkOrder,
   OdooWorkOrderMessage,
   WorkOrder,
-} from 'onecore-types'
-import { RentalPropertyInfoFactory } from './rental-property-info'
-import { TenantFactory } from './tenant'
-import { LeaseFactory } from './lease'
+} from '../../schemas'
 
 export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
   AccessCaption: 'Huvudnyckel',
@@ -19,9 +19,9 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
   DetailsCaption: 'Details about the work order',
   ExternalResource: false,
   Id: `${sequence}`,
-  LastChanged: new Date().toISOString(),
+  LastChanged: new Date(),
   Priority: 'High',
-  Registered: new Date().toISOString(),
+  Registered: new Date(),
   RentalObjectCode: `RO-${sequence}`,
   Status: 'Resurs tilldelad',
   UseMasterKey: false,
@@ -38,7 +38,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
       body: 'Message body',
       author: 'Author Name',
       messageType: 'from_tenant',
-      createDate: new Date().toISOString(),
+      createDate: new Date(),
     },
   ],
   Url: `https://example.com/work-order/${sequence}`,
@@ -77,12 +77,14 @@ export const OdooWorkOrderMessageFactory = Factory.define<OdooWorkOrderMessage>(
   })
 )
 
-export const CreateWorkOrderFactory = Factory.define<CreateWorkOrder>(() => ({
-  rentalPropertyInfo: RentalPropertyInfoFactory.build(),
-  tenant: TenantFactory.build(),
-  lease: LeaseFactory.build(),
-  details: CreateWorkOrderDetailsFactory.build(),
-}))
+export const CreateWorkOrderFactory = Factory.define<CreateWorkOrderBody>(
+  () => ({
+    rentalProperty: RentalPropertyFactory.build(),
+    tenant: TenantFactory.build(),
+    lease: LeaseFactory.build(),
+    details: CreateWorkOrderDetailsFactory.build(),
+  })
+)
 
 export const CreateWorkOrderDetailsFactory =
   Factory.define<CreateWorkOrderDetails>(({ sequence }) => ({
@@ -96,7 +98,7 @@ export const CreateWorkOrderDetailsFactory =
       CallBetween: '08:00 - 17:00',
     },
     HearingImpaired: false,
-    Pet: false,
+    Pet: 'Nej',
     Rows: [
       {
         LocationCode: 'TV',

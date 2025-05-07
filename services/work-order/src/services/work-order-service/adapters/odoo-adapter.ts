@@ -4,26 +4,23 @@ import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../common/config'
 import {
-  ApartmentInfo,
-  Lease,
-  MaintenanceUnitInfo,
-  RentalPropertyInfo,
-  Tenant,
-  CreateWorkOrderDetails,
-  CreateWorkOrderMessage,
-  OdooWorkOrderMessage,
-  CreateWorkOrder,
-  OdooWorkOrder,
-  CreateWorkOrderRow,
-  WorkOrder,
-  WorkOrderMessage,
-} from 'onecore-types'
-import {
   transformWorkOrder,
   transformMessages,
   transformEquipmentCode,
 } from './utils'
 import { AdapterResult } from '../types'
+import {
+  CreateWorkOrderDetails,
+  CreateWorkOrderRow,
+  Lease,
+  MaintenanceUnit,
+  OdooWorkOrder,
+  OdooWorkOrderMessage,
+  RentalProperty,
+  Tenant,
+  WorkOrder,
+  WorkOrderMessage,
+} from '../schemas'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -32,7 +29,7 @@ const odoo = new Odoo({
   password: Config.odoo.password,
 })
 
-const WORK_ORDER_DOMAIN = (contactCode: string): any[] => [
+const WORK_ORDER_DOMAIN = (contactCode: string) => [
   ['contact_code', '=', contactCode],
 ]
 const WORK_ORDER_FIELDS: string[] = [
@@ -56,7 +53,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'maintenance_unit_caption',
 ]
 
-const MESSAGE_DOMAIN = (workOrderIds: number[]): any[] => [
+const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
   ['res_id', 'in', workOrderIds],
   ['model', '=', 'maintenance.request'],
   [
@@ -91,13 +88,13 @@ export const getWorkOrderByResidenceId = async (
   try {
     await odoo.connect()
 
-    const odooWorkOrders: OdooWorkOrder[] = await odoo.searchRead(
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
       ['rental_property_id', '=', residenceId],
       WORK_ORDER_FIELDS
     )
 
-    const odooWorkOrderMessages: OdooWorkOrderMessage[] = await odoo.searchRead(
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
       'mail.message',
       MESSAGE_DOMAIN(odooWorkOrders.map((workOrder) => workOrder.id)),
       MESSAGE_FIELDS
@@ -105,11 +102,11 @@ export const getWorkOrderByResidenceId = async (
 
     const messagesById = groupBy(odooWorkOrderMessages, 'res_id')
 
-    const workOrders: WorkOrder[] = odooWorkOrders.map((workOrder) => ({
+    const workOrders = odooWorkOrders.map((workOrder) => ({
       ...transformWorkOrder(workOrder),
       Messages: transformMessages(
         messagesById[workOrder.id]
-      ) as WorkOrderMessage[],
+      ) satisfies WorkOrderMessage[],
       Url: WorkOrderUrl(workOrder.id),
     }))
 
@@ -120,19 +117,19 @@ export const getWorkOrderByResidenceId = async (
   }
 }
 
-export const getWorkOrderByContactCode = async (
+export const getWorkOrdersByContactCode = async (
   contactCode: string
-): Promise<any> => {
+): Promise<WorkOrder[]> => {
   try {
     await odoo.connect()
 
-    const odooWorkOrders: OdooWorkOrder[] = await odoo.searchRead(
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
       WORK_ORDER_DOMAIN(contactCode),
       WORK_ORDER_FIELDS
     )
 
-    const odooWorkOrderMessages: OdooWorkOrderMessage[] = await odoo.searchRead(
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
       'mail.message',
       MESSAGE_DOMAIN(odooWorkOrders.map((workOrder) => workOrder.id)),
       MESSAGE_FIELDS
@@ -140,11 +137,9 @@ export const getWorkOrderByContactCode = async (
 
     const messagesById = groupBy(odooWorkOrderMessages, 'res_id')
 
-    const workOrders: WorkOrder[] = odooWorkOrders.map((workOrder) => ({
+    const workOrders = odooWorkOrders.map((workOrder) => ({
       ...transformWorkOrder(workOrder),
-      Messages: transformMessages(
-        messagesById[workOrder.id]
-      ) as WorkOrderMessage[],
+      Messages: transformMessages(messagesById[workOrder.id]),
     }))
 
     return workOrders
@@ -155,11 +150,12 @@ export const getWorkOrderByContactCode = async (
 }
 
 export const createWorkOrder = async (
-  createWorkOrder: CreateWorkOrder
+  rentalPropertyInfo: RentalProperty,
+  tenant: Tenant,
+  lease: Lease,
+  details: CreateWorkOrderDetails
 ): Promise<AdapterResult<number, unknown>> => {
   try {
-    const { rentalPropertyInfo, tenant, lease, details } = createWorkOrder
-
     await odoo.connect()
     const maintenanceTeamId = await getMaintenanceTeamId('Kundcenter')
 
@@ -192,10 +188,10 @@ export const createWorkOrder = async (
 }
 
 const createRentalPropertyRecord = async (
-  rentalPropertyInfo: RentalPropertyInfo
+  rentalPropertyInfo: RentalProperty
 ): Promise<number> => {
   try {
-    const apartmentProperty = rentalPropertyInfo.property as ApartmentInfo
+    const apartmentProperty = rentalPropertyInfo.property
     return await odoo.create('maintenance.rental.property', {
       name: rentalPropertyInfo.id,
       rental_property_id: rentalPropertyInfo.id,
@@ -265,7 +261,7 @@ const createTenantRecord = async (
 }
 
 const createMaintenanceUnitRecord = async (
-  maintenanceUnit: MaintenanceUnitInfo,
+  maintenanceUnit: MaintenanceUnit,
   CreateWorkOrderRow: CreateWorkOrderRow
 ): Promise<number> => {
   try {
@@ -438,7 +434,7 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
 
 export const addMessageToWorkOrder = async (
   workOrderId: number,
-  message: CreateWorkOrderMessage
+  message: string
 ): Promise<number> => {
   try {
     await odoo.connect()
@@ -446,7 +442,7 @@ export const addMessageToWorkOrder = async (
     return await odoo.execute_kw('maintenance.request', 'message_post', [
       [workOrderId],
       {
-        body: striptags(message.body).replaceAll('\n', '<br>'),
+        body: striptags(message).replaceAll('\n', '<br>'),
         message_type: 'from_tenant',
         body_is_html: true,
       },

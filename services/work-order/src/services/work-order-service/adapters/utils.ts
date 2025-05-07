@@ -5,7 +5,7 @@ import {
   OdooWorkOrderMessage,
   WorkOrder,
   WorkOrderMessage,
-} from 'onecore-types'
+} from '../schemas'
 
 const removePTags = (text: string): string =>
   text ? text.replace(/<\/?p>/g, '') : ''
@@ -65,9 +65,11 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
         : odooWorkOrder.name + `: ${description}`,
     ExternalResource: false,
     Id: odooWorkOrder.uuid,
-    LastChanged: odooWorkOrder.write_date || odooWorkOrder.create_date,
+    LastChanged: new Date(
+      odooWorkOrder.write_date || odooWorkOrder.create_date
+    ),
     Priority: odooWorkOrder.priority || '',
-    Registered: odooWorkOrder.create_date,
+    Registered: new Date(odooWorkOrder.create_date),
     RentalObjectCode: odooWorkOrder.rental_property_id[1],
     Status: odooWorkOrder.stage_id[1],
     HiddenFromMyPages: odooWorkOrder.hidden_from_my_pages || false,
@@ -90,5 +92,5 @@ export const transformMessages = (
     body: striptags(message.body, ['br']).replaceAll('<br>', '\n'),
     messageType: message.message_type,
     author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
-    createDate: message.create_date,
+    createDate: new Date(message.create_date),
   }))

@@ -1,13 +1,12 @@
 import { transformWorkOrder, transformMessages } from '../../adapters/utils'
-import { OdooWorkOrder, WorkOrder, OdooWorkOrderMessage } from 'onecore-types'
 import * as factory from '../factories'
 
 describe('utils', () => {
   describe('transformWorkOrder', () => {
-    const odooWorkOrderMock: OdooWorkOrder = factory.odooWorkOrder.build()
+    const odooWorkOrderMock = factory.odooWorkOrder.build()
 
     it('should transform a work order correctly', () => {
-      const result = transformWorkOrder(odooWorkOrderMock) as WorkOrder
+      const result = transformWorkOrder(odooWorkOrderMock)
 
       expect(result).toHaveProperty('AccessCaption')
       expect(result).toHaveProperty('Caption')
@@ -39,8 +38,7 @@ describe('utils', () => {
   })
 
   describe('transformMessages', () => {
-    const odooWorkOrderMessageMock: OdooWorkOrderMessage[] =
-      factory.odooWorkOrderMessage.buildList(2)
+    const odooWorkOrderMessageMock = factory.odooWorkOrderMessage.buildList(2)
 
     it('should transform messages correctly', () => {
       const result = transformMessages(odooWorkOrderMessageMock)

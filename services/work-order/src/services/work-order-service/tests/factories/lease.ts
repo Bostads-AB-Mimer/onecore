@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Lease, LeaseStatus } from 'onecore-types'
+import { Lease } from '../../schemas'
 
 export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
   leaseId: `123-456-789/${sequence}`,
@@ -14,7 +14,7 @@ export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
   lastDebitDate: undefined,
   leaseEndDate: undefined,
   leaseNumber: '123',
-  leaseStartDate: new Date(),
+  leaseStartDate: new Date().toISOString(),
   noticeDate: undefined,
   noticeGivenBy: 'tenant',
   noticeTimeTenant: '',
@@ -32,7 +32,6 @@ export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
     },
     futureRents: undefined,
   },
-  status: LeaseStatus.Current,
   tenantContactIds: ['P12345'],
   tenants: undefined,
   terminationDate: undefined,

@@ -4,7 +4,6 @@ import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
 import * as odooAdapter from '../adapters/odoo-adapter'
 import { routes } from '../index'
-import { OdooWorkOrder } from 'onecore-types'
 import * as factory from './factories'
 
 jest.mock('onecore-utilities', () => {
@@ -46,7 +45,9 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content.workOrders).toEqual(workOrderMock)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(workOrderMock)
+      )
     })
 
     it('should return 500 if there is an error', async () => {
@@ -65,13 +66,13 @@ describe('work-order-service index', () => {
 
   describe('GET /workOrders/contactCode/{contactCode}', () => {
     const contactCode = 'P174958'
-    const workOrderMock: OdooWorkOrder[] = factory.odooWorkOrder.buildList(4, {
-      contact_code: contactCode,
+    const workOrderMock = factory.workOrder.buildList(4, {
+      ContactCode: contactCode,
     })
 
     beforeEach(() => {
       jest
-        .spyOn(odooAdapter, 'getWorkOrderByContactCode')
+        .spyOn(odooAdapter, 'getWorkOrdersByContactCode')
         .mockResolvedValue(workOrderMock)
     })
 
@@ -81,12 +82,14 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content.workOrders).toEqual(workOrderMock)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(workOrderMock)
+      )
     })
 
     it('should return 500 if there is an error', async () => {
       jest
-        .spyOn(odooAdapter, 'getWorkOrderByContactCode')
+        .spyOn(odooAdapter, 'getWorkOrdersByContactCode')
         .mockRejectedValue(new Error('Internal server error'))
 
       const res = await request(app.callback()).get(
@@ -148,9 +151,10 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.message).toBeDefined()
-      expect(addMessageToWorkOrderSpy).toHaveBeenCalledWith(workOrderId, {
-        body: message,
-      })
+      expect(addMessageToWorkOrderSpy).toHaveBeenCalledWith(
+        workOrderId,
+        message
+      )
     })
 
     it('should return 400 if message body is missing', async () => {
