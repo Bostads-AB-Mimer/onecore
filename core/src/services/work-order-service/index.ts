@@ -7,7 +7,7 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
-import { Lease, RentalPropertyInfo } from 'onecore-types'
+import { ApartmentInfo, Lease, RentalPropertyInfo } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
@@ -105,7 +105,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/workOrderData/:identifier', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['handler'])
-    const responseData: any = []
+    const responseData: RentalPropertyInfoWithLeases[] = []
 
     const getRentalPropertyInfoWithLeases = async (leases: Lease[]) => {
       for (const lease of leases) {
@@ -113,11 +113,17 @@ export const routes = (router: KoaRouter) => {
           await propertyManagementAdapter.getRentalPropertyInfo(
             lease.rentalPropertyId
           )
+        if (!rentalPropertyInfo) {
+          logger.error(
+            `Rental property info not found for rental property id: ${lease.rentalPropertyId}`
+          )
+          continue
+        }
 
         responseData.push({
           ...rentalPropertyInfo,
           leases: [lease],
-        } as RentalPropertyInfoWithLeases)
+        })
       }
     }
 
@@ -142,7 +148,7 @@ export const routes = (router: KoaRouter) => {
             responseData.push({
               ...rentalPropertyInfo,
               leases: [],
-            } as RentalPropertyInfoWithLeases)
+            })
           }
         }
       },
@@ -512,6 +518,25 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      /*
+        We know that rentalPropertyInfo.property is of type ApartmentInfo here,
+        but that is not reflected in the RentalPropertyInfo type, so we do a little narrowing
+      */
+      const rentalPropertyIsApartment = (
+        rentalPropertyInfo: RentalPropertyInfo
+      ): rentalPropertyInfo is RentalPropertyInfo & {
+        property: ApartmentInfo
+      } => rentalPropertyInfo.type === 'Lägenhet'
+
+      if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Rental property is not an apartment',
+          ...metadata,
+        }
+        return
+      }
+
       // Get tenant with leases by contact code
       const tenant = await leasingAdapter.getTenantByContactCode(ContactCode)
       if (!tenant.ok) {
@@ -537,9 +562,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       const result = await workOrderAdapter.createWorkOrder({
-        rentalPropertyInfo: rentalPropertyInfo,
+        rentalProperty: rentalPropertyInfo,
+        // @ts-expect-error phoneNumbers.isMainNumber is typed as boolean, but it is actually a number
         tenant: tenant.data,
-        lease: lease,
+        // @ts-expect-error leaseStartDate and other dates are typed as Date, but they are actually strings
+        lease,
         details: {
           ContactCode,
           RentalObjectCode,
@@ -584,7 +611,7 @@ export const routes = (router: KoaRouter) => {
    *         name: workOrderId
    *         required: true
    *         schema:
-   *           type: integer
+   *           type: string
    *         description: The ID of the work order to be updated.
    *     requestBody:
    *       required: true
@@ -645,7 +672,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      await workOrderAdapter.updateWorkOrder(parseInt(workOrderId), message)
+      await workOrderAdapter.updateWorkOrder(workOrderId, message)
 
       ctx.status = 200
       ctx.body = {
@@ -676,7 +703,7 @@ export const routes = (router: KoaRouter) => {
    *         name: workOrderId
    *         required: true
    *         schema:
-   *           type: integer
+   *           type: string
    *         description: The ID of the work order to be closed.
    *     responses:
    *       '200':
@@ -706,7 +733,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { workOrderId } = ctx.params
 
-    const success = await workOrderAdapter.closeWorkOrder(parseInt(workOrderId))
+    const success = await workOrderAdapter.closeWorkOrder(workOrderId)
 
     if (success) {
       ctx.status = 200

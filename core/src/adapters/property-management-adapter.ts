@@ -32,10 +32,13 @@ const getRentalProperty = async (
 //todo: modify calling code to use a pattern like in "getRentalPropertyInfoFromXpand"
 const getRentalPropertyInfo = async (
   rentalPropertyId: string
-): Promise<RentalPropertyInfo> => {
+): Promise<RentalPropertyInfo | null> => {
   const propertyResponse = await axios(
     propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
   )
+  if (propertyResponse.status === 404) {
+    return null
+  }
 
   return propertyResponse.data.content
 }

@@ -34,7 +34,14 @@ export const CoreWorkOrderSchema = z.object({
   Url: z.string().optional(),
 })
 
+export const CreateWorkOrderResponseSchema = z.object({
+  newWorkOrderId: z.number(),
+})
+
 export const CoreWorkOrderSchemaArray = z.array(CoreWorkOrderSchema)
 
 export type CoreWorkOrderMessage = z.infer<typeof CoreWorkOrderMessageSchema>
 export type CoreWorkOrder = z.infer<typeof CoreWorkOrderSchema>
+export type CreateWorkOrderResponse = z.infer<
+  typeof CreateWorkOrderResponseSchema
+>

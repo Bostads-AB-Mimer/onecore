@@ -8,14 +8,6 @@ import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as workOrderAdapter from '../../../adapters/work-order-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
-import {
-  Lease,
-  Contact,
-  Tenant,
-  RentalPropertyInfo,
-  WorkOrder,
-  CreateWorkOrderDetails,
-} from 'onecore-types'
 import * as factory from '../../../../test/factories'
 
 jest.mock('onecore-utilities', () => {
@@ -43,10 +35,9 @@ app.use(router.routes())
 
 describe('work-order-service index', () => {
   describe('GET /workOrderData/:identifier', () => {
-    const leaseMock: Lease = factory.lease.build()
-    const contactMock: Contact = factory.contact.build()
-    const rentalPropertyInfoMock: RentalPropertyInfo =
-      factory.rentalPropertyInfo.build()
+    const leaseMock = factory.lease.build()
+    const contactMock = factory.contact.build()
+    const rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
 
     it('should handle leaseId case', async () => {
       const getLeaseSpy = jest
@@ -245,15 +236,9 @@ describe('work-order-service index', () => {
   })
 
   describe('POST /workOrders', () => {
-    let rentalPropertyInfoMock: RentalPropertyInfo
-    let tenantMock: Tenant
-    let createWorkOrderDetailsMock: CreateWorkOrderDetails
-
-    beforeEach(() => {
-      rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
-      tenantMock = factory.tenant.build()
-      createWorkOrderDetailsMock = factory.createWorkOrderDetails.build()
-    })
+    const rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
+    const tenantMock = factory.tenant.build()
+    const createWorkOrderDetailsMock = factory.createWorkOrderDetails.build()
 
     it('should create work order', async () => {
       const getRentalPropertyInfoSpy = jest
@@ -306,10 +291,9 @@ describe('work-order-service index', () => {
     })
 
     it('should return 400 if no work orders found in request', async () => {
-      createWorkOrderDetailsMock.Rows = []
       const res = await request(app.callback())
         .post('/api/workOrders')
-        .send(createWorkOrderDetailsMock)
+        .send({ ...createWorkOrderDetailsMock, Rows: [] })
 
       expect(res.status).toBe(400)
       expect(res.body.reason).toBe('No work orders found in request')
@@ -318,7 +302,7 @@ describe('work-order-service index', () => {
     it('should return 404 if rental property not found', async () => {
       jest
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
-        .mockResolvedValue(null as unknown as RentalPropertyInfo)
+        .mockResolvedValue(null)
 
       const res = await request(app.callback())
         .post('/api/workOrders')
@@ -367,7 +351,7 @@ describe('work-order-service index', () => {
   })
 
   describe('POST /workOrders/:workOrderId/update', () => {
-    const workOrderId = 13
+    const workOrderId = '13'
     const message = 'test'
     const updateWorkOrderSpy = jest
       .spyOn(workOrderAdapter, 'updateWorkOrder')
