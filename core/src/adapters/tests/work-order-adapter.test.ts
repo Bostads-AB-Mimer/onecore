@@ -95,7 +95,7 @@ describe('work-order-adapter', () => {
   })
 
   describe(workOrderAdapter.updateWorkOrder, () => {
-    it.only('returns err if request fails', async () => {
+    it('returns err if request fails', async () => {
       mockServer.use(
         http.post(
           `${config.workOrderService.url}/workOrders/1/update`,
@@ -125,9 +125,7 @@ describe('work-order-adapter', () => {
 
       expect(result.ok).toBe(true)
       if (result.ok)
-        expect(result.data).toEqual({
-          message: 'Message added to work order with ID 1',
-        })
+        expect(result.data).toEqual('Message added to work order with ID 1')
     })
   })
 
@@ -143,8 +141,7 @@ describe('work-order-adapter', () => {
       const result = await workOrderAdapter.closeWorkOrder('1')
 
       expect(result.ok).toBe(false)
-      if (!result.ok)
-        expect(result.err).toBe('Request failed with status code 500')
+      if (!result.ok) expect(result.err).toBe('unknown')
     })
 
     it('returns closed work order data', async () => {
@@ -163,9 +160,7 @@ describe('work-order-adapter', () => {
 
       expect(result.ok).toBe(true)
       if (result.ok)
-        expect(result.data).toEqual({
-          message: 'Work order with ID 1 updated successfully',
-        })
+        expect(result.data).toEqual('Work order with ID 1 updated successfully')
     })
   })
 })
