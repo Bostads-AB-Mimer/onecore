@@ -936,6 +936,51 @@ export interface paths {
         };
       };
     };
+  };
+  "/contacts/{contactCode}/application-profile/admin": {
+    /**
+     * Creates or updates an application profile by contact code
+     * @description Create or update application profile information by contact code.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The contact code associated with the application profile. */
+          contactCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": Record<string, never>;
+        };
+      };
+      responses: {
+        /** @description Successfully updated application profile. */
+        200: {
+          content: {
+            "application/json": {
+              /** @description The application profile data. */
+              data?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Successfully created application profile. */
+        201: {
+          content: {
+            "application/json": {
+              /** @description The application profile data. */
+              data?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to update application profile information. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/{contactCode}/application-profile/client": {
     /**
      * Creates or updates an application profile by contact code
      * @description Create or update application profile information by contact code.
@@ -1918,6 +1963,38 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/rooms": {
+    /**
+     * Get rooms by residence id.
+     * @description Returns all rooms belonging to a residence.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The id of the residence. */
+          residenceId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -2047,15 +2124,8 @@ export interface components {
     ResidenceDetails: {
       id: string;
       code: string;
-      name: string;
-      deleted: boolean;
-      validityPeriod: {
-        /** Format: date-time */
-        fromDate: string;
-        /** Format: date-time */
-        toDate: string;
-      };
-      location?: string;
+      name: string | null;
+      location: string | null;
       accessibility: {
         wheelchairAccessible: boolean;
         residenceAdapted: boolean;
@@ -2070,19 +2140,27 @@ export interface components {
           location: string;
           type: string;
         };
-        patioLocation?: string;
-        hygieneFacility: string;
+        patioLocation: string | null;
+        hygieneFacility: string | null;
         sauna: boolean;
         extraToilet: boolean;
         sharedKitchen: boolean;
         petAllergyFree: boolean;
+        /** @description Is the apartment checked for electric allergy intolerance? */
         electricAllergyIntolerance: boolean;
         smokeFree: boolean;
         asbestos: boolean;
       };
-      entrance: string;
+      entrance: string | null;
       partNo?: number | null;
       part?: string | null;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
       residenceType: {
         residenceTypeId: string;
         code: string;
@@ -2109,6 +2187,14 @@ export interface components {
         };
         rentalId: string | null;
       };
+      property: {
+        name: string | null;
+        code: string | null;
+      };
+      building: {
+        name: string | null;
+        code: string | null;
+      };
     };
     Staircase: {
       id: string;
@@ -2127,6 +2213,47 @@ export interface components {
       deleted: boolean;
       /** Format: date-time */
       timestamp: string;
+    };
+    Room: {
+      id: string;
+      code: string;
+      name: string | null;
+      usage: {
+        shared: boolean;
+        allowPeriodicWorks: boolean;
+        spaceType: number;
+      };
+      features: {
+        hasToilet: boolean;
+        isHeated: boolean;
+        hasThermostatValve: boolean;
+        orientation: number;
+      };
+      dates: {
+        /** Format: date-time */
+        installation: string | null;
+        /** Format: date-time */
+        from: string;
+        /** Format: date */
+        to: string;
+        /** Format: date-time */
+        availableFrom: string | null;
+        /** Format: date-time */
+        availableTo: string | null;
+      };
+      sortingOrder: number;
+      deleted: boolean;
+      timestamp: string;
+      roomType: ({
+        id: string;
+        code: string;
+        name: string | null;
+        use: number;
+        optionAllowed: number;
+        isSystemStandard: number;
+        allowSmallRoomsInValuation: number;
+        timestamp: string;
+      }) | null;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
