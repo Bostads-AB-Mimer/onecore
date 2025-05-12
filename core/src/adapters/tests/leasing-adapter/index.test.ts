@@ -67,11 +67,10 @@ describe('leasing-adapter', () => {
   describe(leasingAdapter.addApplicantToWaitingList, () => {
     it('should add applicant to waiting list', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contacts\/196709226789\/waitingLists/)
+        .post(/contacts\/P123456\/waitingLists/)
         .reply(201)
 
       const result = await leasingAdapter.addApplicantToWaitingList(
-        '196709226789',
         'P123456',
         WaitingListType.ParkingSpace
       )
@@ -83,11 +82,10 @@ describe('leasing-adapter', () => {
   describe(leasingAdapter.resetWaitingList, () => {
     it('should reset waiting list for applicant', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contacts\/196709226789\/waitingLists/)
+        .post(/contacts\/P123456\/waitingLists/)
         .reply(200)
 
       const result = await leasingAdapter.resetWaitingList(
-        '196709226789',
         'P123456',
         WaitingListType.ParkingSpace
       )
@@ -97,11 +95,10 @@ describe('leasing-adapter', () => {
 
     it('should return not-in-waiting-list when applicant not in waiting list', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contacts\/196709226789\/waitingLists/)
+        .post(/contacts\/P123456\/waitingLists/)
         .reply(404)
 
       const result = await leasingAdapter.resetWaitingList(
-        '196709226789',
         'P123456',
         WaitingListType.ParkingSpace
       )
@@ -112,11 +109,10 @@ describe('leasing-adapter', () => {
 
     it('should return unknown on unknown error from leasing', async () => {
       nock(config.tenantsLeasesService.url)
-        .post(/contacts\/196709226789\/waitingLists/)
+        .post(/contacts\/P123456\/waitingLists/)
         .reply(500)
 
       const result = await leasingAdapter.resetWaitingList(
-        '196709226789',
         'P123456',
         WaitingListType.ParkingSpace
       )

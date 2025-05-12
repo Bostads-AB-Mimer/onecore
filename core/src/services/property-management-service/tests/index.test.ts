@@ -124,15 +124,11 @@ describe('rental-property-service index', () => {
           ...maintenanceUnitInfo,
           type: index % 2 === 0 ? 'Tvättstuga' : 'Miljöbod',
         }))
-    const contactMock = factory.contact.build()
     const leaseMock = factory.lease.build()
 
     it('should return all maintenance units', async () => {
-      const getContactSpy = jest
-        .spyOn(leasingAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: contactMock })
-      const getLeasesForPnrSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForPnr')
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForContactCode')
         .mockResolvedValue([leaseMock])
       const getMaintenanceUnitsForRentalPropertySpy = jest
         .spyOn(
@@ -147,15 +143,33 @@ describe('rental-property-service index', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
-      expect(getContactSpy).toHaveBeenCalledWith('P965339')
-      expect(getLeasesForPnrSpy).toHaveBeenCalledWith(
-        '199404084924',
-        false,
-        false
-      )
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
-        '705-022-04-0201'
+        leaseMock.rentalPropertyId
       )
+    })
+
+    it('should return an empty list if there are no leases', async () => {
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .mockResolvedValue([])
+
+      const res = await request(app.callback()).get(
+        '/api/maintenanceUnits/contactCode/P965339'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      expect(res.body.reason).toBe('No maintenance units found')
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      })
     })
   })
 })

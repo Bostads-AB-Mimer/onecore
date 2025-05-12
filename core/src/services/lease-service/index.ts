@@ -7,7 +7,10 @@
  */
 import KoaRouter from '@koa/router'
 import dayjs from 'dayjs'
-import { GetActiveOfferByListingIdErrorCodes } from 'onecore-types'
+import {
+  GetActiveOfferByListingIdErrorCodes,
+  RouteErrorResponse,
+} from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { z } from 'zod'
 
@@ -20,6 +23,8 @@ import { makeAdminApplicationProfileRequestParams } from './helpers/application-
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
+import { routes as applicationProfileRoutesOld } from './application-profile-old'
+
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
 
@@ -31,8 +36,11 @@ const getLeasesWithRelatedEntitiesForPnr = async (
 ) => {
   const leases = await leasingAdapter.getLeasesForPnr(
     nationalRegistrationNumber,
-    false,
-    true
+    {
+      includeUpcomingLeases: false,
+      includeTerminatedLeases: false,
+      includeContacts: true,
+    }
   )
 
   return leases
@@ -54,6 +62,10 @@ const getLeasesWithRelatedEntitiesForPnr = async (
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  // TODO: Remove this once all routes are migrated to the new application
+  // profile (with housing references)
+  applicationProfileRoutesOld(router)
+
   /**
    * @swagger
    * /leases/for/{pnr}:
@@ -456,6 +468,39 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /tenants/contactCode/{contactCode}:
+   *   get:
+   *     summary: Get tenant by contact code
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves a tenant based on the provided contact code.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code used to identify the contact.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved tenant information.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The tenant data.
+   *       404:
+   *         description: Not found.
+   *       500:
+   *         description: Internal server error. Failed to retrieve Tenant information.
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('(.*)/tenants/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getTenantByContactCode(
@@ -463,8 +508,49 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!res.ok) {
+      if (res.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: res.err,
+          title: 'Contact not found',
+          status: 404,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      if (res.err === 'no-valid-housing-contract') {
+        ctx.status = 500
+        ctx.body = {
+          type: res.err,
+          title: 'No valid housing contract found',
+          status: 500,
+          detail: 'No active or upcoming contract found.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+
+        return
+      }
+
+      if (res.err === 'contact-not-tenant') {
+        ctx.status = 500
+        ctx.body = {
+          type: res.err,
+          title: 'Contact is not a tenant',
+          status: 500,
+          detail: 'No active or upcoming contract found.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
       ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
+      ctx.body = {
+        type: res.err,
+        title: 'Internal server error',
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
       return
     }
 
@@ -946,8 +1032,9 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 applicationType: string
-   *                 example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
+   *                 applicationType:
+   *                   type: string
+   *                   example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
    *                 reason:
    *                   type: string
    *                   example: No property rental rules applies to this property.
@@ -1072,8 +1159,9 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 applicationType: string
-   *                 example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
+   *                 applicationType:
+   *                   type: string
+   *                   example: Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property.
    *                 reason:
    *                   type: string
    *                   examples:

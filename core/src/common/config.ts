@@ -28,6 +28,9 @@ export interface Config {
   minaSidor: {
     url: string
   }
+  propertyBaseService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: string
@@ -41,6 +44,10 @@ export interface Config {
   }
   health: {
     leasing: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    propertyBase: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -81,6 +88,9 @@ const config = configPackage({
     minaSidor: {
       url: 'https://test.mimer.nu/',
     },
+    propertyBaseService: {
+      url: 'http://localhost:5050',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -93,6 +103,10 @@ const config = configPackage({
     health: {
       leasing: {
         systemName: 'leasing',
+        minimumMinutesBetweenRequests: 1,
+      },
+      propertyBase: {
+        systemName: 'property-base',
         minimumMinutesBetweenRequests: 1,
       },
       propertyManagement: {
@@ -122,4 +136,5 @@ export default {
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
   health: config.get('health'),
+  propertyBaseService: config.get('propertyBaseService'),
 } as Config

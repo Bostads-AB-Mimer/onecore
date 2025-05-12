@@ -23,6 +23,7 @@ import {
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getContactByContactCode,
+  getLeasesForContactCode,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import {
@@ -59,7 +60,6 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         `The parking space ${parkingSpaceId} does not exist or is no longer available.`
       )
     }
-
     const parkingSpaceApplicationType = parkingSpace.waitingListType
       ? parkingSpaceApplicationCategoryTranslation[parkingSpace.waitingListType]
       : undefined
@@ -87,12 +87,14 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     }
 
     const applicantContact = getApplicantContact.data
+
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForPnr(
-      applicantContact.nationalRegistrationNumber,
-      true,
-      false
-    )
+    const leases = await getLeasesForContactCode(contactCode, {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      })
+
     if (leases.length < 1) {
       return endFailingProcess(
         log,
@@ -166,7 +168,6 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     if (!applicantContact.parkingSpaceWaitingList) {
       log.push(`Sökande saknas i kö för parkeringsplats.`)
       const result = await addApplicantToWaitingList(
-        applicantContact.nationalRegistrationNumber,
         applicantContact.contactCode,
         WaitingListType.ParkingSpace
       )

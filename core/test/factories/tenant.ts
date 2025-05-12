@@ -139,4 +139,5 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       type: 'Bostadskontrakt',
     },
   ],
+  isAboutToLeave: false,
 }))

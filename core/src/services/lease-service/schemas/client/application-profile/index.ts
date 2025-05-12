@@ -14,6 +14,23 @@ export const UpdateApplicationProfileRequestParams =
       ),
   })
 
+// TODO: Remove this once all routes are migrated to the new application
+// profile (with housing references)
+export const UpdateApplicationProfileRequestParamsOld =
+  leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.pick({
+    numChildren: true,
+    numAdults: true,
+    landlord: true,
+    housingType: true,
+    housingTypeDescription: true,
+  }).extend({
+    housingReference:
+      leasing.CreateOrUpdateApplicationProfileRequestParamsSchema.shape.housingReference
+        .unwrap()
+        .pick({ email: true, phone: true })
+        .optional(),
+  })
+
 export const UpdateApplicationProfileResponseData =
   leasing.v1.CreateOrUpdateApplicationProfileResponseDataSchema.pick({
     contactCode: true,
