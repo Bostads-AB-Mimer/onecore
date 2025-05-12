@@ -764,8 +764,43 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
-  router.get('(.*)/listings', async (ctx) => {
-    console.log('calling /listings ctx', ctx)
+  /**
+   * @swagger
+   * /vacant-parkingspaces:
+   *   get:
+   *     summary: Get all vacant parking spaces
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves a list of all vacant parking spaces.
+   *     responses:
+   *       '200':
+   *         description: A list of vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/VacantParkingSpace'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: Error message.
+   * components:
+   *   schemas:
+   *     VacantParkingSpace:
+   *       type: object
+   *       description: Represents a vacant parking space.
+   */
+  router.get('(.*)/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getAllVacantParkingSpaces()
 

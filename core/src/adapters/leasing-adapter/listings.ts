@@ -6,7 +6,7 @@ import {
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
-  ParkingSpace,
+  VacantParkingSpace,
 } from 'onecore-types'
 
 import { AdapterResult } from '../types'
@@ -48,7 +48,7 @@ const getListingsWithApplicants = async (
 }
 
 const getAllVacantParkingSpaces = async (): Promise<
-  AdapterResult<ParkingSpace[], 'unknown'>
+  AdapterResult<VacantParkingSpace[], 'unknown'>
 > => {
   try {
     const response = await axios.get(
