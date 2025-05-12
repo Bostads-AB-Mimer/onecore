@@ -333,6 +333,15 @@ interface ParkingSpaceInfo {
   code: string
 }
 
+interface ParkingSpace {
+  parkingSpaceId: string
+  address: Address
+  rent: RentInfo
+  vacantFrom: Date
+  type: ParkingSpaceType
+  applicationCategory: ParkingSpaceApplicationCategory
+}
+
 interface RentalObject {
   rentalObjectCode: string
   address: string
@@ -348,7 +357,7 @@ interface RentalObject {
   vacantFrom: Date
 }
 
-interface ParkingSpace extends RentalObject {
+interface VacantParkingSpace extends RentalObject {
   vehicleSpaceCaption: string
   vehicleSpaceCode: string
 }
@@ -395,6 +404,7 @@ export type {
   Invoice,
   RentalObject,
   ParkingSpace,
+  VacantParkingSpace,
   Email,
   Sms,
   WaitingList,
