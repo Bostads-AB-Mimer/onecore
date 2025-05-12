@@ -678,6 +678,21 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  router.get('(.*)/listings', async (ctx) => {
+    console.log('calling /listings ctx', ctx)
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getAllVacantParkingSpaces()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
   /**
    * @swagger
    * /listings/{listingId}/offers:

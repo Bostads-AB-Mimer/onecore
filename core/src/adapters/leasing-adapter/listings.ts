@@ -6,6 +6,7 @@ import {
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
+  ParkingSpace,
 } from 'onecore-types'
 
 import { AdapterResult } from '../types'
@@ -27,10 +28,7 @@ const getActiveListingByRentalObjectCode = async (
 
     return { ok: true, data: res.data.content }
   } catch (error) {
-    logger.error(
-      error,
-      'Error fetching active listing by rental object code:'
-    )
+    logger.error(error, 'Error fetching active listing by rental object code:')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -45,6 +43,20 @@ const getListingsWithApplicants = async (
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(error, 'Error fetching listings with applicants:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getAllVacantParkingSpaces = async (): Promise<
+  AdapterResult<ParkingSpace[], 'unknown'>
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/listings/vacant-parkingspaces`
+    )
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(error, 'Error fetching vacant-parkingspaces:')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -212,6 +224,7 @@ const getExpiredListingsWithNoOffers = async (): Promise<
 export {
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
+  getAllVacantParkingSpaces,
   createNewListing,
   applyForListing,
   getListingByListingId,
