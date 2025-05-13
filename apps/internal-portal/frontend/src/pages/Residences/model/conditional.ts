@@ -1,4 +1,4 @@
-export const housingFieldMatrix: Record<string, string[]> = {
+export const housingFieldMatrix: Record<string, readonly string[]> = {
   ['RENTAL']: [
     'landlord',
     'numAdults',
@@ -25,7 +25,7 @@ export const housingFieldMatrix: Record<string, string[]> = {
   ],
 } as const
 
-export const reviewStatusFieldMatrix: Record<string, string[]> = {
+export const reviewStatusFieldMatrix: Record<string, readonly string[]> = {
   ['APPROVED']: [],
   ['REJECTED']: [
     'housingReference.reasonRejected',

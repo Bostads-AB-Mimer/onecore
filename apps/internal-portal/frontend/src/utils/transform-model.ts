@@ -1,6 +1,6 @@
 export const setConditionalFields = (
   source: any,
-  matrix: Record<string, string[]>,
+  matrix: Record<string, readonly string[]>,
   controllerValue: string,
   target: Record<string, any>
 ) => {

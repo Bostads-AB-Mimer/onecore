@@ -16,7 +16,7 @@ type SearchContactProps = {
   placeholder?: string
   onSelect: (contact: ContactSearchData | null) => void
   contact: ContactSearchData | null
-  inputRef: any
+  inputRef?: React.MutableRefObject<HTMLInputElement | null>
 }
 
 export const SearchContact = ({

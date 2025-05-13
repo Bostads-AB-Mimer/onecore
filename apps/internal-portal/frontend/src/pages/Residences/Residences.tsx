@@ -203,10 +203,10 @@ const ResidencesPage: React.FC = () => {
 
   const housingReference = customerCard?.applicationProfile?.housingReference
 
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
+    searchInputRef.current?.focus()
   }, [])
 
   return (
@@ -218,7 +218,7 @@ const ResidencesPage: React.FC = () => {
             placeholder="Sök på person eller kundnummer"
             contact={selectedContact}
             onSelect={setSelectedContact}
-            inputRef={inputRef}
+            inputRef={searchInputRef}
           />
 
           <Paper
