@@ -22,7 +22,6 @@ export const UpdateApplicationProfileRequestParamsSchema =
           phone: true,
           reviewStatus: true,
           comment: true,
-          reviewedBy: true,
           reasonRejected: true,
           expiresAt: true,
         }

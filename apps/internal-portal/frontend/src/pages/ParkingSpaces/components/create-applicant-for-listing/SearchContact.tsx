@@ -16,12 +16,14 @@ type SearchContactProps = {
   placeholder?: string
   onSelect: (contact: ContactSearchData | null) => void
   contact: ContactSearchData | null
+  inputRef: any
 }
 
 export const SearchContact = ({
   onSelect,
   contact,
   placeholder = 'Sök boende',
+  inputRef,
 }: SearchContactProps) => {
   const [searchString, setSearchString] = useState<string>('')
   const contactsQuery = useSearchContacts(searchString)
@@ -54,6 +56,7 @@ export const SearchContact = ({
         renderInput={(params) => (
           <TextField
             {...params}
+            inputRef={inputRef}
             size="small"
             variant="outlined"
             placeholder={placeholder}

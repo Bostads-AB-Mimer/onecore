@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 import { Controller, useFormContext } from 'react-hook-form'
 
-import HousingTypeComponentSwitcher from '../HousingTypeComponentSwitcher'
+import HousingTypeDetailsSection from '../HousingTypeDetailsSection'
 
 const HousingType = () => {
   const { control } = useFormContext()
@@ -59,7 +59,7 @@ const HousingType = () => {
           )}
         />
       </Grid>
-      <HousingTypeComponentSwitcher />
+      <HousingTypeDetailsSection />
     </Grid>
   )
 }

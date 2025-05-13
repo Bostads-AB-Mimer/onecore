@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Button,
   Container,
@@ -10,15 +10,15 @@ import {
 } from '@mui/material'
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import dayjs from 'dayjs'
 import { Contact, schemas } from 'onecore-types'
+import dayjs from 'dayjs'
 import { z } from 'zod'
 
 import { SearchContact } from '../ParkingSpaces/components/create-applicant-for-listing/SearchContact'
 import { ContactSearchData } from '../ParkingSpaces/components/create-applicant-for-listing/types'
 import CustomerInformation from './components/CustomerInformation'
 import HousingType from './components/Form/HousingType'
-import HousingReferenceReviewStatus from './components/Form/ReviewStatus'
+import ReviewStatusSection from './components/ReviewStatusSection'
 import HousingReferenceComment from './components/Form/HousingReferenceComment'
 import CustomerReference from './components/CustomerReference'
 import { useCustomerCard } from './hooks/useCustomerCard'
@@ -26,6 +26,11 @@ import {
   useCreateOrUpdateApplicationProfile,
   UpdateApplicationProfileRequestParamsSchema,
 } from './hooks/useCreateOrUpdateApplicationProfile'
+import {
+  housingFieldMatrix,
+  reviewStatusFieldMatrix,
+} from './model/conditional'
+import { setConditionalFields } from '../../utils/transform-model'
 
 type HousingTypes = z.infer<
   typeof schemas.v1.ApplicationProfileHousingTypeSchema
@@ -46,10 +51,6 @@ export type Inputs = {
     comment: string
     email: string
     expiresAt: dayjs.Dayjs
-    reviewedBy: string | null
-    reviewedAt: dayjs.Dayjs
-    lastAdminUpdatedAt: dayjs.Dayjs
-    lastApplicantUpdatedAt: dayjs.Dayjs
     phone: string
     reasonRejected: RejectedReasons | ''
     reviewStatus: ReviewStatus
@@ -62,27 +63,32 @@ export type Inputs = {
 const getContactsMainPhoneNumber = (contact: Contact) =>
   contact.phoneNumbers?.find(({ isMainNumber }) => isMainNumber)?.phoneNumber
 
-const emptyStringToNull = (val: string | null | undefined): string | null =>
-  val == null || val.trim() === '' ? null : val
+const formDefaults = (): Inputs => {
+  return {
+    housingType: '',
+    housingTypeDescription: '',
+    housingReference: {
+      comment: '',
+      email: '',
+      expiresAt: dayjs(),
+      phone: '',
+      reasonRejected: '',
+      reviewStatus: 'PENDING',
+    },
+    landlord: '',
+    numAdults: 1,
+    numChildren: 0,
+  }
+}
 
 const ResidencesPage: React.FC = () => {
-  const { handleSubmit, ...formMethods } = useForm<Inputs>({
+  const formMethods = useForm<Inputs>({
     defaultValues: {
-      housingType: '',
-      housingTypeDescription: '',
-      housingReference: {
-        comment: '',
-        email: '',
-        expiresAt: dayjs(),
-        phone: '',
-        reasonRejected: '',
-        reviewStatus: 'PENDING',
-      },
-      landlord: '',
-      numAdults: 1,
-      numChildren: 0,
+      ...formDefaults(),
     },
   })
+
+  const { handleSubmit, reset } = formMethods
 
   const [selectedContact, setSelectedContact] =
     useState<ContactSearchData | null>(null)
@@ -98,17 +104,28 @@ const ResidencesPage: React.FC = () => {
   const createOrUpdateApplicationProfile = useCreateOrUpdateApplicationProfile()
 
   const onSubmit: SubmitHandler<Inputs> = (data: Inputs) => {
-    const parsed = UpdateApplicationProfileRequestParamsSchema.safeParse({
-      ...data,
-      landlord: emptyStringToNull(data.landlord),
+    const payload = {
+      ...formDefaults(),
+      housingType: data.housingType,
+      numAdults: data.numAdults,
+      numChildren: data.numChildren,
       housingReference: {
-        ...data.housingReference,
-        reasonRejected: emptyStringToNull(data.housingReference.reasonRejected),
-        email: emptyStringToNull(data.housingReference.email),
-        phone: emptyStringToNull(data.housingReference.phone),
-        expiresAt: null,
+        ...formDefaults().housingReference,
+        reviewStatus: data.housingReference.reviewStatus,
+        reasonRejected: null,
       },
-    })
+    }
+
+    setConditionalFields(data, housingFieldMatrix, data.housingType, payload)
+    setConditionalFields(
+      data,
+      reviewStatusFieldMatrix,
+      data.housingReference.reviewStatus,
+      payload
+    )
+
+    const parsed =
+      UpdateApplicationProfileRequestParamsSchema.safeParse(payload)
 
     if (parsed.success) {
       createOrUpdateApplicationProfile.mutate(
@@ -157,15 +174,13 @@ const ResidencesPage: React.FC = () => {
           comment: '',
           email: '',
           expiresAt: dayjs(),
-          reviewedAt: dayjs(),
-          reviewedBy: '',
           phone: '',
           reasonRejected: '',
           reviewStatus: 'PENDING',
         },
       } = customerCard.applicationProfile ?? {}
 
-      formMethods.reset({
+      reset({
         housingType: housingType || '',
         housingTypeDescription: housingTypeDescription || '',
         landlord: landlord || '',
@@ -175,8 +190,6 @@ const ResidencesPage: React.FC = () => {
           comment: housingReference.comment || '',
           email: housingReference.email || '',
           expiresAt: dayjs(housingReference.expiresAt),
-          reviewedAt: dayjs(housingReference.reviewedAt),
-          reviewedBy: housingReference.reviewedBy,
           phone: housingReference.phone || '',
           reasonRejected: housingReference.reasonRejected || '',
           reviewStatus: housingReference.reviewStatus || '',
@@ -184,25 +197,28 @@ const ResidencesPage: React.FC = () => {
       })
     }
     if (isError) {
-      formMethods.reset()
+      reset()
     }
-    // Using exhaustive-deps rule leads to an infinite loop, using `status`
-    // instead
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status])
+  }, [customerCard?.applicationProfile, isError, isSuccess, reset, status])
 
   const housingReference = customerCard?.applicationProfile?.housingReference
+
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   return (
     <Stack spacing={4} padding={0}>
       <Typography variant="h1">Sökandeprofil</Typography>
-
       <Container maxWidth="md" disableGutters>
         <Stack spacing={2}>
           <SearchContact
             placeholder="Sök på person eller kundnummer"
             contact={selectedContact}
             onSelect={setSelectedContact}
+            inputRef={inputRef}
           />
 
           <Paper
@@ -213,7 +229,7 @@ const ResidencesPage: React.FC = () => {
               padding: '0px 20px',
             }}
           >
-            <FormProvider {...formMethods} handleSubmit={handleSubmit}>
+            <FormProvider {...formMethods}>
               <form onSubmit={handleSubmit(onSubmit)}>
                 <fieldset disabled={!isSuccess}>
                   <Grid container spacing={2} padding={2}>
@@ -234,7 +250,7 @@ const ResidencesPage: React.FC = () => {
 
                       <Divider />
 
-                      <HousingReferenceReviewStatus />
+                      <ReviewStatusSection />
 
                       <CustomerReference
                         customerReferenceReceivedAt={
