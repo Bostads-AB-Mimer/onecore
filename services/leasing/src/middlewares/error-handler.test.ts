@@ -3,6 +3,17 @@ import request from 'supertest'
 import errorHandler from './error-handler'
 
 describe('errorHandler', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error')
+    // @ts-expect-error jest.spyOn adds this functionallity
+    console.error.mockImplementation(() => null)
+  })
+
+  afterEach(() => {
+    // @ts-expect-error jest.spyOn adds this functionallity
+    console.error.mockRestore()
+  })
+
   const app = new Koa()
   app.use(errorHandler())
 
