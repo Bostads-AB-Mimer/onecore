@@ -24,6 +24,12 @@ import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
 import { routes as applicationProfileRoutesOld } from './application-profile-old'
+import { registerSchema } from '../../utils/openapi'
+import {
+  GetLeasesByRentalPropertyIdQueryParams,
+  Lease,
+  mapLease,
+} from './schemas/lease'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -62,9 +68,101 @@ const getLeasesWithRelatedEntitiesForPnr = async (
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('Lease', Lease)
+
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
   applicationProfileRoutesOld(router)
+
+  /**
+   * @swagger
+   * /leases/by-rental-property-id/{rentalPropertyId}:
+   *   get:
+   *     summary: Get leases with related entities for a specific rental property id
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental roperty id of the building/residence to fetch leases for.
+   *       - in: query
+   *         name: includeUpcomingLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include upcoming leases in the response
+   *       - in: query
+   *         name: includeTerminatedLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include terminated leases in the response
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include contact information in the response
+   *     responses:
+   *       '200':
+   *         description: Successful response with leases and related entities
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *       '400':
+   *         description: Invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/leases/by-rental-property-id/:rentalPropertyId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const queryParams = GetLeasesByRentalPropertyIdQueryParams.safeParse(
+        ctx.query
+      )
+
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid query parameters',
+          error: queryParams.error,
+          ...metadata,
+        }
+        return
+      }
+
+      try {
+        const leases = await leasingAdapter.getLeasesForPropertyId(
+          ctx.params.rentalPropertyId,
+          queryParams.data
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: leases.map(mapLease),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err, metadata }, 'Error fetching leases from leasing')
+        ctx.status = 500
+      }
+    }
+  )
 
   /**
    * @swagger
