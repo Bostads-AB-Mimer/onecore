@@ -35,14 +35,24 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
             className={`grid ${isMobile ? 'grid-cols-1 gap-y-4' : 'grid-cols-2 md:grid-cols-3 gap-4'}`}
           >
             <div>
-              <p className="text-sm text-muted-foreground">Lägenhetskod</p>
-              <p className="font-medium">{residence.code}</p>
-            </div>
-            <div>
               <p className="text-sm text-muted-foreground">Namn</p>
               <p className="font-medium">
                 {residence.residenceType.name}, {residence.name}
               </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Skatteverkets lägenhetsnummer
+              </p>
+              <p className="font-medium">{residence.code}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Hyres ID</p>
+              <p className="font-medium">{residence.propertyObject.rentalId}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Typ</p>
+              <p className="font-medium">{residence.residenceType.name}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Status</p>

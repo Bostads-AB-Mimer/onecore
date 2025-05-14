@@ -5,13 +5,14 @@ import { Separator } from '../ui/v2/Separator'
 import { LeaseInfo } from './LeaseInfo'
 import { TenantCard } from './TenantCard'
 import { Grid } from '../ui/Grid'
+
 interface Props {
   rentalPropertyId: string
 }
 
 export function TenantInformation(props: Props) {
   const leasesQuery = useQuery({
-    queryKey: ['rooms', props.rentalPropertyId],
+    queryKey: ['leases', props.rentalPropertyId],
     queryFn: () =>
       leaseService.getByRentalPropertyId(props.rentalPropertyId, {
         includeContacts: true,
