@@ -9,6 +9,7 @@ import { ResidenceBasicInfo } from '../residence/ResidenceBasicInfo'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
+import { TenantInformation } from '../residence/TenantInformation'
 
 export function ResidenceView() {
   const { residenceId } = useParams()
@@ -58,11 +59,7 @@ export function ResidenceView() {
               <ClipboardList className="h-4 w-4" />
               Besiktningar
             </TabsTrigger>
-            <TabsTrigger
-              disabled
-              value="tenant"
-              className="flex items-center gap-1.5"
-            >
+            <TabsTrigger value="tenant" className="flex items-center gap-1.5">
               <Users className="h-4 w-4" />
               Hyresgäst
             </TabsTrigger>
@@ -79,6 +76,15 @@ export function ResidenceView() {
             <Card>
               <CardContent className="p-4">
                 <RoomInfo residenceId={residence.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="tenant">
+            <Card>
+              <CardContent className="p-4">
+                <TenantInformation
+                  rentalPropertyId={residence.propertyObject.rentalId!}
+                />
               </CardContent>
             </Card>
           </TabsContent>

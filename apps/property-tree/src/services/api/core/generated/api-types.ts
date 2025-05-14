@@ -109,6 +109,44 @@ export interface paths {
   };
   "security": {
   };
+  "/leases/by-rental-property-id/{rentalPropertyId}": {
+    /**
+     * Get leases with related entities for a specific rental property id
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean;
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean;
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean;
+        };
+        path: {
+          /** @description Rental roperty id of the building/residence to fetch leases for. */
+          rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
   "/leases/for/{pnr}": {
     /**
      * Get leases with related entities for a specific Personal Number (PNR)
@@ -1552,7 +1590,7 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to be updated. */
-          workOrderId: number;
+          workOrderId: string;
         };
       };
       requestBody: {
@@ -1603,7 +1641,7 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to be closed. */
-          workOrderId: number;
+          workOrderId: string;
         };
       };
       responses: {
@@ -2033,6 +2071,109 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    Lease: {
+      leaseId: string;
+      leaseNumber: string;
+      /** Format: date-time */
+      leaseStartDate: string;
+      /** Format: date-time */
+      leaseEndDate?: string;
+      /** @enum {string} */
+      status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+      tenantContactIds?: string[];
+      rentalPropertyId: string;
+      rentalProperty?: {
+        rentalPropertyId: string;
+        apartmentNumber: number;
+        size: number;
+        type: string;
+        address?: {
+          street: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
+        rentalPropertyType: string;
+        additionsIncludedInRent: string;
+        otherInfo?: string;
+        roomTypes?: {
+            roomTypeId: string;
+            name: string;
+          }[];
+        /** Format: date-time */
+        lastUpdated?: string;
+      };
+      type: string;
+      rentInfo?: {
+        currentRent: {
+          rentId?: string;
+          leaseId?: string;
+          currentRent: number;
+          vat: number;
+          additionalChargeDescription?: string;
+          additionalChargeAmount?: number;
+          /** Format: date-time */
+          rentStartDate?: string;
+          /** Format: date-time */
+          rentEndDate?: string;
+        };
+      };
+      address?: {
+        street: string;
+        number: string;
+        postalCode: string;
+        city: string;
+      };
+      noticeGivenBy?: string;
+      /** Format: date-time */
+      noticeDate?: string;
+      noticeTimeTenant?: string;
+      /** Format: date-time */
+      preferredMoveOutDate?: string;
+      /** Format: date-time */
+      terminationDate?: string;
+      /** Format: date-time */
+      contractDate?: string;
+      /** Format: date-time */
+      lastDebitDate?: string;
+      /** Format: date-time */
+      approvalDate?: string;
+      residentialArea?: {
+        code: string;
+        caption: string;
+      };
+      tenants?: {
+          contactCode: string;
+          contactKey: string;
+          leaseIds?: string[];
+          firstName: string;
+          lastName: string;
+          fullName: string;
+          nationalRegistrationNumber: string;
+          /** Format: date-time */
+          birthDate: string;
+          address?: {
+            street: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          phoneNumbers?: {
+              phoneNumber: string;
+              type: string;
+              isMainNumber: boolean;
+            }[];
+          emailAddress?: string;
+          isTenant: boolean;
+          parkingSpaceWaitingList?: {
+            /** Format: date-time */
+            queueTime: string;
+            queuePoints: number;
+            type: number;
+          };
+          specialAttention?: boolean;
+        }[];
+    };
     WorkOrder: {
       AccessCaption: string;
       Caption: string;
@@ -2234,7 +2375,7 @@ export interface components {
         installation: string | null;
         /** Format: date-time */
         from: string;
-        /** Format: date */
+        /** Format: date-time */
         to: string;
         /** Format: date-time */
         availableFrom: string | null;
