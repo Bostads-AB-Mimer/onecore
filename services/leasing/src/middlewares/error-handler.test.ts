@@ -4,14 +4,11 @@ import errorHandler from './error-handler'
 
 describe('errorHandler', () => {
   beforeEach(() => {
-    jest.spyOn(console, 'error')
-    // @ts-expect-error jest.spyOn adds this functionallity
-    console.error.mockImplementation(() => null)
+    jest.spyOn(console, 'error').mockImplementation(() => null)
   })
 
   afterEach(() => {
-    // @ts-expect-error jest.spyOn adds this functionallity
-    console.error.mockRestore()
+    jest.restoreAllMocks()
   })
 
   const app = new Koa()
