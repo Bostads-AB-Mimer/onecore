@@ -5,6 +5,7 @@ import {
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
+  RentalObject,
   UpdateListingStatusErrorCodes,
   VacantParkingSpace,
 } from 'onecore-types'
@@ -57,6 +58,27 @@ const getAllVacantParkingSpaces = async (): Promise<
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(error, 'Error fetching vacant-parkingspaces:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+//todo: returnera parking space istället för rental object och flytta till onecore-property-management
+const getParkingSpaceByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>> => {
+  try {
+    const res = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-object/by-code/${rentalObjectCode}`
+    )
+    if (res.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: res.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -241,6 +263,7 @@ export {
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
   getAllVacantParkingSpaces,
+  getParkingSpaceByRentalObjectCode,
   createNewListing,
   applyForListing,
   getListingByListingId,

@@ -608,6 +608,53 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rental-object/by-code/{rentalObjectCode}:
+   *   get:
+   *     summary: Get a rental object
+   *     description: Fetches a rental object by Rental Object Code.
+   *     tags:
+   *       - RentalObject
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalObject'
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('(.*)/rental-object/by-code/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+    const result =
+      await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /propertyInfoFromXpand/{rentalObjectCode}:
    *   get:
    *     summary: Get rental property information from Xpand
