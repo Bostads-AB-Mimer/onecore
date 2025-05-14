@@ -1,7 +1,21 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from 'onecore-utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
-import { CreateWorkOrderBodySchema, WorkOrder } from './schemas'
+import {
+  CreateWorkOrderBodySchema,
+  CreateWorkOrderDetailsSchema,
+  GetWorkOrdersFromXpandQuerySchema,
+  LeaseSchema,
+  RentalPropertySchema,
+  TenantSchema,
+  WorkOrder,
+  WorkOrderSchema,
+  XpandWorkOrderDetails,
+  XpandWorkOrderDetailsSchema,
+  XpandWorkOrderSchema,
+} from './schemas'
+import * as xpandAdapter from './adapters/xpand-adapter'
+import { registerSchema } from '../../middlewares/swagger-middleware'
 
 /**
  * @swagger
@@ -19,6 +33,15 @@ import { CreateWorkOrderBodySchema, WorkOrder } from './schemas'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('WorkOrder', WorkOrderSchema)
+  registerSchema('XpandWorkOrder', XpandWorkOrderSchema)
+  registerSchema('XpandWorkOrderDetails', XpandWorkOrderDetailsSchema)
+  registerSchema('CreateWorkOrderBody', CreateWorkOrderBodySchema)
+  registerSchema('CreateWorkOrderDetails', CreateWorkOrderDetailsSchema)
+  registerSchema('Lease', LeaseSchema)
+  registerSchema('Tenant', TenantSchema)
+  registerSchema('RentalProperty', RentalPropertySchema)
+
   /**
    * @swagger
    * /workOrders/contactCode/{contactCode}:
@@ -146,7 +169,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/workOrders/residenceId/:residenceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const workOrders = await odooAdapter.getWorkOrderByResidenceId(
+      const workOrders = await odooAdapter.getWorkOrdersByResidenceId(
         ctx.params.residenceId
       )
       ctx.status = 200
@@ -154,6 +177,222 @@ export const routes = (router: KoaRouter) => {
         content: {
           workOrders: workOrders satisfies WorkOrder[],
         },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/xpand/residenceId/{residenceId}:
+   *   get:
+   *     summary: Get work orders by residence id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders from xpand based on the provided residence id.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The residence id to filter work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to skip.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to fetch.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Whether to sort the work orders by ascending creation date.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/residenceId/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetWorkOrdersFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedQuery.data
+
+    try {
+      const xpandWorkOrders = await xpandAdapter.getWorkOrdersByResidenceId(
+        ctx.params.residenceId,
+        {
+          skip,
+          limit,
+          sortAscending,
+        }
+      )
+
+      if (!xpandWorkOrders.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch work orders from Xpand: ${xpandWorkOrders.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: xpandWorkOrders.data,
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/xpand/{code}:
+   *   get:
+   *     summary: Get work order details by work order code from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work order details from xpand.
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The work order code to fetch details for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/XpandWorkOrderDetails'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const xpandWorkOrder = await xpandAdapter.getWorkOrderDetails(
+        ctx.params.code
+      )
+
+      if (!xpandWorkOrder.ok) {
+        if (xpandWorkOrder.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Work order with code ${ctx.params.code} not found`,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch work order from Xpand: ${xpandWorkOrder.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: xpandWorkOrder.data satisfies XpandWorkOrderDetails,
         ...metadata,
       }
     } catch (error: unknown) {

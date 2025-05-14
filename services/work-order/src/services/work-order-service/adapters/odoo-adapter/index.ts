@@ -2,13 +2,13 @@ import Odoo from 'odoo-await'
 import striptags from 'striptags'
 import { groupBy } from 'lodash'
 import z from 'zod'
-import Config from '../../../common/config'
+import Config from '../../../../common/config'
 import {
   transformWorkOrder,
   transformMessages,
   transformEquipmentCode,
 } from './utils'
-import { AdapterResult } from '../types'
+import { AdapterResult } from '../../types'
 import {
   CreateWorkOrderDetails,
   CreateWorkOrderRow,
@@ -20,7 +20,7 @@ import {
   Tenant,
   WorkOrder,
   WorkOrderMessage,
-} from '../schemas'
+} from '../../schemas'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -82,7 +82,7 @@ const MESSAGE_FIELDS: string[] = [
 const WorkOrderUrl = (workOrderId: number): string =>
   `${Config.odoo.url}/web#id=${workOrderId}&model=maintenance.request&view_type=form`
 
-export const getWorkOrderByResidenceId = async (
+export const getWorkOrdersByResidenceId = async (
   residenceId: string
 ): Promise<WorkOrder[]> => {
   try {

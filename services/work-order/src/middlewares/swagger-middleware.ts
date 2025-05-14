@@ -20,13 +20,15 @@ export function swaggerMiddleware({
   version,
 }: {
   routes: string[]
-  schemas: Record<string, z.ZodType>
+  schemas?: Record<string, z.ZodType>
   serviceName?: string
   version?: string
 }) {
-  Object.entries(schemas).forEach(([name, schema]) =>
-    registerSchema(name, schema)
-  )
+  if (schemas) {
+    Object.entries(schemas).forEach(([name, schema]) =>
+      registerSchema(name, schema)
+    )
+  }
 
   const router = new KoaRouter()
 

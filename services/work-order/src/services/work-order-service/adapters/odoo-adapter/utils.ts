@@ -5,7 +5,7 @@ import {
   OdooWorkOrderMessage,
   WorkOrder,
   WorkOrderMessage,
-} from '../schemas'
+} from '../../schemas'
 
 const removePTags = (text: string): string =>
   text ? text.replace(/<\/?p>/g, '') : ''

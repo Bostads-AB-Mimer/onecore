@@ -10,14 +10,6 @@ const app = new Koa()
 
 import { koaSwagger } from 'koa2-swagger-ui'
 import { swaggerMiddleware } from './middlewares/swagger-middleware'
-import {
-  WorkOrderSchema,
-  CreateWorkOrderBodySchema,
-  LeaseSchema,
-  RentalPropertySchema,
-  TenantSchema,
-  CreateWorkOrderDetailsSchema,
-} from './services/work-order-service/schemas'
 
 app.use(cors())
 
@@ -45,14 +37,6 @@ app.use(
       `${__dirname}/services/health-service/*.{ts,js}`,
       `${__dirname}/services/work-order-service/*.{ts,js}`,
     ],
-    schemas: {
-      WorkOrder: WorkOrderSchema,
-      CreateWorkOrderBody: CreateWorkOrderBodySchema,
-      Lease: LeaseSchema,
-      RentalProperty: RentalPropertySchema,
-      Tenant: TenantSchema,
-      CreateWorkOrderDetails: CreateWorkOrderDetailsSchema,
-    },
   })
 )
 

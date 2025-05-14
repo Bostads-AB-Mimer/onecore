@@ -3,6 +3,7 @@ import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
 import * as odooAdapter from '../adapters/odoo-adapter'
+import * as xpandAdapter from '../adapters/xpand-adapter'
 import { routes } from '../index'
 import * as factory from './factories'
 
@@ -35,7 +36,7 @@ describe('work-order-service index', () => {
 
     beforeEach(() => {
       jest
-        .spyOn(odooAdapter, 'getWorkOrderByResidenceId')
+        .spyOn(odooAdapter, 'getWorkOrdersByResidenceId')
         .mockResolvedValue(workOrderMock)
     })
 
@@ -52,7 +53,7 @@ describe('work-order-service index', () => {
 
     it('should return 500 if there is an error', async () => {
       jest
-        .spyOn(odooAdapter, 'getWorkOrderByResidenceId')
+        .spyOn(odooAdapter, 'getWorkOrdersByResidenceId')
         .mockRejectedValue(new Error('Internal server error'))
 
       const res = await request(app.callback()).get(
@@ -61,6 +62,100 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('GET /workOrders/xpand/residenceId/{residenceId}', () => {
+    const residenceId = '123-123-123'
+    const xpandWorkOrdersMock = factory.xpandWorkOrder.buildList(4, {
+      RentalObjectCode: residenceId,
+    })
+
+    it('should return work orders for the given residence id', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByResidenceId')
+        .mockResolvedValue({ ok: true, data: xpandWorkOrdersMock })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/residenceId/${residenceId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(xpandWorkOrdersMock)
+      )
+    })
+
+    it('should return 400 on invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/residenceId/${residenceId}?skip=tjena`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByResidenceId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/residenceId/${residenceId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'Failed to fetch work orders from Xpand: unknown'
+      )
+    })
+  })
+
+  describe('GET /workOrders/xpand/{code}', () => {
+    const workOrderCode = '25-000050'
+    const xpandWorkOrderDetailsMock = factory.xpandWorkOrderDetails.build({
+      Code: workOrderCode,
+    })
+
+    it('should return a work order', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrderDetails')
+        .mockResolvedValue({ ok: true, data: xpandWorkOrderDetailsMock })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/${workOrderCode}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(xpandWorkOrderDetailsMock)
+      )
+    })
+
+    it('should return 404 if work order is not found', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrderDetails')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/${workOrderCode}`
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrderDetails')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/${workOrderCode}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'Failed to fetch work order from Xpand: unknown'
+      )
     })
   })
 
