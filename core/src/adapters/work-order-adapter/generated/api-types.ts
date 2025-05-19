@@ -221,6 +221,147 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workOrders/xpand/residenceId/{residenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get work orders by residence id from xpand
+         * @description Retrieves work orders from xpand based on the provided residence id.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The number of work orders to skip. */
+                    skip?: number;
+                    /** @description The number of work orders to fetch. */
+                    limit?: number;
+                    /** @description Whether to sort the work orders by ascending creation date. */
+                    sortAscending?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description The residence id to filter work orders. */
+                    residenceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved work orders. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: {
+                                workOrders?: components["schemas"]["XpandWorkOrder"][];
+                            };
+                            /** @description Route metadata */
+                            metadata?: Record<string, never>;
+                        };
+                    };
+                };
+                /** @description Internal server error. Failed to retrieve work orders. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example Internal server error */
+                            error?: string;
+                            /** @description Route metadata */
+                            metadata?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workOrders/xpand/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get work order details by work order code from xpand
+         * @description Retrieves work order details from xpand.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The work order code to fetch details for. */
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved work order. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["XpandWorkOrderDetails"];
+                            /** @description Route metadata */
+                            metadata?: Record<string, never>;
+                        };
+                    };
+                };
+                /** @description Work order not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example Work order not found */
+                            error?: string;
+                        };
+                    };
+                };
+                /** @description Internal server error. Failed to retrieve work order. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @example Internal server error */
+                            error?: string;
+                            /** @description Route metadata */
+                            metadata?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workOrders": {
         parameters: {
             query?: never;
@@ -486,6 +627,40 @@ export interface components {
             }[];
             Url?: string;
         };
+        XpandWorkOrder: {
+            AccessCaption: string;
+            Caption: string | null;
+            Code: string;
+            ContactCode: string | null;
+            Id: string;
+            /** Format: date-time */
+            LastChanged: string;
+            Priority: string | null;
+            /** Format: date-time */
+            Registered: string;
+            RentalObjectCode: string;
+            Status: string;
+        };
+        XpandWorkOrderDetails: {
+            AccessCaption: string;
+            Caption: string | null;
+            Code: string;
+            ContactCode: string | null;
+            Description: string;
+            Id: string;
+            /** Format: date-time */
+            LastChanged: string;
+            Priority: string | null;
+            /** Format: date-time */
+            Registered: string;
+            RentalObjectCode: string;
+            Status: string;
+            WorkOrderRows: {
+                Description: string | null;
+                LocationCode: string | null;
+                EquipmentCode: string | null;
+            }[];
+        };
         CreateWorkOrderBody: {
             rentalProperty: {
                 id: string;
@@ -560,6 +735,30 @@ export interface components {
                 }[];
             };
         };
+        CreateWorkOrderDetails: {
+            ContactCode: string;
+            RentalObjectCode: string;
+            AccessOptions: {
+                Type: number;
+                PhoneNumber: string | null;
+                Email: string;
+                CallBetween: string;
+            };
+            HearingImpaired: boolean;
+            Pet: string;
+            Rows: {
+                LocationCode: string;
+                PartOfBuildingCode: string;
+                Description: string;
+                MaintenanceUnitCode?: (unknown | string) | null;
+                MaintenanceUnitCaption?: (unknown | string) | null;
+            }[];
+            Images: {
+                Filename: string;
+                ImageType: number;
+                Base64String: string;
+            }[];
+        };
         Lease: {
             leaseId: string;
             leaseNumber: string;
@@ -568,6 +767,19 @@ export interface components {
             leaseEndDate?: (unknown | string) | null;
             contractDate?: string;
             approvalDate?: string;
+        };
+        Tenant: {
+            contactCode: string;
+            contactKey: string;
+            firstName?: string;
+            lastName?: string;
+            nationalRegistrationNumber?: string;
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: number;
+            }[];
+            emailAddress?: string;
         };
         RentalProperty: {
             id: string;
@@ -593,43 +805,6 @@ export interface components {
                 type: string;
                 estateCode: string;
                 estate: string;
-            }[];
-        };
-        Tenant: {
-            contactCode: string;
-            contactKey: string;
-            firstName?: string;
-            lastName?: string;
-            nationalRegistrationNumber?: string;
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: number;
-            }[];
-            emailAddress?: string;
-        };
-        CreateWorkOrderDetails: {
-            ContactCode: string;
-            RentalObjectCode: string;
-            AccessOptions: {
-                Type: number;
-                PhoneNumber: string | null;
-                Email: string;
-                CallBetween: string;
-            };
-            HearingImpaired: boolean;
-            Pet: string;
-            Rows: {
-                LocationCode: string;
-                PartOfBuildingCode: string;
-                Description: string;
-                MaintenanceUnitCode?: (unknown | string) | null;
-                MaintenanceUnitCaption?: (unknown | string) | null;
-            }[];
-            Images: {
-                Filename: string;
-                ImageType: number;
-                Base64String: string;
             }[];
         };
     };

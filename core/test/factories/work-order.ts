@@ -20,7 +20,6 @@ export const WorkOrderFactory = Factory.define<CoreWorkOrder>(
     Registered: new Date(),
     RentalObjectCode: 'RentalObjectCode',
     Status: 'Status',
-    UseMasterKey: false,
     WorkOrderRows: [
       {
         Description: 'Description',

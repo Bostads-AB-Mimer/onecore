@@ -4,7 +4,11 @@ import config from '../../common/config'
 import { AdapterResult } from '../types'
 import {
   CoreWorkOrder,
-  CoreWorkOrderSchemaArray,
+  CoreWorkOrderSchema,
+  CoreXpandWorkOrder,
+  CoreXpandWorkOrderDetails,
+  CoreXpandWorkOrderDetailsSchema,
+  CoreXpandWorkOrderSchema,
   CreateWorkOrderResponse,
   CreateWorkOrderResponseSchema,
 } from '../../services/work-order-service/schemas'
@@ -29,7 +33,7 @@ export const getWorkOrdersByContactCode = async (
       }
     )
     if (fetchResponse.data?.content?.workOrders) {
-      const parsed = CoreWorkOrderSchemaArray.safeParse(
+      const parsed = CoreWorkOrderSchema.array().safeParse(
         fetchResponse.data.content.workOrders
       )
       if (!parsed.success) {
@@ -60,7 +64,7 @@ export const getWorkOrdersByRentalPropertyId = async (
       }
     )
     if (fetchResponse.data?.content?.workOrders) {
-      const parsed = CoreWorkOrderSchemaArray.safeParse(
+      const parsed = CoreWorkOrderSchema.array().safeParse(
         fetchResponse.data.content.workOrders
       )
       if (!parsed.success) {
@@ -79,6 +83,88 @@ export const getWorkOrdersByRentalPropertyId = async (
       { error },
       'work-order-adapter.getWorkOrdersByRentalPropertyId'
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandWorkOrdersByRentalPropertyId = async (
+  rentalPropertyId: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<CoreXpandWorkOrder[], 'schema-error' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/xpand/residenceId/{residenceId}',
+      {
+        params: {
+          path: { residenceId: rentalPropertyId },
+          query: { skip, limit, sortAscending },
+        },
+      }
+    )
+    if (fetchResponse.data?.content?.workOrders) {
+      const parsed = CoreXpandWorkOrderSchema.array().safeParse(
+        fetchResponse.data.content.workOrders
+      )
+      if (!parsed.success) {
+        logger.error({ error: parsed.error.format() })
+        return { ok: false, err: 'schema-error' }
+      }
+
+      return {
+        ok: true,
+        data: parsed.data,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      { error },
+      'work-order-adapter.getXpandWorkOrdersByRentalPropertyId'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandWorkOrderDetails = async (
+  workOrderCode: string
+): Promise<
+  AdapterResult<
+    CoreXpandWorkOrderDetails,
+    'not-found' | 'schema-error' | 'unknown'
+  >
+> => {
+  try {
+    const fetchResponse = await client().GET('/workOrders/xpand/{code}', {
+      params: { path: { code: workOrderCode } },
+    })
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (fetchResponse.data?.content) {
+      const parsed = CoreXpandWorkOrderDetailsSchema.safeParse(
+        fetchResponse.data.content
+      )
+      if (!parsed.success) {
+        logger.error({ error: parsed.error.format() })
+        return { ok: false, err: 'schema-error' }
+      }
+
+      return {
+        ok: true,
+        data: parsed.data,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getXpandWorkOrderDetails')
     return { ok: false, err: 'unknown' }
   }
 }

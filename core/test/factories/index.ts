@@ -11,9 +11,15 @@ export { WaitingListFactory as waitingList } from './waiting-list'
 export { ApartmentInfoFactory as apartmentInfo } from './apartment-info'
 export { RentalPropertyInfoFactory as rentalPropertyInfo } from './rental-property-info'
 export { TenantFactory as tenant } from './tenant'
-export { WorkOrderFactory as workOrder } from './work-order'
-export { CreateWorkOrderFactory as createWorkOrder } from './work-order'
-export { CreateWorkOrderDetailsFactory as createWorkOrderDetails } from './work-order'
+export {
+  WorkOrderFactory as workOrder,
+  CreateWorkOrderFactory as createWorkOrder,
+  CreateWorkOrderDetailsFactory as createWorkOrderDetails,
+} from './work-order'
+export {
+  XpandWorkOrderFactory as xpandWorkOrder,
+  XpandWorkOrderDetailsFactory as xpandWorkOrderDetails,
+} from './xpand-work-order'
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
 export {
   ApplicationProfileFactory as applicationProfile,
