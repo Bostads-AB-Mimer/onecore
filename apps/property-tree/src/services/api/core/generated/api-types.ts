@@ -1516,6 +1516,84 @@ export interface paths {
       };
     };
   };
+  "/workOrders/xpand/rentalPropertyId/{rentalPropertyId}": {
+    /**
+     * Get work orders by rental property id from xpand
+     * @description Retrieves work orders based on the provided rental property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental property id used to fetch work orders. */
+          rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/workOrders/xpand/{code}": {
+    /**
+     * Get work order details by rental property id from xpand
+     * @description Retrieves work order details.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The work order code to fetch details for. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work order. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["XpandWorkOrder"];
+            };
+          };
+        };
+        /** @description Work order not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Work order not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work order. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/workOrders": {
     /**
      * Create a new work order
@@ -2190,7 +2268,6 @@ export interface components {
       Registered: string;
       RentalObjectCode: string;
       Status: string;
-      UseMasterKey: boolean;
       WorkOrderRows: ({
           Description: string | null;
           LocationCode: string | null;
@@ -2205,6 +2282,20 @@ export interface components {
           createDate: string;
         }[];
       Url?: string;
+    };
+    XpandWorkOrder: {
+      AccessCaption: string;
+      Caption: string | null;
+      Code: string;
+      ContactCode: string;
+      Id: string;
+      /** Format: date-time */
+      LastChanged: string;
+      Priority: string | null;
+      /** Format: date-time */
+      Registered: string;
+      RentalObjectCode: string;
+      Status: string;
     };
     Company: {
       id: string;
