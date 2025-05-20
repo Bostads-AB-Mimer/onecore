@@ -173,6 +173,14 @@ export const ResidenceDetailsSchema = z.object({
       energyIndex: z.number().optional(),
     }),
     rentalId: z.string().nullable(),
+    rentalInformation: z
+      .object({
+        type: z.object({
+          code: z.string(),
+          name: z.string().nullable(),
+        }),
+      })
+      .nullable(),
   }),
   property: z.object({
     name: z.string().nullable(),
