@@ -36,6 +36,17 @@ export type ResidenceWithRelations = Prisma.ResidenceGetPayload<{
         }
       }
     }
+    comments: {
+      where: {
+        template: {
+          type: 'balgh'
+          caption: 'Anläggningsid'
+        }
+      }
+      select: {
+        text: true
+      }
+    }
   }
 }>
 
@@ -70,6 +81,17 @@ export const getResidenceById = async (
                 propertyName: true,
               },
             },
+          },
+        },
+        comments: {
+          where: {
+            template: {
+              type: 'balgh',
+              caption: 'Anläggningsid',
+            },
+          },
+          select: {
+            text: true,
           },
         },
       },

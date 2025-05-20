@@ -330,6 +330,7 @@ export const routes = (router: KoaRouter) => {
           code: residence.propertyObject.propertyStructures[0].buildingCode,
           name: residence.propertyObject.propertyStructures[0].buildingName,
         },
+        malarEnergiFacilityId: residence.comments?.[0].text || null,
       } satisfies ResidenceDetails
 
       ctx.status = 200
