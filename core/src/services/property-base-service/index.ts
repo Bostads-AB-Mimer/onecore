@@ -1,10 +1,12 @@
 import KoaRouter from '@koa/router'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
+import { calculateResidenceStatus } from './calculate-residence-status'
 
 /**
  * @swagger
@@ -392,22 +394,51 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getResidenceDetails(residenceId)
-      if (!result.ok) {
-        if (result.err === 'not-found') {
+      const getResidence =
+        await propertyBaseAdapter.getResidenceDetails(residenceId)
+
+      if (!getResidence.ok) {
+        if (getResidence.err === 'not-found') {
           ctx.status = 404
           ctx.body = { error: 'Residence not found', ...metadata }
           return
         }
 
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(getResidence.err, 'Internal server error', metadata)
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
       }
 
+      if (!getResidence.data.propertyObject.rentalId) {
+        ctx.status = 200
+        ctx.body = {
+          content: schemas.ResidenceDetailsSchema.parse({
+            ...getResidence.data,
+            status: null,
+          }),
+          ...metadata,
+        }
+        return
+      }
+
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        getResidence.data.propertyObject.rentalId,
+        {
+          includeContacts: false,
+          includeTerminatedLeases: false,
+          includeUpcomingLeases: true,
+        }
+      )
+
+      const status = calculateResidenceStatus(leases)
+
+      ctx.status = 200
       ctx.body = {
-        content: schemas.ResidenceDetailsSchema.parse(result.data),
+        content: schemas.ResidenceDetailsSchema.parse({
+          ...getResidence.data,
+          status,
+        }),
         ...metadata,
       }
     } catch (error) {

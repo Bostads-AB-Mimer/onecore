@@ -111,6 +111,7 @@ export const ResidenceDetailsSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string().nullable(),
+  status: z.enum(['VACANT', 'LEASED']).nullable(),
   location: z.string().nullable(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),

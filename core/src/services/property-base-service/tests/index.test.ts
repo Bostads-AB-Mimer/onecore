@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { routes } from '../index'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
+import * as leasingAdapter from '../../../adapters/leasing-adapter'
 
 import * as factory from '../../../../test/factories'
 import {
@@ -15,6 +16,7 @@ import {
   RoomSchema,
   StaircaseSchema,
 } from '../schemas'
+import { LeaseStatus } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -142,6 +144,31 @@ describe('property-base-service', () => {
       expect(res.status).toBe(200)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
       expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 200 and a residence with status', async () => {
+      const residenceDetails = factory.residenceDetails.build({
+        propertyObject: { rentalId: '1234' },
+      })
+      const getResidenceDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
+        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
+
+      const lease = factory.lease.build({ status: LeaseStatus.Current })
+      const getLeasesSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValueOnce([lease])
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/residence/${residenceDetails.id}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
+      expect(res.body.content.status).toBe('LEASED')
+
+      expect(getResidenceDetailsSpy).toHaveBeenCalled()
+      expect(getLeasesSpy).toHaveBeenCalled()
     })
 
     it('returns 404 if no residence is found', async () => {
