@@ -636,6 +636,7 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      malarEnergiFacilityId: string | null;
     };
     ResidenceSearchResult: {
       id: string;

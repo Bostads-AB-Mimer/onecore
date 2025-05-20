@@ -76,8 +76,7 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
                 Anläggnings ID Mälarenergi
               </p>
               <p className="font-medium">
-                {/* {residence.malarenergiFacilityId || '-'} */}
-                N/A
+                {residence.malarEnergiFacilityId || 'N/A'}
               </p>
             </div>
             <div>
