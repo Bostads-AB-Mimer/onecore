@@ -179,9 +179,7 @@ describe('rental-property-service index', () => {
         .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-      const res = await request(app.callback()).get(
-        '/listings/vacant-parkingspaces'
-      )
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
 
       expect(res.status).toBe(500)
       expect(res.body).toMatchObject({ error: expect.any(String) })
@@ -192,9 +190,7 @@ describe('rental-property-service index', () => {
         .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValueOnce({ ok: true, data: [] })
 
-      const res = await request(app.callback()).get(
-        '/listings/vacant-parkingspaces'
-      )
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -207,9 +203,7 @@ describe('rental-property-service index', () => {
         .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValueOnce({ ok: true, data: vacantParkingSpaces })
 
-      const res = await request(app.callback()).get(
-        '/listings/vacant-parkingspaces'
-      )
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(

@@ -192,7 +192,7 @@ const getAllVacantParkingSpaces = async (): Promise<
 > => {
   try {
     const response = await axios.get(
-      `${propertyManagementServiceUrl}/listings/vacant-parkingspaces`
+      `${propertyManagementServiceUrl}/vacant-parkingspaces`
     )
     return { ok: true, data: response.data.content }
   } catch (error) {
