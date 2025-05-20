@@ -621,6 +621,12 @@ export interface components {
           energyIndex?: number;
         };
         rentalId: string | null;
+        rentalInformation: ({
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
       };
       property: {
         name: string | null;

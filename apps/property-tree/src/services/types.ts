@@ -7,7 +7,6 @@ export type Property = components['schemas']['Property']
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']
 export type Residence = components['schemas']['Residence']
-export type ResidenceDetails = components['schemas']['ResidenceDetails']
 export type Room = components['schemas']['Room']
 export type Component = components['schemas']['Component']
 

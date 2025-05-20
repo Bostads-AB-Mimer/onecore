@@ -1,5 +1,8 @@
-import { Residence, ResidenceDetails } from '../types'
+import { Residence } from '../types'
 import { GET } from './core/base-api'
+import { components } from './core/generated/api-types'
+
+type ResidenceDetails = components['schemas']['ResidenceDetails']
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {

@@ -4,8 +4,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import { ResidenceDetails } from '@/services/types'
 import { useIsMobile } from '../hooks/useMobile'
+import { components } from '@/services/api/core/generated/api-types'
+
+type ResidenceDetails = components['schemas']['ResidenceDetails']
 
 interface ResidenceBasicInfoProps {
   residence: ResidenceDetails
@@ -35,9 +37,9 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
             className={`grid ${isMobile ? 'grid-cols-1 gap-y-4' : 'grid-cols-2 md:grid-cols-3 gap-4'}`}
           >
             <div>
-              <p className="text-sm text-muted-foreground">Namn</p>
+              <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>
               <p className="font-medium">
-                {residence.residenceType.name}, {residence.name}
+                {residence.propertyObject?.rentalInformation?.type.name}
               </p>
             </div>
             <div>
