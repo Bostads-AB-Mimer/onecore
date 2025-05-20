@@ -1,7 +1,11 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
 import { Listing, ListingStatus } from 'onecore-types'
-import { getParkingSpace } from '../adapters/xpand-adapter'
+import {
+  getAllVacantParkingSpaces,
+  getParkingSpace,
+  getRentalObject,
+} from '../adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from '../adapters/xpand-soap-adapter'
 
 /**
@@ -168,5 +172,58 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.body = { content: listing, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /vacant-parkingspaces:
+   *   get:
+   *     summary: Get all vacant parking spaces
+   *     description: Fetches a list of all vacant parking spaces available in the system.
+   *     tags:
+   *       - Listings
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the list of vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/VacantParkingSpace'
+   *       '500':
+   *         description: Internal server error. Failed to fetch vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('/vacant-parkingspaces', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const vacantParkingSpaces = await getAllVacantParkingSpaces()
+
+    if (!vacantParkingSpaces.ok) {
+      logger.error(
+        vacantParkingSpaces.err,
+        'Error fetching vacant parking spaces:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching vacant parking spaces.',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: vacantParkingSpaces.data, ...metadata }
   })
 }

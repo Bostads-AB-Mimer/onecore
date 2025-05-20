@@ -470,4 +470,49 @@ describe('parking spaces', () => {
       )
     })
   })
+
+  describe('GET /vacant-parkingspaces', () => {
+    it('should return a list of vacant parking spaces', async () => {
+      const mockedVacantParkingSpaces = [
+        {
+          rentalObjectCode: '924-004-99-0008',
+          address: 'Karl IX:s V 18',
+          objectTypeCaption: 'Motorcykelgarage',
+          objectTypeCode: 'MCGAR',
+          vehicleSpaceCaption: 'KARL IX:S VÄG 18',
+          vehicleSpaceCode: '0008',
+          districtCaption: 'Distrikt Norr',
+          districtCode: '2',
+          monthlyRent: 0,
+          restidentalAreaCaption: 'Centrum',
+          restidentalAreaCode: 'CTR',
+          vacantFrom: new Date('2023-10-01'),
+        },
+      ]
+
+      const getAllVacantParkingSpacesSpy = jest
+        .spyOn(xpandAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValue({ ok: true, data: mockedVacantParkingSpaces })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(200)
+      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
+      expect(res.body.content).toEqual(mockedVacantParkingSpaces)
+    })
+
+    it('should handle errors gracefully', async () => {
+      const getAllVacantParkingSpacesSpy = jest
+        .spyOn(xpandAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValue({ ok: false, err: new Error('Database error') })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(500)
+      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
+      expect(res.body.error).toBe(
+        'An error occurred while fetching vacant parking spaces.'
+      )
+    })
+  })
 })
