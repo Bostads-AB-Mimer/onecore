@@ -8,7 +8,7 @@ describe('errorHandler', () => {
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    ;(console.error as jest.Mock).mockRestore()
   })
 
   const app = new Koa()
