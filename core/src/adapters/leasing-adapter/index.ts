@@ -1,7 +1,6 @@
 import { loggedAxios as axios, logger } from 'onecore-utilities'
 import { AxiosError } from 'axios'
 import dayjs from 'dayjs'
-import querystring from 'querystring'
 import {
   ConsumerReport,
   Contact,
@@ -642,8 +641,6 @@ export {
   getListingByListingId,
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
-  getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   syncInternalParkingSpacesFromXpand,
   updateListingStatus,
   getExpiredListingsWithNoOffers,

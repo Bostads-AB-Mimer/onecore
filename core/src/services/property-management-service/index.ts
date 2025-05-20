@@ -386,6 +386,55 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /vacant-parkingspaces:
+   *   get:
+   *     summary: Get all vacant parking spaces
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves a list of all vacant parking spaces.
+   *     responses:
+   *       '200':
+   *         description: A list of vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/VacantParkingSpace'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: Error message.
+   * components:
+   *   schemas:
+   *     VacantParkingSpace:
+   *       type: object
+   *       description: Represents a vacant parking space.
+   */
+  router.get('(.*)/vacant-parkingspaces', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await propertyManagementAdapter.getAllVacantParkingSpaces()
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /parkingspaces/{parkingSpaceId}/leases:
    *   post:
    *     summary: Create lease for an external parking space
@@ -641,7 +690,9 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
     const result =
-      await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
+      await propertyManagementAdapter.getParkingSpaceByRentalObjectCode(
+        rentalObjectCode
+      )
 
     if (!result.ok) {
       ctx.status = 500
