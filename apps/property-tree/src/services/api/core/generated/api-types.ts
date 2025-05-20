@@ -2266,6 +2266,8 @@ export interface components {
       id: string;
       code: string;
       name: string | null;
+      /** @enum {string|null} */
+      status: "VACANT" | "LEASED" | null;
       location: string | null;
       accessibility: {
         wheelchairAccessible: boolean;

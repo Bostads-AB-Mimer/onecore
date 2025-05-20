@@ -1,7 +1,7 @@
-import { Residence } from '../types'
 import { GET } from './core/base-api'
 import { components } from './core/generated/api-types'
 
+type Residence = components['schemas']['Residence']
 type ResidenceDetails = components['schemas']['ResidenceDetails']
 
 export const residenceService = {
