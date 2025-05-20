@@ -311,6 +311,16 @@ export const routes = (router: KoaRouter) => {
             energyIndex: residence.propertyObject?.energyIndex?.toNumber(),
           },
           rentalId,
+          rentalInformation: !residence.propertyObject?.rentalInformation
+            ? null
+            : {
+                type: {
+                  code: residence.propertyObject.rentalInformation
+                    .rentalInformationType.code,
+                  name: residence.propertyObject.rentalInformation
+                    .rentalInformationType.name,
+                },
+              },
         },
         property: {
           code: residence.propertyObject.propertyStructures[0].propertyCode,

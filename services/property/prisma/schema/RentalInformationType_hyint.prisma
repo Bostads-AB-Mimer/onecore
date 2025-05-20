@@ -1,0 +1,23 @@
+model RentalInformationType {
+  @@map("hyint")
+
+  id String @id(map: "pkhyint") @map("keyhyint") @db.Char(15)
+  code String @map("code") @db.Char(10)
+  name String? @map("caption") @db.Char(30)
+  // Exclude unused fields
+
+// waitingListTypeId String? @map("keybkkty") @db.Char(15)
+// minimumAge Int? @map("minage") @db.TinyInt
+// maximumAge Int? @map("maxage") @db.TinyInt
+// housingType Int @default(0, map: "DF__hyint__lmcat__66796CD3") @map("lmcat") @db.TinyInt
+// publishStatus Int @default(0, map: "DF__hyint__publicera__676D910C") @map("publiceras") @db.TinyInt
+// apartmentInspectionStatus Int @default(1, map: "DF__hyint__lbcreate__6861B545") @map("lbcreate") @db.TinyInt
+// turnoverVisibility Int @default(0, map: "DF__hyint__tuovisibl__6955D97E") @map("tuovisible") @db.TinyInt
+// familySituationStatus Int @default(0, map: "DF__hyint__familysit__6A49FDB7") @map("familysit") @db.TinyInt
+// timestamp String @map("timestamp") @db.Char(10)
+
+  rentalInformations RentalInformation[] // Previously hyinf; converted to use the new model name
+// waitingListType WaitingListType? @relation(fields: [waitingListTypeId], references: [waitingListTypeId], onDelete: NoAction, onUpdate: NoAction, map: "fkhyintkeybkkty")
+
+// @@index([waitingListTypeId], map: "fkhyintbkkty")
+}

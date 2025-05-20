@@ -23,6 +23,7 @@ model PropertyObject {
   administrativeUnit AdministrativeUnit? //@relation("PropertyObjectToAdministrativeUnit")
   propertyArea       PropertyArea[] //@relation("PropertyObjectToPropertyArea")
   property           Property? //@relation("PropertyObjectToProperty") //todo: fix this relation
+  rentalInformation  RentalInformation? @relation("PropertyObjectToRentalInformation")
 
   rentalObject RentalObject? //@relation("PropertyObjectToRentalObject")
   //company Company? @relation("PropertyObjectToCompany")
