@@ -177,15 +177,6 @@ interface ConsumerReportError {
   Reject_comment: string
 }
 
-interface ParkingSpace {
-  parkingSpaceId: string
-  address: Address
-  rent: RentInfo
-  vacantFrom: Date
-  type: ParkingSpaceType
-  applicationCategory: ParkingSpaceApplicationCategory
-}
-
 interface Email {
   to: string
   subject: string
@@ -342,6 +333,35 @@ interface ParkingSpaceInfo {
   code: string
 }
 
+interface ParkingSpace {
+  parkingSpaceId: string
+  address: Address
+  rent: RentInfo
+  vacantFrom: Date
+  type: ParkingSpaceType
+  applicationCategory: ParkingSpaceApplicationCategory
+}
+
+interface RentalObject {
+  rentalObjectCode: string
+  address: string
+  monthlyRent: number
+  districtCaption?: string
+  districtCode?: string
+  blockCaption?: string
+  blockCode?: string
+  restidentalAreaCaption: string
+  restidentalAreaCode: string
+  objectTypeCaption: string
+  objectTypeCode: string
+  vacantFrom: Date
+}
+
+interface VacantParkingSpace extends RentalObject {
+  vehicleSpaceCaption: string
+  vehicleSpaceCode: string
+}
+
 interface MaintenanceUnitInfo {
   id: string
   rentalPropertyId: string
@@ -382,7 +402,9 @@ export type {
   ConsumerReportError,
   Invoices,
   Invoice,
+  RentalObject,
   ParkingSpace,
+  VacantParkingSpace,
   Email,
   Sms,
   WaitingList,
