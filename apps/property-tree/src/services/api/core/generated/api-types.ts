@@ -2357,6 +2357,8 @@ export interface components {
       id: string;
       code: string;
       name: string | null;
+      /** @enum {string|null} */
+      status: "VACANT" | "LEASED" | null;
       location: string | null;
       accessibility: {
         wheelchairAccessible: boolean;
@@ -2418,6 +2420,12 @@ export interface components {
           energyIndex?: number;
         };
         rentalId: string | null;
+        rentalInformation: ({
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
       };
       property: {
         name: string | null;
@@ -2427,6 +2435,7 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      malarEnergiFacilityId: string | null;
     };
     Staircase: {
       id: string;

@@ -621,6 +621,12 @@ export interface components {
           energyIndex?: number;
         };
         rentalId: string | null;
+        rentalInformation: ({
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
       };
       property: {
         name: string | null;
@@ -630,6 +636,7 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      malarEnergiFacilityId: string | null;
     };
     ResidenceSearchResult: {
       id: string;
