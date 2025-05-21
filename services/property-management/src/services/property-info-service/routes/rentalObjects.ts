@@ -46,6 +46,7 @@ export const routes = (router: KoaRouter) => {
     const rentalObjectCode = ctx.params.rentalObjectCode
 
     const result = await getRentalObject(rentalObjectCode)
+    console.log('result .*)/rental-object/by-code/:rentalObjectCode', result)
 
     if (!result.ok) {
       logger.error(result.err, 'Error fetching rental object:')

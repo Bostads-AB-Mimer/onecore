@@ -4,7 +4,6 @@ import { Listing, ListingStatus } from 'onecore-types'
 import {
   getAllVacantParkingSpaces,
   getParkingSpace,
-  getRentalObject,
 } from '../adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from '../adapters/xpand-soap-adapter'
 

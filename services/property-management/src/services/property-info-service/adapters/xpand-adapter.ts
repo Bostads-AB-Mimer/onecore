@@ -7,8 +7,9 @@ import {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ParkingSpace,
-  VacantParkingSpace,
-  RentalObject,
+  Address,
+  // RentalObject,
+  // VacantParkingSpace,
 } from 'onecore-types'
 
 import Config from '../../../common/config'
@@ -19,10 +20,69 @@ import {
   getStreetNumber,
 } from '../../../utils/parking-spaces'
 
+interface RentalObject {
+  rentalObjectCode: string
+  address: Address
+  monthlyRent: number
+  districtCaption?: string
+  districtCode?: string
+  blockCaption?: string
+  blockCode?: string
+  restidentalAreaCaption: string
+  restidentalAreaCode: string
+  objectTypeCaption: string
+  objectTypeCode: string
+  vacantFrom: Date
+}
+
+interface VacantParkingSpace extends RentalObject {
+  vehicleSpaceCaption: string
+  vehicleSpaceCode: string
+  parkingSpaceArea: number | null
+}
+
 const db = knex({
   client: 'mssql',
   connection: Config.xpandDatabase,
 })
+
+const districts = {
+  'Distrikt Mitt': [
+    'Centrum',
+    'Gryta',
+    'Skallberget',
+    'Nordanby',
+    'Vega',
+    'Hökåsen',
+  ],
+  'Distrikt Norr': [
+    'Oxbacken',
+    'Jakobsberg',
+    'Pettersberg',
+    'Vallby',
+    'Skultuna',
+  ],
+  'Distrikt Väst': [
+    'Vetterstorp',
+    'Vetterslund',
+    'Råby',
+    'Hammarby',
+    'Fredriksberg',
+    'Bäckby',
+    'Skälby',
+  ],
+  'Distrikt Öst': [
+    'Lillåudden',
+    'Gideonsberg',
+    'Hemdal',
+    'Haga',
+    'Malmaberg',
+    'Skiljebo',
+    'Viksäng',
+    'Öster Mälarstrand',
+  ],
+  'Mimer Student': ['Student'],
+}
 
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
 
@@ -328,44 +388,6 @@ const getParkingSpace = async (
   }
 }
 
-const districts = {
-  'Distrikt Mitt': [
-    'Centrum',
-    'Gryta',
-    'Skallberget',
-    'Nordanby',
-    'Vega',
-    'Hökåsen',
-  ],
-  'Distrikt Norr': [
-    'Oxbacken',
-    'Jakobsberg',
-    'Pettersberg',
-    'Vallby',
-    'Skultuna',
-  ],
-  'Distrikt Väst': [
-    'Vetterstorp',
-    'Vetterslund',
-    'Råby',
-    'Hammarby',
-    'Fredriksberg',
-    'Bäckby',
-    'Skälby',
-  ],
-  'Distrikt Öst': [
-    'Lillåudden',
-    'Gideonsberg',
-    'Hemdal',
-    'Haga',
-    'Malmaberg',
-    'Skiljebo',
-    'Viksäng',
-    'Öster Mälarstrand',
-  ],
-  'Mimer Student': ['Student'],
-}
-
 function transformFromXpandListing(row: any): VacantParkingSpace {
   const scegcaption = row.scegcaption?.toUpperCase() || ''
   let district = '-'
@@ -390,21 +412,37 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
     }
   }
 
+  // Calculate monthlyRent from yearrent if available and numeric
+  let monthlyRent = 0 // fallback
+  if (typeof row.yearrent === 'number' && !isNaN(row.yearrent)) {
+    monthlyRent = Math.round(row.yearrent / 12)
+  }
+
+  if (row.parkingspacearea !== null) {
+    console.log('row', row)
+  }
+  // Transform the row and add district info
   return {
     rentalObjectCode: row.rentalObjectCode,
-    address: row.postaladdress,
-    monthlyRent: row.MonthlyRent, // TODO: Add rent info if available
-    blockCaption: row.blockcaption,
-    blockCode: row.blockcode,
-    restidentalAreaCode: row.scegcode,
-    objectTypeCaption: row.vehiclespacetypecaption,
-    objectTypeCode: row.vehiclespacetypecode,
+    address: {
+      street: getStreet(row.postaladdress),
+      number: getStreetNumber(row.postaladdress),
+      postalCode: row.zipCode,
+      city: row.city,
+    },
+    monthlyRent: monthlyRent,
+    blockCaption: row.blockcaption || undefined,
+    blockCode: row.blockcode || undefined,
+    restidentalAreaCode: row.scegcode || undefined,
+    objectTypeCaption: row.vehiclespacetypecaption || undefined,
+    objectTypeCode: row.vehiclespacetypecode || undefined,
     vacantFrom: row.lastdebitdate || new Date(),
-    vehicleSpaceCaption: row.vehiclespacecaption,
-    vehicleSpaceCode: row.vehiclespacecode,
+    vehicleSpaceCaption: row.vehiclespacecaption || undefined,
+    vehicleSpaceCode: row.vehiclespacecode || undefined,
     districtCaption: district,
-    districtCode,
-    restidentalAreaCaption,
+    districtCode: districtCode,
+    restidentalAreaCaption: restidentalAreaCaption,
+    parkingSpaceArea: row.parkingspacearea || null,
   }
 }
 
@@ -443,10 +481,28 @@ const buildMainQuery = (
       'rb.blockenddate',
       'ac.contractid',
       'ac.fromdate as contractfromdate',
-      'ac.lastdebitdate'
+      'ac.lastdebitdate',
+      'rent.yearrent',
+      'cmvalbar.value as parkingspacearea'
     )
     .leftJoin(activeRentalBlocksQuery.as('rb'), 'rb.keycmobj', 'ps.keycmobj')
     .leftJoin(activeContractsQuery.as('ac'), 'ac.keycmobj', 'ps.keycmobj')
+    .leftJoin(
+      db
+        .select('x.yearrent', 'x.rentalpropertyid')
+        .from('hy_debitrowrentalproperty_xpand_api as x')
+        .as('rent'),
+      'rent.rentalpropertyid',
+      'ps.rentalObjectCode'
+    )
+    .leftJoin(
+      db('cmval as cmvalbar')
+        .select('cmvalbar.keycode', 'cmvalbar.value')
+        .where('cmvalbar.keycmvat', 'BRA')
+        .as('cmvalbar'),
+      'cmvalbar.keycode',
+      'ps.keycmobj'
+    )
 }
 
 const buildSubQueries = () => {
@@ -549,6 +605,7 @@ const getAllVacantParkingSpaces = async (): Promise<
       .whereNull('ac.keycmobj')
       .orderBy('ps.blockcode', 'ps.vehiclespacenumber')
 
+    // console.log('results', results)
     const listings: VacantParkingSpace[] = results.map((row) =>
       trimRow(transformFromXpandListing(row))
     )
@@ -583,6 +640,8 @@ const getRentalObject = async (
     )
       .where('ps.rentalObjectCode', '=', rentalObjectCode) // Filter by rentalObjectCode
       .first()
+
+    console.log('result', result)
 
     if (!result) {
       return { ok: false, err: 'rental-object-not-found' }
