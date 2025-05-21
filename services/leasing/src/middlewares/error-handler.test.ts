@@ -3,6 +3,14 @@ import request from 'supertest'
 import errorHandler from './error-handler'
 
 describe('errorHandler', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => null)
+  })
+
+  afterEach(() => {
+    ;(console.error as jest.Mock).mockRestore()
+  })
+
   const app = new Koa()
   app.use(errorHandler())
 
