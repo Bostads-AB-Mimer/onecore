@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import {
   getResidenceById,
+  getResidenceSizeById,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
@@ -234,8 +235,11 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 404
         return
       }
-
       // TODO: find out why building is null in residence
+
+      // We need to get the size of the residence separately because of the way
+      // the database is structured. The size is stored in the cmval table
+      const residenceSizeResult = await getResidenceSizeById(id)
 
       const rentalId =
         residence.propertyObject?.propertyStructures?.length > 0
@@ -331,6 +335,7 @@ export const routes = (router: KoaRouter) => {
           name: residence.propertyObject.propertyStructures[0].buildingName,
         },
         malarEnergiFacilityId: residence.comments?.[0].text || null,
+        size: residenceSizeResult?.value || null,
       } satisfies ResidenceDetails
 
       ctx.status = 200
