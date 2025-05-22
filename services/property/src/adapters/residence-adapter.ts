@@ -176,6 +176,47 @@ export type ResidenceSearchResult = Prisma.ResidenceGetPayload<{
   }
 }>
 
+export const getResidenceSizeById = async (residenceId: string) => {
+  try {
+    const result = await prisma.quantityValue
+      .findFirst({
+        where: {
+          quantityTypeId: 'BOA',
+          residence: {
+            id: residenceId,
+          },
+          quantityType: {
+            categoryLinks: {
+              some: { categoryId: 'balgh' },
+            },
+          },
+        },
+        include: {
+          quantityType: {
+            select: {
+              id: true,
+              name: true,
+              unitId: true,
+              categoryLinks: false,
+            },
+          },
+          residence: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+      .then(trimStrings)
+
+    return result
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getResidenceSizeById')
+    throw err
+  }
+}
+
 export const searchResidences = async (
   q: string
 ): Promise<Array<ResidenceSearchResult>> => {
