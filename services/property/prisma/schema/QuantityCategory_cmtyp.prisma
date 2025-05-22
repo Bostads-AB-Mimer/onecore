@@ -1,0 +1,20 @@
+model QuantityCategory {
+  id                 String  @id @map("keycmtyp") @db.Char(15)
+  parentCategoryId   String? @map("keycmtyp2") @db.Char(15)
+  name               String  @map("caption") @db.VarChar(60)
+  sortOrder          Int     @default(0) @map("sortorder") @db.SmallInt
+  allowTextValues    Int     @default(0) @map("txtallow") @db.TinyInt
+  allowSubCategories Int     @default(0) @map("sublvls") @db.TinyInt
+  isPublished        Int     @default(1) @map("publish") @db.TinyInt
+  module             String? @map("validmdl") @db.VarChar(80)
+  isHidden           Int     @default(0) @map("hidetype") @db.TinyInt
+  systemStandard     Int     @default(0) @map("repab") @db.TinyInt
+  timestamp          String  @map("timestamp") @db.Char(10)
+
+  parent   QuantityCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subtypes QuantityCategory[]     @relation("CategoryHierarchy")
+  links    QuantityCategoryLink[]
+
+  @@index([parentCategoryId])
+  @@map("cmtyp")
+}
