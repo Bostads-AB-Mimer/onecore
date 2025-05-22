@@ -2436,6 +2436,7 @@ export interface components {
         code: string | null;
       };
       malarEnergiFacilityId: string | null;
+      size: number | null;
     };
     Staircase: {
       id: string;
