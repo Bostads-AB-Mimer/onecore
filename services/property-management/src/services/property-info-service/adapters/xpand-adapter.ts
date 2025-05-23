@@ -16,10 +16,6 @@ import {
   getStreet,
   getStreetNumber,
 } from '../../../utils/parking-spaces'
-import {
-  RentalObject,
-  VacantParkingSpace,
-} from '../../../../../onecore-types/dist'
 
 const db = knex({
   client: 'mssql',
@@ -369,7 +365,7 @@ const districts = {
 }
 
 function transformFromXpandListing(row: any): VacantParkingSpace {
-  const scegcaption = row.scegcaption?.toUpperCase() || '' // Normalize case and handle undefined
+  const scegcaption = row.scegcaption?.toUpperCase() || ''
   let district = '-'
   let districtCode: string | undefined = undefined
   let restidentalAreaCaption = '-'
@@ -377,7 +373,7 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
   // Extract district code (number before ':')
   const match = scegcaption.match(/^(\d+):/)
   if (match) {
-    districtCode = match[1] // Extract the number before ':'
+    districtCode = match[1]
   }
 
   // Determine district and restidentalAreaCaption based on scegcaption
@@ -387,27 +383,26 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
     )
     if (matchedLocation) {
       district = key
-      restidentalAreaCaption = matchedLocation // Save the matched location (not uppercased)
+      restidentalAreaCaption = matchedLocation
       break
     }
   }
 
-  // Transform the row and add district info
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
     monthlyRent: row.MonthlyRent, // TODO: Add rent info if available
-    blockCaption: row.blockcaption || undefined,
-    blockCode: row.blockcode || undefined,
-    restidentalAreaCode: row.scegcode || undefined,
-    objectTypeCaption: row.vehiclespacetypecaption || undefined,
-    objectTypeCode: row.vehiclespacetypecode || undefined,
-    vacantFrom: row.lastdebitdate || new Date(), // TODO: Add logic for vacantFrom
-    vehicleSpaceCaption: row.vehiclespacecaption || undefined,
-    vehicleSpaceCode: row.vehiclespacecode || undefined,
+    blockCaption: row.blockcaption,
+    blockCode: row.blockcode,
+    restidentalAreaCode: row.scegcode,
+    objectTypeCaption: row.vehiclespacetypecaption,
+    objectTypeCode: row.vehiclespacetypecode,
+    vacantFrom: row.lastdebitdate,
+    vehicleSpaceCaption: row.vehiclespacecaption,
+    vehicleSpaceCode: row.vehiclespacecode,
     districtCaption: district,
-    districtCode: districtCode,
-    restidentalAreaCaption: restidentalAreaCaption, // Add the location
+    districtCode,
+    restidentalAreaCaption,
   }
 }
 
@@ -528,7 +523,7 @@ const buildSubQueries = () => {
 }
 
 const getAllVacantParkingSpaces = async (): Promise<
-  AdapterResult<VacantParkingSpace[], unknown>
+  AdapterResult<VacantParkingSpace[], 'get-all-vacant-parking-spaces-failed'>
 > => {
   try {
     const {
@@ -558,7 +553,7 @@ const getAllVacantParkingSpaces = async (): Promise<
     return { ok: true, data: listings }
   } catch (err) {
     logger.error(err, 'tenantLeaseAdapter.getAllAvailableParkingSpaces')
-    return { ok: false, err }
+    return { ok: false, err: 'get-all-vacant-parking-spaces-failed' }
   }
 }
 
@@ -566,7 +561,12 @@ const getAllVacantParkingSpaces = async (): Promise<
 //todo: behöver också hämta hyra
 const getRentalObject = async (
   rentalObjectCode: string
-): Promise<AdapterResult<RentalObject, 'unknown' | 'not-found'>> => {
+): Promise<
+  AdapterResult<
+    RentalObject,
+    'get-rental-object-failed' | 'rental-object-not-found'
+  >
+> => {
   try {
     const {
       parkingSpacesQuery,
@@ -583,14 +583,14 @@ const getRentalObject = async (
       .first()
 
     if (!result) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'rental-object-not-found' }
     }
 
     const rentalObject = trimRow(transformFromXpandListing(result))
     return { ok: true, data: rentalObject }
   } catch (err) {
     logger.error(err, 'tenantLeaseAdapter.getRentalObject')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'get-rental-object-failed' }
   }
 }
 
