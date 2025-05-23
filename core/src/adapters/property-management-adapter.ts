@@ -188,7 +188,7 @@ const getPublishedParkingSpace = async (
 }
 
 const getAllVacantParkingSpaces = async (): Promise<
-  AdapterResult<VacantParkingSpace[], 'unknown'>
+  AdapterResult<VacantParkingSpace[], 'get-all-vacant-parking-spaces-failed'>
 > => {
   try {
     const response = await axios.get(
@@ -197,28 +197,33 @@ const getAllVacantParkingSpaces = async (): Promise<
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(error, 'Error fetching vacant-parkingspaces:')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'get-all-vacant-parking-spaces-failed' }
   }
 }
 
 //todo: returnera parking space istället för rental object och flytta till onecore-property-management
 const getParkingSpaceByRentalObjectCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    RentalObject,
+    'get-rental-object-failed' | 'rental-object-not-found'
+  >
+> => {
   try {
-    const res = await axios.get(
+    const response = await axios.get(
       `${propertyManagementServiceUrl}/rental-object/by-code/${rentalObjectCode}`
     )
-    if (res.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'not-found' }
+    if (response.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'rental-object-not-found' }
     }
-    return { ok: true, data: res.data.content }
+    return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
       'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'get-rental-object-failed' }
   }
 }
 
