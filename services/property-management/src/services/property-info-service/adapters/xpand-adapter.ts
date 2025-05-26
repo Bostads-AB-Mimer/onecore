@@ -399,7 +399,7 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
     restidentalAreaCode: row.scegcode,
     objectTypeCaption: row.vehiclespacetypecaption,
     objectTypeCode: row.vehiclespacetypecode,
-    vacantFrom: row.lastdebitdate,
+    vacantFrom: new Date(row.lastdebitdate),
     vehicleSpaceCaption: row.vehiclespacecaption,
     vehicleSpaceCode: row.vehiclespacecode,
     districtCaption: district,
