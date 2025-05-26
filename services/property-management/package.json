@@ -4,7 +4,7 @@
   "main": "./src/index.ts",
   "private": "true",
   "engines": {
-    "node": "18.*"
+    "node": "20.*"
   },
   "scripts": {
     "test": "jest",
