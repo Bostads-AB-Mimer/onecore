@@ -6,9 +6,9 @@ import {
   MaterialChoice,
   MaterialOption,
   ParkingSpace,
+  RentalObject,
   RentalProperty,
   RentalPropertyInfo,
-  RentalObject,
   VacantParkingSpace,
 } from 'onecore-types'
 import { AxiosError, HttpStatusCode } from 'axios'
