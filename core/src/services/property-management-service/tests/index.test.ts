@@ -172,4 +172,62 @@ describe('rental-property-service index', () => {
       })
     })
   })
+
+  describe('GET /vacant-parkingspaces', () => {
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: expect.any(String) })
+    })
+
+    it('responds with 200 and an empty list if no parking spaces are vacant', async () => {
+      jest
+        .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+    })
+
+    it('responds with 200 and a list of vacant parking spaces', async () => {
+      const vacantParkingSpaces = factory.parkingSpace.buildList(2)
+
+      jest
+        .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: vacantParkingSpaces })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            rentalObjectCode: expect.any(String),
+            address: expect.any(String),
+            monthlyRent: expect.any(Number),
+            districtCaption: expect.any(String),
+            districtCode: expect.any(String),
+            blockCaption: expect.any(String),
+            blockCode: expect.any(String),
+            objectTypeCaption: expect.any(String),
+            objectTypeCode: expect.any(String),
+            rentalObjectTypeCaption: expect.any(String),
+            rentalObjectTypeCode: expect.any(String),
+            vehicleSpaceCode: expect.any(String),
+            vehicleSpaceCaption: expect.any(String),
+            restidentalAreaCaption: expect.any(String),
+            restidentalAreaCode: expect.any(String),
+            vacantFrom: expect.any(String),
+          }),
+        ])
+      )
+    })
+  })
 })
