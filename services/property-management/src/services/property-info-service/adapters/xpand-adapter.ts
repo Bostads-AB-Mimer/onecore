@@ -7,6 +7,8 @@ import {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ParkingSpace,
+  VacantParkingSpace,
+  RentalObject,
 } from 'onecore-types'
 
 import Config from '../../../common/config'
