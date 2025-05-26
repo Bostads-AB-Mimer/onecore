@@ -473,8 +473,6 @@ describe('parking spaces', () => {
 
   describe('GET /vacant-parkingspaces', () => {
     it('should return a list of vacant parking spaces', async () => {
-      const vacantFromDate = new Date('2023-10-01T00:00:00.000Z')
-
       const mockedVacantParkingSpaces = [
         {
           rentalObjectCode: '924-004-99-0008',
@@ -488,7 +486,7 @@ describe('parking spaces', () => {
           monthlyRent: 0,
           restidentalAreaCaption: 'Centrum',
           restidentalAreaCode: 'CTR',
-          vacantFrom: vacantFromDate.toISOString(),
+          vacantFrom: new Date('2023-10-01'),
         },
       ]
 
@@ -500,7 +498,10 @@ describe('parking spaces', () => {
 
       expect(res.status).toBe(200)
       expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
-      expect(res.body.content).toEqual(mockedVacantParkingSpaces)
+
+      expect(res.body.content).toStrictEqual(
+        JSON.parse(JSON.stringify(mockedVacantParkingSpaces))
+      )
     })
 
     it('should handle errors gracefully', async () => {
