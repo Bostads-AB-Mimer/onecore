@@ -504,7 +504,10 @@ describe('parking spaces', () => {
     it('should handle errors gracefully', async () => {
       const getAllVacantParkingSpacesSpy = jest
         .spyOn(xpandAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({ ok: false, err: new Error('Database error') })
+        .mockResolvedValue({
+          ok: false,
+          err: 'get-all-vacant-parking-spaces-failed',
+        })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
