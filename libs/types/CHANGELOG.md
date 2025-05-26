@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.9.0...v3.10.0) (2025-05-26)
+
+
+### Features
+
+* realease UTH-230 types ([f064dcc](https://github.com/Bostads-AB-Mimer/onecore-types/commit/f064dcc0632928c2c4c3c01472b8a0ce3e3719b7))
+
 ## [3.9.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.8.0...v3.9.0) (2025-04-29)
 
 
