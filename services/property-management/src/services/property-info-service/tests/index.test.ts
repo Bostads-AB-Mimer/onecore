@@ -486,7 +486,7 @@ describe('parking spaces', () => {
           monthlyRent: 0,
           restidentalAreaCaption: 'Centrum',
           restidentalAreaCode: 'CTR',
-          vacantFrom: new Date(),
+          vacantFrom: new Date('2023-10-01T00:00:00.000Z'),
         },
       ]
 
