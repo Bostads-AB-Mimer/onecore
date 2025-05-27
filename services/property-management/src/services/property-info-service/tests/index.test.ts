@@ -498,7 +498,10 @@ describe('parking spaces', () => {
 
       expect(res.status).toBe(200)
       expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
-      expect(res.body.content).toEqual(mockedVacantParkingSpaces)
+
+      expect(res.body.content).toStrictEqual(
+        JSON.parse(JSON.stringify(mockedVacantParkingSpaces))
+      )
     })
 
     it('should handle errors gracefully', async () => {
