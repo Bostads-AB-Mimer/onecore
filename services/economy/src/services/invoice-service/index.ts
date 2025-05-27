@@ -181,25 +181,6 @@ export const routes = (router: KoaRouter) => {
 
       console.log('get-ledger-rows')
 
-<<<<<<< HEAD
-    try {
-      const batchId = ctx.params.batchId
-      const transactionRows = await createLedgerRows(batchId)
-
-      ctx.status = 200
-      ctx.body = {
-        content: transactionRows,
-        ...metadata,
-      }
-    } catch (error: any) {
-      logger.error(error, 'Error getting invoice transaction rows')
-      ctx.status = 500
-      ctx.body = {
-        message: error.message,
-      }
-    }
-  })
-=======
       try {
         const batchId = ctx.params.batchId
         const transactionRows = await createLedgerRows(batchId)
@@ -218,5 +199,4 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
->>>>>>> 937830f (Mälarenergi WIP)
 }
