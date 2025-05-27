@@ -1,0 +1,237 @@
+import fs from 'fs/promises'
+import config from '../common/config'
+import { XMLParser } from 'fast-xml-parser'
+import path from 'path'
+import { InvoiceDataRow } from '../common/types'
+import { logger } from 'onecore-utilities'
+
+const xmlParserOptions = {
+  ignoreAttributes: false,
+  ignoreNameSpace: false,
+  removeNSPrefix: true,
+}
+
+enum ProcurementInvoiceType {
+  electricity = 1,
+  water = 2,
+  heating = 3,
+}
+
+// How many months to backdate costs, index is month number
+// according to Date.getMonth()
+const periodMonthInformation: Record<number, number> = {
+  0: 0,
+  1: -1,
+  2: -1,
+  3: 0,
+  4: -1,
+  5: -1,
+  6: 0,
+  7: -1,
+  8: -1,
+  9: 0,
+  10: -1,
+  11: -1,
+}
+
+const ledgerAccount = '2440'
+const debtAccount = '2881'
+
+const accountMap: Record<ProcurementInvoiceType, { costAccount: string }> = {
+  [ProcurementInvoiceType.electricity]: {
+    costAccount: '4611',
+  },
+  [ProcurementInvoiceType.water]: { costAccount: '4631' },
+  [ProcurementInvoiceType.heating]: {
+    costAccount: '4621',
+  },
+}
+
+const getPeriodInfo = (procurementInvoice: any) => {
+  const invoiceMonth = new Date(
+    Date.parse(procurementInvoice.IssueDate)
+  ).getMonth()
+
+  const monthPeriodInfo = periodMonthInformation[invoiceMonth]
+
+  return {
+    periodStart: monthPeriodInfo == 0 ? '' : monthPeriodInfo,
+    numPeriods: monthPeriodInfo == 0 ? '' : 1,
+  }
+}
+
+const getTaxRule = (totalAmount: number, totalVat: number) => {
+  const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+
+  switch (vatRate) {
+    case 25:
+      return '1'
+    case 12:
+      return '11'
+    case 6:
+      return '12'
+    default:
+      return ''
+  }
+}
+
+const transformXmlToInvoiceRows = (
+  procurementInvoice: any
+): InvoiceDataRow[] => {
+  if (
+    !procurementInvoice['InvoiceLine'] ||
+    procurementInvoice['InvoiceLine'].length <= 1
+  ) {
+    logger.error(
+      { parsedXml: procurementInvoice },
+      'No invoice lines in XML invoice'
+    )
+    throw new Error('No invoice lines in XML invoice')
+  }
+
+  let invoiceType: ProcurementInvoiceType | undefined
+
+  switch (
+    procurementInvoice['InvoiceLine'][0].Note.split(' ')[0].toLowerCase()
+  ) {
+    case 'elhandel':
+      invoiceType = ProcurementInvoiceType.electricity
+      break
+    case 'elnät':
+      invoiceType = ProcurementInvoiceType.electricity
+      break
+    case 'vatten':
+      invoiceType = ProcurementInvoiceType.water
+      break
+    case 'fjärrvärme':
+      invoiceType = ProcurementInvoiceType.heating
+      break
+    case 'fjärrkyla':
+      invoiceType = ProcurementInvoiceType.heating
+      break
+  }
+
+  if (!invoiceType) {
+    logger.error(
+      { invoiceLine: procurementInvoice['InvoiceLine'][0].Note },
+      'Could not determine invoice type from xml'
+    )
+    throw new Error('Could not determine invoice type from xml')
+  }
+
+  const periodInfo = getPeriodInfo(procurementInvoice)
+  const invoiceAmount =
+    procurementInvoice.LegalTotal.TaxInclusiveTotalAmount['#text']
+  const facilityId = procurementInvoice.Delivery.DeliveryAddress.ID
+  const invoiceNumber = procurementInvoice.ID
+  const vatAmount = procurementInvoice.TaxTotal.TotalTaxAmount['#text']
+
+  return [
+    {
+      invoiceNumber,
+      account: ledgerAccount,
+      totalAmount: invoiceAmount,
+      invoiceDate: procurementInvoice.IssueDate,
+      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
+      facilityId,
+      periodStart: '',
+      numPeriods: '',
+      subledgerNumber: 'F044966',
+    },
+    {
+      invoiceNumber,
+      account: debtAccount,
+      totalAmount: -invoiceAmount,
+      invoiceDate: procurementInvoice.IssueDate,
+      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
+      facilityId,
+      periodStart: '',
+      numPeriods: '',
+      subledgerNumber: 'F044966',
+    },
+    {
+      invoiceNumber,
+      account: accountMap[invoiceType].costAccount,
+      totalAmount: -invoiceAmount,
+      vatCode: getTaxRule(invoiceAmount, vatAmount),
+      facilityId,
+      invoiceDate: procurementInvoice.IssueDate,
+      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
+      periodStart: periodInfo.periodStart,
+      numPeriods: periodInfo.numPeriods,
+      subledgerNumber: 'F044966',
+    },
+    {
+      invoiceNumber,
+      account: debtAccount,
+      totalAmount: invoiceAmount,
+      invoiceDate: procurementInvoice.IssueDate,
+      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
+      facilityId,
+      periodStart: periodInfo.periodStart,
+      numPeriods: periodInfo.numPeriods,
+      subledgerNumber: 'F044966',
+    },
+  ]
+}
+
+const readXmlFiles = async (xmlFileNames: string[]) => {
+  const xmlFiles: any[] = []
+
+  for (const xmlFileName of xmlFileNames) {
+    try {
+      const xmlFile = await fs.readFile(
+        path.join(config.procurementInvoices.directory, xmlFileName)
+      )
+      const parser = new XMLParser(xmlParserOptions)
+      const xmlContents = parser.parse(xmlFile)['Invoice']
+      xmlFiles.push(xmlContents)
+    } catch (err) {
+      logger.error({ xmlFileName }, 'Error reading xml file')
+    }
+  }
+
+  // Sort files to be able to group them into the same vouchers later
+  const sortedXmlFiles = xmlFiles.sort((fileA: any, fileB: any) => {
+    const periodInfoA = getPeriodInfo(fileA)
+    const periodInfoB = getPeriodInfo(fileB)
+
+    return (
+      (fileA.IssueDate as string).localeCompare(fileB.IssueDate as string) ||
+      (periodInfoA.periodStart as number) -
+        (periodInfoB.periodStart as number) ||
+      (periodInfoA.numPeriods as number) - (periodInfoB.numPeriods as number) ||
+      (fileA.ID as number) - (fileB.ID as number)
+    )
+  })
+
+  return sortedXmlFiles
+}
+
+export const getNewProcurementInvoiceRows = async () => {
+  const files = await fs.readdir(config.procurementInvoices.directory)
+
+  const xmlFileNames = files.filter((file) => {
+    return file.endsWith('.xml')
+  })
+
+  const invoiceRows: InvoiceDataRow[] = []
+
+  const xmlFiles = await readXmlFiles(xmlFileNames)
+
+  for (const xmlFile of xmlFiles) {
+    try {
+      const fileInvoiceRows = await transformXmlToInvoiceRows(xmlFile)
+
+      invoiceRows.push(...fileInvoiceRows)
+    } catch (err) {
+      logger.error({ xmlFile }, 'Error transforming xml file')
+    }
+  }
+
+  return invoiceRows
+}
+
+export const markProcurementFilesAsImported = async (files: string[]) => {
+  return
+}

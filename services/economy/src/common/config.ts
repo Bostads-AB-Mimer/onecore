@@ -22,6 +22,9 @@ export interface Config {
     url: string
     apiToken: string
   }
+  procurementInvoices: {
+    directory: string
+  }
   health: {
     xledger: {
       systemName: string
@@ -39,6 +42,9 @@ const config = configPackage({
     },
     economyDatabase: {
       port: 1438,
+    },
+    procurementInvoices: {
+      directory: './procurement-invoices',
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -58,5 +64,6 @@ export default {
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
+  procurementInvoices: config.get('procurementInvoices'),
   health: config.get('health'),
 } as Config

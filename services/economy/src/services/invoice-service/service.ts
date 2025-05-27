@@ -5,13 +5,13 @@ import {
   getCounterPartCustomers,
   getInvoiceRows,
   saveInvoiceRows,
-} from './adapters/invoice-data-db-adapter'
-import { enrichInvoiceRows } from './adapters/xpand-db-adapter'
-import { InvoiceContract, InvoiceDataRow } from './types'
+} from '../../adapters/invoice-data-db-adapter'
+import { enrichInvoiceRows } from '../../adapters/xpand-db-adapter'
+import { InvoiceContract, InvoiceDataRow } from '../../common/types'
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
-} from './adapters/xledger-adapter'
+} from '../../adapters/xledger-adapter'
 
 /**
  * Enriches each invoice row of a batch with accounting data from Xpand. Saves each
