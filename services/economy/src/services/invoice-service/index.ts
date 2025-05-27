@@ -1,11 +1,11 @@
 import KoaRouter from '@koa/router'
-import { getInvoicesByContactCode } from './adapters/xledger-adapter'
+import { getInvoicesByContactCode } from '../../adapters/xledger-adapter'
 import {
   saveContacts,
   createBatch,
   getContacts,
-} from './adapters/invoice-data-db-adapter'
-import { syncContact, transformContact } from './adapters/xledger-adapter'
+} from '../../adapters/invoice-data-db-adapter'
+import { syncContact, transformContact } from '../../adapters/xledger-adapter'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
 import {
   createAggregateRows,
@@ -28,7 +28,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/enrich-invoice-data-rows', async (ctx) => {
+  router.post('(.*)/invoices/import/enrich-invoice-data-rows', async (ctx) => {
     console.log('enrich-invoice-data-rows')
 
     try {
@@ -55,7 +55,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/batches', async (ctx) => {
+  router.post('(.*)/invoices/import/batches', async (ctx) => {
     try {
       const batchId = await createBatch()
 
@@ -70,7 +70,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/save-contacts', async (ctx) => {
+  router.post('(.*)/invoices/import/save-contacts', async (ctx) => {
     console.log('save-contacts')
     const metadata = generateRouteMetadata(ctx)
 
@@ -91,7 +91,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoice-data/update-contacts', async (ctx) => {
+  router.post('(.*)/invoices/import/update-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     function sleep(ms: number) {
@@ -134,7 +134,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/invoice-data/batches/:batchId/contacts', async (ctx) => {
+  router.get('(.*)/invoices/import/batches/:batchId/contacts', async (ctx) => {
     console.log('get contacts', ctx.params.batchId)
     const metadata = generateRouteMetadata(ctx)
 
@@ -149,12 +149,10 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get(
-    '(.*)/invoice-data/batches/:batchId/aggregated-rows',
+    '(.*)/invoices/import/batches/:batchId/aggregated-rows',
     async (ctx) => {
       ctx.request.socket.setTimeout(0)
       const metadata = generateRouteMetadata(ctx)
-
-      console.log('get-aggregated-rows')
 
       try {
         const batchId = ctx.params.batchId
@@ -175,12 +173,15 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  router.get('(.*)/invoice-data/batches/:batchId/ledger-rows', async (ctx) => {
-    ctx.request.socket.setTimeout(0)
-    const metadata = generateRouteMetadata(ctx)
+  router.get(
+    '(.*)/invoices/import/batches/:batchId/ledger-rows',
+    async (ctx) => {
+      ctx.request.socket.setTimeout(0)
+      const metadata = generateRouteMetadata(ctx)
 
-    console.log('get-ledger-rows')
+      console.log('get-ledger-rows')
 
+<<<<<<< HEAD
     try {
       const batchId = ctx.params.batchId
       const transactionRows = await createLedgerRows(batchId)
@@ -198,4 +199,24 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+=======
+      try {
+        const batchId = ctx.params.batchId
+        const transactionRows = await createLedgerRows(batchId)
+
+        ctx.status = 200
+        ctx.body = {
+          content: transactionRows,
+          ...metadata,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting invoice transaction rows')
+        ctx.status = 500
+        ctx.body = {
+          message: error.message,
+        }
+      }
+    }
+  )
+>>>>>>> 937830f (Mälarenergi WIP)
 }

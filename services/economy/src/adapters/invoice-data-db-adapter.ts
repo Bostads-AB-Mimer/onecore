@@ -4,10 +4,11 @@ import {
   InvoiceContract,
   InvoiceDataRow,
   TOTAL_ACCOUNT,
-} from '../types'
+} from '../common/types'
 import knex from 'knex'
-import config from '../../../common/config'
+import config from '../common/config'
 import { Contact } from 'onecore-types'
+import { logger } from 'onecore-utilities'
 
 const db = knex({
   connection: {
@@ -47,7 +48,7 @@ export const saveInvoiceRows = async (
       process.stdout.cursorTo(0)
       process.stdout.write('Saving ' + (i++).toString())
     } catch (error: any) {
-      console.error(
+      logger.error(
         'Error inserting row',
         row['contractCode'],
         row['rentalArticle']
@@ -98,6 +99,10 @@ export const saveContacts = async (
       successfulContacts++
     } catch (error: any) {
       failedContacts++
+      logger.error(
+        error,
+        `Error saving contact ${contact.contactCode} to invoice data database`
+      )
       errors.push(
         `Error saving contact ${contact.contactCode} to invoice data database`
       )
