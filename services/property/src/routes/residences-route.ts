@@ -330,7 +330,7 @@ export const routes = (router: KoaRouter) => {
           code: residence.propertyObject.propertyStructures[0].buildingCode,
           name: residence.propertyObject.propertyStructures[0].buildingName,
         },
-        malarEnergiFacilityId: residence.comments?.[0].text || null,
+        malarEnergiFacilityId: residence.comments?.[0]?.text || null,
       } satisfies ResidenceDetails
 
       ctx.status = 200
@@ -339,6 +339,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (err) {
+      logger.error(err, 'Error fetching residence by ID')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
