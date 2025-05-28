@@ -52,7 +52,7 @@ export function TenantInformation(props: Props) {
         isSecondaryRental={false}
       />
       <div className="space-y-6">
-        {lease.tenants?.concat(lease.tenants).map((tenant, i) => (
+        {lease.tenants?.map((tenant, i) => (
           <>
             {i > 0 && <Separator />}
             <TenantCard lease={lease} tenant={tenant} key={i} />
