@@ -7,9 +7,8 @@ import {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ParkingSpace,
-  Address,
-  // RentalObject,
-  // VacantParkingSpace,
+  RentalObject,
+  VacantParkingSpace,
 } from 'onecore-types'
 
 import Config from '../../../common/config'
@@ -19,27 +18,6 @@ import {
   getStreet,
   getStreetNumber,
 } from '../../../utils/parking-spaces'
-
-interface RentalObject {
-  rentalObjectCode: string
-  address: Address
-  monthlyRent: number
-  districtCaption?: string
-  districtCode?: string
-  blockCaption?: string
-  blockCode?: string
-  restidentalAreaCaption: string
-  restidentalAreaCode: string
-  objectTypeCaption: string
-  objectTypeCode: string
-  vacantFrom: Date
-}
-
-interface VacantParkingSpace extends RentalObject {
-  vehicleSpaceCaption: string
-  vehicleSpaceCode: string
-  parkingSpaceArea: number | null
-}
 
 const db = knex({
   client: 'mssql',
@@ -412,37 +390,34 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
     }
   }
 
+  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
   // Calculate monthlyRent from yearrent if available and numeric
-  let monthlyRent = 0 // fallback
-  if (typeof row.yearrent === 'number' && !isNaN(row.yearrent)) {
-    monthlyRent = Math.round(row.yearrent / 12)
+  let monthlyRent = 0
+  if (Array.isArray(yearRentRows) && yearRentRows.length > 0) {
+    const totalYearRent = yearRentRows
+      .map((r: any) =>
+        typeof r.yearrent === 'number' && !isNaN(r.yearrent) ? r.yearrent : 0
+      )
+      .reduce((sum: number, val: number) => sum + val, 0)
+    monthlyRent = Math.round(totalYearRent / 12)
   }
 
-  if (row.parkingspacearea !== null) {
-    console.log('row', row)
-  }
-  // Transform the row and add district info
   return {
     rentalObjectCode: row.rentalObjectCode,
-    address: {
-      street: getStreet(row.postaladdress),
-      number: getStreetNumber(row.postaladdress),
-      postalCode: row.zipCode,
-      city: row.city,
-    },
+    address: row.postaladdress,
     monthlyRent: monthlyRent,
-    blockCaption: row.blockcaption || undefined,
-    blockCode: row.blockcode || undefined,
-    restidentalAreaCode: row.scegcode || undefined,
-    objectTypeCaption: row.vehiclespacetypecaption || undefined,
-    objectTypeCode: row.vehiclespacetypecode || undefined,
+    blockCaption: row.blockcaption,
+    blockCode: row.blockcode,
+    restidentalAreaCode: row.scegcode,
+    objectTypeCaption: row.vehiclespacetypecaption,
+    objectTypeCode: row.vehiclespacetypecode,
     vacantFrom: row.lastdebitdate || new Date(),
-    vehicleSpaceCaption: row.vehiclespacecaption || undefined,
-    vehicleSpaceCode: row.vehiclespacecode || undefined,
+    vehicleSpaceCaption: row.vehiclespacecaption,
+    vehicleSpaceCode: row.vehiclespacecode,
     districtCaption: district,
     districtCode: districtCode,
     restidentalAreaCaption: restidentalAreaCaption,
-    parkingSpaceArea: row.parkingspacearea || null,
+    braArea: row.braarea,
   }
 }
 
@@ -482,16 +457,26 @@ const buildMainQuery = (
       'ac.contractid',
       'ac.fromdate as contractfromdate',
       'ac.lastdebitdate',
-      'rent.yearrent',
-      'cmvalbar.value as parkingspacearea'
+      'rent.yearrentrows',
+      'cmvalbar.value as braarea'
     )
     .leftJoin(activeRentalBlocksQuery.as('rb'), 'rb.keycmobj', 'ps.keycmobj')
     .leftJoin(activeContractsQuery.as('ac'), 'ac.keycmobj', 'ps.keycmobj')
     .leftJoin(
-      db
-        .select('x.yearrent', 'x.rentalpropertyid')
-        .from('hy_debitrowrentalproperty_xpand_api as x')
-        .as('rent'),
+      db.raw(`
+          (
+            SELECT 
+              rentalpropertyid, 
+              (
+                SELECT yearrent
+                FROM hy_debitrowrentalproperty_xpand_api x2 
+                WHERE x2.rentalpropertyid = x1.rentalpropertyid 
+                FOR JSON PATH
+              ) as yearrentrows
+            FROM hy_debitrowrentalproperty_xpand_api x1
+            GROUP BY rentalpropertyid
+          ) as rent
+        `),
       'rent.rentalpropertyid',
       'ps.rentalObjectCode'
     )
@@ -605,7 +590,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       .whereNull('ac.keycmobj')
       .orderBy('ps.blockcode', 'ps.vehiclespacenumber')
 
-    // console.log('results', results)
     const listings: VacantParkingSpace[] = results.map((row) =>
       trimRow(transformFromXpandListing(row))
     )
@@ -640,8 +624,6 @@ const getRentalObject = async (
     )
       .where('ps.rentalObjectCode', '=', rentalObjectCode) // Filter by rentalObjectCode
       .first()
-
-    console.log('result', result)
 
     if (!result) {
       return { ok: false, err: 'rental-object-not-found' }
