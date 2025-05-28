@@ -30,7 +30,7 @@ export const useTenantWithValidation = (
     queryFn: () =>
       axios
         .get(
-          `${backendUrl}/get-and-validate-tenant/${contactCode}/${districtCode}/${rentalObjectCode}`,
+          `${backendUrl}/contacts/${contactCode}/validate-tentant/${districtCode}/${rentalObjectCode}`,
           {
             headers: {
               Accept: 'application/json',

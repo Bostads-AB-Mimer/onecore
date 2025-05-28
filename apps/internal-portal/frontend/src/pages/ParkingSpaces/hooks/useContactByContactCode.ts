@@ -10,7 +10,7 @@ export const useContactByContactCode = (contactCode?: string) =>
     enabled: Boolean(contactCode),
     queryFn: () =>
       axios
-        .get(`${backendUrl}/contact/${contactCode}`, {
+        .get(`${backendUrl}/contacts/${contactCode}`, {
           headers: {
             Accept: 'application/json',
             'Access-Control-Allow-Credentials': true,

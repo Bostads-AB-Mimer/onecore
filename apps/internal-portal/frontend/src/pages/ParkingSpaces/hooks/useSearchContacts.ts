@@ -11,7 +11,7 @@ export const useSearchContacts = (q: string) =>
     enabled: Boolean(q?.length >= 3),
     queryFn: () =>
       axios
-        .get(`${backendUrl}/contacts/search?q=${q}`, {
+        .get(`${backendUrl}/contacts?q=${q}`, {
           headers: {
             Accept: 'application/json',
             'Access-Control-Allow-Credentials': true,

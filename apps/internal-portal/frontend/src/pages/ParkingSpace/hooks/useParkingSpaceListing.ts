@@ -25,7 +25,7 @@ export const useParkingSpaceListing = (params: Params) =>
     queryFn: () =>
       axios
         .get<{ content: ResultType }>(
-          `${backendUrl}/leases/listing-with-applicants/${params.id}`,
+          `${backendUrl}/listings/with-applicants/${params.id}`,
           {
             headers: {
               Accept: 'application/json',

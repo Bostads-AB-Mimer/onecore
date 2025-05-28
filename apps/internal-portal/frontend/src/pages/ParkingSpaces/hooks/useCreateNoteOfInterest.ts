@@ -21,7 +21,7 @@ export const useCreateNoteOfInterest = (listingId: number) => {
   >({
     mutationFn: (params: CreateNoteOfInterestRequestParams) =>
       axios
-        .post<unknown>(`${backendUrl}/listing/applicant`, params, {
+        .post<unknown>(`${backendUrl}/listings/applicant`, params, {
           headers: {
             Accept: 'application/json',
             'Access-Control-Allow-Credentials': true,

@@ -17,7 +17,7 @@ export const useParkingSpaceListings = (
     queryKey: ['parkingSpaceListings', type],
     queryFn: () =>
       axios
-        .get(`${backendUrl}/leases/listings-with-applicants?type=${type}`, {
+        .get(`${backendUrl}/listings/with-applicants?type=${type}`, {
           headers: {
             Accept: 'application/json',
             'Access-Control-Allow-Credentials': true,
