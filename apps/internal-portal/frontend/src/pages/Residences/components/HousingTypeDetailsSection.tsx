@@ -18,7 +18,7 @@ const fieldConfigs: any = {
       placeholder: 'Namn på nuvarande hyresvärd',
     },
   } as any,
-  'housingReference.housingTypeDescription': {
+  housingTypeDescription: {
     label: 'Beskriv boende *',
     input: {
       type: 'text',

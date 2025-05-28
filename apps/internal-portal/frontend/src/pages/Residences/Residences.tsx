@@ -111,6 +111,7 @@ const ResidencesPage: React.FC = () => {
       numChildren: data.numChildren,
       housingReference: {
         ...formDefaults().housingReference,
+        comment: data.housingReference.comment,
         reviewStatus: data.housingReference.reviewStatus,
         reasonRejected: null,
       },
