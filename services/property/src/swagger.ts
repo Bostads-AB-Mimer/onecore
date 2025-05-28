@@ -17,6 +17,7 @@ export const swaggerSpec = {
     `${basePath}/routes/staircases-route.{ts,js}`,
     `${basePath}/routes/rooms-route.{ts,js}`,
     `${basePath}/routes/companies-route.{ts,js}`,
+    `${basePath}/routes/maintenance-units-route.{ts,js}`,
     `${basePath}/routes/health-route.{ts,js}`,
     `${basePath}/routes/swagger-route.{ts,js}`,
   ],
