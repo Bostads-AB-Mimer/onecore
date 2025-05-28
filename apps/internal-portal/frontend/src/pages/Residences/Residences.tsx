@@ -254,7 +254,7 @@ const ResidencesPage: React.FC = () => {
 
                       <CustomerReference
                         customerReferenceReceivedAt={
-                          housingReference?.createdAt
+                          customerCard?.applicationProfile?.lastUpdatedAt
                         }
                         housingReferenceUpdatedAt={housingReference?.reviewedAt}
                         updatedBy={housingReference?.reviewedBy}
