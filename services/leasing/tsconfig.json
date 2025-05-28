@@ -7,7 +7,6 @@
     "outDir": "./build",
     "resolveJsonModule": true,
     "types": ["jest","node"],
-    "noErrorTruncation": true,
-
+    "noErrorTruncation": true
   }
 }
