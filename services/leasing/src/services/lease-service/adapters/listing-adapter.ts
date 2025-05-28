@@ -265,7 +265,6 @@ const updateApplicantStatus = async (
   }
 }
 
-//todo: varför tar alla metoder dbConnection? Är det för att kunna göra tester som går mot riktiga db? Konsekvensen blir att adaptern inte är utbytbar/oberoende mot servicen...
 const getListings = async (
   published?: boolean,
   rentalRule?: 'Scored' | 'NonScored',
