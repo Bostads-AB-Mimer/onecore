@@ -500,6 +500,40 @@ export interface paths {
       };
     };
   };
+  "/maintenance-units-by-rental-property-id/{id}": {
+    /**
+     * Get all maintenance units for a specific rental property id
+     * @description Retrieves all maintenance units associated with a given rental property id.
+     * Returns detailed information about each building including its code, name,
+     * construction details, and associated property information.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the rental property for which to retrieve maintenance units. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the buildings. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -904,6 +938,15 @@ export interface components {
       subletFeeAmount: number;
       disableQuantitiesBelowCompany: number;
       timestamp: string;
+    };
+    MaintenanceUnit: {
+      id: string;
+      rentalPropertyId: string;
+      code: string;
+      caption: string;
+      type: string;
+      estateCode: string;
+      estate: string;
     };
   };
   responses: never;
