@@ -13,13 +13,16 @@ export { RentalPropertyInfoFactory as rentalPropertyInfo } from './rental-proper
 export { TenantFactory as tenant } from './tenant'
 export {
   WorkOrderFactory as workOrder,
+  XpandWorkOrderFactory as xpandWorkOrder,
+  XpandWorkOrderDetailsFactory as xpandWorkOrderDetails,
   CreateWorkOrderFactory as createWorkOrder,
   CreateWorkOrderDetailsFactory as createWorkOrderDetails,
 } from './work-order'
 export {
-  XpandWorkOrderFactory as xpandWorkOrder,
-  XpandWorkOrderDetailsFactory as xpandWorkOrderDetails,
-} from './xpand-work-order'
+  XpandWorkOrderFactory as externalXpandWorkOrder,
+  XpandWorkOrderDetailsFactory as externalXpandWorkOrderDetails,
+  OdooWorkOrderFactory as externalOdooWorkOrder,
+} from './work-order-external'
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
 export {
   ApplicationProfileFactory as applicationProfile,

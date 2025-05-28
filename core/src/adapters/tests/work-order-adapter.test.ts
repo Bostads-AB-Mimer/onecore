@@ -21,7 +21,8 @@ describe('work-order-adapter', () => {
   })
 
   describe(workOrderAdapter.getWorkOrdersByContactCode, () => {
-    const workOrderMock = factory.workOrder.buildList(2)
+    const workOrderMock = factory.externalXpandWorkOrder.build()
+
     it('returns err if request fails', async () => {
       mockServer.use(
         http.get(
@@ -43,7 +44,7 @@ describe('work-order-adapter', () => {
           () =>
             HttpResponse.json(
               {
-                content: { workOrders: workOrderMock },
+                content: { workOrders: [workOrderMock] },
               },
               { status: 200 }
             )
@@ -54,14 +55,14 @@ describe('work-order-adapter', () => {
 
       expect(result).toMatchObject({
         ok: true,
-        data: workOrderMock,
+        data: [workOrderMock],
       })
     })
   })
 
   describe(workOrderAdapter.getXpandWorkOrdersByRentalPropertyId, () => {
     const rentalPropertyId = '406-028-02-0101'
-    const xpandWorkOrderMock = factory.xpandWorkOrder.buildList(3)
+    const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
 
     it('returns err if request fails', async () => {
       mockServer.use(
@@ -108,9 +109,10 @@ describe('work-order-adapter', () => {
 
   describe(workOrderAdapter.getXpandWorkOrderDetails, () => {
     const workOrderCode = '25-000050'
-    const xpandWorkOrderDetailsMock = factory.xpandWorkOrderDetails.build({
-      Code: workOrderCode,
-    })
+    const xpandWorkOrderDetailsMock =
+      factory.externalXpandWorkOrderDetails.build({
+        Code: workOrderCode,
+      })
 
     it('returns err if request fails', async () => {
       mockServer.use(
