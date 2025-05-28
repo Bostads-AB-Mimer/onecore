@@ -23,6 +23,7 @@ export interface XpandDbWorkOrder {
   resource: string
   resourceGroup: string
   createdAt: Date
+  expiresAt: Date | null
   lastChanged: Date
   priority: string | null
   residenceId: string
@@ -54,6 +55,7 @@ export async function getWorkOrdersByResidenceId(
       'resource.cmctcben AS resource',
       'cmrgr.caption AS resourceGroup',
       'aoupp.time AS createdAt',
+      'aoupp.timeforf AS expiresAt',
       'aoupp.lastchged AS lastChanged',
       'aopri.code AS priority',
       'babuf.hyresid AS residenceId'
@@ -61,7 +63,7 @@ export async function getWorkOrdersByResidenceId(
     .innerJoin('babuf', 'babuf.keycmobj', 'aoupp.keycmobj')
     .innerJoin('aotlt', 'aotlt.keyaotlt', 'aoupp.keyaotlt')
     .leftJoin('cmctc', 'cmctc.keycmctc', 'aoupp.keycmctc')
-    .leftJoin('cmctc as resource', 'cmctc.keycmctc', 'aoupp.keycmctc2')
+    .leftJoin('cmctc as resource', 'resource.keycmctc', 'aoupp.keycmctc2')
     .leftJoin('cmrgr', 'cmrgr.keycmrgr', 'aoupp.keycmrgr')
     .leftJoin('aopri', 'aopri.keyaopri', 'aoupp.keyaopri')
     .where('babuf.hyresid', residenceId)
@@ -102,6 +104,7 @@ export async function getWorkOrderDetails(
       'resource.cmctcben AS resource',
       'cmrgr.caption AS resourceGroup',
       'aoupp.time AS createdAt',
+      'aoupp.timeforf AS expiresAt',
       'aoupp.lastchged AS lastChanged',
       'aopri.code AS priority',
       'babuf.hyresid AS residenceId',

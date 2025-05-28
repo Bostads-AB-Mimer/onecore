@@ -16,6 +16,7 @@ export const XpandWorkOrderDetailsFactory =
     LastChanged: new Date(),
     Priority: sequence % 2 === 0 ? 'High' : null,
     Registered: new Date(),
+    DueDate: null,
     RentalObjectCode: `RO-${sequence}`,
     Status: 'Resurs tilldelad',
     WorkOrderRows: [
@@ -37,6 +38,7 @@ export const XpandWorkOrderFactory = Factory.define<XpandWorkOrder>(
     LastChanged: new Date(),
     Priority: sequence % 2 === 0 ? 'High' : null,
     Registered: new Date(),
+    DueDate: null,
     RentalObjectCode: `RO-${sequence}`,
     Status: 'Resurs tilldelad',
   })
@@ -52,6 +54,7 @@ export const XpandDbWorkOrderDetailsFactory =
     resource: `Resource-${sequence}`,
     resourceGroup: `Group-${sequence}`,
     createdAt: new Date(),
+    expiresAt: null,
     lastChanged: new Date(),
     priority: sequence % 2 === 0 ? '7 dagar' : null,
     residenceId: `406-028-02-${sequence}`,
@@ -74,6 +77,7 @@ export const XpandDbWorkOrderFactory = Factory.define<XpandDbWorkOrder>(
     resource: `Resource-${sequence}`,
     resourceGroup: `Group-${sequence}`,
     createdAt: new Date(),
+    expiresAt: null,
     lastChanged: new Date(),
     priority: sequence % 2 === 0 ? '7 dagar' : null,
     residenceId: `406-028-02-${sequence}`,

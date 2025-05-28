@@ -70,6 +70,7 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     ),
     Priority: odooWorkOrder.priority || '',
     Registered: new Date(odooWorkOrder.create_date),
+    DueDate: odooWorkOrder.due_date ? new Date(odooWorkOrder.due_date) : null,
     RentalObjectCode: odooWorkOrder.rental_property_id[1],
     Status: odooWorkOrder.stage_id[1],
     HiddenFromMyPages: odooWorkOrder.hidden_from_my_pages || false,

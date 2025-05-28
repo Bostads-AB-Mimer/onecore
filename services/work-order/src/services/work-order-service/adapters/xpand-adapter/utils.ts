@@ -64,6 +64,9 @@ export function transformXpandDbWorkOrderDetails(
       LastChanged: new Date(dbWorkOrderDetails.lastChanged),
       Priority: dbWorkOrderDetails.priority,
       Registered: new Date(dbWorkOrderDetails.createdAt),
+      DueDate: dbWorkOrderDetails.expiresAt
+        ? new Date(dbWorkOrderDetails.expiresAt)
+        : null,
       RentalObjectCode: dbWorkOrderDetails.residenceId,
       Status: xpandStatusToString(dbWorkOrderDetails.status),
       WorkOrderRows: rows.map((row) => ({
@@ -92,6 +95,7 @@ export function transformXpandDbWorkOrder(
       LastChanged: new Date(dbWorkOrder.lastChanged),
       Priority: dbWorkOrder.priority,
       Registered: new Date(dbWorkOrder.createdAt),
+      DueDate: dbWorkOrder.expiresAt,
       RentalObjectCode: dbWorkOrder.residenceId,
       Status: xpandStatusToString(dbWorkOrder.status),
     }

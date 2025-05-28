@@ -45,6 +45,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'equipment_code',
   'rental_property_id',
   'create_date',
+  'due_date',
   'write_date',
   'stage_id',
   'phone_number',

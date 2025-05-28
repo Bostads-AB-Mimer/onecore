@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from 'onecore-utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateWorkOrderBodySchema,
@@ -298,7 +298,8 @@ export const routes = (router: KoaRouter) => {
         },
         ...metadata,
       }
-    } catch (error: unknown) {
+    } catch (error) {
+      logger.error(error, 'Error fetching work orders from Xpand')
       ctx.status = 500
 
       if (error instanceof Error) {

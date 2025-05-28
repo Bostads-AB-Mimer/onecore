@@ -13,7 +13,8 @@
     "lint": "eslint src/",
     "start": "node index",
     "test:ci": "jest --silent",
-    "ts:ci": "tsc --noEmit"
+    "ts:ci": "tsc --noEmit",
+    "ts:watch": "tsc --noEmit --watch"
   },
   "keywords": [],
   "author": "",

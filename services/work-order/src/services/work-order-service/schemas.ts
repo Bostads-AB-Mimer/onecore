@@ -20,6 +20,7 @@ export const WorkOrderSchema = z.object({
   LastChanged: z.coerce.date(),
   Priority: z.string(),
   Registered: z.coerce.date(),
+  DueDate: z.union([z.null(), z.coerce.date()]),
   RentalObjectCode: z.string(),
   Status: z.string(),
   UseMasterKey: z.boolean(),
@@ -50,6 +51,7 @@ export const OdooWorkOrderSchema = z.object({
   equipment_code: z.string(),
   rental_property_id: z.string(),
   create_date: z.coerce.string(),
+  due_date: z.coerce.string().nullable(),
   write_date: z.coerce.string(),
   stage_id: z.tuple([z.number(), z.string()]),
 })
