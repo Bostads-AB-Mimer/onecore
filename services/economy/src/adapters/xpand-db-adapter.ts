@@ -3,6 +3,11 @@ import config from '../common/config'
 import { InvoiceDataRow } from '../common/types'
 import { logger } from 'onecore-utilities'
 
+type FacilityDistributions = Record<
+  string,
+  { propertyCode: string; costCode: string; distributionPercentage: number }
+>
+
 const db = knex({
   connection: {
     host: config.xpandDatabase.host,
@@ -14,28 +19,6 @@ const db = knex({
   },
   client: 'mssql',
 })
-
-const columnIndex: Record<string, number> = {
-  contractCode: 1,
-  contactCode: 2,
-  tenantName: 3,
-  contractType: 4,
-  contractFromDate: 5,
-  invoiceFromDate: 6,
-  invoiceToDate: 7,
-  rentArticle: 8,
-  invoiceRowText: 9,
-  rentalObjectCode: 10,
-  rentalObjectName: 11,
-  amount: 12,
-  vat: 13,
-  totalAmount: 14,
-  account: 15,
-  costCode: 16,
-  projectCode: 17,
-  freeCode: 18,
-  sumRow: 19,
-}
 
 const getSpecificRules = async (contractCode: string, year: string) => {
   // Get specific rules from building or area
@@ -167,7 +150,10 @@ export const enrichInvoiceRows = async (
   return Promise.all(enrichedInvoiceRows)
 }
 
-const getDistributions = async (facilityId: string, year: string) => {
+const getDistributions = async (
+  facilityId: string,
+  year: string
+): Promise<FacilityDistributions> => {
   // NOTE! This is a very non-standard way of sanitizing input parameters. It is used
   // here because knex has a bug where the query times out if facilityId is passed
   // as a parameter.
@@ -189,8 +175,6 @@ const getDistributions = async (facilityId: string, year: string) => {
     .where('keycmtyp', 'babyg')
     .where('cmval.keycmvat', 'AREATEMP')
     .whereRaw(`mptanlid = '${facilityId}'`)
-    //.where('mptanlid', db.raw('CAST(? AS CHAR(25))', facilityId))
-    //.where('mptanlid', '935999000099204400')
     .whereNull('keyobjrum')
     .whereNull('keyobjbdl')
     .whereNull('keyobjvan')
@@ -201,10 +185,7 @@ const getDistributions = async (facilityId: string, year: string) => {
 
   const areaTemps = await query
 
-  const distributions: Record<
-    string,
-    { propertyCode: string; costCode: string; distributionPercentage: number }
-  > = {}
+  const distributions: FacilityDistributions = {}
 
   const areaTempTotal = areaTemps.reduce((sum, tempRow) => {
     return sum + tempRow.value
@@ -222,12 +203,6 @@ const getDistributions = async (facilityId: string, year: string) => {
 
     distributions[property].distributionPercentage +=
       areaTemp.value / areaTempTotal
-
-    /*    distributions[property].distributionPercentage =
-      Math.round(
-        (distributions[property].distributionPercentage + Number.EPSILON) *
-          10000
-      ) / 10000*/
   })
 
   // If distributionPercentage is 0, there is no distribution. Set to 1.
@@ -238,108 +213,38 @@ const getDistributions = async (facilityId: string, year: string) => {
   }
 
   return distributions
-
-  /*const query = db('babyg')
-    .select('babyg.keycmobj', 'babuf.keyobjfst', 'bafst.code')
-    .distinct()
-    .innerJoin('babuf', 'babuf.keyobjbyg', 'babyg.keycmobj')
-    .innerJoin('drmpt', 'drmpt.keycmobj', 'babuf.keyobjfst')
-    .innerJoin('drfor', 'drfor.keycmobj', 'babuf.keyobjbyg')
-    .innerJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
-    .whereRaw(`mptanlid = '${facilityId}'`)
-
-  const buildingIdResults = await query
-
-  if (buildingIdResults.length > 0) {
-    const buildingProperty: Record<
-      string,
-      { propertyId: string; propertyCode: string }
-    > = {}
-    const buildingIds = buildingIdResults.map((row: any) => {
-      buildingProperty[row.keycmobj.trimEnd()] = {
-        propertyId: row.keyobjfst.trimEnd(),
-        propertyCode: row.code.trimEnd(),
-      }
-      return row.keycmobj.trimEnd()
-    })
-
-    const areaTempQuery = db('cmval')
-      .select('value', 'keycode')
-      .innerJoin('cmvat', 'cmval.keycmvat', 'cmvat.keycmvat')
-      .innerJoin('cmvap', 'cmvap.keycmvat', 'cmvat.keycmvat')
-      .innerJoin('babyg', 'keycode', 'babyg.keycmobj')
-      .where('keycmtyp', 'babyg')
-      .where('cmval.keycmvat', 'AREATEMP')
-      .whereIn('babyg.keycmobj', buildingIds)
-
-    const areaTemps = await areaTempQuery
-
-    const areaTempTotal = areaTemps.reduce((sum, tempRow) => {
-      return sum + tempRow.value
-    }, 0)
-    const distributions: Record<
-      string,
-      { propertyCode: string; distributionPercentage: number }
-    > = {}
-
-    areaTemps.forEach((areaTemp) => {
-      const property = buildingProperty[areaTemp.keycode.trimEnd()]
-      if (!distributions[property.propertyId]) {
-        distributions[property.propertyId] = {
-          propertyCode: property.propertyCode,
-          distributionPercentage: 0,
-        }
-      }
-
-      distributions[property.propertyId].distributionPercentage +=
-        areaTemp.value / areaTempTotal
-
-      distributions[property.propertyId].distributionPercentage =
-        Math.round(
-          (distributions[property.propertyId].distributionPercentage +
-            Number.EPSILON) *
-            100
-        ) / 100
-    })
-
-    // If distributionPercentage is 0, there is no distribution. Set to 1.
-    for (const [propertyId, distribution] of Object.entries(distributions)) {
-      if (distribution.distributionPercentage === 0) {
-        distribution.distributionPercentage = 1
-      }
-    }
-
-    return distributions
-  } else {
-    return null
-  }*/
 }
 
 export const enrichProcurementInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[]
-): Promise<InvoiceDataRow[]> => {
+): Promise<{
+  rows: InvoiceDataRow[]
+  missingFacilities: Record<string, string>
+}> => {
   const enrichedInvoiceRows: InvoiceDataRow[] = []
+  const missingFacilities: Record<string, string> = {}
+  let facilityId = invoiceDataRows[0].facilityId as string
+  let facilityDistributions: FacilityDistributions = await getDistributions(
+    invoiceDataRows[0].facilityId as string,
+    (invoiceDataRows[0].invoiceDate as string).substring(0, 4)
+  )
 
   for (const invoiceDataRow of invoiceDataRows) {
-    if ((invoiceDataRow.account as string).startsWith('4')) {
-      const year = (invoiceDataRow.invoiceDate as string).substring(0, 4)
-
-      const distributions = await getDistributions(
+    if ((invoiceDataRow.facilityId as string).localeCompare(facilityId)) {
+      facilityId = invoiceDataRow.facilityId as string
+      facilityDistributions = await getDistributions(
         invoiceDataRow.facilityId as string,
-        year
+        (invoiceDataRow.invoiceDate as string).substring(0, 4)
       )
+    }
 
-      if (distributions) {
-        if (Object.keys(distributions).length > 1) {
-          console.log(
-            'Actual distributions!',
-            invoiceDataRow.facilityId,
-            distributions
-          )
-        }
-
-        Object.keys(distributions).forEach((propertyId: string) => {
-          const distribution = distributions[propertyId]
+    if (
+      facilityDistributions &&
+      Object.keys(facilityDistributions).length > 0
+    ) {
+      if ((invoiceDataRow.account as string).startsWith('4')) {
+        Object.keys(facilityDistributions).forEach((propertyId: string) => {
+          const distribution = facilityDistributions[propertyId]
           const distributionDataRow: InvoiceDataRow = { ...invoiceDataRow }
           distributionDataRow.propertyCode = distribution.propertyCode
           distributionDataRow.costCode = distribution.costCode
@@ -358,9 +263,10 @@ export const enrichProcurementInvoiceRows = async (
         enrichedInvoiceRows.push(invoiceDataRow)
       }
     } else {
-      enrichedInvoiceRows.push(invoiceDataRow)
+      missingFacilities[invoiceDataRow.invoiceNumber as string] =
+        invoiceDataRow.facilityId as string
     }
   }
 
-  return enrichedInvoiceRows
+  return { rows: enrichedInvoiceRows, missingFacilities }
 }
