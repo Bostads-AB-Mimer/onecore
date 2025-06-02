@@ -5,13 +5,10 @@ import { InvoiceDataRow } from '../../common/types'
 const createVoucherNumbers = (invoiceDataRows: InvoiceDataRow[]) => {
   let lastRow = invoiceDataRows[0]
   let chunkNumber = 1
+  const chunkSize = 500
+  let currentChunkSize = 0
 
   invoiceDataRows.forEach((invoiceDataRow: InvoiceDataRow) => {
-    invoiceDataRow.voucherNo =
-      '3' +
-      '12345'.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0')
-
     if (
       (invoiceDataRow.invoiceDate as string).localeCompare(
         lastRow.invoiceDate as string
@@ -23,10 +20,33 @@ const createVoucherNumbers = (invoiceDataRows: InvoiceDataRow[]) => {
 
       if (diff) {
         chunkNumber++
+        currentChunkSize = 0
       }
-
-      lastRow = invoiceDataRow
+    } else if (
+      invoiceDataRow.invoiceNumber !== lastRow.invoiceNumber &&
+      currentChunkSize > chunkSize
+    ) {
+      chunkNumber++
+      currentChunkSize = 0
     }
+
+    lastRow = invoiceDataRow
+    currentChunkSize++
+
+    const date = new Date()
+    let uniquePart = date.toISOString().substring(2, 4)
+    uniquePart +=
+      (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
+        Date.UTC(date.getFullYear(), 0, 0)) /
+      24 /
+      60 /
+      60 /
+      1000
+
+    invoiceDataRow.voucherNo =
+      '3' +
+      uniquePart.toString().padStart(5, '0') +
+      chunkNumber.toString().padStart(3, '0')
   })
 
   return invoiceDataRows
@@ -45,10 +65,15 @@ const convertInvoiceRowsToCsv = async (invoiceDataRows: InvoiceDataRow[]) => {
 
 export const importNewFiles = async () => {
   const importedInvoiceRows = await getNewProcurementInvoiceRows()
-  const enrichedInvoiceRows = await enrichProcurementInvoiceRows(
-    importedInvoiceRows.slice(0, 50)
+  const enrichedInvoiceRows =
+    await enrichProcurementInvoiceRows(importedInvoiceRows)
+  const batchedInvoiceRows = await createVoucherNumbers(
+    enrichedInvoiceRows.rows
   )
-  const batchedInvoiceRows = await createVoucherNumbers(enrichedInvoiceRows)
+
+  if (enrichedInvoiceRows.missingFacilities) {
+    console.log('Missing facilities', enrichedInvoiceRows.missingFacilities)
+  }
 
   const csvLines = convertInvoiceRowsToCsv(batchedInvoiceRows)
 

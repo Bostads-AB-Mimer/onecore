@@ -15,6 +15,7 @@ enum ProcurementInvoiceType {
   electricity = 1,
   water = 2,
   heating = 3,
+  cooling = 4,
 }
 
 // How many months to backdate costs, index is month number
@@ -44,6 +45,9 @@ const accountMap: Record<ProcurementInvoiceType, { costAccount: string }> = {
   [ProcurementInvoiceType.water]: { costAccount: '4631' },
   [ProcurementInvoiceType.heating]: {
     costAccount: '4621',
+  },
+  [ProcurementInvoiceType.cooling]: {
+    costAccount: '4651',
   },
 }
 
@@ -107,7 +111,7 @@ const transformXmlToInvoiceRows = (
       invoiceType = ProcurementInvoiceType.heating
       break
     case 'fjärrkyla':
-      invoiceType = ProcurementInvoiceType.heating
+      invoiceType = ProcurementInvoiceType.cooling
       break
   }
 
@@ -122,7 +126,7 @@ const transformXmlToInvoiceRows = (
   const periodInfo = getPeriodInfo(procurementInvoice)
   const invoiceAmount =
     procurementInvoice.LegalTotal.TaxInclusiveTotalAmount['#text']
-  const facilityId = procurementInvoice.Delivery.DeliveryAddress.ID
+  const facilityId = procurementInvoice.Delivery.DeliveryAddress.ID.toString()
   const invoiceNumber = procurementInvoice.ID
   const vatAmount = procurementInvoice.TaxTotal.TotalTaxAmount['#text']
 
