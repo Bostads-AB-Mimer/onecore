@@ -602,20 +602,22 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /propertyBase/maintenance-units/by-rental-property/{rentalPropertyId}:
    *   get:
-   *     summary: Get rooms by rental property id.
+   *     summary: Get maintenance units by rental property id.
    *     description: Returns all maintenance units belonging to a rental property.
    *     tags:
    *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
    *     parameters:
    *       - in: path
    *         name: rentalPropertyId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the rental property.
+   *         description: The ID of the rental property for which to retrieve maintenance units.
    *     responses:
    *       200:
-   *         description: Successfully retrieved the rooms.
+   *         description: Successfully retrieved the maintenance units.
    *         content:
    *           application/json:
    *             schema:
@@ -649,7 +651,7 @@ export const routes = (router: KoaRouter) => {
         if (!result.ok) {
           logger.error(
             result.err,
-            'Error getting rooms from property-base',
+            'Error getting maintenance units from property-base',
             metadata
           )
           ctx.status = 500
