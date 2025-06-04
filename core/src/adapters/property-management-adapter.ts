@@ -6,11 +6,12 @@ import {
   MaterialChoice,
   MaterialOption,
   ParkingSpace,
-  VacantParkingSpace,
+  RentalObject,
   RentalProperty,
   RentalPropertyInfo,
+  VacantParkingSpace,
 } from 'onecore-types'
-import { AxiosError } from 'axios'
+import { AxiosError, HttpStatusCode } from 'axios'
 
 import config from '../common/config'
 import { AdapterResult } from './types'
@@ -239,6 +240,46 @@ const getPublishedParkingSpace = async (
   }
 }
 
+const getAllVacantParkingSpaces = async (): Promise<
+  AdapterResult<VacantParkingSpace[], 'get-all-vacant-parking-spaces-failed'>
+> => {
+  try {
+    const response = await axios.get(
+      `${propertyManagementServiceUrl}/vacant-parkingspaces`
+    )
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(error, 'Error fetching vacant-parkingspaces:')
+    return { ok: false, err: 'get-all-vacant-parking-spaces-failed' }
+  }
+}
+
+//todo: returnera parking space istället för rental object och flytta till onecore-property-management
+const getParkingSpaceByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<
+  AdapterResult<
+    RentalObject,
+    'get-rental-object-failed' | 'rental-object-not-found'
+  >
+> => {
+  try {
+    const response = await axios.get(
+      `${propertyManagementServiceUrl}/rental-object/by-code/${rentalObjectCode}`
+    )
+    if (response.status == HttpStatusCode.NotFound) {
+      return { ok: false, err: 'rental-object-not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
+    )
+    return { ok: false, err: 'get-rental-object-failed' }
+  }
+}
+
 export {
   getRentalProperty,
   getRentalPropertyInfo,
@@ -253,6 +294,8 @@ export {
   getPublishedParkingSpace,
   getRentalPropertyInfoFromXpand,
   getApartmentRentalPropertyInfo,
+  getAllVacantParkingSpaces,
+  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
 }
