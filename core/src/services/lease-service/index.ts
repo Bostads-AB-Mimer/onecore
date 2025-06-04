@@ -24,6 +24,7 @@ import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
 import { routes as applicationProfileRoutesOld } from './application-profile-old'
+import { routes as listings } from './listings'
 import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
@@ -67,12 +68,14 @@ const getLeasesWithRelatedEntitiesForPnr = async (
  * security:
  *   - bearerAuth: []
  */
+
 export const routes = (router: KoaRouter) => {
   registerSchema('Lease', Lease)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
   applicationProfileRoutesOld(router)
+  listings(router)
 
   /**
    * @swagger

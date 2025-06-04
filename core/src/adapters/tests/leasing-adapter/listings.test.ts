@@ -5,6 +5,14 @@ import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
 import * as factory from '../../../../test/factories'
 
+beforeEach(() => {
+  nock.cleanAll() // Rensar alla tidigare mockade HTTP-förfrågningar
+})
+
+afterAll(() => {
+  nock.restore() // Återställer nock till sitt ursprungliga tillstånd
+})
+
 describe(leasingAdapter.getListingsWithApplicants, () => {
   it('returns err if request fails', async () => {
     nock(config.tenantsLeasesService.url)
@@ -132,6 +140,63 @@ describe(leasingAdapter.getActiveListingByRentalObjectCode, () => {
         rentalObjectCode: '123',
         status: ListingStatus.Active,
       }),
+    })
+  })
+})
+
+describe(leasingAdapter.getListings, () => {
+  it('returns err if leasing responds with 500', async () => {
+    nock(config.tenantsLeasesService.url).get('/listings').reply(500)
+
+    const result = await leasingAdapter.getListings(true, undefined)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns a list of listings without filters', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/listings')
+      .reply(200, { content: factory.listing.buildList(5) })
+
+    const result = await leasingAdapter.getListings()
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('returns a list of listings with rentalRule filter', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/listings')
+      .query({ rentalRule: 'Scored' })
+      .reply(200, { content: factory.listing.buildList(2) })
+
+    const result = await leasingAdapter.getListings(undefined, 'Scored')
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('returns a list of listings with published filter', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/listings')
+      .query({ published: 'true' })
+      .reply(200, { content: factory.listing.buildList(3) })
+
+    const result = await leasingAdapter.getListings(true, undefined)
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
     })
   })
 })
