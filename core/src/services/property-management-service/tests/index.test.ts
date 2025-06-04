@@ -177,7 +177,10 @@ describe('rental-property-service index', () => {
     it('responds with 500 if adapter fails', async () => {
       jest
         .spyOn(propertyManagementAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'get-all-vacant-parking-spaces-failed',
+        })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
