@@ -2111,14 +2111,14 @@ export interface paths {
       };
     };
   };
-  "/propertyBase/maintenance-units/by-rental-property/{id}": {
+  "/propertyBase/maintenance-units/by-rental-property/{rentalPropertyId}": {
     /**
      * Get rooms by rental property id.
      * @description Returns all maintenance units belonging to a rental property.
      */
     get: {
       parameters: {
-        query: {
+        path: {
           /** @description The id of the rental property. */
           rentalPropertyId: string;
         };
