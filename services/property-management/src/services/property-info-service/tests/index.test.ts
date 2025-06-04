@@ -6,13 +6,7 @@ import { routes } from '../index'
 import * as materialOptionsAdapter from '../adapters/material-options-adapter'
 import * as roomTypesAdapter from '../adapters/contech-os-adapter'
 import * as xpandAdapter from '../adapters/xpand-adapter'
-import {
-  RentalPropertyInfo,
-  ParkingSpace,
-  ParkingSpaceApplicationCategory,
-  ParkingSpaceType,
-  MaintenanceUnitInfo,
-} from 'onecore-types'
+import { RentalPropertyInfo, MaintenanceUnitInfo } from 'onecore-types'
 import { rentalPropertyInfoMockData } from './mockData'
 
 const app = new Koa()
@@ -386,50 +380,7 @@ describe('GET /rentalproperties/:apartmentId/material-choices', () => {
   })
 })
 
-describe('parking spaces', () => {
-  describe('GET /parkingspaces/:id', () => {
-    it('Gets and returns a parking space', async () => {
-      const mockedParkingSpace: ParkingSpace = {
-        address: {
-          street: 'Parkeringsgatan',
-          number: '1',
-          city: 'Västerås',
-          postalCode: '12345',
-        },
-        applicationCategory: ParkingSpaceApplicationCategory.internal,
-        parkingSpaceId: '123-456-789',
-        rent: {
-          currentRent: {
-            currentRent: 123,
-            vat: 3,
-            additionalChargeAmount: undefined,
-            additionalChargeDescription: undefined,
-            rentEndDate: undefined,
-            rentStartDate: undefined,
-          },
-          futureRents: undefined,
-        },
-        vacantFrom: new Date(),
-        type: ParkingSpaceType.Garage,
-      }
-      const getParkingPaceSpy = jest
-        .spyOn(xpandAdapter, 'getParkingSpace')
-        .mockResolvedValue(mockedParkingSpace)
-
-      const res = await request(app.callback()).get(
-        `/parkingspaces/${mockedParkingSpace.parkingSpaceId}`
-      )
-
-      expect(res.status).toBe(200)
-      expect(getParkingPaceSpy).toHaveBeenCalledWith(
-        mockedParkingSpace.parkingSpaceId
-      )
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify(mockedParkingSpace))
-      )
-    })
-  })
-
+describe('maintenance units', () => {
   describe('GET /maintenanceUnits/:rentalPropertyId', () => {
     let maintenanceUnitsMock: MaintenanceUnitInfo[]
     beforeEach(() => {
@@ -467,57 +418,6 @@ describe('parking spaces', () => {
       )
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         '705-022-04-0201'
-      )
-    })
-  })
-
-  describe('GET /vacant-parkingspaces', () => {
-    it('should return a list of vacant parking spaces', async () => {
-      const mockedVacantParkingSpaces = [
-        {
-          rentalObjectCode: '924-004-99-0008',
-          address: 'Karl IX:s V 18',
-          objectTypeCaption: 'Motorcykelgarage',
-          objectTypeCode: 'MCGAR',
-          vehicleSpaceCaption: 'KARL IX:S VÄG 18',
-          vehicleSpaceCode: '0008',
-          districtCaption: 'Distrikt Norr',
-          districtCode: '2',
-          monthlyRent: 0,
-          restidentalAreaCaption: 'Centrum',
-          restidentalAreaCode: 'CTR',
-          vacantFrom: new Date('2023-10-01'),
-        },
-      ]
-
-      const getAllVacantParkingSpacesSpy = jest
-        .spyOn(xpandAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({ ok: true, data: mockedVacantParkingSpaces })
-
-      const res = await request(app.callback()).get('/vacant-parkingspaces')
-
-      expect(res.status).toBe(200)
-      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
-
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify(mockedVacantParkingSpaces))
-      )
-    })
-
-    it('should handle errors gracefully', async () => {
-      const getAllVacantParkingSpacesSpy = jest
-        .spyOn(xpandAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({
-          ok: false,
-          err: 'get-all-vacant-parking-spaces-failed',
-        })
-
-      const res = await request(app.callback()).get('/vacant-parkingspaces')
-
-      expect(res.status).toBe(500)
-      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
-      expect(res.body.error).toBe(
-        'An error occurred while fetching vacant parking spaces.'
       )
     })
   })

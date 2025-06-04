@@ -282,7 +282,7 @@ const getMaintenanceUnits = async (
   return transformFromDbMaintenanceUnits(rows)
 }
 
-const getParkingSpace = async (
+const getParkingSpaceOld = async (
   parkingSpaceId: string
 ): Promise<ParkingSpace | undefined> => {
   try {
@@ -366,7 +366,7 @@ const districts = {
   'Mimer Student': ['Student'],
 }
 
-function transformFromXpandListing(row: any): VacantParkingSpace {
+function transformFromXpandRentalObject(row: any): VacantParkingSpace {
   const scegcaption = row.scegcaption?.toUpperCase() || ''
   let district = '-'
   let districtCode: string | undefined = undefined
@@ -410,10 +410,10 @@ function transformFromXpandListing(row: any): VacantParkingSpace {
 
 const buildMainQuery = (
   parkingSpacesQuery: any,
-  activeRentalBlocksQuery: any,
-  activeContractsQuery: any
+  activeRentalBlocksQuery?: any,
+  activeContractsQuery?: any
 ) => {
-  return db
+  let query = db
     .from(parkingSpacesQuery.as('ps'))
     .select(
       'ps.rentalObjectCode',
@@ -430,23 +430,31 @@ const buildMainQuery = (
       'ps.zipcode',
       'ps.city',
       'ps.scegcaption',
-      'ps.scegcode',
-      db.raw(`
-        CASE
-          WHEN rb.keycmobj IS NOT NULL THEN 'Has rental block: ' + rb.blocktype
-          WHEN ac.keycmobj IS NOT NULL THEN 'Has active contract: ' + ac.contractid
-          ELSE 'VACANT'
-        END AS status
-      `),
-      'rb.blocktype',
-      'rb.blockstartdate',
-      'rb.blockenddate',
-      'ac.contractid',
-      'ac.fromdate as contractfromdate',
-      'ac.lastdebitdate'
+      'ps.scegcode'
     )
-    .leftJoin(activeRentalBlocksQuery.as('rb'), 'rb.keycmobj', 'ps.keycmobj')
-    .leftJoin(activeContractsQuery.as('ac'), 'ac.keycmobj', 'ps.keycmobj')
+
+  if (activeRentalBlocksQuery && activeContractsQuery) {
+    query = query
+      .select(
+        db.raw(`
+          CASE
+            WHEN rb.keycmobj IS NOT NULL THEN 'Has rental block: ' + rb.blocktype
+            WHEN ac.keycmobj IS NOT NULL THEN 'Has active contract: ' + ac.contractid
+            ELSE 'VACANT'
+          END AS status
+        `),
+        'rb.blocktype',
+        'rb.blockstartdate',
+        'rb.blockenddate',
+        'ac.contractid',
+        'ac.fromdate as contractfromdate',
+        'ac.lastdebitdate'
+      )
+      .leftJoin(activeRentalBlocksQuery.as('rb'), 'rb.keycmobj', 'ps.keycmobj')
+      .leftJoin(activeContractsQuery.as('ac'), 'ac.keycmobj', 'ps.keycmobj')
+  }
+
+  return query
 }
 
 const buildSubQueries = () => {
@@ -550,7 +558,7 @@ const getAllVacantParkingSpaces = async (): Promise<
       .orderBy('ps.blockcode', 'ps.vehiclespacenumber')
 
     const listings: VacantParkingSpace[] = results.map((row) =>
-      trimRow(transformFromXpandListing(row))
+      trimRow(transformFromXpandRentalObject(row))
     )
     return { ok: true, data: listings }
   } catch (err) {
@@ -559,50 +567,74 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-//todo: behöver också hämta parking space type (ex. varmgarage, carport osv). Då behöver vi göra en ny typ "ParkingSpace" som ärver RentalObject? I så fall byta namn på funktionen till getParkingSpace istället och returnera parking spaces....
-//todo: behöver också hämta hyra
-const getRentalObject = async (
+//todo: behöver också hämta parking space type, hyra, yta.
+const getParkingSpace = async (
   rentalObjectCode: string
 ): Promise<
-  AdapterResult<
-    RentalObject,
-    'get-rental-object-failed' | 'rental-object-not-found'
-  >
+  AdapterResult<VacantParkingSpace, 'unknown' | 'parking-space-not-found'>
 > => {
   try {
-    const {
-      parkingSpacesQuery,
-      activeRentalBlocksQuery,
-      activeContractsQuery,
-    } = buildSubQueries()
+    const { parkingSpacesQuery } = buildSubQueries()
 
-    const result = await buildMainQuery(
-      parkingSpacesQuery,
-      activeRentalBlocksQuery,
-      activeContractsQuery
-    )
-      .where('ps.rentalObjectCode', '=', rentalObjectCode) // Filter by rentalObjectCode
+    const result = await buildMainQuery(parkingSpacesQuery)
+      .where('ps.rentalObjectCode', '=', rentalObjectCode)
       .first()
 
     if (!result) {
-      return { ok: false, err: 'rental-object-not-found' }
+      logger.error(
+        `Parking space not found by Rental Object Code: ${rentalObjectCode}`
+      )
+      return { ok: false, err: 'parking-space-not-found' }
     }
 
-    const rentalObject = trimRow(transformFromXpandListing(result))
+    const rentalObject = trimRow(transformFromXpandRentalObject(result))
     return { ok: true, data: rentalObject }
   } catch (err) {
     logger.error(err, 'tenantLeaseAdapter.getRentalObject')
-    return { ok: false, err: 'get-rental-object-failed' }
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getParkingSpaces = async (
+  includeRentalObjectCodes?: string[]
+): Promise<
+  AdapterResult<VacantParkingSpace[], 'unknown' | 'parking-spaces-not-found'>
+> => {
+  try {
+    const { parkingSpacesQuery } = buildSubQueries()
+
+    let query = buildMainQuery(parkingSpacesQuery)
+    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
+      query = query.whereIn('ps.rentalObjectCode', includeRentalObjectCodes)
+    }
+
+    const results = await query
+
+    if (!results || results.length === 0) {
+      logger.error(
+        `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`
+      )
+      return { ok: false, err: 'parking-spaces-not-found' }
+    }
+
+    const rentalObjects = results.map((row) =>
+      trimRow(transformFromXpandRentalObject(row))
+    )
+    return { ok: true, data: rentalObjects }
+  } catch (err) {
+    logger.error(err, 'tenantLeaseAdapter.getRentalObjects')
+    return { ok: false, err: 'unknown' }
   }
 }
 
 export {
   getRentalPropertyInfo,
   getMaintenanceUnits,
-  getParkingSpace,
+  getParkingSpaceOld,
   getApartmentRentalPropertyInfo,
   getAllVacantParkingSpaces,
-  getRentalObject,
-  transformFromXpandListing,
+  getParkingSpace,
+  getParkingSpaces,
+  transformFromXpandRentalObject,
   db,
 }
