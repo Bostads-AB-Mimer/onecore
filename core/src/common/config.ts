@@ -1,5 +1,7 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
+// eslint-disable-next-line node/no-extraneous-import
+import ms from 'ms'
 dotenv.config()
 
 interface Account {
@@ -33,7 +35,7 @@ export interface Config {
   }
   auth: {
     secret: string
-    expiresIn: string
+    expiresIn: ms.StringValue | number
     maxFailedLoginAttempts: number
     testAccount: Account
   }
