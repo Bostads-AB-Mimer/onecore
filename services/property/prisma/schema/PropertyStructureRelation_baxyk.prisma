@@ -1,8 +1,8 @@
+/**
+  *  This model represents the relation between two property structures
+  *  for example a maintenance unit property structure and an apartment property structure (as far as I understand)
+**/
 model PropertyStructureRelation {
-  /**
-   *  This model represents the relation between two property structures
-   *  for example a maintenance unit property structure and an apartment property structure (as far as I understand)
-  **/
   id                      String  @id(map: "pkbaxyk") @map("keybaxyk") @db.Char(15)
   relationTypeId          String? @map("keybaxyt") @db.Char(15)  // related table is empty?
   propertyObjectIdFrom    String  @map("keycmobj") @db.Char(15)  // mu_babuf
