@@ -68,6 +68,91 @@ describe('GET /listing/:listingId/applicants/details', () => {
   })
 })
 
+describe('GET /listings', () => {
+  it('responds with 200 and listings', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: factory.listing.buildList(3),
+    })
+
+    const res = await request(app.callback()).get('/listings')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('responds with 200 and listings with filter for published', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: factory.listing.buildList(2),
+    })
+
+    const res = await request(app.callback()).get('/listings?published=true')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('responds with 200 and listings with filter for rentalRule', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: factory.listing.buildList(1),
+    })
+
+    const res = await request(app.callback()).get('/listings?rentalRule=Scored')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('responds with 500 on unknown error', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: false,
+      err: 'unknown',
+    })
+
+    const res = await request(app.callback()).get('/listings')
+    expect(res.status).toBe(500)
+  })
+
+  it('responds with 200 and empty array if no listings found', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: [],
+    })
+
+    const res = await request(app.callback()).get('/listings')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ content: [] })
+  })
+
+  it('responds with 200 and listings with filter for rentalRule and published', async () => {
+    jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: factory.listing.buildList(2),
+    })
+
+    const res = await request(app.callback()).get(
+      '/listings?published=true&rentalRule=NonScored'
+    )
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+})
+
 describe('GET /listings-with-applicants', () => {
   const getListingsWithApplicantsSpy = jest.spyOn(
     listingAdapter,

@@ -28,6 +28,67 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /listings:
+   *   get:
+   *     summary: Get listings
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves a list of listings.
+   *     parameters:
+   *       - in: query
+   *         name: published
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: true for published listings, false for unpublished listings.
+   *       - in: query
+   *         name: waitingListType
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: ie "Scored" or "NonScored".
+   *     responses:
+   *       '200':
+   *         description: Successful response with the requested list of listings.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/listings', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const querySchema = z.object({
+      published: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
+      rentalRule: z.enum(['Scored', 'NonScored']).optional(),
+    })
+    const query = querySchema.safeParse(ctx.query)
+
+    const result = await listingAdapter.getListings(
+      query.data?.published,
+      query.data?.rentalRule
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'An unknown error occured when gettings listings',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /listings:
    *   post:
    *     summary: Create new listing
    *     description: Create a new listing.
