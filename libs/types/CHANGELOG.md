@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.10.0...v3.11.0) (2025-06-04)
+
+
+### Features
+
+* UTH-250 add area types to RentalObject ([#177](https://github.com/Bostads-AB-Mimer/onecore-types/issues/177)) ([afee4a1](https://github.com/Bostads-AB-Mimer/onecore-types/commit/afee4a1a79dfe208452dc1f04bdbe1c59115c1fc))
+
 ## [3.10.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.9.0...v3.10.0) (2025-05-26)
 
 
