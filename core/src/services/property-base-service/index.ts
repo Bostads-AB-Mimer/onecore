@@ -670,4 +670,95 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /propertyBase/maintenance-units/by-contact-code/{contactCode}:
+   *   get:
+   *     summary: Get maintenance units by contact code.
+   *     description: Returns all maintenance units belonging to a contact code.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code for which to retrieve maintenance units.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       ok:
+   *                         type: boolean
+   *                       data:
+   *                         type: array
+   *                         items:
+   *                           $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get(
+    '(.*)/maintenance-units/by-contact-code/:contactCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const leases = await leasingAdapter.getLeasesForContactCode(
+          ctx.params.contactCode,
+          {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: false,
+            includeContacts: false,
+          }
+        )
+        const promises = leases
+          .filter(
+            (lease) =>
+              lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
+          )
+          .map((lease) =>
+            propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
+              lease.rentalPropertyId
+            )
+          )
+
+        const maintenanceUnits = await Promise.all(promises).then((units) =>
+          units.filter((unit) => unit !== undefined).flat()
+        )
+
+        if (maintenanceUnits && maintenanceUnits.length > 0) {
+          ctx.status = 200
+          ctx.body = { content: maintenanceUnits, ...metadata }
+        } else {
+          ctx.status = 200
+          ctx.body = {
+            content: [],
+            reason: 'No maintenance units found',
+            ...metadata,
+          }
+          logger.info('No maintenance units found')
+          return
+        }
+      } catch (error) {
+        console.error('Error:', error)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
 }
