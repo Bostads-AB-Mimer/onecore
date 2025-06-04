@@ -285,9 +285,7 @@ const getListings = async (
       }
     })
 
-    const transformedListings = listings.map(transformFromDbListing)
-
-    return { ok: true, data: transformedListings }
+    return { ok: true, data: listings.map(transformFromDbListing) }
   } catch (err) {
     logger.error(err, 'listingAdapter.getListings')
     return { ok: false, err: 'unknown' }
