@@ -2111,6 +2111,38 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/maintenance-units/by-rental-property/{id}": {
+    /**
+     * Get rooms by rental property id.
+     * @description Returns all maintenance units belonging to a rental property.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The id of the rental property. */
+          rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -2495,6 +2527,15 @@ export interface components {
         allowSmallRoomsInValuation: number;
         timestamp: string;
       }) | null;
+    };
+    MaintenanceUnit: {
+      id: string;
+      rentalPropertyId: string;
+      code: string;
+      caption: string;
+      type: string | null;
+      estateCode: string;
+      estate: string;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */

@@ -500,7 +500,7 @@ export interface paths {
       };
     };
   };
-  "/maintenance-units-by-rental-property-id/{id}": {
+  "/maintenance-units/by-rental-property/{id}": {
     /**
      * Get all maintenance units for a specific rental property id
      * @description Retrieves all maintenance units associated with a given rental property id.
@@ -513,7 +513,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully retrieved the buildings. */
+        /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
             "application/json": {
@@ -942,7 +942,7 @@ export interface components {
       rentalPropertyId: string;
       code: string;
       caption: string;
-      type: string;
+      type: string | null;
       estateCode: string;
       estate: string;
     };
