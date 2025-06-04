@@ -249,6 +249,16 @@ export const RoomSchema = z.object({
   roomType: RoomTypeSchema.nullable(),
 })
 
+export const MaintenanceUnitSchema = z.object({
+  id: z.string(),
+  rentalPropertyId: z.string(),
+  code: z.string(),
+  caption: z.string(),
+  type: z.string().nullable(),
+  estateCode: z.string(),
+  estate: z.string(),
+})
+
 export const GetRoomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
 })
@@ -277,3 +287,4 @@ export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
 export type Staircase = z.infer<typeof StaircaseSchema>
 export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>
+export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>

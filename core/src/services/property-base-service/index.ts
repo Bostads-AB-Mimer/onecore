@@ -30,6 +30,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
+  registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
 
   /**
    * @swagger
@@ -596,4 +597,75 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /propertyBase/maintenance-units/by-rental-property/{rentalPropertyId}:
+   *   get:
+   *     summary: Get rooms by rental property id.
+   *     description: Returns all maintenance units belonging to a rental property.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the rental property.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rooms.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get(
+    '(.*)/maintenance-units/by-rental-property/:rentalPropertyId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalPropertyId } = ctx.params
+
+      logger.info(
+        `GET /maintenance-units/by-rental-property/${rentalPropertyId}`,
+        metadata
+      )
+
+      try {
+        const result =
+          await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
+            rentalPropertyId
+          )
+        if (!result.ok) {
+          logger.error(
+            result.err,
+            'Error getting rooms from property-base',
+            metadata
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: result.data satisfies Array<schemas.MaintenanceUnit>,
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 }

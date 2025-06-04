@@ -915,6 +915,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/maintenance-units/by-rental-property/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all maintenance units for a specific rental property id
+         * @description Retrieves all maintenance units associated with a given rental property id.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the rental property for which to retrieve maintenance units. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the maintenance units. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["MaintenanceUnit"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1340,6 +1399,15 @@ export interface components {
             subletFeeAmount: number;
             disableQuantitiesBelowCompany: number;
             timestamp: string;
+        };
+        MaintenanceUnit: {
+            id: string;
+            rentalPropertyId: string;
+            code: string;
+            caption: string;
+            type: string | null;
+            estateCode: string;
+            estate: string;
         };
     };
     responses: never;
