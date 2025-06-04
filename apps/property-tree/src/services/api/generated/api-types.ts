@@ -504,8 +504,6 @@ export interface paths {
     /**
      * Get all maintenance units for a specific rental property id
      * @description Retrieves all maintenance units associated with a given rental property id.
-     * Returns detailed information about each building including its code, name,
-     * construction details, and associated property information.
      */
     get: {
       parameters: {
