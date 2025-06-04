@@ -273,7 +273,7 @@ const getListings = async (
   try {
     const now = new Date()
 
-    const query = dbConnection('listing').where((builder) => {
+    const listings = await dbConnection('listing').where((builder) => {
       if (published) {
         builder
           .where('Status', '=', ListingStatus.Active)
@@ -284,8 +284,6 @@ const getListings = async (
         builder.andWhere('WaitingListType', '=', rentalRule)
       }
     })
-
-    const listings = await query
 
     const transformedListings = listings.map(transformFromDbListing)
 
