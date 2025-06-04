@@ -110,13 +110,9 @@ export const ResidenceSchema = z.object({
 export const ResidenceDetailsSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
-  deleted: z.boolean(),
-  validityPeriod: z.object({
-    fromDate: z.string().datetime(),
-    toDate: z.string().datetime(),
-  }),
-  location: z.string().optional(),
+  name: z.string().nullable(),
+  status: z.enum(['VACANT', 'LEASED']).nullable(),
+  location: z.string().nullable(),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),
     residenceAdapted: z.boolean(),
@@ -135,19 +131,26 @@ export const ResidenceDetailsSchema = z.object({
         type: z.string(),
       })
       .optional(),
-    patioLocation: z.string().optional(),
-    hygieneFacility: z.string(),
+    patioLocation: z.string().nullable(),
+    hygieneFacility: z.string().nullable(),
     sauna: z.boolean(),
     extraToilet: z.boolean(),
     sharedKitchen: z.boolean(),
     petAllergyFree: z.boolean(),
-    electricAllergyIntolerance: z.boolean(),
+    electricAllergyIntolerance: z
+      .boolean()
+      .describe('Is the apartment checked for electric allergy intolerance?'),
     smokeFree: z.boolean(),
     asbestos: z.boolean(),
   }),
-  entrance: z.string(),
+  entrance: z.string().nullable(),
   partNo: z.number().optional().nullable(),
   part: z.string().optional().nullable(),
+  deleted: z.boolean(),
+  validityPeriod: z.object({
+    fromDate: z.coerce.date(),
+    toDate: z.coerce.date(),
+  }),
   residenceType: z.object({
     residenceTypeId: z.string(),
     code: z.string(),
@@ -166,12 +169,29 @@ export const ResidenceDetailsSchema = z.object({
   propertyObject: z.object({
     energy: z.object({
       energyClass: z.number(),
-      energyRegistered: z.string().datetime().optional(),
-      energyReceived: z.string().datetime().optional(),
+      energyRegistered: z.coerce.date().optional(),
+      energyReceived: z.date().optional(),
       energyIndex: z.number().optional(),
     }),
     rentalId: z.string().nullable(),
+    rentalInformation: z
+      .object({
+        type: z.object({
+          code: z.string(),
+          name: z.string().nullable(),
+        }),
+      })
+      .nullable(),
   }),
+  property: z.object({
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  building: z.object({
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  malarEnergiFacilityId: z.string().nullable(),
 })
 
 export const StaircaseSchema = z.object({
@@ -188,6 +208,49 @@ export const StaircaseSchema = z.object({
   }),
   deleted: z.boolean(),
   timestamp: z.string().datetime(),
+})
+
+export const RoomTypeSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  use: z.number(),
+  optionAllowed: z.number(),
+  isSystemStandard: z.number(),
+  allowSmallRoomsInValuation: z.number(),
+  timestamp: z.string(),
+})
+
+export const RoomSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  usage: z.object({
+    shared: z.boolean(),
+    allowPeriodicWorks: z.boolean(),
+    spaceType: z.number(),
+  }),
+  features: z.object({
+    hasToilet: z.boolean(),
+    isHeated: z.boolean(),
+    hasThermostatValve: z.boolean(),
+    orientation: z.number(),
+  }),
+  dates: z.object({
+    installation: z.string().datetime().nullable(),
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    availableFrom: z.string().datetime().nullable(),
+    availableTo: z.string().datetime().nullable(),
+  }),
+  sortingOrder: z.number(),
+  deleted: z.boolean(),
+  timestamp: z.string(),
+  roomType: RoomTypeSchema.nullable(),
+})
+
+export const GetRoomsQueryParamsSchema = z.object({
+  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
 })
 
 export const GetResidencesQueryParamsSchema = z.object({
@@ -212,3 +275,5 @@ export type PropertyDetails = z.infer<typeof PropertyDetailsSchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
 export type Staircase = z.infer<typeof StaircaseSchema>
+export type RoomType = z.infer<typeof RoomTypeSchema>
+export type Room = z.infer<typeof RoomSchema>

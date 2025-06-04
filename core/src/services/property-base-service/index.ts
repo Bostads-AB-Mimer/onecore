@@ -1,10 +1,12 @@
 import KoaRouter from '@koa/router'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
+import { calculateResidenceStatus } from './calculate-residence-status'
 
 /**
  * @swagger
@@ -27,6 +29,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
+  registerSchema('Room', schemas.RoomSchema)
 
   /**
    * @swagger
@@ -391,22 +394,51 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getResidenceDetails(residenceId)
-      if (!result.ok) {
-        if (result.err === 'not-found') {
+      const getResidence =
+        await propertyBaseAdapter.getResidenceDetails(residenceId)
+
+      if (!getResidence.ok) {
+        if (getResidence.err === 'not-found') {
           ctx.status = 404
           ctx.body = { error: 'Residence not found', ...metadata }
           return
         }
 
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(getResidence.err, 'Internal server error', metadata)
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
       }
 
+      if (!getResidence.data.propertyObject.rentalId) {
+        ctx.status = 200
+        ctx.body = {
+          content: schemas.ResidenceDetailsSchema.parse({
+            ...getResidence.data,
+            status: null,
+          }),
+          ...metadata,
+        }
+        return
+      }
+
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        getResidence.data.propertyObject.rentalId,
+        {
+          includeContacts: false,
+          includeTerminatedLeases: false,
+          includeUpcomingLeases: true,
+        }
+      )
+
+      const status = calculateResidenceStatus(leases)
+
+      ctx.status = 200
       ctx.body = {
-        content: result.data satisfies schemas.ResidenceDetails,
+        content: schemas.ResidenceDetailsSchema.parse({
+          ...getResidence.data,
+          status,
+        }),
         ...metadata,
       }
     } catch (error) {
@@ -477,9 +509,7 @@ export const routes = (router: KoaRouter) => {
     const { buildingCode } = queryParams.data
 
     try {
-      const result = await propertyBaseAdapter.getStaircases(
-        buildingCode as string
-      )
+      const result = await propertyBaseAdapter.getStaircases(buildingCode)
       if (!result.ok) {
         logger.error(result.err, 'Internal server error', metadata)
         ctx.status = 500
@@ -489,6 +519,75 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies schemas.Staircase[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /propertyBase/rooms:
+   *   get:
+   *     summary: Get rooms by residence id.
+   *     description: Returns all rooms belonging to a residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the residence.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rooms.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Room'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/rooms', async (ctx) => {
+    const queryParams = schemas.GetRoomsQueryParamsSchema.safeParse(ctx.query)
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { errors: queryParams.error.errors }
+      return
+    }
+
+    const { residenceId } = queryParams.data
+
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /rooms?residenceId=${residenceId}`, metadata)
+
+    try {
+      const result = await propertyBaseAdapter.getRooms(residenceId)
+      if (!result.ok) {
+        logger.error(
+          result.err,
+          'Error getting rooms from property-base',
+          metadata
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.Room>,
         ...metadata,
       }
     } catch (error) {

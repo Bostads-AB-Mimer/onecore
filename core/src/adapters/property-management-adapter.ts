@@ -34,10 +34,13 @@ const getRentalProperty = async (
 //todo: modify calling code to use a pattern like in "getRentalPropertyInfoFromXpand"
 const getRentalPropertyInfo = async (
   rentalPropertyId: string
-): Promise<RentalPropertyInfo> => {
+): Promise<RentalPropertyInfo | null> => {
   const propertyResponse = await axios(
     propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
   )
+  if (propertyResponse.status === 404) {
+    return null
+  }
 
   return propertyResponse.data.content
 }
@@ -154,6 +157,56 @@ const saveMaterialChoice = async (
   return response.data.content
 }
 
+const getParkingSpaceByCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<VacantParkingSpace, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${propertyManagementServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
+    )
+    if (response.status === 404) {
+      logger.error('Parking space not found for code:', rentalObjectCode)
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving rental object by code: ${rentalObjectCode}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getParkingSpaces = async (
+  includeRentalObjectCodes?: string[]
+): Promise<AdapterResult<VacantParkingSpace[], 'not-found' | 'unknown'>> => {
+  try {
+    let url = `${propertyManagementServiceUrl}/parking-spaces`
+
+    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
+      const codesParam = includeRentalObjectCodes.join(',')
+      url += `?includeRentalObjectCodes=${encodeURIComponent(codesParam)}`
+    }
+
+    const response = await axios.get(url)
+
+    if (response.status === 404) {
+      logger.error(
+        `Parking space not found for codes: ${includeRentalObjectCodes?.join(', ')}`
+      )
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving rental objects by codes ${includeRentalObjectCodes?.join(', ')}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 //todo: refactor the subsequent requests to use same data source (soap api)
 //todo: getParkingSpace uses the mimer.nu api
 //todo: getPublishedParkingSpace uses the soap service
@@ -243,4 +296,6 @@ export {
   getApartmentRentalPropertyInfo,
   getAllVacantParkingSpaces,
   getParkingSpaceByRentalObjectCode,
+  getParkingSpaceByCode,
+  getParkingSpaces,
 }

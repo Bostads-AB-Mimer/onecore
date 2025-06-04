@@ -151,6 +151,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/residences/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search residences
+         * @description Retrieves a list of all real estate residences by rental object id.
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The search query. */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of residences. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["ResidenceSearchResult"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/residences/{id}": {
         parameters: {
             query?: never;
@@ -641,18 +700,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get rooms by building code, staircase code, and residence code.
-         * @description Returns all rooms belonging to a specific building, staircase, and residence code.
+         * Get rooms by residence id.
+         * @description Returns all rooms belonging to a residence.
          */
         get: {
             parameters: {
                 query: {
-                    /** @description The building code of the building for the residence. */
-                    buildingCode: string;
-                    /** @description The code of the staircase. */
-                    staircaseCode: string;
-                    /** @description The residence code where the rooms are located. */
-                    residenceCode: string;
+                    /** @description The id of the residence. */
+                    residenceId: string;
                 };
                 header?: never;
                 path?: never;
@@ -940,15 +995,8 @@ export interface components {
         ResidenceDetails: {
             id: string;
             code: string;
-            name: string;
-            deleted: boolean;
-            validityPeriod: {
-                /** Format: date-time */
-                fromDate: string;
-                /** Format: date-time */
-                toDate: string;
-            };
-            location?: string;
+            name: string | null;
+            location: string | null;
             accessibility: {
                 wheelchairAccessible: boolean;
                 residenceAdapted: boolean;
@@ -963,8 +1011,8 @@ export interface components {
                     location: string;
                     type: string;
                 };
-                patioLocation?: string;
-                hygieneFacility: string;
+                patioLocation: string | null;
+                hygieneFacility: string | null;
                 sauna: boolean;
                 extraToilet: boolean;
                 sharedKitchen: boolean;
@@ -974,9 +1022,16 @@ export interface components {
                 smokeFree: boolean;
                 asbestos: boolean;
             };
-            entrance: string;
+            entrance: string | null;
             partNo?: number | null;
             part?: string | null;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
             residenceType: {
                 residenceTypeId: string;
                 code: string;
@@ -1002,6 +1057,42 @@ export interface components {
                     energyIndex?: number;
                 };
                 rentalId: string | null;
+                rentalInformation: {
+                    type: {
+                        code: string;
+                        name: string | null;
+                    };
+                } | null;
+            };
+            property: {
+                name: string | null;
+                code: string | null;
+            };
+            building: {
+                name: string | null;
+                code: string | null;
+            };
+            malarEnergiFacilityId: string | null;
+        };
+        ResidenceSearchResult: {
+            id: string;
+            code: string;
+            name: string | null;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
+            rentalId: string | null;
+            property: {
+                code: string | null;
+                name: string | null;
+            };
+            building: {
+                code: string | null;
+                name: string | null;
             };
         };
         Building: {
@@ -1203,8 +1294,8 @@ export interface components {
             deleted: boolean;
             timestamp: string;
             roomType: {
-                roomTypeId: string;
-                roomTypeCode: string;
+                id: string;
+                code: string;
                 name: string | null;
                 use: number;
                 optionAllowed: number;

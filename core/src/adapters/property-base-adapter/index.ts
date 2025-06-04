@@ -56,6 +56,27 @@ export async function searchBuildings(
   }
 }
 
+type SearchResidencesResponse = components['schemas']['ResidenceSearchResult'][]
+
+export async function searchResidences(
+  q: string
+): Promise<AdapterResult<SearchResidencesResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/residences/search', {
+      params: { query: { q } },
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data.content ?? [] }
+    }
+
+    throw { ok: false, err: 'missing response data invariant' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchResidences')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetCompaniesResponse = components['schemas']['Company'][]
 
 export async function getCompanies(): Promise<
@@ -195,6 +216,27 @@ export async function getStaircases(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getStaircases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetRoomsResponse = components['schemas']['Room'][]
+
+export async function getRooms(
+  residenceId: string
+): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/rooms', {
+      params: { query: { residenceId } },
+    })
+
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRooms')
     return { ok: false, err: 'unknown' }
   }
 }

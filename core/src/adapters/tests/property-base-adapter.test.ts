@@ -288,4 +288,41 @@ describe('property-base-adapter', () => {
       })
     })
   })
+
+  describe('getRooms', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/rooms`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRooms('residence-123')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns rooms', async () => {
+      const roomsMock = factory.room.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/rooms`, () =>
+          HttpResponse.json(
+            {
+              content: roomsMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRooms('residence-123')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: roomsMock,
+      })
+    })
+  })
 })

@@ -217,7 +217,41 @@ const getExpiredListingsWithNoOffers = async (): Promise<
     )
     return { ok: true, data: response.data.content }
   } catch (error) {
-    logger.error(error, 'Error fetching exired listings without offers:')
+    logger.error(error, 'Error fetching expired listings without offers:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getListings = async (
+  published?: boolean,
+  rentalRule?: 'Scored' | 'NonScored',
+  validToRentForContactCode?: string
+): Promise<AdapterResult<Listing[], 'unknown'>> => {
+  const queryParams = new URLSearchParams()
+  if (published) queryParams.append('published', published.toString())
+  if (rentalRule) queryParams.append('rentalRule', rentalRule)
+  if (validToRentForContactCode)
+    queryParams.append('validToRentForContactCode', validToRentForContactCode)
+
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/listings?${queryParams}`
+    )
+
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, data: response.data },
+        `Error getting listings from leasing, by: published ${published}, rentalRule ${rentalRule} and validToRentForContactCode ${validToRentForContactCode}`
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Unknown error fetching listings by published ${published}, rentalRule ${rentalRule} and validToRentForContactCode ${validToRentForContactCode}`
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -232,4 +266,5 @@ export {
   deleteListing,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
+  getListings,
 }

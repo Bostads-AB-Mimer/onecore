@@ -1,64 +1,111 @@
 import { Factory } from 'fishery'
-import { CreateWorkOrderDetails, CreateWorkOrder } from 'onecore-types'
-import { RentalPropertyInfoFactory } from './rental-property-info'
-import { TenantFactory } from './tenant'
-import { LeaseFactory } from './lease'
-import { CoreWorkOrder } from '../../src/services/work-order-service/schemas'
+
+import { WorkOrderRentalPropertyFactory } from './rental-property-info'
+import { WorkOrderTenantFactory } from './tenant'
+import { WorkOrderLeaseFactory } from './lease'
+import {
+  CoreWorkOrder,
+  CoreXpandWorkOrder,
+  CoreXpandWorkOrderDetails,
+} from '../../src/services/work-order-service/schemas'
+import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const WorkOrderFactory = Factory.define<CoreWorkOrder>(
   ({ sequence }) => ({
-    AccessCaption: 'AccessCaption',
-    Caption: 'Caption',
-    Code: `WO${sequence}`,
-    ContactCode: `P${158769 + sequence}`,
-    Description: 'Description',
-    DetailsCaption: 'DetailsCaption',
-    ExternalResource: false,
-    Id: `WO${sequence}`,
-    LastChanged: new Date(),
-    Priority: 'Priority',
-    Registered: new Date(),
-    RentalObjectCode: 'RentalObjectCode',
-    Status: 'Status',
-    UseMasterKey: false,
-    WorkOrderRows: [
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    description: 'Description',
+    detailsCaption: 'DetailsCaption',
+    externalResource: false,
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Status',
+    dueDate: null,
+    workOrderRows: [
       {
-        Description: 'Description',
-        LocationCode: 'LocationCode',
-        EquipmentCode: 'EquipmentCode',
+        description: 'Description',
+        locationCode: 'LocationCode',
+        equipmentCode: 'EquipmentCode',
       },
     ],
-    Messages: [],
+    messages: [],
   })
 )
 
-export const CreateWorkOrderFactory = Factory.define<CreateWorkOrder>(() => ({
-  rentalPropertyInfo: RentalPropertyInfoFactory.build(),
-  tenant: TenantFactory.build(),
-  lease: LeaseFactory.build(),
-  details: CreateWorkOrderDetailsFactory.build(),
-}))
+export const XpandWorkOrderFactory = Factory.define<CoreXpandWorkOrder>(
+  ({ sequence }) => ({
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    dueDate: null,
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Status',
+  })
+)
 
-export const CreateWorkOrderDetailsFactory =
-  Factory.define<CreateWorkOrderDetails>(({ sequence }) => ({
-    ContactCode: `P${158769 + sequence}`,
-    RentalObjectCode: `123-456-789`,
-    Images: [],
-    AccessOptions: {
-      Type: 0,
-      Email: 'test@mimer.nu',
-      PhoneNumber: '070000000',
-      CallBetween: '08:00 - 17:00',
-    },
-    Pet: false,
-    HearingImpaired: false,
-    Rows: [
+export const XpandWorkOrderDetailsFactory =
+  Factory.define<CoreXpandWorkOrderDetails>(({ sequence }) => ({
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    description: 'Description',
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    dueDate: null,
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Väntar på handläggning',
+    workOrderRows: [
       {
-        LocationCode: 'TV',
-        PartOfBuildingCode: 'TM',
-        Description: 'Ärendebeskrivning',
-        MaintenanceUnitCode: undefined,
-        MaintenanceUnitCaption: undefined,
+        description: 'Description',
+        locationCode: 'LocationCode',
+        equipmentCode: 'EquipmentCode',
       },
     ],
   }))
+
+export const CreateWorkOrderFactory = Factory.define<
+  components['schemas']['CreateWorkOrderBody']
+>(() => ({
+  rentalProperty: WorkOrderRentalPropertyFactory.build(),
+  tenant: WorkOrderTenantFactory.build(),
+  lease: WorkOrderLeaseFactory.build(),
+  details: CreateWorkOrderDetailsFactory.build(),
+}))
+
+export const CreateWorkOrderDetailsFactory = Factory.define<
+  components['schemas']['CreateWorkOrderDetails']
+>(({ sequence }) => ({
+  ContactCode: `P${158769 + sequence}`,
+  RentalObjectCode: `123-456-789`,
+  Images: [],
+  AccessOptions: {
+    Type: 0,
+    Email: 'test@mimer.nu',
+    PhoneNumber: '070000000',
+    CallBetween: '08:00 - 17:00',
+  },
+  Pet: 'Nej',
+  HearingImpaired: false,
+  Rows: [
+    {
+      LocationCode: 'TV',
+      PartOfBuildingCode: 'TM',
+      Description: 'Ärendebeskrivning',
+      MaintenanceUnitCode: undefined,
+      MaintenanceUnitCaption: undefined,
+    },
+  ],
+}))

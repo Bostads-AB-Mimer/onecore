@@ -26,6 +26,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('SearchQueryParams', schemas.SearchQueryParamsSchema)
   registerSchema('PropertySearchResult', schemas.PropertySearchResultSchema)
   registerSchema('BuildingSearchResult', schemas.BuildingSearchResultSchema)
+  registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -35,13 +36,13 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Search Service
    *     summary: Omni-search for different entities
-   *     description: Search for properties, buildings, and more.
+   *     description: Search for properties, buildings, and residences.
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         type: string
-   *         description: The search query string
+   *         description: The search query string. Matches on property name, building name or residence rental object id
    *     responses:
    *       200:
    *         description: A list of search results
@@ -82,7 +83,11 @@ export const routes = (router: KoaRouter) => {
       queryParams.data.q
     )
 
-    if (!getProperties.ok || !getBuildings.ok) {
+    const getResidences = await propertyBaseAdapter.searchResidences(
+      queryParams.data.q
+    )
+
+    if (!getProperties.ok || !getBuildings.ok || !getResidences.ok) {
       ctx.status = 500
       return
     }
@@ -104,11 +109,23 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedResidences = getResidences.data.map(
+      (residence): schemas.ResidenceSearchResult => ({
+        id: residence.id,
+        type: 'residence',
+        name: residence.name,
+        rentalId: residence.rentalId,
+        property: residence.property,
+        building: residence.building,
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
         ...mappedProperties,
         ...mappedBuildings,
+        ...mappedResidences,
       ] satisfies SearchResultResponseContent,
     }
   })

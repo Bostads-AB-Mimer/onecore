@@ -1,5 +1,5 @@
 {
-  "version": "1.0.208",
+  "version": "1.0.220",
   "description": "",
   "main": "./src/index.ts",
   "private": "true",
@@ -18,7 +18,9 @@
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "TZ=UTC jest --silent",
     "ts:ci": "tsc --noEmit",
-    "generate-types:property-base": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/adapters/property-base-adapter/generated/api-types.ts"
+    "generate-types:property-base": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/adapters/property-base-adapter/generated/api-types.ts",
+    "generate-types:work-order": "npx openapi-typescript http://localhost:5070/swagger.json -o ./src/adapters/work-order-adapter/generated/api-types.ts",
+    "generate-types": "npm run generate-types:property-base & npm run generate-types:work-order"
   },
   "author": "",
   "license": "MIT",

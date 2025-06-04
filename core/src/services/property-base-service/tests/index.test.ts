@@ -6,14 +6,17 @@ import { z } from 'zod'
 
 import { routes } from '../index'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
+import * as leasingAdapter from '../../../adapters/leasing-adapter'
 
 import * as factory from '../../../../test/factories'
 import {
   CompanySchema,
   PropertySchema,
   ResidenceSchema,
+  RoomSchema,
   StaircaseSchema,
 } from '../schemas'
+import { LeaseStatus } from 'onecore-types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -102,7 +105,7 @@ describe('property-base-service', () => {
 
   describe('GET /propertyBase/residences', () => {
     it('returns 200 and a list of residences', async () => {
-      const residences = factory.residenceDetails.buildList(3)
+      const residences = factory.residence.buildList(3)
       const getResidencesSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidences')
         .mockResolvedValueOnce({ ok: true, data: residences })
@@ -140,10 +143,32 @@ describe('property-base-service', () => {
 
       expect(res.status).toBe(200)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.content)).toEqual(
-        JSON.stringify(residenceDetails)
-      )
       expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 200 and a residence with status', async () => {
+      const residenceDetails = factory.residenceDetails.build({
+        propertyObject: { rentalId: '1234' },
+      })
+      const getResidenceDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
+        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
+
+      const lease = factory.lease.build({ status: LeaseStatus.Current })
+      const getLeasesSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValueOnce([lease])
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/residence/${residenceDetails.id}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
+      expect(res.body.content.status).toBe('LEASED')
+
+      expect(getResidenceDetailsSpy).toHaveBeenCalled()
+      expect(getLeasesSpy).toHaveBeenCalled()
     })
 
     it('returns 404 if no residence is found', async () => {
@@ -186,6 +211,29 @@ describe('property-base-service', () => {
       const res = await request(app.callback()).get('/propertyBase/staircases')
 
       expect(res.status).toBe(400)
+    })
+  })
+
+  describe('GET /propertyBase/rooms', () => {
+    it('returns 400 if residenceId query parameter is missing', async () => {
+      const res = await request(app.callback()).get('/propertyBase/rooms')
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 and a list of rooms', async () => {
+      const roomsMock = factory.room.buildList(3)
+      const getRoomsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRooms')
+        .mockResolvedValueOnce({ ok: true, data: roomsMock })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/rooms?residenceId=foo'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getRoomsSpy).toHaveBeenCalled()
+      expect(() => z.array(RoomSchema).parse(res.body.content)).not.toThrow()
     })
   })
 })

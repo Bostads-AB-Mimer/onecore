@@ -1,6 +1,7 @@
 export { DetailedApplicantFactory as detailedApplicant } from './detailed-applicant'
 export { ListingFactory as listing } from './listing'
 export { ParkingSpaceFactory as parkingSpace } from './parking-space'
+export { VacantParkingSpaceFactory as vacantParkingSpace } from './vacant-parkingspace'
 export { OfferFactory as offer } from './offer'
 export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from './offer'
 export { DetailedOfferFactory as detailedOffer } from './offer'
@@ -12,9 +13,18 @@ export { WaitingListFactory as waitingList } from './waiting-list'
 export { ApartmentInfoFactory as apartmentInfo } from './apartment-info'
 export { RentalPropertyInfoFactory as rentalPropertyInfo } from './rental-property-info'
 export { TenantFactory as tenant } from './tenant'
-export { WorkOrderFactory as workOrder } from './work-order'
-export { CreateWorkOrderFactory as createWorkOrder } from './work-order'
-export { CreateWorkOrderDetailsFactory as createWorkOrderDetails } from './work-order'
+export {
+  WorkOrderFactory as workOrder,
+  XpandWorkOrderFactory as xpandWorkOrder,
+  XpandWorkOrderDetailsFactory as xpandWorkOrderDetails,
+  CreateWorkOrderFactory as createWorkOrder,
+  CreateWorkOrderDetailsFactory as createWorkOrderDetails,
+} from './work-order'
+export {
+  XpandWorkOrderFactory as externalXpandWorkOrder,
+  XpandWorkOrderDetailsFactory as externalXpandWorkOrderDetails,
+  OdooWorkOrderFactory as externalOdooWorkOrder,
+} from './work-order-external'
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
 export {
   ApplicationProfileFactory as applicationProfile,
@@ -25,3 +35,5 @@ export { ResidenceDetailsFactory as residenceDetails } from './residence-details
 export { PropertyFactory as property } from './property'
 export { PropertyDetailsFactory as propertyDetails } from './property-details'
 export { StaircaseFactory as staircase } from './staircase'
+export { ResidenceSearchResultFactory as residenceSearchResult } from './residence-search-result'
+export { RoomFactory as room } from './room'

@@ -7,7 +7,7 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
-import { Lease, RentalPropertyInfo } from 'onecore-types'
+import { ApartmentInfo, Lease, RentalPropertyInfo } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
@@ -31,6 +31,7 @@ interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('WorkOrder', schemas.CoreWorkOrderSchema)
+  registerSchema('XpandWorkOrder', schemas.CoreXpandWorkOrderSchema)
 
   /**
    * @swagger
@@ -105,7 +106,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/workOrderData/:identifier', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['handler'])
-    const responseData: any = []
+    const responseData: RentalPropertyInfoWithLeases[] = []
 
     const getRentalPropertyInfoWithLeases = async (leases: Lease[]) => {
       for (const lease of leases) {
@@ -113,11 +114,17 @@ export const routes = (router: KoaRouter) => {
           await propertyManagementAdapter.getRentalPropertyInfo(
             lease.rentalPropertyId
           )
+        if (!rentalPropertyInfo) {
+          logger.error(
+            `Rental property info not found for rental property id: ${lease.rentalPropertyId}`
+          )
+          continue
+        }
 
         responseData.push({
           ...rentalPropertyInfo,
           leases: [lease],
-        } as RentalPropertyInfoWithLeases)
+        })
       }
     }
 
@@ -142,7 +149,7 @@ export const routes = (router: KoaRouter) => {
             responseData.push({
               ...rentalPropertyInfo,
               leases: [],
-            } as RentalPropertyInfoWithLeases)
+            })
           }
         }
       },
@@ -283,7 +290,29 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data satisfies schemas.CoreWorkOrder[],
+            workOrders: result.data.map(
+              (v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+              })
+            ),
           },
           ...metadata,
         }
@@ -357,12 +386,36 @@ export const routes = (router: KoaRouter) => {
         const result = await workOrderAdapter.getWorkOrdersByRentalPropertyId(
           ctx.params.rentalPropertyId
         )
+
         if (result.ok) {
           ctx.status = 200
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data satisfies schemas.CoreWorkOrder[],
+              workOrders: result.data.map(
+                (v): schemas.CoreWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  contactCode: v.ContactCode,
+                  description: v.Description,
+                  detailsCaption: v.DetailsCaption,
+                  externalResource: v.ExternalResource,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                  url: v.Url,
+                  workOrderRows: v.WorkOrderRows.map((row) => ({
+                    description: row.Description,
+                    locationCode: row.LocationCode,
+                    equipmentCode: row.EquipmentCode,
+                  })),
+                })
+              ),
             },
             ...metadata,
           }
@@ -383,6 +436,224 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /workOrders/xpand/rentalPropertyId/{rentalPropertyId}:
+   *   get:
+   *     summary: Get work orders by rental property id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided rental property id.
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental property id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/workOrders/xpand/rentalPropertyId/:rentalPropertyId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
+        ctx.query
+      )
+      if (!parsedParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid query parameters',
+          ...metadata,
+        }
+        return
+      }
+
+      const { skip, limit, sortAscending } = parsedParams.data
+
+      try {
+        const result =
+          await workOrderAdapter.getXpandWorkOrdersByRentalPropertyId(
+            ctx.params.rentalPropertyId,
+            { skip, limit, sortAscending }
+          )
+
+        if (result.ok) {
+          ctx.status = 200
+          ctx.body = {
+            content: {
+              totalCount: result.data.length,
+              workOrders: result.data.map(
+                (v): schemas.CoreXpandWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  contactCode: v.ContactCode,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                })
+              ),
+            },
+            ...metadata,
+          }
+        } else {
+          logger.error(
+            result.err,
+            'Error getting workOrders by rental property id from xpand',
+            metadata
+          )
+          ctx.status = result.statusCode || 500
+          ctx.body = { error: result.err, ...metadata }
+        }
+      } catch (error) {
+        logger.error(
+          error,
+          'Error getting workOrders by rental property id from xpand'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /workOrders/xpand/{code}:
+   *   get:
+   *     summary: Get work order details by rental property id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work order details.
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The work order code to fetch details for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/XpandWorkOrder'
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await workOrderAdapter.getXpandWorkOrderDetails(
+        ctx.params.code
+      )
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            id: result.data.Id,
+            accessCaption: result.data.AccessCaption,
+            caption: result.data.Caption,
+            code: result.data.Code,
+            contactCode: result.data.ContactCode,
+            lastChanged: new Date(result.data.LastChanged),
+            priority: result.data.Priority,
+            registered: new Date(result.data.Registered),
+            dueDate: result.data.DueDate ? new Date(result.data.DueDate) : null,
+            rentalObjectCode: result.data.RentalObjectCode,
+            status: result.data.Status,
+            workOrderRows: result.data.WorkOrderRows.map((row) => ({
+              description: row.Description,
+              locationCode: row.LocationCode,
+              equipmentCode: row.EquipmentCode,
+            })),
+            description: result.data.Description,
+          } satisfies schemas.CoreXpandWorkOrderDetails,
+          ...metadata,
+        }
+      } else {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Work order not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          result.err,
+          'Error getting workOrders by rental property id from xpand',
+          metadata
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        error,
+        'Error getting workOrders by rental property id from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
 
   /**
    * @swagger
@@ -512,6 +783,25 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      /*
+        We know that rentalPropertyInfo.property is of type ApartmentInfo here,
+        but that is not reflected in the RentalPropertyInfo type, so we do a little narrowing
+      */
+      const rentalPropertyIsApartment = (
+        rentalPropertyInfo: RentalPropertyInfo
+      ): rentalPropertyInfo is RentalPropertyInfo & {
+        property: ApartmentInfo
+      } => rentalPropertyInfo.type === 'Lägenhet'
+
+      if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Rental property is not an apartment',
+          ...metadata,
+        }
+        return
+      }
+
       // Get tenant with leases by contact code
       const tenant = await leasingAdapter.getTenantByContactCode(ContactCode)
       if (!tenant.ok) {
@@ -537,9 +827,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       const result = await workOrderAdapter.createWorkOrder({
-        rentalPropertyInfo: rentalPropertyInfo,
+        rentalProperty: rentalPropertyInfo,
+        // @ts-expect-error phoneNumbers.isMainNumber is typed as boolean, but it is actually a number
         tenant: tenant.data,
-        lease: lease,
+        // @ts-expect-error leaseStartDate and other dates are typed as Date, but they are actually strings
+        lease,
         details: {
           ContactCode,
           RentalObjectCode,
@@ -584,7 +876,7 @@ export const routes = (router: KoaRouter) => {
    *         name: workOrderId
    *         required: true
    *         schema:
-   *           type: integer
+   *           type: string
    *         description: The ID of the work order to be updated.
    *     requestBody:
    *       required: true
@@ -645,7 +937,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      await workOrderAdapter.updateWorkOrder(parseInt(workOrderId), message)
+      await workOrderAdapter.updateWorkOrder(workOrderId, message)
 
       ctx.status = 200
       ctx.body = {
@@ -676,7 +968,7 @@ export const routes = (router: KoaRouter) => {
    *         name: workOrderId
    *         required: true
    *         schema:
-   *           type: integer
+   *           type: string
    *         description: The ID of the work order to be closed.
    *     responses:
    *       '200':
@@ -706,7 +998,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { workOrderId } = ctx.params
 
-    const success = await workOrderAdapter.closeWorkOrder(parseInt(workOrderId))
+    const success = await workOrderAdapter.closeWorkOrder(workOrderId)
 
     if (success) {
       ctx.status = 200

@@ -644,6 +644,7 @@ export {
   syncInternalParkingSpacesFromXpand,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
+  getListings,
 } from './listings'
 
 export {

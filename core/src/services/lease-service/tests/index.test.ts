@@ -19,6 +19,7 @@ import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-t
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
 import { schemas } from '../schemas'
+import { Lease as LeaseSchema } from '../schemas/lease'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -46,6 +47,54 @@ describe('lease-service', () => {
     zip: '72266',
     city: 'Västerås',
   }
+
+  describe('GET /leases/by-rental-property-id/:rentalPropertyId', () => {
+    it('responds with 400 for invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-property-id/123?includeUpcomingLeases=invalid'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({
+        reason: 'Invalid query parameters',
+        error: expect.any(Object),
+      })
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .mockRejectedValue(new Error('Adapter error'))
+
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-property-id/123'
+      )
+
+      expect(res.status).toBe(500)
+    })
+
+    it('responds with a list of leases for valid query parameters', async () => {
+      const getLeasesForPropertyIdSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValue(factory.lease.buildList(1))
+
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-property-id/123?includeUpcomingLeases=true&includeTerminatedLeases=false&includeContacts=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
+        '123',
+        expect.objectContaining({
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: false,
+          includeContacts: true,
+        })
+      )
+
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
+    })
+  })
 
   describe('GET /leases/for/:pnr', () => {
     it('responds with a list of leases', async () => {
@@ -772,11 +821,6 @@ describe('lease-service', () => {
         numAdults: 2,
         lastUpdatedAt: new Date('2021-01-01'),
         expiresAt: new Date('2021-01-01'),
-      })
-
-      const updatedProfile = factory.applicationProfile.build({
-        ...existingProfile,
-        numAdults: 3,
       })
 
       jest
