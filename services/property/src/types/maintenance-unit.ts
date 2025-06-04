@@ -5,7 +5,7 @@ export const MaintenanceUnitSchema = z.object({
   rentalPropertyId: z.string(),
   code: z.string(),
   caption: z.string(),
-  type: z.string(),
+  type: z.string().nullable(),
   estateCode: z.string(),
   estate: z.string(),
 })
