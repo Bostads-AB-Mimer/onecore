@@ -13,7 +13,11 @@ import {
 import {
   ApplicationProfileHousingReferenceSchema,
   ApplicationProfileSchema,
-} from './schemas'
+  CommentThreadIdSchema,
+  CommentTypeSchema,
+  CommentSchema,
+  CommentThreadSchema,
+} from './schemas/v1'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -387,6 +391,11 @@ type ApplicationProfileHousingReference = z.infer<
   typeof ApplicationProfileHousingReferenceSchema
 >
 
+type CommentThreadId = z.infer<typeof CommentThreadIdSchema>
+type CommentType = z.infer<typeof CommentTypeSchema>
+type Comment = z.infer<typeof CommentSchema>
+type CommentThread = z.infer<typeof CommentThreadSchema>
+
 export type {
   Contact,
   Lease,
@@ -424,4 +433,8 @@ export type {
   SystemStatus,
   ApplicationProfile,
   ApplicationProfileHousingReference,
+  CommentThreadId,
+  CommentThread,
+  CommentType,
+  Comment,
 }
