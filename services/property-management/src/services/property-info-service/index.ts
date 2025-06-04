@@ -16,9 +16,8 @@ import {
   getApartmentRentalPropertyInfo,
 } from './adapters/xpand-adapter'
 
-import { routes as parkingspaceRoutes } from './routes/parkingspaces'
+import { routes as parkingspaceRoutes } from './routes/parking-spaces'
 import { routes as materialChoiceRoutes } from './routes/materialChoices'
-import { routes as rentalObjectRoutes } from './routes/rentalObjects'
 /**
  * The routes of this service are exported as the routes object. The service can also have
  * other exports (named or default) to provide externally usable helper functions, types etc.
@@ -34,7 +33,6 @@ import { routes as rentalObjectRoutes } from './routes/rentalObjects'
 export const routes = (router: KoaRouter) => {
   parkingspaceRoutes(router)
   materialChoiceRoutes(router)
-  rentalObjectRoutes(router)
 
   /**
    * @swagger
