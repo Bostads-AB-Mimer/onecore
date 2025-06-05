@@ -2113,22 +2113,57 @@ export interface paths {
   };
   "/propertyBase/maintenance-units/by-rental-property/{rentalPropertyId}": {
     /**
-     * Get rooms by rental property id.
+     * Get maintenance units by rental property id.
      * @description Returns all maintenance units belonging to a rental property.
      */
     get: {
       parameters: {
         path: {
-          /** @description The id of the rental property. */
+          /** @description The ID of the rental property for which to retrieve maintenance units. */
           rentalPropertyId: string;
         };
       };
       responses: {
-        /** @description Successfully retrieved the rooms. */
+        /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
             "application/json": {
               content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/maintenance-units/by-contact-code/{contactCode}": {
+    /**
+     * Get maintenance units by contact code.
+     * @description Returns all maintenance units belonging to a contact code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The contact code for which to retrieve maintenance units. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  ok?: boolean;
+                  data?: components["schemas"]["MaintenanceUnit"][];
+                }[];
             };
           };
         };
