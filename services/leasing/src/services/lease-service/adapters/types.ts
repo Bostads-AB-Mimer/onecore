@@ -78,4 +78,15 @@ export type DbListing = {
   WaitingListType: string | null
 }
 
+export type DbComment = {
+  Id: number
+  TargetType: string
+  TargetId: number
+  AuthorName: string
+  AuthorId: string
+  CreatedAt: Date
+  Type: 'COMMENT' | 'WARNING' | 'STOP'
+  Comment: string
+}
+
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
