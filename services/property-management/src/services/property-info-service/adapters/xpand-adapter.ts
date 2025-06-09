@@ -8,7 +8,6 @@ import {
   MaintenanceUnitInfo,
   ParkingSpace,
   VacantParkingSpace,
-  RentalObject,
 } from 'onecore-types'
 
 import Config from '../../../common/config'
@@ -23,6 +22,44 @@ const db = knex({
   client: 'mssql',
   connection: Config.xpandDatabase,
 })
+
+const districts = {
+  'Distrikt Mitt': [
+    'Centrum',
+    'Gryta',
+    'Skallberget',
+    'Nordanby',
+    'Vega',
+    'Hökåsen',
+  ],
+  'Distrikt Norr': [
+    'Oxbacken',
+    'Jakobsberg',
+    'Pettersberg',
+    'Vallby',
+    'Skultuna',
+  ],
+  'Distrikt Väst': [
+    'Vetterstorp',
+    'Vetterslund',
+    'Råby',
+    'Hammarby',
+    'Fredriksberg',
+    'Bäckby',
+    'Skälby',
+  ],
+  'Distrikt Öst': [
+    'Lillåudden',
+    'Gideonsberg',
+    'Hemdal',
+    'Haga',
+    'Malmaberg',
+    'Skiljebo',
+    'Viksäng',
+    'Öster Mälarstrand',
+  ],
+  'Mimer Student': ['Student'],
+}
 
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
 
@@ -328,44 +365,6 @@ const getParkingSpaceOld = async (
   }
 }
 
-const districts = {
-  'Distrikt Mitt': [
-    'Centrum',
-    'Gryta',
-    'Skallberget',
-    'Nordanby',
-    'Vega',
-    'Hökåsen',
-  ],
-  'Distrikt Norr': [
-    'Oxbacken',
-    'Jakobsberg',
-    'Pettersberg',
-    'Vallby',
-    'Skultuna',
-  ],
-  'Distrikt Väst': [
-    'Vetterstorp',
-    'Vetterslund',
-    'Råby',
-    'Hammarby',
-    'Fredriksberg',
-    'Bäckby',
-    'Skälby',
-  ],
-  'Distrikt Öst': [
-    'Lillåudden',
-    'Gideonsberg',
-    'Hemdal',
-    'Haga',
-    'Malmaberg',
-    'Skiljebo',
-    'Viksäng',
-    'Öster Mälarstrand',
-  ],
-  'Mimer Student': ['Student'],
-}
-
 function transformFromXpandRentalObject(row: any): VacantParkingSpace {
   const scegcaption = row.scegcaption?.toUpperCase() || ''
   let district = '-'
@@ -390,10 +389,22 @@ function transformFromXpandRentalObject(row: any): VacantParkingSpace {
     }
   }
 
+  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
+  // Calculate monthlyRent from yearrent if available and numeric
+  let monthlyRent = 0
+  if (Array.isArray(yearRentRows) && yearRentRows.length > 0) {
+    const totalYearRent = yearRentRows
+      .map((r: any) =>
+        typeof r.yearrent === 'number' && !isNaN(r.yearrent) ? r.yearrent : 0
+      )
+      .reduce((sum: number, val: number) => sum + val, 0)
+    monthlyRent = totalYearRent / 12
+  }
+
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
-    monthlyRent: row.MonthlyRent, // TODO: Add rent info if available
+    monthlyRent: monthlyRent,
     blockCaption: row.blockcaption,
     blockCode: row.blockcode,
     restidentalAreaCode: row.scegcode,
@@ -403,8 +414,9 @@ function transformFromXpandRentalObject(row: any): VacantParkingSpace {
     vehicleSpaceCaption: row.vehiclespacecaption,
     vehicleSpaceCode: row.vehiclespacecode,
     districtCaption: district,
-    districtCode,
-    restidentalAreaCaption,
+    districtCode: districtCode,
+    restidentalAreaCaption: restidentalAreaCaption,
+    braArea: row.braarea,
   }
 }
 
@@ -448,13 +460,41 @@ const buildMainQuery = (
         'rb.blockenddate',
         'ac.contractid',
         'ac.fromdate as contractfromdate',
-        'ac.lastdebitdate'
+        'ac.lastdebitdate',
+        'rent.yearrentrows',
+        'cmvalbar.value as braarea'
       )
       .leftJoin(activeRentalBlocksQuery.as('rb'), 'rb.keycmobj', 'ps.keycmobj')
       .leftJoin(activeContractsQuery.as('ac'), 'ac.keycmobj', 'ps.keycmobj')
   }
 
   return query
+    .leftJoin(
+      db.raw(`
+          (
+            SELECT 
+              rentalpropertyid, 
+              (
+                SELECT yearrent
+                FROM hy_debitrowrentalproperty_xpand_api x2 
+                WHERE x2.rentalpropertyid = x1.rentalpropertyid 
+                FOR JSON PATH
+              ) as yearrentrows
+            FROM hy_debitrowrentalproperty_xpand_api x1
+            GROUP BY rentalpropertyid
+          ) as rent
+        `),
+      'rent.rentalpropertyid',
+      'ps.rentalObjectCode'
+    )
+    .leftJoin(
+      db('cmval as cmvalbar')
+        .select('cmvalbar.keycode', 'cmvalbar.value')
+        .where('cmvalbar.keycmvat', 'BRA')
+        .as('cmvalbar'),
+      'cmvalbar.keycode',
+      'ps.keycmobj'
+    )
 }
 
 const buildSubQueries = () => {
