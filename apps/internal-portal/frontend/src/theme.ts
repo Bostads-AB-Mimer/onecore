@@ -24,6 +24,7 @@ declare module '@mui/material/Button' {
   interface ButtonPropsVariantOverrides {
     dark: true
     'dark-outlined': true
+    'dark-outlined-utility': true
   }
 }
 
@@ -250,6 +251,22 @@ export const mdTheme = createTheme(theme, {
             border: '2px solid black',
             fontWeight: 700,
             color: 'rgba(0, 0, 0, 1)',
+            background: 'white',
+            ':hover': {
+              background: 'white',
+            },
+          },
+        },
+        {
+          props: { variant: 'dark-outlined-utility' },
+          style: {
+            borderRadius: '6px',
+            textTransform: 'none',
+            border: '2px solid black',
+            fontWeight: 700,
+            color: 'rgba(0, 0, 0, 1)',
+            padding: 4,
+            lineHeight: 1,
             background: 'white',
             ':hover': {
               background: 'white',

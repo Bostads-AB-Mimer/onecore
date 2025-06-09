@@ -1,4 +1,4 @@
-import { Typography } from '@mui/material'
+import { Typography, Grid } from '@mui/material'
 import { Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 
@@ -8,6 +8,7 @@ import {
   ParkingSpaceInfoLoading,
 } from './components'
 import { useParkingSpaceListing } from './hooks/useParkingSpaceListing'
+import CommentSection from './components/CommentSection'
 import OffersTabContext from './components/OffersTabContext'
 import AllApplicantsTabContext from './components/AllApplicantsTabContext'
 import { PageGoBack } from '../../components/PageGoBack'
@@ -23,12 +24,24 @@ const ParkingSpace = () => {
       <Suspense fallback={<ApplicantsLoading />}>
         <ParkingSpaceTabs listingId={listingId} />
       </Suspense>
-      <Typography paddingY="2rem" variant="h1">
-        Objektsinformation
-      </Typography>
-      <Suspense fallback={<ParkingSpaceInfoLoading />}>
-        <ParkingSpaceInfo listingId={listingId} />
-      </Suspense>
+      <Grid container columnSpacing={4}>
+        <Grid item xl={6}>
+          <Typography paddingY="2rem" variant="h1">
+            Objektsinformation
+          </Typography>
+          <Suspense fallback={<ParkingSpaceInfoLoading />}>
+            <ParkingSpaceInfo listingId={listingId} />
+          </Suspense>
+        </Grid>
+        <Grid item xs={6}>
+          <Typography paddingY="2rem" variant="h1">
+            Kommentarer / Logg
+          </Typography>
+          <CommentSection
+            threadId={{ targetType: 'listing', targetId: listingId }}
+          />
+        </Grid>
+      </Grid>
     </>
   )
 }
