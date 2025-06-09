@@ -4,7 +4,6 @@ import { z } from 'zod'
 
 import {
   getResidenceById,
-  getResidenceSizeById,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
