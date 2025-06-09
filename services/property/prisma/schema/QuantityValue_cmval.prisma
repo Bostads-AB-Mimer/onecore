@@ -1,13 +1,12 @@
 model QuantityValue {
-  id             String @id @map("keycmval") @db.Char(15)
-  tableName      String @map("keydbtbl") @db.Char(15)
-  code           String @map("keycode") @db.Char(15)
-  quantityTypeId String @map("keycmvat") @db.Char(15)
-  value          Float  @default(0.0) @db.Money
-  timestamp      String @map("timestamp") @db.Char(10)
+  id              String @id @map("keycmval") @db.Char(15)
+  tableName       String @map("keydbtbl") @db.Char(15)
+  code            String @map("keycode") @db.Char(15)
+  quantityTypeId  String @map("keycmvat") @db.Char(15)
+  value           Float  @default(0.0) @db.Money
+  timestamp       String @map("timestamp") @db.Char(10)
 
-  quantityType QuantityType @relation(fields: [quantityTypeId], references: [id])
-  residence    Residence?   @relation(name: "ResidenceToQuantityValue", fields: [code], references: [propertyObjectId])
+  quantityType    QuantityType @relation(fields: [quantityTypeId], references: [id])
 
   @@unique([quantityTypeId, code])
   @@index([quantityTypeId])
