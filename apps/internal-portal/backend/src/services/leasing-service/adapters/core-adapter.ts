@@ -12,7 +12,11 @@ import {
   Tenant,
   leasing,
   schemas,
+  Comment,
+  CommentThread,
+  CommentThreadId,
 } from 'onecore-types'
+
 import { AxiosError, HttpStatusCode } from 'axios'
 import { z } from 'zod'
 import Config from '../../../common/config'
@@ -495,10 +499,64 @@ const createOrUpdateApplicationProfile = async (
   }
 }
 
+const getCommentThread = async (
+  threadId: CommentThreadId
+): Promise<AdapterResult<CommentThread, 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: CommentThread }>({
+      method: 'get',
+      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}`,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+type AddCommentRequest = z.infer<
+  typeof leasing.v1.AddCommentRequestParamsSchema
+>
+
+const addComment = async (
+  threadId: CommentThreadId,
+  comment: AddCommentRequest
+): Promise<AdapterResult<Comment, 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Comment }>({
+      method: 'post',
+      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}`,
+      data: comment,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const removeComment = async (
+  threadId: CommentThreadId,
+  commentId: number
+): Promise<AdapterResult<void, 'unknown' | 'not-found'>> => {
+  try {
+    const response = await getFromCore({
+      method: 'delete',
+      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
+  addComment,
+  removeComment,
   getListingsWithApplicants,
   getListingWithApplicants,
   removeApplicant,
+  getCommentThread,
   getContactsDataBySearchQuery,
   getTenantByContactCode,
   getContactByContactCode,
