@@ -195,6 +195,13 @@ export const getResidenceSizeByRentalId = async (rentalId: string) => {
       },
     })
 
+    if (propertyInfo === null) {
+      logger.warn(
+        'residence-adapter.getResidenceSizeByRentalId: No property structure found for rentalId'
+      )
+      return null
+    }
+
     // Get area size for the property object
     const areaSize = await prisma.quantityValue.findFirst({
       where: {

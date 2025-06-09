@@ -243,7 +243,7 @@ export const routes = (router: KoaRouter) => {
           : null
 
       // Get area size for the residence (yta)
-      const size = await getResidenceSizeByRentalId(rentalId)
+      const size = rentalId ? await getResidenceSizeByRentalId(rentalId) : null
 
       const mappedResidence = {
         id: residence.id,
