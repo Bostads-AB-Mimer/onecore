@@ -311,6 +311,13 @@ export const routes = (router: KoaRouter) => {
                   locationCode: row.LocationCode,
                   equipmentCode: row.EquipmentCode,
                 })),
+                messages: v.Messages?.map((message) => ({
+                  id: message.id,
+                  body: message.body,
+                  messageType: message.messageType,
+                  author: message.author,
+                  createDate: new Date(message.createDate),
+                })),
               })
             ),
           },
