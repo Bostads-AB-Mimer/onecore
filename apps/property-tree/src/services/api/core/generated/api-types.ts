@@ -2253,27 +2253,28 @@ export interface components {
         }[];
     };
     WorkOrder: {
-      AccessCaption: string;
-      Caption: string;
-      Code: string;
-      ContactCode: string;
-      Description: string;
-      DetailsCaption: string;
-      ExternalResource: boolean;
-      Id: string;
+      accessCaption: string;
+      caption: string;
+      code: string;
+      contactCode: string;
+      description: string;
+      detailsCaption: string;
+      externalResource: boolean;
+      id: string;
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string;
+      lastChanged: string;
+      priority: string;
       /** Format: date-time */
-      Registered: string;
-      RentalObjectCode: string;
-      Status: string;
-      WorkOrderRows: ({
-          Description: string | null;
-          LocationCode: string | null;
-          EquipmentCode: string | null;
+      registered: string;
+      dueDate: ("null" | null) | string;
+      rentalObjectCode: string;
+      status: string;
+      workOrderRows: ({
+          description: string | null;
+          locationCode: string | null;
+          equipmentCode: string | null;
         })[];
-      Messages?: {
+      messages?: {
           id: number;
           body: string;
           messageType: string;
@@ -2281,21 +2282,22 @@ export interface components {
           /** Format: date-time */
           createDate: string;
         }[];
-      Url?: string;
+      url?: string;
     };
     XpandWorkOrder: {
-      AccessCaption: string;
-      Caption: string | null;
-      Code: string;
-      ContactCode: string;
-      Id: string;
+      accessCaption: string;
+      caption: string | null;
+      code: string;
+      contactCode: string | null;
+      id: string;
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string | null;
+      lastChanged: string;
+      priority: string | null;
       /** Format: date-time */
-      Registered: string;
-      RentalObjectCode: string;
-      Status: string;
+      registered: string;
+      dueDate: ("null" | null) | string;
+      rentalObjectCode: string;
+      status: string;
     };
     Company: {
       id: string;
