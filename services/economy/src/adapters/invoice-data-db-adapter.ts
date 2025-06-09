@@ -28,31 +28,51 @@ export const createBatch = async () => {
   return batchId
 }
 
+const convertToDbRow = (row: InvoiceDataRow, batchId: string) => {
+  return {
+    batchId,
+    contractCode: row.contractCode,
+    contactCode: row.contactCode,
+    tenantName: row.tenantName,
+    invoiceFromDate: row.invoiceFromDate,
+    invoiceToDate: row.invoiceToDate,
+    invoiceDueDate: row.invoiceDueDate,
+    rentArticle: row.rentArticle,
+    invoiceRowText: row.invoiceRowText,
+    amount: row.amount,
+    vat: row.vat,
+    totalAmount: row.totalAmount,
+    account: row.account,
+    costCode: row.costCode,
+    property: row.property,
+    projectCode: row.projectCode,
+    freeCode: row.freeCode,
+    invoiceNumber: row.invoiceNumber,
+    oCR: row.invoiceNumber,
+    ledgerAccount: row.ledgerAccount,
+    totalAccount: row.totalAccount,
+  }
+}
+
 export const saveInvoiceRows = async (
   rows: InvoiceDataRow[],
   batchId: string
 ) => {
-  const dbRows = rows.map((row): InvoiceDataRow => {
-    return {
-      ...row,
-      batchId,
-    }
-  })
-
   let i = 0
 
-  for (const row of dbRows) {
+  for (const row of rows) {
+    const dbRow = convertToDbRow(row, batchId)
     try {
-      await db('invoice_data').insert(row)
+      await db('invoice_data').insert(dbRow)
       process.stdout.clearLine(0)
       process.stdout.cursorTo(0)
       process.stdout.write('Saving ' + (i++).toString())
     } catch (error: any) {
-      logger.error(
-        'Error inserting row',
-        row['contractCode'],
-        row['rentalArticle']
-      )
+      logger.error({
+        error,
+        contractCode: dbRow['contractCode'],
+        article: dbRow['rentArticle'],
+      })
     }
   }
 

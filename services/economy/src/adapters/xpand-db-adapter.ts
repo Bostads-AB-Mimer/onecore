@@ -8,6 +8,18 @@ type FacilityDistributions = Record<
   { propertyCode: string; costCode: string; distributionPercentage: number }
 >
 
+type RentArticleDetails = Record<
+  string,
+  {
+    account: string
+    costCode: string
+    property: string
+    projectCode: string
+    freeCode: string
+    sumRowText: string
+  }
+>
+
 const db = knex({
   connection: {
     host: config.xpandDatabase.host,
@@ -61,52 +73,105 @@ const getOcrAndInvoiceNumber = async (row: InvoiceDataRow) => {
   return ocr
 }
 
+const getInvoices = async (rows: InvoiceDataRow[]) => {
+  const uniqueInvoiceNumbers: Record<string, boolean> = {}
+
+  rows.forEach((row) => {
+    uniqueInvoiceNumbers[row.invoiceNumber as string] = true
+  })
+
+  const invoiceNumbers = Object.keys(uniqueInvoiceNumbers)
+
+  const invoices = await db('krfkh').whereIn('invoice', invoiceNumbers)
+
+  return invoices
+}
+
+const getRentArticleDetails = async (
+  year: string
+): Promise<RentArticleDetails> => {
+  console.log('Getting rent article details')
+  const rentArticleQuery = db('cmart')
+    .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
+    .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
+    .andWhere('keyrektk', 'INTAKT')
+    .andWhere('year', year)
+    .andWhere('keycmuni', 'month')
+    .distinct()
+
+  const rentArticleResult = await rentArticleQuery
+  const rentArticleDetails: RentArticleDetails = {}
+
+  rentArticleResult.forEach((rentArticle) => {
+    rentArticleDetails[rentArticle.code.toString().trimEnd()] = {
+      account: rentArticle['p1'].toString().trimEnd(),
+      costCode: rentArticle['p2'].toString().trimEnd(),
+      property: rentArticle['p3'].toString().trimEnd(),
+      projectCode: rentArticle['p4'].toString().trimEnd(),
+      freeCode: rentArticle['p5'].toString().trimEnd(),
+      sumRowText: rentArticle['hysumben']?.toString().trimEnd(),
+    }
+  })
+
+  return rentArticleDetails
+}
+
 const getAdditionalColumns = async (
-  row: InvoiceDataRow
+  row: InvoiceDataRow,
+  rentArticleDetails: RentArticleDetails
 ): Promise<InvoiceDataRow> => {
   const rentArticleName = row.rentArticle
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
-  let rentArticleResult: any[]
-  const year = (row.invoiceFromDate as string).substring(0, 4)
+  const year = (row.accountingDate as string).substring(0, 4)
+  //  const year = (row.invoiceFromDate as string).substring(0, 4)
+  /*  let rentArticleResult: any[]*/
 
-  if ('Öresutjämning' == row.invoiceRowText) {
+  /*  if ('Öresutjämning' == row.invoiceRowText) {
     rentArticleResult = await db('repsk')
       .where('keycode', 'ORESUTJ')
       .andWhere('year', year)
       .distinct()
-  } else {
-    rentArticleResult = await db('cmart')
-      .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
-      .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
-      .where('code', rentArticleName)
-      .andWhere('keyrektk', 'INTAKT')
-      .andWhere('year', year)
-      .andWhere('keycmuni', 'month')
-      .distinct()
+  } else {*/
+  /*const rentArticleQuery = db('cmart')
+    .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
+    .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
+    .where('code', rentArticleName)
+    .andWhere('keyrektk', 'INTAKT')
+    .andWhere('year', year)
+    .andWhere('keycmuni', 'month')
+    .distinct()*/
+
+  const rentArticle = rentArticleDetails[rentArticleName]
+
+  if (!rentArticle) {
+    console.error({ rentArticleName }, 'Rent article details not found')
+    return {}
   }
+  additionalColumns['account'] = rentArticle['account']
+  additionalColumns['costCode'] = rentArticle['costCode']
+  additionalColumns['property'] = rentArticle['property']
+  additionalColumns['projectCode'] = rentArticle['projectCode']
+  additionalColumns['freeCode'] = rentArticle['freeCode']
+  additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()
 
-  if (rentArticleResult && rentArticleResult[0]) {
-    const rentArticle = rentArticleResult[0]
-    additionalColumns['account'] = rentArticle['p1'].toString().trimEnd()
-    additionalColumns['costCode'] = rentArticle['p2'].toString().trimEnd()
-    additionalColumns['property'] = rentArticle['p3'].toString().trimEnd()
-    additionalColumns['projectCode'] = rentArticle['p4'].toString().trimEnd()
-    additionalColumns['freeCode'] = rentArticle['p5'].toString().trimEnd()
-    additionalColumns['SumRow'] = rentArticle['hysumben']?.toString().trimEnd()
-
-    if (!additionalColumns['costCode'] && contractCode) {
-      const specificRules = await getSpecificRules(contractCode, year)
-      if (specificRules && specificRules[0]) {
-        const specificRule = specificRules[0]
-        additionalColumns['costCode'] = specificRule['p2'].toString().trimEnd()
-        additionalColumns['property'] = specificRule['p3'].toString().trimEnd()
-      } else {
-        logger.error(row, 'Could not find cost code and property')
-      }
+  if (!additionalColumns['costCode'] && contractCode) {
+    console.log('Getting specific rules')
+    const specificRules = await getSpecificRules(contractCode, year)
+    if (specificRules && specificRules[0]) {
+      const specificRule = specificRules[0]
+      additionalColumns['costCode'] = specificRule['p2'].toString().trimEnd()
+      additionalColumns['property'] = specificRule['p3'].toString().trimEnd()
+    } else {
+      logger.error(row, 'Could not find cost code and property')
     }
+  }
+  return additionalColumns
 
-    const ocr = await getOcrAndInvoiceNumber(row)
+  //}
+  return {}
+
+  /*    const ocr = await getOcrAndInvoiceNumber(row)
 
     if (ocr && ocr[0]) {
       const ocrResult = ocr[0]
@@ -116,12 +181,7 @@ const getAdditionalColumns = async (
         .trimEnd()
     } else {
       logger.error({ row }, 'OCR information not found')
-    }
-
-    return additionalColumns
-  } else {
-    return {}
-  }
+    }*/
 }
 
 export const enrichInvoiceRows = async (
@@ -131,10 +191,33 @@ export const enrichInvoiceRows = async (
 ): Promise<InvoiceDataRow[]> => {
   let i = 1
 
+  const invoices = await getInvoices(invoiceDataRows)
+  invoiceDataRows.forEach((row) => {
+    const invoice = invoices.find((invoice) => {
+      return (row.invoiceNumber as string).localeCompare(invoice.invoice)
+    })
+
+    if (invoice) {
+      row.invoiceDate = invoice.invoiceDate
+      row.invoiceFromDate = invoice.fromDate
+      row.invoiceToDate = invoice.toDate
+    } else {
+      console.error(
+        { invoiceNumber: row.invoiceNumber },
+        'Invoice not found in XPand'
+      )
+    }
+  })
+
+  const rentArticleDetails = await getRentArticleDetails('2025')
+
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
       async (row: InvoiceDataRow): Promise<InvoiceDataRow> => {
-        const additionalColumns = await getAdditionalColumns(row)
+        const additionalColumns = await getAdditionalColumns(
+          row,
+          rentArticleDetails
+        )
 
         process.stdout.clearLine(0)
         process.stdout.cursorTo(0)
