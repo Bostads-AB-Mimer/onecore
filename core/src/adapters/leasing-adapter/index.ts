@@ -659,3 +659,5 @@ export {
   handleExpiredOffers,
   updateOfferSentAt,
 } from './offers'
+
+export { getCommentThread, addComment, removeComment } from './comments'
