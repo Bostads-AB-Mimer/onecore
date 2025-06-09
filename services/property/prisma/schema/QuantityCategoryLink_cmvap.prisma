@@ -1,0 +1,14 @@
+model QuantityCategoryLink {
+  id             String @id @map("keycmvap") @db.Char(15)
+  quantityTypeId String @map("keycmvat") @db.Char(15)
+  categoryId     String @map("keycmtyp") @db.Char(15)
+  timestamp      String @map("timestamp") @db.Char(10)
+
+  quantityType QuantityType     @relation(fields: [quantityTypeId], references: [id])
+  category     QuantityCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([quantityTypeId, categoryId])
+  @@index([categoryId])
+  @@index([quantityTypeId])
+  @@map("cmvap")
+}

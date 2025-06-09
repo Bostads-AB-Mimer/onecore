@@ -176,6 +176,47 @@ export type ResidenceSearchResult = Prisma.ResidenceGetPayload<{
   }
 }>
 
+export const getResidenceSizeByRentalId = async (rentalId: string) => {
+  try {
+    // Get property structure information for the residence
+    const propertyInfo = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+        NOT: { propertyCode: null },
+      },
+      select: {
+        name: true,
+        propertyObject: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    })
+
+    if (propertyInfo === null) {
+      logger.warn(
+        'residence-adapter.getResidenceSizeByRentalId: No property structure found for rentalId'
+      )
+      return null
+    }
+
+    // Get area size for the property object
+    const areaSize = await prisma.quantityValue.findFirst({
+      where: {
+        code: propertyInfo.propertyObject.id,
+        quantityTypeId: 'BOA',
+      },
+    })
+
+    return areaSize
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getResidenceSizeById')
+    throw err
+  }
+}
+
 export const searchResidences = async (
   q: string
 ): Promise<Array<ResidenceSearchResult>> => {
