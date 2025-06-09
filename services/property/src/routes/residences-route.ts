@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import {
   getResidenceById,
+  getResidenceSizeByRentalId,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
@@ -241,6 +242,9 @@ export const routes = (router: KoaRouter) => {
           ? residence.propertyObject.propertyStructures[0].rentalId
           : null
 
+      // Get area size for the residence (yta)
+      const size = await getResidenceSizeByRentalId(rentalId)
+
       const mappedResidence = {
         id: residence.id,
         code: residence.code,
@@ -330,7 +334,7 @@ export const routes = (router: KoaRouter) => {
           name: residence.propertyObject.propertyStructures[0].buildingName,
         },
         malarEnergiFacilityId: residence.comments?.[0]?.text || null,
-        size: null, // Populate this with size from Andreas PR (YTA)
+        size: size?.value || null,
       } satisfies ResidenceDetails
 
       ctx.status = 200
