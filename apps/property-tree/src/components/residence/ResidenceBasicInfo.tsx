@@ -71,8 +71,7 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
             <div>
               <p className="text-sm text-muted-foreground">Yta</p>
               <p className="font-medium">
-                N/A
-                {/* {residence.size ? `${residence.size} m²` : '-'} */}
+                {residence.size ? `${residence.size} m²` : '-'}
               </p>
             </div>
             <div>
