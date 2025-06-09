@@ -9,7 +9,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "start": "npm run migrate:up && ts-node ./src/index.ts",
+    "start": "npm run migrate:up && node -r dotenv/config index",
     "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "lint": "eslint -c .eslintrc src/",
     "migrate:make": "knex migrate:make",
