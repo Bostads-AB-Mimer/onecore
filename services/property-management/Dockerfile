@@ -21,7 +21,6 @@ COPY --from=BUILDER /home/app/package* ./
 COPY --from=BUILDER /home/app/build ./
 COPY ./knexfile.js .
 COPY ./migrations ./migrations
-COPY ./seeds ./seeds
 
 ENV PORT 80
 EXPOSE 80
