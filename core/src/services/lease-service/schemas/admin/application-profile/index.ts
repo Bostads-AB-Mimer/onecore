@@ -17,6 +17,7 @@ export const UpdateApplicationProfileRequestParams =
           comment: true,
           reviewedBy: true,
           reasonRejected: true,
+          expiresAt: true,
         }
       ),
   })

@@ -717,6 +717,7 @@ describe('lease-service', () => {
         housingReference: {
           ...existingProfile.housingReference,
           reviewStatus: 'REJECTED',
+          expiresAt: new Date('2022-01-01'),
         },
       })
 
