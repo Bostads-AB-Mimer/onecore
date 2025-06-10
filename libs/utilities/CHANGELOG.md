@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.1.0...v1.2.0) (2025-06-10)
+
+
+### Features
+
+* Ignore connection errors to accomplish automatic reconnect ([09c604f](https://github.com/Bostads-AB-Mimer/onecore-utilities/commit/09c604f3fd7fb770760cfbb896be6cdf9343d6ad))
+
 ## [1.1.0](https://github.com/Bostads-AB-Mimer/onecore-utilities/compare/v1.0.3...v1.1.0) (2024-08-27)
 
 
