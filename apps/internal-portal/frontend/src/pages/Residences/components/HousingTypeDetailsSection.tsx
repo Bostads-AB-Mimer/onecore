@@ -17,11 +17,29 @@ const fieldConfigs: any = {
       type: 'text',
       placeholder: 'Namn på nuvarande hyresvärd',
     },
+    controller: {
+      rules: {
+        value: true,
+        message: 'Du behöver ange nuvarande hyresvärd.',
+        validate: (value: string) => {
+          return value !== '' || 'Du behöver ange nuvarande hyresvärd.'
+        },
+      },
+    },
   } as any,
   housingTypeDescription: {
     label: 'Beskriv boende *',
     input: {
       type: 'text',
+    },
+    controller: {
+      rules: {
+        value: true,
+        message: 'Du behöver beskriva boende.',
+        validate: (value: string) => {
+          return value !== '' || 'Du behöver beskriva boende.'
+        },
+      },
     },
   },
   numAdults: {
@@ -68,6 +86,17 @@ const fieldConfigs: any = {
   'housingReference.phone': {
     label: 'Telefonnummer hyresvärd *',
     input: { type: 'tel' },
+    controller: {
+      rules: {
+        value: true,
+        message: 'Du behöver fylla i telefonnummer till hyresvärd.',
+        validate: (value: string) => {
+          return (
+            value !== '' || 'Du behöver fylla i telefonnummer till hyresvärd.'
+          )
+        },
+      },
+    },
   },
   'housingReference.email': {
     label: 'Mejladress hyresvärd',
