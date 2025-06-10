@@ -45,7 +45,7 @@ const HousingType = () => {
                 </MenuItem>
 
                 <MenuItem value="RENTAL">Hyresrätt</MenuItem>
-                <MenuItem value="SUB_RENTAL">Andrahand</MenuItem>
+                <MenuItem value="SUB_RENTAL">Andra hand</MenuItem>
                 <MenuItem value="LIVES_WITH_FAMILY">Bor hos förälder</MenuItem>
                 <MenuItem value="LODGER">Inneboende</MenuItem>
                 <MenuItem value="OWNS_HOUSE">Äger villa</MenuItem>

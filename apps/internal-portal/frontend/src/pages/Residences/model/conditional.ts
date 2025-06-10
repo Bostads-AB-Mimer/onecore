@@ -6,7 +6,7 @@ export const housingFieldMatrix: Record<string, readonly string[]> = {
     'housingReference.phone',
     'housingReference.email',
   ],
-  ['LIVES_WITH_FAMILY']: [
+  ['SUB_RENTAL']: [
     'landlord',
     'numAdults',
     'numChildren',
@@ -14,6 +14,7 @@ export const housingFieldMatrix: Record<string, readonly string[]> = {
     'housingReference.email',
   ],
   ['LODGER']: ['numAdults', 'numChildren'],
+  ['LIVES_WITH_FAMILY']: ['numAdults', 'numChildren'],
   ['OWNS_HOUSE']: ['numAdults', 'numChildren'],
   ['OWNS_FLAT']: ['numAdults', 'numChildren'],
   ['OWNS_ROW_HOUSE']: ['numAdults', 'numChildren'],

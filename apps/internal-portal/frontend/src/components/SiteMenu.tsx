@@ -46,12 +46,12 @@ const SiteMenu = () => (
                 <Typography>Bilplatser</Typography>
               </MenuItem>
             </Link>
-
+            {/* 
             <Link to="/materialval">
               <MenuItem onClick={popupState.close}>
                 <Typography>Materialval</Typography>
               </MenuItem>
-            </Link>
+            </Link> */}
 
             <Link to="/sokandeprofil">
               <MenuItem onClick={popupState.close}>
