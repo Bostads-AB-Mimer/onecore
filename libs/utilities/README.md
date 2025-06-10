@@ -113,6 +113,8 @@ In your application's folder, run `npm link onecore-utilities`
 
 This will symlink the application's node_modules/onecore-utilities to this project folder.
 
+**IMPORTANT! This requires that your application and this repo uses the same version of Node.**
+
 When you are done, run `npm unlink --no-save onecore-utilities` in the application's folder (which removes the symlink, but not the package from package.json)
 
 ### Releases

@@ -9,12 +9,77 @@ import {
   getCorrelationId as getCorrelationIdFromStorage,
 } from './loggingStorage'
 
+import {
+  ConnectionOptions,
+  ConnectionRequestParams,
+  ConnectionRequestOptions,
+  ConnectionRequestResponse,
+  ConnectionRequestOptionsAsStream,
+  ConnectionRequestResponseAsStream,
+} from '@elastic/elasticsearch'
+
+import { UndiciConnection } from '@elastic/transport'
+
+export class IgnoreErrorConnection extends UndiciConnection {
+  constructor(opts: ConnectionOptions) {
+    super(opts)
+  }
+
+  async request(
+    params: ConnectionRequestParams,
+    options: ConnectionRequestOptions
+  ): Promise<ConnectionRequestResponse>
+  async request(
+    params: ConnectionRequestParams,
+    options: ConnectionRequestOptionsAsStream
+  ): Promise<ConnectionRequestResponseAsStream>
+  async request(params: ConnectionRequestParams, options: any): Promise<any> {
+    try {
+      const response = await super.request(params, options)
+      return response
+    } catch (err: any) {
+      switch (err.name) {
+        case 'TimeoutError':
+        case 'ConnectionError': {
+          // Do not throw errors for these errors since elasticsearch transport
+          // cannot recover from them.
+          return this.fakeResponse(params)
+        }
+        default: {
+          throw err
+        }
+      }
+    }
+  }
+
+  fakeResponse(params: any): ConnectionRequestResponse {
+    const docs = params.body.split('\n').length
+    const result = {
+      errors: false,
+      took: docs,
+      items: Array(docs).fill({ result: 'created', status: 201 }),
+    }
+    const body = JSON.stringify(result)
+
+    return {
+      statusCode: 200,
+      headers: {
+        'content-type': 'application/vnd.elasticsearch+json;compatible-with=8',
+        'content-length': body.length.toString(),
+        'x-elastic-product': 'Elasticsearch',
+      },
+      body,
+    }
+  }
+}
+
 const streamToElastic = pinoElastic({
   index: 'onecore-logging',
   node: process.env.ELASTICSEARCH_LOGGING_HOST || 'http://localhost:9200',
   esVersion: 8,
   flushBytes: 100,
   flushInterval: 1000,
+  Connection: IgnoreErrorConnection,
 })
 
 streamToElastic.on('error', (error: any) => console.log(error))
