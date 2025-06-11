@@ -20,6 +20,14 @@ type RentArticleDetails = Record<
   }
 >
 
+type RentalSpecificRules = Record<
+  string,
+  {
+    costCode: string
+    property: string
+  }
+>
+
 const db = knex({
   connection: {
     host: config.xpandDatabase.host,
@@ -90,7 +98,6 @@ const getInvoices = async (rows: InvoiceDataRow[]) => {
 const getRentArticleDetails = async (
   year: string
 ): Promise<RentArticleDetails> => {
-  console.log('Getting rent article details')
   const rentArticleQuery = db('cmart')
     .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
     .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
@@ -116,9 +123,45 @@ const getRentArticleDetails = async (
   return rentArticleDetails
 }
 
+const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
+  const specificRules: RentalSpecificRules = {}
+  const specificRulesBuildings = await db('repsk')
+    .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
+    .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
+    .where('year', year)
+    .andWhereLike('keyrektk', 'INTAKT%')
+    .whereIn('hyresid', rentalIds)
+    .distinct()
+
+  specificRulesBuildings.forEach((row) => {
+    specificRules[row['hyresid'].toString().trimEnd()] = {
+      costCode: row['p2'].toString().trimEnd(),
+      property: row['p3'].toString().trimEnd(),
+    }
+  })
+
+  const specificRulesAreas = await db('repsk')
+    .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
+    .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
+    .where('year', year)
+    .andWhereLike('keyrektk', 'INTAKT%')
+    .whereIn('hyresid', rentalIds)
+    .distinct()
+
+  specificRulesAreas.forEach((row) => {
+    specificRules[row['hyresid'].toString().trimEnd()] = {
+      costCode: row['p2'].toString().trimEnd(),
+      property: row['p3'].toString().trimEnd(),
+    }
+  })
+
+  return specificRules
+}
+
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
-  rentArticleDetails: RentArticleDetails
+  rentArticleDetails: RentArticleDetails,
+  rentalSpecificRules: RentalSpecificRules
 ): Promise<InvoiceDataRow> => {
   const rentArticleName = row.rentArticle
   const contractCode = row.contractCode as string
@@ -156,12 +199,11 @@ const getAdditionalColumns = async (
   additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()
 
   if (!additionalColumns['costCode'] && contractCode) {
-    console.log('Getting specific rules')
-    const specificRules = await getSpecificRules(contractCode, year)
-    if (specificRules && specificRules[0]) {
-      const specificRule = specificRules[0]
-      additionalColumns['costCode'] = specificRule['p2'].toString().trimEnd()
-      additionalColumns['property'] = specificRule['p3'].toString().trimEnd()
+    const specificRule = rentalSpecificRules[contractCode.split('/')[0]]
+
+    if (specificRule) {
+      additionalColumns['costCode'] = specificRule['costCode']
+      additionalColumns['property'] = specificRule['property']
     } else {
       logger.error(row, 'Could not find cost code and property')
     }
@@ -201,6 +243,12 @@ export const enrichInvoiceRows = async (
       row.invoiceDate = invoice.invoiceDate
       row.invoiceFromDate = invoice.fromDate
       row.invoiceToDate = invoice.toDate
+      console.log(
+        'Invoice',
+        row.invoiceNumber,
+        'öresutjämning',
+        invoice.roundoff
+      )
     } else {
       console.error(
         { invoiceNumber: row.invoiceNumber },
@@ -209,6 +257,15 @@ export const enrichInvoiceRows = async (
     }
   })
 
+  const rentalIdMap: Record<string, boolean> = {}
+
+  invoiceDataRows.forEach((row) => {
+    rentalIdMap[row.contractCode.toString().split('/')[0]] = true
+  })
+
+  const rentalIds = Object.keys(rentalIdMap)
+  const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
+
   const rentArticleDetails = await getRentArticleDetails('2025')
 
   const enrichedInvoiceRows = await Promise.all(
@@ -216,7 +273,8 @@ export const enrichInvoiceRows = async (
       async (row: InvoiceDataRow): Promise<InvoiceDataRow> => {
         const additionalColumns = await getAdditionalColumns(
           row,
-          rentArticleDetails
+          rentArticleDetails,
+          rentalSpecificRules
         )
 
         process.stdout.clearLine(0)
