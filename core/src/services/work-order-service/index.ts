@@ -306,6 +306,7 @@ export const routes = (router: KoaRouter) => {
                 rentalObjectCode: v.RentalObjectCode,
                 status: v.Status,
                 dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                hiddenFromMyPages: v.HiddenFromMyPages,
                 workOrderRows: v.WorkOrderRows.map((row) => ({
                   description: row.Description,
                   locationCode: row.LocationCode,
