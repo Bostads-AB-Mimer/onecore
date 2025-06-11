@@ -75,7 +75,7 @@
     "koa2-swagger-ui": "^5.10.0",
     "mssql": "^11.0.1",
     "onecore-types": "^3.11.0",
-    "onecore-utilities": "^1.1.0",
+    "onecore-utilities": "^1.2.0",
     "personnummer": "^3.2.1",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",
