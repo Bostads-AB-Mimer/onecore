@@ -7,6 +7,12 @@ import {
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
+import {
+  AuthProvider,
+  ProtectedRoute,
+  useAuth,
+} from './components/auth/useAuth'
+import { AuthCallback } from './components/auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
@@ -40,6 +46,8 @@ const queryClient = new QueryClient({
 })
 
 function AppContent() {
+  const { user, logout } = useAuth()
+
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-gray-900">
       <SidebarProvider>
@@ -49,25 +57,38 @@ function AppContent() {
           <header className="flex sticky top-0 bg-background h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Hem</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Företag</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Fastighet</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Byggnad</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Våning</BreadcrumbLink>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <div className="flex justify-between w-full">
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Hem</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Företag</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Fastighet</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Byggnad</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Våning</BreadcrumbLink>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+              {user && (
+                <div className="flex items-center gap-4">
+                  <span className="text-sm">{user.name}</span>
+                  <button
+                    onClick={logout}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Logga ut
+                  </button>
+                </div>
+              )}
+            </div>
           </header>
           <main className="flex-1">
             <Routes>
@@ -102,13 +123,33 @@ function AppContent() {
 }
 
 export default function App() {
+  const authConfig = {
+    keycloakUrl:
+      import.meta.env.VITE_KEYCLOAK_URL ||
+      'https://auth-test.mimer.nu/realms/onecore-test',
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'onecore-test',
+    apiUrl: import.meta.env.VITE_CORE_API_URL || 'http://localhost:5010',
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <CommandPaletteProvider>
-          <AppContent />
-        </CommandPaletteProvider>
-      </Router>
+      <AuthProvider config={authConfig}>
+        <Router>
+          <CommandPaletteProvider>
+            <Routes>
+              <Route path="/callback" element={<AuthCallback />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <AppContent />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </CommandPaletteProvider>
+        </Router>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
