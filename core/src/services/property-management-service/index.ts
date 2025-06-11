@@ -674,7 +674,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/RentalObject'
+   *                     type: object
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
    *         content:
