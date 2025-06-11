@@ -63,7 +63,7 @@
     "lodash": "^4.17.21",
     "odoo-await": "^3.4.1",
     "onecore-types": "^3.9.0",
-    "onecore-utilities": "^1.1.0",
+    "onecore-utilities": "^1.2.0",
     "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "tedious": "^18.6.1",
