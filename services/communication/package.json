@@ -52,7 +52,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "onecore-types": "^3.7.0",
-    "onecore-utilities": "^1.1.0",
+    "onecore-utilities": "^1.2.0",
     "striptags": "^3.2.0",
     "telefonnummer": "^2.1.0",
     "tslib": "^2.7.0",
