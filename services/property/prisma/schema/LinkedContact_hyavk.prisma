@@ -1,0 +1,33 @@
+model LinkedContact {
+  id                  String   @id @map("keyhyavk") @db.Char(15)           // Kopplad kontakt
+  contractId          String   @map("keyhyobj")     @db.Char(15)           // Kontrakt
+  holdingPeriodId     String?  @map("keyhyinp")     @db.Char(15)           // Innehavsperiod
+  contactId           String   @map("keycmctc")     @db.Char(15)           // Kontakt
+  secondaryContactId  String?  @map("keycmctc2")    @db.Char(15)           // Kontakt
+  contractPersonType  String   @map("keyhyakt")     @db.Char(15)           // Typ av kontraktsperson
+  share               Decimal  @db.Decimal(6, 3)                            // Andel
+  order               Int?     @map("ordning")      @db.TinyInt            // Ordning
+  validFrom           DateTime?@map("fdate")                               // Fr.o.m. datum
+  validTo             DateTime?@map("tdate")                               // T.o.m. datum
+  approvedDate        DateTime?@map("godkdat")                             // Godkänt datum
+  approvedBy          String?  @map("godksign")     @db.VarChar(80)        // Godkänt signatur
+  notifyDate          DateTime?@map("notifydate")                          // Påminnelse skickad
+  enrollmentDate      DateTime?@map("enrollment")                          // Inskrivningsdatum
+  terminatedBy        Int?     @map("terminby")     @db.TinyInt            // Uppsagt av
+  ownedNumerator      Int?     @map("agdandelt")     @db.SmallInt          // Ägd andel täljare
+  ownedDenominator    Int?     @map("agdandeln")     @db.SmallInt          // Ägd andel nämnare
+  reportedNumerator   Int?     @map("redandelt")     @db.SmallInt          // Redovisad andel täljare
+  reportedDenominator Int?     @map("redandeln")     @db.SmallInt          // Redovisad andel nämnare
+  signedDate          DateTime?@map("signed")                              // Signed
+  feePeriod           Int      @default(0) @map("feeperiod") @db.TinyInt   // Fee period
+  timeToken           String   @map("timestamp")     @db.Char(10)          // TIMESTAMP (generic label)
+
+  @@index([contactId], name: "fkhyavkcmctc")
+  @@index([secondaryContactId], name: "fkhyavkcmctc2")
+  @@index([contractPersonType], name: "fkhyavkhyakt")
+  @@index([holdingPeriodId], name: "fkhyavkhyinp")
+  @@index([contractId], name: "fkhyavkhyobj")
+  @@index([contractId, contactId, contractPersonType, order], name: "inhyavk_1QN1DW238")
+
+  @@map("hyavk")
+}
