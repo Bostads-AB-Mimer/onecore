@@ -192,6 +192,7 @@ export const ResidenceDetailsSchema = z.object({
     code: z.string().nullable(),
   }),
   malarEnergiFacilityId: z.string().nullable(),
+  size: z.number().nullable(),
 })
 
 export const StaircaseSchema = z.object({

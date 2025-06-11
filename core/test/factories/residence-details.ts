@@ -59,4 +59,5 @@ export const ResidenceDetailsFactory = Factory.define<
   property: { code: null, name: 'foo-property' },
   building: { code: null, name: 'foo-building' },
   malarEnergiFacilityId: '735999137000482621',
+  size: null,
 }))

@@ -1073,6 +1073,7 @@ export interface components {
                 code: string | null;
             };
             malarEnergiFacilityId: string | null;
+            size: number | null;
         };
         ResidenceSearchResult: {
             id: string;

@@ -38,6 +38,12 @@ export interface Config {
     expiresIn: ms.StringValue | number
     maxFailedLoginAttempts: number
     testAccount: Account
+    keycloak: {
+      url: string
+      realm: string
+      clientId: string
+      clientSecret: string
+    }
   }
   emailAddresses: {
     leasing: string
@@ -97,6 +103,12 @@ const config = configPackage({
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
       maxFailedLoginAttempts: 3,
+      keycloak: {
+        url: 'http://localhost:8080/auth',
+        realm: 'onecore-test',
+        clientId: 'onecore-test',
+        clientSecret: 'your-client-secret',
+      },
     },
     emailAddresses: {
       leasing: '',

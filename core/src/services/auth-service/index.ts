@@ -1,8 +1,10 @@
 import KoaRouter from '@koa/router'
+import createHttpError from 'http-errors'
+import { logger } from 'onecore-utilities'
 
 import hash from './hash'
 import { createToken } from './jwt'
-import createHttpError from 'http-errors'
+import auth from './keycloak'
 
 /**
  * @swagger
@@ -120,4 +122,109 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /auth/login:
+   *   get:
+   *     summary: Redirects to Keycloak login
+   *     description: Redirects the user to the Keycloak login page
+   *     tags:
+   *       - Auth
+   *     responses:
+   *       '302':
+   *         description: Redirect to Keycloak login
+   */
+  router.get('(.*)/auth/login', async (ctx) => {
+    const redirectUri = `${ctx.protocol}://${ctx.host}/auth/callback`
+    const keycloakLoginUrl = `${auth.keycloakUrl}/protocol/openid-connect/auth?client_id=${auth.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid`
+
+    ctx.redirect(keycloakLoginUrl)
+  })
+
+  /**
+   * @swagger
+   * /auth/callback:
+   *   post:
+   *     summary: OAuth callback endpoint
+   *     description: Handles the OAuth callback from Keycloak
+   *     tags:
+   *       - Auth
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               code:
+   *                 type: string
+   *               redirectUri:
+   *                 type: string
+   *     responses:
+   *       '200':
+   *         description: User profile information
+   */
+  router.post('(.*)/auth/callback', async (ctx) => {
+    try {
+      const { code, redirectUri } = ctx.request.body
+      if (!code || typeof code !== 'string') {
+        throw new Error('Missing authorization code')
+      }
+
+      // Exchange code for tokens and set cookies
+      const { user } = await auth.handleTokenExchange(code, redirectUri, ctx)
+
+      ctx.body = user
+    } catch (error) {
+      logger.error('Authentication error:', error)
+      ctx.redirect('/auth/login?error=auth_failed')
+    }
+  })
+
+  /**
+   * @swagger
+   * /auth/logout:
+   *   get:
+   *     summary: Logout endpoint
+   *     description: Clears authentication cookies and redirects to Keycloak logout
+   *     tags:
+   *       - Auth
+   *     responses:
+   *       '302':
+   *         description: Redirect to login page
+   */
+  router.get('(.*)/auth/logout', async (ctx) => {
+    // Clear cookies
+    auth.logout(ctx)
+
+    // Redirect to Keycloak logout
+    const keycloakLogoutUrl = `${auth.keycloakUrl}/protocol/openid-connect/logout`
+
+    ctx.redirect(keycloakLogoutUrl)
+  })
+
+  /**
+   * @swagger
+   * /auth/profile:
+   *   get:
+   *     summary: Get user profile
+   *     description: Returns the authenticated user's profile information
+   *     tags:
+   *       - Auth
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       '200':
+   *         description: User profile information
+   *       '401':
+   *         description: Unauthorized
+   */
+  router.get(
+    '(.*)/auth/profile',
+    auth.middleware.extractJwtToken,
+    async (ctx) => {
+      ctx.body = ctx.state.user
+    }
+  )
 }
