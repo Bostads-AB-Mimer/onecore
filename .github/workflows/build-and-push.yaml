@@ -69,9 +69,29 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.package-version.outputs.version }}
 
-      - name: Build and push
+      - name: Build and push property-base
+        if: matrix.package == 'property-base'
         uses: docker/build-push-action@v5
         with:
+          context: .
+          file: ./packages/${{ matrix.package }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.package }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+
+      - name: Build and push property-tree
+        if: matrix.package == 'property-tree'
+        uses: docker/build-push-action@v5
+        with:
+          build-args: |
+            VITE_API_URL=http://property-base
+            VITE_CORE_API_URL=http://core
+            VITE_KEYCLOAK_URL=https://auth-test.mimer.nu/realms/onecore-test
+            VITE_KEYCLOAK_CLIENT_ID=onecore-test
+            VITE_KEYCLOAK_REDIRECT_URI=https://property-tree-test.mimer.nu/callback
+            VITE_KEYCLOAK_REALM=onecore-test
           context: .
           file: ./packages/${{ matrix.package }}/Dockerfile
           push: true
