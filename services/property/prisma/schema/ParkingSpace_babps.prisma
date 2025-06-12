@@ -20,6 +20,10 @@ model ParkingSpace {
 
   // Relations
   parkingSpaceType ParkingSpaceType @relation(fields: [parkingSpaceTypeId], references: [id], onUpdate: NoAction, map: "fkbabpskeybabpt ")
+  
+  // This is the relation from property structure to parking space relation
+  PropertyStructure PropertyStructure[]
+
   // TODO: Commenting this relation until the model 'cmobj' is defined somewhere
   // cmobj cmobj @relation(fields: [objectId], references: [keycmobj], onDelete: Cascade, onUpdate: NoAction, map: "fkbabpskeycmobj ")
 
@@ -30,4 +34,5 @@ model ParkingSpace {
   @@index([code], map: "inbabps_2BR0UA5RD")
   @@index([name], map: "inbabps_2BR0UA5T7")
   @@map("babps")
+
 }

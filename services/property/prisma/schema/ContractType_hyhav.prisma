@@ -6,6 +6,9 @@ model ContractType {
   systemStandardCode Int      @map("repabkod")         @default(0) @db.TinyInt // Systemstandard
   timestampValue     String   @map("timestamp")        @db.Char(10)       // Timestamp
 
+	// Relations
+  Contract Contract[] @relation("Contract_contractType")
+
   @@index([agreementFormId], name: "fkhyhavhyobt")
   @@map("hyhav")
 }

@@ -64,7 +64,8 @@ model PropertyStructure {
   toDate                   DateTime @map("tdate") @db.DateTime
   timestamp                String   @map("timestamp") @db.Char(10)
 
-  propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
+  propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")  
+  parkingSpace    ParkingSpace?    @relation(fields: [parkingSpaceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   maintenanceUnit MaintenanceUnit? @relation(fields: [maintenanceUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Ny relation baserad på maintenanceUnitCode

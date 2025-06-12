@@ -128,7 +128,7 @@ model Contract {
   // company            Company?           @relation("Contract_company", fields: [companyId], references: [companyId])
   // company2           Company?           @relation("Contract_company2", fields: [companyId2], references: [companyId])
   // masterContract     Contract?          @relation("Contract_master", fields: [masterContractId], references: [contractId])
-  // contractType       ContractType       @relation(fields: [contractTypeId], references: [contractTypeId])
+  contractType          ContractType       @relation("Contract_contractType", fields: [contractTypeId], references: [contractTypeId])
   // tenantUnit         Unit               @relation("Contract_tenantUnit", fields: [tenantUnitId], references: [unitId])
   // landlordUnit       Unit               @relation("Contract_landlordUnit", fields: [landlordUnitId], references: [unitId])
   // extensionUnit      Unit               @relation("Contract_extensionUnit", fields: [extensionUnitId], references: [unitId])
