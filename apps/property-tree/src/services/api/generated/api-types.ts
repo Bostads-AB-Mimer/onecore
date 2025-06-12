@@ -351,6 +351,43 @@ export interface paths {
       };
     };
   };
+  "/parking-space/{id}": {
+    /**
+     * Gets a list of parking spaces by id
+     * @description Retrieves parking space from id.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the parking space. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the parking space. Returns parking space object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ParkingSpace"];
+            };
+          };
+        };
+        /** @description Invalid id provided */
+        400: {
+          content: never;
+        };
+        /** @description No parking spaces found for the specified id */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/staircases": {
     /**
      * Gets staircases belonging to a building by building code
