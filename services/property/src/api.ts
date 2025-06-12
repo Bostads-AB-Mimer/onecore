@@ -3,6 +3,7 @@ import { routes as componentsRoutes } from './routes/components-route'
 import { routes as residencesRoutes } from './routes/residences-route'
 import { routes as buildingsRoutes } from './routes/buildings-route'
 import { routes as propertiesRoutes } from './routes/properties-route'
+import { routes as parkingSpacesRoutes } from './routes/parking-spaces-route'
 import { routes as staircasesRoutes } from './routes/staircases-route'
 import { routes as roomsRoutes } from './routes/rooms-route'
 import { routes as companiesRoutes } from './routes/companies-route'
@@ -14,6 +15,7 @@ componentsRoutes(router)
 residencesRoutes(router)
 buildingsRoutes(router)
 propertiesRoutes(router)
+parkingSpacesRoutes(router)
 staircasesRoutes(router)
 roomsRoutes(router)
 companiesRoutes(router)
