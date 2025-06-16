@@ -351,16 +351,15 @@ export interface paths {
       };
     };
   };
-  "/parking-space/{id}": {
+  "/parking-spaces/by-lease-id/{id}": {
     /**
-     * Gets a list of parking spaces by id
-     * @description Retrieves parking space from id.
-     * Components are returned ordered by installation date (newest first).
+     * Gets a list of parking space by lease id
+     * @description Retrieves parking space from lease id.
      */
     get: {
       parameters: {
         path: {
-          /** @description The id of the parking space. */
+          /** @description The lease id. */
           id: string;
         };
       };
@@ -942,6 +941,33 @@ export interface components {
       subletFeeAmount: number;
       disableQuantitiesBelowCompany: number;
       timestamp: string;
+    };
+    ParkingSpace: {
+      rentalId: string;
+      companyCode: string;
+      companyName: string;
+      managementUnitCode: string;
+      managementUnitName: string;
+      propertyCode: string;
+      propertyName: string;
+      buildingCode: string | null;
+      buildingName: string | null;
+      parkingSpace: {
+        propertyObjectId: string;
+        code: string;
+        name: string;
+        parkingNumber: string;
+        parkingSpaceType: {
+          code: string;
+          name: string;
+        };
+      };
+      address: ({
+        streetAddress: string | null;
+        streetAddress2: string | null;
+        postalCode: string | null;
+        city: string | null;
+      }) | null;
     };
   };
   responses: never;
