@@ -334,16 +334,18 @@ const getDistributions = async (
 
   areaTemps.forEach((areaTemp) => {
     const property = areaTemp.code.trimEnd()
-    if (!distributions[property]) {
-      distributions[property] = {
-        propertyCode: property,
-        costCode: areaTemp.p2.trimEnd(),
-        distributionPercentage: 0,
+    if (property !== '0') {
+      if (!distributions[property]) {
+        distributions[property] = {
+          propertyCode: property,
+          costCode: areaTemp.p2.trimEnd(),
+          distributionPercentage: 0,
+        }
       }
-    }
 
-    distributions[property].distributionPercentage +=
-      areaTemp.value / areaTempTotal
+      distributions[property].distributionPercentage +=
+        areaTemp.value / areaTempTotal
+    }
   })
 
   // If distributionPercentage is 0, there is no distribution. Set to 1.

@@ -1,8 +1,8 @@
 import fs from 'fs/promises'
-import config from '../common/config'
+import config from '../../../common/config'
 import { XMLParser } from 'fast-xml-parser'
 import path from 'path'
-import { InvoiceDataRow } from '../common/types'
+import { InvoiceDataRow } from '../../../common/types'
 import { logger } from 'onecore-utilities'
 
 const xmlParserOptions = {
