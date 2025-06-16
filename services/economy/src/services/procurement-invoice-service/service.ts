@@ -1,5 +1,5 @@
-import { getNewProcurementInvoiceRows } from '../../adapters/procurement-file-adapter'
-import { enrichProcurementInvoiceRows } from '../../adapters/xpand-db-adapter'
+import { getNewProcurementInvoiceRows } from './adapters/procurement-file-adapter'
+import { enrichProcurementInvoiceRows } from './adapters/xpand-db-adapter'
 import { InvoiceDataRow } from '../../common/types'
 
 const createVoucherNumbers = (invoiceDataRows: InvoiceDataRow[]) => {
