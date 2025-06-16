@@ -87,7 +87,7 @@ jobs:
         with:
           build-args: |
             VITE_API_URL=http://property-base
-            VITE_CORE_API_URL=http://core
+            VITE_CORE_API_URL=https://core-test-yg.mimer.nu
             VITE_KEYCLOAK_URL=https://auth-test.mimer.nu/realms/onecore-test
             VITE_KEYCLOAK_CLIENT_ID=onecore-test
             VITE_KEYCLOAK_REDIRECT_URI=https://property-tree-test.mimer.nu/callback
