@@ -68,7 +68,6 @@ export async function getParkingSpaceByRentalPropertyId(
   })
 
   // Don't return anything if no parking space is found in the data..
-  // If for example providing a contract number that is associated with an apartment.
   if (propertyStructureResponse?.parkingSpace === null) return null
 
   // Fetch the address associated with the parking space

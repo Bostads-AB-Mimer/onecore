@@ -1,9 +1,8 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
-import * as leaseAdapter from '../adapters/lease-adapter'
 import * as parkingSpacesAdapter from '../adapters/parking-spaces-adapter'
-import { getRentalPropertyIdFromLeaseId } from '@src/utils/leases'
 import { ParkingSpaceSchema } from '@src/types/parking-space'
+import { trimStrings } from '@src/utils/data-conversion'
 
 /**
  * @swagger
@@ -15,11 +14,11 @@ import { ParkingSpaceSchema } from '@src/types/parking-space'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /parking-spaces/by-lease-id/{id}:
+   * /parking-spaces/by-rental-id/{id}:
    *   get:
-   *     summary: Gets a list of parking space by lease id
+   *     summary: Gets a list of parking space by rental id
    *     description: |
-   *       Retrieves parking space from lease id.
+   *       Retrieves parking space from rental id.
    *     tags:
    *       - Parking Spaces
    *     parameters:
@@ -28,7 +27,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The lease id.
+   *         description: The rental id.
    *     responses:
    *       200:
    *         description: |
@@ -47,39 +46,21 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/parking-spaces/by-lease-id/:id', async (ctx) => {
+  router.get('(.*)/parking-spaces/by-rental-id/:id', async (ctx) => {
     const id = ctx.params.id
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /parking-spaces/by-lease-id/${id}`, metadata)
+    logger.info(`GET /parking-spaces/by-rental-id/${id}`, metadata)
 
     try {
-      // 1. Fetch the lease by lease id to check if it exists or not
-      const lease = await leaseAdapter.getLeaseById(id)
-
-      if (!lease) {
-        ctx.status = 404
-        ctx.body = {
-          reason: 'No lease found for the specified lease id',
-          ...metadata,
-        }
-        return
-      }
-
-      // 2. Extract the rental property id from the lease id the same way as in the lease service (string parsing).
-      const rentalPropertyId = getRentalPropertyIdFromLeaseId(
-        lease.contractNumber
-      )
-
-      // 3. Fetch the parking space associated With the rental property id (hyresid).
-      const parkingSpace =
-        await parkingSpacesAdapter.getParkingSpaceByRentalPropertyId(
-          rentalPropertyId
-        )
+      // Fetch the parking space associated with the rental property id
+      const parkingSpace = await parkingSpacesAdapter
+        .getParkingSpaceByRentalPropertyId(id)
+        .then(trimStrings)
 
       if (!parkingSpace) {
         ctx.status = 404
         ctx.body = {
-          reason: 'No parking space found for the specified lease id',
+          reason: 'No parking space found for the specified rental id',
           ...metadata,
         }
         return
@@ -91,7 +72,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (err) {
-      logger.error({ err }, 'Error fetching parking space by leaseId')
+      logger.error({ err }, 'Error fetching parking space by rental id')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
