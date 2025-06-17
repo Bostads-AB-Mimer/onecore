@@ -15,6 +15,7 @@ import {
   ResidenceSchema,
   RoomSchema,
   StaircaseSchema,
+  ResidenceByRentalIdSchema,
 } from '../schemas'
 import { LeaseStatus } from 'onecore-types'
 
@@ -127,6 +128,38 @@ describe('property-base-service', () => {
       const res = await request(app.callback()).get(`/propertyBase/residences`)
 
       expect(res.status).toBe(400)
+    })
+  })
+
+  describe('GET /propertyBase/residence/rental-id/:rentalId', () => {
+    it('returns 200 and a residence', async () => {
+      const residenceDetails = factory.residenceByRentalIdDetails.build()
+      const getResidenceDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/residence/rental-id/1234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getResidenceDetailsSpy).toHaveBeenCalled()
+      expect(() =>
+        ResidenceByRentalIdSchema.parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 404 if no residence is found', async () => {
+      const getResidenceDetailsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/residence/rental-id/1234`
+      )
+
+      expect(res.status).toBe(404)
+      expect(getResidenceDetailsSpy).toHaveBeenCalled()
     })
   })
 

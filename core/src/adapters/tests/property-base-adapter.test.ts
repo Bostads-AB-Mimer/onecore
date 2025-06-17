@@ -189,6 +189,60 @@ describe('property-base-adapter', () => {
     })
   })
 
+  describe('getResidenceByRentalId', () => {
+    it('returns err if request fails', async () => {
+      const residenceDetailsMock = factory.residenceByRentalIdDetails.build()
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getResidenceByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns not-found if residence is not found', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234`,
+          () => new HttpResponse(null, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getResidenceByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('not-found')
+    })
+
+    it('returns residence', async () => {
+      const residenceDetailsMock = factory.residenceByRentalIdDetails.build()
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234`,
+          () =>
+            HttpResponse.json(
+              {
+                content: residenceDetailsMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getResidenceByRentalId('1234')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residenceDetailsMock,
+      })
+    })
+  })
   describe('getResidenceDetails', () => {
     it('returns err if request fails', async () => {
       const residenceDetailsMock = factory.residenceDetails.build()

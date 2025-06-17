@@ -210,6 +210,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/residences/rental-id/{rentalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a residence by rental ID
+         * @description Returns a residence with the specified rental ID
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The rental ID of the residence */
+                    rentalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the residence */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GetResidenceByRentalIdResponse"];
+                    };
+                };
+                /** @description Residence not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/residences/{id}": {
         parameters: {
             query?: never;
@@ -1341,6 +1397,95 @@ export interface components {
             subletFeeAmount: number;
             disableQuantitiesBelowCompany: number;
             timestamp: string;
+        };
+        ResidenceByRentalId: {
+            id: string;
+            code: string;
+            name: string | null;
+            accessibility: {
+                wheelchairAccessible: boolean;
+                elevator: boolean;
+            };
+            features: {
+                hygieneFacility: string | null;
+            };
+            entrance: string | null;
+            deleted: boolean;
+            type: {
+                code: string;
+                name: string | null;
+                roomCount: number | null;
+                kitchen: number;
+            };
+            rentalInformation: {
+                apartmentNumber: string | null;
+                rentalId: string | null;
+                type: {
+                    code: string;
+                    name: string | null;
+                };
+            } | null;
+            property: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            building: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            areaSize: number | null;
+        };
+        GetResidenceByRentalIdResponse: {
+            content: {
+                id: string;
+                code: string;
+                name: string | null;
+                accessibility: {
+                    wheelchairAccessible: boolean;
+                    elevator: boolean;
+                };
+                features: {
+                    hygieneFacility: string | null;
+                };
+                entrance: string | null;
+                deleted: boolean;
+                type: {
+                    code: string;
+                    name: string | null;
+                    roomCount: number | null;
+                    kitchen: number;
+                };
+                rentalInformation: {
+                    apartmentNumber: string | null;
+                    rentalId: string | null;
+                    type: {
+                        code: string;
+                        name: string | null;
+                    };
+                } | null;
+                property: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                building: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                areaSize: number | null;
+            };
+            _links: {
+                self: {
+                    href: string;
+                };
+                link: {
+                    href: string;
+                    templated: boolean;
+                };
+            };
         };
     };
     responses: never;

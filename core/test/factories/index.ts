@@ -31,7 +31,10 @@ export {
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
 } from './application-profile'
 export { ResidenceFactory as residence } from './residence'
-export { ResidenceDetailsFactory as residenceDetails } from './residence-details'
+export {
+  ResidenceDetailsFactory as residenceDetails,
+  ResidenceByRentalIdDetailsFactory as residenceByRentalIdDetails,
+} from './residence-details'
 export { PropertyFactory as property } from './property'
 export { PropertyDetailsFactory as propertyDetails } from './property-details'
 export { StaircaseFactory as staircase } from './staircase'
