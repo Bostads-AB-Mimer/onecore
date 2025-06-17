@@ -351,15 +351,15 @@ export interface paths {
       };
     };
   };
-  "/parking-spaces/by-lease-id/{id}": {
+  "/parking-spaces/by-rental-id/{id}": {
     /**
-     * Gets a list of parking space by lease id
-     * @description Retrieves parking space from lease id.
+     * Gets a list of parking space by rental id
+     * @description Retrieves parking space from rental id.
      */
     get: {
       parameters: {
         path: {
-          /** @description The lease id. */
+          /** @description The rental id. */
           id: string;
         };
       };
