@@ -8,14 +8,18 @@ import {
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
+  getResidenceByRentalId,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
   ResidenceDetailedSchema,
   ResidenceSearchResult,
+  GetResidenceByRentalIdResponse,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
+
+type ResidenceDetails = z.infer<typeof ResidenceDetailedSchema>
 
 /**
  * @swagger
@@ -195,6 +199,99 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-id/{rentalId}:
+   *   get:
+   *     summary: Get a residence by rental ID
+   *     description: Returns a residence with the specified rental ID
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental ID of the residence
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the residence
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/GetResidenceByRentalIdResponse'
+   *       404:
+   *         description: Residence not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-id/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /residences/rental-id/${ctx.params.rentalId}`, metadata)
+
+    try {
+      const result = await getResidenceByRentalId(ctx.params.rentalId)
+      const areaSize = await getResidenceSizeByRentalId(ctx.params.rentalId)
+
+      const payload: GetResidenceByRentalIdResponse = {
+        content: {
+          id: result.propertyObject.residence.id,
+          code: result.propertyObject.residence.code,
+          name: result.propertyObject.residence.name,
+          entrance: result.propertyObject.residence.entrance,
+          accessibility: {
+            elevator: Boolean(result.propertyObject.residence.elevator),
+            wheelchairAccessible: Boolean(
+              result.propertyObject.residence.wheelchairAccessible
+            ),
+          },
+          features: {
+            hygieneFacility: result.propertyObject.residence.hygieneFacility,
+          },
+          deleted: Boolean(result.propertyObject.residence.deleted),
+          type: {
+            code: result.propertyObject.residence.residenceType.code,
+            name: result.propertyObject.residence.residenceType.name,
+            roomCount: result.propertyObject.residence.residenceType.roomCount,
+            kitchen: result.propertyObject.residence.residenceType.kitchen,
+          },
+          areaSize: areaSize?.value ?? null,
+          building: {
+            id: result.buildingId,
+            code: result.buildingCode,
+            name: result.buildingName,
+          },
+          property: {
+            id: result.propertyId,
+            code: result.propertyCode,
+            name: result.propertyName,
+          },
+          rentalInformation: {
+            rentalId: result.rentalId,
+            apartmentNumber:
+              result.propertyObject.rentalInformation.apartmentNumber,
+            type: {
+              code: result.propertyObject.rentalInformation
+                .rentalInformationType.code,
+              name: result.propertyObject.rentalInformation
+                .rentalInformationType.name,
+            },
+          },
+        },
+        ...metadata,
+      }
+
+      ctx.status = 200
+      ctx.body = payload
+    } catch (err) {
+      logger.error(err, 'Error fetching residence rental property info')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/{id}:
    *   get:
    *     summary: Get a residence by ID
@@ -223,7 +320,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  type ResidenceDetails = z.infer<typeof ResidenceDetailedSchema>
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id

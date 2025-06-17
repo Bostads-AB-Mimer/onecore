@@ -1,10 +1,11 @@
 import { Prisma } from '@prisma/client'
 import { map } from 'lodash'
+import { logger } from 'onecore-utilities'
+import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
-import { logger } from 'onecore-utilities'
 
 //todo: add types
 
@@ -57,6 +58,76 @@ const residenceSelect: Prisma.ResidenceSelect = {
   deleted: true,
   fromDate: true,
   toDate: true,
+}
+
+export const getResidenceByRentalId = async (rentalId: string) => {
+  try {
+    const propertyStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+      },
+      select: {
+        buildingCode: true,
+        buildingName: true,
+        propertyCode: true,
+        propertyName: true,
+        propertyId: true,
+        buildingId: true,
+        rentalId: true,
+        propertyObject: {
+          select: {
+            rentalInformation: {
+              select: {
+                apartmentNumber: true,
+                rentalInformationType: { select: { name: true, code: true } },
+              },
+            },
+            residence: {
+              select: {
+                id: true,
+                elevator: true,
+                entrance: true,
+                deleted: true,
+                code: true,
+                hygieneFacility: true,
+                name: true,
+                wheelchairAccessible: true,
+                residenceType: {
+                  select: {
+                    code: true,
+                    name: true,
+                    roomCount: true,
+                    kitchen: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    assert(propertyStructure, 'property-structure-not-found')
+    assert(propertyStructure.propertyObject, 'property-object-not-found')
+    assert(propertyStructure.propertyObject.residence, 'residence-not-found')
+    assert(
+      propertyStructure.propertyObject.rentalInformation,
+      'rentalinformation-not-found'
+    )
+
+    const {
+      propertyObject: { residence, rentalInformation },
+    } = propertyStructure
+
+    return trimStrings({
+      ...propertyStructure,
+      propertyObject: { residence, rentalInformation },
+    })
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getResidenceByRentalId')
+    throw err
+  }
 }
 
 export const getResidenceById = async (
