@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import {
   getResidenceById,
+  getResidenceSizeByRentalId,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
@@ -234,13 +235,15 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 404
         return
       }
-
       // TODO: find out why building is null in residence
 
       const rentalId =
         residence.propertyObject?.propertyStructures?.length > 0
           ? residence.propertyObject.propertyStructures[0].rentalId
           : null
+
+      // Get area size for the residence (yta)
+      const size = rentalId ? await getResidenceSizeByRentalId(rentalId) : null
 
       const mappedResidence = {
         id: residence.id,
@@ -330,7 +333,8 @@ export const routes = (router: KoaRouter) => {
           code: residence.propertyObject.propertyStructures[0].buildingCode,
           name: residence.propertyObject.propertyStructures[0].buildingName,
         },
-        malarEnergiFacilityId: residence.comments?.[0].text || null,
+        malarEnergiFacilityId: residence.comments?.[0]?.text || null,
+        size: size?.value || null,
       } satisfies ResidenceDetails
 
       ctx.status = 200
@@ -339,6 +343,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (err) {
+      logger.error(err, 'Error fetching residence by ID')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

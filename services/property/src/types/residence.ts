@@ -125,6 +125,7 @@ export const ResidenceDetailedSchema = z.object({
     code: z.string().nullable(),
   }),
   malarEnergiFacilityId: z.string().nullable(),
+  size: z.number().nullable(),
 })
 
 export type ExternalResidence = z.infer<typeof ResidenceSchema>
