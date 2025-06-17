@@ -115,6 +115,36 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-id/{rentalId}": {
+    /**
+     * Get a residence by rental ID
+     * @description Returns a residence with the specified rental ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental ID of the residence */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the residence */
+        200: {
+          content: {
+            "application/json": components["schemas"]["GetResidenceByRentalIdResponse"];
+          };
+        };
+        /** @description Residence not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/{id}": {
     /**
      * Get a residence by ID
@@ -905,6 +935,95 @@ export interface components {
       subletFeeAmount: number;
       disableQuantitiesBelowCompany: number;
       timestamp: string;
+    };
+    ResidenceByRentalId: {
+      id: string;
+      code: string;
+      name: string | null;
+      accessibility: {
+        wheelchairAccessible: boolean;
+        elevator: boolean;
+      };
+      features: {
+        hygieneFacility: string | null;
+      };
+      entrance: string | null;
+      deleted: boolean;
+      type: {
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
+      };
+      rentalInformation: ({
+        apartmentNumber: string | null;
+        rentalId: string | null;
+        type: {
+          code: string;
+          name: string | null;
+        };
+      }) | null;
+      property: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      building: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      areaSize: number | null;
+    };
+    GetResidenceByRentalIdResponse: {
+      content: {
+        id: string;
+        code: string;
+        name: string | null;
+        accessibility: {
+          wheelchairAccessible: boolean;
+          elevator: boolean;
+        };
+        features: {
+          hygieneFacility: string | null;
+        };
+        entrance: string | null;
+        deleted: boolean;
+        type: {
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+        };
+        rentalInformation: ({
+          apartmentNumber: string | null;
+          rentalId: string | null;
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        property: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        building: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        areaSize: number | null;
+      };
+      _links: {
+        self: {
+          href: string;
+        };
+        link: {
+          href: string;
+          templated: boolean;
+        };
+      };
     };
   };
   responses: never;

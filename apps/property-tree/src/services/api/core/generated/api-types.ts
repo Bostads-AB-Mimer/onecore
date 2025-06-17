@@ -1502,7 +1502,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: Record<string, never>[];
+              content?: components["schemas"]["RentalObject"][];
             };
           };
         };
@@ -2143,6 +2143,48 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/residence/rental-id/{rentalId}": {
+    /**
+     * Get residence data by residence rental id
+     * @description Retrieves residence data by residence rental id
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id for the residence to fetch */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved residence. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceByRentalIdDetails"];
+            };
+          };
+        };
+        /** @description Residence not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Residence not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve residence data. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/propertyBase/residence/{residenceId}": {
     /**
      * Get residence data by residenceId
@@ -2417,6 +2459,7 @@ export interface components {
       dueDate: ("null" | null) | string;
       rentalObjectCode: string;
       status: string;
+      hiddenFromMyPages?: boolean;
       workOrderRows: ({
           description: string | null;
           locationCode: string | null;
@@ -2647,6 +2690,45 @@ export interface components {
         timestamp: string;
       }) | null;
     };
+    ResidenceByRentalIdDetails: {
+      id: string;
+      code: string;
+      name: string | null;
+      accessibility: {
+        wheelchairAccessible: boolean;
+        elevator: boolean;
+      };
+      features: {
+        hygieneFacility: string | null;
+      };
+      entrance: string | null;
+      deleted: boolean;
+      type: {
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
+      };
+      rentalInformation: ({
+        apartmentNumber: string | null;
+        rentalId: string | null;
+        type: {
+          code: string;
+          name: string | null;
+        };
+      }) | null;
+      property: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      building: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      areaSize: number | null;
+    };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
       q: string;
@@ -2754,6 +2836,8 @@ export interface components {
     });
     /** @description Represents a vacant parking space. */
     VacantParkingSpace: Record<string, never>;
+    /** @description Represents a rental object. */
+    RentalObject: Record<string, never>;
   };
   responses: never;
   parameters: never;
