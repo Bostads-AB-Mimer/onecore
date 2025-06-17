@@ -414,6 +414,8 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   description: Error message.
+   *     security:
+   *       - bearerAuth: []
    * components:
    *   schemas:
    *     VacantParkingSpace:
@@ -685,6 +687,8 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   description: The error message.
+   *     security:
+   *       - bearerAuth: []
    * components:
    *   schemas:
    *     RentalObject:
