@@ -67,6 +67,74 @@ export interface paths {
       };
     };
   };
+  "/auth/login": {
+    /**
+     * Redirects to Keycloak login
+     * @description Redirects the user to the Keycloak login page
+     */
+    get: {
+      responses: {
+        /** @description Redirect to Keycloak login */
+        302: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/auth/callback": {
+    /**
+     * OAuth callback endpoint
+     * @description Handles the OAuth callback from Keycloak
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            code?: string;
+            redirectUri?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description User profile information */
+        200: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/auth/logout": {
+    /**
+     * Logout endpoint
+     * @description Clears authentication cookies and redirects to Keycloak logout
+     */
+    get: {
+      responses: {
+        /** @description Redirect to login page */
+        302: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/auth/profile": {
+    /**
+     * Get user profile
+     * @description Returns the authenticated user's profile information
+     */
+    get: {
+      responses: {
+        /** @description User profile information */
+        200: {
+          content: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+      };
+    };
+  };
   "openapi": {
   };
   "/health": {
@@ -1095,6 +1163,32 @@ export interface paths {
       };
     };
   };
+  "/listings": {
+    /**
+     * Get listings
+     * @description Retrieves a list of listings.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description true for published listings, false for unpublished listings. */
+          published?: boolean;
+          /** @description ie "Bilplats (Intern)" or "Bilplats (Extern)". */
+          waitingListType?: string;
+          /** @description A contact code to filter out listings that are not valid to rent for the contact. */
+          validToRentForContactCode?: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with the requested list of listings. */
+        200: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
   "/rentalproperties/{id}/floorplan": {
     /**
      * Get floor plan for a rental property
@@ -1290,6 +1384,33 @@ export interface paths {
       };
     };
   };
+  "/vacant-parkingspaces": {
+    /**
+     * Get all vacant parking spaces
+     * @description Retrieves a list of all vacant parking spaces.
+     */
+    get: {
+      responses: {
+        /** @description A list of vacant parking spaces. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["VacantParkingSpace"][];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve vacant parking spaces. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description Error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/parkingspaces/{parkingSpaceId}/leases": {
     /**
      * Create lease for an external parking space
@@ -1364,6 +1485,33 @@ export interface paths {
             "application/json": {
               /** @example A technical error has occured. */
               message?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-object/by-code/{rentalObjectCode}": {
+    /**
+     * Get a rental object
+     * @description Fetches a rental object by Rental Object Code.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
             };
           };
         };
@@ -2320,27 +2468,28 @@ export interface components {
         }[];
     };
     WorkOrder: {
-      AccessCaption: string;
-      Caption: string;
-      Code: string;
-      ContactCode: string;
-      Description: string;
-      DetailsCaption: string;
-      ExternalResource: boolean;
-      Id: string;
+      accessCaption: string;
+      caption: string;
+      code: string;
+      contactCode: string;
+      description: string;
+      detailsCaption: string;
+      externalResource: boolean;
+      id: string;
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string;
+      lastChanged: string;
+      priority: string;
       /** Format: date-time */
-      Registered: string;
-      RentalObjectCode: string;
-      Status: string;
-      WorkOrderRows: ({
-          Description: string | null;
-          LocationCode: string | null;
-          EquipmentCode: string | null;
+      registered: string;
+      dueDate: ("null" | null) | string;
+      rentalObjectCode: string;
+      status: string;
+      workOrderRows: ({
+          description: string | null;
+          locationCode: string | null;
+          equipmentCode: string | null;
         })[];
-      Messages?: {
+      messages?: {
           id: number;
           body: string;
           messageType: string;
@@ -2348,21 +2497,22 @@ export interface components {
           /** Format: date-time */
           createDate: string;
         }[];
-      Url?: string;
+      url?: string;
     };
     XpandWorkOrder: {
-      AccessCaption: string;
-      Caption: string | null;
-      Code: string;
-      ContactCode: string;
-      Id: string;
+      accessCaption: string;
+      caption: string | null;
+      code: string;
+      contactCode: string | null;
+      id: string;
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string | null;
+      lastChanged: string;
+      priority: string | null;
       /** Format: date-time */
-      Registered: string;
-      RentalObjectCode: string;
-      Status: string;
+      registered: string;
+      dueDate: ("null" | null) | string;
+      rentalObjectCode: string;
+      status: string;
     };
     Company: {
       id: string;
@@ -2503,6 +2653,7 @@ export interface components {
         code: string | null;
       };
       malarEnergiFacilityId: string | null;
+      size: number | null;
     };
     Staircase: {
       id: string;
@@ -2677,6 +2828,8 @@ export interface components {
         name: string | null;
       };
     });
+    /** @description Represents a vacant parking space. */
+    VacantParkingSpace: Record<string, never>;
   };
   responses: never;
   parameters: never;

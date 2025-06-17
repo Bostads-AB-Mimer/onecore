@@ -64,8 +64,7 @@ export function ResidenceView() {
               Hyresgäst
             </TabsTrigger>
             <TabsTrigger
-              disabled
-              value="issues"
+              value="workorders"
               className="flex items-center gap-1.5"
             >
               <MessageSquare className="h-4 w-4" />
@@ -88,12 +87,18 @@ export function ResidenceView() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="workorders">
+            <Card>
+              <CardContent className="p-4">
+                {residence.propertyObject.rentalId && (
+                  <ResidenceWorkOrders
+                    rentalId={residence.propertyObject.rentalId}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
-      </div>
-      <div className="lg:col-span-2 space-y-6">
-        {residence.propertyObject.rentalId && (
-          <ResidenceWorkOrders rentalId={residence.propertyObject.rentalId} />
-        )}
       </div>
     </div>
   )
