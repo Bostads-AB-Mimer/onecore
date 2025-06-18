@@ -1,85 +1,84 @@
 model RentalInformation {
-  @@map("hyinf")
-  id String @id(map: "pkhyinf") @map("keyhyinf") @db.Char(15)
-  propertyObjectId String @unique(map: "akhyinf1") @map("keycmobj") @db.Char(15)
-  rentalInformationTypeId String @map("keyhyint") @db.Char(15)
+  id                      String  @id(map: "pkhyinf") @map("keyhyinf") @db.Char(15)
+  propertyObjectId        String  @unique(map: "akhyinf1") @map("keycmobj") @db.Char(15)
+  rentalInformationTypeId String  @map("keyhyint") @db.Char(15)
+  apartmentNumber         String? @map("lmnr") @db.Char(5)
   // Exclude unused fields
 
-// shownByUserId String? @map("keybkvis") @db.Char(15) // TODO: Confirm relation name if changed
-// indexSeriesId String? @map("keycmind") @db.Char(15)
-// indexValueId String? @map("keycminv") @db.Char(15)
-// quantityTypeId String? @map("keycmvat") @db.Char(15)
-// quantityTypeId2 String? @map("keycmvat2") @db.Char(15)
-// quantityTypeId3 String? @map("keycmvat3") @db.Char(15)
-// quantityTypeId4 String? @map("keycmvat4") @db.Char(15)
-// taxAreaId String? @map("keyhyvaa") @db.Char(15)
-// heatingId String? @map("keybahea") @db.Char(15)
-// renovationExemptionId String? @map("keybarex") @db.Char(15)
-// creditTemplateId String? @map("keycmcte") @db.Char(15)
-// rentId String? @map("hyresid") @db.VarChar(30)
-// generation Int? @map("generation") @db.SmallInt
-// startGeneration Int? @map("startgen") @db.TinyInt
-// apartmentNumber String? @map("lmnr") @db.Char(5)
-// housingNumber String? @map("prynumber") @db.VarChar(30)
-// shareNumber String? @map("shareno") @db.VarChar(60)
-// tenureForm Int? @map("upplform") @db.TinyInt
-// currentTenureForm Int? @map("upplformnu") @db.TinyInt
-// isShortTermRental Int @map("shortstay") @db.TinyInt
-// sharePercentage Decimal? @map("andelstal") @db.Decimal(22, 7)
-// rentDistributionFactor Decimal? @map("aixrent") @db.Decimal(8, 7)
-// shareValue Float? @map("sharevalue") @db.Money
-// voteCount Int? @map("votecount") @db.TinyInt
-// depositAdvance Float? @map("insatspre") @db.Money
-// depositForfeit Float? @map("insatsfors") @db.Money // deposit Float? @map("insats") @db.Money // depositDate DateTime? @map("inputdate") @db.DateTime
-// tenureFee Float? @map("upplavg") @db.Money
-// tenureFeeDate DateTime? @map("letfeedate") @db.DateTime
-// irrevocableCapitalContribution Float? @map("oaterkap") @db.Money
-// originalAnnualFee Float? @map("planarsavg") @db.Money
-// firstOccupancyDate DateTime? @map("inflyttdat") @db.DateTime
-// queueManagement Int? @map("direktuth") @db.TinyInt
-// baseRentAmount Float? @map("akthyratot") @db.Money
-// contractBaseRent Float? @map("konthyra") @db.Money
-// isDraft Int @default(0, map: "DF__hyinf__draft__535320DE") @map("draft") @db.TinyInt
-// doNotInvoiceDeposit Int @map("ejbrinsats") @db.TinyInt
-// doNotAllocateToInternalFund Int @map("ejbrfnd") @db.TinyInt
-// statisticsFrom DateTime @map("statfrom") @db.DateTime
-// statisticsTo DateTime @map("stattom") @db.DateTime
-// rentLossFrom DateTime? @map("lossfrom") @db.DateTime
-// rentLossTo DateTime? @map("lossto") @db.DateTime
-// salesStop Int @map("saljstopp") @db.TinyInt
-// housingEvaluationType Int @default(0, map: "DF__hyinf__pointtype__54474517") @map("pointtype") @db.TinyInt
-// housingAllowance Int @default(0, map: "DF__hyinf__allowance__553B6950") @map("allowance") @db.TinyInt
-// housingEnergyClass Int @default(0, map: "DF__hyinf__fohenergy__562F8D89") @map("fohenergyc") @db.TinyInt
-// targetRentPercentage Decimal? @map("targetperc") @db.Decimal(4, 1)
-// targetRentAmount Float? @map("targetrent") @db.Money
-// evaluationPoints Int? @map("points") @db.SmallInt
-// minOccupants Int? @map("persmin") @db.TinyInt
-// maxOccupants Int? @map("persmax") @db.TinyInt
-// minAge Int? @map("persagemin") @db.TinyInt
-// maxAge Int? @map("persagemax") @db.TinyInt
-// minTenureMonths Int? @map("tentimemin") @db.TinyInt
-// minIncomeRentFactor Decimal? @map("increntmin") @db.Decimal(4, 2)
-// additionalInfo String? @map("otherinfo") @db.VarChar(200)
-// renovationExemptionComment String? @map("rexcomment") @db.VarChar(200)
-// firstClassId Int @default(0, map: "DF__hyinf__fcobject__5723B1C2") @map("fcobject") @db.TinyInt
-// upgradeStandard Int @default(0, map: "DF__hyinf__fcstatus__5817D5FB") @map("fcstatus") @db.TinyInt
-// upgradeNeed Int @default(0, map: "DF__hyinf__fcupgneed__590BFA34") @map("fcupgneed") @db.TinyInt
-// lastUpgradeDate DateTime? @map("fcdate") @db.DateTime
-// upgradeComment String? @map("fccomment") @db.VarChar(250)
-// isBGUCovered Int @default(0, map: "DF__hyinf__bguused__5A001E6D") @map("bguused") @db.TinyInt
-// hasLakeView Int @default(0, map: "DF__hyinf__lakeview__5AF442A6") @map("lakeview") @db.TinyInt
-// vatRate Decimal @default(0, map: "DF__hyinf__vatstat__5BE866DF") @map("vatstat") @db.Decimal(4, 2)
-// purposeLabel Int @default(1, map: "DF__hyinf__label__5CDC8B18") @map("label") @db.TinyInt
-// isRenovated Int @default(0, map: "DF__hyinf__renovatio__5DD0AF51") @map("renovation") @db.TinyInt
-// daebStatus Int @default(1, map: "DF__hyinf__daeb__5EC4D38A") @map("daeb") @db.TinyInt
-// standardYearRent Float? @map("stdyrrent") @db.Money
-// discountFee Float @default(0, map: "DF__hyinf__discfee__5FB8F7C3") @map("discfee") @db.Money
-// rentCalculationMethod Int @default(0, map: "DF__hyinf__rentcalcm__60AD1BFC") @map("rentcalcm") @db.TinyInt
-// deleteMark Int @default(0, map: "DF__hyinf__deletemar__61A14035") @map("deletemark") @db.TinyInt
-// timestamp String @map("timestamp") @db.Char(10)
+  // shownByUserId String? @map("keybkvis") @db.Char(15) // TODO: Confirm relation name if changed
+  // indexSeriesId String? @map("keycmind") @db.Char(15)
+  // indexValueId String? @map("keycminv") @db.Char(15)
+  // quantityTypeId String? @map("keycmvat") @db.Char(15)
+  // quantityTypeId2 String? @map("keycmvat2") @db.Char(15)
+  // quantityTypeId3 String? @map("keycmvat3") @db.Char(15)
+  // quantityTypeId4 String? @map("keycmvat4") @db.Char(15)
+  // taxAreaId String? @map("keyhyvaa") @db.Char(15)
+  // heatingId String? @map("keybahea") @db.Char(15)
+  // renovationExemptionId String? @map("keybarex") @db.Char(15)
+  // creditTemplateId String? @map("keycmcte") @db.Char(15)
+  // rentId String? @map("hyresid") @db.VarChar(30)
+  // generation Int? @map("generation") @db.SmallInt
+  // startGeneration Int? @map("startgen") @db.TinyInt
+  // housingNumber String? @map("prynumber") @db.VarChar(30)
+  // shareNumber String? @map("shareno") @db.VarChar(60)
+  // tenureForm Int? @map("upplform") @db.TinyInt
+  // currentTenureForm Int? @map("upplformnu") @db.TinyInt
+  // isShortTermRental Int @map("shortstay") @db.TinyInt
+  // sharePercentage Decimal? @map("andelstal") @db.Decimal(22, 7)
+  // rentDistributionFactor Decimal? @map("aixrent") @db.Decimal(8, 7)
+  // shareValue Float? @map("sharevalue") @db.Money
+  // voteCount Int? @map("votecount") @db.TinyInt
+  // depositAdvance Float? @map("insatspre") @db.Money
+  // depositForfeit Float? @map("insatsfors") @db.Money // deposit Float? @map("insats") @db.Money // depositDate DateTime? @map("inputdate") @db.DateTime
+  // tenureFee Float? @map("upplavg") @db.Money
+  // tenureFeeDate DateTime? @map("letfeedate") @db.DateTime
+  // irrevocableCapitalContribution Float? @map("oaterkap") @db.Money
+  // originalAnnualFee Float? @map("planarsavg") @db.Money
+  // firstOccupancyDate DateTime? @map("inflyttdat") @db.DateTime
+  // queueManagement Int? @map("direktuth") @db.TinyInt
+  // baseRentAmount Float? @map("akthyratot") @db.Money
+  // contractBaseRent Float? @map("konthyra") @db.Money
+  // isDraft Int @default(0, map: "DF__hyinf__draft__535320DE") @map("draft") @db.TinyInt
+  // doNotInvoiceDeposit Int @map("ejbrinsats") @db.TinyInt
+  // doNotAllocateToInternalFund Int @map("ejbrfnd") @db.TinyInt
+  // statisticsFrom DateTime @map("statfrom") @db.DateTime
+  // statisticsTo DateTime @map("stattom") @db.DateTime
+  // rentLossFrom DateTime? @map("lossfrom") @db.DateTime
+  // rentLossTo DateTime? @map("lossto") @db.DateTime
+  // salesStop Int @map("saljstopp") @db.TinyInt
+  // housingEvaluationType Int @default(0, map: "DF__hyinf__pointtype__54474517") @map("pointtype") @db.TinyInt
+  // housingAllowance Int @default(0, map: "DF__hyinf__allowance__553B6950") @map("allowance") @db.TinyInt
+  // housingEnergyClass Int @default(0, map: "DF__hyinf__fohenergy__562F8D89") @map("fohenergyc") @db.TinyInt
+  // targetRentPercentage Decimal? @map("targetperc") @db.Decimal(4, 1)
+  // targetRentAmount Float? @map("targetrent") @db.Money
+  // evaluationPoints Int? @map("points") @db.SmallInt
+  // minOccupants Int? @map("persmin") @db.TinyInt
+  // maxOccupants Int? @map("persmax") @db.TinyInt
+  // minAge Int? @map("persagemin") @db.TinyInt
+  // maxAge Int? @map("persagemax") @db.TinyInt
+  // minTenureMonths Int? @map("tentimemin") @db.TinyInt
+  // minIncomeRentFactor Decimal? @map("increntmin") @db.Decimal(4, 2)
+  // additionalInfo String? @map("otherinfo") @db.VarChar(200)
+  // renovationExemptionComment String? @map("rexcomment") @db.VarChar(200)
+  // firstClassId Int @default(0, map: "DF__hyinf__fcobject__5723B1C2") @map("fcobject") @db.TinyInt
+  // upgradeStandard Int @default(0, map: "DF__hyinf__fcstatus__5817D5FB") @map("fcstatus") @db.TinyInt
+  // upgradeNeed Int @default(0, map: "DF__hyinf__fcupgneed__590BFA34") @map("fcupgneed") @db.TinyInt
+  // lastUpgradeDate DateTime? @map("fcdate") @db.DateTime
+  // upgradeComment String? @map("fccomment") @db.VarChar(250)
+  // isBGUCovered Int @default(0, map: "DF__hyinf__bguused__5A001E6D") @map("bguused") @db.TinyInt
+  // hasLakeView Int @default(0, map: "DF__hyinf__lakeview__5AF442A6") @map("lakeview") @db.TinyInt
+  // vatRate Decimal @default(0, map: "DF__hyinf__vatstat__5BE866DF") @map("vatstat") @db.Decimal(4, 2)
+  // purposeLabel Int @default(1, map: "DF__hyinf__label__5CDC8B18") @map("label") @db.TinyInt
+  // isRenovated Int @default(0, map: "DF__hyinf__renovatio__5DD0AF51") @map("renovation") @db.TinyInt
+  // daebStatus Int @default(1, map: "DF__hyinf__daeb__5EC4D38A") @map("daeb") @db.TinyInt
+  // standardYearRent Float? @map("stdyrrent") @db.Money
+  // discountFee Float @default(0, map: "DF__hyinf__discfee__5FB8F7C3") @map("discfee") @db.Money
+  // rentCalculationMethod Int @default(0, map: "DF__hyinf__rentcalcm__60AD1BFC") @map("rentcalcm") @db.TinyInt
+  // deleteMark Int @default(0, map: "DF__hyinf__deletemar__61A14035") @map("deletemark") @db.TinyInt
+  // timestamp String @map("timestamp") @db.Char(10)
 
-// heating Heating? @relation(fields: [heatingId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkhyinfbahea")
-// creditTemplate CreditTemplate? @relation(fields: [creditTemplateId], references: [id], onUpdate: NoAction, map: "fkhyinfcmcte")
+  // heating Heating? @relation(fields: [heatingId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkhyinfbahea")
+  // creditTemplate CreditTemplate? @relation(fields: [creditTemplateId], references: [id], onUpdate: NoAction, map: "fkhyinfcmcte")
 
   // TODO: change relations when knowing the new model names
   // indexSeries cmind? @relation(fields: [indexSeriesId], references: [keycmind], onDelete: NoAction, onUpdate: NoAction, map: "fkhyinfkeycmind")
@@ -90,16 +89,18 @@ model RentalInformation {
   // quantityType3 cmvat_hyinf_keycmvat3Tocmvat cmvat? @relation("hyinf_keycmvat3Tocmvat", fields: [quantityTypeId3], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkhyinfkeycmvat3")
   // quantityType4 cmvat_hyinf_keycmvat4Tocmvat cmvat? @relation("hyinf_keycmvat4Tocmvat", fields: [quantityTypeId4], references: [keycmvat], onDelete: NoAction, onUpdate: NoAction, map: "fkhyinfkeycmvat4")
   rentalInformationType RentalInformationType @relation(fields: [rentalInformationTypeId], references: [id], onUpdate: NoAction, map: "fkhyinfkeyhyint")
-  propertyObject PropertyObject @relation("PropertyObjectToRentalInformation", fields: [propertyObjectId], references: [id], map: "fkhyinfkeycmobj")
-// @@index([heatingId], map: "fkhyinfbahea")
-// @@index([shownByUserId], map: "fkhyinfbkvis")
-// @@index([creditTemplateId], map: "fkhyinfcmcte")
-// @@index([indexSeriesId], map: "fkhyinfcmind")
-// @@index([indexValueId], map: "fkhyinfcminv")
-// @@index([quantityTypeId], map: "fkhyinfcmvat")
-// @@index([quantityTypeId2], map: "fkhyinfcmvat2")
-// @@index([quantityTypeId3], map: "fkhyinfcmvat3")
-// @@index([quantityTypeId4], map: "fkhyinfcmvat4")
-// @@index([rentalInformationTypeId], map: "fkhyinfhyint")
-// @@index([rentId], map: "inhyinf_2J70GWSR9")
+  propertyObject        PropertyObject        @relation("PropertyObjectToRentalInformation", fields: [propertyObjectId], references: [id], map: "fkhyinfkeycmobj")
+  // @@index([heatingId], map: "fkhyinfbahea")
+  // @@index([shownByUserId], map: "fkhyinfbkvis")
+  // @@index([creditTemplateId], map: "fkhyinfcmcte")
+  // @@index([indexSeriesId], map: "fkhyinfcmind")
+  // @@index([indexValueId], map: "fkhyinfcminv")
+  // @@index([quantityTypeId], map: "fkhyinfcmvat")
+  // @@index([quantityTypeId2], map: "fkhyinfcmvat2")
+  // @@index([quantityTypeId3], map: "fkhyinfcmvat3")
+  // @@index([quantityTypeId4], map: "fkhyinfcmvat4")
+  // @@index([rentalInformationTypeId], map: "fkhyinfhyint")
+  // @@index([rentId], map: "inhyinf_2J70GWSR9")
+
+  @@map("hyinf")
 }
