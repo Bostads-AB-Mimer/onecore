@@ -61,5 +61,5 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
     }
   })
 
-  return trimStrings(maintenanceUnitPropertyStructuresMapped)
+  return maintenanceUnitPropertyStructuresMapped
 }
