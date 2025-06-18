@@ -2,9 +2,11 @@ name: Lint and Type Check
 
 on:
   pull_request:
-    branches: ['**']
+    branches:
+      - main
   push:
-    branches: ['main']
+    branches:
+      - main
   workflow_call:
 
 jobs:
