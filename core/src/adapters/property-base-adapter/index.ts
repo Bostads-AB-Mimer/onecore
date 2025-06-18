@@ -284,7 +284,7 @@ export async function getMaintenanceUnitsForRentalProperty(
 > {
   try {
     const fetchResponse = await client().GET(
-      '/maintenance-units/by-rental-property/{id}',
+      '/maintenance-units/by-rental-id/{id}',
       {
         params: { path: { id: rentalPropertyId } },
       }

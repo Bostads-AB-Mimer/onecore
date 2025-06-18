@@ -4,1563 +4,1563 @@
  */
 
 export interface paths {
-  openapi: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/components': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Gets a list of components for a maintenance unit
-     * @description Retrieves all components associated with a specific maintenance unit code.
-     *     Components are returned ordered by installation date (newest first).
-     *     Each component includes details about its type, category, manufacturer,
-     *     and associated maintenance unit information.
-     *
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The unique code identifying the maintenance unit. */
-          maintenanceUnit: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the components list. Returns an array of component objects
-         *     containing details like ID, code, name, manufacturer, installation date, etc.
-         *      */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Component'][]
-            }
-          }
-        }
-        /** @description Invalid maintenance unit code provided */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description No components found for the specified maintenance unit */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/residences': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get residences by building code, optionally filtered by staircase code.
-     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The building code of the building. */
-          buildingCode: string
-          /** @description The code of the staircase (optional). */
-          staircaseCode?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the residences. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Residence'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/residences/search': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Search residences
-     * @description Retrieves a list of all real estate residences by rental object id.
-     *
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The search query. */
-          q?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved list of residences. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['ResidenceSearchResult'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/residences/rental-id/{rentalId}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a residence by rental ID
-     * @description Returns a residence with the specified rental ID
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The rental ID of the residence */
-          rentalId: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the residence */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['GetResidenceByRentalIdResponse']
-          }
-        }
-        /** @description Residence not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/residences/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a residence by ID
-     * @description Returns a residence with the specified ID
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the residence */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the residence */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['ResidenceDetails']
-            }
-          }
-        }
-        /** @description Residence not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/buildings': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get all buildings for a specific property
-     * @description Retrieves all buildings associated with a given property code.
-     *     Returns detailed information about each building including its code, name,
-     *     construction details, and associated property information.
-     *
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The code of the property. */
-          propertyCode: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the buildings. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/buildings/search': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Search buildings
-     * @description Retrieves all buildings associated with a given name.
-     *     Returns detailed information about each building including its code, name,
-     *     construction details, and associated property information.
-     *
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The search query. */
-          q: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the buildings. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/buildings/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get detailed information about a specific building
-     * @description Retrieves comprehensive information about a building using its unique building code.
-     *     Returns details including construction year, renovation history, insurance information,
-     *     and associated property data. The building code must be at least 7 characters long.
-     *
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The unique id of the building */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved building information */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building']
-            }
-          }
-        }
-        /** @description Building not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/properties': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a list of all properties belonging to a company
-     * @description Retrieves a list of all real estate properties belonging to a specific company.
-     *     Can be filtered by tract if provided. Returns basic property information
-     *     including property ID, code, tract, and designation.
-     *
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The code of the company that owns the properties. */
-          companyCode: string
-          /** @description Optional filter to get properties in a specific tract. */
-          tract?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved list of properties. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Property'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/properties/search': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Search properties
-     * @description Retrieves a list of all real estate properties by name.
-     *
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The search query. */
-          q?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved list of properties. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Property'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/properties/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get detailed information about a specific property
-     * @description Retrieves comprehensive information about a real estate property using its unique identifier.
-     *     Returns detailed property information including property code, tract, designation,
-     *     and associated property objects.
-     *
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the property. */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the property. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['PropertyDetails']
-            }
-          }
-        }
-        /** @description Property not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/staircases': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Gets staircases belonging to a building by building code
-     * @description Returns the staircases belonging to the building.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The building code of the building. */
-          buildingCode: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the staircases. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Staircase'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/rooms': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get rooms by residence id.
-     * @description Returns all rooms belonging to a residence.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The id of the residence. */
-          residenceId: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the rooms. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Room'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/rooms/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a room by ID
-     * @description Returns a room with the specified ID
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the room */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the room */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': components['schemas']['Room']
-          }
-        }
-        /** @description Room not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/companies': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a list of all companies
-     * @description Retrieves a list of all companies in the system.
-     *     Returns the base company information
-     *
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved list of companies */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['Company'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/companies/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get detailed information about a specific company
-     * @description Retrieves comprehensive information about a company using its unique identifier.
-     *
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the company. */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the company. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['CompanyDetails']
-            }
-          }
-        }
-        /** @description Company not found */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/maintenance-units/by-rental-property/{id}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get all maintenance units for a specific rental property id
-     * @description Retrieves all maintenance units associated with a given rental property id.
-     *
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the rental property for which to retrieve maintenance units. */
-          id: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successfully retrieved the maintenance units. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-        /** @description Internal server error. */
-        500: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/health': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Check system health status
-     * @description Retrieves the health status of the system and its subsystems.
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Successful response with system health status */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'application/json': {
-              /**
-               * @description Name of the system.
-               * @example core
-               */
-              name?: string
-              /**
-               * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
-               * @example active
-               */
-              status?: string
-              subsystems?: {
-                /** @description Name of the subsystem. */
-                name?: string
-                /**
-                 * @description Status of the subsystem.
-                 * @enum {string}
-                 */
-                status?: 'active' | 'impaired' | 'failure' | 'unknown'
-                /** @description Additional details about the subsystem status. */
-                details?: string
-              }[]
-            }
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
+    openapi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gets a list of components for a maintenance unit
+         * @description Retrieves all components associated with a specific maintenance unit code.
+         *     Components are returned ordered by installation date (newest first).
+         *     Each component includes details about its type, category, manufacturer,
+         *     and associated maintenance unit information.
+         *
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The unique code identifying the maintenance unit. */
+                    maintenanceUnit: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the components list. Returns an array of component objects
+                 *     containing details like ID, code, name, manufacturer, installation date, etc.
+                 *      */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Component"][];
+                        };
+                    };
+                };
+                /** @description Invalid maintenance unit code provided */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No components found for the specified maintenance unit */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/residences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get residences by building code, optionally filtered by staircase code.
+         * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The building code of the building. */
+                    buildingCode: string;
+                    /** @description The code of the staircase (optional). */
+                    staircaseCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the residences. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Residence"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/residences/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search residences
+         * @description Retrieves a list of all real estate residences by rental object id.
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The search query. */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of residences. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["ResidenceSearchResult"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/residences/rental-id/{rentalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a residence by rental ID
+         * @description Returns a residence with the specified rental ID
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The rental ID of the residence */
+                    rentalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the residence */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GetResidenceByRentalIdResponse"];
+                    };
+                };
+                /** @description Residence not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/residences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a residence by ID
+         * @description Returns a residence with the specified ID
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the residence */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the residence */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["ResidenceDetails"];
+                        };
+                    };
+                };
+                /** @description Residence not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/buildings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all buildings for a specific property
+         * @description Retrieves all buildings associated with a given property code.
+         *     Returns detailed information about each building including its code, name,
+         *     construction details, and associated property information.
+         *
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The code of the property. */
+                    propertyCode: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the buildings. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Building"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/buildings/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search buildings
+         * @description Retrieves all buildings associated with a given name.
+         *     Returns detailed information about each building including its code, name,
+         *     construction details, and associated property information.
+         *
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The search query. */
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the buildings. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Building"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/buildings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get detailed information about a specific building
+         * @description Retrieves comprehensive information about a building using its unique building code.
+         *     Returns details including construction year, renovation history, insurance information,
+         *     and associated property data. The building code must be at least 7 characters long.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The unique id of the building */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved building information */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Building"];
+                        };
+                    };
+                };
+                /** @description Building not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a list of all properties belonging to a company
+         * @description Retrieves a list of all real estate properties belonging to a specific company.
+         *     Can be filtered by tract if provided. Returns basic property information
+         *     including property ID, code, tract, and designation.
+         *
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The code of the company that owns the properties. */
+                    companyCode: string;
+                    /** @description Optional filter to get properties in a specific tract. */
+                    tract?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of properties. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Property"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/properties/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search properties
+         * @description Retrieves a list of all real estate properties by name.
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The search query. */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of properties. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Property"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/properties/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get detailed information about a specific property
+         * @description Retrieves comprehensive information about a real estate property using its unique identifier.
+         *     Returns detailed property information including property code, tract, designation,
+         *     and associated property objects.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the property. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the property. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["PropertyDetails"];
+                        };
+                    };
+                };
+                /** @description Property not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staircases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gets staircases belonging to a building by building code
+         * @description Returns the staircases belonging to the building.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The building code of the building. */
+                    buildingCode: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the staircases. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Staircase"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get rooms by residence id.
+         * @description Returns all rooms belonging to a residence.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The id of the residence. */
+                    residenceId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the rooms. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Room"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rooms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a room by ID
+         * @description Returns a room with the specified ID
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the room */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the room */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Room"];
+                    };
+                };
+                /** @description Room not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a list of all companies
+         * @description Retrieves a list of all companies in the system.
+         *     Returns the base company information
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved list of companies */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Company"][];
+                        };
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get detailed information about a specific company
+         * @description Retrieves comprehensive information about a company using its unique identifier.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the company. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the company. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["CompanyDetails"];
+                        };
+                    };
+                };
+                /** @description Company not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/maintenance-units/by-rental-id/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all maintenance units for a specific rental property id
+         * @description Retrieves all maintenance units associated with a given rental property id.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the rental property for which to retrieve maintenance units. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the maintenance units. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["MaintenanceUnit"][];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check system health status
+         * @description Retrieves the health status of the system and its subsystems.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful response with system health status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /**
+                             * @description Name of the system.
+                             * @example core
+                             */
+                            name?: string;
+                            /**
+                             * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
+                             * @example active
+                             */
+                            status?: string;
+                            subsystems?: {
+                                /** @description Name of the subsystem. */
+                                name?: string;
+                                /**
+                                 * @description Status of the subsystem.
+                                 * @enum {string}
+                                 */
+                                status?: "active" | "impaired" | "failure" | "unknown";
+                                /** @description Additional details about the subsystem status. */
+                                details?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
-export type webhooks = Record<string, never>
+export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    Residence: {
-      id: string
-      code: string
-      name: string
-      deleted: boolean
-      validityPeriod: {
-        /** Format: date-time */
-        fromDate: string
-        /** Format: date-time */
-        toDate: string
-      }
-    }
-    ResidenceDetails: {
-      id: string
-      code: string
-      name: string | null
-      location: string | null
-      accessibility: {
-        wheelchairAccessible: boolean
-        residenceAdapted: boolean
-        elevator: boolean
-      }
-      features: {
-        balcony1?: {
-          location: string
-          type: string
-        }
-        balcony2?: {
-          location: string
-          type: string
-        }
-        patioLocation: string | null
-        hygieneFacility: string | null
-        sauna: boolean
-        extraToilet: boolean
-        sharedKitchen: boolean
-        petAllergyFree: boolean
-        /** @description Is the apartment checked for electric allergy intolerance? */
-        electricAllergyIntolerance: boolean
-        smokeFree: boolean
-        asbestos: boolean
-      }
-      entrance: string | null
-      partNo?: number | null
-      part?: string | null
-      deleted: boolean
-      validityPeriod: {
-        /** Format: date-time */
-        fromDate: string
-        /** Format: date-time */
-        toDate: string
-      }
-      residenceType: {
-        residenceTypeId: string
-        code: string
-        name: string | null
-        roomCount: number | null
-        kitchen: number
-        systemStandard: number
-        checklistId: string | null
-        componentTypeActionId: string | null
-        statisticsGroupSCBId: string | null
-        statisticsGroup2Id: string | null
-        statisticsGroup3Id: string | null
-        statisticsGroup4Id: string | null
-        timestamp: string
-      }
-      propertyObject: {
-        energy: {
-          energyClass: number
-          /** Format: date-time */
-          energyRegistered?: string
-          /** Format: date-time */
-          energyReceived?: string
-          energyIndex?: number
-        }
-        rentalId: string | null
-        rentalInformation: {
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-      }
-      property: {
-        name: string | null
-        code: string | null
-      }
-      building: {
-        name: string | null
-        code: string | null
-      }
-      malarEnergiFacilityId: string | null
-      size: number | null
-    }
-    ResidenceSearchResult: {
-      id: string
-      code: string
-      name: string | null
-      deleted: boolean
-      validityPeriod: {
-        /** Format: date-time */
-        fromDate: string
-        /** Format: date-time */
-        toDate: string
-      }
-      rentalId: string | null
-      property: {
-        code: string | null
-        name: string | null
-      }
-      building: {
-        code: string | null
-        name: string | null
-      }
-    }
-    Building: {
-      id: string
-      code: string
-      name: string
-      buildingType: {
-        id: string
-        code: string
-        name: string
-      }
-      construction: {
-        constructionYear: number | null
-        renovationYear: number | null
-        valueYear: number | null
-      }
-      features: {
-        heating?: string | null
-        fireRating?: string | null
-      }
-      insurance: {
-        class: string | null
-        value: number | null
-      }
-      deleted: boolean
-      property?: {
-        name: string | null
-        code: string
-        id: string
-      } | null
-    }
-    Component: {
-      id: string
-      code: string
-      name: string
-      details: {
-        manufacturer: string | null
-        typeDesignation: string | null
-      }
-      dates: {
-        /** Format: date-time */
-        installation: string | null
-        /** Format: date-time */
-        warrantyEnd: string | null
-      }
-      classification: {
-        componentType: {
-          code: string
-          name: string
-        }
-        category: {
-          code: string
-          name: string
-        }
-      }
-      maintenanceUnits: {
-        id: string
-        code: string
-        name: string
-      }[]
-    }
-    Property: {
-      id: string
-      propertyObjectId: string
-      marketAreaId: string
-      districtId: string
-      propertyDesignationId: string
-      valueAreaId: string | null
-      code: string
-      designation: string
-      /** @description Kommun */
-      municipality: string
-      tract: string
-      block: string
-      sector: string | null
-      propertyIndexNumber: string | null
-      congregation: string
-      builtStatus: number
-      separateAssessmentUnit: number
-      consolidationNumber: string
-      ownershipType: string
-      registrationDate: string | null
-      acquisitionDate: string | null
-      isLeasehold: number
-      leaseholdTerminationDate: string | null
-      area: string | null
-      purpose: string | null
-      buildingType: string | null
-      propertyTaxNumber: string | null
-      mainPartAssessedValue: number
-      includeInAssessedValue: number
-      grading: number
-      deleteMark: number
-      /** Format: date-time */
-      fromDate: string
-      /** Format: date-time */
-      toDate: string
-      timestamp: string
-    }
-    PropertyDetails: {
-      id: string
-      propertyObjectId: string
-      marketAreaId: string
-      districtId: string
-      propertyDesignationId: string
-      valueAreaId: string | null
-      code: string
-      designation: string
-      /** @description Municipality=kommun */
-      municipality: string
-      tract: string
-      block: string
-      sector: string | null
-      propertyIndexNumber: string | null
-      congregation: string
-      builtStatus: number
-      separateAssessmentUnit: number
-      consolidationNumber: string
-      ownershipType: string
-      registrationDate: string | null
-      acquisitionDate: string | null
-      isLeasehold: number
-      leaseholdTerminationDate: string | null
-      area: string | null
-      purpose: string | null
-      buildingType: string | null
-      propertyTaxNumber: string | null
-      mainPartAssessedValue: number
-      includeInAssessedValue: number
-      grading: number
-      deleteMark: number
-      /** Format: date-time */
-      fromDate: string
-      /** Format: date-time */
-      toDate: string
-      timestamp: string
-      propertyObject: {
-        id: string
-        deleteMark: number
-        timestamp: string
-        objectTypeId: string
-        barcode: string | null
-        barcodeType: number
-        condition: number
-        conditionInspectionDate: string | null
-        vatAdjustmentPrinciple: number
-        energyClass: number
-        energyRegistered: string | null
-        energyReceived: string | null
-        energyIndex: string | null
-        heatingNature: number
-      }
-    }
-    Staircase: {
-      id: string
-      code: string
-      name: string | null
-      features: {
-        floorPlan: string | null
-        accessibleByElevator: boolean
-      }
-      dates: {
-        /** Format: date-time */
-        from: string
-        /** Format: date-time */
-        to: string
-      }
-      deleted: boolean
-      timestamp: string
-    }
-    Room: {
-      id: string
-      code: string
-      name: string | null
-      usage: {
-        shared: boolean
-        allowPeriodicWorks: boolean
-        spaceType: number
-      }
-      features: {
-        hasToilet: boolean
-        isHeated: boolean
-        hasThermostatValve: boolean
-        orientation: number
-      }
-      dates: {
-        /** Format: date-time */
-        installation: string | null
-        /** Format: date-time */
-        from: string
-        /** Format: date-time */
-        to: string
-        /** Format: date-time */
-        availableFrom: string | null
-        /** Format: date-time */
-        availableTo: string | null
-      }
-      sortingOrder: number
-      deleted: boolean
-      timestamp: string
-      roomType: {
-        id: string
-        code: string
-        name: string | null
-        use: number
-        optionAllowed: number
-        isSystemStandard: number
-        allowSmallRoomsInValuation: number
-        timestamp: string
-      } | null
-    }
-    Company: {
-      id: string
-      propertyObjectId: string
-      code: string
-      name: string
-      organizationNumber: string | null
-    }
-    CompanyDetails: {
-      id: string
-      propertyObjectId: string
-      code: string
-      name: string
-      organizationNumber: string | null
-      phone: string | null
-      fax: string | null
-      vatNumber?: string | null
-      internalExternal: number
-      fTax: number
-      cooperativeHousingAssociation: number
-      differentiatedAdditionalCapital: number
-      rentAdministered: number
-      blocked: number
-      rentDaysPerMonth: number
-      economicPlanApproved: number
-      vatObligationPercent: number
-      vatRegistered: number
-      energyOptimization: number
-      ownedCompany: number
-      interestInvoice: number
-      errorReportAdministration: number
-      mediaBilling: number
-      ownResponsibilityForInternalMaintenance: number
-      subletPercentage: number
-      subletFeeAmount: number
-      disableQuantitiesBelowCompany: number
-      timestamp: string
-    }
-    MaintenanceUnit: {
-      id: string
-      rentalPropertyId: string
-      code: string
-      caption: string
-      type: string | null
-      estateCode: string
-      estate: string
-    }
-    ResidenceByRentalId: {
-      id: string
-      code: string
-      name: string | null
-      accessibility: {
-        wheelchairAccessible: boolean
-        elevator: boolean
-      }
-      features: {
-        hygieneFacility: string | null
-      }
-      entrance: string | null
-      deleted: boolean
-      type: {
-        code: string
-        name: string | null
-        roomCount: number | null
-        kitchen: number
-      }
-      rentalInformation: {
-        apartmentNumber: string | null
-        rentalId: string | null
-        type: {
-          code: string
-          name: string | null
-        }
-      } | null
-      property: {
-        id: string | null
-        name: string | null
-        code: string | null
-      }
-      building: {
-        id: string | null
-        name: string | null
-        code: string | null
-      }
-      areaSize: number | null
-    }
-    GetResidenceByRentalIdResponse: {
-      content: {
-        id: string
-        code: string
-        name: string | null
-        accessibility: {
-          wheelchairAccessible: boolean
-          elevator: boolean
-        }
-        features: {
-          hygieneFacility: string | null
-        }
-        entrance: string | null
-        deleted: boolean
-        type: {
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-        }
-        rentalInformation: {
-          apartmentNumber: string | null
-          rentalId: string | null
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-        property: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        building: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        areaSize: number | null
-      }
-      _links: {
-        self: {
-          href: string
-        }
-        link: {
-          href: string
-          templated: boolean
-        }
-      }
-    }
-  }
-  responses: never
-  parameters: never
-  requestBodies: never
-  headers: never
-  pathItems: never
+    schemas: {
+        Residence: {
+            id: string;
+            code: string;
+            name: string;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
+        };
+        ResidenceDetails: {
+            id: string;
+            code: string;
+            name: string | null;
+            location: string | null;
+            accessibility: {
+                wheelchairAccessible: boolean;
+                residenceAdapted: boolean;
+                elevator: boolean;
+            };
+            features: {
+                balcony1?: {
+                    location: string;
+                    type: string;
+                };
+                balcony2?: {
+                    location: string;
+                    type: string;
+                };
+                patioLocation: string | null;
+                hygieneFacility: string | null;
+                sauna: boolean;
+                extraToilet: boolean;
+                sharedKitchen: boolean;
+                petAllergyFree: boolean;
+                /** @description Is the apartment checked for electric allergy intolerance? */
+                electricAllergyIntolerance: boolean;
+                smokeFree: boolean;
+                asbestos: boolean;
+            };
+            entrance: string | null;
+            partNo?: number | null;
+            part?: string | null;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
+            residenceType: {
+                residenceTypeId: string;
+                code: string;
+                name: string | null;
+                roomCount: number | null;
+                kitchen: number;
+                systemStandard: number;
+                checklistId: string | null;
+                componentTypeActionId: string | null;
+                statisticsGroupSCBId: string | null;
+                statisticsGroup2Id: string | null;
+                statisticsGroup3Id: string | null;
+                statisticsGroup4Id: string | null;
+                timestamp: string;
+            };
+            propertyObject: {
+                energy: {
+                    energyClass: number;
+                    /** Format: date-time */
+                    energyRegistered?: string;
+                    /** Format: date-time */
+                    energyReceived?: string;
+                    energyIndex?: number;
+                };
+                rentalId: string | null;
+                rentalInformation: {
+                    type: {
+                        code: string;
+                        name: string | null;
+                    };
+                } | null;
+            };
+            property: {
+                name: string | null;
+                code: string | null;
+            };
+            building: {
+                name: string | null;
+                code: string | null;
+            };
+            malarEnergiFacilityId: string | null;
+            size: number | null;
+        };
+        ResidenceSearchResult: {
+            id: string;
+            code: string;
+            name: string | null;
+            deleted: boolean;
+            validityPeriod: {
+                /** Format: date-time */
+                fromDate: string;
+                /** Format: date-time */
+                toDate: string;
+            };
+            rentalId: string | null;
+            property: {
+                code: string | null;
+                name: string | null;
+            };
+            building: {
+                code: string | null;
+                name: string | null;
+            };
+        };
+        Building: {
+            id: string;
+            code: string;
+            name: string;
+            buildingType: {
+                id: string;
+                code: string;
+                name: string;
+            };
+            construction: {
+                constructionYear: number | null;
+                renovationYear: number | null;
+                valueYear: number | null;
+            };
+            features: {
+                heating?: string | null;
+                fireRating?: string | null;
+            };
+            insurance: {
+                class: string | null;
+                value: number | null;
+            };
+            deleted: boolean;
+            property?: {
+                name: string | null;
+                code: string;
+                id: string;
+            } | null;
+        };
+        Component: {
+            id: string;
+            code: string;
+            name: string;
+            details: {
+                manufacturer: string | null;
+                typeDesignation: string | null;
+            };
+            dates: {
+                /** Format: date-time */
+                installation: string | null;
+                /** Format: date-time */
+                warrantyEnd: string | null;
+            };
+            classification: {
+                componentType: {
+                    code: string;
+                    name: string;
+                };
+                category: {
+                    code: string;
+                    name: string;
+                };
+            };
+            maintenanceUnits: {
+                id: string;
+                code: string;
+                name: string;
+            }[];
+        };
+        Property: {
+            id: string;
+            propertyObjectId: string;
+            marketAreaId: string;
+            districtId: string;
+            propertyDesignationId: string;
+            valueAreaId: string | null;
+            code: string;
+            designation: string;
+            /** @description Kommun */
+            municipality: string;
+            tract: string;
+            block: string;
+            sector: string | null;
+            propertyIndexNumber: string | null;
+            congregation: string;
+            builtStatus: number;
+            separateAssessmentUnit: number;
+            consolidationNumber: string;
+            ownershipType: string;
+            registrationDate: string | null;
+            acquisitionDate: string | null;
+            isLeasehold: number;
+            leaseholdTerminationDate: string | null;
+            area: string | null;
+            purpose: string | null;
+            buildingType: string | null;
+            propertyTaxNumber: string | null;
+            mainPartAssessedValue: number;
+            includeInAssessedValue: number;
+            grading: number;
+            deleteMark: number;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string;
+            timestamp: string;
+        };
+        PropertyDetails: {
+            id: string;
+            propertyObjectId: string;
+            marketAreaId: string;
+            districtId: string;
+            propertyDesignationId: string;
+            valueAreaId: string | null;
+            code: string;
+            designation: string;
+            /** @description Municipality=kommun */
+            municipality: string;
+            tract: string;
+            block: string;
+            sector: string | null;
+            propertyIndexNumber: string | null;
+            congregation: string;
+            builtStatus: number;
+            separateAssessmentUnit: number;
+            consolidationNumber: string;
+            ownershipType: string;
+            registrationDate: string | null;
+            acquisitionDate: string | null;
+            isLeasehold: number;
+            leaseholdTerminationDate: string | null;
+            area: string | null;
+            purpose: string | null;
+            buildingType: string | null;
+            propertyTaxNumber: string | null;
+            mainPartAssessedValue: number;
+            includeInAssessedValue: number;
+            grading: number;
+            deleteMark: number;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string;
+            timestamp: string;
+            propertyObject: {
+                id: string;
+                deleteMark: number;
+                timestamp: string;
+                objectTypeId: string;
+                barcode: string | null;
+                barcodeType: number;
+                condition: number;
+                conditionInspectionDate: string | null;
+                vatAdjustmentPrinciple: number;
+                energyClass: number;
+                energyRegistered: string | null;
+                energyReceived: string | null;
+                energyIndex: string | null;
+                heatingNature: number;
+            };
+        };
+        Staircase: {
+            id: string;
+            code: string;
+            name: string | null;
+            features: {
+                floorPlan: string | null;
+                accessibleByElevator: boolean;
+            };
+            dates: {
+                /** Format: date-time */
+                from: string;
+                /** Format: date-time */
+                to: string;
+            };
+            deleted: boolean;
+            timestamp: string;
+        };
+        Room: {
+            id: string;
+            code: string;
+            name: string | null;
+            usage: {
+                shared: boolean;
+                allowPeriodicWorks: boolean;
+                spaceType: number;
+            };
+            features: {
+                hasToilet: boolean;
+                isHeated: boolean;
+                hasThermostatValve: boolean;
+                orientation: number;
+            };
+            dates: {
+                /** Format: date-time */
+                installation: string | null;
+                /** Format: date-time */
+                from: string;
+                /** Format: date-time */
+                to: string;
+                /** Format: date-time */
+                availableFrom: string | null;
+                /** Format: date-time */
+                availableTo: string | null;
+            };
+            sortingOrder: number;
+            deleted: boolean;
+            timestamp: string;
+            roomType: {
+                id: string;
+                code: string;
+                name: string | null;
+                use: number;
+                optionAllowed: number;
+                isSystemStandard: number;
+                allowSmallRoomsInValuation: number;
+                timestamp: string;
+            } | null;
+        };
+        Company: {
+            id: string;
+            propertyObjectId: string;
+            code: string;
+            name: string;
+            organizationNumber: string | null;
+        };
+        CompanyDetails: {
+            id: string;
+            propertyObjectId: string;
+            code: string;
+            name: string;
+            organizationNumber: string | null;
+            phone: string | null;
+            fax: string | null;
+            vatNumber?: string | null;
+            internalExternal: number;
+            fTax: number;
+            cooperativeHousingAssociation: number;
+            differentiatedAdditionalCapital: number;
+            rentAdministered: number;
+            blocked: number;
+            rentDaysPerMonth: number;
+            economicPlanApproved: number;
+            vatObligationPercent: number;
+            vatRegistered: number;
+            energyOptimization: number;
+            ownedCompany: number;
+            interestInvoice: number;
+            errorReportAdministration: number;
+            mediaBilling: number;
+            ownResponsibilityForInternalMaintenance: number;
+            subletPercentage: number;
+            subletFeeAmount: number;
+            disableQuantitiesBelowCompany: number;
+            timestamp: string;
+        };
+        MaintenanceUnit: {
+            id: string;
+            rentalPropertyId: string;
+            code: string;
+            caption: string;
+            type: string | null;
+            estateCode: string;
+            estate: string;
+        };
+        ResidenceByRentalId: {
+            id: string;
+            code: string;
+            name: string | null;
+            accessibility: {
+                wheelchairAccessible: boolean;
+                elevator: boolean;
+            };
+            features: {
+                hygieneFacility: string | null;
+            };
+            entrance: string | null;
+            deleted: boolean;
+            type: {
+                code: string;
+                name: string | null;
+                roomCount: number | null;
+                kitchen: number;
+            };
+            rentalInformation: {
+                apartmentNumber: string | null;
+                rentalId: string | null;
+                type: {
+                    code: string;
+                    name: string | null;
+                };
+            } | null;
+            property: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            building: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            areaSize: number | null;
+        };
+        GetResidenceByRentalIdResponse: {
+            content: {
+                id: string;
+                code: string;
+                name: string | null;
+                accessibility: {
+                    wheelchairAccessible: boolean;
+                    elevator: boolean;
+                };
+                features: {
+                    hygieneFacility: string | null;
+                };
+                entrance: string | null;
+                deleted: boolean;
+                type: {
+                    code: string;
+                    name: string | null;
+                    roomCount: number | null;
+                    kitchen: number;
+                };
+                rentalInformation: {
+                    apartmentNumber: string | null;
+                    rentalId: string | null;
+                    type: {
+                        code: string;
+                        name: string | null;
+                    };
+                } | null;
+                property: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                building: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                areaSize: number | null;
+            };
+            _links: {
+                self: {
+                    href: string;
+                };
+                link: {
+                    href: string;
+                    templated: boolean;
+                };
+            };
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
-export type $defs = Record<string, never>
-export type operations = Record<string, never>
+export type $defs = Record<string, never>;
+export type operations = Record<string, never>;

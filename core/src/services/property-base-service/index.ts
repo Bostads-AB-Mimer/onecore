@@ -680,9 +680,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/maintenance-units/by-rental-property/{rentalPropertyId}:
+   * /propertyBase/maintenance-units/by-rental-id/{rentalId}:
    *   get:
-   *     summary: Get maintenance units by rental property id.
+   *     summary: Get maintenance units by rental id.
    *     description: Returns all maintenance units belonging to a rental property.
    *     tags:
    *       - Property base Service
@@ -690,7 +690,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    *     parameters:
    *       - in: path
-   *         name: rentalPropertyId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
@@ -712,44 +712,36 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get(
-    '(.*)/maintenance-units/by-rental-property/:rentalPropertyId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { rentalPropertyId } = ctx.params
+  router.get('(.*)/maintenance-units/by-rental-id/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { rentalId } = ctx.params
 
-      logger.info(
-        `GET /maintenance-units/by-rental-property/${rentalPropertyId}`,
-        metadata
-      )
+    logger.info(`GET /maintenance-units/by-rental-id/${rentalId}`, metadata)
 
-      try {
-        const result =
-          await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
-            rentalPropertyId
-          )
-        if (!result.ok) {
-          logger.error(
-            result.err,
-            'Error getting maintenance units from property-base',
-            metadata
-          )
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
-          return
-        }
-
-        ctx.body = {
-          content: result.data satisfies Array<schemas.MaintenanceUnit>,
-          ...metadata,
-        }
-      } catch (error) {
-        logger.error(error, 'Internal server error', metadata)
+    try {
+      const result =
+        await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(rentalId)
+      if (!result.ok) {
+        logger.error(
+          result.err,
+          'Error getting maintenance units from property-base',
+          metadata
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
+        return
       }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.MaintenanceUnit>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   /**
    * @swagger
