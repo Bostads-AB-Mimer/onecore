@@ -379,4 +379,46 @@ describe('property-base-adapter', () => {
       })
     })
   })
+
+  describe('getMaintenanceUnitsByRentalId', () => {
+    it('returns maintenance units for a rental property', async () => {
+      const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/maintenance-units/by-rental-id/1234`,
+          () =>
+            HttpResponse.json(
+              {
+                content: maintenanceUnitsMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty('1234')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: maintenanceUnitsMock,
+      })
+    })
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/maintenance-units/by-rental-id/1234`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+  })
 })

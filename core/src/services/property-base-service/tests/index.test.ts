@@ -271,7 +271,7 @@ describe('property-base-service', () => {
     })
   })
 
-  describe('GET /propertyBase/maintenance-units/by-rental-property/:id', () => {
+  describe('GET /propertyBase/maintenance-units/by-rental-id/:id', () => {
     it('returns 200 and a list of maintenance units for a rental property', async () => {
       const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
 
@@ -280,7 +280,7 @@ describe('property-base-service', () => {
         .mockResolvedValueOnce({ ok: true, data: maintenanceUnitsMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-rental-property/1234'
+        '/propertyBase/maintenance-units/by-rental-id/1234'
       )
 
       expect(res.status).toBe(200)
@@ -299,7 +299,7 @@ describe('property-base-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-rental-property/1234'
+        '/propertyBase/maintenance-units/by-rental-id/1234'
       )
 
       expect(res.status).toBe(500)
