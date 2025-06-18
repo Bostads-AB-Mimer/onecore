@@ -500,7 +500,7 @@ export interface paths {
       };
     };
   };
-  "/maintenance-units/by-rental-property/{id}": {
+  "/maintenance-units/by-rental-id/{id}": {
     /**
      * Get all maintenance units for a specific rental property id
      * @description Retrieves all maintenance units associated with a given rental property id.
