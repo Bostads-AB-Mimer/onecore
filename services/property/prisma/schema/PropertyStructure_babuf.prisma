@@ -69,11 +69,7 @@ model PropertyStructure {
 
   // Ny relation baserad på maintenanceUnitCode
   maintenanceUnitByCode MaintenanceUnit? @relation("MaintenanceUnitCodeRelation", fields: [maintenanceUnitCode], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])
-
-  // Relations to baxyk join table
-  PropertyStructureJoinTableRelation1 PropertyStructureRelation[] @relation("PropertyStructure1")
-  PropertyStructureJoinTableRelation2 PropertyStructureRelation[] @relation("PropertyStructure2")
+  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])  
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")

@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { getMaintenanceUnitsByRentalPropertyId } from '@src/adapters/maintenance-units-adapter'
+import { getMaintenanceUnitsByRentalId } from '@src/adapters/maintenance-units-adapter'
 import { MaintenanceUnitSchema } from '@src/types/maintenance-unit'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
 
@@ -14,7 +14,7 @@ import { generateRouteMetadata, logger } from 'onecore-utilities'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /maintenance-units/by-rental-property/{id}:
+   * /maintenance-units/by-rental-id/{id}:
    *   get:
    *     summary: Get all maintenance units for a specific rental property id
    *     description: |
@@ -45,13 +45,13 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('(.*)/maintenance-units/by-rental-property/:id', async (ctx) => {
+  router.get('(.*)/maintenance-units/by-rental-id/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /maintenance-units/by-rental-property/${id}`, metadata)
+    logger.info(`GET /maintenance-units/by-rental-id/${id}`, metadata)
 
     try {
-      const response = await getMaintenanceUnitsByRentalPropertyId(id)
+      const response = await getMaintenanceUnitsByRentalId(id)
 
       if (!response) {
         ctx.status = 404

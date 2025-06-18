@@ -1,79 +1,65 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 
-export const getMaintenanceUnitsByRentalPropertyId = async (
-  rentalPropertyId: string
-) => {
-  /*
-    Based on SQL Query to fetch maintenance units by rental property ID
-
-    SELECT 
-    baxyk.keycmobj,
-    prop_babuf.hyresid AS rental_property_id,
-    mu_babuf.code AS code,
-    mu_babuf.caption AS caption,
-    bauht.caption AS type,
-    mu_babuf.fstcode AS estate_code,
-    mu_babuf.fstcaption AS estate
-    
-    FROM baxyk
-    
-    INNER JOIN babuf AS mu_babuf ON baxyk.keycmobj = mu_babuf.keycmobj
-    INNER JOIN babuf AS prop_babuf ON baxyk.keycmobj2 = prop_babuf.keycmobj
-    INNER JOIN bauhe ON mu_babuf.keycmobj = bauhe.keycmobj
-    INNER JOIN bauht ON bauhe.keybauht = bauht.keybauht
-    
-    WHERE prop_babuf.hyresid = '206-007-01-0102
-  */
-
-  const response = await prisma.propertyStructureRelation.findMany({
+export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
+  /**
+   *  Get property structure info for the given rental ID
+   *  In order to extract propertyObjectId and other details used in response
+   */
+  const rentalPropertyInfo = await prisma.propertyStructure.findFirst({
     select: {
-      // Assuming this includes maintenance unit details (mu_babuf)
-      propertyStructure1: {
-        select: {
-          maintenanceUnitName: true,
-          maintenanceUnitId: true,
-          maintenanceUnit: {
-            select: {
-              code: true,
-              maintenanceUnitType: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                },
-              },
-            },
+      rentalId: true,
+      propertyCode: true,
+      propertyName: true,
+      propertyObjectId: true,
+    },
+    where: {
+      rentalId: rentalId,
+      roomCode: null,
+      NOT: {
+        propertyCode: null,
+        propertyName: null,
+        buildingCode: null,
+        buildingName: null,
+      },
+    },
+  })
+
+  if (!rentalPropertyInfo) {
+    console.error(`No property found for rental ID: ${rentalId}`)
+    return []
+  }
+
+  // Grab related maintenance units with propertyObjectId
+  const rentalPropertyToMaintenanceUnit =
+    await prisma.residenceToMaintenanceUnitRelation.findMany({
+      include: {
+        maintenanceUnit: {
+          include: {
+            maintenanceUnitType: true,
           },
         },
       },
-      // Assuming this includes rental property details (prop_babuf)
-      propertyStructure2: {
-        select: {
-          rentalId: true,
-          propertyCode: true,
-          propertyName: true,
-        },
+      where: {
+        residencePropertyObjectId: rentalPropertyInfo.propertyObjectId,
       },
-    },
-    where: {
-      propertyStructure2: {
-        rentalId: rentalPropertyId,
-      },
-    },
-  })
+    })
 
-  const maintenanceUnitsMapped = trimStrings(response).map((item) => {
+  // Trim strings and map the results to the desired structure
+  const rentalPropertyInfoTrimmed = trimStrings(rentalPropertyInfo)
+  const maintenanceUnitPropertyStructuresMapped = trimStrings(
+    rentalPropertyToMaintenanceUnit
+  ).map((item) => {
     return {
-      id: item.propertyStructure1.maintenanceUnitId,
-      rentalPropertyId: item.propertyStructure2.rentalId,
-      code: item.propertyStructure1.maintenanceUnit?.code,
-      caption: item.propertyStructure1.maintenanceUnitName,
-      type: item.propertyStructure1.maintenanceUnit?.maintenanceUnitType?.name,
-      estateCode: item.propertyStructure2.propertyCode,
-      estate: item.propertyStructure2.propertyName,
+      id: item?.maintenanceUnit?.id,
+      rentalPropertyId: rentalPropertyInfoTrimmed.rentalId,
+      code: item.maintenanceUnit?.code,
+      caption: item?.maintenanceUnit?.name,
+      type: item.maintenanceUnit?.maintenanceUnitType?.name,
+      estateCode: rentalPropertyInfoTrimmed.propertyCode,
+      estate: rentalPropertyInfoTrimmed.propertyName,
     }
   })
 
-  return maintenanceUnitsMapped
+  return trimStrings(maintenanceUnitPropertyStructuresMapped)
 }
