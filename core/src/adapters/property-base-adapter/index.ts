@@ -273,3 +273,32 @@ export async function getRooms(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetMaintenanceUnitsByRentalPropertyIdResponse =
+  components['schemas']['MaintenanceUnit'][]
+
+export async function getMaintenanceUnitsForRentalProperty(
+  rentalPropertyId: string
+): Promise<
+  AdapterResult<GetMaintenanceUnitsByRentalPropertyIdResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/maintenance-units/by-rental-id/{id}',
+      {
+        params: { path: { id: rentalPropertyId } },
+      }
+    )
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.getMaintenanceUnitsForRentalProperty'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
