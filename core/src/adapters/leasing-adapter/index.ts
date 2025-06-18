@@ -644,6 +644,7 @@ export {
   syncInternalParkingSpacesFromXpand,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
+  getListings,
 } from './listings'
 
 export {
@@ -658,3 +659,5 @@ export {
   handleExpiredOffers,
   updateOfferSentAt,
 } from './offers'
+
+export { getCommentThread, addComment, removeComment } from './comments'

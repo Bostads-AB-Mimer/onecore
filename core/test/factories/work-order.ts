@@ -1,35 +1,80 @@
 import { Factory } from 'fishery'
+
 import { WorkOrderRentalPropertyFactory } from './rental-property-info'
 import { WorkOrderTenantFactory } from './tenant'
 import { WorkOrderLeaseFactory } from './lease'
-import { CoreWorkOrder } from '../../src/services/work-order-service/schemas'
+import {
+  CoreWorkOrder,
+  CoreXpandWorkOrder,
+  CoreXpandWorkOrderDetails,
+} from '../../src/services/work-order-service/schemas'
 import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const WorkOrderFactory = Factory.define<CoreWorkOrder>(
   ({ sequence }) => ({
-    AccessCaption: 'AccessCaption',
-    Caption: 'Caption',
-    Code: `WO${sequence}`,
-    ContactCode: `P${158769 + sequence}`,
-    Description: 'Description',
-    DetailsCaption: 'DetailsCaption',
-    ExternalResource: false,
-    Id: `WO${sequence}`,
-    LastChanged: new Date(),
-    Priority: 'Priority',
-    Registered: new Date(),
-    RentalObjectCode: 'RentalObjectCode',
-    Status: 'Status',
-    WorkOrderRows: [
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    description: 'Description',
+    detailsCaption: 'DetailsCaption',
+    externalResource: false,
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Status',
+    dueDate: null,
+    workOrderRows: [
       {
-        Description: 'Description',
-        LocationCode: 'LocationCode',
-        EquipmentCode: 'EquipmentCode',
+        description: 'Description',
+        locationCode: 'LocationCode',
+        equipmentCode: 'EquipmentCode',
       },
     ],
-    Messages: [],
+    messages: [],
   })
 )
+
+export const XpandWorkOrderFactory = Factory.define<CoreXpandWorkOrder>(
+  ({ sequence }) => ({
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    dueDate: null,
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Status',
+  })
+)
+
+export const XpandWorkOrderDetailsFactory =
+  Factory.define<CoreXpandWorkOrderDetails>(({ sequence }) => ({
+    accessCaption: 'AccessCaption',
+    caption: 'Caption',
+    code: `WO${sequence}`,
+    contactCode: `P${158769 + sequence}`,
+    description: 'Description',
+    id: `WO${sequence}`,
+    lastChanged: new Date(),
+    priority: 'Priority',
+    registered: new Date(),
+    dueDate: null,
+    rentalObjectCode: 'RentalObjectCode',
+    status: 'Väntar på handläggning',
+    workOrderRows: [
+      {
+        description: 'Description',
+        locationCode: 'LocationCode',
+        equipmentCode: 'EquipmentCode',
+      },
+    ],
+  }))
 
 export const CreateWorkOrderFactory = Factory.define<
   components['schemas']['CreateWorkOrderBody']

@@ -608,6 +608,7 @@ export interface components {
             Priority: string;
             /** Format: date-time */
             Registered: string;
+            DueDate: null | string;
             RentalObjectCode: string;
             Status: string;
             UseMasterKey: boolean;
@@ -638,6 +639,7 @@ export interface components {
             Priority: string | null;
             /** Format: date-time */
             Registered: string;
+            DueDate: null | string;
             RentalObjectCode: string;
             Status: string;
         };
@@ -653,6 +655,7 @@ export interface components {
             Priority: string | null;
             /** Format: date-time */
             Registered: string;
+            DueDate: null | string;
             RentalObjectCode: string;
             Status: string;
             WorkOrderRows: {

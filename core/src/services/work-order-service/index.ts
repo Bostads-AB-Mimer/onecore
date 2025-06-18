@@ -290,7 +290,37 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data satisfies schemas.CoreWorkOrder[],
+            workOrders: result.data.map(
+              (v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                hiddenFromMyPages: v.HiddenFromMyPages,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+                messages: v.Messages?.map((message) => ({
+                  id: message.id,
+                  body: message.body,
+                  messageType: message.messageType,
+                  author: message.author,
+                  createDate: new Date(message.createDate),
+                })),
+              })
+            ),
           },
           ...metadata,
         }
@@ -364,12 +394,36 @@ export const routes = (router: KoaRouter) => {
         const result = await workOrderAdapter.getWorkOrdersByRentalPropertyId(
           ctx.params.rentalPropertyId
         )
+
         if (result.ok) {
           ctx.status = 200
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data satisfies schemas.CoreWorkOrder[],
+              workOrders: result.data.map(
+                (v): schemas.CoreWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  contactCode: v.ContactCode,
+                  description: v.Description,
+                  detailsCaption: v.DetailsCaption,
+                  externalResource: v.ExternalResource,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                  url: v.Url,
+                  workOrderRows: v.WorkOrderRows.map((row) => ({
+                    description: row.Description,
+                    locationCode: row.LocationCode,
+                    equipmentCode: row.EquipmentCode,
+                  })),
+                })
+              ),
             },
             ...metadata,
           }
@@ -460,12 +514,27 @@ export const routes = (router: KoaRouter) => {
             ctx.params.rentalPropertyId,
             { skip, limit, sortAscending }
           )
+
         if (result.ok) {
           ctx.status = 200
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data satisfies schemas.CoreXpandWorkOrder[],
+              workOrders: result.data.map(
+                (v): schemas.CoreXpandWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  contactCode: v.ContactCode,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                })
+              ),
             },
             ...metadata,
           }
@@ -547,7 +616,25 @@ export const routes = (router: KoaRouter) => {
       if (result.ok) {
         ctx.status = 200
         ctx.body = {
-          content: result.data satisfies schemas.CoreXpandWorkOrder,
+          content: {
+            id: result.data.Id,
+            accessCaption: result.data.AccessCaption,
+            caption: result.data.Caption,
+            code: result.data.Code,
+            contactCode: result.data.ContactCode,
+            lastChanged: new Date(result.data.LastChanged),
+            priority: result.data.Priority,
+            registered: new Date(result.data.Registered),
+            dueDate: result.data.DueDate ? new Date(result.data.DueDate) : null,
+            rentalObjectCode: result.data.RentalObjectCode,
+            status: result.data.Status,
+            workOrderRows: result.data.WorkOrderRows.map((row) => ({
+              description: row.Description,
+              locationCode: row.LocationCode,
+              equipmentCode: row.EquipmentCode,
+            })),
+            description: result.data.Description,
+          } satisfies schemas.CoreXpandWorkOrderDetails,
           ...metadata,
         }
       } else {

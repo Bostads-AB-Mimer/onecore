@@ -7,6 +7,7 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
+import { z } from 'zod'
 
 /**
  * @swagger
@@ -31,6 +32,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
+  registerSchema(
+    'ResidenceByRentalIdDetails',
+    schemas.ResidenceByRentalIdSchema
+  )
 
   /**
    * @swagger
@@ -339,6 +344,81 @@ export const routes = (router: KoaRouter) => {
       logger.error(error, 'Internal server error', metadata)
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /propertyBase/residence/rental-id/{rentalId}:
+   *   get:
+   *     summary: Get residence data by residence rental id
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves residence data by residence rental id
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental id for the residence to fetch
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved residence.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
+   *       '404':
+   *         description: Residence not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Residence not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve residence data.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/residence/rental-id/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { rentalId } = ctx.params
+
+    const getResidence =
+      await propertyBaseAdapter.getResidenceByRentalId(rentalId)
+
+    if (!getResidence.ok) {
+      if (getResidence.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Residence not found', ...metadata }
+        return
+      }
+
+      logger.error(getResidence.err, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
+      ...metadata,
     }
   })
 
