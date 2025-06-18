@@ -15,6 +15,7 @@ import { StaircaseSchema } from '../types/staircase'
 import { RoomSchema } from '../types/room'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
 import zodToJsonSchema from 'zod-to-json-schema'
+import { MaintenanceUnitSchema } from '../types/maintenance-unit'
 
 const schemas = {
   ...zodToJsonSchema(ResidenceSchema, {
@@ -60,6 +61,9 @@ const schemas = {
   ...zodToJsonSchema(CompanyDetailsSchema, {
     name: 'CompanyDetails',
     target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(MaintenanceUnitSchema, {
+    name: 'MaintenanceUnit',
   }).definitions,
   ...zodToJsonSchema(ResidenceByRentalIdSchema, {
     name: 'ResidenceByRentalId',

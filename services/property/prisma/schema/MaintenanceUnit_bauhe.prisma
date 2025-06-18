@@ -26,6 +26,9 @@ model MaintenanceUnit {
   propertyObject     PropertyObject      @relation(fields: [propertyObjectId], references: [id], onDelete: Cascade)
   propertyStructures PropertyStructure[]
 
+  // Residence -> MaintenanceUnit join table relation through "baxyk" table
+  ResidenceToMaintenanceUnitRelation ResidenceToMaintenanceUnitRelation[] @relation("ResidenceToMaintenanceUnitRelation")
+
   @@index([maintenanceUnitTypeId], map: "fkbauhebauht")
   @@index([code], map: "inbauhe_1A00UDL36")
   @@index([name], map: "inbauhe_1A00UDL45")

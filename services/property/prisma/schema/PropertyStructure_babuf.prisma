@@ -65,11 +65,11 @@ model PropertyStructure {
   timestamp                String   @map("timestamp") @db.Char(10)
 
   propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
-  maintenanceUnit MaintenanceUnit? @relation(fields: [maintenanceUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  maintenanceUnit MaintenanceUnit? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
 
   // Ny relation baserad på maintenanceUnitCode
   maintenanceUnitByCode MaintenanceUnit? @relation("MaintenanceUnitCodeRelation", fields: [maintenanceUnitCode], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])
+  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])  
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")
