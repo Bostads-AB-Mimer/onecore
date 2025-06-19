@@ -14,26 +14,18 @@ import { match } from 'ts-pattern'
 import { db } from './db'
 import { AdapterResult, DbApplicant, DbListing } from './types'
 
-function transformFromDbListing(row: DbListing): Listing {
+type ListingWithoutRentalObject = Omit<Listing, 'rentalObject'>
+
+function transformFromDbListing(row: DbListing): ListingWithoutRentalObject {
   return {
     id: row.Id,
     rentalObjectCode: row.RentalObjectCode,
-    address: row.Address,
-    monthlyRent: row.MonthlyRent,
-    districtCaption: row.DistrictCaption || undefined,
-    districtCode: row.DistrictCode || undefined,
-    blockCaption: row.BlockCaption || undefined,
-    blockCode: row.BlockCode || undefined,
-    objectTypeCaption: row.ObjectTypeCaption || undefined,
-    objectTypeCode: row.ObjectTypeCode || undefined,
-    rentalObjectTypeCaption: row.RentalObjectTypeCaption || undefined,
-    rentalObjectTypeCode: row.RentalObjectTypeCode || undefined,
     publishedFrom: row.PublishedFrom || undefined,
     publishedTo: row.PublishedTo,
-    vacantFrom: row.VacantFrom,
     status: row.Status,
-    waitingListType: row.WaitingListType || undefined,
     applicants: undefined,
+    rentalRule: row.RentalRule || undefined,
+    listingCategory: row.ListingCategory || undefined,
   }
 }
 
@@ -51,28 +43,23 @@ function transformDbApplicant(row: DbApplicant): Applicant {
 }
 
 const createListing = async (
-  listingData: Omit<Listing, 'id'>,
+  listingData: Omit<ListingWithoutRentalObject, 'id'>,
   dbConnection = db
-): Promise<AdapterResult<Listing, 'conflict-active-listing' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    ListingWithoutRentalObject,
+    'conflict-active-listing' | 'unknown'
+  >
+> => {
   try {
     const insertedRow = await dbConnection<DbListing>('Listing')
       .insert({
         RentalObjectCode: listingData.rentalObjectCode,
-        Address: listingData.address,
-        DistrictCaption: listingData.districtCaption,
-        DistrictCode: listingData.districtCode,
-        BlockCaption: listingData.blockCaption,
-        BlockCode: listingData.blockCode,
-        MonthlyRent: listingData.monthlyRent,
-        ObjectTypeCaption: listingData.objectTypeCaption,
-        ObjectTypeCode: listingData.objectTypeCode,
-        RentalObjectTypeCaption: listingData.rentalObjectTypeCaption,
-        RentalObjectTypeCode: listingData.rentalObjectTypeCode,
         PublishedFrom: listingData.publishedFrom,
         PublishedTo: listingData.publishedTo,
-        VacantFrom: listingData.vacantFrom,
         Status: listingData.status,
-        WaitingListType: listingData.waitingListType,
+        RentalRule: listingData.rentalRule,
+        ListingCategory: listingData.listingCategory,
       })
       .returning('*')
 
@@ -107,12 +94,12 @@ const createListing = async (
  * Checks if an active listing already exists based on unique criteria.
  *
  * @param {string} rentalObjectCode - The rental object code of the active listing (originally from xpand)
- * @returns {Promise<Listing>} - Promise that resolves to the existing listing if it exists.
+ * @returns {Promise<ListingWithoutRentalObject>} - Promise that resolves to the existing listing if it exists.
  */
 const getActiveListingByRentalObjectCode = async (
   rentalObjectCode: string,
   dbConnection = db
-): Promise<Listing | undefined> => {
+): Promise<ListingWithoutRentalObject | undefined> => {
   const listing = await dbConnection<DbListing>('Listing')
     .where({
       RentalObjectCode: rentalObjectCode,
@@ -129,7 +116,7 @@ const getActiveListingByRentalObjectCode = async (
 const getListingById = async (
   listingId: number,
   dbConnection = db
-): Promise<Listing | undefined> => {
+): Promise<ListingWithoutRentalObject | undefined> => {
   logger.info({ listingId }, `Getting listing ${listingId} from leasing DB`)
   const result = await dbConnection
     .from('listing AS l')
@@ -157,7 +144,7 @@ const getListingById = async (
 
   const transformListing = (
     row: DbListing & { applicants: Array<DbApplicant> }
-  ): Listing => ({
+  ): ListingWithoutRentalObject => ({
     ...transformFromDbListing(row),
     applicants: row.applicants
       .map(transformDbApplicant)
@@ -265,23 +252,31 @@ const updateApplicantStatus = async (
   }
 }
 
+type GetListingsParams = {
+  listingCategory?: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+  published?: boolean
+  rentalRule?: 'SCORED' | 'NON_SCORED'
+}
+
 const getListings = async (
-  published?: boolean,
-  rentalRule?: 'Scored' | 'NonScored',
+  params: GetListingsParams = {},
   dbConnection = db
-): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
+): Promise<AdapterResult<Array<ListingWithoutRentalObject>, 'unknown'>> => {
   try {
     const now = new Date()
 
     const listings = await dbConnection('listing').where((builder) => {
-      if (published) {
+      if (params.published) {
         builder
           .where('Status', '=', ListingStatus.Active)
           .andWhere('PublishedFrom', '<=', now)
           .andWhere('PublishedTo', '>=', now)
       }
-      if (rentalRule) {
-        builder.andWhere('WaitingListType', '=', rentalRule)
+      if (params.rentalRule) {
+        builder.andWhere('RentalRule', '=', params.rentalRule)
+      }
+      if (params.listingCategory) {
+        builder.andWhere('ListingCategory', '=', params.listingCategory)
       }
     })
 
@@ -295,7 +290,7 @@ const getListings = async (
 const getListingsWithApplicants = async (
   db: Knex,
   opts?: GetListingsWithApplicantsFilterParams
-): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
+): Promise<AdapterResult<Array<ListingWithoutRentalObject>, 'unknown'>> => {
   try {
     const whereClause = match(opts?.by)
       .with({ type: 'published' }, () =>
@@ -373,7 +368,7 @@ const getListingsWithApplicants = async (
 
     const transformListing = (
       row: DbListing & { applicants: Array<DbApplicant> }
-    ): Listing => ({
+    ): ListingWithoutRentalObject => ({
       ...transformFromDbListing(row),
       applicants: row.applicants
         .map(transformDbApplicant)
@@ -473,7 +468,7 @@ const getExpiredListings = async (dbConnection = db) => {
 }
 
 const getExpiredListingsWithNoOffers = async (): Promise<
-  AdapterResult<Array<Listing>, 'unknown'>
+  AdapterResult<Array<ListingWithoutRentalObject>, 'unknown'>
 > => {
   const dbListings = await db('listing')
     .leftJoin('offer', 'offer.ListingId', 'listing.Id')

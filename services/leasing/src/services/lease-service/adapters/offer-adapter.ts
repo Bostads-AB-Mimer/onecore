@@ -222,7 +222,7 @@ export async function getOfferByContactCodeAndOfferId(
       'offer.ApplicantId',
       'offer.CreatedAt',
       'listing.RentalObjectCode',
-      'listing.VacantFrom',
+      // 'listing.VacantFrom',
       'applicant.Id as ApplicantApplicantId',
       'applicant.Name as ApplicantName',
       'applicant.NationalRegistrationNumber as ApplicantNationalRegistrationNumber',
@@ -256,7 +256,7 @@ export async function getOfferByContactCodeAndOfferId(
     ApplicantStatus,
     ApplicantListingId,
     RentalObjectCode,
-    VacantFrom,
+    // VacantFrom,
     ...offer
   } = row
 
@@ -272,7 +272,7 @@ export async function getOfferByContactCodeAndOfferId(
       ApplicationType: ApplicantApplicationType,
     }),
     rentalObjectCode: RentalObjectCode,
-    vacantFrom: VacantFrom,
+    // vacantFrom: VacantFrom,
   }
 }
 
@@ -292,7 +292,7 @@ export async function getOfferByOfferId(
         'offer.ApplicantId',
         'offer.CreatedAt',
         'listing.RentalObjectCode',
-        'listing.VacantFrom',
+        // 'listing.VacantFrom',
         'applicant.Id as ApplicantApplicantId',
         'applicant.Name as ApplicantName',
         'applicant.NationalRegistrationNumber as ApplicantNationalRegistrationNumber',
@@ -325,7 +325,7 @@ export async function getOfferByOfferId(
       ApplicantStatus,
       ApplicantListingId,
       RentalObjectCode,
-      VacantFrom,
+      // VacantFrom,
       ...offer
     } = row
 
@@ -343,7 +343,7 @@ export async function getOfferByOfferId(
           ApplicationType: ApplicantApplicationType,
         }),
         rentalObjectCode: RentalObjectCode,
-        vacantFrom: VacantFrom,
+        // vacantFrom: VacantFrom,
       },
     }
   } catch (error) {

@@ -6,7 +6,8 @@
     "rootDir": "./src",
     "outDir": "./build",
     "resolveJsonModule": true,
-    "types": ["jest","node"],
-    "noErrorTruncation": true
+    "types": ["jest", "node"],
+    "noErrorTruncation": true,
+    "isolatedModules": true
   }
 }

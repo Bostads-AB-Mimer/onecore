@@ -10,7 +10,7 @@ describe('listing-adapter', () => {
     it('inserts a new listing in the database', () =>
       withContext(async (ctx) => {
         const insertedListing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
         assert(insertedListing.ok)
@@ -22,7 +22,7 @@ describe('listing-adapter', () => {
     it('fails on duplicate combination of ListingStatus.Active and RentalObjectCode', () =>
       withContext(async (ctx) => {
         await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Active,
           }),
@@ -30,7 +30,7 @@ describe('listing-adapter', () => {
         )
 
         const insertionResult = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Active,
           }),
@@ -46,7 +46,7 @@ describe('listing-adapter', () => {
     it('allows duplicate combination of Listing status Assigned and RentalObjectCode', () =>
       withContext(async (ctx) => {
         await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Assigned,
           }),
@@ -54,7 +54,7 @@ describe('listing-adapter', () => {
         )
 
         const insertionResult = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Active,
           }),
@@ -69,7 +69,7 @@ describe('listing-adapter', () => {
     it('allows duplicate combination of Listing status Closed and RentalObjectCode', () =>
       withContext(async (ctx) => {
         await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Closed,
           }),
@@ -77,7 +77,7 @@ describe('listing-adapter', () => {
         )
 
         const insertionResult = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Active,
           }),
@@ -94,7 +94,7 @@ describe('listing-adapter', () => {
     it('returns an active listing by rental object code', () =>
       withContext(async (ctx) => {
         const insertedListing = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Active,
           }),
@@ -102,7 +102,7 @@ describe('listing-adapter', () => {
         )
         assert(insertedListing.ok)
         const insertedListing2 = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             status: ListingStatus.Closed,
           }),
@@ -127,7 +127,7 @@ describe('listing-adapter', () => {
     it('returns a listing by id', () =>
       withContext(async (ctx) => {
         const insertedListing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
         expect(insertedListing).toBeDefined()
@@ -145,7 +145,7 @@ describe('listing-adapter', () => {
     it('returns an applicant by id', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
 
@@ -167,7 +167,7 @@ describe('listing-adapter', () => {
     it('inserts a new application in the database', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
         assert(listing.ok)
@@ -186,7 +186,7 @@ describe('listing-adapter', () => {
     it('updates an applicants status', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
         assert(listing.ok)
@@ -215,7 +215,7 @@ describe('listing-adapter', () => {
     it('returns an applicant by contact code', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
 
@@ -254,7 +254,7 @@ describe('listing-adapter', () => {
     it('returns an applicant by contact code and listing id', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
 
@@ -294,7 +294,7 @@ describe('listing-adapter', () => {
     it('returns true if application exists', () =>
       withContext(async (ctx) => {
         const listing = await listingAdapter.createListing(
-          factory.listing.build({ rentalObjectCode: '1' }),
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
           ctx.db
         )
         assert(listing.ok)
@@ -333,7 +333,7 @@ describe('listing-adapter', () => {
         )
         //active listing
         await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '1',
             publishedTo: oneWeekInTheFuture,
           }),
@@ -342,7 +342,7 @@ describe('listing-adapter', () => {
 
         const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
         const expiredListing = await listingAdapter.createListing(
-          factory.listing.build({
+          factory.listingWithoutRentalObject.build({
             rentalObjectCode: '2',
             publishedTo: oneWeekAgo,
             status: ListingStatus.Active,
@@ -365,18 +365,21 @@ describe('listing-adapter', () => {
     it('updates the status of listings from an array of listing ids', () =>
       withContext(async (ctx) => {
         const listing1 = await listingAdapter.createListing(
-          factory.listing.build(),
+          factory.listingWithoutRentalObject.build(),
           ctx.db
         )
 
         const listing2 = await listingAdapter.createListing(
-          factory.listing.build(),
+          factory.listingWithoutRentalObject.build(),
           ctx.db
         )
 
         assert(listing1.ok)
         assert(listing2.ok)
-        await listingAdapter.createListing(factory.listing.build(), ctx.db)
+        await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build(),
+          ctx.db
+        )
 
         const result = await listingAdapter.updateListingStatuses(
           [listing1.data.id, listing2.data.id],

@@ -60,10 +60,10 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   }
 
   if (
-    listing.districtCode &&
-    isListingInAreaWithSpecificRentalRules(listing.districtCode) &&
+    listing.rentalObject.districtCode &&
+    isListingInAreaWithSpecificRentalRules(listing.rentalObject.districtCode) &&
     !isHousingContractsOfApplicantInSameAreaAsListing(
-      listing.districtCode,
+      listing.rentalObject.districtCode,
       applicant
     )
   ) {
@@ -90,7 +90,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     if (applicant.currentHousingContract) {
       if (
         applicant.currentHousingContract?.residentialArea?.code ===
-        listing.districtCode
+        listing.rentalObject.districtCode
       ) {
         logger.info(
           applicant.name +
@@ -108,7 +108,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
     if (applicant.upcomingHousingContract) {
       if (
         applicant.upcomingHousingContract?.residentialArea?.code ===
-        listing.districtCode
+        listing.rentalObject.districtCode
       ) {
         logger.info(
           applicant.name +

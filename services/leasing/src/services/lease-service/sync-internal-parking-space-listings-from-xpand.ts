@@ -6,8 +6,9 @@ import * as xpandSoapAdapter from './adapters/xpand/xpand-soap-adapter'
 import * as listingAdapter from './adapters/listing-adapter'
 import * as leaseAdapter from './adapters/xpand/tenant-lease-adapter'
 import { AdapterResult } from './adapters/types'
+import { ListingWithoutRentalObject } from '../../common/types'
 
-type CreateListingData = Omit<Listing, 'id'>
+type CreateListingData = Omit<ListingWithoutRentalObject, 'id'>
 type ServiceError = 'get-parking-spaces' | 'get-residential-area' | 'unknown'
 
 type CreateListingErrors = Extract<
@@ -18,7 +19,7 @@ type CreateListingErrors = Extract<
 type ServiceSuccessData = {
   invalid: ParseInternalParkingSpacesToInsertableListingsResult['invalid']
   insertions: {
-    inserted: Array<Listing>
+    inserted: Array<ListingWithoutRentalObject>
     failed: Array<{
       listing: CreateListingData
       err: CreateListingErrors
@@ -216,16 +217,10 @@ export function toInternalParkingSpaceListingsData(
 ): CreateListingData {
   return {
     rentalObjectCode: item.RentalObjectCode,
-    address: item.Address1,
-    monthlyRent: item.MonthRent,
-    objectTypeCaption: item.ObjectTypeCaption ?? undefined,
-    objectTypeCode: item.ObjectTypeCode ?? undefined,
-    rentalObjectTypeCaption: item.RentalObjectTypeCaption ?? undefined,
-    rentalObjectTypeCode: item.RentalObjectTypeCode ?? undefined,
     publishedFrom: new Date(item.PublishedFrom),
     publishedTo: new Date(item.PublishedTo),
-    vacantFrom: new Date(item.VacantFrom),
     status: ListingStatus.Active,
-    waitingListType: item.WaitingListType,
+    rentalRule: 'NON_SCORED',
+    listingCategory: 'PARKING_SPACE',
   }
 }

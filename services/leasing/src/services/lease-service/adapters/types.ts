@@ -61,21 +61,11 @@ export type DbApplicant = {
 export type DbListing = {
   Id: number
   RentalObjectCode: string
-  Address: string
-  MonthlyRent: number
-  DistrictCaption: string | null
-  DistrictCode: string | null
-  BlockCaption: string | null
-  BlockCode: string | null
-  ObjectTypeCaption: string | null
-  ObjectTypeCode: string | null
-  RentalObjectTypeCaption: string | null
-  RentalObjectTypeCode: string | null
   PublishedFrom: Date
   PublishedTo: Date
-  VacantFrom: Date
   Status: ListingStatus
-  WaitingListType: string | null
+  RentalRule: 'SCORED' | 'NON_SCORED'
+  ListingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
 }
 
 export type DbComment = {

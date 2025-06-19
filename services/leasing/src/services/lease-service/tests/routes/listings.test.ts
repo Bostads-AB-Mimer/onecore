@@ -42,11 +42,17 @@ describe('GET /listing/:listingId/applicants/details', () => {
       nationalRegistrationNumber: '198001011234',
     })
 
+    const rentalObject = factory.rentalObject
+      .params({
+        vacantFrom: new Date(),
+      })
+      .build()
+
     const listing = factory.listing.build({
       id: listingId,
       publishedFrom: new Date(),
       publishedTo: new Date(),
-      vacantFrom: new Date(),
+      rentalObject: rentalObject,
       applicants: [applicant1, applicant2],
     })
 
