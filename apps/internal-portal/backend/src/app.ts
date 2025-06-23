@@ -48,7 +48,7 @@ app.use(async (ctx, next) => {
   }
 })
 
-app.use(cors({ credentials: true }))
+app.use(cors({ credentials: true, origin: process.env.CORS_ORIGIN }))
 
 app.on('error', (err) => {
   logger.error(err)
