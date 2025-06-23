@@ -1,0 +1,32 @@
+name: Production
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [property-base, property-tree]
+
+    steps:
+      - name: 🛎️ Checkout
+        uses: actions/checkout@v3
+
+      - name: 🔐 Login to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Build and push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./packages/${{ matrix.package }}
+          file: ./packages/${{ matrix.package }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/bostads-ab-mimer/onecore-core/${{ matrix.package }}:release-${{ github.event.release.tag_name }}
