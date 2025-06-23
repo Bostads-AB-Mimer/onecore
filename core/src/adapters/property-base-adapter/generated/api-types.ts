@@ -446,6 +446,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/buildings/by-building-code/{buildingCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get detailed information about a specific building by building code
+         * @description Retrieves comprehensive information about a building using its building code.
+         *     Returns details including construction year, renovation history, insurance information,
+         *     and associated property data.
+         *
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The building code of the building */
+                    buildingCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved building information */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content?: components["schemas"]["Building"];
+                        };
+                    };
+                };
+                /** @description Building not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/buildings/{id}": {
         parameters: {
             query?: never;

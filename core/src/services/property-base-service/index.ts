@@ -7,7 +7,6 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
-import { z } from 'zod'
 
 /**
  * @swagger
@@ -35,6 +34,88 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'ResidenceByRentalIdDetails',
     schemas.ResidenceByRentalIdSchema
+  )
+
+  /**
+   * @swagger
+   * /propertyBase/buildings/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get building by building code
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves building data by building code
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the building
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved building
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Building'
+   *       '404':
+   *         description: Building not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Building not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/propertyBase/buildings/by-building-code/:buildingCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { buildingCode } = ctx.params
+
+      try {
+        const result = await propertyBaseAdapter.getBuildingByCode(buildingCode)
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Building not found', ...metadata }
+            return
+          }
+
+          logger.error(result.err, 'Internal server error', metadata)
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: result.data as schemas.Building,
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
   )
 
   /**

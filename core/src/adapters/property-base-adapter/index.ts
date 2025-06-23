@@ -77,6 +77,34 @@ export async function searchResidences(
   }
 }
 
+type GetBuildingResponse = components['schemas']['Building']
+
+export async function getBuildingByCode(
+  buildingCode: string
+): Promise<AdapterResult<GetBuildingResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/buildings/by-building-code/{buildingCode}',
+      {
+        params: { path: { buildingCode } },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getBuilding')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetCompaniesResponse = components['schemas']['Company'][]
 
 export async function getCompanies(): Promise<
