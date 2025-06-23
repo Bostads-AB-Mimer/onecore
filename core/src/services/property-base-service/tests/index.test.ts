@@ -28,6 +28,51 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('property-base-service', () => {
+  describe('GET /propertyBase/buildings/by-building-code/:buildingCode', () => {
+    it('returns 200 and a building by code', async () => {
+      const buildingMock = factory.building.build()
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingByCode')
+        .mockResolvedValueOnce({ ok: true, data: buildingMock })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/buildings/by-building-code/${buildingMock.code}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getBuildingSpy).toHaveBeenCalledWith(buildingMock.code)
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(buildingMock)
+      )
+    })
+
+    it('returns 404 if no building is found', async () => {
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/buildings/by-building-code/123-456'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getBuildingSpy).toHaveBeenCalledWith('123-456')
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/buildings/by-building-code/123-456'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getBuildingSpy).toHaveBeenCalledWith('123-456')
+    })
+  })
+
   describe('GET /propertyBase/companies', () => {
     it('returns 200 and a list of companies', async () => {
       const companiesMock = factory.company.buildList(3)
