@@ -1988,48 +1988,6 @@ export interface paths {
       };
     };
   };
-  "/propertyBase/buildings/by-building-code/{buildingCode}": {
-    /**
-     * Get building by building code
-     * @description Retrieves building data by building code
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the building */
-          buildingCode: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved building */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Building"];
-            };
-          };
-        };
-        /** @description Building not found */
-        404: {
-          content: {
-            "application/json": {
-              /** @example Building not found */
-              error?: string;
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/propertyBase/companies": {
     /**
      * Get all companies
