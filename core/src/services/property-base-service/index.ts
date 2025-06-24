@@ -270,6 +270,73 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /propertyBase/properties/search:
+   *   get:
+   *     summary: Search properties
+   *     description: |
+   *       Retrieves a list of all real estate properties by name.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: The search query.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved list of properties.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Property'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/propertyBase/properties/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = z.object({ q: z.string() }).safeParse(ctx.query)
+
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors }
+      return
+    }
+
+    const { q } = params.data
+
+    try {
+      const result = await propertyBaseAdapter.searchProperties(q)
+
+      if (!result.ok) {
+        logger.error(result.err, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Property[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /propertyBase/properties/{propertyId}:
    *   get:
    *     summary: Get property by property id

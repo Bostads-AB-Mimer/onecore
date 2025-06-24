@@ -105,6 +105,49 @@ describe('property-base-service', () => {
     })
   })
 
+  describe('GET /propertyBase/properties/search', () => {
+    it('returns 200 and a list of properties', async () => {
+      const propertiesMock = factory.property.buildList(3)
+      const getPropertiesSpy = jest
+        .spyOn(propertyBaseAdapter, 'searchProperties')
+        .mockResolvedValueOnce({ ok: true, data: propertiesMock })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/properties/search?q=KVARTER%201`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getPropertiesSpy).toHaveBeenCalled()
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(propertiesMock)
+      )
+      expect(() =>
+        z.array(PropertySchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 400 if query parameter is missing', async () => {
+      const res = await request(app.callback()).get(
+        `/propertyBase/properties/search`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getPropertiesSpy = jest
+        .spyOn(propertyBaseAdapter, 'searchProperties')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/propertyBase/properties/search?q=KVARTER%201`
+      )
+
+      expect(res.status).toBe(500)
+      expect(getPropertiesSpy).toHaveBeenCalled()
+    })
+  })
+
   describe('GET /propertyBase/residences', () => {
     it('returns 200 and a list of residences', async () => {
       const residences = factory.residence.buildList(3)
