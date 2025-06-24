@@ -2,6 +2,8 @@ import KoaRouter from '@koa/router'
 import swaggerJsdoc from 'swagger-jsdoc'
 import { swaggerSpec } from '../swagger'
 import {
+  GetResidenceByRentalIdResponseSchema,
+  ResidenceByRentalIdSchema,
   ResidenceDetailedSchema,
   ResidenceSchema,
   ResidenceSearchResultSchema,
@@ -14,6 +16,7 @@ import { RoomSchema } from '../types/room'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
 import { ParkingSpaceSchema } from '../types/parking-space'
 import zodToJsonSchema from 'zod-to-json-schema'
+import { MaintenanceUnitSchema } from '../types/maintenance-unit'
 
 const schemas = {
   ...zodToJsonSchema(ResidenceSchema, {
@@ -58,6 +61,17 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(CompanyDetailsSchema, {
     name: 'CompanyDetails',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(MaintenanceUnitSchema, {
+    name: 'MaintenanceUnit',
+  }).definitions,
+  ...zodToJsonSchema(ResidenceByRentalIdSchema, {
+    name: 'ResidenceByRentalId',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(GetResidenceByRentalIdResponseSchema, {
+    name: 'GetResidenceByRentalIdResponse',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(ParkingSpaceSchema, {

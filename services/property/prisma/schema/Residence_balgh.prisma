@@ -43,6 +43,9 @@ model Residence {
   // TODO: Verify relation for checklistId as the InspectionProtocol model was provided but fields need to be verified
   // inspectionProtocol InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalghkeylbpro ")
 
+  // MaintenanceUnit -> Residence join table relation through "baxyk" table
+  ResidenceToMaintenanceUnitRelation ResidenceToMaintenanceUnitRelation[] @relation("MaintenanceUnitToResidenceRelation")
+
   @@index([residenceTypeId], map: "fkbalghbalgt")
   @@index([checklistId], map: "fkbalghlbpro")
   @@index([fromDate], map: "inbalgh_2BR0U8P2C")
@@ -50,4 +53,5 @@ model Residence {
   @@index([code], map: "inbalgh_2BR0U8P4U")
   @@index([name], map: "inbalgh_2BR0U8P5R")
   @@map("balgh")
+
 }

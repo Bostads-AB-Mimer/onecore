@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { createGenericResponseSchema } from './response'
 
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
@@ -128,6 +129,55 @@ export const ResidenceDetailedSchema = z.object({
   size: z.number().nullable(),
 })
 
+export const ResidenceByRentalIdSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  accessibility: z.object({
+    wheelchairAccessible: z.boolean(),
+    elevator: z.boolean(),
+  }),
+  features: z.object({
+    hygieneFacility: z.string().nullable(),
+  }),
+  entrance: z.string().nullable(),
+  deleted: z.boolean(),
+  type: z.object({
+    code: z.string(),
+    name: z.string().nullable(),
+    roomCount: z.number().nullable(),
+    kitchen: z.number(),
+  }),
+  rentalInformation: z
+    .object({
+      apartmentNumber: z.string().nullable(),
+      rentalId: z.string().nullable(),
+      type: z.object({
+        code: z.string(),
+        name: z.string().nullable(),
+      }),
+    })
+    .nullable(),
+  property: z.object({
+    id: z.string().nullable(),
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  building: z.object({
+    id: z.string().nullable(),
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  areaSize: z.number().nullable(),
+})
+
+export const GetResidenceByRentalIdResponseSchema = createGenericResponseSchema(
+  ResidenceByRentalIdSchema
+)
+
 export type ExternalResidence = z.infer<typeof ResidenceSchema>
 export type Residence = ExternalResidence
 export type ResidenceSearchResult = z.infer<typeof ResidenceSearchResultSchema>
+export type GetResidenceByRentalIdResponse = z.infer<
+  typeof GetResidenceByRentalIdResponseSchema
+>
