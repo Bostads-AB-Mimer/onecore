@@ -862,6 +862,7 @@ export const routes = (router: KoaRouter) => {
     const responseData = (await leasingAdapter.getListingByListingId(
       Number.parseInt(ctx.params.id)
     )) as Listing | undefined
+<<<<<<< HEAD
 
     if (!responseData) {
       ctx.status = 404
@@ -869,6 +870,15 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+=======
+    console.log('responseData', responseData)
+    if (!responseData) {
+      ctx.status = 404
+      ctx.body = { error: 'Listing not found', ...metadata }
+      return
+    }
+
+>>>>>>> ccfbdc4 (Added RentalObject to listings and listings/id)
     const parkingSpacesResult =
       await propertyManagementAdapter.getParkingSpaceByCode(
         responseData.rentalObjectCode
