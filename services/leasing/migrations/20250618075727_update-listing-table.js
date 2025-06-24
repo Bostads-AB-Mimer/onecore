@@ -5,8 +5,8 @@
 exports.up = async function (knex) {
   // Lägg till nya kolumner först
   await knex.schema.alterTable('Listing', (table) => {
-    table.string('RentalRule').nullable() // ska den vara nullable?
-    table.string('ListingCategory').nullable() // ska den vara nullable?
+    table.string('RentalRule').nullable()
+    table.string('ListingCategory').nullable()
   })
 
   // Flytta och mappa data från WaitingListType till RentalRule och ListingCategory
