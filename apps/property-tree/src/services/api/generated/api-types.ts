@@ -245,40 +245,6 @@ export interface paths {
       };
     };
   };
-  "/buildings/by-building-code/{buildingCode}": {
-    /**
-     * Get detailed information about a specific building by building code
-     * @description Retrieves comprehensive information about a building using its building code.
-     * Returns details including construction year, renovation history, insurance information,
-     * and associated property data.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The building code of the building */
-          buildingCode: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved building information */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Building"];
-            };
-          };
-        };
-        /** @description Building not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/buildings/{id}": {
     /**
      * Get detailed information about a specific building
