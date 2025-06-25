@@ -4,14 +4,16 @@ import { RentalObject } from 'onecore-types'
 export const RentalObjectFactory = Factory.define<RentalObject>(
   ({ sequence }) => ({
     rentalObjectCode: `R${sequence + 1000}`,
-    address: 'Flugsnappargatan',
-    districtCaption: 'Distrikt Väst',
-    districtCode: '4',
-    objectTypeCaption: 'Parkeringsplats utan el',
-    objectTypeCode: 'PPLUEL',
-    vacantFrom: new Date(),
+    address: 'Sample Address',
     monthlyRent: 1000,
-    restidentalAreaCode: '61145',
-    restidentalAreaCaption: 'Råby',
+    districtCaption: 'Malmaberg',
+    districtCode: 'MAL',
+    propertyCaption: 'LINDAREN 2',
+    propertyCode: '1401',
+    residentialAreaCaption: 'res_area',
+    residentialAreaCode: 'RES_AREA',
+    objectTypeCaption: 'Carport',
+    objectTypeCode: 'CPORT',
+    vacantFrom: new Date(),
   })
 )

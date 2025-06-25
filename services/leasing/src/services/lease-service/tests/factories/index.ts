@@ -16,3 +16,4 @@ export {
   ApplicationProfileFactory as applicationProfile,
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
 } from './application-profile'
+export { RentalObjectFactory as rentalObject } from './rental-object'
