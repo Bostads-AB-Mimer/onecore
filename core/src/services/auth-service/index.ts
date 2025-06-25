@@ -175,10 +175,18 @@ export const routes = (router: KoaRouter) => {
       // Exchange code for tokens and set cookies
       const { user } = await auth.handleTokenExchange(code, redirectUri, ctx)
 
+      ctx.status = 200
       ctx.body = user
     } catch (error) {
       logger.error('Authentication error:', error)
-      ctx.redirect('/auth/login?error=auth_failed')
+      if (typeof error === 'object' && error !== null && 'status' in error) {
+        if (error.status === 400) {
+          ctx.status = 400
+          return
+        }
+      } else {
+        ctx.status = 500
+      }
     }
   })
 
