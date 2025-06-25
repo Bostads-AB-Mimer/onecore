@@ -343,21 +343,16 @@ interface RentalObject {
   monthlyRent: number
   districtCaption?: string
   districtCode?: string
-  blockCaption?: string
-  blockCode?: string
-  restidentalAreaCaption: string
-  restidentalAreaCode: string
+  propertyCaption?: string
+  propertyCode?: string
+  residentialAreaCaption: string
+  residentialAreaCode: string
   objectTypeCaption: string
   objectTypeCode: string
   vacantFrom: Date
   braArea?: number
   btaArea?: number
   boaArea?: number
-}
-
-interface VacantParkingSpace extends RentalObject {
-  vehicleSpaceCaption: string
-  vehicleSpaceCode: string
 }
 
 interface MaintenanceUnitInfo {
@@ -407,7 +402,6 @@ export type {
   Invoice,
   RentalObject,
   ParkingSpace,
-  VacantParkingSpace,
   Email,
   Sms,
   WaitingList,
