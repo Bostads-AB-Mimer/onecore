@@ -189,6 +189,44 @@ describe('property-base-adapter', () => {
     })
   })
 
+  describe('searchProperties', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/search`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.searchProperties('001')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns properties', async () => {
+      const propertiesMock = factory.property.buildList(2)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/properties/search`, () =>
+          HttpResponse.json(
+            {
+              content: propertiesMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.searchProperties('KVARTER 1')
+
+      expect(result.ok).toBe(true)
+      expect(result).toMatchObject({
+        ok: true,
+        data: propertiesMock,
+      })
+    })
+  })
+
   describe('getResidenceByRentalId', () => {
     it('returns err if request fails', async () => {
       const residenceDetailsMock = factory.residenceByRentalIdDetails.build()
