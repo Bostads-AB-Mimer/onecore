@@ -25,6 +25,7 @@ import { z } from 'zod'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('Building', schemas.BuildingSchema)
   registerSchema('Company', schemas.CompanySchema)
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
