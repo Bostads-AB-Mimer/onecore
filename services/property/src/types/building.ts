@@ -9,11 +9,11 @@ export const buildingsQueryParamsSchema = z.object({
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
   buildingType: z.object({
-    id: z.string(),
-    code: z.string(),
-    name: z.string(),
+    id: z.string().nullable(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
   }),
   construction: z.object({
     constructionYear: z.number().nullable(),

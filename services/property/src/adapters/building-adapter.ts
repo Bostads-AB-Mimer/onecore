@@ -81,6 +81,29 @@ const getBuildingById = async (
     .then(trimStrings)
 }
 
+const getBuildingByCode = async (
+  code: string
+): Promise<BuildingWithRelations | null> => {
+  return prisma.building
+    .findFirst({
+      where: {
+        buildingCode: code,
+      },
+      include: {
+        buildingType: true,
+        marketArea: true,
+        propertyDesignation: true,
+        district: true,
+        propertyObject: {
+          include: {
+            property: true,
+          },
+        },
+      },
+    })
+    .then(trimStrings)
+}
+
 /**
  * Searches buildings by name
  * At the moment this function has an "under investigation" approach to fetchin
@@ -168,4 +191,4 @@ const searchBuildings = async (
   }
 }
 
-export { getBuildings, getBuildingById, searchBuildings }
+export { getBuildings, getBuildingById, getBuildingByCode, searchBuildings }
