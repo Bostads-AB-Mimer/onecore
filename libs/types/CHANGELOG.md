@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.11.0...v3.11.1) (2025-06-25)
+
+
+### Features
+
+* UTH-251 Model Changes to Fetch RentalObject from XPand-db ([#179](https://github.com/Bostads-AB-Mimer/onecore-types/issues/179)) ([27e8cbd](https://github.com/Bostads-AB-Mimer/onecore-types/commit/27e8cbd8a2fbf1d3320e61281e07f7636c1a5c23))
+
 ## [3.11.0](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.10.0...v3.11.0) (2025-06-04)
 
 
