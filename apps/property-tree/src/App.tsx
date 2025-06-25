@@ -7,12 +7,7 @@ import {
 import { CommandPalette } from './components/CommandPalette'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
-import {
-  AuthProvider,
-  ProtectedRoute,
-  useAuth,
-} from './components/auth/useAuth'
-import { AuthCallback } from './components/auth/AuthCallback'
+import { AuthCallback } from './auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
@@ -35,6 +30,9 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
 } from './components/ui/Breadcrumb'
+import { ProtectedRoute } from './auth/ProtectedRoute'
+import { useAuth } from './auth/useAuth'
+import { useUser } from './auth/useUser'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +44,8 @@ const queryClient = new QueryClient({
 })
 
 function AppContent() {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
+  const userState = useUser()
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-gray-900">
@@ -77,9 +76,9 @@ function AppContent() {
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
-              {user && (
+              {userState.tag === 'success' && (
                 <div className="flex items-center gap-4">
-                  <span className="text-sm">{user.name}</span>
+                  <span className="text-sm">{userState.user.name}</span>
                   <button
                     onClick={logout}
                     className="text-sm text-gray-500 hover:text-gray-700"
@@ -123,36 +122,23 @@ function AppContent() {
 }
 
 export default function App() {
-  const authConfig = {
-    keycloakUrl:
-      import.meta.env.VITE_KEYCLOAK_URL ||
-      'https://auth-test.mimer.nu/realms/onecore-test',
-    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'onecore-test',
-    apiUrl: import.meta.env.VITE_CORE_API_URL || 'http://localhost:5010',
-    redirectUri:
-      import.meta.env.VITE_KEYCLOAK_REDIRECT_URI ||
-      'http://localhost:3000/callback',
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider config={authConfig}>
+      <CommandPaletteProvider>
         <Router>
-          <CommandPaletteProvider>
-            <Routes>
-              <Route path="/callback" element={<AuthCallback />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AppContent />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </CommandPaletteProvider>
+          <Routes>
+            <Route path="/callback" element={<AuthCallback />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppContent />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
         </Router>
-      </AuthProvider>
+      </CommandPaletteProvider>
     </QueryClientProvider>
   )
 }
