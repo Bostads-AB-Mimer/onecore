@@ -237,7 +237,8 @@ export const routes = (router: KoaRouter) => {
           id: result.propertyObject.residence.id,
           code: result.propertyObject.residence.code,
           name: result.propertyObject.residence.name,
-          entrance: result.propertyObject.residence.entrance,
+          entrance: result.staircaseCode,
+          floor: result.propertyObject.residence.floor,
           accessibility: {
             elevator: Boolean(result.propertyObject.residence.elevator),
             wheelchairAccessible: Boolean(
@@ -346,7 +347,7 @@ export const routes = (router: KoaRouter) => {
         code: residence.code,
         name: residence.name,
         location: residence.location,
-        entrance: residence.entrance,
+        floor: residence.floor,
         partNo: residence.partNo,
         part: residence.part,
         deleted: Boolean(residence.deleted),
