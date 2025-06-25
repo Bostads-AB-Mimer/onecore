@@ -19,11 +19,11 @@ export function transformBuildingData(
   return {
     id: building.id,
     code: building.buildingCode,
-    name: building.name || '',
+    name: building.name || null,
     buildingType: {
-      id: building.buildingType?.id || '',
-      code: building.buildingType?.code || '',
-      name: building.buildingType?.name || '',
+      id: building.buildingType?.id || null,
+      code: building.buildingType?.code || null,
+      name: building.buildingType?.name || null,
     },
     construction: {
       constructionYear: building.constructionYear,
