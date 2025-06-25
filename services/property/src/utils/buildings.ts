@@ -1,4 +1,5 @@
 import { BuildingWithRelations } from '@src/adapters/building-adapter'
+import { Building } from '@src/types/building'
 
 /**
  * Transforms a building entity with relations into a normalized building data object.
@@ -12,7 +13,9 @@ import { BuildingWithRelations } from '@src/adapters/building-adapter'
  *   - Insurance details (class, value)
  *   - Deletion status
  */
-export function transformBuildingData(building: BuildingWithRelations) {
+export function transformBuildingData(
+  building: BuildingWithRelations
+): Building {
   return {
     id: building.id,
     code: building.buildingCode,
@@ -28,8 +31,8 @@ export function transformBuildingData(building: BuildingWithRelations) {
       valueYear: building.valueYear,
     },
     features: {
-      heating: building.heating || '',
-      fireRating: building.fireRating || '',
+      heating: building.heating || null,
+      fireRating: building.fireRating || null,
     },
     insurance: {
       class: building.insuranceClass,
