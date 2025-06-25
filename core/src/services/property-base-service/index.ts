@@ -32,6 +32,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
+  registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
   registerSchema(
     'ResidenceByRentalIdDetails',
@@ -827,6 +828,90 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /propertyBase/parking-spaces/by-rental-id/{rentalId}:
+   *   get:
+   *     summary: Get parking space data by rentalId
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves parking space data by rentalId
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental id to fetch parking space for
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved parking space.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ParkingSpace'
+   *       '404':
+   *         description: Parking space not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Parking space not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve parking space data.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/propertyBase/parking-spaces/by-rental-id/:rentalId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalId } = ctx.params
+
+      try {
+        const response =
+          await propertyBaseAdapter.getParkingSpaceByRentalId(rentalId)
+
+        if (!response.ok) {
+          if (response.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Parking space not found', ...metadata }
+            return
+          }
+
+          logger.error(response.err, 'Internal server error', metadata)
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+        ctx.status = 200
+
+        ctx.body = {
+          content: schemas.ParkingSpaceSchema.parse(response.data),
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
