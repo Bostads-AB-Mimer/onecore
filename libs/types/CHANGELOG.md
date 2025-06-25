@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.2](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.11.1...v3.11.2) (2025-06-25)
+
+
+### Features
+
+* UTH-257 Model changes of RentalObject, removal of VacantParkingSpace ([afe4454](https://github.com/Bostads-AB-Mimer/onecore-types/commit/afe4454e9ca7168234f0c502a8aa2de2a44a1e56))
+
 ## [3.11.1](https://github.com/Bostads-AB-Mimer/onecore-types/compare/v3.11.0...v3.11.1) (2025-06-25)
 
 
