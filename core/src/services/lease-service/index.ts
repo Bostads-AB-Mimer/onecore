@@ -211,6 +211,50 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/by-contact-code/{contactCode}:
+   *   get:
+   *     summary: Get leases with related entities for a specific contact code
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Contact code of the individual to fetch leases for.
+   *     responses:
+   *       '200':
+   *         description: Successful response with leases and related entities
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const responseData = await leasingAdapter.getLeasesForContactCode(
+      ctx.params.contactCode,
+      {
+        includeUpcomingLeases: false,
+        includeTerminatedLeases: false,
+        includeContacts: true,
+      }
+    )
+
+    ctx.body = {
+      content: responseData,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /cas/getConsumerReport/{pnr}:
    *   get:
    *     summary: Get consumer report for a specific Personal Number (PNR)

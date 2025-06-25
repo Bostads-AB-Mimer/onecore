@@ -33,7 +33,7 @@ export const ResidenceDetailsFactory = Factory.define<
     smokeFree: false,
     asbestos: false,
   },
-  entrance: '1',
+  floor: '1',
   residenceType: {
     residenceTypeId: 'string',
     code: '2RK',
@@ -86,4 +86,5 @@ export const ResidenceByRentalIdDetailsFactory = Factory.define<
     rentalId: '1234',
     type: { code: '1RK', name: '1 rum och kök' },
   },
+  floor: '1',
 }))

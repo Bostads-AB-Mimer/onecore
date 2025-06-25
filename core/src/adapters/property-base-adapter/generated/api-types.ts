@@ -1198,7 +1198,7 @@ export interface components {
                 smokeFree: boolean;
                 asbestos: boolean;
             };
-            entrance: string | null;
+            floor: string | null;
             partNo?: number | null;
             part?: string | null;
             deleted: boolean;
@@ -1539,6 +1539,7 @@ export interface components {
                 hygieneFacility: string | null;
             };
             entrance: string | null;
+            floor: string | null;
             deleted: boolean;
             type: {
                 code: string;
@@ -1579,6 +1580,7 @@ export interface components {
                     hygieneFacility: string | null;
                 };
                 entrance: string | null;
+                floor: string | null;
                 deleted: boolean;
                 type: {
                     code: string;

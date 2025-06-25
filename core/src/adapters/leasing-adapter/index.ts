@@ -41,7 +41,7 @@ const getLease = async (
   const leaseResponse = await axios(
     tenantsLeasesServiceUrl +
       '/leases/' +
-      leaseId +
+      encodeURIComponent(leaseId) +
       (includeContacts ? '?includeContacts=true' : '')
   )
 
