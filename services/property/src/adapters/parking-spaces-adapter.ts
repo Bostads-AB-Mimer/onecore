@@ -68,7 +68,7 @@ export async function getParkingSpaceByRentalPropertyId(
   })
 
   // Don't return anything if no parking space is found in the data..
-  if (propertyStructureResponse?.parkingSpace === null) return null
+  if (!propertyStructureResponse?.parkingSpace) return null
 
   // Fetch the address associated with the parking space
   const addressResponse = await prisma.address.findFirst({
