@@ -24,8 +24,8 @@ function transformFromDbListing(row: DbListing): ListingWithoutRentalObject {
     publishedTo: row.PublishedTo,
     status: row.Status,
     applicants: undefined,
-    rentalRule: row.RentalRule || undefined,
-    listingCategory: row.ListingCategory || undefined,
+    rentalRule: row.RentalRule,
+    listingCategory: row.ListingCategory,
   }
 }
 
