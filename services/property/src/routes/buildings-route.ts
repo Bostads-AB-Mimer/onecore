@@ -8,12 +8,14 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { z } from 'zod'
 
 import {
+  getBuildingByCode,
   getBuildingById,
   getBuildings,
   searchBuildings,
 } from '../adapters/building-adapter'
 import { buildingsQueryParamsSchema, BuildingSchema } from '../types/building'
 import { parseRequest } from '../middleware/parse-request'
+import { transformBuildingData } from '../utils/buildings'
 
 /**
  * @swagger
@@ -73,30 +75,9 @@ export const routes = (router: KoaRouter) => {
         const buildings = await getBuildings(propertyCode)
 
         const responseContent = buildings.map((building) => {
-          const parsedBuilding = BuildingSchema.parse({
-            id: building.id,
-            code: building.buildingCode,
-            name: building.name || '',
-            buildingType: {
-              id: building.buildingType?.id || '',
-              code: building.buildingType?.code || '',
-              name: building.buildingType?.name || '',
-            },
-            construction: {
-              constructionYear: building.constructionYear,
-              renovationYear: building.renovationYear,
-              valueYear: building.valueYear,
-            },
-            features: {
-              heating: building.heating || '',
-              fireRating: building.fireRating || '',
-            },
-            insurance: {
-              class: building.insuranceClass,
-              value: building.insuranceValue,
-            },
-            deleted: Boolean(building.deleteMark),
-          })
+          const parsedBuilding = BuildingSchema.parse(
+            transformBuildingData(building)
+          )
 
           return parsedBuilding
         })
@@ -204,6 +185,65 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /buildings/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get detailed information about a specific building by building code
+   *     description: |
+   *       Retrieves comprehensive information about a building using its building code.
+   *       Returns details including construction year, renovation history, insurance information,
+   *       and associated property data.
+   *     tags:
+   *       - Buildings
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building code of the building
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved building information
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Building'
+   *       404:
+   *         description: Building not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/buildings/by-building-code/:buildingCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const buildingCode = ctx.params.buildingCode
+    logger.info(`GET /buildings/by-building-code/${buildingCode}`, metadata)
+
+    try {
+      const building = await getBuildingByCode(buildingCode)
+
+      if (!building) {
+        ctx.status = 404
+        return
+      }
+
+      const transformedData = transformBuildingData(building)
+
+      ctx.body = {
+        content: BuildingSchema.parse(transformedData),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /buildings/{id}:
    *   get:
    *     summary: Get detailed information about a specific building
@@ -249,33 +289,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const parsedBuilding = BuildingSchema.parse({
-        id: building.id,
-        code: building.buildingCode,
-        name: building.name || '',
-        buildingType: {
-          id: building.buildingType?.id || '',
-          code: building.buildingType?.code || '',
-          name: building.buildingType?.name || '',
-        },
-        construction: {
-          constructionYear: building.constructionYear,
-          renovationYear: building.renovationYear,
-          valueYear: building.valueYear,
-        },
-        features: {
-          heating: building.heating,
-          fireRating: building.fireRating,
-        },
-        insurance: {
-          class: building.insuranceClass,
-          value: building.insuranceValue,
-        },
-        deleted: Boolean(building.deleteMark),
-      })
+      const transformedData = transformBuildingData(building)
 
       ctx.body = {
-        content: parsedBuilding,
+        content: BuildingSchema.parse(transformedData),
         ...metadata,
       }
     } catch (err) {
