@@ -13,21 +13,39 @@ jobs:
 
     steps:
       - name: 🛎️ Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🔧 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: 🔐 Login to Docker Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔧 Build and push Docker Image
-        uses: docker/build-push-action@v4
+      - name: 🔧 Build and push property-base
+        if: matrix.package == 'property-base'
+        uses: docker/build-push-action@v5
         with:
+          context: .
+          file: ./packages/${{ matrix.package }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/bostads-ab-mimer/property-base/${{ matrix.package }}:release-${{ github.event.release.tag_name }}
+
+      - name: 🔧 Build and push property-tree
+        if: matrix.package == 'property-tree'
+        uses: docker/build-push-action@v5
+        with:
+          build-args: |
+            VITE_API_URL=http://property-base
+            VITE_CORE_API_URL=https://api.mimer.nu
+            VITE_KEYCLOAK_URL=https://auth.mimer.nu/realms/onecore
+            VITE_KEYCLOAK_CLIENT_ID=onecore
+            VITE_KEYCLOAK_REDIRECT_URI=https://property-tree.mimer.nu/callback
+            VITE_KEYCLOAK_REALM=onecore
           context: .
           file: ./packages/${{ matrix.package }}/Dockerfile
           push: true
