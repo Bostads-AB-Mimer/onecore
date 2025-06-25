@@ -7,6 +7,7 @@ import { logger, generateRouteMetadata } from 'onecore-utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
+import { z } from 'zod'
 
 /**
  * @swagger
