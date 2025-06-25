@@ -221,22 +221,13 @@ interface WaitingList {
 interface Listing {
   id: number
   rentalObjectCode: string
-  address: string
-  monthlyRent: number
-  districtCaption?: string
-  districtCode?: string
-  blockCaption?: string
-  blockCode?: string
-  objectTypeCaption?: string | undefined
-  objectTypeCode?: string | undefined
-  rentalObjectTypeCaption?: string | undefined
-  rentalObjectTypeCode?: string | undefined
   publishedFrom: Date
   publishedTo: Date
-  vacantFrom: Date
   status: ListingStatus
-  waitingListType?: string | undefined
+  rentalRule: 'SCORED' | 'NON_SCORED'
+  listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   applicants?: Applicant[]
+  rentalObject: RentalObject
 }
 
 interface Applicant {
