@@ -1275,11 +1275,11 @@ export interface components {
         Building: {
             id: string;
             code: string;
-            name: string;
+            name: string | null;
             buildingType: {
-                id: string;
-                code: string;
-                name: string;
+                id: string | null;
+                code: string | null;
+                name: string | null;
             };
             construction: {
                 constructionYear: number | null;
