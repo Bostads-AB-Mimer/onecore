@@ -14,6 +14,7 @@ import { PropertySchema, PropertyDetailsSchema } from '../types/property'
 import { StaircaseSchema } from '../types/staircase'
 import { RoomSchema } from '../types/room'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
+import { ParkingSpaceSchema } from '../types/parking-space'
 import zodToJsonSchema from 'zod-to-json-schema'
 import { MaintenanceUnitSchema } from '../types/maintenance-unit'
 
@@ -71,6 +72,10 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(GetResidenceByRentalIdResponseSchema, {
     name: 'GetResidenceByRentalIdResponse',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(ParkingSpaceSchema, {
+    name: 'ParkingSpace',
     target: 'openApi3',
   }).definitions,
 }
