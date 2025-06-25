@@ -9,7 +9,7 @@ export const PropertySearchResultSchema = z.object({
 export const BuildingSearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('building').describe('Indicates this is a building result'),
-  name: z.string().describe('Name of the building'),
+  name: z.string().nullable().describe('Name of the building'),
   property: z
     .object({
       name: z
