@@ -21,7 +21,7 @@ export const ListingFactory = Factory.define<Listing>(({ sequence }) => ({
     objectTypeCaption: 'Carport',
     objectTypeCode: 'CPORT',
     vacantFrom: new Date(),
-    restidentalAreaCaption: 'Malmaberg',
-    restidentalAreaCode: 'MAL',
+    residentialAreaCaption: 'Malmaberg',
+    residentialAreaCode: 'MAL',
   },
 }))

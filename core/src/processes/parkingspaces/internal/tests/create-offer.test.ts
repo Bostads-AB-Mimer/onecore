@@ -141,8 +141,8 @@ describe('createOfferForInternalParkingSpace', () => {
   it('passes applicants that are not eligible for renting in area with specific rental rule', async () => {
     const rentalObject = factory.rentalObject
       .params({
-        restidentalAreaCaption: 'Centrum',
-        restidentalAreaCode: 'CEN',
+        residentialAreaCaption: 'Centrum',
+        residentialAreaCode: 'CEN',
       })
       .build()
 

@@ -49,8 +49,8 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       vacantFrom: new Date('2023-01-31T23:00:00.000Z'),
       monthlyRent: 698.33,
       address: 'Svarvargatan 4',
-      restidentalAreaCode: 'MAL',
-      restidentalAreaCaption: 'Malmaberg',
+      residentialAreaCode: 'MAL',
+      residentialAreaCaption: 'Malmaberg',
     })
     .build()
   const mockedParkingSpace = factory.listing.build({

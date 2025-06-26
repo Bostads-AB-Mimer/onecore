@@ -52,7 +52,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
   try {
     const parkingSpace = await getPublishedParkingSpace(parkingSpaceId)
     // step 1 - get parking space
-    if (!parkingSpace || !parkingSpace.rentalObject.restidentalAreaCode) {
+    if (!parkingSpace || !parkingSpace.rentalObject.residentialAreaCode) {
       return endFailingProcess(
         log,
         CreateNoteOfInterestErrorCodes.ParkingspaceNotFound,
@@ -102,7 +102,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       await Promise.all([
         validateResidentialAreaRentalRules(
           contactCode,
-          parkingSpace.rentalObject.restidentalAreaCode
+          parkingSpace.rentalObject.residentialAreaCode
         ),
         validatePropertyRentalRules(contactCode, parkingSpaceId),
       ]).then((results) =>
