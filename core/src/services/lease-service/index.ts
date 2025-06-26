@@ -26,13 +26,15 @@ import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
 import { routes as applicationProfileRoutesOld } from './application-profile-old'
 import { routes as listings } from './listings'
+import { routes as commentsRoutes } from './comments'
+import { routes as rentalObjectsRoutes } from './rental-objects'
+
 import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
   Lease,
   mapLease,
 } from './schemas/lease'
-import { routes as commentsRoutes } from './comments'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -78,8 +80,8 @@ export const routes = (router: KoaRouter) => {
   // profile (with housing references)
   applicationProfileRoutesOld(router)
   listings(router)
-
   commentsRoutes(router)
+  rentalObjectsRoutes(router)
 
   /**
    * @swagger

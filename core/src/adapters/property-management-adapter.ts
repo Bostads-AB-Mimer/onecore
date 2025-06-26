@@ -9,7 +9,6 @@ import {
   RentalObject,
   RentalProperty,
   RentalPropertyInfo,
-  VacantParkingSpace,
 } from 'onecore-types'
 import { AxiosError, HttpStatusCode } from 'axios'
 
@@ -157,56 +156,6 @@ const saveMaterialChoice = async (
   return response.data.content
 }
 
-const getParkingSpaceByCode = async (
-  rentalObjectCode: string
-): Promise<AdapterResult<VacantParkingSpace, 'not-found' | 'unknown'>> => {
-  try {
-    const response = await axios.get(
-      `${propertyManagementServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
-    )
-    if (response.status === 404) {
-      logger.error('Parking space not found for code:', rentalObjectCode)
-      return { ok: false, err: 'not-found' }
-    }
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(
-      error,
-      `Error retrieving rental object by code: ${rentalObjectCode}`
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getParkingSpaces = async (
-  includeRentalObjectCodes?: string[]
-): Promise<AdapterResult<VacantParkingSpace[], 'not-found' | 'unknown'>> => {
-  try {
-    let url = `${propertyManagementServiceUrl}/parking-spaces`
-
-    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
-      const codesParam = includeRentalObjectCodes.join(',')
-      url += `?includeRentalObjectCodes=${encodeURIComponent(codesParam)}`
-    }
-
-    const response = await axios.get(url)
-
-    if (response.status === 404) {
-      logger.error(
-        `Parking space not found for codes: ${includeRentalObjectCodes?.join(', ')}`
-      )
-      return { ok: false, err: 'not-found' }
-    }
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(
-      error,
-      `Error retrieving rental objects by codes ${includeRentalObjectCodes?.join(', ')}`
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 //todo: refactor the subsequent requests to use same data source (soap api)
 //todo: getParkingSpace uses the mimer.nu api
 //todo: getPublishedParkingSpace uses the soap service
@@ -240,46 +189,6 @@ const getPublishedParkingSpace = async (
   }
 }
 
-const getAllVacantParkingSpaces = async (): Promise<
-  AdapterResult<VacantParkingSpace[], 'get-all-vacant-parking-spaces-failed'>
-> => {
-  try {
-    const response = await axios.get(
-      `${propertyManagementServiceUrl}/vacant-parkingspaces`
-    )
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching vacant-parkingspaces:')
-    return { ok: false, err: 'get-all-vacant-parking-spaces-failed' }
-  }
-}
-
-//todo: returnera parking space istället för rental object och flytta till onecore-property-management
-const getParkingSpaceByRentalObjectCode = async (
-  rentalObjectCode: string
-): Promise<
-  AdapterResult<
-    RentalObject,
-    'get-rental-object-failed' | 'rental-object-not-found'
-  >
-> => {
-  try {
-    const response = await axios.get(
-      `${propertyManagementServiceUrl}/rental-object/by-code/${rentalObjectCode}`
-    )
-    if (response.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'rental-object-not-found' }
-    }
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(
-      error,
-      'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
-    )
-    return { ok: false, err: 'get-rental-object-failed' }
-  }
-}
-
 export {
   getRentalProperty,
   getRentalPropertyInfo,
@@ -294,8 +203,4 @@ export {
   getPublishedParkingSpace,
   getRentalPropertyInfoFromXpand,
   getApartmentRentalPropertyInfo,
-  getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
-  getParkingSpaceByCode,
-  getParkingSpaces,
 }
