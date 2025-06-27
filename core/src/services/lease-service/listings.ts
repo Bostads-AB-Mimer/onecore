@@ -25,17 +25,23 @@ export const routes = (router: KoaRouter) => {
    *     description: Retrieves a list of listings.
    *     parameters:
    *       - in: query
+   *         name: listingCategory
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The listing category, either PARKING_SPACE, APARTMENT or STORAGE.
+   *       - in: query
    *         name: published
    *         required: false
    *         schema:
    *           type: boolean
    *         description: true for published listings, false for unpublished listings.
    *       - in: query
-   *         name: waitingListType
+   *         name: rentalRule
    *         required: false
    *         schema:
    *           type: string
-   *         description: ie "Bilplats (Intern)" or "Bilplats (Extern)".
+   *         description: The rental rule for the listings, either SCORED or NON_SCORED.
    *       - in: query
    *         name: validToRentForContactCode
    *         required: false
@@ -57,20 +63,25 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       const querySchema = z.object({
+        listingCategory: z
+          .enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE'])
+          .optional(),
         published: z
           .enum(['true', 'false'])
           .optional()
           .transform((value) => (value ? value === 'true' : undefined)),
-        rentalRule: z.enum(['Scored', 'NonScored']).optional(),
+        rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
         validToRentForContactCode: z.string().optional(),
       })
       const query = querySchema.safeParse(ctx.query)
 
-      const result = await leasingAdapter.getListings(
-        query.data?.published,
-        query.data?.rentalRule,
-        query.data?.validToRentForContactCode
-      )
+      const result = await leasingAdapter.getListings({
+        listingCategory: query.data?.listingCategory,
+        published: query.data?.published,
+        rentalRule: query.data?.rentalRule,
+        validToRentForContactCode: query.data?.validToRentForContactCode,
+      })
+
       if (!result.ok) {
         ctx.status = 500
         ctx.body = { error: 'Error getting listings from leasing', ...metadata }
@@ -91,18 +102,17 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const listingsWithRentalObjects: ListingWithRentalObject[] = result.data
+      //TODO flytta til leasing när adaptern flyttats från property-mgmt
+      const listingsWithRentalObjects: Listing[] = result.data
         .map((listing) => {
           const rentalObject = parkingSpacesResult.data.find(
             (ps) => ps.rentalObjectCode === listing.rentalObjectCode
           )
           if (!rentalObject) return undefined
-          return {
-            ...listing,
-            rentalObject,
-          }
+          listing.rentalObject = rentalObject
+          return listing
         })
-        .filter((item): item is ListingWithRentalObject => !!item)
+        .filter((item): item is Listing => !!item)
 
       ctx.status = 200
       ctx.body = { content: listingsWithRentalObjects, ...metadata }
@@ -111,8 +121,4 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
     }
   })
-
-  interface ListingWithRentalObject extends Listing {
-    rentalObject: VacantParkingSpace
-  }
 }

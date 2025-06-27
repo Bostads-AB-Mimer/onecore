@@ -423,6 +423,11 @@ describe('lease-service', () => {
       'getListingsWithApplicants'
     )
 
+    const getParkingSpacesSpy = jest.spyOn(
+      propertyManagementAdapter,
+      'getParkingSpaces'
+    )
+
     beforeEach(jest.resetAllMocks)
     it('responds with 500 if adapter fails', async () => {
       getListingsWithApplicantsSpy.mockResolvedValueOnce({
@@ -442,6 +447,7 @@ describe('lease-service', () => {
         ok: true,
         data: [],
       })
+      getParkingSpacesSpy.mockResolvedValueOnce({ ok: true, data: [] })
 
       const res = await request(app.callback()).get(`/listings-with-applicants`)
 
@@ -455,6 +461,7 @@ describe('lease-service', () => {
         ok: true,
         data: [],
       })
+      getParkingSpacesSpy.mockResolvedValueOnce({ ok: true, data: [] })
 
       const res = await request(app.callback()).get(
         `/listings-with-applicants?type=published`

@@ -58,7 +58,7 @@ describe('GET /listings', () => {
 
     const res = await request(app.callback()).get('/listings?published=true')
 
-    expect(getListingsSpy).toHaveBeenCalledWith(true, undefined, undefined)
+    expect(getListingsSpy).toHaveBeenCalledWith({ published: true })
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: 1337 })],
@@ -68,7 +68,7 @@ describe('GET /listings', () => {
   it('responds with 200 on success with filter on rentalRule', async () => {
     const listing = factory.listing.build({
       id: 1337,
-      waitingListType: 'Scored',
+      rentalRule: 'SCORED',
       rentalObjectCode: '12345',
     })
     const parkingSpace = factory.vacantParkingSpace.build({
@@ -83,9 +83,14 @@ describe('GET /listings', () => {
       .spyOn(propertyMgmtAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
-    const res = await request(app.callback()).get('/listings?rentalRule=Scored')
+    const res = await request(app.callback()).get('/listings?rentalRule=SCORED')
 
-    expect(getListingsSpy).toHaveBeenCalledWith(undefined, 'Scored', undefined)
+    expect(getListingsSpy).toHaveBeenCalledWith({
+      rentalRule: 'SCORED',
+      published: undefined,
+      listingCategory: undefined,
+      validToRentForContactCode: undefined,
+    })
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: 1337 })],
@@ -113,7 +118,9 @@ describe('GET /listings', () => {
       '/listings?validToRentForContactCode=abc123'
     )
 
-    expect(getListingsSpy).toHaveBeenCalledWith(undefined, undefined, 'abc123')
+    expect(getListingsSpy).toHaveBeenCalledWith({
+      validToRentForContactCode: 'abc123',
+    })
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: 1337 })],

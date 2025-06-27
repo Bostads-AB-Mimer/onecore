@@ -222,16 +222,27 @@ const getExpiredListingsWithNoOffers = async (): Promise<
   }
 }
 
-const getListings = async (
-  published?: boolean,
-  rentalRule?: 'Scored' | 'NonScored',
+type GetListingsParams = {
+  listingCategory?: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+  published?: boolean
+  rentalRule?: 'SCORED' | 'NON_SCORED'
   validToRentForContactCode?: string
+}
+
+const getListings = async (
+  params: GetListingsParams = {}
 ): Promise<AdapterResult<Listing[], 'unknown'>> => {
   const queryParams = new URLSearchParams()
-  if (published) queryParams.append('published', published.toString())
-  if (rentalRule) queryParams.append('rentalRule', rentalRule)
-  if (validToRentForContactCode)
-    queryParams.append('validToRentForContactCode', validToRentForContactCode)
+  if (params.listingCategory)
+    queryParams.append('listingCategory', params.listingCategory)
+  if (params.published !== undefined)
+    queryParams.append('published', params.published.toString())
+  if (params.rentalRule) queryParams.append('rentalRule', params.rentalRule)
+  if (params.validToRentForContactCode)
+    queryParams.append(
+      'validToRentForContactCode',
+      params.validToRentForContactCode
+    )
 
   try {
     const response = await axios.get(
@@ -241,7 +252,7 @@ const getListings = async (
     if (response.status !== 200) {
       logger.error(
         { status: response.status, data: response.data },
-        `Error getting listings from leasing, by: published ${published}, rentalRule ${rentalRule} and validToRentForContactCode ${validToRentForContactCode}`
+        `Error getting listings from leasing, by: published ${params.published}, rentalRule ${params.rentalRule} and validToRentForContactCode ${params.validToRentForContactCode}`
       )
       return { ok: false, err: 'unknown' }
     }
@@ -250,7 +261,7 @@ const getListings = async (
   } catch (error) {
     logger.error(
       error,
-      `Unknown error fetching listings by published ${published}, rentalRule ${rentalRule} and validToRentForContactCode ${validToRentForContactCode}`
+      `Unknown error fetching listings by published ${params.published}, rentalRule ${params.rentalRule} and validToRentForContactCode ${params.validToRentForContactCode}`
     )
     return { ok: false, err: 'unknown' }
   }

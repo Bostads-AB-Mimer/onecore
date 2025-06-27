@@ -1,4 +1,5 @@
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as propertyMgmtAdapter from '../../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 
 import { OfferStatus, ReplyToOfferErrorCodes } from 'onecore-types'
@@ -63,7 +64,7 @@ describe('replyToOffer', () => {
         error: ReplyToOfferErrorCodes.NoListing,
         httpStatus: 404,
         response: {
-          message: `The listing ${offer.rentalObjectCode} does not exist or is no longer available.`,
+          message: `The listing ${offer.rentalObjectCode} cannot be found.`,
           errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
@@ -76,7 +77,23 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
+
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
       createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
       getOffersForContactSpy.mockResolvedValueOnce({
@@ -109,7 +126,22 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
 
       createLeaseSpy.mockImplementation(() => {
         throw new Error('Lease not created')
@@ -138,7 +170,23 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
+
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -178,7 +226,23 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
+
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
       createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
 
@@ -217,7 +281,23 @@ describe('replyToOffer', () => {
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
+
       closeOfferSpy.mockResolvedValueOnce({ ok: true, data: null })
       createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
 
@@ -275,7 +355,7 @@ describe('replyToOffer', () => {
         error: ReplyToOfferErrorCodes.NoListing,
         httpStatus: 404,
         response: {
-          message: `The listing ${offer.listingId} does not exist or is no longer available.`,
+          message: `The listing ${offer.listingId} cannot be found.`,
           errorCode: ReplyToOfferErrorCodes.NoListing,
         },
       })
@@ -292,7 +372,21 @@ describe('replyToOffer', () => {
         .spyOn(leasingAdapter, 'closeOfferByDeny')
         .mockResolvedValueOnce({ ok: true, data: null })
 
-      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+      const listing = factory.listing.build()
+      jest
+        .spyOn(leasingAdapter, 'getListingByListingId')
+        .mockResolvedValue(listing)
+
+      jest
+        .spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.vacantParkingSpace
+            .params({
+              rentalObjectCode: listing.rentalObjectCode,
+            })
+            .build(),
+        })
 
       const createOffer = jest
         .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')

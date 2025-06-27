@@ -148,7 +148,7 @@ describe(leasingAdapter.getListings, () => {
   it('returns err if leasing responds with 500', async () => {
     nock(config.tenantsLeasesService.url).get('/listings').reply(500)
 
-    const result = await leasingAdapter.getListings(true, undefined)
+    const result = await leasingAdapter.getListings({ published: true })
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
@@ -171,10 +171,10 @@ describe(leasingAdapter.getListings, () => {
   it('returns a list of listings with rentalRule filter', async () => {
     nock(config.tenantsLeasesService.url)
       .get('/listings')
-      .query({ rentalRule: 'Scored' })
+      .query({ rentalRule: 'SCORED' })
       .reply(200, { content: factory.listing.buildList(2) })
 
-    const result = await leasingAdapter.getListings(undefined, 'Scored')
+    const result = await leasingAdapter.getListings({ rentalRule: 'SCORED' })
 
     expect(result).toMatchObject({
       ok: true,
@@ -190,7 +190,25 @@ describe(leasingAdapter.getListings, () => {
       .query({ published: 'true' })
       .reply(200, { content: factory.listing.buildList(3) })
 
-    const result = await leasingAdapter.getListings(true, undefined)
+    const result = await leasingAdapter.getListings({ published: true })
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
+  it('returns a list of listings with listingCategory filter', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/listings')
+      .query({ listingCategory: 'PARKING_SPACE' })
+      .reply(200, { content: factory.listing.buildList(4) })
+
+    const result = await leasingAdapter.getListings({
+      listingCategory: 'PARKING_SPACE',
+    })
 
     expect(result).toMatchObject({
       ok: true,

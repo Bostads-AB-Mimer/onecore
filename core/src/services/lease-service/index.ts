@@ -9,6 +9,7 @@ import KoaRouter from '@koa/router'
 import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
+  Listing,
   RouteErrorResponse,
 } from 'onecore-types'
 import { logger, generateRouteMetadata } from 'onecore-utilities'
@@ -858,11 +859,38 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/listing/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await leasingAdapter.getListingByListingId(
+    const responseData = (await leasingAdapter.getListingByListingId(
       Number.parseInt(ctx.params.id)
-    )
+    )) as Listing | undefined
 
-    ctx.body = { content: responseData, ...metadata }
+    if (!responseData) {
+      ctx.status = 404
+      ctx.body = { error: 'Listing not found', ...metadata }
+      return
+    }
+
+    const parkingSpacesResult =
+      await propertyManagementAdapter.getParkingSpaceByCode(
+        responseData.rentalObjectCode
+      )
+
+    if (!parkingSpacesResult.ok) {
+      parkingSpacesResult.err === 'not-found'
+        ? (ctx.status = 404)
+        : (ctx.status = 500)
+      ctx.body = {
+        error: 'Error getting parking spaces from leasing',
+        ...metadata,
+      }
+      return
+    }
+
+    const listingWithRentalObject = {
+      ...responseData,
+      rentalObject: parkingSpacesResult.data,
+    }
+
+    ctx.body = { content: listingWithRentalObject, ...metadata }
   })
 
   /**
@@ -908,8 +936,35 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const parkingSpacesResult =
+      await propertyManagementAdapter.getParkingSpaces(
+        result.data.map((listing) => listing.rentalObjectCode)
+      )
+    if (!parkingSpacesResult.ok) {
+      parkingSpacesResult.err === 'not-found'
+        ? (ctx.status = 404)
+        : (ctx.status = 500)
+      ctx.body = {
+        error: 'Error getting parking spaces from leasing',
+        ...metadata,
+      }
+      return
+    }
+
+    //TODO flytta til leasing när adaptern flyttats från property-mgmt
+    const listingsWithRentalObjects: Listing[] = result.data
+      .map((listing) => {
+        const rentalObject = parkingSpacesResult.data.find(
+          (ps) => ps.rentalObjectCode === listing.rentalObjectCode
+        )
+        if (!rentalObject) return undefined
+        listing.rentalObject = rentalObject
+        return listing
+      })
+      .filter((item): item is Listing => !!item)
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { content: listingsWithRentalObjects, ...metadata }
   })
 
   /**

@@ -44,15 +44,23 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   const mockedApplicant = factory.applicant.build({
     contactCode: mockedContact.contactCode,
   })
+  const mockedRentalObject = factory.rentalObject
+    .params({
+      vacantFrom: new Date('2023-01-31T23:00:00.000Z'),
+      monthlyRent: 698.33,
+      address: 'Svarvargatan 4',
+      restidentalAreaCode: 'MAL',
+      restidentalAreaCaption: 'Malmaberg',
+    })
+    .build()
   const mockedParkingSpace = factory.listing.build({
     id: 1,
-    vacantFrom: new Date('2023-01-31T23:00:00.000Z'),
     publishedFrom: new Date('2024-03-26T09:06:56.000Z'),
     publishedTo: new Date('2024-05-04T21:59:59.000Z'),
     rentalObjectCode: '705-808-00-0006',
-    monthlyRent: 698.33,
-    address: 'Svarvargatan 4',
+    rentalRule: 'SCORED',
     applicants: undefined,
+    rentalObject: mockedRentalObject,
   })
 
   const getContactSpy = jest
@@ -160,7 +168,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   it('returns an error if parking space is not internal', async () => {
     getParkingSpaceSpy.mockResolvedValue({
       ...mockedParkingSpace,
-      waitingListType: 'Bilplats (extern)',
+      rentalRule: 'NON_SCORED',
     })
 
     const result =
@@ -334,23 +342,15 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     )
 
     expect(createNewListingSpy).toHaveBeenCalledWith({
-      address: 'Svarvargatan 4',
-      blockCaption: 'LINDAREN 2',
-      blockCode: '1401',
-      districtCaption: 'Malmaberg',
-      districtCode: 'MAL',
       id: 1,
-      monthlyRent: 698.33,
-      objectTypeCaption: 'Carport',
-      objectTypeCode: 'CPORT',
       publishedFrom: new Date('2024-03-26T09:06:56.000Z'),
       publishedTo: new Date('2024-05-04T21:59:59.000Z'),
-      rentalObjectCode: '705-808-00-0006',
-      rentalObjectTypeCaption: 'Standard hyresobjektstyp',
-      rentalObjectTypeCode: 'STD',
       status: 1,
-      vacantFrom: new Date('2023-01-31T23:00:00.000Z'),
-      waitingListType: 'Bilplats (intern)',
+      rentalRule: 'SCORED',
+      listingCategory: 'PARKING_SPACE',
+      rentalObjectCode: '705-808-00-0006',
+      applicants: undefined,
+      rentalObject: mockedRentalObject,
     })
   })
 

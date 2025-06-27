@@ -15,6 +15,7 @@ import {
   ProcessError,
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
+import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
@@ -42,14 +43,33 @@ export const createOfferForInternalParkingSpace = async (
   ]
 
   try {
-    const listing = await leasingAdapter.getListingByListingId(listingId)
-    if (!listing) {
+    const listingWithoutRentalObject =
+      await leasingAdapter.getListingByListingId(listingId)
+    if (!listingWithoutRentalObject) {
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.NoListing,
         500,
         `Listing with id ${listingId} not found`
       )
+    }
+
+    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+      listingWithoutRentalObject.rentalObjectCode
+    )
+
+    if (!parkingSpacesResult.ok) {
+      return endFailingProcess(
+        log,
+        CreateOfferErrorCodes.NoListing,
+        500,
+        `RentalObject for listing with id ${listingId} not found`
+      )
+    }
+
+    const listing = {
+      ...listingWithoutRentalObject,
+      rentalObject: parkingSpacesResult.data,
     }
 
     if (listing.status !== ListingStatus.Expired) {
@@ -172,14 +192,14 @@ export const createOfferForInternalParkingSpace = async (
         to: contact.emailAddress,
         subject: 'Erbjudande om bilplats',
         text: 'Erbjudande om bilplats',
-        address: listing.address,
+        address: listing.rentalObject.address,
         firstName: eligibleApplicant.name
           ? extractApplicantFirstName(eligibleApplicant.name)
           : '',
-        availableFrom: new Date(listing.vacantFrom).toISOString(),
+        availableFrom: new Date(listing.rentalObject.vacantFrom).toISOString(),
         deadlineDate: new Date(offer.data.expiresAt).toISOString(),
-        rent: String(listing.monthlyRent),
-        type: listing.rentalObjectTypeCaption ?? '',
+        rent: String(listing.rentalObject.monthlyRent),
+        type: listing.rentalObject.objectTypeCaption ?? '',
         parkingSpaceId: listing.rentalObjectCode,
         objectId: listing.id.toString(),
         applicationType:

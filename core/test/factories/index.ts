@@ -1,6 +1,7 @@
 export { BuildingFactory as building } from './building'
 export { DetailedApplicantFactory as detailedApplicant } from './detailed-applicant'
 export { ListingFactory as listing } from './listing'
+export { RentalObjectFactory as rentalObject } from './rental-object'
 export { ParkingSpaceFactory as parkingSpace } from './parking-space'
 export { VacantParkingSpaceFactory as vacantParkingSpace } from './vacant-parkingspace'
 export { OfferFactory as offer } from './offer'

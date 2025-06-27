@@ -12,6 +12,7 @@ import {
   ProcessStatus,
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
+import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { AdapterResult } from '../../../adapters/types'
@@ -66,9 +67,37 @@ export const acceptOffer = async (
     )
 
     //Get listing
-    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
+    const listingWithoutRentalObject =
+      await leasingAdapter.getListingByListingId(offer.listingId)
 
-    if (!listing || !listing.districtCode) {
+    if (!listingWithoutRentalObject) {
+      return endFailingProcess(
+        log,
+        ReplyToOfferErrorCodes.NoListing,
+        404,
+        `The listing ${offer.listingId.toString()} cannot be found.`
+      )
+    }
+
+    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+      listingWithoutRentalObject.rentalObjectCode
+    )
+
+    if (!parkingSpacesResult.ok) {
+      return endFailingProcess(
+        log,
+        ReplyToOfferErrorCodes.NoListing,
+        500,
+        `RentalObject for listing with id ${listingWithoutRentalObject.id} not found`
+      )
+    }
+
+    const listing = {
+      ...listingWithoutRentalObject,
+      rentalObject: parkingSpacesResult.data,
+    }
+
+    if (!listing || !listing.rentalObject.restidentalAreaCode) {
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,
@@ -83,8 +112,8 @@ export const acceptOffer = async (
       lease = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
-        listing.vacantFrom != undefined
-          ? new Date(listing.vacantFrom).toISOString() // fix: vacantFrom is really a string...
+        listing.rentalObject.vacantFrom != undefined
+          ? new Date(listing.rentalObject.vacantFrom).toISOString() // fix: vacantFrom is really a string...
           : new Date().toISOString(),
         '001'
       )
@@ -209,8 +238,39 @@ export const denyOffer = async (
     const offer = res.data
 
     //Get listing
-    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listing || !listing.districtCode) {
+    const listingWithoutRentalObject =
+      await leasingAdapter.getListingByListingId(offer.listingId)
+    if (!listingWithoutRentalObject) {
+      return endFailingProcess(
+        log,
+        ReplyToOfferErrorCodes.NoListing,
+        404,
+        `The listing ${offer.listingId.toString()} cannot be found.`
+      )
+    }
+
+    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+      listingWithoutRentalObject.rentalObjectCode
+    )
+
+    if (!parkingSpacesResult.ok) {
+      return endFailingProcess(
+        log,
+        ReplyToOfferErrorCodes.NoListing,
+        500,
+        `RentalObject for listing with id ${listingWithoutRentalObject.id} not found`
+      )
+    }
+
+    const listing = {
+      ...listingWithoutRentalObject,
+      rentalObject: parkingSpacesResult.data,
+    }
+
+    if (
+      !listingWithoutRentalObject ||
+      !listing.rentalObject.restidentalAreaCode
+    ) {
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,
@@ -286,7 +346,7 @@ export const expireOffer = async (
 
     //Get listing
     const listing = await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listing || !listing.districtCode) {
+    if (!listing || !listing.rentalObject.restidentalAreaCode) {
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,

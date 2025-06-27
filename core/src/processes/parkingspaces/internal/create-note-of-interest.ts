@@ -52,7 +52,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
   try {
     const parkingSpace = await getPublishedParkingSpace(parkingSpaceId)
     // step 1 - get parking space
-    if (!parkingSpace || !parkingSpace.districtCode) {
+    if (!parkingSpace || !parkingSpace.rentalObject.restidentalAreaCode) {
       return endFailingProcess(
         log,
         CreateNoteOfInterestErrorCodes.ParkingspaceNotFound,
@@ -60,18 +60,12 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         `The parking space ${parkingSpaceId} does not exist or is no longer available.`
       )
     }
-    const parkingSpaceApplicationType = parkingSpace.waitingListType
-      ? parkingSpaceApplicationCategoryTranslation[parkingSpace.waitingListType]
-      : undefined
-
-    if (
-      parkingSpaceApplicationType != ParkingSpaceApplicationCategory.internal
-    ) {
+    if (parkingSpace.rentalRule !== 'SCORED') {
       return endFailingProcess(
         log,
         CreateNoteOfInterestErrorCodes.ParkingspaceNotInternal,
         400,
-        `This process currently only handles internal parking spaces. The parking space provided is not internal (it is ${parkingSpaceApplicationType}, ${parkingSpaceApplicationCategoryTranslation.internal}).`
+        `This process currently only handles internal parking spaces. The parking space provided is not internal (it is ${parkingSpace.rentalRule}, ${parkingSpaceApplicationCategoryTranslation.internal}).`
       )
     }
 
@@ -90,10 +84,10 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesForContactCode(contactCode, {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
-      })
+      includeUpcomingLeases: true,
+      includeTerminatedLeases: false,
+      includeContacts: false,
+    })
 
     if (leases.length < 1) {
       return endFailingProcess(
@@ -108,7 +102,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       await Promise.all([
         validateResidentialAreaRentalRules(
           contactCode,
-          parkingSpace.districtCode
+          parkingSpace.rentalObject.restidentalAreaCode
         ),
         validatePropertyRentalRules(contactCode, parkingSpaceId),
       ]).then((results) =>
