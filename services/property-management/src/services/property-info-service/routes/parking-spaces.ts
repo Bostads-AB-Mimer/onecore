@@ -288,21 +288,28 @@ export const routes = (router: KoaRouter) => {
     const listing: Listing = {
       id: -1,
       rentalObjectCode: xpandParkingSpace.parkingSpaceId,
-      address: xpandParkingSpace.address.street,
-      monthlyRent: xpandParkingSpace.rent.currentRent.currentRent,
-      districtCaption: xpandParkingSpace.freeTable1Caption,
-      districtCode: xpandParkingSpace.freeTable1Code,
-      blockCaption: xpandParkingSpace.freeTable3Caption,
-      blockCode: xpandParkingSpace.freeTable3Code,
-      objectTypeCaption: xpandParkingSpace.objectTypeCaption,
-      objectTypeCode: xpandParkingSpace.objectTypeCode,
-      rentalObjectTypeCaption: xpandParkingSpace.rentalObjectTypeCaption,
-      rentalObjectTypeCode: xpandParkingSpace.rentalObjectTypeCode,
       publishedFrom: xpandParkingSpace.publishedFrom,
       publishedTo: xpandParkingSpace.publishedTo,
-      vacantFrom: xpandParkingSpace.vacantFrom,
       status: ListingStatus.Active,
-      waitingListType: xpandParkingSpace.waitingListType,
+      rentalRule:
+        xpandParkingSpace.waitingListType == 'Bilplats (extern)'
+          ? 'NON_SCORED'
+          : 'SCORED',
+      listingCategory: 'PARKING_SPACE',
+      rentalObject: {
+        rentalObjectCode: xpandParkingSpace.parkingSpaceId,
+        address: xpandParkingSpace.address.street,
+        monthlyRent: xpandParkingSpace.rent.currentRent.currentRent,
+        districtCaption: xpandParkingSpace.freeTable1Caption,
+        districtCode: xpandParkingSpace.freeTable1Code,
+        blockCaption: xpandParkingSpace.freeTable3Caption,
+        blockCode: xpandParkingSpace.freeTable3Code,
+        objectTypeCaption: xpandParkingSpace.objectTypeCaption,
+        objectTypeCode: xpandParkingSpace.objectTypeCode,
+        vacantFrom: xpandParkingSpace.vacantFrom,
+        restidentalAreaCaption: xpandParkingSpace.freeTable1Caption,
+        restidentalAreaCode: xpandParkingSpace.freeTable1Code,
+      },
     }
 
     ctx.body = { content: listing, ...metadata }

@@ -596,7 +596,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       })
       .whereNull('ac.keycmobj')
       .orderBy('ps.blockcode', 'ps.vehiclespacenumber')
-
     const listings: VacantParkingSpace[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
@@ -607,16 +606,23 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-//todo: behöver också hämta parking space type, hyra, yta.
 const getParkingSpace = async (
   rentalObjectCode: string
 ): Promise<
   AdapterResult<VacantParkingSpace, 'unknown' | 'parking-space-not-found'>
 > => {
   try {
-    const { parkingSpacesQuery } = buildSubQueries()
+    const {
+      parkingSpacesQuery,
+      activeRentalBlocksQuery,
+      activeContractsQuery,
+    } = buildSubQueries()
 
-    const result = await buildMainQuery(parkingSpacesQuery)
+    const result = await buildMainQuery(
+      parkingSpacesQuery,
+      activeRentalBlocksQuery,
+      activeContractsQuery
+    )
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
       .first()
 
@@ -641,9 +647,17 @@ const getParkingSpaces = async (
   AdapterResult<VacantParkingSpace[], 'unknown' | 'parking-spaces-not-found'>
 > => {
   try {
-    const { parkingSpacesQuery } = buildSubQueries()
+    const {
+      parkingSpacesQuery,
+      activeRentalBlocksQuery,
+      activeContractsQuery,
+    } = buildSubQueries()
 
-    let query = buildMainQuery(parkingSpacesQuery)
+    let query = buildMainQuery(
+      parkingSpacesQuery,
+      activeRentalBlocksQuery,
+      activeContractsQuery
+    )
     if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
       query = query.whereIn('ps.rentalObjectCode', includeRentalObjectCodes)
     }

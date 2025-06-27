@@ -19,6 +19,23 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('parking spaces', () => {
+  afterEach(() => {
+    jest.clearAllMocks()
+    jest.useRealTimers()
+  })
+
+  jest.mock('onecore-utilities', () => ({
+    ...jest.requireActual('onecore-utilities'),
+    logger: {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    },
+    generateRouteMetadata:
+      jest.requireActual('onecore-utilities').generateRouteMetadata,
+  }))
+
   describe('GET /parking-spaces', () => {
     it('Gets and returns a list of parking spaces', async () => {
       const parkingSpace = factory.vacantParkingSpace.build({
