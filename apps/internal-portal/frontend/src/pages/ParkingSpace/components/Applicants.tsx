@@ -18,7 +18,7 @@ export const Applicants = (props: { listingId: number }) => {
 
   const columns = getColumns(
     props.listingId,
-    parkingSpaceListing?.address ?? ''
+    parkingSpaceListing?.rentalObject.address ?? ''
   )
 
   return (

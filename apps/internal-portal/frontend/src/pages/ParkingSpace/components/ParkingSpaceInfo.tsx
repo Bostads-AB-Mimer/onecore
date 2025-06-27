@@ -39,7 +39,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Bilplats</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.address}
+                {parkingSpaceListing.rentalObject.address}
               </Typography>
               <Typography fontWeight="bold" textAlign="right">
                 {parkingSpaceListing.rentalObjectCode}
@@ -50,15 +50,37 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Skyltnummer</Typography>
             <Box>
-              <Typography fontWeight="bold">{'N/A'}</Typography>
+              <Typography fontWeight="bold">
+                {
+                  parkingSpaceListing.rentalObjectCode.split('-')[
+                    parkingSpaceListing.rentalObjectCode.split('-').length - 1
+                  ]
+                }
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Yta</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.braArea} kvm
+              </Typography>
             </Box>
           </Box>
           <Box height="50px" />
           <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Distrikt</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.districtCaption}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Område</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.districtCaption}
+                {parkingSpaceListing.rentalObject.restidentalAreaCaption}
               </Typography>
             </Box>
           </Box>
@@ -66,7 +88,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Bilplatstyp</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.objectTypeCaption}
+                {parkingSpaceListing.rentalObject.objectTypeCaption}
               </Typography>
             </Box>
           </Box>
@@ -74,7 +96,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Hyra</Typography>
             <Box>
               <Typography fontWeight="bold">{`${numberFormatter.format(
-                parkingSpaceListing.monthlyRent
+                parkingSpaceListing.rentalObject.monthlyRent
               )}/mån`}</Typography>
             </Box>
           </Box>
@@ -100,7 +122,10 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Ledig från och med</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {printVacantFrom(dateFormatter, parkingSpaceListing.vacantFrom)}
+                {printVacantFrom(
+                  dateFormatter,
+                  parkingSpaceListing.rentalObject.vacantFrom
+                )}
               </Typography>
             </Box>
           </Box>

@@ -15,11 +15,12 @@ import { LoadingButton } from '@mui/lab'
 
 import { useDeleteParkingSpaceListing } from '../hooks/useDeleteParkingSpaceListing'
 
-export const DeleteListing = (
-  props: Pick<Listing, 'rentalObjectCode' | 'address' | 'id'> & {
-    disabled: boolean
-  }
-) => {
+export const DeleteListing = (props: {
+  disabled: boolean
+  address: string
+  rentalObjectCode: string
+  id: number
+}) => {
   const deleteListing = useDeleteParkingSpaceListing()
   const [open, setOpen] = useState(false)
 

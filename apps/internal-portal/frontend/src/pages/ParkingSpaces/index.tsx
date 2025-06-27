@@ -193,7 +193,7 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       getActions: ({ row }) => [
         <DeleteListing
           key={0}
-          address={row.address}
+          address={row.rentalObject.address}
           rentalObjectCode={row.rentalObjectCode}
           disabled={row.status !== ListingStatus.Active}
           id={row.id}
@@ -278,30 +278,45 @@ const getColumns = (
       flex: 1.25,
       renderCell: (v) => (
         <span>
-          <span style={{ display: 'block' }}>{v.row.address}</span>
+          <span style={{ display: 'block' }}>{v.row.rentalObject.address}</span>
           {v.row.rentalObjectCode}
         </span>
       ),
     },
     {
       field: 'districtCaption',
+      headerName: 'Distrikt',
+      ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.districtCaption ?? '',
+    },
+    {
+      field: 'restidentalAreaCaption',
       headerName: 'Område',
       ...sharedColumnProps,
+      valueGetter: (params) =>
+        params.row.rentalObject?.restidentalAreaCaption ?? '',
     },
     {
       field: 'objectTypeCaption',
       headerName: 'Bilplatstyp',
       ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.objectTypeCaption ?? '',
     },
     {
-      field: 'waitingListType',
+      field: 'rentalRule',
       headerName: 'Kötyp',
       ...sharedColumnProps,
+      valueGetter: (params) => {
+        if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
+        if (params.row.rentalRule === 'SCORED') return 'Intern'
+        return ''
+      },
     },
     {
       field: 'monthlyRent',
       headerName: 'Hyra',
       ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
       valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
     },
     {
@@ -321,6 +336,7 @@ const getColumns = (
       field: 'vacantFrom',
       headerName: 'Ledig FR.O.M',
       ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.vacantFrom ?? '',
       valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
     },
   ]

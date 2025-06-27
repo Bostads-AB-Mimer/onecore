@@ -41,7 +41,7 @@ const AllApplicantsTabContext = (props: { listing: Listing }) => {
         }}
       >
         <Typography paddingBottom="2rem" marginRight="1rem" variant="h1">
-          <span>Intresseanmälningar {props.listing.address}</span>
+          <span>Intresseanmälningar {props.listing.rentalObject.address}</span>
         </Typography>
         <Chip
           label={formatStatus(props.listing.status)}

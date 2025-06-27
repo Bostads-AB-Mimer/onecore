@@ -20,7 +20,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Område</Typography>
         <Box>
-          <Typography>{props.listing.districtCaption}</Typography>
+          <Typography>{props.listing.rentalObject.districtCaption}</Typography>
         </Box>
       </Box>
       <Box
@@ -42,7 +42,9 @@ export const ListingInfo = (props: { listing: Listing }) => {
       >
         <Typography>Bilplatstyp</Typography>
         <Box>
-          <Typography>{props.listing.objectTypeCaption}</Typography>
+          <Typography>
+            {props.listing.rentalObject.objectTypeCaption}
+          </Typography>
         </Box>
       </Box>
       <Box
@@ -54,7 +56,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
         <Typography>Hyra</Typography>
         <Box>
           <Typography>{`${numberFormatter.format(
-            props.listing.monthlyRent
+            props.listing.rentalObject.monthlyRent
           )}/mån`}</Typography>
         </Box>
       </Box>
@@ -91,7 +93,10 @@ export const ListingInfo = (props: { listing: Listing }) => {
         <Typography>Ledig från och med</Typography>
         <Box>
           <Typography>
-            {printVacantFrom(dateFormatter, props.listing.vacantFrom)}
+            {printVacantFrom(
+              dateFormatter,
+              props.listing.rentalObject.vacantFrom
+            )}
           </Typography>
         </Box>
       </Box>

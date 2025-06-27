@@ -51,7 +51,7 @@ export const CreateApplicantForListing = (props: Props) => {
 
   const tenantQuery = useTenantWithValidation(
     selectedContact?.contactCode,
-    props.listing.districtCode,
+    props.listing.rentalObject.restidentalAreaCode,
     props.listing.rentalObjectCode
   )
 
@@ -122,7 +122,7 @@ export const CreateApplicantForListing = (props: Props) => {
           <Box paddingTop="0.5rem">
             <Box display="flex">
               <DialogTitle variant="h1" fontSize={24} textAlign="left">
-                Ny intresseanmälan, {props.listing.address}
+                Ny intresseanmälan, {props.listing.rentalObject.address}
               </DialogTitle>
               <Box
                 display="flex"
@@ -297,10 +297,10 @@ function tenantHasValidContractForTheDiscrict(
 ) {
   const hasUpComingContractInThisDistrict =
     tenant.upcomingHousingContract?.residentialArea?.code ===
-    listing.districtCode
+    listing.rentalObject.restidentalAreaCode
   const hasCurrentContractInThisDistrict =
     tenant.currentHousingContract?.residentialArea?.code ===
-    listing.districtCode
+    listing.rentalObject.restidentalAreaCode
 
   return hasCurrentContractInThisDistrict || hasUpComingContractInThisDistrict
 }
