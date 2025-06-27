@@ -49,7 +49,10 @@ describe(listingAdapter.getListings, () => {
         ctx.db
       )
 
-      const result = await listingAdapter.getListings(true, undefined, ctx.db)
+      const result = await listingAdapter.getListings(
+        { published: true },
+        ctx.db
+      )
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -64,7 +67,7 @@ describe(listingAdapter.getListings, () => {
       await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '1',
-          waitingListType: 'Scored',
+          rentalRule: 'SCORED',
           status: ListingStatus.Active,
         }),
         ctx.db
@@ -73,17 +76,17 @@ describe(listingAdapter.getListings, () => {
       await listingAdapter.createListing(
         factory.listing.build({
           rentalObjectCode: '2',
-          waitingListType: 'NonScored',
+          rentalRule: 'NON_SCORED',
           status: ListingStatus.Active,
         }),
         ctx.db
       )
 
       const result = await listingAdapter.getListings(
-        undefined,
-        'Scored',
+        { rentalRule: 'SCORED' },
         ctx.db
       )
+
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.data).toHaveLength(1)
@@ -110,11 +113,8 @@ describe(listingAdapter.getListings, () => {
         ctx.db
       )
 
-      const result = await listingAdapter.getListings(
-        undefined,
-        undefined,
-        ctx.db
-      )
+      const result = await listingAdapter.getListings({}, ctx.db)
+
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.data).toHaveLength(2)
@@ -122,5 +122,41 @@ describe(listingAdapter.getListings, () => {
           expect.arrayContaining(['1', '2'])
         )
       }
+    }))
+
+  it('should filter on listingCategory', async () =>
+    withContext(async (ctx) => {
+      await listingAdapter.createListing(
+        {
+          rentalObjectCode: '1',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+          publishedFrom: new Date(),
+          publishedTo: new Date(Date.now() + 1000000),
+        },
+        ctx.db
+      )
+      await listingAdapter.createListing(
+        {
+          rentalObjectCode: '2',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'APARTMENT',
+          publishedFrom: new Date(),
+          publishedTo: new Date(Date.now() + 1000000),
+        },
+        ctx.db
+      )
+
+      const result = await listingAdapter.getListings(
+        { listingCategory: 'PARKING_SPACE' },
+        ctx.db
+      )
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].listingCategory).toBe('PARKING_SPACE')
     }))
 })

@@ -283,14 +283,17 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
 
 describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:districtCode', () => {
   it('responds with 200 if rental rules does not apply to listing', async () => {
+    const rentalObject = factory.rentalObject
+      .params({ restidentalAreaCode: 'AREA_WHERE_RULES_DO_NOT_APPLY' })
+      .build()
     const listing = factory.listing
       .params({
-        districtCode: 'AREA_WHERE_RULES_DO_NOT_APPLY',
+        rentalObject: rentalObject,
       })
       .build()
 
     const res = await request(app.callback()).get(
-      `/applicants/validateResidentialAreaRentalRules/123/${listing.districtCode}`
+      `/applicants/validateResidentialAreaRentalRules/123/${listing.rentalObject.restidentalAreaCode}`
     )
 
     expect(res.status).toBe(200)
@@ -300,9 +303,12 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
   })
 
   it('responds with 403 if applicant does not have a current or upcoming housing contract in same area as listing', async () => {
+    const rentalObject = factory.rentalObject
+      .params({ restidentalAreaCode: 'OXB' })
+      .build()
     const listing = factory.listing
       .params({
-        districtCode: 'OXB',
+        rentalObject: rentalObject,
       })
       .build()
     const applicant = factory.applicant
@@ -321,7 +327,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       .mockResolvedValueOnce({ ok: true, data: tenant })
 
     const res = await request(app.callback()).get(
-      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.districtCode}`
+      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.rentalObject.restidentalAreaCode}`
     )
 
     expect(res.status).toBe(403)
@@ -332,9 +338,12 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
   })
 
   it('responds with 200 if applicant has no current parking space in the same area as listing', async () => {
+    const rentalObject = factory.rentalObject
+      .params({ restidentalAreaCode: 'OXB' })
+      .build()
     const listing = factory.listing
       .params({
-        districtCode: 'OXB',
+        rentalObject: rentalObject,
       })
       .build()
     const applicant = factory.applicant
@@ -355,7 +364,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       .mockResolvedValueOnce({ ok: true, data: tenant })
 
     const res = await request(app.callback()).get(
-      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.districtCode}`
+      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.rentalObject.restidentalAreaCode}`
     )
 
     expect(res.status).toBe(200)
@@ -367,9 +376,12 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
   })
 
   it('responds with 200 and applicationType "Replace" if applicant has a current parking space in the same area as listing', async () => {
+    const rentalObject = factory.rentalObject
+      .params({ restidentalAreaCode: 'OXB' })
+      .build()
     const listing = factory.listing
       .params({
-        districtCode: 'OXB',
+        rentalObject: rentalObject,
       })
       .build()
     const applicant = factory.applicant
@@ -395,7 +407,7 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
       .mockResolvedValueOnce({ ok: true, data: tenant })
 
     const res = await request(app.callback()).get(
-      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.districtCode}`
+      `/applicants/validateResidentialAreaRentalRules/${applicant.contactCode}/${listing.rentalObject.restidentalAreaCode}`
     )
 
     expect(res.status).toBe(200)

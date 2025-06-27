@@ -3,6 +3,8 @@ export { DetailedApplicantFactory as detailedApplicant } from './detailed-applic
 export { InvoiceFactory as invoice } from './invoice'
 export { LeaseFactory as lease } from './lease'
 export { ListingFactory as listing } from './listing'
+export { ListingWithoutRentalObjectFactory as listingWithoutRentalObject } from './listing-without-rental-object'
+export { RentalObjectFactory as rentalObject } from './rental-object'
 export { OfferFactory as offer } from './offer'
 export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from './offer'
 export { DetailedOfferFactory as detailedOffer } from './offer'

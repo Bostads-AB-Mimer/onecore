@@ -35,17 +35,23 @@ export const routes = (router: KoaRouter) => {
    *     description: Retrieves a list of listings.
    *     parameters:
    *       - in: query
+   *         name: listingCategory
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The listing category, either PARKING_SPACE, APARTMENT or STORAGE.
+   *       - in: query
    *         name: published
    *         required: false
    *         schema:
    *           type: boolean
    *         description: true for published listings, false for unpublished listings.
    *       - in: query
-   *         name: waitingListType
+   *         name: rentalRule
    *         required: false
    *         schema:
    *           type: string
-   *         description: ie "Scored" or "NonScored".
+   *         description: The rental rule for the listings, either SCORED or NON_SCORED.
    *     responses:
    *       '200':
    *         description: Successful response with the requested list of listings.
@@ -60,18 +66,24 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     const querySchema = z.object({
+      listingCategory: z
+        .enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE'])
+        .optional(),
       published: z
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
-      rentalRule: z.enum(['Scored', 'NonScored']).optional(),
+      rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
     })
     const query = querySchema.safeParse(ctx.query)
 
-    const result = await listingAdapter.getListings(
-      query.data?.published,
-      query.data?.rentalRule
-    )
+    const result = await listingAdapter.getListings({
+      listingCategory: query.data?.listingCategory,
+      published: query.data?.published,
+      rentalRule: query.data?.rentalRule,
+    })
+
+    //TODO: get correponding rental objects from xpand-adapter and add them to the listings
 
     if (!result.ok) {
       ctx.status = 500
@@ -336,6 +348,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      //TODO: get rental object from new xpand-adapter that gets rental objects from db
+
       ctx.body = { content: listing, ...metadata }
       ctx.status = 200
     } catch (error) {
@@ -405,6 +419,8 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { reason: 'Listing not found', ...metadata }
         return
       }
+
+      //TODO: get rental object from new xpand-adapter that gets rental objects from db
 
       ctx.body = { content: listing, ...metadata }
       ctx.status = 200
@@ -508,6 +524,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    //TODO: get rental objects from new xpand-adapter that gets rental objects from db
+
     ctx.status = 200
     ctx.body = { content: listingsWithApplicants.data, ...metadata }
   })
@@ -524,6 +542,8 @@ export const routes = (router: KoaRouter) => {
       }
       return
     }
+
+    //TODO: get correponding rental objects from xpand-adapter and add them to the listings
 
     ctx.status = 200
     ctx.body = {
@@ -638,9 +658,11 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const listingId = ctx.params.listingId
-      const listing = await listingAdapter.getListingById(Number(listingId))
+      const listingWithoutRentalObject = await listingAdapter.getListingById(
+        Number(listingId)
+      )
 
-      if (!listing) {
+      if (!listingWithoutRentalObject) {
         ctx.status = 404
         ctx.body = {
           reason: 'Listing not found',
@@ -651,8 +673,8 @@ export const routes = (router: KoaRouter) => {
 
       const applicants: DetailedApplicant[] = []
 
-      if (listing.applicants) {
-        for (const applicant of listing.applicants) {
+      if (listingWithoutRentalObject.applicants) {
+        for (const applicant of listingWithoutRentalObject.applicants) {
           const tenant = await getTenant({
             contactCode: applicant.contactCode,
           })
@@ -678,6 +700,14 @@ export const routes = (router: KoaRouter) => {
           })
         }
       }
+
+      //TODO: get rental object from new xpand-adapter that gets rental objects from db
+      const listing = {
+        ...listingWithoutRentalObject,
+        rentalObject: {
+          rentalObjectCode: listingWithoutRentalObject.rentalObjectCode,
+        },
+      } as Listing
 
       const applicantsWithPriority =
         priorityListService.addPriorityToApplicantsBasedOnRentalRules(

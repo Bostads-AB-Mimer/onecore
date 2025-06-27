@@ -288,7 +288,11 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should get priority 1 if no parking space contract and valid housing contract in same residential area as listing', async () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -318,7 +322,11 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should get priority 1 if no parking space contract and upcoming housing contract in same residential area as listing', () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -382,7 +390,11 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should get priority 1 if they only have parking space contracts that are about to end and valid housing contract in same residential area as listing', async () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -417,7 +429,11 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should get priority 1 if they only have terminated parking spaces and valid housing contract in same residential area as listing', async () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -528,7 +544,11 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
   it('applicant should not get a priority if not eligible for renting in area with specific rental rule', () => {
     const listing = factory.listing
       .params({
-        districtCode: 'CEN',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'CEN',
+          })
+          .build(),
       })
       .build()
 
@@ -559,7 +579,11 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   it('should sort applicants in expected order based on rental rules', () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -726,10 +750,13 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   it('should handle priority 1 applicants with current and upcoming housing contracts', () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
-
     //priority 1 applicant
     //has no parking space contract and active housing contract in same residential area as listing
     const applicant1HousingContract = factory.lease
@@ -798,7 +825,11 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   it('should handle applicants with undefined priority', () => {
     const listing = factory.listing
       .params({
-        districtCode: 'XYZ',
+        rentalObject: factory.rentalObject
+          .params({
+            districtCode: 'XYZ',
+          })
+          .build(),
       })
       .build()
 
@@ -861,16 +892,16 @@ describe('sortApplicantsBasedOnRentalRules', () => {
   it('should assign priority null if applicant has no upcoming housing contracts or active parking space contracts', () => {
     const listing = factory.listing.build({
       rentalObjectCode: '307-706-00-0015',
-      districtCaption: 'Vallby',
-      districtCode: 'VAL',
-      objectTypeCaption: 'Parkeringsplats med el',
-      objectTypeCode: 'PPLMEL',
-      rentalObjectTypeCaption: 'Standard hyresobjektstyp',
       publishedFrom: new Date('2024-10-21T07:55:51.000Z'),
       publishedTo: new Date('2024-10-19T22:59:59.000Z'),
-      vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
       status: 4,
-      waitingListType: 'Bilplats (intern)',
+      rentalObject: factory.rentalObject.build({
+        districtCaption: 'Vallby',
+        districtCode: 'VAL',
+        objectTypeCaption: 'Parkeringsplats med el',
+        objectTypeCode: 'PPLMEL',
+        vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
+      }),
     })
 
     const detailedApplicant3 = factory.detailedApplicant
