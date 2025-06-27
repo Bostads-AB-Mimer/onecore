@@ -80,13 +80,8 @@ const getParkingSpaceByRentalObjectCode = async (
   >
 > => {
   try {
-    console.log(`Fetching rental object by code: ${rentalObjectCode}`)
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
-    )
-    console.log(
-      `Received response for rental object code ${rentalObjectCode}:`,
-      response.status
     )
     if (response.status == HttpStatusCode.NotFound) {
       return { ok: false, err: 'rental-object-not-found' }

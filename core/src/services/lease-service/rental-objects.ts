@@ -103,7 +103,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-object/by-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
-    console.log(`Fetching rental object with code: ${rentalObjectCode}`)
     const result =
       await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
 
