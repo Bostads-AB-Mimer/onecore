@@ -98,7 +98,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     monthlyRent: monthlyRent,
     propertyCaption: row.estatecaption,
     propertyCode: row.estatecode,
-    residentialAreaCode: row.restidentialareacode,
+    residentialAreaCode: row.residentialareacode,
     residentialAreaCaption: row.residentialareacaption,
     objectTypeCaption: row.vehiclespacetypecaption,
     objectTypeCode: row.vehiclespacetypecode,
@@ -281,19 +281,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       .whereNull('ac.keycmobj')
       .orderBy('ps.rentalObjectCode', 'asc')
 
-    // TABORT INNAN PR
-    console.log(
-      `Fetched ${results.length} vacant parking spaces from the database`
-    )
-    console.log(results[0])
-
-    const countWithBlockCaption = results.filter(
-      (row) => !!row.blockcaption
-    ).length
-    console.log(
-      `Number of vacant parking spaces with blockcaption: ${countWithBlockCaption}`
-    )
-    //
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
@@ -304,7 +291,6 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-//todo: behöver också hämta parking space type, hyra, yta.
 const getParkingSpace = async (
   rentalObjectCode: string
 ): Promise<
@@ -325,12 +311,6 @@ const getParkingSpace = async (
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
       .first()
 
-    // TABORT INNAN PR
-    console.log(
-      `Fetching parking space with rental object code: ${rentalObjectCode}`
-    )
-    // TABORT INNAN PR
-    console.log(`Result:`, result)
     if (!result) {
       logger.error(
         `Parking space not found by Rental Object Code: ${rentalObjectCode}`
