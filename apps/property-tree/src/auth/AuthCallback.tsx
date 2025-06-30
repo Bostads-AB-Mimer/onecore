@@ -42,7 +42,13 @@ export function AuthCallback() {
             redirectUri: authConfig.redirectUri,
           },
         })
-          .then(() => setState({ tag: 'success' }))
+          .then((result) => {
+            if (result.error) {
+              throw 'unknown-error'
+            }
+
+            setState({ tag: 'success' })
+          })
           .catch((err) => {
             console.error(err)
             setState({
