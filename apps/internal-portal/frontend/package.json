@@ -25,7 +25,7 @@
     "axios": "^1.6.5",
     "dayjs": "^1.11.13",
     "material-ui-popup-state": "^5.0.10",
-    "onecore-types": "^3.11.0",
+    "onecore-types": "^3.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-error-boundary": "^4.0.13",
