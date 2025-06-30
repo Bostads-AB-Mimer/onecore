@@ -170,8 +170,8 @@ export const routes = (router: KoaRouter) => {
         objectTypeCaption: xpandParkingSpace.objectTypeCaption,
         objectTypeCode: xpandParkingSpace.objectTypeCode,
         vacantFrom: xpandParkingSpace.vacantFrom,
-        restidentalAreaCaption: xpandParkingSpace.freeTable1Caption,
-        restidentalAreaCode: xpandParkingSpace.freeTable1Code,
+        residentialAreaCaption: xpandParkingSpace.freeTable1Caption,
+        residentialAreaCode: xpandParkingSpace.freeTable1Code,
       },
     }
 
