@@ -80,7 +80,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Område</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.rentalObject.restidentalAreaCaption}
+                {parkingSpaceListing.rentalObject.residentialAreaCaption}
               </Typography>
             </Box>
           </Box>
