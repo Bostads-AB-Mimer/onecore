@@ -424,7 +424,7 @@ describe('lease-service', () => {
     )
 
     const getParkingSpacesSpy = jest.spyOn(
-      propertyManagementAdapter,
+      tenantLeaseAdapter,
       'getParkingSpaces'
     )
 

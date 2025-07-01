@@ -6,7 +6,6 @@ import {
 
 import { createOfferForInternalParkingSpace } from '../create-offer'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import * as factory from '../../../../../test/factories'
 import { ProcessStatus } from '../../../../common/types'
@@ -45,7 +44,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -73,7 +72,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -108,7 +107,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -154,7 +153,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -221,7 +220,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -258,7 +257,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -298,7 +297,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
@@ -341,7 +340,7 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getListingByListingId')
       .mockResolvedValue(listing)
 
-    jest.spyOn(propertyMgmtAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
       ok: true,
       data: factory.vacantParkingSpace
         .params({
