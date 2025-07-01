@@ -79,7 +79,7 @@ export const acceptOffer = async (
       )
     }
 
-    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
       listingWithoutRentalObject.rentalObjectCode
     )
 
@@ -249,7 +249,7 @@ export const denyOffer = async (
       )
     }
 
-    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
       listingWithoutRentalObject.rentalObjectCode
     )
 

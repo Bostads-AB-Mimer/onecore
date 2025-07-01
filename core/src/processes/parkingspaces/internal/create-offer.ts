@@ -54,7 +54,7 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
       listingWithoutRentalObject.rentalObjectCode
     )
 
