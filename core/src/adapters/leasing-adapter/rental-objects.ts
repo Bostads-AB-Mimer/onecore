@@ -29,13 +29,13 @@ const getParkingSpaceByCode = async (
 }
 
 const getParkingSpaces = async (
-  includeRentalObjectCodes?: string[]
+  rentalObjectCodes?: string[]
 ): Promise<AdapterResult<RentalObject[], 'not-found' | 'unknown'>> => {
   try {
     let url = `${tenantsLeasesServiceUrl}/parking-spaces`
 
-    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
-      const codesParam = includeRentalObjectCodes.join(',')
+    if (rentalObjectCodes && rentalObjectCodes.length) {
+      const codesParam = rentalObjectCodes.join(',')
       url += `?includeRentalObjectCodes=${encodeURIComponent(codesParam)}`
     }
 
@@ -43,7 +43,7 @@ const getParkingSpaces = async (
 
     if (response.status === 404) {
       logger.error(
-        `Parking space not found for codes: ${includeRentalObjectCodes?.join(', ')}`
+        `Parking space not found for codes: ${rentalObjectCodes?.join(', ')}`
       )
       return { ok: false, err: 'not-found' }
     }
@@ -51,7 +51,7 @@ const getParkingSpaces = async (
   } catch (error) {
     logger.error(
       error,
-      `Error retrieving rental objects by codes ${includeRentalObjectCodes?.join(', ')}`
+      `Error retrieving rental objects by codes ${rentalObjectCodes?.join(', ')}`
     )
     return { ok: false, err: 'unknown' }
   }
