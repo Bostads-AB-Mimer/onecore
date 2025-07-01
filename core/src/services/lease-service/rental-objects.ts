@@ -30,7 +30,35 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/RentalObject'
+   *                     type: object
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       address:
+   *                         type: string
+   *                       monthlyRent:
+   *                         type: number
+   *                       propertyCaption:
+   *                         type: string
+   *                       propertyCode:
+   *                         type: string
+   *                       residentialAreaCode:
+   *                         type: string
+   *                       residentialAreaCaption:
+   *                         type: string
+   *                       objectTypeCaption:
+   *                         type: string
+   *                       objectTypeCode:
+   *                         type: string
+   *                       vacantFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       districtCaption:
+   *                         type: string
+   *                       districtCode:
+   *                         type: string
+   *                       braArea:
+   *                         type: number
    *       '500':
    *         description: Internal server error. Failed to retrieve vacant parking spaces.
    *         content:
@@ -43,11 +71,6 @@ export const routes = (router: KoaRouter) => {
    *                   description: Error message.
    *     security:
    *       - bearerAuth: []
-   * components:
-   *   schemas:
-   *     RentalObject:
-   *       type: object
-   *       description: Represents a rental object.
    */
   router.get('(.*)/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -70,6 +93,13 @@ export const routes = (router: KoaRouter) => {
    *     description: Fetches a rental object by Rental Object Code.
    *     tags:
    *       - RentalObject
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the rental object to fetch.
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object.
@@ -81,7 +111,35 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/RentalObject'
+   *                     type: object
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       address:
+   *                         type: string
+   *                       monthlyRent:
+   *                         type: number
+   *                       propertyCaption:
+   *                         type: string
+   *                       propertyCode:
+   *                         type: string
+   *                       residentialAreaCode:
+   *                         type: string
+   *                       residentialAreaCaption:
+   *                         type: string
+   *                       objectTypeCaption:
+   *                         type: string
+   *                       objectTypeCode:
+   *                         type: string
+   *                       vacantFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       districtCaption:
+   *                         type: string
+   *                       districtCode:
+   *                         type: string
+   *                       braArea:
+   *                         type: number
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
    *         content:
@@ -94,11 +152,6 @@ export const routes = (router: KoaRouter) => {
    *                   description: The error message.
    *     security:
    *       - bearerAuth: []
-   * components:
-   *   schemas:
-   *     RentalObject:
-   *       type: object
-   *       description: Represents a rental object.
    */
   router.get('(.*)/rental-object/by-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
