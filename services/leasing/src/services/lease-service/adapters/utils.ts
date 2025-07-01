@@ -26,3 +26,12 @@ export const pascalToCamel = <T>(obj: { [K in keyof T]: T[K] }) =>
   Object.fromEntries(
     Object.entries(obj).map(([k, v]) => [uncapitalize(k), v])
   ) as PascalToCamelObject<T>
+
+export const trimRow = (obj: any): any => {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      typeof value === 'string' ? value.trimEnd() : value,
+    ])
+  )
+}

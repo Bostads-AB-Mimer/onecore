@@ -1,6 +1,7 @@
 import { logger } from 'onecore-utilities'
 import { RentalObject } from 'onecore-types'
 import { xpandDb } from './xpandDb'
+import { trimRow } from '../utils'
 
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
@@ -28,15 +29,6 @@ const districts = {
 }
 
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
-
-function trimRow(obj: any): any {
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [
-      key,
-      typeof value === 'string' ? value.trimEnd() : value,
-    ])
-  )
-}
 
 function transformFromXpandRentalObject(row: any): RentalObject {
   const scegcaption = row.scegcaption?.toUpperCase() || ''

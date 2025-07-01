@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
-import { routes } from '../../routes/rentalObjects'
+import { routes } from '../../routes/rental-objects'
 import * as factory from '../factories'
 
 const app = new Koa()

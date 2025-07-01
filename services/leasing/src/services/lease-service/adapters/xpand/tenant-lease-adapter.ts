@@ -4,6 +4,7 @@ import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 import { logger } from 'onecore-utilities'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
+import { trimRow } from '../utils'
 
 interface GetLeasesOptions {
   includeUpcomingLeases: boolean
@@ -18,14 +19,6 @@ type PartialLease = {
   terminationDate: Lease['terminationDate']
 }
 
-function trimRow(obj: any): any {
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [
-      key,
-      typeof value === 'string' ? value.trimEnd() : value,
-    ])
-  )
-}
 const calculateQueuePoints = (queueTime: Date): number => {
   const stripDate = (date: Date): Date => {
     return new Date(
