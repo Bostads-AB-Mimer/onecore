@@ -5,14 +5,8 @@ import {
   invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from 'onecore-types'
-import knex from 'knex'
-import Config from '../../../../common/config'
 import { logger } from 'onecore-utilities'
-
-const db = knex({
-  client: 'mssql',
-  connection: Config.xpandDatabase,
-})
+import { xpandDb } from './xpandDb'
 
 const getTransactionType = (transactionTypeString: any) => {
   if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
@@ -58,7 +52,7 @@ const getInvoicesByContactCode = async (
     { contactCode: contactKey },
     'Getting invoices by contact code from Xpand DB'
   )
-  const rows = await db
+  const rows = await xpandDb
     .select(
       'krfkh.invoice as invoiceId',
       'krfkh.reference as leaseId',

@@ -1,12 +1,7 @@
 import { logger } from 'onecore-utilities'
-import Config from '../../../../common/config'
-import knex from 'knex'
 import { RentalObject } from 'onecore-types'
+import { xpandDb } from './xpandDb'
 
-const db = knex({
-  client: 'mssql',
-  connection: Config.xpandDatabase,
-})
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
   Norr: ['Oxbacken', 'Jakobsberg', 'Pettersberg', 'Vallby', 'Skultuna'],
@@ -114,7 +109,7 @@ const buildMainQuery = (
   activeRentalBlocksQuery?: any,
   activeContractsQuery?: any
 ) => {
-  let query = db
+  let query = xpandDb
     .from(parkingSpacesQuery.as('ps'))
     .select(
       'ps.rentalObjectCode',
@@ -134,7 +129,7 @@ const buildMainQuery = (
   if (activeRentalBlocksQuery && activeContractsQuery) {
     query = query
       .select(
-        db.raw(`
+        xpandDb.raw(`
           CASE
             WHEN rb.keycmobj IS NOT NULL THEN 'Has rental block: ' + rb.blocktype
             WHEN ac.keycmobj IS NOT NULL THEN 'Has active contract: ' + ac.contractid
@@ -157,7 +152,7 @@ const buildMainQuery = (
 
   return query
     .leftJoin(
-      db.raw(`
+      xpandDb.raw(`
           (
             SELECT 
               rentalpropertyid, 
@@ -175,7 +170,7 @@ const buildMainQuery = (
       'ps.rentalObjectCode'
     )
     .leftJoin(
-      db('cmval as cmvalbar')
+      xpandDb('cmval as cmvalbar')
         .select('cmvalbar.keycode', 'cmvalbar.value')
         .where('cmvalbar.keycmvat', 'BRA')
         .as('cmvalbar'),
@@ -185,7 +180,7 @@ const buildMainQuery = (
 }
 
 const buildSubQueries = () => {
-  const parkingSpacesQuery = db
+  const parkingSpacesQuery = xpandDb
     .from('babps')
     .select(
       'babps.keycmobj',
@@ -207,14 +202,14 @@ const buildSubQueries = () => {
     .innerJoin('babpt', 'babpt.keybabpt', 'babps.keybabpt')
     .leftJoin('cmadr', function () {
       this.on('cmadr.keycode', '=', 'babps.keycmobj')
-        .andOn('cmadr.keydbtbl', '=', db.raw('?', ['_RQA11RNMA']))
-        .andOn('cmadr.keycmtyp', '=', db.raw('?', ['adrpost']))
+        .andOn('cmadr.keydbtbl', '=', xpandDb.raw('?', ['_RQA11RNMA']))
+        .andOn('cmadr.keycmtyp', '=', xpandDb.raw('?', ['adrpost']))
     })
     .leftJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .where('babuf.cmpcode', '=', '001')
 
-  const activeRentalBlocksQuery = db
+  const activeRentalBlocksQuery = xpandDb
     .from('hyspt')
     .select(
       'hyspt.keycmobj',
@@ -224,13 +219,21 @@ const buildSubQueries = () => {
     )
     .innerJoin('hyspa', 'hyspa.keyhyspa', 'hyspt.keyhyspa')
     .where(function () {
-      this.whereNull('hyspt.fdate').orWhere('hyspt.fdate', '<=', db.fn.now())
+      this.whereNull('hyspt.fdate').orWhere(
+        'hyspt.fdate',
+        '<=',
+        xpandDb.fn.now()
+      )
     })
     .andWhere(function () {
-      this.whereNull('hyspt.tdate').orWhere('hyspt.tdate', '>', db.fn.now())
+      this.whereNull('hyspt.tdate').orWhere(
+        'hyspt.tdate',
+        '>',
+        xpandDb.fn.now()
+      )
     })
 
-  const activeContractsQuery = db
+  const activeContractsQuery = xpandDb
     .from('hyobj')
     .select(
       'hyinf.keycmobj',
@@ -244,7 +247,7 @@ const buildSubQueries = () => {
       this.on('hykop.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
         'hykop.ordning',
         '=',
-        db.raw('?', [1])
+        xpandDb.raw('?', [1])
       )
     })
     .innerJoin('hyinf', 'hyinf.keycmobj', 'hykop.keycmobj')
@@ -275,7 +278,7 @@ const getAllVacantParkingSpaces = async (): Promise<
         this.whereNull('rb.keycmobj').orWhere(
           'rb.blockenddate',
           '<=',
-          db.fn.now()
+          xpandDb.fn.now()
         )
       })
       .whereNull('ac.keycmobj')
@@ -371,5 +374,4 @@ export {
   getParkingSpace,
   getParkingSpaces,
   transformFromXpandRentalObject,
-  db,
 }

@@ -1,10 +1,4 @@
-import Config from '../../../../common/config'
-import knex from 'knex'
-
-const db = knex({
-  client: 'mssql',
-  connection: Config.xpandDatabase,
-})
+import { xpandDb } from './xpandDb'
 
 // This adapter is a workaround to get the estate code of a rental object.
 // The estate code is needed to be able to validate, according to, property rental rules
@@ -28,7 +22,7 @@ const db = knex({
 const getEstateCodeFromXpandByRentalObjectCode = async (
   rentalObjectCode: string
 ): Promise<{ estateCode: string; type: string } | undefined> => {
-  const [row] = await db('cmobj')
+  const [row] = await xpandDb('cmobj')
     .select('babuf.fstcode as estateCode', 'cmobt.keycmobt as type')
     .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
     .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
