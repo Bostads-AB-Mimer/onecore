@@ -17,6 +17,7 @@ import {
   StaircaseSchema,
   MaintenanceUnitSchema,
   ResidenceByRentalIdSchema,
+  FacilityDetailsSchema,
 } from '../schemas'
 import { LeaseStatus } from 'onecore-types'
 
@@ -392,6 +393,52 @@ describe('property-base-service', () => {
 
       expect(res.status).toBe(500)
       expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('1234')
+    })
+  })
+
+  describe('GET /propertyBase/facilities/by-rental-id/:rentalId', () => {
+    it('returns 200 and a facility', async () => {
+      const facilityMock = factory.facilityDetails.build()
+      const getFacilitySpy = jest
+        .spyOn(propertyBaseAdapter, 'getFacilityByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: facilityMock })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/facilities/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getFacilitySpy).toHaveBeenCalledWith('1234')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(facilityMock)
+      )
+      expect(() => FacilityDetailsSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 404 if no facility is found', async () => {
+      const getFacilitySpy = jest
+        .spyOn(propertyBaseAdapter, 'getFacilityByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/facilities/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getFacilitySpy).toHaveBeenCalledWith('1234')
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getFacilitySpy = jest
+        .spyOn(propertyBaseAdapter, 'getFacilityByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/facilities/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getFacilitySpy).toHaveBeenCalledWith('1234')
     })
   })
 })

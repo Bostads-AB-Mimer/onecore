@@ -356,6 +356,39 @@ export const MaintenanceUnitSchema = z.object({
   estate: z.string(),
 })
 
+export const FacilityDetailsSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  entrance: z.string().nullable(),
+  deleted: z.boolean(),
+  type: z.object({
+    code: z.string(),
+    name: z.string().nullable(),
+  }),
+  rentalInformation: z
+    .object({
+      apartmentNumber: z.string().nullable(),
+      rentalId: z.string().nullable(),
+      type: z.object({
+        code: z.string(),
+        name: z.string().nullable(),
+      }),
+    })
+    .nullable(),
+  property: z.object({
+    id: z.string().nullable(),
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  building: z.object({
+    id: z.string().nullable(),
+    name: z.string().nullable(),
+    code: z.string().nullable(),
+  }),
+  areaSize: z.number().nullable(),
+})
+
 export const GetRoomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
 })
@@ -390,3 +423,4 @@ export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
+export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>

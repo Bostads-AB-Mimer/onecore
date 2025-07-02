@@ -509,4 +509,51 @@ describe('property-base-adapter', () => {
       if (!result.ok) expect(result.err).toBe('unknown')
     })
   })
+
+  describe('getFacilityByRentalId', () => {
+    it('returns not-found if facility is not found', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          () => HttpResponse.json(null, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getFacilityByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('not-found')
+    })
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getFacilityByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns facility', async () => {
+      const facilityMock = factory.facilityDetails.build()
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          () => HttpResponse.json({ content: facilityMock }, { status: 200 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getFacilityByRentalId('1234')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: facilityMock,
+      })
+    })
+  })
 })

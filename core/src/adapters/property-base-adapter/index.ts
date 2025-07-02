@@ -354,3 +354,43 @@ export async function getMaintenanceUnitsForRentalProperty(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetFacilityByRentalIdResponse =
+  components['schemas']['GetFacilityByRentalIdResponse']['content']
+
+export async function getFacilityByRentalId(
+  rentalId: string
+): Promise<
+  AdapterResult<GetFacilityByRentalIdResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/facilities/rental-id/{rentalId}',
+      {
+        params: { path: { rentalId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (fetchResponse.response.status === 404) {
+      logger.info(
+        { err: `Facility not found for rental id: ${rentalId}` },
+        'property-base-adapter.getFacilityByRentalId'
+      )
+
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (!fetchResponse.data?.content) {
+      throw 'Invariant: response data missing'
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getFacilityByRentalId')
+    return { ok: false, err: 'unknown' }
+  }
+}

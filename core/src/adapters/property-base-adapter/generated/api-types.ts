@@ -1158,6 +1158,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/facilities/rental-id/{rentalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a facility by rental ID
+         * @description Returns a facility with the specified rental ID
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The rental ID of the facility */
+                    rentalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully retrieved the facility */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GetFacilityByRentalIdResponse"];
+                    };
+                };
+                /** @description Facility not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1711,6 +1767,77 @@ export interface components {
                 postalCode: string | null;
                 city: string | null;
             } | null;
+        };
+        FacilityDetails: {
+            id: string;
+            code: string;
+            name: string | null;
+            entrance: string | null;
+            deleted: boolean;
+            type: {
+                code: string;
+                name: string | null;
+            };
+            rentalInformation: {
+                apartmentNumber: string | null;
+                rentalId: string | null;
+                type: {
+                    code: string;
+                    name: string | null;
+                };
+            } | null;
+            property: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            building: {
+                id: string | null;
+                name: string | null;
+                code: string | null;
+            };
+            areaSize: number | null;
+        };
+        GetFacilityByRentalIdResponse: {
+            content: {
+                id: string;
+                code: string;
+                name: string | null;
+                entrance: string | null;
+                deleted: boolean;
+                type: {
+                    code: string;
+                    name: string | null;
+                };
+                rentalInformation: {
+                    apartmentNumber: string | null;
+                    rentalId: string | null;
+                    type: {
+                        code: string;
+                        name: string | null;
+                    };
+                } | null;
+                property: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                building: {
+                    id: string | null;
+                    name: string | null;
+                    code: string | null;
+                };
+                areaSize: number | null;
+            };
+            _links: {
+                self: {
+                    href: string;
+                };
+                link: {
+                    href: string;
+                    templated: boolean;
+                };
+            };
         };
     };
     responses: never;
