@@ -1,4 +1,4 @@
-model PropertyType {
+model FacilityType {
   id                            String  @id(map: "pkbalot") @map("keybalot") @db.Char(15)
   componentTypeActionId         String? @map("keypuatt") @db.Char(15)
   statisticsGroupScbId          String? @map("keyballs") @db.Char(15)
@@ -13,7 +13,6 @@ model PropertyType {
   isSystemStandard              Int     @default(0, map: "DF__balot__issystem__4B4F8A24") @map("issystem") @db.TinyInt
   timestamp                     String  @map("timestamp") @db.Char(10) // TODO: consider renaming timestamp field when knowing more about its usage
 
-  location Location[] //@relation("fkbalokkeybalot") // Changed the relation from balok
   // TODO: Commented out as StatisticsGroupScb is not defined
   // statisticsGroupScb StatisticsGroupScb? @relation("balot_keyballsToballs", fields: [statisticsGroupScbId], references: [keyballs], onUpdate: NoAction, map: "fkbalotkeyballs")
   // TODO: Commented out as StatisticsGroup2 is not defined
@@ -24,6 +23,7 @@ model PropertyType {
   // statisticsGroup4 StatisticsGroup4? @relation("balot_keyballs4Toballs", fields: [statisticsGroup4Id], references: [keyballs], onDelete: NoAction, onUpdate: NoAction, map: "fkbalotkeyballs4")
   //checklist InspectionProtocol? @relation(fields: [checklistId], references: [inspectionProtocolId], onUpdate: NoAction, map: "fkbalotkeylbpro")
   //componentTypeAction ActionType? @relation(fields: [componentTypeActionId], references: [actionTypeId], onUpdate: NoAction, map: "fkbalotkeypuatt")
+  Facility Facility[]
 
   @@index([statisticsGroupScbId], map: "fkbalotballs")
   @@index([statisticsGroup2Id], map: "fkbalotballs2")
