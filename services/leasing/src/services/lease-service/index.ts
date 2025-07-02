@@ -6,6 +6,7 @@ import { routes as invoiceRoutes } from './routes/invoices'
 import { routes as leaseRoutes } from './routes/leases'
 import { routes as listingRoutes } from './routes/listings'
 import { routes as applicantsRoutes } from './routes/applicants'
+import { routes as rentalObjectsRoutes } from './routes/rental-objects'
 
 export const routes = (router: KoaRouter) => {
   applicantsRoutes(router)
@@ -15,4 +16,5 @@ export const routes = (router: KoaRouter) => {
   invoiceRoutes(router)
   leaseRoutes(router)
   listingRoutes(router)
+  rentalObjectsRoutes(router)
 }

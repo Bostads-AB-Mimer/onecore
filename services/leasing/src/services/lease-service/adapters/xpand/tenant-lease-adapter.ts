@@ -1,15 +1,10 @@
 import { Lease, Contact, WaitingList, WaitingListType } from 'onecore-types'
 import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
-import knex from 'knex'
-import Config from '../../../../common/config'
 import { logger } from 'onecore-utilities'
 import { AdapterResult } from '../types'
-
-const db = knex({
-  client: 'mssql',
-  connection: Config.xpandDatabase,
-})
+import { xpandDb } from './xpandDb'
+import { trimRow } from '../utils'
 
 interface GetLeasesOptions {
   includeUpcomingLeases: boolean
@@ -24,14 +19,6 @@ type PartialLease = {
   terminationDate: Lease['terminationDate']
 }
 
-function trimRow(obj: any): any {
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [
-      key,
-      typeof value === 'string' ? value.trimEnd() : value,
-    ])
-  )
-}
 const calculateQueuePoints = (queueTime: Date): number => {
   const stripDate = (date: Date): Date => {
     return new Date(
@@ -127,7 +114,7 @@ const getLeasesForNationalRegistrationNumber = async (
   options: GetLeasesOptions
 ) => {
   logger.info('Getting leases for national registration number from Xpand DB')
-  const contact = await db
+  const contact = await xpandDb
     .from('cmctc')
     .select('cmctc.keycmctc as contactKey')
     .limit(1)
@@ -167,7 +154,7 @@ const getLeasesForContactCode = async (
 ): Promise<AdapterResult<Array<Lease>, unknown>> => {
   logger.info({ contactCode }, 'Getting leases for contact code from Xpand DB')
   try {
-    const contact = await db
+    const contact = await xpandDb
       .from('cmctc')
       .select('cmctc.keycmctc as contactKey')
       .limit(1)
@@ -214,7 +201,7 @@ const getLeasesForPropertyId = async (
   options: GetLeasesOptions
 ) => {
   let leases: Lease[] = []
-  const rows = await db
+  const rows = await xpandDb
     .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
@@ -255,7 +242,7 @@ const getResidentialAreaByRentalPropertyId = async (
   rentalPropertyId: string
 ): Promise<AdapterResult<{ code: any; caption: any } | undefined, unknown>> => {
   try {
-    const rows = await db
+    const rows = await xpandDb
       .from('babya')
       .select('babya.code', 'babya.caption')
       .innerJoin('bafst', 'bafst.keybabya', 'babya.keybabya')
@@ -289,7 +276,7 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
-    const rows = await db
+    const rows = await xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
       .where('cmctc.cmctckod', 'like', `%${q}%`)
@@ -380,7 +367,7 @@ const getContactByPhoneNumber = async (
 
 const getContactsByLeaseId = async (leaseId: string) => {
   const contacts: Contact[] = []
-  const rows = await db
+  const rows = await xpandDb
     .from('hyavk')
     .select('hyavk.keycmctc as contactKey')
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
@@ -399,7 +386,7 @@ const getContactsByLeaseId = async (leaseId: string) => {
 }
 
 const getContactQuery = () => {
-  return db
+  return xpandDb
     .from('cmctc')
     .select(
       'cmctc.cmctckod as contactCode',
@@ -427,7 +414,7 @@ const getContactQuery = () => {
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
-  let rows = await db
+  let rows = await xpandDb
     .from('cmtel')
     .select(
       'cmtelben as phoneNumber',
@@ -444,7 +431,7 @@ const getPhoneNumbersForContact = async (keycmobj: string) => {
 }
 
 const getContactForPhoneNumber = async (phoneNumber: string) => {
-  const rows = await db
+  const rows = await xpandDb
     .from('cmtel')
     .select('keycmobj as keycmobj')
     .where({ cmtelben: phoneNumber })
@@ -457,7 +444,7 @@ const getLeaseIds = async (
   keycmctc: string,
   includeTerminatedLeases: boolean
 ) => {
-  const rows = await db
+  const rows = await xpandDb
     .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
@@ -474,7 +461,7 @@ const getLeaseIds = async (
 }
 
 const getLeasesByContactKey = async (keycmctc: string) => {
-  const rows = await db
+  const rows = await xpandDb
     .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
@@ -504,7 +491,7 @@ const getLeasesByContactKey = async (keycmctc: string) => {
 }
 
 const getLeaseById = async (hyobjben: string) => {
-  const rows = await db
+  const rows = await xpandDb
     .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
