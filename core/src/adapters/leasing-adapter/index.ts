@@ -661,3 +661,10 @@ export {
 } from './offers'
 
 export { getCommentThread, addComment, removeComment } from './comments'
+
+export {
+  getAllVacantParkingSpaces,
+  getParkingSpaceByRentalObjectCode,
+  getParkingSpaceByCode,
+  getParkingSpaces,
+} from './rental-objects'

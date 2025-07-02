@@ -10,8 +10,7 @@ import { generateRouteMetadata } from 'onecore-utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../adapters/property-management-adapter'
-import { Listing, VacantParkingSpace } from 'onecore-types'
+import { Listing, RentalObject } from 'onecore-types'
 import { logger, loggedAxios as axios } from 'onecore-utilities'
 
 export const routes = (router: KoaRouter) => {
@@ -88,7 +87,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaces(
+      const parkingSpacesResult = await leasingAdapter.getParkingSpaces(
         result.data.map((listing) => listing.rentalObjectCode)
       )
       if (!parkingSpacesResult.ok) {
@@ -121,4 +120,8 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
     }
   })
+
+  interface ListingWithRentalObject extends Listing {
+    rentalObject: RentalObject
+  }
 }

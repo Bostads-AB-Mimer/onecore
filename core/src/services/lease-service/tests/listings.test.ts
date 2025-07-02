@@ -5,7 +5,6 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 
 import * as factory from '../../../../test/factories'
 
@@ -28,7 +27,7 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [listing] })
 
     jest
-      .spyOn(propertyMgmtAdapter, 'getParkingSpaces')
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [] })
 
     const res = await request(app.callback()).get('/listings')
@@ -53,7 +52,7 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [listing] })
 
     jest
-      .spyOn(propertyMgmtAdapter, 'getParkingSpaces')
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
     const res = await request(app.callback()).get('/listings?published=true')
@@ -80,7 +79,7 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [listing] })
 
     jest
-      .spyOn(propertyMgmtAdapter, 'getParkingSpaces')
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
     const res = await request(app.callback()).get('/listings?rentalRule=SCORED')
@@ -111,7 +110,7 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [listing] })
 
     jest
-      .spyOn(propertyMgmtAdapter, 'getParkingSpaces')
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
     const res = await request(app.callback()).get(

@@ -26,13 +26,15 @@ import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
 import { routes as applicationProfileRoutesOld } from './application-profile-old'
 import { routes as listings } from './listings'
+import { routes as commentsRoutes } from './comments'
+import { routes as rentalObjectsRoutes } from './rental-objects'
+
 import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
   Lease,
   mapLease,
 } from './schemas/lease'
-import { routes as commentsRoutes } from './comments'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -78,8 +80,8 @@ export const routes = (router: KoaRouter) => {
   // profile (with housing references)
   applicationProfileRoutesOld(router)
   listings(router)
-
   commentsRoutes(router)
+  rentalObjectsRoutes(router)
 
   /**
    * @swagger
@@ -862,17 +864,15 @@ export const routes = (router: KoaRouter) => {
     const responseData = (await leasingAdapter.getListingByListingId(
       Number.parseInt(ctx.params.id)
     )) as Listing | undefined
-
     if (!responseData) {
       ctx.status = 404
       ctx.body = { error: 'Listing not found', ...metadata }
       return
     }
 
-    const parkingSpacesResult =
-      await propertyManagementAdapter.getParkingSpaceByCode(
-        responseData.rentalObjectCode
-      )
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
+      responseData.rentalObjectCode
+    )
 
     if (!parkingSpacesResult.ok) {
       parkingSpacesResult.err === 'not-found'
@@ -936,10 +936,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const parkingSpacesResult =
-      await propertyManagementAdapter.getParkingSpaces(
-        result.data.map((listing) => listing.rentalObjectCode)
-      )
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaces(
+      result.data.map((listing) => listing.rentalObjectCode)
+    )
     if (!parkingSpacesResult.ok) {
       parkingSpacesResult.err === 'not-found'
         ? (ctx.status = 404)

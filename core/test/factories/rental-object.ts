@@ -13,7 +13,7 @@ export const RentalObjectFactory = Factory.define<RentalObject>(
     objectTypeCaption: 'Carport',
     objectTypeCode: 'CPORT',
     vacantFrom: new Date(),
-    restidentalAreaCaption: 'Malmaberg',
-    restidentalAreaCode: 'MAL',
+    residentialAreaCaption: 'Malmaberg',
+    residentialAreaCode: 'MAL',
   })
 )

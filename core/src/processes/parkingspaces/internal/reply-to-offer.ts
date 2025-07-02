@@ -79,7 +79,7 @@ export const acceptOffer = async (
       )
     }
 
-    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
       listingWithoutRentalObject.rentalObjectCode
     )
 
@@ -97,7 +97,7 @@ export const acceptOffer = async (
       rentalObject: parkingSpacesResult.data,
     }
 
-    if (!listing || !listing.rentalObject.restidentalAreaCode) {
+    if (!listing || !listing.rentalObject.residentialAreaCode) {
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,
@@ -249,7 +249,7 @@ export const denyOffer = async (
       )
     }
 
-    const parkingSpacesResult = await propertyMgmtAdapter.getParkingSpaceByCode(
+    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
       listingWithoutRentalObject.rentalObjectCode
     )
 
@@ -269,7 +269,7 @@ export const denyOffer = async (
 
     if (
       !listingWithoutRentalObject ||
-      !listing.rentalObject.restidentalAreaCode
+      !listing.rentalObject.residentialAreaCode
     ) {
       return endFailingProcess(
         log,
@@ -346,7 +346,7 @@ export const expireOffer = async (
 
     //Get listing
     const listing = await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listing || !listing.rentalObject.restidentalAreaCode) {
+    if (!listing || !listing.rentalObject.residentialAreaCode) {
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,
