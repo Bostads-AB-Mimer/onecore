@@ -1,8 +1,8 @@
-import config from '../common/config'
+import config from '../../../common/config'
 import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
-import { AdapterResult, InvoiceDataRow } from '../common/types'
+import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 

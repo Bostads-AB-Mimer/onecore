@@ -134,6 +134,17 @@ const transformXmlToInvoiceRows = (
     {
       invoiceNumber,
       account: ledgerAccount,
+      totalAmount: -invoiceAmount,
+      invoiceDate: procurementInvoice.IssueDate,
+      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
+      facilityId,
+      periodStart: '',
+      numPeriods: '',
+      subledgerNumber: 'F044966',
+    },
+    /*    {
+      invoiceNumber,
+      account: debtAccount,
       totalAmount: invoiceAmount,
       invoiceDate: procurementInvoice.IssueDate,
       dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
@@ -141,22 +152,11 @@ const transformXmlToInvoiceRows = (
       periodStart: '',
       numPeriods: '',
       subledgerNumber: 'F044966',
-    },
-    {
-      invoiceNumber,
-      account: debtAccount,
-      totalAmount: -invoiceAmount,
-      invoiceDate: procurementInvoice.IssueDate,
-      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
-      facilityId,
-      periodStart: '',
-      numPeriods: '',
-      subledgerNumber: 'F044966',
-    },
+    },*/
     {
       invoiceNumber,
       account: accountMap[invoiceType].costAccount,
-      totalAmount: -invoiceAmount,
+      totalAmount: invoiceAmount,
       vatCode: getTaxRule(invoiceAmount, vatAmount),
       facilityId,
       invoiceDate: procurementInvoice.IssueDate,
@@ -165,17 +165,17 @@ const transformXmlToInvoiceRows = (
       numPeriods: periodInfo.numPeriods,
       subledgerNumber: 'F044966',
     },
-    {
+    /*    {
       invoiceNumber,
       account: debtAccount,
-      totalAmount: invoiceAmount,
+      totalAmount: -invoiceAmount,
       invoiceDate: procurementInvoice.IssueDate,
       dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
       facilityId,
       periodStart: periodInfo.periodStart,
       numPeriods: periodInfo.numPeriods,
       subledgerNumber: 'F044966',
-    },
+    },*/
   ]
 }
 
