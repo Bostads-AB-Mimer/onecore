@@ -51,6 +51,8 @@ export const columnNames: string[] = [
 
 export type InvoiceDataRow = Record<string, string | number>
 
+export type Invoice = Record<string, string | number | Date>
+
 export type InvoiceContract = {
   contractCode: string
   invoiceFromDate: string
@@ -62,3 +64,7 @@ export type InvoiceContract = {
 export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
   | { ok: false; err: E; statusCode?: number }
+
+export const xledgerDateString = (date: Date) => {
+  return date.toISOString().substring(0, 10).replaceAll('-', '')
+}

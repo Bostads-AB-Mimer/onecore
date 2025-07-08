@@ -1,11 +1,11 @@
 import KoaRouter from '@koa/router'
-import { getInvoicesByContactCode } from '../../adapters/xledger-adapter'
+import { getInvoicesByContactCode } from './adapters/xledger-adapter'
 import {
   saveContacts,
   createBatch,
   getContacts,
-} from '../../adapters/invoice-data-db-adapter'
-import { syncContact, transformContact } from '../../adapters/xledger-adapter'
+} from './adapters/invoice-data-db-adapter'
+import { syncContact, transformContact } from './adapters/xledger-adapter'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
 import {
   createAggregateRows,
@@ -45,7 +45,11 @@ export const routes = (router: KoaRouter) => {
       )
 
       ctx.status = 200
-      ctx.body = contactCodes
+      // Roundoff rows are missing contact codes, filter out the
+      // 'undefined' entry that results in
+      ctx.body = contactCodes.filter(
+        (contactCode) => contactCode !== 'undefined'
+      )
     } catch (error: any) {
       console.error('Error', error)
       ctx.status = 500

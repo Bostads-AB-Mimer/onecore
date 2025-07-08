@@ -5,17 +5,45 @@ import {
   getCounterPartCustomers,
   getInvoiceRows,
   saveInvoiceRows,
-} from '../../adapters/invoice-data-db-adapter'
-import { enrichInvoiceRows } from '../../adapters/xpand-db-adapter'
-import { InvoiceContract, InvoiceDataRow } from '../../common/types'
+} from './adapters/invoice-data-db-adapter'
+import {
+  enrichInvoiceRows,
+  getInvoices,
+  getRoundOffInformation,
+} from './adapters/xpand-db-adapter'
+import {
+  InvoiceContract,
+  InvoiceDataRow,
+  Invoice,
+  xledgerDateString,
+} from '../../common/types'
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
-} from '../../adapters/xledger-adapter'
+} from './adapters/xledger-adapter'
+
+const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
+  const fromDateString = xledgerDateString(invoice.fromdate as Date)
+  const year = fromDateString.substring(0, 4)
+  const roundOffInformation = await getRoundOffInformation(year)
+
+  return {
+    account: roundOffInformation.account,
+    costCode: roundOffInformation.costCode,
+    totalAmount: invoice.roundoff as number,
+    invoiceDate: xledgerDateString(invoice.invdate as Date),
+    invoiceNumber: (invoice.invoice as string).trimEnd(),
+    invoiceRowText: 'Öresutjämning',
+    fromDate: fromDateString,
+    toDate: xledgerDateString(invoice.todate as Date),
+    contractCode: (invoice.reference as string).split('/')[0],
+  }
+}
 
 /**
  * Enriches each invoice row of a batch with accounting data from Xpand. Saves each
- * enriched row to invoice_data in economy db.
+ * enriched row to invoice_data in economy db. Also adds a roundoff row for each
+ * unique invoice that has a roundoff.
  *
  * @param invoiceDataRows Array of invoice rows from Xpand
  * @param batchId Batch ID previously created
@@ -31,10 +59,20 @@ export const processInvoiceRows = async (
 ): Promise<string[]> => {
   const addedContactCodes: Record<string, boolean> = {}
 
+  const invoices = await getInvoices(invoiceDataRows)
+
+  for (const invoice of invoices) {
+    if ((invoice.roundoff as number) > 0) {
+      const roundOffRow = await createRoundOffRow(invoice)
+      invoiceDataRows.push(roundOffRow)
+    }
+  }
+
   const enrichedInvoiceRows = await enrichInvoiceRows(
     invoiceDataRows,
     invoiceDate,
-    invoiceDueDate
+    invoiceDueDate,
+    invoices
   )
 
   const enrichedInvoiceRowsWithAccounts =

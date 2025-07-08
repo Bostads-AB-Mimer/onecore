@@ -4,9 +4,9 @@ import {
   InvoiceContract,
   InvoiceDataRow,
   TOTAL_ACCOUNT,
-} from '../common/types'
+} from '../../../common/types'
 import knex from 'knex'
-import config from '../common/config'
+import config from '../../../common/config'
 import { Contact } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
@@ -66,7 +66,7 @@ export const saveInvoiceRows = async (
       await db('invoice_data').insert(dbRow)
       process.stdout.clearLine(0)
       process.stdout.cursorTo(0)
-      process.stdout.write('Saving ' + (i++).toString())
+      process.stdout.write('Saving ' + (++i).toString())
     } catch (error: any) {
       logger.error({
         error,
@@ -231,16 +231,22 @@ export const addAccountInformation = async (
 ): Promise<InvoiceDataRow[]> => {
   const counterPartCustomers = await getCounterPartCustomers()
   for (const row of invoiceDataRows) {
-    const counterPart = counterPartCustomers.find((counterPart) =>
-      (row.tenantName as string).startsWith(counterPart.CustomerName)
-    )
+    if ('Öresutjämning'.localeCompare(row.invoiceRowText as string) !== 0) {
+      try {
+        const counterPart = counterPartCustomers.find((counterPart) =>
+          (row.tenantName as string).startsWith(counterPart.CustomerName)
+        )
 
-    if (counterPart) {
-      row.ledgerAccount = counterPart.LedgerAccount
-      row.totalAccount = counterPart.TotalAccount
-    } else {
-      row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
-      row.totalAccount = TOTAL_ACCOUNT
+        if (counterPart) {
+          row.ledgerAccount = counterPart.LedgerAccount
+          row.totalAccount = counterPart.TotalAccount
+        } else {
+          row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+          row.totalAccount = TOTAL_ACCOUNT
+        }
+      } catch (error: any) {
+        console.log(row)
+      }
     }
   }
 
