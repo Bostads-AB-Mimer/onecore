@@ -771,6 +771,65 @@ describe('lease-service', () => {
         existingProfile.housingReference.expiresAt?.getTime() as number
       )
     })
+
+    it('allows update with null housingType on existing profile', async () => {
+      const existingProfile = factory.applicationProfile.build({
+        housingType: null,
+        numAdults: 2,
+        lastUpdatedAt: new Date('2021-01-01'),
+        expiresAt: new Date('2021-01-01'),
+        housingReference: {
+          reviewedAt: new Date('2021-01-01'),
+          expiresAt: new Date('2021-01-01'),
+          reviewStatus: 'PENDING',
+        },
+      })
+
+      const updatedProfile = factory.applicationProfile.build({
+        ...existingProfile,
+        housingType: 'RENTAL',
+        housingReference: {
+          ...existingProfile.housingReference,
+          reviewStatus: 'REJECTED',
+          expiresAt: new Date('2022-01-01'),
+        },
+      })
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getApplicationProfileByContactCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: existingProfile,
+        })
+
+      const adapterSpy = jest
+        .spyOn(
+          tenantLeaseAdapter,
+          'createOrUpdateApplicationProfileByContactCode'
+        )
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.applicationProfile.build(),
+        })
+
+      const res = await request(app.callback())
+        .post(
+          `/contacts/${existingProfile.contactCode}/application-profile/admin`
+        )
+        .send(updatedProfile)
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.admin.applicationProfile.UpdateApplicationProfileResponseData.parse(
+          res.body.content
+        )
+      ).not.toThrow()
+
+      expect(adapterSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ housingType: updatedProfile.housingType })
+      )
+    })
   })
 
   describe('POST /contacts/:contactCode/application-profile/client', () => {
