@@ -57,7 +57,7 @@ const convertInvoiceRowsToCsv = async (invoiceDataRows: InvoiceDataRow[]) => {
     'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
 
   const csvLines = invoiceDataRows.map((invoiceDataRow: InvoiceDataRow) => {
-    return `GL;${invoiceDataRow.voucherNo};${(invoiceDataRow.invoiceDate as string).replaceAll('-', '')};${invoiceDataRow.account};${invoiceDataRow.costCode ?? ''};${invoiceDataRow.projectCode ?? ''};${invoiceDataRow.propertyCode ?? ''};${invoiceDataRow.freeCode ?? ''};;${invoiceDataRow.periodStart};${invoiceDataRow.numPeriods};${invoiceDataRow.subledgerNumber};${(invoiceDataRow.invoiceDate as string).replaceAll('-', '')};${invoiceDataRow.invoiceNumber};${invoiceDataRow.invoiceNumber};${(invoiceDataRow.dueDate as string).replaceAll('-', '')};;${invoiceDataRow.vatCode || ''};${invoiceDataRow.totalAmount}`
+    return `MA;${invoiceDataRow.voucherNo};${(invoiceDataRow.invoiceDate as string).replaceAll('-', '')};${invoiceDataRow.account};${invoiceDataRow.costCode ?? ''};${invoiceDataRow.projectCode ?? ''};${invoiceDataRow.propertyCode ?? ''};${invoiceDataRow.freeCode ?? ''};'Mälarenergi AB';${invoiceDataRow.periodStart};${invoiceDataRow.numPeriods};${invoiceDataRow.subledgerNumber};${(invoiceDataRow.invoiceDate as string).replaceAll('-', '')};${invoiceDataRow.invoiceNumber};${invoiceDataRow.invoiceNumber};${(invoiceDataRow.dueDate as string).replaceAll('-', '')};${invoiceDataRow.invoiceNumber};${invoiceDataRow.vatCode || ''};${invoiceDataRow.totalAmount}`
   })
 
   return [csvHeader, ...csvLines]

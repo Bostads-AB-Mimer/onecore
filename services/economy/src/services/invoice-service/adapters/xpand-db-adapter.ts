@@ -191,11 +191,13 @@ const getAdditionalColumns = async (
     console.error({ rentArticleName }, 'Rent article details not found')
     return {}
   }
-  additionalColumns['account'] = rentArticle['account']
-  additionalColumns['costCode'] = rentArticle['costCode']
-  additionalColumns['property'] = rentArticle['property']
+  additionalColumns['account'] = rentArticle['account']?.toString().trimEnd()
+  additionalColumns['costCode'] = rentArticle['costCode']?.toString().trimEnd()
+  additionalColumns['property'] = rentArticle['property']?.toString().trimEnd()
   additionalColumns['projectCode'] = rentArticle['projectCode']
-  additionalColumns['freeCode'] = rentArticle['freeCode']
+    ?.toString()
+    .trimEnd()
+  additionalColumns['freeCode'] = rentArticle['freeCode']?.toString().trimEnd()
   additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()
 
   if (!additionalColumns['costCode'] && contractCode) {
