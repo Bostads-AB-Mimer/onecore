@@ -53,8 +53,8 @@ export const getRoundOffInformation = async (
       .distinct()
 
     roundOffInformation = {
-      account: roundOffInformationDb[0]['p1'],
-      costCode: roundOffInformationDb[0]['p2'],
+      account: roundOffInformationDb[0]['p1']?.toString().trimEnd(),
+      costCode: roundOffInformationDb[0]['p2']?.toString().trimEnd(),
     }
   }
 
@@ -85,8 +85,6 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
   invoices.forEach((invoice) => {
     invoiceTypes[invoice.name] = true
   })
-
-  console.log(Object.keys(invoiceTypes))
 
   return invoices
 }
@@ -205,7 +203,11 @@ const getAdditionalColumns = async (
 
     if (specificRule) {
       additionalColumns['costCode'] = specificRule['costCode']
+        ?.toString()
+        .trimEnd()
       additionalColumns['property'] = specificRule['property']
+        ?.toString()
+        .trimEnd()
     } else {
       logger.error(row, 'Could not find cost code and property')
     }
@@ -226,8 +228,10 @@ export const enrichInvoiceRows = async (
 
   invoiceDataRows.forEach((row) => {
     const invoice = invoices.find((invoice) => {
-      return (row.invoiceNumber as string).localeCompare(
-        invoice.invoice as string
+      return (
+        (row.invoiceNumber as string).localeCompare(
+          (invoice.invoice as string).trimEnd()
+        ) === 0
       )
     })
 

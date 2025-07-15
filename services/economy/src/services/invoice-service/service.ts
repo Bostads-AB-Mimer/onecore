@@ -117,6 +117,9 @@ export const createLedgerTotalRow = (
     return acc
   }, accumulator)
 
+  totalRow.amount =
+    Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
+
   return totalRow
 }
 

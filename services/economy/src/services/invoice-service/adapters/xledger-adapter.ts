@@ -79,6 +79,17 @@ const dateFromString = (dateString: string): Date => {
   return new Date(Date.parse(dateString))
 }
 
+const dateFromXledgerDateString = (xledgerDateString: string): Date => {
+  const dateString =
+    xledgerDateString.substring(0, 4) +
+    '-' +
+    xledgerDateString.substring(4, 6) +
+    '-' +
+    xledgerDateString.substring(6, 8)
+
+  return dateFromString(dateString)
+}
+
 const transformToInvoice = (invoiceData: any[]): Invoice[] => {
   const invoices = invoiceData.map((invoiceData) => {
     const invoice = {
@@ -386,14 +397,16 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
 export const getPeriodInformation = (
   invoiceRow: InvoiceDataRow
 ): { periodStart: string; periods: string } => {
-  const from = new Date(invoiceRow.InvoiceFromDate as string)
-  const to = new Date(invoiceRow.InvoiceToDate as string)
+  const from = dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string)
+  const to = dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
   const interval = to.getMonth() - from.getMonth()
 
-  return {
+  const periodInformation = {
     periodStart: interval == 0 ? '' : '0',
     periods: interval == 0 ? '' : (interval + 1).toString(),
   }
+
+  return periodInformation
 }
 
 export const transformAggregatedInvoiceRow = (
