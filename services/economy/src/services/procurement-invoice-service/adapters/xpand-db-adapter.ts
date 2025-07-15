@@ -32,7 +32,7 @@ const getDistributions = async (
   }
 
   const query = db('cmval')
-    .select('value', 'bafst.code', 'p2')
+    .select('value', 'p3', 'p2')
     .innerJoin('cmvat', 'cmval.keycmvat', 'cmvat.keycmvat')
     .innerJoin('cmvap', 'cmvap.keycmvat', 'cmvat.keycmvat')
     .innerJoin('babyg', 'keycode', 'babyg.keycmobj')
@@ -62,7 +62,7 @@ const getDistributions = async (
   }, 0)
 
   areaTemps.forEach((areaTemp) => {
-    const property = areaTemp.code.trimEnd()
+    const property = areaTemp.p3.trimEnd()
     if (property !== '0') {
       if (!distributions[property]) {
         distributions[property] = {

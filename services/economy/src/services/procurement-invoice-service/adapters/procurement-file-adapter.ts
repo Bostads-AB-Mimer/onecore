@@ -19,24 +19,24 @@ enum ProcurementInvoiceType {
 }
 
 // How many months to backdate costs, index is month number
-// according to Date.getMonth()
+// according to Date.getMonth() - i.e. 0 = January
 const periodMonthInformation: Record<number, number> = {
-  0: 0,
+  0: -1,
   1: -1,
-  2: -1,
+  2: 0,
   3: 0,
   4: -1,
-  5: -1,
-  6: 0,
+  5: 0,
+  6: -1,
   7: -1,
   8: -1,
   9: 0,
-  10: -1,
-  11: -1,
+  10: 0,
+  11: 0,
 }
 
-const ledgerAccount = '2440'
-const debtAccount = '2881'
+const ledgerAccount = '2460'
+const subledgerNumber = '53984290'
 
 const accountMap: Record<ProcurementInvoiceType, { costAccount: string }> = {
   [ProcurementInvoiceType.electricity]: {
@@ -140,7 +140,7 @@ const transformXmlToInvoiceRows = (
       facilityId,
       periodStart: '',
       numPeriods: '',
-      subledgerNumber: 'F044966',
+      subledgerNumber: subledgerNumber,
     },
     /*    {
       invoiceNumber,
@@ -163,7 +163,7 @@ const transformXmlToInvoiceRows = (
       dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
       periodStart: periodInfo.periodStart,
       numPeriods: periodInfo.numPeriods,
-      subledgerNumber: 'F044966',
+      subledgerNumber: subledgerNumber,
     },
     /*    {
       invoiceNumber,
@@ -216,7 +216,7 @@ export const getNewProcurementInvoiceRows = async () => {
   const files = await fs.readdir(config.procurementInvoices.directory)
 
   const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.xml')
+    return file.endsWith('.old')
   })
 
   const invoiceRows: InvoiceDataRow[] = []
