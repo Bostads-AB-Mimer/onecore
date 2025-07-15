@@ -216,7 +216,7 @@ export const getNewProcurementInvoiceRows = async () => {
   const files = await fs.readdir(config.procurementInvoices.directory)
 
   const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.old')
+    return file.endsWith('.xml')
   })
 
   const invoiceRows: InvoiceDataRow[] = []
