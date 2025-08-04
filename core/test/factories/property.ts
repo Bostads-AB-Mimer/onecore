@@ -1,0 +1,40 @@
+import { Factory } from 'fishery'
+import { components } from '../../src/adapters/property-base-adapter/generated/api-types'
+
+export const PropertyFactory = Factory.define<
+  components['schemas']['Property']
+>(({ sequence }) => ({
+  id: `_0J415G5G${sequence}`,
+  propertyObjectId: '_0J415G5G',
+  code: `_0J415G5${sequence}`,
+  marketAreaId: '_0J415G5G',
+  districtId: '_3G10LIENEXZQ2B',
+  propertyDesignationId: '_0JD0N8A7L',
+  valueAreaId: null,
+  designation: 'KVARTER 1',
+  municipality: 'Västerås',
+  tract: 'KVARTER',
+  block: '1',
+  sector: '1',
+  propertyIndexNumber: '1',
+  congregation: 'Västerås',
+  builtStatus: 0,
+  separateAssessmentUnit: 0,
+  consolidationNumber: '1',
+  ownershipType: '1',
+  registrationDate: '2025-04-09T11:39:26.158Z',
+  acquisitionDate: '2025-04-09T11:39:26.158Z',
+  isLeasehold: 0,
+  leaseholdTerminationDate: '2025-04-09T11:39:26.158Z',
+  area: '1',
+  purpose: '1',
+  buildingType: '1',
+  propertyTaxNumber: '1',
+  mainPartAssessedValue: 0,
+  includeInAssessedValue: 0,
+  grading: 0,
+  deleteMark: 0,
+  fromDate: '2025-04-09T11:39:26.158Z',
+  toDate: '2025-04-09T11:39:26.158Z',
+  timestamp: '2025-04-09T11:39:26.158Z',
+}))
