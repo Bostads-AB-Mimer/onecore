@@ -1,4 +1,4 @@
-import { RentalProperty, RoomType } from 'onecore-types'
+import { RentalProperty, RoomType } from '@onecore/types'
 
 const getRentalProperty = async (
   rentalPropertyId: string

@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
-import { Listing, ListingStatus } from 'onecore-types'
+import { generateRouteMetadata } from '@onecore/utilities'
+import { Listing, ListingStatus } from '@onecore/types'
 import { getParkingSpaceOld } from '../adapters/xpand-adapter'
 import { getPublishedParkingSpaceFromSoapService } from '../adapters/xpand-soap-adapter'
 

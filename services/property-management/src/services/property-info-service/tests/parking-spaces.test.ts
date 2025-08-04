@@ -8,7 +8,7 @@ import {
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
-} from 'onecore-types'
+} from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()

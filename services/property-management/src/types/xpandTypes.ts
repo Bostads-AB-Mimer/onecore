@@ -1,4 +1,4 @@
-import {Address, ParkingSpaceType, ParkingSpaceApplicationCategory, RentInfo} from 'onecore-types'
+import {Address, ParkingSpaceType, ParkingSpaceApplicationCategory, RentInfo} from '@onecore/types'
 
 //internal type for converting xpand service parking space objects to listing type
 interface XpandParkingSpace {

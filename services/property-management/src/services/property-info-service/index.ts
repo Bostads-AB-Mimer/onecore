@@ -9,7 +9,7 @@ import KoaRouter from '@koa/router'
 
 import { getRentalProperty } from './adapters/contech-os-adapter'
 
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import {
   getRentalPropertyInfo,
   getMaintenanceUnits,

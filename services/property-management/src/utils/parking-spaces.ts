@@ -3,7 +3,7 @@ import {
   parkingSpaceApplicationCategoryTranslation,
   ParkingSpaceType,
   parkingSpaceTypeTranslation,
-} from 'onecore-types'
+} from '@onecore/types'
 
 const getStreet = (streetAndNumber: string) => {
   const matches = streetAndNumber.split(/([^0-9]+) ([0-9].*)/)

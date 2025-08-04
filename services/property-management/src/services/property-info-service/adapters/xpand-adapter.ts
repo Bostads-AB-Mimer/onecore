@@ -1,4 +1,4 @@
-import { loggedAxios as axios, logger } from 'onecore-utilities'
+import { loggedAxios as axios, logger } from '@onecore/utilities'
 import knex from 'knex'
 import {
   RentalPropertyInfo,
@@ -7,7 +7,7 @@ import {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ParkingSpace,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import Config from '../../../common/config'
 import {

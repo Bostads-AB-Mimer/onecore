@@ -7,7 +7,7 @@ import {
   getParkingSpaceApplicationCategory,
   getParkingSpaceType,
 } from '../../../utils/parking-spaces'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const getPublishedParkingSpaceFromSoapService = async (
   parkingSpaceId: string

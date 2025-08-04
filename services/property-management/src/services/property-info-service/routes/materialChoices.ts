@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
-import { MaterialChoice, MaterialOptionGroup } from 'onecore-types'
+import { generateRouteMetadata } from '@onecore/utilities'
+import { MaterialChoice, MaterialOptionGroup } from '@onecore/types'
 import {
   getRoomTypeWithMaterialOptions,
   getMaterialOption,

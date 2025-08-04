@@ -6,7 +6,7 @@ import { routes } from '../index'
 import * as materialOptionsAdapter from '../adapters/material-options-adapter'
 import * as roomTypesAdapter from '../adapters/contech-os-adapter'
 import * as xpandAdapter from '../adapters/xpand-adapter'
-import { RentalPropertyInfo, MaintenanceUnitInfo } from 'onecore-types'
+import { RentalPropertyInfo, MaintenanceUnitInfo } from '@onecore/types'
 import { rentalPropertyInfoMockData } from './mockData'
 
 const app = new Koa()

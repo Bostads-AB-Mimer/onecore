@@ -4,7 +4,7 @@ import cors from '@koa/cors'
 
 import api from './api'
 import errorHandler from './middlewares/error-handler'
-import { logger, loggerMiddlewares } from 'onecore-utilities'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 
 const app = new Koa()

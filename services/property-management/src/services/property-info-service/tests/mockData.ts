@@ -1,4 +1,4 @@
-import { RentalPropertyInfo } from 'onecore-types'
+import { RentalPropertyInfo } from '@onecore/types'
 
 export const rentalPropertyInfoMockData: RentalPropertyInfo = {
   id: '705-022-04-0201',

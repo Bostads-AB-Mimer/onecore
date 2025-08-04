@@ -3,11 +3,11 @@ import {
   MaterialOption,
   MaterialOptionGroup,
   RoomType,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import knex from 'knex'
 import config from '../../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const db = knex({
   client: 'mssql',
