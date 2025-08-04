@@ -29,7 +29,7 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('@onecore/property-service', () => {
-  describe('GET /propertyBase/buildings/by-building-code/:buildingCode', () => {
+  describe('GET /property-base/buildings/by-building-code/:buildingCode', () => {
     it('returns 200 and a building by code', async () => {
       const buildingMock = factory.building.build()
       const getBuildingSpy = jest
@@ -37,7 +37,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: buildingMock })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/buildings/by-building-code/${buildingMock.code}`
+        `/property-base/buildings/by-building-code/${buildingMock.code}`
       )
 
       expect(res.status).toBe(200)
@@ -53,7 +53,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/buildings/by-building-code/123-456'
+        '/property-base/buildings/by-building-code/123-456'
       )
 
       expect(res.status).toBe(404)
@@ -66,7 +66,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/buildings/by-building-code/123-456'
+        '/property-base/buildings/by-building-code/123-456'
       )
 
       expect(res.status).toBe(500)
@@ -74,13 +74,13 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/companies', () => {
+  describe('GET /property-base/companies', () => {
     it('returns 200 and a list of companies', async () => {
       const companiesMock = factory.company.buildList(3)
       const getCompaniesSpy = jest
         .spyOn(propertyBaseAdapter, 'getCompanies')
         .mockResolvedValueOnce({ ok: true, data: companiesMock })
-      const res = await request(app.callback()).get('/propertyBase/companies')
+      const res = await request(app.callback()).get('/property-base/companies')
       expect(res.status).toBe(200)
       expect(getCompaniesSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.content)).toEqual(
@@ -90,7 +90,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/properties', () => {
+  describe('GET /property-base/properties', () => {
     it('returns 200 and a list of properties', async () => {
       const propertiesMock = factory.property.buildList(3)
       const getPropertiesSpy = jest
@@ -98,7 +98,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: propertiesMock })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/properties?companyCode=123`
+        `/property-base/properties?companyCode=123`
       )
 
       expect(res.status).toBe(200)
@@ -112,13 +112,13 @@ describe('@onecore/property-service', () => {
     })
 
     it('returns 400 if company code is missing', async () => {
-      const res = await request(app.callback()).get(`/propertyBase/properties`)
+      const res = await request(app.callback()).get(`/property-base/properties`)
 
       expect(res.status).toBe(400)
     })
   })
 
-  describe('GET /propertyBase/properties/:propertyId', () => {
+  describe('GET /property-base/properties/:propertyId', () => {
     it('returns 200 and a property', async () => {
       const propertyDetails = factory.propertyDetails.build()
       const getPropertyDetailsSpy = jest
@@ -126,7 +126,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: propertyDetails })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/properties/${propertyDetails.id}`
+        `/property-base/properties/${propertyDetails.id}`
       )
 
       expect(res.status).toBe(200)
@@ -143,7 +143,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/properties/1234567890'
+        '/property-base/properties/1234567890'
       )
 
       expect(res.status).toBe(404)
@@ -151,7 +151,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/properties/search', () => {
+  describe('GET /property-base/properties/search', () => {
     it('returns 200 and a list of properties', async () => {
       const propertiesMock = factory.property.buildList(3)
       const getPropertiesSpy = jest
@@ -159,7 +159,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: propertiesMock })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/properties/search?q=KVARTER%201`
+        `/property-base/properties/search?q=KVARTER%201`
       )
 
       expect(res.status).toBe(200)
@@ -174,7 +174,7 @@ describe('@onecore/property-service', () => {
 
     it('returns 400 if query parameter is missing', async () => {
       const res = await request(app.callback()).get(
-        `/propertyBase/properties/search`
+        `/property-base/properties/search`
       )
 
       expect(res.status).toBe(400)
@@ -186,7 +186,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/properties/search?q=KVARTER%201`
+        `/property-base/properties/search?q=KVARTER%201`
       )
 
       expect(res.status).toBe(500)
@@ -194,14 +194,14 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/residences', () => {
+  describe('GET /property-base/residences', () => {
     it('returns 200 and a list of residences', async () => {
       const residences = factory.residence.buildList(3)
       const getResidencesSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidences')
         .mockResolvedValueOnce({ ok: true, data: residences })
       const res = await request(app.callback()).get(
-        `/propertyBase/residences?buildingCode=202-002`
+        `/property-base/residences?buildingCode=202-002`
       )
 
       expect(res.status).toBe(200)
@@ -215,13 +215,13 @@ describe('@onecore/property-service', () => {
     })
 
     it('returns 400 if building code is missing', async () => {
-      const res = await request(app.callback()).get(`/propertyBase/residences`)
+      const res = await request(app.callback()).get(`/property-base/residences`)
 
       expect(res.status).toBe(400)
     })
   })
 
-  describe('GET /propertyBase/residence/rental-id/:rentalId', () => {
+  describe('GET /property-base/residences/by-rental-id/:rentalId', () => {
     it('returns 200 and a residence', async () => {
       const residenceDetails = factory.residenceByRentalIdDetails.build()
       const getResidenceDetailsSpy = jest
@@ -229,7 +229,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: residenceDetails })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/residence/rental-id/1234`
+        `/property-base/residences/by-rental-id/1234`
       )
 
       expect(res.status).toBe(200)
@@ -245,7 +245,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/residence/rental-id/1234`
+        `/property-base/residences/by-rental-id/1234`
       )
 
       expect(res.status).toBe(404)
@@ -253,7 +253,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/residence/:residenceId', () => {
+  describe('GET /property-base/residences/:residenceId', () => {
     it('returns 200 and a residence', async () => {
       const residenceDetails = factory.residenceDetails.build()
       const getResidenceDetailsSpy = jest
@@ -261,7 +261,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: residenceDetails })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/residence/${residenceDetails.id}`
+        `/property-base/residences/${residenceDetails.id}`
       )
 
       expect(res.status).toBe(200)
@@ -283,7 +283,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce([lease])
 
       const res = await request(app.callback()).get(
-        `/propertyBase/residence/${residenceDetails.id}`
+        `/property-base/residences/${residenceDetails.id}`
       )
 
       expect(res.status).toBe(200)
@@ -301,7 +301,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        `/propertyBase/residence/${residence.id}`
+        `/property-base/residences/${residence.id}`
       )
 
       expect(res.status).toBe(404)
@@ -309,7 +309,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/staircases', () => {
+  describe('GET /property-base/staircases', () => {
     it('returns 200 and a list of staircases', async () => {
       const staircasesMock = factory.staircase.buildList(3)
       const getStaircasesSpy = jest
@@ -317,7 +317,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: staircasesMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/staircases?buildingCode=002-002'
+        '/property-base/staircases?buildingCode=002-002'
       )
 
       expect(res.status).toBe(200)
@@ -331,15 +331,15 @@ describe('@onecore/property-service', () => {
     })
 
     it('returns 400 if buildingCode query parameter is missing', async () => {
-      const res = await request(app.callback()).get('/propertyBase/staircases')
+      const res = await request(app.callback()).get('/property-base/staircases')
 
       expect(res.status).toBe(400)
     })
   })
 
-  describe('GET /propertyBase/rooms', () => {
+  describe('GET /property-base/rooms', () => {
     it('returns 400 if residenceId query parameter is missing', async () => {
-      const res = await request(app.callback()).get('/propertyBase/rooms')
+      const res = await request(app.callback()).get('/property-base/rooms')
 
       expect(res.status).toBe(400)
     })
@@ -351,7 +351,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: roomsMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/rooms?residenceId=foo'
+        '/property-base/rooms?residenceId=foo'
       )
 
       expect(res.status).toBe(200)
@@ -360,7 +360,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/maintenance-units/by-rental-id/:id', () => {
+  describe('GET /property-base/maintenance-units/by-rental-id/:id', () => {
     it('returns 200 and a list of maintenance units for a rental property', async () => {
       const maintenanceUnitsMock =
         factory.propertyBaseMaintenanceUnit.buildList(3)
@@ -370,7 +370,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: maintenanceUnitsMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-rental-id/1234'
+        '/property-base/maintenance-units/by-rental-id/1234'
       )
 
       expect(res.status).toBe(200)
@@ -389,7 +389,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-rental-id/1234'
+        '/property-base/maintenance-units/by-rental-id/1234'
       )
 
       expect(res.status).toBe(500)
@@ -397,7 +397,7 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /propertyBase/facilities/by-rental-id/:rentalId', () => {
+  describe('GET /property-base/facilities/by-rental-id/:rentalId', () => {
     it('returns 200 and a facility', async () => {
       const facilityMock = factory.facilityDetails.build()
       const getFacilitySpy = jest
@@ -405,7 +405,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: facilityMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/facilities/by-rental-id/1234'
+        '/property-base/facilities/by-rental-id/1234'
       )
 
       expect(res.status).toBe(200)
@@ -422,7 +422,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/facilities/by-rental-id/1234'
+        '/property-base/facilities/by-rental-id/1234'
       )
 
       expect(res.status).toBe(404)
@@ -435,7 +435,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/facilities/by-rental-id/1234'
+        '/property-base/facilities/by-rental-id/1234'
       )
 
       expect(res.status).toBe(500)
