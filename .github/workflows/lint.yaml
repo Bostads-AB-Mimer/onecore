@@ -4,9 +4,13 @@ on:
   pull_request:
     branches:
       - main
+      - release/**
+      - epic/**
   push:
     branches:
       - main
+      - release/**
+      - epic/**
   workflow_call:
 
 jobs:
@@ -27,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
-        run: cd packages/property-base && npx prisma generate
+        run: npm run generate:static
 
       - name: Run Prettier check
         run: npm run prettier
@@ -40,6 +44,6 @@ jobs:
           ESLINT_IGNORE_PATTERN: '**/dist/**'
 
       - name: Run TypeScript check
-        run: npm run type-check
+        run: npm run typecheck
         env:
           TS_IGNORE_PATTERN: '**/dist/**'

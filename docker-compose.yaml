@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   sql:
     # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
@@ -5,7 +7,7 @@ services:
     container_name: onecore-sql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${LEASING_DATABASE__PASSWORD}
+      - MSSQL_SA_PASSWORD=p455w0rd
     networks:
       - onecore
     ports:

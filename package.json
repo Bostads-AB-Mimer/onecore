@@ -1,6 +1,47 @@
 {
   "name": "onecore-monorepo",
-  "private": true,
   "version": "0.0.0",
-  "author": "Bostads AB Mimer"
+  "private": true,
+  "author": "Bostads AB Mimer",
+  "packageManager": "npm",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "apps/internal-portal/*",
+    "core",
+    "libs/*",
+    "services/*"
+  ],
+  "scripts": {
+    "build": "npm run build:libs && npm run build:services && npm run build:apps && npm run build:core",
+    "build:apps": "npm run build:internal-portal && npm run build:property-tree",
+    "build:communication": "npm run build --workspace=@onecore/communication",
+    "build:core": "npm run build --workspace=@onecore/core",
+    "build:internal-portal": "npm run build --workspace=@onecore/internal-portal && npm run build:internal-portal-backend",
+    "build:internal-portal-backend": "npm run build --workspace=@onecore/internal-portal-backend",
+    "build:leasing": "npm run build --workspace=@onecore/leasing",
+    "build:libs": "npm run build:types && npm run build:utilities",
+    "build:property": "npm run build --workspace=@onecore/property",
+    "build:property-management": "npm run build --workspace=@onecore/property-management",
+    "build:property-tree": "npm run build --workspace=@onecore/property-tree",
+    "build:services": "npm run build:leasing && npm run build:property-management && npm run build:communication && npm run build:work-order && npm run build:property",
+    "build:types": "npm run build --workspace=@onecore/types",
+    "build:utilities": "npm run build --workspace=@onecore/utilities",
+    "build:work-order": "npm run build --workspace=@onecore/work-order",
+    "dev:init": "npm run dev:init --workspaces --if-present",
+    "generate:static": "npm run generate:static --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "prettier": "npm run prettier --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "eslint": "^9.31.0",
+    "prettier": "^3.6.2",
+    "syncpack": "^13.0.4",
+    "typescript": "^5.6.2"
+  }
 }
