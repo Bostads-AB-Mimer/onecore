@@ -4,7 +4,7 @@ import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
 import * as factory from '../../../../test/factories'
 import assert from 'assert'
-import { OfferStatus } from 'onecore-types'
+import { OfferStatus } from '@onecore/types'
 
 describe(leasingAdapter.createOffer, () => {
   it('should try to create an offer', async () => {

@@ -6,7 +6,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 

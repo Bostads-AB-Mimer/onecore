@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
 import { AdapterResult } from '../types'
@@ -30,7 +30,7 @@ export async function searchProperties(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.searchProperties')
+    logger.error({ err }, '@onecore/property-adapter.searchProperties')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -51,7 +51,7 @@ export async function searchBuildings(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.searchBuildings')
+    logger.error({ err }, '@onecore/property-adapter.searchBuildings')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -72,7 +72,7 @@ export async function searchResidences(
 
     throw { ok: false, err: 'missing response data invariant' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.searchResidences')
+    logger.error({ err }, '@onecore/property-adapter.searchResidences')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -100,7 +100,7 @@ export async function getBuildingByCode(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getBuilding')
+    logger.error({ err }, '@onecore/property-adapter.getBuilding')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -122,7 +122,7 @@ export async function getCompanies(): Promise<
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(err, 'property-base-adapter.getCompanies')
+    logger.error(err, '@onecore/property-adapter.getCompanies')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -144,7 +144,7 @@ export async function getProperties(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getProperties')
+    logger.error({ err }, '@onecore/property-adapter.getProperties')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -171,7 +171,7 @@ export async function getPropertyDetails(
       `Unexpected response status: ${fetchResponse.response.status}`
     )
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getPropertyDetails')
+    logger.error({ err }, '@onecore/property-adapter.getPropertyDetails')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -193,7 +193,7 @@ export async function getResidences(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getResidences')
+    logger.error({ err }, '@onecore/property-adapter.getResidences')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -222,7 +222,7 @@ export async function getResidenceDetails(
       `Unexpected response status: ${fetchResponse.response.status}`
     )
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getResidenceDetails')
+    logger.error({ err }, '@onecore/property-adapter.getResidenceDetails')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -255,7 +255,7 @@ export async function getResidenceByRentalId(
       `Unexpected response status: ${fetchResponse.response.status}`
     )
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getResidenceByRentalId')
+    logger.error({ err }, '@onecore/property-adapter.getResidenceByRentalId')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -276,7 +276,7 @@ export async function getStaircases(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getStaircases')
+    logger.error({ err }, '@onecore/property-adapter.getStaircases')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -297,7 +297,7 @@ export async function getRooms(
 
     return { ok: true, data: fetchResponse.data.content }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getRooms')
+    logger.error({ err }, '@onecore/property-adapter.getRooms')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -321,7 +321,7 @@ export async function getParkingSpaceByRentalId(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getParkingSpaceByRentalId')
+    logger.error({ err }, '@onecore/property-adapter.getParkingSpaceByRentalId')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -349,7 +349,7 @@ export async function getMaintenanceUnitsForRentalProperty(
   } catch (err) {
     logger.error(
       { err },
-      'property-base-adapter.getMaintenanceUnitsForRentalProperty'
+      '@onecore/property-adapter.getMaintenanceUnitsForRentalProperty'
     )
     return { ok: false, err: 'unknown' }
   }
@@ -378,7 +378,7 @@ export async function getFacilityByRentalId(
     if (fetchResponse.response.status === 404) {
       logger.info(
         { err: `Facility not found for rental id: ${rentalId}` },
-        'property-base-adapter.getFacilityByRentalId'
+        '@onecore/property-adapter.getFacilityByRentalId'
       )
 
       return { ok: false, err: 'not-found' }
@@ -390,7 +390,7 @@ export async function getFacilityByRentalId(
 
     return { ok: true, data: fetchResponse.data.content }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getFacilityByRentalId')
+    logger.error({ err }, '@onecore/property-adapter.getFacilityByRentalId')
     return { ok: false, err: 'unknown' }
   }
 }

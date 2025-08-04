@@ -19,7 +19,7 @@ import {
   ResidenceByRentalIdSchema,
   FacilityDetailsSchema,
 } from '../schemas'
-import { LeaseStatus } from 'onecore-types'
+import { LeaseStatus } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -28,7 +28,7 @@ app.use(bodyParser())
 app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
-describe('property-base-service', () => {
+describe('@onecore/property-service', () => {
   describe('GET /propertyBase/buildings/by-building-code/:buildingCode', () => {
     it('returns 200 and a building by code', async () => {
       const buildingMock = factory.building.build()

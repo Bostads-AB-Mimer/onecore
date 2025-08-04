@@ -1,6 +1,6 @@
 import keycloak from 'keycloak-koa'
 import config from '../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 // Initialize Keycloak with configuration
 const auth = keycloak({

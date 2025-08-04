@@ -1,5 +1,5 @@
-import { Comment, CommentThread, CommentThreadId, leasing } from 'onecore-types'
-import { loggedAxios as axios } from 'onecore-utilities'
+import { Comment, CommentThread, CommentThreadId, leasing } from '@onecore/types'
+import { loggedAxios as axios } from '@onecore/utilities'
 import z from 'zod'
 import { AdapterResult } from '../types'
 

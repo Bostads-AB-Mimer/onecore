@@ -7,8 +7,8 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
-import { ApartmentInfo, Lease, RentalPropertyInfo } from 'onecore-types'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]

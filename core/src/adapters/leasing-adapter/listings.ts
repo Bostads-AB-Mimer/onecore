@@ -1,12 +1,12 @@
 import { HttpStatusCode } from 'axios'
-import { logger, loggedAxios as axios } from 'onecore-utilities'
+import { logger, loggedAxios as axios } from '@onecore/utilities'
 import {
   Applicant,
   InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'

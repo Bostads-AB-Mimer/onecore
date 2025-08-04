@@ -1,4 +1,4 @@
-import { loggedAxios as axios } from 'onecore-utilities'
+import { loggedAxios as axios } from '@onecore/utilities'
 import config from '../../../common/config'
 
 const getFloorPlanStream = async (rentalPropertyId: string) => {

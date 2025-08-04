@@ -120,7 +120,7 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 1,
       },
       propertyBase: {
-        systemName: 'property-base',
+        systemName: '@onecore/property',
         minimumMinutesBetweenRequests: 1,
       },
       propertyManagement: {

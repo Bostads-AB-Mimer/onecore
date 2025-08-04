@@ -1,6 +1,6 @@
 import { Context, Next } from 'koa'
 import auth from '../services/auth-service/keycloak'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 // Middleware to protect routes
 export const requireAuth = async (ctx: Context, next: Next) => {

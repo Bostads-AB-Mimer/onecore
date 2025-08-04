@@ -1,7 +1,7 @@
 import { HttpStatusCode } from 'axios'
 import assert from 'node:assert'
 import nock from 'nock'
-import { leasing, WaitingListType } from 'onecore-types'
+import { leasing, WaitingListType } from '@onecore/types'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'

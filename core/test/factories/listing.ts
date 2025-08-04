@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Listing, ListingStatus } from 'onecore-types'
+import { Listing, ListingStatus } from '@onecore/types'
 
 export const ListingFactory = Factory.define<Listing>(({ sequence }) => ({
   id: sequence,

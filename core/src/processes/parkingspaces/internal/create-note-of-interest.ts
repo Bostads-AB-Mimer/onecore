@@ -8,8 +8,8 @@ import {
   Listing,
   CreateNoteOfInterestErrorCodes,
   WaitingListType,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import {
   getLeasesForPnr,

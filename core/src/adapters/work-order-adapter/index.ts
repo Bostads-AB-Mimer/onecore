@@ -1,5 +1,5 @@
 import createClient from 'openapi-fetch'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import {

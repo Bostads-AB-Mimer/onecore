@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Contact } from 'onecore-types'
+import { Contact } from '@onecore/types'
 
 export const ContactFactory = Factory.define<Contact>(({ sequence }) => ({
   contactCode: `P${158769 + sequence}`,

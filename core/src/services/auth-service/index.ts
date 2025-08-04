@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import createHttpError from 'http-errors'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 import hash from './hash'
 import { createToken } from './jwt'

@@ -6,7 +6,7 @@ import {
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
-} from 'onecore-types'
+} from '@onecore/types'
 
 export const mockedParkingSpace: ParkingSpace = {
   parkingSpaceId: '123-456-789/0',

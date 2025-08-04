@@ -6,8 +6,8 @@ import {
   LeaseStatus,
   ListingStatus,
   OfferStatus,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import {
   ProcessResult,

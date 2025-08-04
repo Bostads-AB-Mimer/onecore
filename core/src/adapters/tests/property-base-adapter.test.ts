@@ -7,7 +7,7 @@ import * as factory from '../../../test/factories'
 
 const mockServer = setupServer()
 
-describe('property-base-adapter', () => {
+describe('@onecore/property-adapter', () => {
   beforeAll(() => {
     mockServer.listen()
   })

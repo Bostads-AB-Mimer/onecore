@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { LeaseStatus, Tenant } from 'onecore-types'
+import { LeaseStatus, Tenant } from '@onecore/types'
 import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({

@@ -6,12 +6,12 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import { Listing, RentalObject } from 'onecore-types'
-import { logger, loggedAxios as axios } from 'onecore-utilities'
+import { Listing, RentalObject } from '@onecore/types'
+import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   /**

@@ -3,7 +3,7 @@ import createHttpError from 'http-errors'
 
 import hash from './hash'
 import config from '../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const getUser = async (username: string) => {
   const user = {

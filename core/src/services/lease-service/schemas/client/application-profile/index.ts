@@ -1,4 +1,4 @@
-import { leasing } from 'onecore-types'
+import { leasing } from '@onecore/types'
 
 export const UpdateApplicationProfileRequestParams =
   leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema.pick({

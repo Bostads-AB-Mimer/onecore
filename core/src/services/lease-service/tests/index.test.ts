@@ -9,7 +9,7 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   ListingStatus,
   UpdateListingStatusErrorCodes,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'

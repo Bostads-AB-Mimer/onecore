@@ -1,4 +1,4 @@
-import { Lease as OnecoreTypesLease } from 'onecore-types'
+import { Lease as OnecoreTypesLease } from '@onecore/types'
 import { z } from 'zod'
 
 /**

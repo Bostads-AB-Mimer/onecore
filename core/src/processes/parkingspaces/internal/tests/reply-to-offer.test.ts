@@ -1,7 +1,7 @@
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 
-import { OfferStatus, ReplyToOfferErrorCodes } from 'onecore-types'
+import { OfferStatus, ReplyToOfferErrorCodes } from '@onecore/types'
 
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'

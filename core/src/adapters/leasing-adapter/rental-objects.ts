@@ -1,5 +1,5 @@
-import { loggedAxios as axios, logger } from 'onecore-utilities'
-import { RentalObject } from 'onecore-types'
+import { loggedAxios as axios, logger } from '@onecore/utilities'
+import { RentalObject } from '@onecore/types'
 import { HttpStatusCode } from 'axios'
 
 import config from '../../common/config'

@@ -4,7 +4,7 @@ import {
   Offer,
   OfferStatus,
   OfferWithRentalObjectCode,
-} from 'onecore-types'
+} from '@onecore/types'
 import { DetailedApplicantFactory } from './detailed-applicant'
 
 export const OfferFactory = Factory.define<Offer>(({ sequence }) => {

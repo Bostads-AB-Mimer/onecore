@@ -1,12 +1,12 @@
-import { loggedAxios as axios } from 'onecore-utilities'
+import { loggedAxios as axios } from '@onecore/utilities'
 import config from '../common/config'
 import {
   Contact,
   ParkingSpaceOfferEmail,
   WorkOrderEmail,
   WorkOrderSms,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
 
 export const sendNotificationToContact = async (

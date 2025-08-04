@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { RentalObject } from 'onecore-types'
+import { RentalObject } from '@onecore/types'
 
 export const ParkingSpaceFactory = Factory.define<RentalObject>(
   ({ sequence }) => ({

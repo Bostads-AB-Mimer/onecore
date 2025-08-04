@@ -11,8 +11,8 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   Listing,
   RouteErrorResponse,
-} from 'onecore-types'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'

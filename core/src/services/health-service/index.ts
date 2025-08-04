@@ -3,8 +3,8 @@ import config from '../../common/config'
 import {
   loggedAxios as axios,
   setAxiosExclusionFilters,
-} from 'onecore-utilities'
-import { SystemHealth } from 'onecore-types'
+} from '@onecore/utilities'
+import { SystemHealth } from '@onecore/types'
 
 setAxiosExclusionFilters([/.*?\/health$/])
 

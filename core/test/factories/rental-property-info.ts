@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { RentalPropertyInfo } from 'onecore-types'
+import { RentalPropertyInfo } from '@onecore/types'
 import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const RentalPropertyInfoFactory = Factory.define<RentalPropertyInfo>(

@@ -3,8 +3,8 @@ import {
   OfferWithRentalObjectCode,
   ReplyToOfferErrorCodes,
   WaitingListType,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import {
   ProcessError,

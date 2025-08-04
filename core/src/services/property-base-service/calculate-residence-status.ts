@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus } from 'onecore-types'
+import { Lease, LeaseStatus } from '@onecore/types'
 import { z } from 'zod'
 
 import * as schemas from './schemas'

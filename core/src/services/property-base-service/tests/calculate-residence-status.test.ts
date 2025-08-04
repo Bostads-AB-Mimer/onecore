@@ -1,4 +1,4 @@
-import { LeaseStatus } from 'onecore-types'
+import { LeaseStatus } from '@onecore/types'
 
 import { calculateResidenceStatus } from '../calculate-residence-status'
 import * as factory from '../../../../test/factories'

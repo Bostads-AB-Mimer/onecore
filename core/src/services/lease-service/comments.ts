@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
-import { leasing } from 'onecore-types'
+import { leasing } from '@onecore/types'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import z from 'zod'
 
 export const routes = (router: KoaRouter) => {

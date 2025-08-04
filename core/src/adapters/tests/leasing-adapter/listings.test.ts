@@ -1,5 +1,5 @@
 import nock from 'nock'
-import { ListingStatus, UpdateListingStatusErrorCodes } from 'onecore-types'
+import { ListingStatus, UpdateListingStatusErrorCodes } from '@onecore/types'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'

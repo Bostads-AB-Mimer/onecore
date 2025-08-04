@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { ApartmentInfo } from 'onecore-types'
+import { ApartmentInfo } from '@onecore/types'
 
 export const ApartmentInfoFactory = Factory.define<ApartmentInfo>(() => ({
   rentalTypeCode: 'R',

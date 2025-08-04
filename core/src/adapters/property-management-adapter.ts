@@ -1,4 +1,4 @@
-import { loggedAxios as axios, logger } from 'onecore-utilities'
+import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   ApartmentInfo,
   Listing,
@@ -9,7 +9,7 @@ import {
   RentalObject,
   RentalProperty,
   RentalPropertyInfo,
-} from 'onecore-types'
+} from '@onecore/types'
 import { AxiosError, HttpStatusCode } from 'axios'
 
 import config from '../common/config'

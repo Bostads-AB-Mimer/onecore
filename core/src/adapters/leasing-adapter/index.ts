@@ -1,4 +1,4 @@
-import { loggedAxios as axios, logger } from 'onecore-utilities'
+import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { AxiosError } from 'axios'
 import dayjs from 'dayjs'
 import {
@@ -14,7 +14,7 @@ import {
   DetailedApplicant,
   Tenant,
   leasing,
-} from 'onecore-types'
+} from '@onecore/types'
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'

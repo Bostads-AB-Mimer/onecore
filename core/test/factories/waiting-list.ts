@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { WaitingList, WaitingListType } from 'onecore-types'
+import { WaitingList, WaitingListType } from '@onecore/types'
 
 export const WaitingListFactory = Factory.define<WaitingList>(() => {
   return {

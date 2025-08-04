@@ -2,7 +2,7 @@ import {
   CreateOfferErrorCodes,
   ListingStatus,
   UpdateListingStatusErrorCodes,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { createOfferForInternalParkingSpace } from '../create-offer'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'

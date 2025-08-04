@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import dayjs from 'dayjs'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'

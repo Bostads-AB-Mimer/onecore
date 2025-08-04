@@ -7,14 +7,14 @@ import { ProcessResult, ProcessStatus } from '../../../common/types'
 import {
   ParkingSpaceApplicationCategory,
   parkingSpaceApplicationCategoryTranslation,
-} from 'onecore-types'
+} from '@onecore/types'
 import {
   createLease,
   getContactByContactCode,
   getCreditInformation,
   getInternalCreditInformation,
 } from '../../../adapters/leasing-adapter'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 //
 // PROCESS (Create lease for external parking space)

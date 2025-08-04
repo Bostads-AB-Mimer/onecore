@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import { getExpiredListingsWithNoOffers } from '../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../processes/parkingspaces/internal'
 

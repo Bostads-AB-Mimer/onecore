@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { MaintenanceUnitInfo } from 'onecore-types'
+import { MaintenanceUnitInfo } from '@onecore/types'
 
 export const MaintenanceUnitInfoFactory = Factory.define<MaintenanceUnitInfo>(
   ({ sequence }) => ({

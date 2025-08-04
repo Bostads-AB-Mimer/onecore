@@ -1,5 +1,5 @@
 import axios from 'axios'
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       info: () => {
@@ -23,7 +23,7 @@ import { routes } from '../index'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as factory from '../../../../test/factories'
-import { MaintenanceUnitInfo } from 'onecore-types'
+import { MaintenanceUnitInfo } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
