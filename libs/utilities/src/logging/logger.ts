@@ -1,3 +1,4 @@
+/* eslint-disable n/no-extraneous-import */
 import pino from 'pino'
 import pinoElastic from 'pino-elasticsearch'
 import { multistream } from 'pino-multi-stream'
