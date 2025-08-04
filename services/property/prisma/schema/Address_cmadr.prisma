@@ -1,0 +1,28 @@
+model Address {
+  addressId     String   @id @map("keycmadr") @db.Char(15) // Adress-ID
+  addressType   String   @map("keycmtyp") @db.Char(15)     // Adresstyp
+  tableName     String   @map("keydbtbl") @db.Char(15)     // Tabell
+  code          String   @map("keycode") @db.Char(15)
+  region        String   @db.Char(2)
+  streetAddress String?  @map("adress1") @db.VarChar(60)   // Postadress
+  streetAddress2 String? @map("adress2") @db.VarChar(60)   // Postadress 2
+  postalCode    String?  @map("adress3") @db.VarChar(60)   // Postnr
+  city          String?  @map("adress4") @db.VarChar(60)   // Ort
+  country       String?  @map("adress5") @db.VarChar(60)   // Land
+  streetName    String?  @map("adress6") @db.VarChar(60)   // Gata
+  streetNumber  String?  @map("adress7") @db.VarChar(60)   // Gatunummer
+  suffix        String?  @map("adress8") @db.VarChar(60)   // Suffix
+  addressExtra1 String?  @map("adress9") @db.VarChar(60)
+  addressExtra2 String?  @map("adress10") @db.VarChar(60)
+  validFrom     DateTime? @map("fdate")                   // Fr.o.m. datum
+  validTo       DateTime? @map("tdate")                   // T.o.m. datum
+  recordStamp   String   @map("timestamp") @db.Char(10)
+
+  @@index([addressType], map: "fkcmadrcmtyp")
+  @@index([code], map: "fkcmadrcode")
+  @@index([tableName], map: "fkcmadrdbtbl")
+  @@index([addressType, tableName, code, validFrom, validTo], name: "akcmadr1")
+  @@index([addressType, tableName, validFrom, validTo, code, addressId, streetAddress], name: "incmadr_2PU0NKCW5")
+  
+  @@map("cmadr")
+}
