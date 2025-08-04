@@ -107,8 +107,9 @@ const fieldConfigs: any = {
 const HousingTypeDetailsSection = () => {
   const { control } = useFormContext()
 
-  const housingType = useFormContext().watch('housingType') as
-    | keyof typeof housingFieldMatrix
+  const housingType = useFormContext().watch(
+    'housingType'
+  ) as keyof typeof housingFieldMatrix
 
   const fields = housingFieldMatrix[housingType] ?? ['numAdults', 'numChildren']
 
