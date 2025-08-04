@@ -1,0 +1,51 @@
+services:
+  sql:
+    # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
+    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    container_name: onecore-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${LEASING_DATABASE__PASSWORD}
+    networks:
+      - onecore
+    ports:
+      - '1438:1433'
+    volumes:
+      - sql:/var/opt/mssql
+
+  elasticsearch:
+    container_name: onecore-elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - 'discovery.type=single-node'
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.4.1
+    networks:
+      - onecore
+    ports:
+      - 9208:9200
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+
+  kibana:
+    container_name: onecore-kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    image: docker.elastic.co/kibana/kibana:8.4.1
+    networks:
+      - onecore
+    ports:
+      - 5608:5601
+
+networks:
+  onecore:
+    driver: bridge
+
+volumes:
+  sql:
+  elasticsearch:
