@@ -1,0 +1,11 @@
+build
+node_modules
+.env
+.env.test
+config.json
+
+# OSX
+.DS_Store
+
+# Jetbrains IDE
+.idea/
