@@ -70,7 +70,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(
+    background-image:
+      radial-gradient(
         at 100% 100%,
         rgba(59, 130, 246, 0.08) 0px,
         transparent 50%
