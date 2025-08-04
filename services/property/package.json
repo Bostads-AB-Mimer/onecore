@@ -12,18 +12,24 @@
     "url": "https://github.com/Bostads-AB-Mimer/property-base/issues"
   },
   "author": "",
+  "packageManager": "npm",
+  "engines": {
+    "node": ">=20"
+  },
   "main": "index.ts",
   "scripts": {
     "build": "tsc",
     "dev": "node --import tsx --watch index.ts",
-    "force-generate": "rm -rf node_modules && npm install && npx prisma generate",
-    "generate": "npx prisma generate",
-    "prettier-check": "prettier --check .",
+    "dev:init": "npm run prepare:dotenv",
+    "generate:static": "npm run prisma:generate",
+    "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
+    "prettier": "prettier --check ./src",
+    "prisma:force-generate": "npm clean-install --workspace . && prisma generate",
+    "prisma:generate": "prisma generate",
     "start": "node --import tsx index.ts",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
-    "ts:watch": "tsc --noEmit --watch",
-    "type-check": "tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@koa/cors": "^5.0.0",
@@ -54,7 +60,7 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "jest": "^29.7.0",
     "nodemon": "^3.1.7",
-    "prettier": "^3.4.1",
+    "prettier": "^3.6.2",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
