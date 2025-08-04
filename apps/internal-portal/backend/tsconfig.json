@@ -1,10 +1,12 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "composite": true,
     "rootDir": "./src",
     "outDir": "./build",
-    "resolveJsonModule": true,
-    "moduleResolution": "node16",
+    "resolveJsonModule": true
   },
+  "exclude": [
+    "./build"
+  ]
 }
