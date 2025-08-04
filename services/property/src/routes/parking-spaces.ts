@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import * as parkingSpacesAdapter from '../adapters/parking-spaces-adapter'
 import { ParkingSpaceSchema } from '@src/types/parking-space'
 import { trimStrings } from '@src/utils/data-conversion'

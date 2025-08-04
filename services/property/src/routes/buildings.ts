@@ -4,7 +4,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {

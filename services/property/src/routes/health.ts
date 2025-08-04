@@ -53,7 +53,7 @@ export const routes = (router: KoaRouter) => {
    *                         description: Additional details about the subsystem status.
    */
   router.get('/health', async (ctx) => {
-    const serviceName = 'property-base'
+    const serviceName = '@onecore/property'
 
     try {
       await prisma.$connect()

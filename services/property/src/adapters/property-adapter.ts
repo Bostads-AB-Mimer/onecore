@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { map } from 'lodash'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 

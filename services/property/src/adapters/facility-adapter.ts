@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'

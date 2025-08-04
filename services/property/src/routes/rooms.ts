@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 import { getRoomById, getRooms } from '@src/adapters/room-adapter'
 import { Room, roomsQueryParamsSchema } from '@src/types/room'

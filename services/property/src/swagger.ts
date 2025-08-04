@@ -4,7 +4,7 @@ export const swaggerSpec = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'property-base',
+      title: '@onecore/property',
       version: '1.0.0',
     },
     components: {},

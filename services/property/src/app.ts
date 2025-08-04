@@ -5,7 +5,7 @@ import cors from '@koa/cors'
 
 import api from './api'
 
-import { logger, loggerMiddlewares } from 'onecore-utilities'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { routes as swaggerRoutes } from './routes/swagger'
 

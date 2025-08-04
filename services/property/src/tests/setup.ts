@@ -1,4 +1,4 @@
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       info: () => {

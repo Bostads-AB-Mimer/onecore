@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { getMaintenanceUnitsByRentalId } from '@src/adapters/maintenance-units-adapter'
 import { MaintenanceUnitSchema } from '@src/types/maintenance-unit'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 /**
  * @swagger
