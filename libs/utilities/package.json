@@ -1,33 +1,33 @@
 {
-  "name": "onecore-utilities",
+  "name": "@onecore/utilities",
   "version": "1.2.0",
-  "description": "ONECore common utilities",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "type": "commonjs",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "build": "tsup",
-    "lint": "eslint -c .eslintrc src/",
-    "ts:watch": "tsc --watch --noEmit",
-    "test:ci": "jest --silent",
-    "ts:ci": "tsc --noEmit"
-  },
+  "description": "ONECore common utilities",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-utilities#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Bostads-AB-Mimer/onecore-utilities.git"
   },
-  "author": "Anders Norrback Bornholm",
-  "license": "AGPL-3.0-only",
   "bugs": {
     "url": "https://github.com/Bostads-AB-Mimer/onecore-utilities/issues"
   },
-  "homepage": "https://github.com/Bostads-AB-Mimer/onecore-utilities#readme",
+  "author": "Anders Norrback Bornholm",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint -c .eslintrc src/",
+    "test": "jest",
+    "test:ci": "jest --silent",
+    "test:watch": "jest --watch",
+    "ts:ci": "tsc --noEmit",
+    "ts:watch": "tsc --watch --noEmit"
+  },
   "dependencies": {
     "axios": "^1.7.2",
     "koa": "^2.15.0",
