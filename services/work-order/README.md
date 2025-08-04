@@ -1,58 +1,92 @@
-# Introduction
+# ONECore - Work Order
 
 Microservice for managing work orders in ONECore. This microservice integrates with Odoo (an open-source ERP system) to handle work orders efficiently, allowing us to sync work orders between ONECore and Odoo, retrieve and update work order details, and ensure data consistency across both systems.
 
-## Installation
 
-1. Make a copy of .env.template, call it .env
-2. Fill out values in .env. (see below)
-3. Install nvm
-4. Install required version of node: `nvm install`
-5. Use required version of node `nvm use`
-6. Install packages: `npm install`
-7. Start the application: `npm run build && npm start`
+## Overview
 
-## Development
-
-Start the development server: `npm run dev`
-
-## Testing
-
-To run the test suite, use the following command: `npm run test`
-
-## Env
-
-According to .env.template.
-
-## Swagger
+### Swagger
 
 We utilize `swagger-jsdoc` for documenting our API. Each endpoint is required to have appropriate
 JSDoc comments and tags for comprehensive documentation. The Swagger document is exposed on `/swagger.json`.
 
-## Routes
 
-### Work Order Service
+### Routes
 
-- **GET /workOrders/contactCode/{contactCode}**
+## Development
 
-  - Retrieves work orders based on the provided contact code.
+### Requirements
 
-- **POST /workOrders**
+This application requires the following to be installed on your system:
 
-  - Creates a new work order based on the provided request body.
 
-- **POST /workOrders/{workOrderId}/update**
+ * **nvm**
+ * **npm**
+ * **Node.js**
+ * **Docker**
 
-  - Adds a message to a work order based on the provided work order ID.
+### Install Instructions
 
-- **POST /workOrders/{workOrderId}/close**
-  - Closes a work order based on the provided work order ID.
+#### Prepare environment
 
-### Health Service
+Run the `dev:init` script to create a file called `.env`, or manually make a copy of `.env.template`:
 
-- **GET /health**
-  - Retrieves the health status of the system and its subsystems.
+
+```sh
+$ npm run dev:init
+```
+
+Or:
+
+
+```sh
+$ cp .env.template .env
+```
+
+#### Install runtime
+
+Install the required node version, if not already installed.
+
+
+```sh
+$ nvm install
+```
+
+Activate the required node version.
+
+
+```sh
+$ nvm use
+```
+
+#### Install dependencies
+
+Install dependencies
+
+
+```sh
+$ npm run install
+```
+
+#### Prepare database
+
+Create the database schema by applying the `knex` migrations:
+
+
+```sh
+$ npm run migrate:up
+```
+
+### Running in Development Mode
+
+When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
+
+
+```sh
+$ npm run dev
+```
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+© 2025 Bostads AB Mimer. [AGPL-3.0-only Licensed](./LICENSE)
+
