@@ -1,12 +1,16 @@
 {
   "extends": "@tsconfig/node20/tsconfig.json",
-  "module": "ESNext",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./build",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "types": ["node", "jest"],
-    "strict": true
+    "types": [
+      "node",
+      "jest"
+    ],
+    "strict": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   }
 }
