@@ -6,9 +6,7 @@ enum CreateNoteOfInterestErrorCodes {
   NotEligibleToRent = 'not-eligible-to-rent',
   InternalCreditCheckFailed = 'internal-credit-check-failed',
   InternalError = 'internal-error',
-  Unknown = 'unknown'
+  Unknown = 'unknown',
 }
 
-export {
-  CreateNoteOfInterestErrorCodes
-}
+export { CreateNoteOfInterestErrorCodes }

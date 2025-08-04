@@ -15,6 +15,4 @@ interface DetailedOffer {
   vacantFrom: Date
 }
 
-export type {
-  DetailedOffer
-}
+export type { DetailedOffer }
