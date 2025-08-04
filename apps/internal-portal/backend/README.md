@@ -1,25 +1,70 @@
-# Introduction
-
-Backend for the coworker portal for Mimer ONECore.
-The frontend is packages/frontend in this repo.
-
-## Installation
-
-1. Make a copy of .env.template, call it .env
-2. Fill out values in .env. (see below)
-3. Install nvm
-4. Install required version of node: `nvm install`
-5. Use required version of node `nvm use`
-6. Install packages: `npm install`
+# ONECore - Internal Portal Backend-for-Frontend
 
 ## Development
 
-Start the development server: `npm run dev`
+### Requirements
 
-Note: You need to have onecore-core, onecore-leasing & onecore-property-management running for this application to work.
+This application requires the following to be installed on your system:
 
-## Env
 
-## Env
+ * **nvm**
+ * **npm**
+ * **Node.js**
+ * **Docker**
 
-According to .env.template.
+### Install Instructions
+
+#### Prepare environment
+
+Run the `dev:init` script to create a file called `.env`, or manually make a copy of `.env.template`:
+
+
+```sh
+$ npm run dev:init
+```
+
+Or:
+
+
+```sh
+$ cp .env.template .env
+```
+
+#### Install runtime
+
+Install the required node version, if not already installed.
+
+
+```sh
+$ nvm install
+```
+
+Activate the required node version.
+
+
+```sh
+$ nvm use
+```
+
+#### Install dependencies
+
+Install dependencies
+
+
+```sh
+$ npm run install
+```
+
+### Running in Development Mode
+
+When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
+
+
+```sh
+$ npm run dev
+```
+
+## License
+
+© 2025 Bostads AB Mimer. [AGPL-3.0-only Licensed](./LICENSE)
+
