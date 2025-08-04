@@ -1,12 +1,21 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "rootDirs": ["./src", "./test"],
+    "rootDirs": [
+      "./src",
+      "./test"
+    ],
     "outDir": "./build",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "noErrorTruncation": true,
-    "types": ["koa-body", "jest"],
+    "types": [
+      "koa-body",
+      "jest"
+    ],
     "strict": true
-  }
+  },
+  "exclude": [
+    "./build"
+  ]
 }
