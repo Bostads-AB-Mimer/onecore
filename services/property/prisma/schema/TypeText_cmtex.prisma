@@ -1,0 +1,11 @@
+model TypeText {
+    id       String @id @map("keycmtex") @db.Char(15)
+    keycmtep String @map("keycmtep") @db.Char(15)
+    keycode  String @map("keycode") @db.Char(15)
+    text     String @map("text") @db.VarChar(255)
+
+    template  Template  @relation("TypeTextToTemplate", fields: [keycmtep], references: [id])
+    residence Residence @relation("ResidenceToTypeText", fields: [keycode], references: [id])
+
+    @@map("cmtex")
+}

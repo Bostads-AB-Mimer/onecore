@@ -1,0 +1,16 @@
+model QuantityType {
+  id             String  @id @map("keycmvat") @db.Char(15)
+  unitId         String? @map("keycmuni") @db.Char(15)
+  name           String  @map("caption") @db.VarChar(30)
+  inputMask      String? @map("inputmask") @db.VarChar(30)
+  locked         Int     @default(0) @map("locked") @db.TinyInt
+  systemStandard Int     @default(0) @map("repabkod") @db.TinyInt
+  timestamp      String  @map("timestamp") @db.Char(10)
+
+  quantityValues QuantityValue[]
+  categoryLinks  QuantityCategoryLink[]
+
+  @@index([unitId])
+  @@index([name])
+  @@map("cmvat")
+}

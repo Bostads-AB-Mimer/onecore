@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-base
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-base
+  template:
+    metadata:
+      labels:
+        app: property-base
+    spec:
+      containers:
+        - name: property-base
+          image: property-base:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: '128Mi'
+              cpu: '100m'
+            limits:
+              memory: '256Mi'
+              cpu: '200m'

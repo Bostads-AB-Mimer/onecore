@@ -1,0 +1,9 @@
+model Template {
+    id      String @id @map("keycmtep") @db.Char(15)
+    type    String @map("keycmtyp") @db.VarChar(10)
+    caption String @map("caption") @db.VarChar(100)
+
+    typeText TypeText[] @relation("TypeTextToTemplate")
+
+    @@map("cmtep")
+}
