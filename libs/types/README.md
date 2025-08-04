@@ -1,45 +1,56 @@
-# onecore-types
+# ONECore - Common Types
 
-Package containing common types for ONECore
+ONECore common types
 
-## Setup
 
-### Install package
+## Development
 
-```shell script
-npm i onecore-types
+### Requirements
+
+This application requires the following to be installed on your system:
+
+
+ * **nvm**
+ * **npm**
+ * **Node.js**
+
+### Install Instructions
+
+#### Install runtime
+
+Install the required node version, if not already installed.
+
+
+```sh
+$ nvm install
 ```
 
-## For contributors
+Activate the required node version.
 
-This packages uses [Release Please](https://github.com/google-github-actions/release-please-action) for automatic updates to the Changelog and for bumping version.
 
-## Local development
+```sh
+$ nvm use
+```
 
-To use a locally updated version of this package, the easiest way it to use npm link.
+#### Install dependencies
 
-Note: For this to work, this project and the project where it is used need to have the same versions of Node.
+Install dependencies
 
-1. Run `npm link` inside this folder
-2. In other projects using this package, run `npm link onecore-types`
-3. Make sure you run `npm run build` every time you make changes to this package.
-4. When done, unlink in the other projects with `npm unlink --no-save onecore-types`
 
-## Relasing a new version
+```sh
+$ npm run install
+```
 
-### Conventional Commit Messages
+### Running in Development Mode
 
-Conventional Commit Messages is what triggers the release action.
+When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
 
-The most important prefixes you should have in mind are:
 
-- fix: which represents bug fixes, and correlates to a SemVer patch.
-- feat: which represents a new feature, and correlates to a SemVer minor.
-- feat!:, or fix!:, refactor!:, etc., which represent a breaking change (indicated by the !) and will result in a SemVer major.
+```sh
+$ npm run undefined
+```
 
-Read more [here](https://www.npmjs.com/package/release-please).
+## License
 
-### Versions and publishing to npm
+© 2025 Bostads AB Mimer. [AGPL-3.0-only Licensed](./LICENSE)
 
-1. Make sure the latest version is built with `npm run build` before pushing.
-2. When Relase Please detects that a new commit containing any of the prefixes listed above, it creates a pull request for updating changelog and bumps version. Once merged the new version is published on npm. Do not change versions in package.json manually.
