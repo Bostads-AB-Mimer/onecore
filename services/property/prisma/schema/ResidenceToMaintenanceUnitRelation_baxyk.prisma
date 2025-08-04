@@ -1,0 +1,15 @@
+model ResidenceToMaintenanceUnitRelation {
+  id                              String  @id(map: "pkbaxyk") @map("keybaxyk") @db.Char(15)
+  relationTypeId                  String? @map("keybaxyt") @db.Char(15) 
+  maintenanceUnitPropertyObjectId String  @map("keycmobj") @db.Char(15)  // cmobj of "bauhe"
+  residencePropertyObjectId       String  @map("keycmobj2") @db.Char(15) // cmobj of "balgh"
+  timestamp                       String  @map("timestamp") @db.Char(10)
+
+  maintenanceUnit MaintenanceUnit @relation("ResidenceToMaintenanceUnitRelation", fields: [maintenanceUnitPropertyObjectId], references: [propertyObjectId], map: "fkbaxykcmobj", onUpdate: NoAction, onDelete: NoAction)
+  residence       Residence       @relation("MaintenanceUnitToResidenceRelation", fields: [residencePropertyObjectId], references: [propertyObjectId], map: "fkbaxykcmobj2")
+
+  @@unique([maintenanceUnitPropertyObjectId, residencePropertyObjectId], map: "akbaxyk")
+  @@index([maintenanceUnitPropertyObjectId], map: "fkbaxykcmobj")
+  @@index([residencePropertyObjectId], map: "fkbaxykcmobj2")
+  @@map("baxyk")
+}
