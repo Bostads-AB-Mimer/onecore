@@ -1,0 +1,13 @@
+./node_modules
+./build
+build
+node_modules
+.env
+config.json
+.DS_Store
+
+# Jetbrains IDE
+.idea/
+
+.vscode
+.aider*
