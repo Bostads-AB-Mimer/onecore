@@ -6,7 +6,7 @@ import {
   Offer,
   OfferStatus,
   OfferWithOfferApplicants,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { OfferRound } from './OfferRound'
 import { Tab, Tabs } from '../../../components'

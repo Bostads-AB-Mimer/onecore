@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material'
-import { Tenant } from 'onecore-types'
+import { Tenant } from '@onecore/types'
 
 export const ContactInfoRow = (props: {
   label: string

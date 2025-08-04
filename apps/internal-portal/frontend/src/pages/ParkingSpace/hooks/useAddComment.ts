@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { CommentThreadId, Comment, CommentType } from 'onecore-types'
+import { CommentThreadId, Comment, CommentType } from '@onecore/types'
 
 import apiClient from '../../../utils/api-client'
 import { RequestError } from '../../../types'

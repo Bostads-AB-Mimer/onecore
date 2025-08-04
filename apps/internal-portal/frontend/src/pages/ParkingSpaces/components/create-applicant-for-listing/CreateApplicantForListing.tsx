@@ -13,7 +13,7 @@ import {
   RadioGroup,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from 'onecore-types'
+import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 

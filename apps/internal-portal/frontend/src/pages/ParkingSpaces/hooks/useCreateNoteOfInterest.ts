@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CreateNoteOfInterestErrorCodes } from 'onecore-types'
+import { CreateNoteOfInterestErrorCodes } from '@onecore/types'
 
 import { RequestError } from '../../../types'
 

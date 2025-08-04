@@ -4,7 +4,7 @@ import {
   GetListingWithApplicantFilterByType,
   Listing,
   Offer,
-} from 'onecore-types'
+} from '@onecore/types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 

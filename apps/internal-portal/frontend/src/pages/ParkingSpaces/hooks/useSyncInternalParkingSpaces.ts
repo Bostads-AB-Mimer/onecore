@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { InternalParkingSpaceSyncSuccessResponse } from 'onecore-types'
+import { InternalParkingSpaceSyncSuccessResponse } from '@onecore/types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 

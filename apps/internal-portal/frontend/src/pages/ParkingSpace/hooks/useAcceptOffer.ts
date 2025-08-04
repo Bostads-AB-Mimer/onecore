@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ReplyToOfferErrorCodes } from 'onecore-types'
+import { ReplyToOfferErrorCodes } from '@onecore/types'
 
 import { RequestError } from '../../../types'
 import { mapReplyOfferErrors } from './replyToOfferErrorMappings'

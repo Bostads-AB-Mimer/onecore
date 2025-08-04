@@ -1,5 +1,5 @@
 import { Typography, Divider, Grid, Box } from '@mui/material'
-import { Rent } from 'onecore-types'
+import { Rent } from '@onecore/types'
 
 import { useLease } from './hooks/useLease'
 

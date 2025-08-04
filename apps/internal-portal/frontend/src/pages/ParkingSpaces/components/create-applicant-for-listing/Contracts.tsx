@@ -1,6 +1,6 @@
 import { Typography, Stack } from '@mui/material'
 import { GridColDef } from '@mui/x-data-grid'
-import { Lease } from 'onecore-types'
+import { Lease } from '@onecore/types'
 import { TabPanel } from '@mui/lab'
 
 import { DataGridTable, Tab } from '../../../../components'

@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { Contact, schemas } from 'onecore-types'
+import { Contact, schemas } from '@onecore/types'
 import dayjs from 'dayjs'
 import { z } from 'zod'
 

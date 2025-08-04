@@ -1,6 +1,6 @@
 import { Box, Button, Chip, Typography } from '@mui/material'
 import { TabContext, TabPanel } from '@mui/lab'
-import { Listing, ListingStatus } from 'onecore-types'
+import { Listing, ListingStatus } from '@onecore/types'
 
 import { Applicants } from './Applicants'
 import { useCreateOffer } from '../hooks/useCreateOffer'

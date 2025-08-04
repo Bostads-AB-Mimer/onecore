@@ -6,7 +6,7 @@ import {
   GetListingWithApplicantFilterByType,
   Listing,
   ListingStatus,
-} from 'onecore-types'
+} from '@onecore/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { TabContext, TabPanel } from '@mui/lab'
 

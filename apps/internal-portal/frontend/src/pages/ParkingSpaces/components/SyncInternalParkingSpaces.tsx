@@ -11,7 +11,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 import { LoadingButton } from '@mui/lab'
 import { useState } from 'react'
-import { InternalParkingSpaceSyncSuccessResponse } from 'onecore-types'
+import { InternalParkingSpaceSyncSuccessResponse } from '@onecore/types'
 
 import { useSyncInternalParkingSpaces } from '../hooks/useSyncInternalParkingSpaces'
 

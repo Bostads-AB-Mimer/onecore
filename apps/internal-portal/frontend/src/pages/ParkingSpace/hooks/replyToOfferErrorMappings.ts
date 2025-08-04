@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios'
-import { ReplyToOfferErrorCodes } from 'onecore-types'
+import { ReplyToOfferErrorCodes } from '@onecore/types'
 
 import { RequestError } from '../../../types'
 

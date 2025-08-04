@@ -24,7 +24,7 @@ import { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/sv'
-import { CommentThreadId, Comment, CommentType } from 'onecore-types'
+import { CommentThreadId, Comment, CommentType } from '@onecore/types'
 import { toast } from 'react-toastify'
 
 import { useProfile, Account } from '../../../common/hooks/useProfile'

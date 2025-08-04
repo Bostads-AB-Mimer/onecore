@@ -9,7 +9,7 @@ import {
   IconButton,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { Listing } from 'onecore-types'
+import { Listing } from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton } from '@mui/lab'
 

@@ -1,6 +1,6 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
-import { CommentThread, CommentThreadId } from 'onecore-types'
+import { CommentThread, CommentThreadId } from '@onecore/types'
 
 import apiClient from '../../../utils/api-client'
 

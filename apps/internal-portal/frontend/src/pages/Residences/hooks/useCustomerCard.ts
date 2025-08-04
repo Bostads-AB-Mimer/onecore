@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios'
 import { useQuery, UseQueryResult } from '@tanstack/react-query'
-import { Contact, schemas } from 'onecore-types'
+import { Contact, schemas } from '@onecore/types'
 import { z } from 'zod'
 
 import apiClient from '../../../utils/api-client'

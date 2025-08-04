@@ -5,7 +5,7 @@ import {
   LeaseStatus,
   Offer,
   OfferApplicant,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { DataGridTable } from '../../../components'
 import { OfferRoundActions } from './OfferRoundActions'

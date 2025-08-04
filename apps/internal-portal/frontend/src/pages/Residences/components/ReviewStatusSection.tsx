@@ -15,7 +15,7 @@ import { DatePicker } from '@mui/x-date-pickers'
 import { Controller, useFormContext } from 'react-hook-form'
 import { z } from 'zod'
 import dayjs from 'dayjs'
-import { schemas } from 'onecore-types'
+import { schemas } from '@onecore/types'
 
 type ReviewStatus = z.infer<
   typeof schemas.v1.HousingReferenceReviewStatusSchema

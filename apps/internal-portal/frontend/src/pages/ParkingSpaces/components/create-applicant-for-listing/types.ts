@@ -1,3 +1,3 @@
-import { Contact } from 'onecore-types'
+import { Contact } from '@onecore/types'
 
 export type ContactSearchData = Pick<Contact, 'contactCode' | 'fullName'>
