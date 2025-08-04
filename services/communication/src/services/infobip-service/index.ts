@@ -16,8 +16,8 @@ import {
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
-} from 'onecore-types'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {

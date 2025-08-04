@@ -1,6 +1,6 @@
 import app from './app'
 import config from './common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const PORT = config.port || 5040
 app.listen(PORT, () => {

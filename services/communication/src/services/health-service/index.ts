@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { SystemHealth } from 'onecore-types'
+import { SystemHealth } from '@onecore/types'
 import config from '../../common/config'
 import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/infobip-adapter'
 

@@ -2,13 +2,13 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, WorkOrderSms } from 'onecore-types'
+import { Email, WorkOrderSms } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms } from '../index'
 import * as infobipAdapter from '../adapters/infobip-adapter'
 import { routes } from '../'
 
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       info: () => {

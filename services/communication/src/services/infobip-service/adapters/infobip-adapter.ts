@@ -7,8 +7,8 @@ import {
   ParkingSpaceOfferSms,
   WorkOrderEmail,
   WorkOrderSms,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
 
