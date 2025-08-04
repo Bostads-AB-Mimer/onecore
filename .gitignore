@@ -1,4 +1,5 @@
 # ---- Generated files ----
+node_modules
 **/prisma/schema/generated
 
 # ---- Build files ----
