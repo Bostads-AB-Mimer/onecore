@@ -1,9 +1,11 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
-  "module": "ESNext",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./build",
     "resolveJsonModule": true
-  }
+  },
+  "exclude": [
+    "./build"
+  ]
 }
