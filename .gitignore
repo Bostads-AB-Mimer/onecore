@@ -1,0 +1,57 @@
+# ---- Generated files ----
+**/prisma/schema/generated
+
+# ---- Build files ----
+build
+*.tsbuildinfo
+dist
+dist-ssr
+
+# ---- Private ----
+.env
+.env.test
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+*.local
+
+# ---- Editors ----
+*~
+.\#*\#
+.\#*
+auto-save-list/
+.vscode
+.idea
+.cursor
+.vscode-test
+!.vscode/extensions.json
+
+# ---- Tools ----
+.aider*
+npm-debug.log*
+.eslintcache
+.node_repl_history
+
+# ---- OS ----
+.DS_Store
+
+# ---- Misc ----
+*.log
+config.json
+logs
+*.pid
+*.seed
+*.pid.lock
+coverage
+*.lcov
+.npm
+lib-cov
+*.tgz
+.cache
+.temp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
