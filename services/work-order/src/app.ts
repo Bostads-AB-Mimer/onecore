@@ -4,7 +4,7 @@ import cors from '@koa/cors'
 
 import api from './api'
 import errorHandler from './middlewares/error-handler'
-import { logger, loggerMiddlewares } from 'onecore-utilities'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 
 const app = new Koa()
 
@@ -32,7 +32,7 @@ app.use(bodyParser())
 
 app.use(
   swaggerMiddleware({
-    serviceName: 'onecore-work-order',
+    serviceName: '@onecore/work-order',
     routes: [
       `${__dirname}/services/health-service/*.{ts,js}`,
       `${__dirname}/services/work-order-service/*.{ts,js}`,

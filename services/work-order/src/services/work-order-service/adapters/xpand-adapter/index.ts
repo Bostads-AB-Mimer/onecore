@@ -1,5 +1,5 @@
 import knex from 'knex'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import Config from '../../../../common/config'
 import { AdapterResult } from '../../types'
 import {

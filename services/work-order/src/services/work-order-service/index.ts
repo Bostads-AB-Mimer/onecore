@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateWorkOrderBodySchema,
