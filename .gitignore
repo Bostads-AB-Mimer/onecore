@@ -5,6 +5,7 @@
 build
 *.tsbuildinfo
 dist
+dist-ssr
 
 # ---- Private ----
 .env
@@ -13,6 +14,7 @@ dist
 .env.test.local
 .env.production.local
 .env.local
+*.local
 
 # ---- Editors ----
 *~
@@ -23,6 +25,7 @@ auto-save-list/
 .idea
 .cursor
 .vscode-test
+!.vscode/extensions.json
 
 # ---- Tools ----
 .aider*
@@ -47,3 +50,8 @@ lib-cov
 *.tgz
 .cache
 .temp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
