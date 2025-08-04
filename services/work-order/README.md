@@ -13,6 +13,29 @@ JSDoc comments and tags for comprehensive documentation. The Swagger document is
 
 ### Routes
 
+#### Work Order Service
+
+- **GET /workOrders/contactCode/{contactCode}**
+
+  - Retrieves work orders based on the provided contact code.
+
+- **POST /workOrders**
+
+  - Creates a new work order based on the provided request body.
+
+- **POST /workOrders/{workOrderId}/update**
+
+  - Adds a message to a work order based on the provided work order ID.
+
+- **POST /workOrders/{workOrderId}/close**
+  - Closes a work order based on the provided work order ID.
+
+#### Health Service
+
+- **GET /health**
+  - Retrieves the health status of the system and its subsystems.
+
+
 ## Development
 
 ### Requirements
