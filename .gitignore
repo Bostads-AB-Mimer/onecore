@@ -1,0 +1,27 @@
+# ---- Generated files ----
+
+# ---- Build files ----
+build
+
+# ---- Private ----
+.env
+.env.test
+
+# ---- Editors ----
+*~
+.\#*\#
+.\#*
+auto-save-list/
+.vscode
+.idea
+.cursor
+
+# ---- Tools ----
+.aider*
+
+# ---- OS ----
+.DS_Store
+
+# ---- Misc ----
+*.log
+config.json
