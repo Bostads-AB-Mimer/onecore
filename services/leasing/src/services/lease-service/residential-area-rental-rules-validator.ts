@@ -1,4 +1,4 @@
-import { DetailedApplicant, ResidentialArea } from 'onecore-types'
+import { DetailedApplicant, ResidentialArea } from '@onecore/types'
 
 //todo: we might need to consider and validate if a housing contract is ending
 //todo: if so we need datetime logic for checkin contract end dates etc

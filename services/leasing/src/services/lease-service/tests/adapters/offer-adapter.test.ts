@@ -1,4 +1,4 @@
-import { OfferStatus } from 'onecore-types'
+import { OfferStatus } from '@onecore/types'
 import assert from 'node:assert'
 
 import * as offerAdapter from '../../adapters/offer-adapter'

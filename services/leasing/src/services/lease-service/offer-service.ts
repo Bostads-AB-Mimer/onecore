@@ -1,5 +1,5 @@
 import { Knex } from 'knex'
-import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
+import { ApplicantStatus, ListingStatus, OfferStatus } from '@onecore/types'
 
 import * as listingAdapter from './adapters/listing-adapter'
 import * as offerAdapter from './adapters/offer-adapter'

@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { SystemHealth, ListingStatus } from 'onecore-types'
+import { SystemHealth, ListingStatus } from '@onecore/types'
 import config from '../../common/config'
 import { healthCheck as xpandSoapApiHealthCheck } from '../lease-service/adapters/xpand/xpand-soap-adapter'
 import { healthCheck as creditSafeHealthCheck } from '../creditsafe/adapters/creditsafe-adapter'

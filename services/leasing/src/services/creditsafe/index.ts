@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { getCreditInformation } from './adapters/creditsafe-adapter'
 
 /**

@@ -1,4 +1,4 @@
-import { WaitingListType, Contact, Lease } from 'onecore-types'
+import { WaitingListType, Contact, Lease } from '@onecore/types'
 import { sub } from 'date-fns'
 
 import { lease } from '../../factories'

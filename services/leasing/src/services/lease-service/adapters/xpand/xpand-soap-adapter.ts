@@ -3,9 +3,9 @@ import { XMLParser } from 'fast-xml-parser'
 import createHttpError from 'http-errors'
 
 import Config from '../../../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
-import { WaitingListType } from 'onecore-types'
+import { WaitingListType } from '@onecore/types'
 
 const createLease = async (
   fromDate: Date,

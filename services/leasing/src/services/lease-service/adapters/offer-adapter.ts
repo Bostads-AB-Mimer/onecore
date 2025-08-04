@@ -7,8 +7,8 @@ import {
   ApplicantStatus,
   OfferWithOfferApplicants,
   CreateOfferParams,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { Knex } from 'knex'
 
 import { db } from './db'

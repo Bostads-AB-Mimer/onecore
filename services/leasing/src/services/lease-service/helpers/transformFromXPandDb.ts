@@ -1,4 +1,4 @@
-import { Lease, Contact, LeaseStatus } from 'onecore-types'
+import { Lease, Contact, LeaseStatus } from '@onecore/types'
 
 const calculateStatus = (
   lastDebitDateString: string,

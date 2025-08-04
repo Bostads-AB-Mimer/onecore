@@ -1,4 +1,4 @@
-import { ApplicantStatus, ListingStatus, OfferStatus } from 'onecore-types'
+import { ApplicantStatus, ListingStatus, OfferStatus } from '@onecore/types'
 import assert from 'node:assert'
 
 import * as factory from './factories'

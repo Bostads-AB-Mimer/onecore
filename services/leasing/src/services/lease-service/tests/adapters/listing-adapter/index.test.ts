@@ -1,4 +1,4 @@
-import { ApplicantStatus, ListingStatus } from 'onecore-types'
+import { ApplicantStatus, ListingStatus } from '@onecore/types'
 import assert from 'node:assert'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'

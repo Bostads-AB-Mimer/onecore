@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
-import { leasing, WaitingListType, RouteErrorResponse } from 'onecore-types'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'

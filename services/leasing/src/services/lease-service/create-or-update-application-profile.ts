@@ -1,4 +1,4 @@
-import { schemas, leasing } from 'onecore-types'
+import { schemas, leasing } from '@onecore/types'
 import { Knex } from 'knex'
 import { z } from 'zod'
 

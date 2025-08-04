@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus } from 'onecore-types'
+import { Lease, LeaseStatus } from '@onecore/types'
 import assert from 'node:assert'
 import {
   addPriorityToApplicantsBasedOnRentalRules,

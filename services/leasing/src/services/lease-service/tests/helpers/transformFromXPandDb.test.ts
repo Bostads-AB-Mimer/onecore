@@ -1,5 +1,5 @@
 import transformFromXPandDb from '../../helpers/transformFromXPandDb'
-import { LeaseStatus } from 'onecore-types'
+import { LeaseStatus } from '@onecore/types'
 
 describe(transformFromXPandDb.toLease, () => {
   it('should set status to Current for lease without lastDebitDate that starts in the past ', () => {

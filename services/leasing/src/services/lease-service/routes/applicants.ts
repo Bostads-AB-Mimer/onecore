@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { ApplicantStatus } from 'onecore-types'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { ApplicantStatus } from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 import {
   getApplicantByContactCodeAndListingId,

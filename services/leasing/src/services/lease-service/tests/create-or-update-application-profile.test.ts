@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { leasing } from 'onecore-types'
+import { leasing } from '@onecore/types'
 import { z } from 'zod'
 import { createOrUpdateApplicationProfile } from '../create-or-update-application-profile'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'

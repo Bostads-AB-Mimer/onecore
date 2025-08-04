@@ -1,5 +1,5 @@
-import { logger } from 'onecore-utilities'
-import { RentalObject } from 'onecore-types'
+import { logger } from '@onecore/utilities'
+import { RentalObject } from '@onecore/types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 

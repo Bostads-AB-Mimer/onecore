@@ -1,10 +1,10 @@
-import { Lease, Tenant } from 'onecore-types'
+import { Lease, Tenant } from '@onecore/types'
 
 import { AdapterResult } from './adapters/types'
 import * as estateCodeAdapter from './adapters/xpand/estate-code-adapter'
 import * as tenantLeaseAdapter from './adapters/xpand/tenant-lease-adapter'
 import * as priorityListService from './priority-list-service'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 type GetTenantError =
   | 'get-contact'

@@ -1,4 +1,4 @@
-import { ListingStatus } from 'onecore-types'
+import { ListingStatus } from '@onecore/types'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'
 import * as factory from '../../factories'

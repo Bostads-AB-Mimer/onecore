@@ -2,9 +2,9 @@ import soapRequest from 'easy-soap-request'
 import dedent from 'dedent'
 import { XMLParser } from 'fast-xml-parser'
 import { format } from '../../../helpers/personnummer'
-import { ConsumerReport, ConsumerReportError } from 'onecore-types'
+import { ConsumerReport, ConsumerReportError } from '@onecore/types'
 import config from '../../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import axios from 'axios'
 
 const CASXML = (pnr: string) => dedent`

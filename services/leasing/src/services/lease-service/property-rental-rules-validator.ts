@@ -1,4 +1,4 @@
-import { Lease } from 'onecore-types'
+import { Lease } from '@onecore/types'
 import { match, P } from 'ts-pattern'
 
 import { getEstateCodeFromXpandByRentalObjectCode } from './adapters/xpand/estate-code-adapter'

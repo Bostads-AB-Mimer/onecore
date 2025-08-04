@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { schemas } from 'onecore-types'
+import { schemas } from '@onecore/types'
 import { z } from 'zod'
 
 type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>

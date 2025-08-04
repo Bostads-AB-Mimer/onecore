@@ -2,7 +2,7 @@ import {
   getExpiredListings,
   updateListingStatuses,
 } from '../services/lease-service/adapters/listing-adapter'
-import { ListingStatus } from 'onecore-types'
+import { ListingStatus } from '@onecore/types'
 
 async function updateExpiredListings() {
   const expiredListings = await getExpiredListings()

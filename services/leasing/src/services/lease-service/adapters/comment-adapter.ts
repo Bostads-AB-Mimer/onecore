@@ -1,6 +1,6 @@
-import { Comment, CommentThread, CommentThreadId } from 'onecore-types'
+import { Comment, CommentThread, CommentThreadId } from '@onecore/types'
 import { DbComment } from './types'
-import { leasing } from 'onecore-types'
+import { leasing } from '@onecore/types'
 import z from 'zod'
 
 import { db } from './db'

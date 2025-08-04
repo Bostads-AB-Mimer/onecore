@@ -6,7 +6,7 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import z from 'zod'
 
 /**

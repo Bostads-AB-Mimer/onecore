@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { DetailedApplicant } from 'onecore-types'
+import { DetailedApplicant } from '@onecore/types'
 
 export const DetailedApplicantFactory = Factory.define<DetailedApplicant>(
   ({ sequence }) => ({

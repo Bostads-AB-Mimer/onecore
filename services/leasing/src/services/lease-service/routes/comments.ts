@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import commentAdapter from '../adapters/comment-adapter'
-import { leasing } from 'onecore-types'
+import { leasing } from '@onecore/types'
 
 /**
  * @swagger

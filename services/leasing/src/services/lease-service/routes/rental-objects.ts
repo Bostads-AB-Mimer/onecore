@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
   getAllVacantParkingSpaces,
   getParkingSpace,

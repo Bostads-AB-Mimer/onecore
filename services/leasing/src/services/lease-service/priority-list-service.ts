@@ -4,8 +4,8 @@
  * Sorting applicants based on rental rules
  */
 
-import { logger } from 'onecore-utilities'
-import { DetailedApplicant, Lease, LeaseStatus, Listing } from 'onecore-types'
+import { logger } from '@onecore/utilities'
+import { DetailedApplicant, Lease, LeaseStatus, Listing } from '@onecore/types'
 
 import { leaseTypes } from '../../constants/leaseTypes'
 

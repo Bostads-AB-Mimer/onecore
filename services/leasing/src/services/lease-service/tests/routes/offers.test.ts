@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { OfferStatus } from 'onecore-types'
+import { OfferStatus } from '@onecore/types'
 
 import { routes } from '../../routes/offers'
 import * as offerAdapter from '../../adapters/offer-adapter'

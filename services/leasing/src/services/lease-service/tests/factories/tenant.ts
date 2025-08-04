@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Tenant } from 'onecore-types'
+import { Tenant } from '@onecore/types'
 
 import { LeaseFactory } from './lease'
 

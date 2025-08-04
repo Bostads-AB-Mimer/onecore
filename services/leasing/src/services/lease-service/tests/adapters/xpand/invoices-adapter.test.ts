@@ -1,4 +1,4 @@
-import { InvoiceTransactionType, PaymentStatus } from 'onecore-types'
+import { InvoiceTransactionType, PaymentStatus } from '@onecore/types'
 
 import * as invoiceAdapter from '../../../adapters/xpand/invoices-adapter'
 

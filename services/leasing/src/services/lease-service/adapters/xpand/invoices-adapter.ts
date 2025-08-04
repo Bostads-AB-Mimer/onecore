@@ -4,8 +4,8 @@ import {
   PaymentStatus,
   invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
-} from 'onecore-types'
-import { logger } from 'onecore-utilities'
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 
 const getTransactionType = (transactionTypeString: any) => {

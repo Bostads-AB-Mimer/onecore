@@ -8,7 +8,7 @@ import * as factory from './../factories'
 import * as getTenantService from '../../get-tenant'
 
 import { routes } from '../../routes/listings'
-import { ListingStatus } from 'onecore-types'
+import { ListingStatus } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()

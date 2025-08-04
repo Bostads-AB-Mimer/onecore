@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { Invoice, InvoiceTransactionType } from 'onecore-types'
+import { Invoice, InvoiceTransactionType } from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>(() => ({
   invoiceId: '552303315030452',

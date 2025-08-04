@@ -6,9 +6,9 @@ import {
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
-} from 'onecore-types'
+} from '@onecore/types'
 import { z } from 'zod'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
 
 import { parseRequestBody } from '../../../middlewares/parse-request-body'

@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { leasing, Tenant, WaitingListType } from 'onecore-types'
+import { leasing, Tenant, WaitingListType } from '@onecore/types'
 
 import { routes } from '../../routes/contacts'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'

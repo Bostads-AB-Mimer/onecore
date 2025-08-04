@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import {
   Applicant,
   Listing,
@@ -6,7 +6,7 @@ import {
   ListingStatus,
   GetListingsWithApplicantsFilterParams,
   OfferStatus,
-} from 'onecore-types'
+} from '@onecore/types'
 import { RequestError } from 'tedious'
 import { Knex } from 'knex'
 import { match } from 'ts-pattern'

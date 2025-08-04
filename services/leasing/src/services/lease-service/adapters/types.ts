@@ -3,7 +3,7 @@ import {
   LeaseStatus,
   ListingStatus,
   OfferStatus,
-} from 'onecore-types'
+} from '@onecore/types'
 
 export type DbOffer = {
   Id: number

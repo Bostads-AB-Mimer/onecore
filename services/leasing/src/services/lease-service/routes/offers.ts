@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
-import { GetActiveOfferByListingIdErrorCodes, OfferStatus } from 'onecore-types'
-import { logger, generateRouteMetadata } from 'onecore-utilities'
+import { GetActiveOfferByListingIdErrorCodes, OfferStatus } from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { HttpStatusCode } from 'axios'
 import { z } from 'zod'
 

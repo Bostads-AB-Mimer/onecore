@@ -1,5 +1,5 @@
 import app from './app'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const PORT = process.env.PORT || 5020
 app.listen(PORT, () => {

@@ -1,6 +1,6 @@
 import { Knex } from 'knex'
 import { RequestError } from 'tedious'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import { AdapterResult } from './types'
