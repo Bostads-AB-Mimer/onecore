@@ -36,4 +36,9 @@ const getParkingSpaceApplicationCategory = (waitingListType: string) => {
   return category
 }
 
-export { getStreet, getStreetNumber, getParkingSpaceType, getParkingSpaceApplicationCategory }
+export {
+  getStreet,
+  getStreetNumber,
+  getParkingSpaceType,
+  getParkingSpaceApplicationCategory,
+}
