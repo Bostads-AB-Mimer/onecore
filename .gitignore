@@ -1,0 +1,22 @@
+# ---- Generated files ----
+
+# ---- Build files ----
+
+# ---- Private ----
+
+# ---- Editors ----
+*~
+.\#*\#
+.\#*
+auto-save-list/
+.vscode
+.idea
+.cursor
+
+# ---- Tools ----
+
+# ---- OS ----
+.DS_Store
+
+# ---- Misc ----
+*.log
