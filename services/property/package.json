@@ -1,30 +1,30 @@
 {
-  "name": "property-base",
+  "name": "@onecore/property",
   "version": "1.0.0",
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
-  "main": "index.ts",
-  "scripts": {
-    "dev": "node --import tsx --watch index.ts",
-    "start": "node --import tsx index.ts",
-    "build": "tsc",
-    "test": "jest --config jest.config.js",
-    "test:watch": "jest --config jest.config.js --watch",
-    "type-check": "tsc --noEmit",
-    "ts:watch": "tsc --noEmit --watch",
-    "generate": "npx prisma generate",
-    "force-generate": "rm -rf node_modules && npm install && npx prisma generate",
-    "prettier-check": "prettier --check ."
-  },
+  "license": "MIT",
+  "homepage": "https://github.com/Bostads-AB-Mimer/property-base#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Bostads-AB-Mimer/property-base.git"
   },
-  "author": "",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Bostads-AB-Mimer/property-base/issues"
   },
-  "homepage": "https://github.com/Bostads-AB-Mimer/property-base#readme",
+  "author": "",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --import tsx --watch index.ts",
+    "force-generate": "rm -rf node_modules && npm install && npx prisma generate",
+    "generate": "npx prisma generate",
+    "prettier-check": "prettier --check .",
+    "start": "node --import tsx index.ts",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch",
+    "ts:watch": "tsc --noEmit --watch",
+    "type-check": "tsc --noEmit"
+  },
   "dependencies": {
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
