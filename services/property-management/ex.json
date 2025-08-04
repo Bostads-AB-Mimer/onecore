@@ -1,0 +1,29 @@
+[
+  {
+    "materialOptionGroupId": "949A0DD6-F7AD-4335-8866-7A1E839C70CE",
+    "roomTypeId": "BADRUM",
+    "name": "Badrum",
+    "actionName": "Välj koncept",
+    "materialOptions": [
+      {
+        "materialOptionId": "00B1853A-63B1-4020-B4C8-C6111FEB5760",
+        "caption": "Koncept 2",
+        "shortDescription": "Kort beskrivning av koncept 2",
+        "description": "Lång beskrivning av koncept 2",
+        "coverImage": "kok_koncept2.png",
+        "materialOptionGroupName": "Badrum",
+        "images": []
+      },
+      {
+        "materialOptionId": "9FE56B72-45A8-4B0F-A5B3-FA1B974051DD",
+        "caption": "Koncept 1",
+        "shortDescription": "Kort beskrivning av koncept 1",
+        "description": "Lång beskrivning av koncept 1",
+        "coverImage": "bad_koncept1.png",
+        "materialOptionGroupName": "Badrum",
+        "images": ["kok_koncept1_3.png", "kok_koncept1_2.png"]
+      }
+    ],
+    "type": "Concept"
+  }
+]

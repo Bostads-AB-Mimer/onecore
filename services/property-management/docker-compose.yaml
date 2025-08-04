@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  sql:
+    # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
+    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    container_name: sql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${PROPERTY_MANAGEMENT_DATABASE__PASSWORD}
+    networks:
+      - property-info
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql:/var/opt/mssql
+
+networks:
+  property-info:
+    driver: bridge
+
+volumes:
+  sql:
