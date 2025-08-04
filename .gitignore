@@ -2,10 +2,16 @@
 
 # ---- Build files ----
 build
+*.tsbuildinfo
+dist
 
 # ---- Private ----
 .env
 .env.test
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
 # ---- Editors ----
 *~
@@ -15,9 +21,13 @@ auto-save-list/
 .vscode
 .idea
 .cursor
+.vscode-test
 
 # ---- Tools ----
 .aider*
+npm-debug.log*
+.eslintcache
+.node_repl_history
 
 # ---- OS ----
 .DS_Store
@@ -25,3 +35,14 @@ auto-save-list/
 # ---- Misc ----
 *.log
 config.json
+logs
+*.pid
+*.seed
+*.pid.lock
+coverage
+*.lcov
+.npm
+lib-cov
+*.tgz
+.cache
+.temp
