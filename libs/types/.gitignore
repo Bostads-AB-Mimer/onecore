@@ -1,9 +1,0 @@
-build
-/dist
-node_modules
-
-# OSX
-.DS_Store
-
-.vscode
-.idea/
