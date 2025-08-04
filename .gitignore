@@ -5,6 +5,7 @@ build
 
 # ---- Private ----
 .env
+.env.test
 
 # ---- Editors ----
 *~
