@@ -3,7 +3,7 @@ import {
   getMaterialChoices,
   getMaterialChoiceStatuses,
 } from './adapters/core-adapter'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {

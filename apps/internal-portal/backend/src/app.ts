@@ -3,7 +3,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import cors from '@koa/cors'
 import session from 'koa-session'
-import { logger, loggerMiddlewares } from 'onecore-utilities'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'

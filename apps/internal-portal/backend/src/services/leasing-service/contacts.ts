@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
-import { generateRouteMetadata } from 'onecore-utilities'
-import { LeaseStatus, RouteErrorResponse } from 'onecore-types'
+import { generateRouteMetadata } from '@onecore/utilities'
+import { LeaseStatus, RouteErrorResponse } from '@onecore/types'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/contacts', async (ctx) => {

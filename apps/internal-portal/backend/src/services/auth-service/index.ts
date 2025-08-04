@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { login, handleRedirect, logout } from './adapters/msal'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/auth/login', async (ctx) => {

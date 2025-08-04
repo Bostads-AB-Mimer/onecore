@@ -15,7 +15,7 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
-} from 'onecore-types'
+} from '@onecore/types'
 
 import { AxiosError, HttpStatusCode } from 'axios'
 import { z } from 'zod'

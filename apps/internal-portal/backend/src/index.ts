@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 import app from './app'
 

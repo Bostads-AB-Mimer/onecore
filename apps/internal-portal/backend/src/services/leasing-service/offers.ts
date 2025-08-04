@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
-import { generateRouteMetadata } from 'onecore-utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/offers/:offerId/accept', async (ctx) => {
