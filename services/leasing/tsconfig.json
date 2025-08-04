@@ -1,13 +1,18 @@
 {
-  "extends": "@tsconfig/node20/tsconfig.json",
-  "exclude": ["xpand-sync"],
-  "module": "ESNext",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./build",
     "resolveJsonModule": true,
-    "types": ["jest", "node"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "noErrorTruncation": true,
     "isolatedModules": true
-  }
+  },
+  "exclude": [
+    "xpand-sync",
+    "./build"
+  ]
 }
