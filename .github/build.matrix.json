@@ -1,0 +1,97 @@
+[
+  {
+    "name": "communication",
+    "label": "ONECore Communication Service",
+    "package": "@onecore/communication",
+    "path": "services/communication",
+    "docker": true,
+    "imageName": "onecore-communication"
+  },
+  {
+    "name": "leasing",
+    "label": "ONECore Leasing Service",
+    "package": "@onecore/leasing",
+    "path": "services/leasing",
+    "docker": true,
+    "imageName": "onecore-core"
+  },
+  {
+    "name": "property-management",
+    "label": "ONECore Property Management Service",
+    "package": "@onecore/property-management",
+    "path": "services/property-management",
+    "docker": true,
+    "imageName": "onecore-property-management"
+  },
+  {
+    "name": "property",
+    "label": "ONECore Property Service",
+    "package": "@onecore/property",
+    "path": "services/property",
+    "docker": true,
+    "imageName": "property-base"
+  },
+  {
+    "name": "work-order",
+    "label": "ONECore Work Order Service",
+    "package": "@onecore/work-order",
+    "path": "services/work-order",
+    "docker": true,
+    "imageName": "onecore-work-order"
+  },
+  {
+    "name": "core",
+    "label": "ONECore Core Orchestration Service",
+    "package": "@onecore/core",
+    "path": "core",
+    "docker": true,
+    "imageName": "onecore-core"
+  },
+  {
+    "name": "internal-portal",
+    "label": "ONECore Internal Portal Application",
+    "path": "apps/internal-portal/frontend",
+    "docker": true,
+    "imageName": "onecore-internal-portal-frontend",
+    "build_args": {
+      "test": {
+        "BACKEND_URL": "/api"
+      },
+      "release": {
+        "BACKEND_URL": "/api"
+      }
+    }
+  },
+  {
+    "name": "internal-portal-backend",
+    "label": "ONECore Internal Portal Backend API",
+    "path": "apps/internal-portal/backend",
+    "docker": true,
+    "imageName": "onecore-internal-portal-backend"
+  },
+  {
+    "name": "property-tree",
+    "label": "ONECore Property Tree Application",
+    "path": "apps/property-tree",
+    "docker": true,
+    "imageName": "property-tree",
+    "build_args": {
+      "test": {
+        "VITE_API_URL": "http://property-base",
+        "VITE_CORE_API_URL": "https://core-test-yg.mimer.nu",
+        "VITE_KEYCLOAK_URL": "https://auth-test.mimer.nu/realms/onecore-test",
+        "VITE_KEYCLOAK_CLIENT_ID": "onecore-test",
+        "VITE_KEYCLOAK_REDIRECT_URI": "https://property-tree-test.mimer.nu/callback",
+        "VITE_KEYCLOAK_REALM": "onecore-test"
+      },
+      "release": {
+        "VITE_API_URL": "http://property-base",
+        "VITE_CORE_API_URL": "https://api.mimer.nu",
+        "VITE_KEYCLOAK_URL": "https://auth.mimer.nu/realms/onecore",
+        "VITE_KEYCLOAK_CLIENT_ID": "onecore",
+        "VITE_KEYCLOAK_REDIRECT_URI": "https://property-tree.mimer.nu/callback",
+        "VITE_KEYCLOAK_REALM": "onecore"
+      }
+    }
+  }
+]
