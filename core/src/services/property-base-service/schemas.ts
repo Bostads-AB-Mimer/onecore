@@ -348,12 +348,12 @@ export const ParkingSpaceSchema = z.object({
 
 export const MaintenanceUnitSchema = z.object({
   id: z.string(),
-  rentalPropertyId: z.string(),
+  rentalPropertyId: z.string().optional(),
   code: z.string(),
-  caption: z.string(),
-  type: z.string().nullable(),
-  estateCode: z.string(),
-  estate: z.string(),
+  caption: z.string().nullable(),
+  type: z.string().nullable().optional(),
+  propertyCode: z.string().nullable(),
+  propertyName: z.string().nullable(),
 })
 
 export const FacilityDetailsSchema = z.object({

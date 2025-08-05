@@ -556,4 +556,46 @@ describe('@onecore/property-adapter', () => {
       })
     })
   })
+
+  describe('getMaintenanceUnitsByPropertyCode', () => {
+    it('returns maintenance units for a property', async () => {
+      const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/maintenance-units/by-property-code/1234`,
+          () =>
+            HttpResponse.json(
+              {
+                content: maintenanceUnitsMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getMaintenanceUnitsByPropertyCode('1234')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: maintenanceUnitsMock,
+      })
+    })
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/maintenance-units/by-property-code/1234`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getMaintenanceUnitsByPropertyCode('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+  })
 })
