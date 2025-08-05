@@ -33,6 +33,9 @@ jobs:
       - name: Generate Prisma Client
         run: npm run generate:static
 
+      - name: Build packages
+        run: npm run build
+
       - name: Run Prettier check
         run: npm run prettier
         env:
