@@ -10,13 +10,13 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import { Listing, RentalObject } from '@onecore/types'
-import { logger, loggedAxios as axios } from '@onecore/utilities'
+import { Listing } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /listings:
+   * /leasing/listings:
    *   get:
    *     summary: Get listings
    *     tags:
@@ -57,7 +57,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/listings', async (ctx) => {
+  router.get('/leasing/listings', async (ctx) => {
     try {
       const metadata = generateRouteMetadata(ctx)
 
@@ -120,8 +120,4 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
     }
   })
-
-  interface ListingWithRentalObject extends Listing {
-    rentalObject: RentalObject
-  }
 }

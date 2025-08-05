@@ -13,7 +13,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /vacant-parkingspaces:
+   * /leasing/vacant-parkingspaces:
    *   get:
    *     summary: Get all vacant parking spaces
    *     tags:
@@ -72,7 +72,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/vacant-parkingspaces', async (ctx) => {
+  router.get('/leasing/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getAllVacantParkingSpaces()
     if (!result.ok) {
@@ -87,12 +87,12 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rental-object/by-code/{rentalObjectCode}:
+   * /leasing/rental-objects/by-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get a rental object
+   *     summary: Get a rental object by code
    *     description: Fetches a rental object by Rental Object Code.
    *     tags:
-   *       - RentalObject
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: rentalObjectCode
@@ -153,19 +153,22 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-object/by-code/:rentalObjectCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const rentalObjectCode = ctx.params.rentalObjectCode
-    const result =
-      await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
+  router.get(
+    '/leasing/rental-objects/by-code/:rentalObjectCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+      const result =
+        await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
 
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { error: 'Unknown error', ...metadata }
-      return
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Unknown error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
+  )
 }
