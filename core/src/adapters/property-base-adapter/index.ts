@@ -371,10 +371,6 @@ export async function getFacilityByRentalId(
       }
     )
 
-    if (fetchResponse.error) {
-      throw fetchResponse.error
-    }
-
     if (fetchResponse.response.status === 404) {
       logger.info(
         { err: `Facility not found for rental id: ${rentalId}` },
