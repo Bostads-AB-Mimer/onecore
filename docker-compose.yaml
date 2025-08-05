@@ -7,7 +7,7 @@ services:
     container_name: onecore-sql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=p455w0rd
+      - MSSQL_SA_PASSWORD=s3cr3t_p455w0rd
     networks:
       - onecore
     ports:
