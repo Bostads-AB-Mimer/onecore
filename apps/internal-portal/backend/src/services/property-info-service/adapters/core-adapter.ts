@@ -6,7 +6,7 @@ const coreBaseUrl = Config.core.url
 const getMaterialChoiceStatuses = async (projectCode: string) => {
   const materialChoiceStatusResponse = await getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/rentalproperties/material-choice-statuses?projectCode=${projectCode}&includeRentalProperties=false`,
+    url: `${coreBaseUrl}/propertymanagement/rentalproperties/material-choice-statuses?projectCode=${projectCode}&includeRentalProperties=false`,
   })
 
   return materialChoiceStatusResponse.data.content
@@ -16,9 +16,9 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
   let url
 
   if (contractId) {
-    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
+    url = `${coreBaseUrl}/propertymanagement/rentalproperties/${apartmentId}/contracts/${contractId}/material-choices`
   } else {
-    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/material-choices`
+    url = `${coreBaseUrl}/propertymanagement/rentalproperties/${apartmentId}/material-choices`
   }
 
   const committedChoicesResponse = await getFromCore({
