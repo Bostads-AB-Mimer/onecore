@@ -34,7 +34,7 @@ const getListingsWithApplicants = async (
   AdapterResult<Array<Listing | (Listing & { offer: Offer })>, 'unknown'>
 > => {
   try {
-    const url = `${coreBaseUrl}/listings-with-applicants?${querystring}`
+    const url = `${coreBaseUrl}/leasing/listings-with-applicants?${querystring}`
     const listingsResponse = await getFromCore<{ content: Array<Listing> }>({
       method: 'get',
       url: url,
@@ -71,17 +71,17 @@ const getListingWithApplicants = async (
 > => {
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/listing/${listingId}`,
+    url: `${coreBaseUrl}/leasing/listings/${listingId}`,
   }).then((res) => res.data.content)
 
   const applicants: Promise<DetailedApplicant[]> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
+    url: `${coreBaseUrl}/leasing/listings/${listingId}/applicants/details`,
   }).then((res) => res.data.content)
 
   const offers: Promise<Array<OfferWithOfferApplicants>> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/offers/listing-id/${listingId}`,
+    url: `${coreBaseUrl}/leasing/offers/by-listing-id/${listingId}`,
   }).then((res) => res.data.content)
 
   const [listingResult, applicantsResult, offersResult] = await Promise.all([
@@ -100,7 +100,7 @@ const getListingWithApplicants = async (
 const removeApplicant = async (applicantId: string) => {
   const response = await getFromCore({
     method: 'delete',
-    url: `${coreBaseUrl}/applicants/${applicantId}/by-manager`,
+    url: `${coreBaseUrl}/leasing/applicants/${applicantId}/by-manager`,
   })
 
   return response.data
@@ -114,7 +114,7 @@ const getContactsDataBySearchQuery = async (
   try {
     const result = await getFromCore<{ content: Array<Contact> }>({
       method: 'get',
-      url: `${coreBaseUrl}/contacts/search?q=${q}`,
+      url: `${coreBaseUrl}/leasing/contacts/search?q=${q}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -137,7 +137,7 @@ const getTenantByContactCode = async (
   try {
     const result = await getFromCore<{ content: Tenant }>({
       method: 'get',
-      url: `${coreBaseUrl}/tenants/contactCode/${contactCode}`,
+      url: `${coreBaseUrl}/leasing/tenants/by-contact-code/${contactCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -156,7 +156,7 @@ const getContactByContactCode = async (
   try {
     const result = await getFromCore<{ content: Contact }>({
       method: 'get',
-      url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
+      url: `${coreBaseUrl}/leasing/contacts/by-contact-code/${contactCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -179,7 +179,7 @@ const validatePropertyRentalRules = async (
       content: { applicationType: 'Replace' | 'Additional' }
     }>({
       method: 'get',
-      url: `${coreBaseUrl}/applicants/validate-rental-rules/property/${contactCode}/${rentalObjectCode}`,
+      url: `${coreBaseUrl}/leasing/applicants/validate-rental-rules/property/${contactCode}/${rentalObjectCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -210,7 +210,7 @@ const validateResidentialAreaRentalRules = async (
       content: { applicationType: 'Replace' | 'Additional' }
     }>({
       method: 'get',
-      url: `${coreBaseUrl}/applicants/validate-rental-rules/residential-area/${contactCode}/${districtCode}`,
+      url: `${coreBaseUrl}/leasing/applicants/validate-rental-rules/residential-area/${contactCode}/${districtCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -238,7 +238,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
     // todo: fix type
     const response = await getFromCore<any>({
       method: 'post',
-      url: `${coreBaseUrl}/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
+      url: `${coreBaseUrl}/leasing/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
       data: params,
     })
 
@@ -267,7 +267,7 @@ const createOffer = async (params: {
   try {
     const response = await getFromCore<any>({
       method: 'post',
-      url: `${coreBaseUrl}/listings/${params.listingId}/offers`,
+      url: `${coreBaseUrl}/leasing/listings/${params.listingId}/offers`,
       data: params,
     })
 
@@ -285,7 +285,7 @@ const syncInternalParkingSpacesFromXpand = async (): Promise<
       content: InternalParkingSpaceSyncSuccessResponse
     }>({
       method: 'post',
-      url: `${coreBaseUrl}/listings/sync-internal-from-xpand`,
+      url: `${coreBaseUrl}/leasing/listings/sync-internal-from-xpand`,
     })
 
     return { ok: true, data: response.data.content }
@@ -302,7 +302,7 @@ const deleteListing = async (
       content: InternalParkingSpaceSyncSuccessResponse
     }>({
       method: 'delete',
-      url: `${coreBaseUrl}/listings/${listingId}`,
+      url: `${coreBaseUrl}/leasing/listings/${listingId}`,
     })
 
     return { ok: true, data: null }
@@ -323,7 +323,7 @@ const closeListing = async (
   try {
     await getFromCore({
       method: 'put',
-      url: `${coreBaseUrl}/listings/${listingId}/status`,
+      url: `${coreBaseUrl}/leasing/listings/${listingId}/status`,
       data: { status: ListingStatus.Closed },
     })
 
@@ -337,7 +337,7 @@ const acceptOffer = async (
   offerId: string
 ): Promise<AdapterResult<Array<Listing>, ReplyToOfferErrorCodes>> => {
   try {
-    const url = `${coreBaseUrl}/offers/${offerId}/accept`
+    const url = `${coreBaseUrl}/leasing/offers/${offerId}/accept`
     const response = await getFromCore({
       method: 'post',
       url: url,
@@ -365,7 +365,7 @@ const denyOffer = async (
   offerId: string
 ): Promise<AdapterResult<Array<Listing>, 'unknown'>> => {
   try {
-    const url = `${coreBaseUrl}/offers/${offerId}/deny`
+    const url = `${coreBaseUrl}/leasing/offers/${offerId}/deny`
     const response = await getFromCore({
       method: 'post',
       url: url,
@@ -395,7 +395,7 @@ const getActiveOfferByListingId = async (
   try {
     const result = await getFromCore<{ content: Offer }>({
       method: 'get',
-      url: `${coreBaseUrl}/offers/listing-id/${listingId}/active`,
+      url: `${coreBaseUrl}/leasing/offers/by-listing-id/${listingId}/active`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -441,7 +441,7 @@ const getApplicationProfileByContactCode = async (
       content: ApplicationProfile
     }>({
       method: 'get',
-      url: `${coreBaseUrl}/contacts/${contactCode}/application-profile`,
+      url: `${coreBaseUrl}/leasing/contacts/${contactCode}/application-profile`,
     })
 
     return {
@@ -489,7 +489,7 @@ const createOrUpdateApplicationProfile = async (
   try {
     const response = await getFromCore<any>({
       method: 'post',
-      url: `${coreBaseUrl}/contacts/${contactCode}/application-profile/admin`,
+      url: `${coreBaseUrl}/leasing/contacts/${contactCode}/application-profile/admin`,
       data: profileCommand,
     })
 
@@ -505,7 +505,7 @@ const getCommentThread = async (
   try {
     const response = await getFromCore<{ content: CommentThread }>({
       method: 'get',
-      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}`,
+      url: `${coreBaseUrl}/leasing/comments/${threadId.targetType}/thread/${threadId.targetId}`,
     })
 
     return { ok: true, data: response.data.content }
@@ -525,7 +525,7 @@ const addComment = async (
   try {
     const response = await getFromCore<{ content: Comment }>({
       method: 'post',
-      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}`,
+      url: `${coreBaseUrl}/leasing/comments/${threadId.targetType}/thread/${threadId.targetId}`,
       data: comment,
     })
     return { ok: true, data: response.data.content }
@@ -541,7 +541,7 @@ const removeComment = async (
   try {
     const response = await getFromCore({
       method: 'delete',
-      url: `${coreBaseUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
+      url: `${coreBaseUrl}/leasing/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
     })
 
     return { ok: true, data: response.data.content }
