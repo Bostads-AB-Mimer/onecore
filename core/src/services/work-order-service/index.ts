@@ -35,7 +35,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrderData/{identifier}:
+   * /workorder/workorders/data/{identifier}:
    *   get:
    *     summary: Get work order data by different identifiers
    *     tags:
@@ -104,7 +104,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrderData/:identifier', async (ctx) => {
+  router.get('/workorder/workorders/data/:identifier', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['handler'])
     const responseData: RentalPropertyInfoWithLeases[] = []
 
@@ -236,7 +236,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/contactCode/{contactCode}:
+   * /workorder/workorders/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get work orders by contact code
    *     tags:
@@ -279,71 +279,74 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/contactCode/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const result = await workOrderAdapter.getWorkOrdersByContactCode(
-        ctx.params.contactCode
-      )
-      if (result.ok) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                contactCode: v.ContactCode,
-                description: v.Description,
-                detailsCaption: v.DetailsCaption,
-                externalResource: v.ExternalResource,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                hiddenFromMyPages: v.HiddenFromMyPages,
-                workOrderRows: v.WorkOrderRows.map((row) => ({
-                  description: row.Description,
-                  locationCode: row.LocationCode,
-                  equipmentCode: row.EquipmentCode,
-                })),
-                messages: v.Messages?.map((message) => ({
-                  id: message.id,
-                  body: message.body,
-                  messageType: message.messageType,
-                  author: message.author,
-                  createDate: new Date(message.createDate),
-                })),
-              })
-            ),
-          },
-          ...metadata,
-        }
-      } else {
-        logger.error(
-          result.err,
-          'Error getting workOrders by contact code',
-          metadata
+  router.get(
+    '/workorder/workorders/by-contact-code/:contactCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const result = await workOrderAdapter.getWorkOrdersByContactCode(
+          ctx.params.contactCode
         )
-        ctx.status = result.statusCode || 500
-        ctx.body = { error: result.err, ...metadata }
+        if (result.ok) {
+          ctx.status = 200
+          ctx.body = {
+            content: {
+              totalCount: result.data.length,
+              workOrders: result.data.map(
+                (v): schemas.CoreWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  contactCode: v.ContactCode,
+                  description: v.Description,
+                  detailsCaption: v.DetailsCaption,
+                  externalResource: v.ExternalResource,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  hiddenFromMyPages: v.HiddenFromMyPages,
+                  workOrderRows: v.WorkOrderRows.map((row) => ({
+                    description: row.Description,
+                    locationCode: row.LocationCode,
+                    equipmentCode: row.EquipmentCode,
+                  })),
+                  messages: v.Messages?.map((message) => ({
+                    id: message.id,
+                    body: message.body,
+                    messageType: message.messageType,
+                    author: message.author,
+                    createDate: new Date(message.createDate),
+                  })),
+                })
+              ),
+            },
+            ...metadata,
+          }
+        } else {
+          logger.error(
+            result.err,
+            'Error getting workOrders by contact code',
+            metadata
+          )
+          ctx.status = result.statusCode || 500
+          ctx.body = { error: result.err, ...metadata }
+        }
+      } catch (error) {
+        logger.error(error, 'Error getting workOrders by contact code')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
       }
-    } catch (error) {
-      logger.error(error, 'Error getting workOrders by contact code')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
     }
-  })
+  )
 
   /**
    * @swagger
-   * /workOrders/rentalPropertyId/{rentalPropertyId}:
+   * /workorder/workorders/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get work orders by rental property id
    *     tags:
@@ -387,7 +390,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/workOrders/rentalPropertyId/:rentalPropertyId',
+    '/workorder/workorders/by-rental-property-id/:rentalPropertyId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
@@ -447,7 +450,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/xpand/rentalPropertyId/{rentalPropertyId}:
+   * /workorder/workorders/xpand/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get work orders by rental property id from xpand
    *     tags:
@@ -491,7 +494,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/workOrders/xpand/rentalPropertyId/:rentalPropertyId',
+    '/workorder/workorders/xpand/by-rental-property-id/:rentalPropertyId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
@@ -561,7 +564,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/xpand/{code}:
+   * /workorder/workorders/xpand/{code}:
    *   get:
    *     summary: Get work order details by rental property id from xpand
    *     tags:
@@ -607,7 +610,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/xpand/:code', async (ctx) => {
+  router.get('/workorder/workorders/xpand/:code', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const result = await workOrderAdapter.getXpandWorkOrderDetails(
@@ -665,7 +668,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders:
+   * /workorder/workorders:
    *   post:
    *     summary: Create a new work order
    *     tags:
@@ -749,7 +752,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/workOrders', async (ctx) => {
+  router.post('/workorder/workorders', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const {
@@ -873,7 +876,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/{workOrderId}/update:
+   * /workorder/workorders/{workOrderId}/update:
    *   post:
    *     summary: Update a work order with a message
    *     tags:
@@ -930,7 +933,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/workOrders/:workOrderId/update', async (ctx) => {
+  router.post('/workorder/workorders/:workOrderId/update', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { workOrderId } = ctx.params
     const { message } = ctx.request.body
@@ -965,7 +968,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/{workOrderId}/close:
+   * /workorder/workorders/{workOrderId}/close:
    *   post:
    *     summary: Close a work order
    *     tags:
@@ -1002,7 +1005,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/workOrders/:workOrderId/close', async (ctx) => {
+  router.post('/workorder/workorders/:workOrderId/close', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { workOrderId } = ctx.params
 
@@ -1025,7 +1028,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/sendSms:
+   * /workorder/workorders/send-sms:
    *   post:
    *     summary: Send SMS for a work order
    *     tags:
@@ -1078,7 +1081,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/workOrders/sendSms', async (ctx) => {
+  router.post('/workorder/workorders/send-sms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { phoneNumber, text, externalContractorName } = ctx.request.body
 
@@ -1127,7 +1130,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/sendEmail:
+   * /workorder/workorders/send-email:
    *   post:
    *     summary: Send email for a work order
    *     tags:
@@ -1183,7 +1186,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/workOrders/sendEmail', async (ctx) => {
+  router.post('/workorder/workorders/send-email', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { to, subject, text, externalContractorName } = ctx.request.body
 
