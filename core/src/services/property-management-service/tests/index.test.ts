@@ -66,7 +66,7 @@ describe('rental-property-service index', () => {
       expect(res.body.content.roomTypes).toBeDefined()
     })
   })
-  describe('GET /propertymanagement/maintenanceunits/byrentalproperty/:rentalPropertyId/:type?', () => {
+  describe('GET /propertymanagement/maintenanceunits/by-rental-property/:rentalPropertyId/:type?', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -84,7 +84,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/propertymanagement/maintenanceunits/byrentalproperty/705-022-04-0201'
+        '/propertymanagement/maintenanceunits/by-rental-property/705-022-04-0201'
       )
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
@@ -102,7 +102,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/propertymanagement/maintenanceunits/byrentalproperty/705-022-04-0201/Miljöbod'
+        '/propertymanagement/maintenanceunits/by-rental-property/705-022-04-0201/Miljöbod'
       )
 
       expect(res.status).toBe(200)
@@ -116,7 +116,7 @@ describe('rental-property-service index', () => {
     })
   })
 
-  describe('GET /propertymanagement/maintenanceunits/bycontact/:contactCode', () => {
+  describe('GET /propertymanagement/maintenanceunits/by-contact/:contactCode', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -138,7 +138,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/propertymanagement/maintenanceunits/bycontact/P965339'
+        '/propertymanagement/maintenanceunits/by-contact/P965339'
       )
 
       expect(res.status).toBe(200)
@@ -159,7 +159,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue([])
 
       const res = await request(app.callback()).get(
-        '/propertymanagement/maintenanceunits/bycontact/P965339'
+        '/propertymanagement/maintenanceunits/by-contact/P965339'
       )
 
       expect(res.status).toBe(200)
