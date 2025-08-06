@@ -1,5 +1,62 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
+import { MaintenanceUnit } from '@src/types/maintenance-unit'
+
+export const getMaintenanceUnitsByBuildingCode = async (
+  buildingCode: string
+): Promise<MaintenanceUnit[]> => {
+  // Use buildingCode to find the propertyCode first
+  const propertyStructure = await prisma.propertyStructure.findFirst({
+    where: {
+      buildingCode: buildingCode,
+      NOT: {
+        buildingCode: null,
+        propertyCode: null,
+        propertyName: null,
+      },
+    },
+    select: {
+      propertyCode: true,
+      propertyName: true,
+    },
+  })
+
+  if (!propertyStructure) {
+    console.error(`No property found for building code: ${buildingCode}`)
+    return []
+  }
+
+  const maintenanceUnits = await prisma.maintenanceUnit.findMany({
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      maintenanceUnitType: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    where: {
+      propertyStructures: {
+        some: {
+          propertyCode: propertyStructure?.propertyCode,
+        },
+      },
+    },
+  })
+
+  return trimStrings(maintenanceUnits).map((item) => {
+    return {
+      id: item.id,
+      code: item.code,
+      caption: item.name,
+      type: item.maintenanceUnitType?.name ?? null,
+      propertyCode: propertyStructure?.propertyCode ?? null,
+      propertyName: propertyStructure?.propertyName ?? null,
+    }
+  })
+}
 
 export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
   /**
@@ -56,8 +113,8 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
       code: item.maintenanceUnit?.code,
       caption: item?.maintenanceUnit?.name,
       type: item.maintenanceUnit?.maintenanceUnitType?.name,
-      estateCode: rentalPropertyInfoTrimmed.propertyCode,
-      estate: rentalPropertyInfoTrimmed.propertyName,
+      propertyCode: rentalPropertyInfoTrimmed.propertyCode,
+      propertyName: rentalPropertyInfoTrimmed.propertyName,
     }
   })
 
