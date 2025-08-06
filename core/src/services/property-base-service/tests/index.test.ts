@@ -362,7 +362,7 @@ describe('@onecore/property-service', () => {
 
   describe('GET /propertyBase/maintenance-units/by-rental-id/:id', () => {
     it('returns 200 and a list of maintenance units for a rental property', async () => {
-      const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
+      const maintenanceUnitsMock = factory.maintenanceUnit.buildList(3)
 
       const getMaintenanceUnitsSpy = jest
         .spyOn(propertyBaseAdapter, 'getMaintenanceUnitsForRentalProperty')
@@ -393,6 +393,42 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(500)
       expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('1234')
+    })
+  })
+
+  describe('GET /propertyBase/maintenance-units/by-building-code/:buildingCode', () => {
+    it('returns 200 and a list of maintenance units for a building', async () => {
+      const maintenanceUnitsMock = factory.maintenanceUnit.buildList(3)
+
+      const getMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getMaintenanceUnitsByBuildingCode')
+        .mockResolvedValueOnce({ ok: true, data: maintenanceUnitsMock })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/maintenance-units/by-building-code/123-456'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('123-456')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(maintenanceUnitsMock)
+      )
+      expect(() =>
+        z.array(MaintenanceUnitSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 500 if no maintenance units can be retrieved', async () => {
+      const getMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getMaintenanceUnitsByBuildingCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/maintenance-units/by-building-code/123-456'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('123-456')
     })
   })
 
