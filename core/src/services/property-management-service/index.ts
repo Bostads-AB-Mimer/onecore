@@ -622,7 +622,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertymanagement/rentalproperties/byrentalobjectcode/{rentalObjectCode}:
+   * /propertymanagement/rentalproperties/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get rental property information from Xpand
    *     tags:
@@ -646,7 +646,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '/propertymanagement/rentalproperties/byrentalobjectcode/:rentalObjectCode',
+    '/propertymanagement/rentalproperties/by-rental-object-code/:rentalObjectCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const res =
@@ -660,7 +660,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertymanagement/maintenanceunits/byrentalproperty/{rentalPropertyId}/{type}:
+   * /propertymanagement/maintenanceunits/by-rental-property/{rentalPropertyId}/{type}:
    *   get:
    *     summary: Get maintenance units for a rental property
    *     tags:
@@ -690,7 +690,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '/propertymanagement/maintenanceunits/byrentalproperty/:rentalPropertyId/:type?',
+    '/propertymanagement/maintenanceunits/by-rental-property/:rentalPropertyId/:type?',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
@@ -731,7 +731,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertymanagement/maintenanceunits/bycontact/{contactCode}:
+   * /propertymanagement/maintenanceunits/by-contact/{contactCode}:
    *   get:
    *     summary: Get maintenance units for a contact
    *     tags:
@@ -755,7 +755,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '/propertymanagement/maintenanceunits/bycontact/:contactCode',
+    '/propertymanagement/maintenanceunits/by-contact/:contactCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
