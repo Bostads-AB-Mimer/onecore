@@ -3,6 +3,8 @@ import config from '../../common/config'
 import { healthCheck as odooHealthCheck } from '../work-order-service/adapters/odoo-adapter'
 import {
   collectDbPoolMetrics,
+  DbConnection,
+  HealthCheckTarget,
   pollSystemHealth,
   probe,
   SystemHealth,
@@ -11,14 +13,17 @@ import { db as xpandDb } from '../work-order-service/adapters/xpand-adapter'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
 
-const CONNECTIONS = [
+/**
+ * Round-up of DB connections used by this service
+ */
+const CONNECTIONS: DbConnection[] = [
   {
     name: 'xpand',
     connection: xpandDb,
   },
 ]
 
-const subsystems = [
+const subsystems: HealthCheckTarget[] = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await probe(

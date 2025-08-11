@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import config from '../../common/config'
 import {
   loggedAxios as axios,
+  HealthCheckTarget,
   pollSystemHealth,
   setAxiosExclusionFilters,
 } from '@onecore/utilities'
@@ -32,7 +33,7 @@ const oneCoreServiceProbe = async (
   )
 }
 
-const subsystems = [
+const subsystems: HealthCheckTarget[] = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await oneCoreServiceProbe(

@@ -6,6 +6,7 @@ import {
   probe,
   pollSystemHealth,
   SystemHealth,
+  HealthCheckTarget,
 } from '@onecore/utilities'
 import { db as xpandDb } from '../property-info-service/adapters/xpand-adapter'
 import { db as propManDb } from '../property-info-service/adapters/material-options-adapter'
@@ -26,7 +27,7 @@ const CONNECTIONS: DbConnection[] = [
   },
 ]
 
-const subsystems = [
+const subsystems: HealthCheckTarget[] = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await probe(
