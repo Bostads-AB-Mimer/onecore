@@ -8,7 +8,7 @@ COPY libs ./libs/
 COPY services/communication ./services/communication/
 
 # Install all workspace dependencies from root
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Build only types (skip utilities due to segmentation fault)
 RUN npm run build:types

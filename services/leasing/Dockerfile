@@ -8,7 +8,7 @@ COPY libs ./libs/
 COPY services/leasing ./services/leasing/
 
 # Install all workspace dependencies from root
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Build libs first (required for leasing)
 RUN npm run build:libs
