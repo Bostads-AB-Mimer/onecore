@@ -7,6 +7,8 @@ COPY package*.json ./
 COPY tsconfig.json ./
 COPY libs ./libs/
 COPY services/communication ./services/communication/
+# Copy communication's own tsconfig.json to override root config
+COPY services/communication/tsconfig.json ./services/communication/
 
 # Install all workspace dependencies from root
 RUN npm ci
