@@ -4,7 +4,7 @@ WORKDIR /home/app
 
 # Help Docker cache npm install if neither of these files have changed
 ADD ./package.json ./package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 ADD ./ ./
 RUN npm run build

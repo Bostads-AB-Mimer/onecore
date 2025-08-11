@@ -10,7 +10,7 @@ COPY ../../libs ./libs/
 COPY ../../services/property ./services/property/
 
 # Install all workspace dependencies from root
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Generate Prisma client and build
 WORKDIR /app/services/property
