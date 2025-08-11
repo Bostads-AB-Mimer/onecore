@@ -19,8 +19,8 @@ services:
   # Property service
   property:
     build:
-      context: services/property
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/property/Dockerfile
     ports:
       - "5050:3000"
     environment:

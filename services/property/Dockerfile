@@ -4,19 +4,17 @@ RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy root workspace files first
+COPY ../../package*.json ./
+COPY ../../libs ./libs/
+COPY ../../services/property ./services/property/
 
-# Install dependencies
+# Install all workspace dependencies from root
 RUN npm ci
 
-# Copy source files
-COPY . .
-
-# Generate Prisma client
+# Generate Prisma client and build
+WORKDIR /app/services/property
 RUN npm run generate
-
-# Build the application
 RUN npm run build
 
 # Production stage
@@ -28,9 +26,9 @@ WORKDIR /app
 
 # Copy built application and dependencies
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/services/property/package*.json ./
+COPY --from=builder /app/services/property/build ./build
+COPY --from=builder /app/services/property/prisma ./prisma
 
 EXPOSE 3000
 
