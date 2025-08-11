@@ -33,7 +33,16 @@ export interface XpandDbWorkOrderDetails extends XpandDbWorkOrder {
   rows: string // Fetched as JSON string
 }
 
-const db = knex({ client: 'mssql', connection: Config.xpandDatabase })
+export const db = knex({
+  client: 'mssql',
+  connection: Config.xpandDatabase,
+  pool: {
+    min: 0,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    destroyTimeoutMillis: 5000,
+  },
+})
 
 export async function getWorkOrdersByResidenceId(
   residenceId: string,
