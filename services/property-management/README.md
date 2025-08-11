@@ -63,7 +63,7 @@ $ npm run install
 Start the development services from the monorepo root directory:
 
 ```sh
-<monorepo root> $ docker-compose up -d &
+<monorepo root> $ docker-compose up -d
 ```
 
 This will start the required services inside a Docker container. This is a shared container used by all services, and it only needs to be started once.
