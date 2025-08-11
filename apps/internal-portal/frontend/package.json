@@ -47,7 +47,7 @@
     "@babel/eslint-parser": "^7.28.0",
     "@babel/plugin-syntax-jsx": "^7.27.1",
     "@babel/preset-react": "^7.27.1",
-    "@iteam/eslint-config-react": "^0.4.0",
+    "@iteam/eslint-config-react": "^0.3.5",
     "@nabla/vite-plugin-eslint": "2.0.6",
     "@testing-library/jest-dom": "5.16.5",
     "@testing-library/react": "13.4.0",
