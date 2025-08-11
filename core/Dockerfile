@@ -29,9 +29,9 @@ WORKDIR /app
 # Copy built application and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/core/package*.json ./
-COPY --from=builder /app/core/src ./src
+COPY --from=builder /app/core/build ./build
 
 ENV PORT 80
 EXPOSE 80
 
-CMD node src/index.js
+CMD node build/src/index.js
