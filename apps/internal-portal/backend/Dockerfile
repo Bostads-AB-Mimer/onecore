@@ -12,8 +12,8 @@ COPY apps/internal-portal/backend ./apps/internal-portal/backend/
 # Install all workspace dependencies from root
 RUN npm ci
 
-# Build libs and core first (required for internal-portal-backend)
-RUN npm run build:libs
+# Build only types and core (skip utilities due to EPIPE error)
+RUN npm run build:types
 RUN npm run build:core
 
 # Generate and build internal-portal-backend
