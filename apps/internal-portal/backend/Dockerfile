@@ -9,7 +9,7 @@ COPY core ./core/
 COPY apps/internal-portal/backend ./apps/internal-portal/backend/
 
 # Install all workspace dependencies from root
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Build libs and core first (required for internal-portal-backend)
 RUN npm run build:libs

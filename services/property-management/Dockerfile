@@ -8,7 +8,7 @@ COPY libs ./libs/
 COPY services/property-management ./services/property-management/
 
 # Install all workspace dependencies from root
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Build libs first (required for property-management)
 RUN npm run build:libs
