@@ -3,9 +3,9 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy root workspace files first
-COPY ../../package*.json ./
-COPY ../../libs ./libs/
-COPY ../../services/leasing ./services/leasing/
+COPY package*.json ./
+COPY libs ./libs/
+COPY services/leasing ./services/leasing/
 
 # Install all workspace dependencies from root
 RUN npm ci --legacy-peer-deps

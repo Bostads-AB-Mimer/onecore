@@ -5,9 +5,9 @@ RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /app
 
 # Copy root workspace files first
-COPY ../../package*.json ./
-COPY ../../libs ./libs/
-COPY ../../services/property ./services/property/
+COPY package*.json ./
+COPY libs ./libs/
+COPY services/property ./services/property/
 
 # Install all workspace dependencies from root
 RUN npm ci --legacy-peer-deps
