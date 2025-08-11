@@ -82,6 +82,7 @@
     "@types/pino-multi-stream": "^5.1.6",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "8.38.0",
+    "@typescript-eslint/parser": "8.38.0",
     "@typescript-eslint/typescript-estree": "8.38.0",
     "eslint": "^9.31.0",
     "eslint-config-prettier": "^10.1.8",
