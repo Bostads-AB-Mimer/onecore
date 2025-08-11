@@ -9,6 +9,8 @@ COPY package*.json ./
 COPY tsconfig.json ./
 COPY libs ./libs/
 COPY services/property ./services/property/
+# Copy property's own tsconfig.json
+COPY services/property/tsconfig.json ./services/property/
 
 # Install all workspace dependencies from root
 RUN npm ci
