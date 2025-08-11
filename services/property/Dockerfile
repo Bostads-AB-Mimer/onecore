@@ -27,7 +27,8 @@ WORKDIR /app
 # Copy built application and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/property/package*.json ./
-COPY --from=builder /app/services/property/build ./build
+COPY --from=builder /app/services/property/*.js ./
+COPY --from=builder /app/services/property/src ./src
 COPY --from=builder /app/services/property/prisma ./prisma
 
 EXPOSE 3000
