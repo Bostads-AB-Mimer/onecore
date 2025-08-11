@@ -38,7 +38,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "8.38.0",
     "eslint": "^9.31.0",
     "prettier": "^3.6.2",
     "syncpack": "^13.0.4",

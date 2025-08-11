@@ -16,9 +16,9 @@ RUN npm prune --production
 # A slimmed down runner image with only the bare necessities
 FROM node:20-slim AS runner
 WORKDIR /home/app
-COPY --from=BUILDER /home/app/node_modules ./node_modules
-COPY --from=BUILDER /home/app/package* ./
-COPY --from=BUILDER /home/app/build ./
+COPY --from=builder /home/app/node_modules ./node_modules
+COPY --from=builder /home/app/package* ./
+COPY --from=builder /home/app/build ./
 COPY ./knexfile.js .
 COPY ./migrations ./migrations
 
