@@ -1,15 +1,20 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "es2016",
-    "declaration": true,
-    "outDir": "dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2016",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2016"],
     "strict": true,
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "baseUrl": "."
   },
-  "exclude": [
-    "dist"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "build"]
 }
