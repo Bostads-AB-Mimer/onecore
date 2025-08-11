@@ -14,7 +14,7 @@ RUN npm ci
 
 # Generate Prisma client and build
 WORKDIR /app/services/property
-RUN npm run generate
+RUN npm run prisma:generate
 RUN npm run build
 
 # Production stage
