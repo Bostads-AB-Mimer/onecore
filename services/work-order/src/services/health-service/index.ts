@@ -1,9 +1,22 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
 import { healthCheck as odooHealthCheck } from '../work-order-service/adapters/odoo-adapter'
-import { pollSystemHealth, probe, SystemHealth } from '@onecore/utilities'
+import {
+  collectDbPoolMetrics,
+  pollSystemHealth,
+  probe,
+  SystemHealth,
+} from '@onecore/utilities'
+import { db as xpandDb } from '../work-order-service/adapters/xpand-adapter'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
+
+const CONNECTIONS = [
+  {
+    name: 'xpand',
+    connection: xpandDb,
+  },
+]
 
 const subsystems = [
   {
@@ -13,6 +26,18 @@ const subsystems = [
         healthChecks,
         config.health.odoo.minimumMinutesBetweenRequests,
         odooHealthCheck
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await probe(
+        config.health.xpandDatabase.systemName,
+        healthChecks,
+        config.health.xpandDatabase.minimumMinutesBetweenRequests,
+        async () => {
+          await xpandDb.table('cmctc').limit(1)
+        }
       )
     },
   },
@@ -69,5 +94,50 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/health', async (ctx) => {
     ctx.body = await pollSystemHealth('work-order', subsystems)
+  })
+
+  /**
+   * @openapi
+   * /health/db:
+   *   get:
+   *     summary: Database connection pool metrics
+   *     tags: [Health]
+   *     responses:
+   *       '200':
+   *         description: Connection pool stats per configured DB connection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 connectionPools:
+   *                   type: integer
+   *                   minimum: 0
+   *                 metrics:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       name:
+   *                         type: string
+   *                       pool:
+   *                         type: object
+   *                         properties:
+   *                           used: { type: integer, minimum: 0 }
+   *                           free: { type: integer, minimum: 0 }
+   *                           pendingCreates: { type: integer, minimum: 0 }
+   *                           pendingAcquires: { type: integer, minimum: 0 }
+   *             examples:
+   *               sample:
+   *                 value:
+   *                   connectionPools: 2
+   *                   metrics:
+   *                     - name: "primary"
+   *                       pool: { used: 3, free: 5, pendingCreates: 0, pendingAcquires: 1 }
+   *                     - name: "reporting"
+   *                       pool: { used: 0, free: 8, pendingCreates: 0, pendingAcquires: 0 }
+   */
+  router.get('(.*)/health/db', async (ctx) => {
+    ctx.body = collectDbPoolMetrics(CONNECTIONS)
   })
 }
