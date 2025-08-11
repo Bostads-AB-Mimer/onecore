@@ -1,4 +1,4 @@
-FROM node:18-slim as BUILDER
+FROM node:18-slim as builder
 
 WORKDIR /home/app
 
