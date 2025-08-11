@@ -10,6 +10,7 @@
   "workspaces": [
     "apps/*",
     "apps/internal-portal/*",
+    "apps/internal-portal/frontend",
     "core",
     "libs/*",
     "services/*"
