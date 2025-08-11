@@ -2,6 +2,7 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 ADD package*.json .
+ADD tsconfig.json .
 RUN npm ci
 ADD . .
 
