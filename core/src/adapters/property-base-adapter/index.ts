@@ -371,10 +371,6 @@ export async function getFacilityByRentalId(
       }
     )
 
-    if (fetchResponse.error) {
-      throw fetchResponse.error
-    }
-
     if (fetchResponse.response.status === 404) {
       logger.info(
         { err: `Facility not found for rental id: ${rentalId}` },
@@ -391,6 +387,35 @@ export async function getFacilityByRentalId(
     return { ok: true, data: fetchResponse.data.content }
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.getFacilityByRentalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetMaintenanceUnitsByPropertyCodeResponse =
+  components['schemas']['MaintenanceUnit'][]
+
+export async function getMaintenanceUnitsByPropertyCode(
+  propertyCode: string
+): Promise<
+  AdapterResult<GetMaintenanceUnitsByPropertyCodeResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/maintenance-units/by-property-code/{code}',
+      {
+        params: { path: { code: propertyCode } },
+      }
+    )
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.getMaintenanceUnitsByPropertyCode'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

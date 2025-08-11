@@ -1,5 +1,5 @@
 import axios from 'axios'
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       info: () => {

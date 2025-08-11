@@ -28,6 +28,7 @@ export {
   OdooWorkOrderFactory as externalOdooWorkOrder,
 } from './work-order-external'
 export { MaintenanceUnitInfoFactory as maintenanceUnitInfo } from './maintenance-unit-info'
+export { MaintenanceUnitFactory as propertyBaseMaintenanceUnit } from './maintenance-unit'
 export {
   ApplicationProfileFactory as applicationProfile,
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
