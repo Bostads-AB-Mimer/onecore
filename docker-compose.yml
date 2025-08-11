@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # Core services
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    ports:
+      - "5010:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./core:/home/app
+      - /home/app/node_modules
+    depends_on:
+      - property
+      - work-order
+
+  # Property service
+  property:
+    build:
+      context: ./services/property
+      dockerfile: Dockerfile
+    ports:
+      - "5050:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - ./services/property:/app/packages/property-base
+      - /app/packages/property-base/node_modules
+
+  # Leasing service
+  leasing:
+    build:
+      context: ./services/leasing
+      dockerfile: Dockerfile
+    ports:
+      - "5020:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./services/leasing:/home/app
+      - /home/app/node_modules
+
+  # Property management service
+  property-management:
+    build:
+      context: ./services/property-management
+      dockerfile: Dockerfile
+    ports:
+      - "5030:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./services/property-management:/home/app
+      - /home/app/node_modules
+
+  # Work order service
+  work-order:
+    build:
+      context: ./services/work-order
+      dockerfile: Dockerfile
+    ports:
+      - "5070:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./services/work-order:/home/app
+      - /home/app/node_modules
+
+  # Communication service
+  communication:
+    build:
+      context: ./services/communication
+      dockerfile: Dockerfile
+    ports:
+      - "5040:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./services/communication:/home/app
+      - /home/app/node_modules
+
+  # Internal portal backend
+  internal-portal-backend:
+    build:
+      context: ./apps/internal-portal/backend
+      dockerfile: Dockerfile
+    ports:
+      - "5060:80"
+    environment:
+      - NODE_ENV=development
+      - PORT=80
+    volumes:
+      - ./apps/internal-portal/backend:/home/app
+      - /home/app/node_modules
+
+  # Internal portal frontend
+  internal-portal-frontend:
+    build:
+      context: ./apps/internal-portal/frontend
+      dockerfile: Dockerfile
+      args:
+        - BACKEND_URL=http://localhost:5060
+    ports:
+      - "3000:80"
+    depends_on:
+      - internal-portal-backend
+
+  # Property tree app
+  property-tree:
+    build:
+      context: ./apps/property-tree
+      dockerfile: Dockerfile
+      args:
+        - VITE_CORE_API_URL=http://localhost:5010
+        - VITE_KEYCLOAK_URL=http://localhost:8080
+        - VITE_KEYCLOAK_CLIENT_ID=onecore
+        - VITE_KEYCLOAK_REDIRECT_URI=http://localhost:3001
+        - VITE_KEYCLOAK_REALM=onecore
+    ports:
+      - "3001:80"
+    depends_on:
+      - core
+
+networks:
+  default:
+    name: onecore-network
