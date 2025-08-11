@@ -1,4 +1,4 @@
-FROM node:23-slim as builder
+FROM node:23-slim AS builder
 
 RUN apt-get update -y && apt-get install -y openssl
 
@@ -20,7 +20,7 @@ RUN npm run generate
 RUN npm run build
 
 # Production stage
-FROM node:23-slim
+FROM node:23-slim AS runner
 
 RUN apt-get update -y && apt-get install -y openssl
 
