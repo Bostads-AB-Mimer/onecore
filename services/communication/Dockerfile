@@ -1,4 +1,4 @@
-FROM node:22-slim AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -10,8 +10,8 @@ COPY services/communication ./services/communication/
 # Install all workspace dependencies from root
 RUN npm ci --legacy-peer-deps
 
-# Build libs first (required for communication)
-RUN npm run build:libs
+# Build only types (skip utilities due to segmentation fault)
+RUN npm run build:types
 
 # Generate and build communication
 WORKDIR /app/services/communication
@@ -22,7 +22,7 @@ ENV NODE_ENV production
 RUN npm prune --production
 
 # A slimmed down runner image with only the bare necessities
-FROM node:22-slim AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 # Copy built application and dependencies
