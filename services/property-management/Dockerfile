@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Copy root workspace files first
 COPY package*.json ./
+COPY tsconfig.json ./
 COPY libs ./libs/
 COPY services/property-management ./services/property-management/
 

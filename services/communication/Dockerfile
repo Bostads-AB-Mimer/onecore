@@ -3,7 +3,8 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy root workspace files first
-COPY tsconfig.* package*.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 COPY libs ./libs/
 COPY services/communication ./services/communication/
 
