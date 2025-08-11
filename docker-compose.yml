@@ -61,16 +61,16 @@ services:
   # Work order service
   work-order:
     build:
-      context: services/work-order
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/work-order/Dockerfile
     ports:
       - "5070:80"
     environment:
       - NODE_ENV=development
       - PORT=80
     volumes:
-      - ./services/work-order:/home/app
-      - /home/app/node_modules
+      - ./services/work-order:/app/services/work-order
+      - /app/node_modules
 
   # Communication service
   communication:
