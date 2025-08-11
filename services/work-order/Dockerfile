@@ -10,7 +10,10 @@ COPY ../../services/work-order ./services/work-order/
 # Install all workspace dependencies from root
 RUN npm ci
 
-# Generate and build
+# Build libs first (required for work-order)
+RUN npm run build:libs
+
+# Generate and build work-order
 WORKDIR /app/services/work-order
 RUN npm run build
 
