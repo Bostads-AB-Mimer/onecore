@@ -29,11 +29,11 @@ WORKDIR /app
 # Copy built application and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/services/property-management/package*.json ./
-COPY --from=builder /app/services/property-management/build ./build
+COPY --from=builder /app/services/property-management/src ./src
 COPY --from=builder /app/services/property-management/knexfile.js ./
 COPY --from=builder /app/services/property-management/migrations ./migrations
 
 ENV PORT 80
 EXPOSE 80
 
-CMD node build/index.js
+CMD node src/index.js
