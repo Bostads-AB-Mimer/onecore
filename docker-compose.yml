@@ -29,8 +29,8 @@ services:
       - NODE_ENV=development
       - PORT=3000
     volumes:
-      - ./services/property:/app/packages/property-base
-      - /app/packages/property-base/node_modules
+      - ./services/property:/app
+      - /app/node_modules
 
   # Leasing service
   leasing:
