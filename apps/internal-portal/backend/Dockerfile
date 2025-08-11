@@ -1,12 +1,22 @@
 FROM node:18-slim AS builder
 
-WORKDIR /home/app
+WORKDIR /app
 
-# Help Docker cache npm install if neither of these files have changed
-ADD ./package.json ./package-lock.json ./
+# Copy root workspace files first
+COPY ../../package*.json ./
+COPY ../../libs ./libs/
+COPY ../../core ./core/
+COPY ../../apps/internal-portal/backend ./apps/internal-portal/backend/
+
+# Install all workspace dependencies from root
 RUN npm ci --legacy-peer-deps
 
-ADD ./ ./
+# Build libs and core first (required for internal-portal-backend)
+RUN npm run build:libs
+RUN npm run build:core
+
+# Generate and build internal-portal-backend
+WORKDIR /app/apps/internal-portal/backend
 RUN npm run build
 
 # Remove stuff in node_modules we no longer need
@@ -15,13 +25,15 @@ RUN npm prune --production
 
 # A slimmed down runner image with only the bare necessities
 FROM node:18-slim AS runner
-WORKDIR /home/app
-COPY --from=builder /home/app/node_modules ./node_modules
-COPY --from=builder /home/app/package* ./
-COPY --from=builder /home/app/build ./
-COPY --from=builder /home/app/assets ./assets
+WORKDIR /app
+
+# Copy built application and dependencies
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/internal-portal/backend/package*.json ./
+COPY --from=builder /app/apps/internal-portal/backend/build ./build
+COPY --from=builder /app/apps/internal-portal/backend/assets ./assets
 
 ENV PORT 80
 EXPOSE 80
 
-CMD node index.js
+CMD node build/index.js
