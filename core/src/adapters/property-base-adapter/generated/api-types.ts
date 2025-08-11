@@ -1106,8 +1106,8 @@ export interface components {
       code: string;
       caption: string | null;
       type: string | null;
-      propertyCode: string | null;
-      propertyName: string | null;
+      estateCode: string | null;
+      estate: string | null;
     };
     ResidenceByRentalId: {
       id: string;

@@ -100,8 +100,8 @@ export const getMaintenanceUnitsByPropertyCode = async (
       code: item.code,
       caption: item.name,
       type: item.maintenanceUnitType?.name ?? null,
-      propertyCode: item.propertyStructures[0]?.propertyCode ?? null,
-      propertyName: item.propertyStructures[0]?.propertyName ?? null,
+      estateCode: item.propertyStructures[0]?.propertyCode ?? null,
+      estate: item.propertyStructures[0]?.propertyName ?? null,
     }
   })
 }
