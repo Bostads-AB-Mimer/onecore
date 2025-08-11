@@ -33,8 +33,8 @@ services:
   # Leasing service
   leasing:
     build:
-      context: services/leasing
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/leasing/Dockerfile
     ports:
       - "5020:80"
     environment:
@@ -47,8 +47,8 @@ services:
   # Property management service
   property-management:
     build:
-      context: services/property-management
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/property-management/Dockerfile
     ports:
       - "5030:80"
     environment:
@@ -75,8 +75,8 @@ services:
   # Communication service
   communication:
     build:
-      context: services/communication
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/communication/Dockerfile
     ports:
       - "5040:80"
     environment:
@@ -89,8 +89,8 @@ services:
   # Internal portal backend
   internal-portal-backend:
     build:
-      context: apps/internal-portal/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/internal-portal/backend/Dockerfile
     ports:
       - "5060:80"
     environment:
