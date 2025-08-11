@@ -45,7 +45,7 @@ export const sendEmail = async (message: Email) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error(error)
+    logger.error(error as Error)
     throw error
   }
 }
@@ -83,7 +83,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error(error)
+    logger.error(error as Error)
     throw error
   }
 }
@@ -121,7 +121,7 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error('Error sending SMS:', error)
+    logger.error('Error sending SMS:', error as Error)
     throw error
   }
 }
@@ -149,7 +149,7 @@ export const sendParkingSpaceAssignedToOther = async (
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error(error)
+    logger.error(error as Error)
     throw error
   }
 }
@@ -211,7 +211,7 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error('Error sending SMS:', error)
+    logger.error('Error sending SMS:', error as Error)
     throw error
   }
 }
