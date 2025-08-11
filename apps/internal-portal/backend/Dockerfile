@@ -3,10 +3,10 @@ FROM node:18-slim AS builder
 WORKDIR /app
 
 # Copy root workspace files first
-COPY ../../package*.json ./
-COPY ../../libs ./libs/
-COPY ../../core ./core/
-COPY ../../apps/internal-portal/backend ./apps/internal-portal/backend/
+COPY package*.json ./
+COPY libs ./libs/
+COPY core ./core/
+COPY apps/internal-portal/backend ./apps/internal-portal/backend/
 
 # Install all workspace dependencies from root
 RUN npm ci --legacy-peer-deps
