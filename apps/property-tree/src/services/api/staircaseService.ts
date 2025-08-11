@@ -4,7 +4,7 @@ import type { Staircase } from '../types'
 export const staircaseService = {
   // Get all staircases for a building
   async getByBuildingCode(buildingCode: string): Promise<Staircase[]> {
-    const { data, error } = await GET('/propertyBase/staircases', {
+    const { data, error } = await GET('/property-base/staircases', {
       params: { query: { buildingCode } },
     })
     if (error) throw error

@@ -8,7 +8,7 @@ async function getByRentalPropertyId(
   params: { includeContacts?: boolean }
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
-    '/leases/by-rental-property-id/{rentalPropertyId}',
+    '/leasing/leases/by-rental-property-id/{rentalPropertyId}',
     {
       params: { path: { rentalPropertyId }, query: params },
     }
