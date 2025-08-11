@@ -11,8 +11,8 @@ COPY services/leasing ./services/leasing/
 # Install all workspace dependencies from root
 RUN npm ci
 
-# Build libs first (required for leasing)
-RUN npm run build:libs
+# Build only types (skip utilities due to EPIPE error)
+RUN npm run build:types
 
 # Generate and build leasing
 WORKDIR /app/services/leasing

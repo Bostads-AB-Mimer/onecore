@@ -11,8 +11,8 @@ COPY services/work-order ./services/work-order/
 # Install all workspace dependencies from root
 RUN npm ci
 
-# Build libs first (required for work-order)
-RUN npm run build:libs
+# Build only types (skip utilities due to EPIPE error)
+RUN npm run build:types
 
 # Generate and build work-order
 WORKDIR /app/services/work-order
