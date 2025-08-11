@@ -1,4 +1,4 @@
-FROM node:18-slim AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ ENV NODE_ENV production
 RUN npm prune --production
 
 # A slimmed down runner image with only the bare necessities
-FROM node:18-slim AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 # Copy built application and dependencies
