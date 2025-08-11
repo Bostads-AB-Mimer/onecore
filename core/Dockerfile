@@ -34,4 +34,4 @@ COPY --from=builder /app/core/build ./build
 ENV PORT 80
 EXPOSE 80
 
-CMD node build/src/index.js
+CMD node build/index.js
