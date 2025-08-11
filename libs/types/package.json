@@ -18,6 +18,9 @@
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
   "peerDependencies": {
     "zod": "^3.23.8"
   },
