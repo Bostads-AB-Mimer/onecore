@@ -2,8 +2,8 @@ services:
   # Core services
   core:
     build:
-      context: core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: core/Dockerfile
     ports:
       - "5010:80"
     environment:

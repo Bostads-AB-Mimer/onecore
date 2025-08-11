@@ -1,12 +1,21 @@
 FROM node:18-slim AS builder
 
-WORKDIR /home/app
+WORKDIR /app
 
-# Help Docker cache npm install if neither of these files have changed
-ADD ./package.json ./package-lock.json ./
+# Copy root workspace files first
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY libs ./libs/
+COPY core ./core/
+
+# Install all workspace dependencies from root
 RUN npm ci
 
-ADD ./ ./
+# Build only types (skip utilities due to EPIPE error)
+RUN npm run build:types
+
+# Generate and build core
+WORKDIR /app/core
 RUN npm run build
 
 # Remove stuff in node_modules we no longer need
@@ -15,12 +24,14 @@ RUN npm prune --production
 
 # A slimmed down runner image with only the bare necessities
 FROM node:18-slim AS runner
-WORKDIR /home/app
-COPY --from=builder /home/app/node_modules ./node_modules
-COPY --from=builder /home/app/package* ./
-COPY --from=builder /home/app/build/src ./
+WORKDIR /app
+
+# Copy built application and dependencies
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/core/package*.json ./
+COPY --from=builder /app/core/build ./build
 
 ENV PORT 80
 EXPOSE 80
 
-CMD node index.js
+CMD node build/src/index.js
