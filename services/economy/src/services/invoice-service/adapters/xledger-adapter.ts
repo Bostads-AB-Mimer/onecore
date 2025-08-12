@@ -337,6 +337,8 @@ export const createCustomerLedgerRow = async (
 
   customerInvoiceAmount = +customerInvoiceAmount.toFixed(2)
 
+  console.log(invoiceDataRows[0])
+
   return {
     voucherType: 'AR',
     voucherNo:
