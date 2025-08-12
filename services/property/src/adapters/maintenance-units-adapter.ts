@@ -113,8 +113,8 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
       code: item.maintenanceUnit?.code,
       caption: item?.maintenanceUnit?.name,
       type: item.maintenanceUnit?.maintenanceUnitType?.name,
-      propertyCode: rentalPropertyInfoTrimmed.propertyCode,
-      propertyName: rentalPropertyInfoTrimmed.propertyName,
+      estateCode: rentalPropertyInfoTrimmed.propertyCode,
+      estate: rentalPropertyInfoTrimmed.propertyName,
     }
   })
 
