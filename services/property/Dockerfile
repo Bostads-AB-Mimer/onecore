@@ -1,22 +1,38 @@
-FROM node:23-slim
+FROM node:23-slim AS builder
 
 RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-# Copy package files for dependency installation
+# Copy root workspace files first
 COPY package*.json ./
-COPY packages/property-base/package*.json ./packages/property-base/
+COPY tsconfig.json ./
+COPY libs ./libs/
+COPY services/property ./services/property/
+# Copy property's own tsconfig.json
+COPY services/property/tsconfig.json ./services/property/
 
-# Install dependencies
+# Install all workspace dependencies from root
 RUN npm ci
 
-# Copy source files
-COPY packages/property-base ./packages/property-base
-
 # Generate Prisma client and build
-WORKDIR /app/packages/property-base
-RUN npm run generate
+WORKDIR /app/services/property
+RUN npm run prisma:generate
+RUN npm run build
+
+# Production stage
+FROM node:23-slim AS runner
+
+RUN apt-get update -y && apt-get install -y openssl
+
+WORKDIR /app
+
+# Copy built application and dependencies
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/services/property/package*.json ./
+COPY --from=builder /app/services/property/*.js ./
+COPY --from=builder /app/services/property/src ./src
+COPY --from=builder /app/services/property/prisma ./prisma
 
 EXPOSE 3000
 
