@@ -1,11 +1,17 @@
-import { Next, ParameterizedContext } from 'koa'
+import { ExtendableContext, Next, Request } from 'koa'
 import { z } from 'zod'
 
-export function parseRequest<T extends z.ZodType, Q extends z.ZodType>(params: {
-  body?: T
-  query?: Q
-}) {
-  return function (ctx: ParameterizedContext, next: Next) {
+type ContextWithParsedRequestBody<T, Q> = ExtendableContext & {
+  request: Request & {
+    parsedBody: z.infer<T>
+    parsedQuery: z.infer<Q>
+  }
+}
+export function parseRequest<
+  T extends z.ZodTypeAny,
+  Q extends z.ZodTypeAny,
+>(params: { body?: T; query?: Q }) {
+  return function (ctx: ContextWithParsedRequestBody<T, Q>, next: Next) {
     if (params.body) {
       const parseResult = params.body.safeParse(ctx.request.body)
       if (!parseResult.success) {
@@ -19,7 +25,7 @@ export function parseRequest<T extends z.ZodType, Q extends z.ZodType>(params: {
         }
         return
       }
-      ctx.state.parsedBody = parseResult.data
+      ctx.request.parsedBody = parseResult.data
     }
 
     if (params.query) {
@@ -35,7 +41,7 @@ export function parseRequest<T extends z.ZodType, Q extends z.ZodType>(params: {
         }
         return
       }
-      ctx.state.parsedQuery = parseResult.data
+      ctx.request.parsedQuery = parseResult.data
     }
 
     return next()
