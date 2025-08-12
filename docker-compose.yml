@@ -115,8 +115,8 @@ services:
   # Property tree app
   property-tree:
     build:
-      context: apps/property-tree
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/property-tree/Dockerfile
       args:
         - VITE_CORE_API_URL=http://localhost:5010
         - VITE_KEYCLOAK_URL=http://localhost:8080

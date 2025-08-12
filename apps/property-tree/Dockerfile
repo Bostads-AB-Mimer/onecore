@@ -2,15 +2,19 @@ FROM node:23-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files for dependency installation
+# Copy root workspace files first
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY apps/property-tree ./apps/property-tree/
+
+# Install all workspace dependencies from root
+RUN npm ci
+
+# Generate and build property-tree
+WORKDIR /app/apps/property-tree
 
 # Install dependencies (use npm install to handle version mismatches)
 RUN npm install
-
-# Copy source files
-COPY . .
 
 ARG VITE_CORE_API_URL
 ARG VITE_KEYCLOAK_URL
@@ -31,7 +35,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/property-tree/dist /usr/share/nginx/html
 
 EXPOSE 80
 
