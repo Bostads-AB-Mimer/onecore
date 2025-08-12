@@ -73,7 +73,7 @@ export const routes = (router: KoaRouter) => {
     '(.*)/properties',
     parseRequest({ query: propertiesQueryParamsSchema }),
     async (ctx) => {
-      const { companyCode, tract } = ctx.request.parsedQuery
+      const { companyCode, tract } = ctx.state.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
       logger.info(
@@ -138,7 +138,7 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ query: PropertySearchQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { q } = ctx.request.parsedQuery
+      const { q } = ctx.state.parsedQuery
 
       try {
         const properties = await searchProperties(q)
