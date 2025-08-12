@@ -77,6 +77,7 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
 
   const invoices = await db('krfkh')
     .innerJoin('revrt', 'krfkh.keyrevrt', 'revrt.keyrevrt')
+    .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
     .whereIn('invoice', invoiceNumbers)
     .where('name', 'HYRA')
     .orWhere('name', 'HYRA INTERN')
@@ -94,9 +95,11 @@ const getRentArticleDetails = async (
 ): Promise<RentArticleDetails> => {
   const rentArticleQuery = db('cmart')
     .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
+    .innerJoin('repsr', 'repsk.keyrepsr', 'repsr.keyrepsr')
     .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
+    .andWhere('repsr.keycode', 'FADBT_HYRA')
     .andWhere('keyrektk', 'INTAKT')
-    .andWhere('year', year)
+    .andWhere('repsk.year', year)
     .andWhere('keycmuni', 'month')
     .distinct()
 

@@ -23,6 +23,7 @@ import {
 } from './adapters/xledger-adapter'
 
 const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
+  console.log('invoice', invoice)
   const fromDateString = xledgerDateString(invoice.fromdate as Date)
   const year = fromDateString.substring(0, 4)
   const roundOffInformation = await getRoundOffInformation(year)
@@ -36,7 +37,11 @@ const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
     invoiceRowText: 'Öresutjämning',
     fromDate: fromDateString,
     toDate: xledgerDateString(invoice.todate as Date),
-    contractCode: (invoice.reference as string).split('/')[0],
+    contractCode: (invoice.reference as string).trimEnd(),
+    totalAccount: 2970,
+    ledgerAccount: 1530,
+    contactCode: (invoice.cmctckod as string).trimEnd(),
+    tenantName: (invoice.cmctcben as string).trimEnd(),
   }
 }
 
@@ -224,6 +229,9 @@ export const createAggregateTotalRow = (
     acc.amount = (acc.amount as number) - (row.amount as number)
     return acc
   }, accumulator)
+
+  totalRow.amount =
+    Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
   return totalRow
 }
