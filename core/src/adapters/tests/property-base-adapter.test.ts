@@ -470,7 +470,7 @@ describe('@onecore/property-adapter', () => {
 
   describe('getMaintenanceUnitsByRentalId', () => {
     it('returns maintenance units for a rental property', async () => {
-      const maintenanceUnitsMock = factory.maintenanceUnit.buildList(3)
+      const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
 
       mockServer.use(
         http.get(
@@ -512,7 +512,7 @@ describe('@onecore/property-adapter', () => {
 
   describe('getMaintenanceUnitsByBuildingCode', () => {
     it('returns maintenance units for a building', async () => {
-      const maintenanceUnitsMock = factory.maintenanceUnit.buildList(3)
+      const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
 
       mockServer.use(
         http.get(
