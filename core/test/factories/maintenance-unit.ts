@@ -9,6 +9,6 @@ export const MaintenanceUnitFactory = Factory.define<
   code: '111111',
   caption: 'TVÄTTSTUGA Testgatan 1',
   type: 'Tvättstuga',
-  propertyCode: '01234',
-  propertyName: 'TESTET 1',
+  estateCode: '01234',
+  estate: 'TESTET 1',
 }))
