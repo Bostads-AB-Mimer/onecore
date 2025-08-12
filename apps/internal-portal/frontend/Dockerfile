@@ -11,8 +11,8 @@ COPY apps/internal-portal/frontend ./apps/internal-portal/frontend/
 # Install all workspace dependencies from root
 RUN npm ci
 
-# Build only types (skip utilities due to EPIPE error)
-RUN npm run build:types
+# Build libs first (required for internal-portal-frontend)
+RUN npm run build:libs
 
 # Generate and build internal-portal-frontend
 WORKDIR /app/apps/internal-portal/frontend
