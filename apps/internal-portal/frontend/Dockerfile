@@ -8,8 +8,8 @@ COPY tsconfig.json ./
 COPY libs ./libs/
 COPY apps/internal-portal/frontend ./apps/internal-portal/frontend/
 
-# Install all workspace dependencies from root
-RUN npm ci
+# Install all workspace dependencies from root (use npm install to avoid segmentation fault)
+RUN npm install --legacy-peer-deps
 
 # Build libs first (required for internal-portal-frontend)
 RUN npm run build:libs
