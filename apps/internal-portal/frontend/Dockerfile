@@ -2,15 +2,20 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy package files for dependency installation
+# Copy root workspace files first
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY libs ./libs/
+COPY apps/internal-portal/frontend ./apps/internal-portal/frontend/
 
-# Install dependencies
+# Install all workspace dependencies from root
 RUN npm ci
 
-# Copy source files
-COPY . .
+# Build only types (skip utilities due to EPIPE error)
+RUN npm run build:types
+
+# Generate and build internal-portal-frontend
+WORKDIR /app/apps/internal-portal/frontend
 
 ARG BACKEND_URL
 ENV VITE_BACKEND_URL=${BACKEND_URL}
@@ -18,5 +23,5 @@ ENV VITE_BACKEND_URL=${BACKEND_URL}
 RUN npm run build
 
 FROM nginx:alpine AS runner
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/apps/internal-portal/frontend/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/internal-portal/frontend/nginx.conf /etc/nginx/conf.d/default.conf
