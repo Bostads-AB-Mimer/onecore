@@ -103,8 +103,8 @@ services:
   # Internal portal frontend
   internal-portal-frontend:
     build:
-      context: apps/internal-portal/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/internal-portal/frontend/Dockerfile
       args:
         - BACKEND_URL=http://localhost:5060
     ports:
