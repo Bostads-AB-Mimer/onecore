@@ -57,7 +57,7 @@ export const routes = (router: KoaRouter) => {
     ['(.*)/construction-parts', '(.*)/construction-parts/'],
     parseRequest({ query: constructionPartsQueryParamsSchema }),
     async (ctx) => {
-      const { buildingCode } = ctx.state.parsedQuery
+      const { buildingCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
