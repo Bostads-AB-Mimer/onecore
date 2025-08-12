@@ -38,6 +38,9 @@ COPY --from=builder /app/libs ./libs
 COPY --from=builder /app/services/property ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/libs ./libs
+# Copy built libs to node_modules so they can be resolved
+COPY --from=builder /app/libs/types/dist ./node_modules/@onecore/types/dist
+COPY --from=builder /app/libs/utilities/dist ./node_modules/@onecore/utilities/dist
 
 EXPOSE 3000
 
