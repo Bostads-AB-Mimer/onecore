@@ -16,6 +16,7 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
+  RentalObject,
   Invoice,
   Lease,
 } from '@onecore/types'
@@ -565,6 +566,23 @@ const removeComment = async (
   }
 }
 
+const getVacantParkingSpaces = async (): Promise<
+  AdapterResult<RentalObject[], unknown>
+> => {
+  try {
+    const response = await getFromCore<{ content: RentalObject[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/vacant-parkingspaces`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    if (e instanceof AxiosError && e.response?.status === 401) {
+      return { ok: false, err: 'unauthorized', statusCode: 401 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 async function getInvoicesByContactCode(
   contactCode: string
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
@@ -626,6 +644,7 @@ export {
   getActiveOfferByListingId,
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
+  getVacantParkingSpaces,
   getInvoicesByContactCode,
   getLeasesByContactCode,
 }
