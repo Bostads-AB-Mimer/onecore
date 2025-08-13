@@ -16,7 +16,7 @@ import { logger } from '@onecore/utilities'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /leasing/listings:
+   * /listings:
    *   get:
    *     summary: Get listings
    *     tags:
@@ -57,7 +57,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/listings', async (ctx) => {
+  router.get('/listings', async (ctx) => {
     try {
       const metadata = generateRouteMetadata(ctx)
 
