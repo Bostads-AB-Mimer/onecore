@@ -158,9 +158,18 @@ export const createOfferForInternalParkingSpace = async (
       ...eligibleApplicant,
       status: ApplicantStatus.Offered,
     }
+
+    const offerExpiresDate = utils.date.addBusinessDays(new Date(), 3)
+    // Set swedish time (CET/CEST) 23:59:59
+    offerExpiresDate.setHours(23, 59, 59, 0)
+    // Convert to UTC time
+    const utcOfferExpiresDate = new Date(
+      offerExpiresDate.getTime() - offerExpiresDate.getTimezoneOffset() * 60000
+    )
+
     const offer = await leasingAdapter.createOffer({
       applicantId: eligibleApplicant.id,
-      expiresAt: utils.date.addBusinessDays(new Date(), 3),
+      expiresAt: utcOfferExpiresDate,
       listingId: listing.id,
       status: OfferStatus.Active,
       selectedApplicants: [updatedApplicant, ...activeApplicants].map(

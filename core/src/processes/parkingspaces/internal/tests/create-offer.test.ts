@@ -11,7 +11,16 @@ import * as factory from '../../../../../test/factories'
 import { ProcessStatus } from '../../../../common/types'
 
 describe('createOfferForInternalParkingSpace', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({
+      advanceTimers: false,
+      doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'nextTick'],
+    })
+  })
+
   afterEach(() => {
+    jest.useRealTimers()
+
     jest.clearAllMocks()
     jest.resetAllMocks()
   })
@@ -382,5 +391,111 @@ describe('createOfferForInternalParkingSpace', () => {
     })
 
     expect(updateOfferSentAtSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('creates offer that expires at midnight 3 business days from a monday', async () => {
+    //set system time to 2025-08-11T06:00:00Z which is a monday
+    const startTime = new Date('2025-08-11T06:00:00Z')
+    jest.setSystemTime(startTime)
+
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({
+          rentalObjectCode: listing.rentalObjectCode,
+        })
+        .build(),
+    })
+
+    jest
+      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedApplicant.buildList(1),
+      })
+    jest
+      .spyOn(leasingAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValueOnce(null)
+
+    jest
+      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
+      .mockResolvedValueOnce(null)
+
+    const createOfferSpy = jest
+      .spyOn(leasingAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+
+    await createOfferForInternalParkingSpace(123)
+
+    expect(createOfferSpy).toHaveBeenCalledTimes(1)
+
+    const expiresAt = createOfferSpy.mock.calls[0][0].expiresAt
+    expect(expiresAt).toBeInstanceOf(Date)
+    expect(expiresAt.getUTCFullYear()).toBe(2025)
+    expect(expiresAt.getUTCMonth()).toBe(7) // August is 7 (0-indexed)
+    expect(expiresAt.getUTCDate()).toBe(14)
+    expect(expiresAt.getUTCHours()).toBe(23)
+    expect(expiresAt.getUTCMinutes()).toBe(59)
+  })
+
+  it('creates offer that expires at midnight 3 business days from a friday', async () => {
+    //set system time to 2025-08-08T06:00:00Z which is a friday
+    const startTime = new Date('2025-08-08T06:00:00Z')
+    jest.setSystemTime(startTime)
+
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({
+          rentalObjectCode: listing.rentalObjectCode,
+        })
+        .build(),
+    })
+
+    jest
+      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedApplicant.buildList(1),
+      })
+    jest
+      .spyOn(leasingAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValueOnce(null)
+
+    jest
+      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
+      .mockResolvedValueOnce(null)
+
+    const createOfferSpy = jest
+      .spyOn(leasingAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+
+    await createOfferForInternalParkingSpace(123)
+
+    expect(createOfferSpy).toHaveBeenCalledTimes(1)
+
+    const expiresAt = createOfferSpy.mock.calls[0][0].expiresAt
+    expect(expiresAt).toBeInstanceOf(Date)
+    expect(expiresAt.getUTCFullYear()).toBe(2025)
+    expect(expiresAt.getUTCMonth()).toBe(7) // August is 7 (0-indexed)
+    expect(expiresAt.getUTCDate()).toBe(13)
+    expect(expiresAt.getUTCHours()).toBe(23)
+    expect(expiresAt.getUTCMinutes()).toBe(59)
   })
 })
