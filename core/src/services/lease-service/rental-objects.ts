@@ -13,7 +13,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /leasing/vacant-parkingspaces:
+   * /vacant-parkingspaces:
    *   get:
    *     summary: Get all vacant parking spaces
    *     tags:
@@ -72,7 +72,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/vacant-parkingspaces', async (ctx) => {
+  router.get('/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getAllVacantParkingSpaces()
     if (!result.ok) {
@@ -87,7 +87,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/rental-objects/by-code/{rentalObjectCode}:
+   * /rental-objects/by-code/{rentalObjectCode}:
    *   get:
    *     summary: Get a rental object by code
    *     description: Fetches a rental object by Rental Object Code.
@@ -153,22 +153,19 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '/leasing/rental-objects/by-code/:rentalObjectCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const rentalObjectCode = ctx.params.rentalObjectCode
-      const result =
-        await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
+  router.get('/rental-objects/by-code/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+    const result =
+      await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
 
-      if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Unknown error', ...metadata }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: 'Unknown error', ...metadata }
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
 }

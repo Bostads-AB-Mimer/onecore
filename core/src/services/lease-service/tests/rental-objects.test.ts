@@ -16,7 +16,7 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 
-describe('GET /leasing/vacant-parkingspaces', () => {
+describe('GET /vacant-parkingspaces', () => {
   it('responds with 500 if adapter fails', async () => {
     jest
       .spyOn(leasingAdapter, 'getAllVacantParkingSpaces')
@@ -25,9 +25,7 @@ describe('GET /leasing/vacant-parkingspaces', () => {
         err: 'get-all-vacant-parking-spaces-failed',
       })
 
-    const res = await request(app.callback()).get(
-      '/leasing/vacant-parkingspaces'
-    )
+    const res = await request(app.callback()).get('/vacant-parkingspaces')
 
     expect(res.status).toBe(500)
     expect(res.body).toMatchObject({ error: expect.any(String) })
@@ -38,9 +36,7 @@ describe('GET /leasing/vacant-parkingspaces', () => {
       .spyOn(leasingAdapter, 'getAllVacantParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [] })
 
-    const res = await request(app.callback()).get(
-      '/leasing/vacant-parkingspaces'
-    )
+    const res = await request(app.callback()).get('/vacant-parkingspaces')
 
     expect(res.status).toBe(200)
     expect(res.body.content).toEqual([])
@@ -53,9 +49,7 @@ describe('GET /leasing/vacant-parkingspaces', () => {
       .spyOn(leasingAdapter, 'getAllVacantParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: vacantParkingSpaces })
 
-    const res = await request(app.callback()).get(
-      '/leasing/vacant-parkingspaces'
-    )
+    const res = await request(app.callback()).get('/vacant-parkingspaces')
 
     expect(res.status).toBe(200)
     expect(res.body.content).toEqual(

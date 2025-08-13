@@ -85,7 +85,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/leases/by-rental-property-id/{rentalPropertyId}:
+   * /leases/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get leases with related entities for a specific rental property id
    *     tags:
@@ -137,45 +137,42 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '/leasing/leases/by-rental-property-id/:rentalPropertyId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const queryParams = GetLeasesByRentalPropertyIdQueryParams.safeParse(
-        ctx.query
+  router.get('/leases/by-rental-property-id/:rentalPropertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = GetLeasesByRentalPropertyIdQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        ctx.params.rentalPropertyId,
+        queryParams.data
       )
 
-      if (!queryParams.success) {
-        ctx.status = 400
-        ctx.body = {
-          reason: 'Invalid query parameters',
-          error: queryParams.error,
-          ...metadata,
-        }
-        return
+      ctx.status = 200
+      ctx.body = {
+        content: leases.map(mapLease),
+        ...metadata,
       }
-
-      try {
-        const leases = await leasingAdapter.getLeasesForPropertyId(
-          ctx.params.rentalPropertyId,
-          queryParams.data
-        )
-
-        ctx.status = 200
-        ctx.body = {
-          content: leases.map(mapLease),
-          ...metadata,
-        }
-      } catch (err) {
-        logger.error({ err, metadata }, 'Error fetching leases from leasing')
-        ctx.status = 500
-      }
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching leases from leasing')
+      ctx.status = 500
     }
-  )
+  })
 
   /**
    * @swagger
-   * /leasing/leases/by-pnr/{pnr}:
+   * /leases/by-pnr/{pnr}:
    *   get:
    *     summary: Get leases with related entities for a specific Personal Number (PNR)
    *     tags:
@@ -200,7 +197,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/leases/by-pnr/:pnr', async (ctx) => {
+  router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await getLeasesWithRelatedEntitiesForPnr(
       ctx.params.pnr
@@ -214,7 +211,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/leases/by-contact-code/{contactCode}:
+   * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases with related entities for a specific contact code
    *     tags:
@@ -239,7 +236,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/leases/by-contact-code/:contactCode', async (ctx) => {
+  router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getLeasesForContactCode(
       ctx.params.contactCode,
@@ -258,7 +255,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/consumer-reports/by-pnr/{pnr}:
+   * /consumer-reports/by-pnr/{pnr}:
    *   get:
    *     summary: Get consumer report for a specific Personal Number (PNR)
    *     tags:
@@ -281,7 +278,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/consumer-reports/by-pnr/:pnr', async (ctx) => {
+  router.get('/consumer-reports/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getCreditInformation(
       ctx.params.pnr
@@ -295,7 +292,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/by-pnr/{pnr}:
+   * /contacts/by-pnr/{pnr}:
    *   get:
    *     summary: Get contact information for a specific Personal Number (PNR)
    *     tags:
@@ -318,7 +315,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/contacts/by-pnr/:pnr', async (ctx) => {
+  router.get('/contacts/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getContactForPnr(ctx.params.pnr)
 
@@ -330,7 +327,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/{contactCode}/offers:
+   * /contacts/{contactCode}/offers:
    *   get:
    *     summary: Get offers for a contact
    *     tags:
@@ -358,7 +355,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
 
-  router.get('/leasing/contacts/:contactCode/offers', async (ctx) => {
+  router.get('/contacts/:contactCode/offers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getOffersForContact(ctx.params.contactCode)
     if (!res.ok) {
@@ -382,7 +379,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/offers/{offerId}/applicants/{contactCode}:
+   * /offers/{offerId}/applicants/{contactCode}:
    *   get:
    *     summary: Get a specific offer for an applicant
    *     description: Retrieve details of a specific offer associated with an applicant using contact code and offer ID.
@@ -416,31 +413,28 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
 
-  router.get(
-    '/leasing/offers/:offerId/applicants/:contactCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const res = await leasingAdapter.getOfferByContactCodeAndOfferId(
-        ctx.params.contactCode,
-        ctx.params.offerId
-      )
-      if (!res.ok) {
-        ctx.status = res.err === 'not-found' ? 404 : 500
-        ctx.body = { error: res.err, ...metadata }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = {
-        content: res.data,
-        ...metadata,
-      }
+  router.get('/offers/:offerId/applicants/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const res = await leasingAdapter.getOfferByContactCodeAndOfferId(
+      ctx.params.contactCode,
+      ctx.params.offerId
+    )
+    if (!res.ok) {
+      ctx.status = res.err === 'not-found' ? 404 : 500
+      ctx.body = { error: res.err, ...metadata }
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = {
+      content: res.data,
+      ...metadata,
+    }
+  })
 
   /**
    * @swagger
-   * /leasing/offers/by-listing-id/{listingId}:
+   * /offers/by-listing-id/{listingId}:
    *   get:
    *     summary: Get offers for a specific listing
    *     description: Get all offers for a listing.
@@ -462,7 +456,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('/leasing/offers/by-listing-id/:listingId', async (ctx) => {
+  router.get('/offers/by-listing-id/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getOffersByListingId(
       Number.parseInt(ctx.params.listingId)
@@ -480,7 +474,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/offers/by-listing-id/{listingId}/active:
+   * /offers/by-listing-id/{listingId}/active:
    *   get:
    *     summary: Gets active offer for a specific listing
    *     description: Get an offer for a listing.
@@ -502,7 +496,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('/leasing/offers/by-listing-id/:listingId/active', async (ctx) => {
+  router.get('/offers/by-listing-id/:listingId/active', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getActiveOfferByListingId(
       Number.parseInt(ctx.params.listingId)
@@ -526,7 +520,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/search:
+   * /contacts/search:
    *   get:
    *     summary: Search contacts by PNR or contact code
    *     tags:
@@ -553,7 +547,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/contacts/search', async (ctx) => {
+  router.get('/contacts/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['q'])
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
@@ -574,7 +568,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/by-contact-code/{contactCode}:
+   * /contacts/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get contact by contact code
    *     tags:
@@ -597,7 +591,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/contacts/by-contact-code/:contactCode', async (ctx) => {
+  router.get('/contacts/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getContactByContactCode(
       ctx.params.contactCode
@@ -624,7 +618,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/tenants/by-contact-code/{contactCode}:
+   * /tenants/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get tenant by contact code
    *     tags:
@@ -655,7 +649,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/tenants/by-contact-code/:contactCode', async (ctx) => {
+  router.get('/tenants/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getTenantByContactCode(
       ctx.params.contactCode
@@ -717,7 +711,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/by-phone-number/{pnr}:
+   * /contacts/by-phone-number/{pnr}:
    *   get:
    *     summary: Get contact by phone number
    *     tags:
@@ -740,7 +734,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/contacts/by-phone-number/:pnr', async (ctx) => {
+  router.get('/contacts/by-phone-number/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.getContactByPhoneNumber(
       ctx.params.pnr
@@ -754,7 +748,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/leases/{id}:
+   * /leases/{id}:
    *   get:
    *     summary: Get lease by ID
    *     tags:
@@ -780,7 +774,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/leases/:id', async (ctx) => {
+  router.get('/leases/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await getLeaseWithRelatedEntities(ctx.params.id)
 
@@ -792,7 +786,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/{listingId}/applicants/details:
+   * /listings/{listingId}/applicants/details:
    *   get:
    *     summary: Get listing by ID with detailed applicants
    *     tags:
@@ -815,7 +809,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/listings/:listingId/applicants/details', async (ctx) => {
+  router.get('/listings/:listingId/applicants/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getDetailedApplicantsByListingId(
       Number(ctx.params.listingId)
@@ -839,7 +833,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/{id}:
+   * /listings/{id}:
    *   get:
    *     summary: Get listing by ID
    *     tags:
@@ -862,7 +856,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/listings/:id', async (ctx) => {
+  router.get('/listings/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = (await leasingAdapter.getListingByListingId(
       Number.parseInt(ctx.params.id)
@@ -898,7 +892,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings-with-applicants:
+   * /listings-with-applicants:
    *   get:
    *     summary: Get listings with applicants
    *     tags:
@@ -927,7 +921,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
 
-  router.get('/leasing/listings-with-applicants', async (ctx) => {
+  router.get('/listings-with-applicants', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getListingsWithApplicants(
       ctx.querystring
@@ -971,7 +965,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/{listingId}/offers:
+   * /listings/{listingId}/offers:
    *   post:
    *     summary: Create an offer for a listing
    *     tags:
@@ -992,7 +986,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/leasing/listings/:listingId/offers', async (ctx) => {
+  router.post('/listings/:listingId/offers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result =
       await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
@@ -1014,7 +1008,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/offers/{offerId}/accept:
+   * /offers/{offerId}/accept:
    *   post:
    *     summary: Accept an offer
    *     tags:
@@ -1035,7 +1029,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/leasing/offers/:offerId/accept', async (ctx) => {
+  router.post('/offers/:offerId/accept', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await internalParkingSpaceProcesses.acceptOffer(
       parseInt(ctx.params.offerId)
@@ -1054,7 +1048,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/offers/{offerId}/deny:
+   * /offers/{offerId}/deny:
    *   post:
    *     summary: Deny an offer
    *     tags:
@@ -1075,7 +1069,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/leasing/offers/:offerId/deny', async (ctx) => {
+  router.post('/offers/:offerId/deny', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const denyOffer = await internalParkingSpaceProcesses.denyOffer(
       Number.parseInt(ctx.params.offerId)
@@ -1093,7 +1087,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/offers/{offerId}/expire:
+   * /offers/{offerId}/expire:
    *   get:
    *     summary: Expire an offer
    *     tags:
@@ -1114,7 +1108,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/offers/:offerId/expire', async (ctx) => {
+  router.get('/offers/:offerId/expire', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await internalParkingSpaceProcesses.expireOffer(
       parseInt(ctx.params.offerId)
@@ -1133,7 +1127,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/sync-internal-from-xpand:
+   * /listings/sync-internal-from-xpand:
    *   post:
    *     summary: Sync internal parking spaces from xpand to onecores database
    *     tags:
@@ -1147,7 +1141,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/leasing/listings/sync-internal-from-xpand', async (ctx) => {
+  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.syncInternalParkingSpacesFromXpand()
 
@@ -1163,7 +1157,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/applicants/by-contact-code/{contactCode}:
+   * /applicants/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get applicants by contact code
    *     tags:
@@ -1186,20 +1180,17 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '/leasing/applicants/by-contact-code/:contactCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const responseData = await leasingAdapter.getApplicantsByContactCode(
-        ctx.params.contactCode
-      )
+  router.get('/applicants/by-contact-code/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const responseData = await leasingAdapter.getApplicantsByContactCode(
+      ctx.params.contactCode
+    )
 
-      ctx.body = { content: responseData, ...metadata }
-    }
-  )
+    ctx.body = { content: responseData, ...metadata }
+  })
   /**
    * @swagger
-   * /leasing/applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}:
+   * /applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}:
    *   get:
    *     summary: Validate property rental rules for applicant
    *     description: Validate property rental rules for an applicant based on contact code and listing ID.
@@ -1285,7 +1276,7 @@ export const routes = (router: KoaRouter) => {
    *                   example: An error occurred while validating property rental rules.
    */
   router.get(
-    '/leasing/applicants/validate-rental-rules/property/:contactCode/:rentalObjectCode',
+    '/applicants/validate-rental-rules/property/:contactCode/:rentalObjectCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const res = await leasingAdapter.validatePropertyRentalRules(
@@ -1326,7 +1317,7 @@ export const routes = (router: KoaRouter) => {
   )
   /**
    * @swagger
-   * /leasing/applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}:
+   * /applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}:
    *   get:
    *     summary: Validate residential area rental rules for applicant
    *     description: Validate residential area rental rules for an applicant based on contact code and district code.
@@ -1398,7 +1389,7 @@ export const routes = (router: KoaRouter) => {
    *                   example: An error occurred while validating residential area rental rules.
    */
   router.get(
-    '/leasing/applicants/validate-rental-rules/residential-area/:contactCode/:districtCode',
+    '/applicants/validate-rental-rules/residential-area/:contactCode/:districtCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const res = await leasingAdapter.validateResidentialAreaRentalRules(
@@ -1434,7 +1425,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/applicants-with-listings/by-contact-code/{contactCode}:
+   * /applicants-with-listings/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get applicants with listings by contact code
    *     tags:
@@ -1458,7 +1449,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '/leasing/applicants-with-listings/by-contact-code/:contactCode',
+    '/applicants-with-listings/by-contact-code/:contactCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const responseData =
@@ -1472,7 +1463,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/{listingId}:
+   * /listings/{listingId}:
    *   delete:
    *     summary: Delete a Listing by ID
    *     description: Deletes a listing by it's ID.
@@ -1501,7 +1492,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    */
-  router.delete('/leasing/listings/:listingId', async (ctx) => {
+  router.delete('/listings/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.deleteListing(
       Number(ctx.params.listingId)
@@ -1525,7 +1516,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/listings/{listingId}/status:
+   * /listings/{listingId}/status:
    *   put:
    *     summary: Update a listings status by ID
    *     description: Updates a listing status by it's ID.
@@ -1564,7 +1555,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    */
-  router.put('/leasing/listings/:listingId/status', async (ctx) => {
+  router.put('/listings/:listingId/status', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.updateListingStatus(
       Number(ctx.params.listingId),
@@ -1583,7 +1574,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/applicants/{contactCode}/{listingId}:
+   * /applicants/{contactCode}/{listingId}:
    *   get:
    *     summary: Get applicant by contact code and listing ID
    *     tags:
@@ -1612,7 +1603,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leasing/applicants/:contactCode/:listingId', async (ctx) => {
+  router.get('/applicants/:contactCode/:listingId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { contactCode, listingId } = ctx.params
     const responseData =
@@ -1626,7 +1617,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/applicants/{applicantId}/by-manager:
+   * /applicants/{applicantId}/by-manager:
    *   delete:
    *     summary: Withdraw applicant by manager
    *     tags:
@@ -1663,7 +1654,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('/leasing/applicants/:applicantId/by-manager', async (ctx) => {
+  router.delete('/applicants/:applicantId/by-manager', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await leasingAdapter.withdrawApplicantByManager(
       ctx.params.applicantId
@@ -1683,7 +1674,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/applicants/{applicantId}/by-user/{contactCode}:
+   * /applicants/{applicantId}/by-user/{contactCode}:
    *   delete:
    *     summary: Withdraw applicant by user
    *     tags:
@@ -1727,7 +1718,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.delete(
-    '/leasing/applicants/:applicantId/by-user/:contactCode',
+    '/applicants/:applicantId/by-user/:contactCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const responseData = await leasingAdapter.withdrawApplicantByUser(
@@ -1750,7 +1741,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/{contactCode}/application-profile:
+   * /contacts/{contactCode}/application-profile:
    *   get:
    *     summary: Gets an application profile by contact code
    *     description: Retrieve application profile information by contact code.
@@ -1779,40 +1770,37 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve application profile information.
    */
 
-  router.get(
-    '/leasing/contacts/:contactCode/application-profile',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const profile = await leasingAdapter.getApplicationProfileByContactCode(
-        ctx.params.contactCode
-      )
+  router.get('/contacts/:contactCode/application-profile', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const profile = await leasingAdapter.getApplicationProfileByContactCode(
+      ctx.params.contactCode
+    )
 
-      if (!profile.ok) {
-        if (profile.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'not-found', ...metadata }
-          return
-        }
-
-        ctx.status = 500
-        ctx.body = { error: 'unknown', ...metadata }
+    if (!profile.ok) {
+      if (profile.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'not-found', ...metadata }
         return
       }
 
-      ctx.status = 200
-      ctx.body = {
-        content: profile.data satisfies z.infer<
-          typeof schemas.client.applicationProfile.GetApplicationProfileResponseData
-        >,
-
-        ...metadata,
-      }
+      ctx.status = 500
+      ctx.body = { error: 'unknown', ...metadata }
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = {
+      content: profile.data satisfies z.infer<
+        typeof schemas.client.applicationProfile.GetApplicationProfileResponseData
+      >,
+
+      ...metadata,
+    }
+  })
 
   /**
    * @swagger
-   * /leasing/contacts/{contactCode}/application-profile/admin:
+   * /contacts/{contactCode}/application-profile/admin:
    *   post:
    *     summary: Creates or updates an application profile by contact code
    *     description: Create or update application profile information by contact code.
@@ -1867,7 +1855,7 @@ export const routes = (router: KoaRouter) => {
   >
 
   router.post(
-    '/leasing/contacts/:contactCode/application-profile/admin',
+    '/contacts/:contactCode/application-profile/admin',
     parseRequestBody(
       schemas.admin.applicationProfile.UpdateApplicationProfileRequestParams
     ),
@@ -1951,7 +1939,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/{contactCode}/application-profile/client:
+   * /contacts/{contactCode}/application-profile/client:
    *   post:
    *     summary: Creates or updates an application profile by contact code
    *     description: Create or update application profile information by contact code.
@@ -2001,7 +1989,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to update application profile information.
    */
   router.post(
-    '/leasing/contacts/:contactCode/application-profile/client',
+    '/contacts/:contactCode/application-profile/client',
     parseRequestBody(
       schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
     ),
@@ -2055,7 +2043,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leasing/contacts/{contactCode}/{rentalObjectCode}/verify-application:
+   * /contacts/{contactCode}/{rentalObjectCode}/verify-application:
    *   get:
    *     summary: Validate max num residents.
    *     description: Checks if application is allowed based on current number of residents.
@@ -2084,7 +2072,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve application profile information.
    */
   router.get(
-    '/leasing/contacts/:contactCode/:rentalObjectCode/verify-application',
+    '/contacts/:contactCode/:rentalObjectCode/verify-application',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const applicationProfile =
