@@ -108,7 +108,7 @@ jobs:
           
   build-and-push:
     needs: [prepare, lint-and-check]
-    if: ${{ always() && needs.lint.result == 'success' }}
+    if: ${{ always() && needs.lint-and-check.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -190,6 +190,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
