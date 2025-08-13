@@ -1,12 +1,9 @@
-import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
-import * as xpandSoapAdapter from '../adapters/xpand/xpand-soap-adapter'
 import * as estateCodeAdapter from '../adapters/xpand/estate-code-adapter'
 import * as priorityListService from '../priority-list-service'
 import { leaseTypes } from '../../../constants/leaseTypes'
@@ -18,11 +15,6 @@ const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use(router.routes())
-
-// Mock until this bug is fixed: https://github.com/kulshekhar/ts-jest/issues/3397
-const LeaseStatus = {
-  Current: 0,
-}
 
 describe('getTenant', () => {
   it("returns no-valid-housing-contract if contact doesn't have a current or upcoming housing contract", async () => {
