@@ -1,6 +1,6 @@
-import { Company } from '../types'
-import { GET as LegacyGET } from './baseApi'
-import { GET } from './core/base-api'
+import { Company } from '../../types'
+import { GET as LegacyGET } from '../baseApi'
+import { GET } from './base-api'
 
 export const companyService = {
   // Get all companies
