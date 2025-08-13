@@ -139,13 +139,23 @@ jobs:
       - name: Render build_args
         id: render-build-args
         env:
-          BUILD_ARGS_JSON: ${{ needs.prepare.outputs.build_type == 'release'
-                               && toJSON(matrix.build_args.release || '{}')
-                               || toJSON(matrix.build_args.test || '{}') }}
+          BUILD_TYPE:  ${{ needs.prepare.outputs.build_type }}
+          RELEASE_BUILD_ARGS: ${{ (matrix.build_args.release && toJSON(matrix.build_args.release)) }}
+          TEST_BUILD_ARGS: ${{ (matrix.build_args.test && toJSON(matrix.build_args.test)) }}
         run: |
-          printf "build_args<<EOF\n" >> "$GITHUB_OUTPUT"
-          echo "$BUILD_ARGS_JSON" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' >> "$GITHUB_OUTPUT"
-          printf "EOF\n" >> "$GITHUB_OUTPUT"
+          if [ "${BUILD_TYPE}" == "release" ]; then
+            BUILD_ARGS_JSON="${RELEASE_BUILD_ARGS}"
+          else
+            BUILD_ARGS_JSON="${TEST_BUILD_ARGS}"
+          fi
+
+          if [ -n "${BUILD_ARGS_JSON}" ]; then
+            {
+              printf "build_args<<EOF\n"
+              echo "$BUILD_ARGS_JSON" | jq -r 'to_entries | .[]? | "\(.key)=\(.value)"'
+              printf "EOF\n"
+            } >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push ${{ steps.meta.outputs.tags }}
         uses: docker/build-push-action@v5
