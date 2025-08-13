@@ -10,6 +10,10 @@ on:
       - v*.*.*
 
 jobs:
+  lint-and-check:
+    uses: ./.github/workflows/lint.yaml
+    secrets: inherit
+
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -102,7 +106,8 @@ jobs:
           fi
           
   build-and-push:
-    needs: [prepare]
+    needs: [prepare, lint-and-check]
+    if: ${{ always() && needs.lint.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
