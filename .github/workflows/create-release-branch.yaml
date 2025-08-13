@@ -43,7 +43,7 @@ jobs:
         run: |
           if [[ -n "${{ github.event.inputs.override_version }}" ]]; then
             new_version="${{ github.event.inputs.override_version }}"
-            npm version "$new_version" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
+            npm version "$new_version" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root --allow-same-version
           else
             npm version minor --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
             new_version=$(jq -r .version package.json)
