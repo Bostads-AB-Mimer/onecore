@@ -1,22 +1,42 @@
-FROM node:23-slim
+# ==========================
+# Build stage
+# ==========================
+FROM node:23-slim AS builder
 
+# Prisma requires openssl to generate client
 RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-# Copy package files for dependency installation
+# Copy root package files for dependency installation
 COPY package*.json ./
-COPY packages/property-base/package*.json ./packages/property-base/
+COPY tsconfig.json ./
+
+# Copy relevant packages
+COPY libs/types ./libs/types
+COPY libs/utilities ./libs/utilities
+COPY services/property ./services/property
 
 # Install dependencies
 RUN npm ci
 
-# Copy source files
-COPY packages/property-base ./packages/property-base
+# Build required libraries
+RUN npm run build:libs
 
-# Generate Prisma client and build
-WORKDIR /app/packages/property-base
-RUN npm run generate
+# Generate Prisma client
+WORKDIR /app/services/property
+RUN npm run generate:static
+
+# ==========================
+# Run stage
+# ==========================
+FROM node:23-slim AS runner
+
+WORKDIR /app
+
+COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/services/property ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 

@@ -1,26 +1,42 @@
-FROM node:18-slim as BUILDER
+# ==========================
+# Build stage
+# ==========================
+FROM node:23-slim AS builder
 
-WORKDIR /home/app
+WORKDIR /app
 
-# Help Docker cache npm install if neither of these files have changed
-ADD ./package.json ./package-lock.json ./
+# Copy root package files for dependency installation
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Copy relevant packages
+COPY libs/types ./libs/types
+COPY libs/utilities ./libs/utilities
+COPY services/communication ./services/communication
+
+# Install dependencies
 RUN npm ci
 
-ADD ./ ./
-RUN npm run build
+# Build required libraries
+RUN npm run build:libs
+
+# Build application
+RUN npm run build:communication
 
 # Remove stuff in node_modules we no longer need
-ENV NODE_ENV production
-RUN npm prune --production
+RUN npm prune --omit=dev
 
-# A slimmed down runner image with only the bare necessities
-FROM node:18-slim AS runner
-WORKDIR /home/app
-COPY --from=BUILDER /home/app/node_modules ./node_modules
-COPY --from=BUILDER /home/app/package* ./
-COPY --from=BUILDER /home/app/build ./
+# ==========================
+# Run stage
+# ==========================
+FROM node:23-slim AS runner
+WORKDIR /app
+COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/services/communication/build ./
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 ENV PORT 80
 EXPOSE 80
 
-CMD ["npm", "run", "start"]
+CMD ["node", "build/index.js"]
