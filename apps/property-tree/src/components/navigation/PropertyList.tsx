@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { SidebarMenu } from '@/components/ui/Sidebar'
 import { PropertyNavigation } from './Property'
 import { useQuery } from '@tanstack/react-query'
-import { propertyService } from '@/services/api'
+import { propertyService } from '@/services/api/core'
 import { MapPin } from 'lucide-react'
 import {
   Collapsible,

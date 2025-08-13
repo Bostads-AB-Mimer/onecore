@@ -9,7 +9,8 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { buildingService, residenceService } from '../../services/api'
+import { buildingService } from '../../services/api'
+import { residenceService } from '../../services/api/core'
 import { Issue } from '@/services/types'
 
 const mockIssues: Issue[] = [
@@ -39,7 +40,7 @@ import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
 import { Grid } from '@/components/ui/Grid'
 import { Badge } from '@/components/ui/Badge'
-import { staircaseService } from '@/services/api/staircaseService'
+import { staircaseService } from '@/services/api/core/staircaseService'
 
 function LoadingSkeleton() {
   return (
