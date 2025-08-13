@@ -10,7 +10,8 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { BuildingList } from '../shared/BuildingList'
-import { propertyService, buildingService } from '../../services/api'
+import { buildingService } from '../../services/api'
+import { propertyService } from '../../services/api/core'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../../components/ui/Card'
 import { Grid } from '../../components/ui/Grid'

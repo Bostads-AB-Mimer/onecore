@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
-import { roomService } from '@/services/api'
+import { roomService } from '@/services/api/core'
 import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 

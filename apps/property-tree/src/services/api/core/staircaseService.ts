@@ -1,5 +1,5 @@
-import { GET } from './core/base-api'
-import type { Staircase } from '../types'
+import { GET } from './base-api'
+import type { Staircase } from '../../types'
 
 export const staircaseService = {
   // Get all staircases for a building

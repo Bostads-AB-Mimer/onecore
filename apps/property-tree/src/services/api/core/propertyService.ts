@@ -1,5 +1,5 @@
-import { Company } from '../types'
-import { GET } from './core/base-api'
+import { Company } from '../../types'
+import { GET } from './base-api'
 
 export const propertyService = {
   // Get all properties

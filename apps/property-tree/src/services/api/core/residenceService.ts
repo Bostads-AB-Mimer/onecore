@@ -1,5 +1,5 @@
-import { GET } from './core/base-api'
-import { components } from './core/generated/api-types'
+import { GET } from './base-api'
+import { components } from './generated/api-types'
 
 type Residence = components['schemas']['Residence']
 type ResidenceDetails = components['schemas']['ResidenceDetails']
