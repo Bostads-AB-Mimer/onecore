@@ -177,7 +177,7 @@ export interface paths {
   };
   "security": {
   };
-  "/leasing/leases/by-rental-property-id/{rentalPropertyId}": {
+  "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
@@ -215,7 +215,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/leases/by-pnr/{pnr}": {
+  "/leases/by-pnr/{pnr}": {
     /**
      * Get leases with related entities for a specific Personal Number (PNR)
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
@@ -237,7 +237,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/leases/by-contact-code/{contactCode}": {
+  "/leases/by-contact-code/{contactCode}": {
     /**
      * Get leases with related entities for a specific contact code
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
@@ -259,7 +259,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/consumer-reports/by-pnr/{pnr}": {
+  "/consumer-reports/by-pnr/{pnr}": {
     /**
      * Get consumer report for a specific Personal Number (PNR)
      * @description Retrieves credit information and consumer report for the specified Personal Number (PNR).
@@ -281,7 +281,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/by-pnr/{pnr}": {
+  "/contacts/by-pnr/{pnr}": {
     /**
      * Get contact information for a specific Personal Number (PNR)
      * @description Retrieves contact information associated with the specified Personal Number (PNR).
@@ -303,7 +303,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/{contactCode}/offers": {
+  "/contacts/{contactCode}/offers": {
     /**
      * Get offers for a contact
      * @description Retrieves all offers associated with a specific contact based on the provided contact code.
@@ -333,7 +333,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/{offerId}/applicants/{contactCode}": {
+  "/offers/{offerId}/applicants/{contactCode}": {
     /**
      * Get a specific offer for an applicant
      * @description Retrieve details of a specific offer associated with an applicant using contact code and offer ID.
@@ -365,7 +365,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/by-listing-id/{listingId}": {
+  "/offers/by-listing-id/{listingId}": {
     /**
      * Get offers for a specific listing
      * @description Get all offers for a listing.
@@ -391,7 +391,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/by-listing-id/{listingId}/active": {
+  "/offers/by-listing-id/{listingId}/active": {
     /**
      * Gets active offer for a specific listing
      * @description Get an offer for a listing.
@@ -417,7 +417,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/search": {
+  "/contacts/search": {
     /**
      * Search contacts by PNR or contact code
      * @description Retrieves contacts based on the provided search query.
@@ -447,7 +447,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/by-contact-code/{contactCode}": {
+  "/contacts/by-contact-code/{contactCode}": {
     /**
      * Get contact by contact code
      * @description Retrieves a contact based on the provided contact code.
@@ -469,7 +469,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/tenants/by-contact-code/{contactCode}": {
+  "/tenants/by-contact-code/{contactCode}": {
     /**
      * Get tenant by contact code
      * @description Retrieves a tenant based on the provided contact code.
@@ -502,7 +502,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/by-phone-number/{pnr}": {
+  "/contacts/by-phone-number/{pnr}": {
     /**
      * Get contact by phone number
      * @description Retrieves a contact based on the provided phone number.
@@ -524,7 +524,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/leases/{id}": {
+  "/leases/{id}": {
     /**
      * Get lease by ID
      * @description Retrieves lease details along with related entities based on the provided ID.
@@ -548,7 +548,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/{listingId}/applicants/details": {
+  "/listings/{listingId}/applicants/details": {
     /**
      * Get listing by ID with detailed applicants
      * @description Retrieves a listing by ID along with detailed information about its applicants.
@@ -570,7 +570,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/{id}": {
+  "/listings/{id}": {
     /**
      * Get listing by ID
      * @description Retrieves details of a listing based on the provided ID.
@@ -592,7 +592,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings-with-applicants": {
+  "/listings-with-applicants": {
     /**
      * Get listings with applicants
      * @description Retrieves a list of listings along with their associated applicants.
@@ -618,7 +618,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/{listingId}/offers": {
+  "/listings/{listingId}/offers": {
     /**
      * Create an offer for a listing
      * @description Creates an offer for the specified listing.
@@ -642,7 +642,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/{offerId}/accept": {
+  "/offers/{offerId}/accept": {
     /**
      * Accept an offer
      * @description Accepts an offer for the contact of the contactCode provided
@@ -666,7 +666,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/{offerId}/deny": {
+  "/offers/{offerId}/deny": {
     /**
      * Deny an offer
      * @description Denies an offer
@@ -690,7 +690,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/offers/{offerId}/expire": {
+  "/offers/{offerId}/expire": {
     /**
      * Expire an offer
      * @description Expires an offer
@@ -714,7 +714,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/sync-internal-from-xpand": {
+  "/listings/sync-internal-from-xpand": {
     /**
      * Sync internal parking spaces from xpand to onecores database
      * @description null
@@ -732,7 +732,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/by-contact-code/{contactCode}": {
+  "/applicants/by-contact-code/{contactCode}": {
     /**
      * Get applicants by contact code
      * @description Retrieves applicants based on the contact code.
@@ -754,7 +754,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}": {
+  "/applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}": {
     /**
      * Validate property rental rules for applicant
      * @description Validate property rental rules for an applicant based on contact code and listing ID.
@@ -817,7 +817,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}": {
+  "/applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}": {
     /**
      * Validate residential area rental rules for applicant
      * @description Validate residential area rental rules for an applicant based on contact code and district code.
@@ -871,7 +871,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants-with-listings/by-contact-code/{contactCode}": {
+  "/applicants-with-listings/by-contact-code/{contactCode}": {
     /**
      * Get applicants with listings by contact code
      * @description Retrieves applicants along with their listings based on the contact code.
@@ -893,7 +893,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/{listingId}": {
+  "/listings/{listingId}": {
     /**
      * Delete a Listing by ID
      * @description Deletes a listing by it's ID.
@@ -926,7 +926,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings/{listingId}/status": {
+  "/listings/{listingId}/status": {
     /**
      * Update a listings status by ID
      * @description Updates a listing status by it's ID.
@@ -964,7 +964,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/{contactCode}/{listingId}": {
+  "/applicants/{contactCode}/{listingId}": {
     /**
      * Get applicant by contact code and listing ID
      * @description Retrieves an applicant by their contact code and listing ID.
@@ -988,7 +988,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/{applicantId}/by-manager": {
+  "/applicants/{applicantId}/by-manager": {
     /**
      * Withdraw applicant by manager
      * @description Withdraws an applicant by the manager using the applicant ID.
@@ -1022,7 +1022,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/applicants/{applicantId}/by-user/{contactCode}": {
+  "/applicants/{applicantId}/by-user/{contactCode}": {
     /**
      * Withdraw applicant by user
      * @description Withdraws an applicant by the user identified by contact code and applicant ID.
@@ -1058,7 +1058,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/{contactCode}/application-profile": {
+  "/contacts/{contactCode}/application-profile": {
     /**
      * Gets an application profile by contact code
      * @description Retrieve application profile information by contact code.
@@ -1091,7 +1091,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/{contactCode}/application-profile/admin": {
+  "/contacts/{contactCode}/application-profile/admin": {
     /**
      * Creates or updates an application profile by contact code
      * @description Create or update application profile information by contact code.
@@ -1134,7 +1134,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/{contactCode}/application-profile/client": {
+  "/contacts/{contactCode}/application-profile/client": {
     /**
      * Creates or updates an application profile by contact code
      * @description Create or update application profile information by contact code.
@@ -1177,7 +1177,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/contacts/{contactCode}/{rentalObjectCode}/verify-application": {
+  "/contacts/{contactCode}/{rentalObjectCode}/verify-application": {
     /**
      * Validate max num residents.
      * @description Checks if application is allowed based on current number of residents.
@@ -1211,7 +1211,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/listings": {
+  "/listings": {
     /**
      * Get listings
      * @description Retrieves a list of listings.
@@ -1239,7 +1239,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/vacant-parkingspaces": {
+  "/vacant-parkingspaces": {
     /**
      * Get all vacant parking spaces
      * @description Retrieves a list of all vacant parking spaces.
@@ -1281,7 +1281,7 @@ export interface paths {
       };
     };
   };
-  "/leasing/rental-objects/by-code/{rentalObjectCode}": {
+  "/rental-objects/by-code/{rentalObjectCode}": {
     /**
      * Get a rental object by code
      * @description Fetches a rental object by Rental Object Code.
@@ -1329,7 +1329,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}/floorplan": {
+  "/rentalproperties/{id}/floorplan": {
     /**
      * Get floor plan for a rental property
      * @description Returns the floor plan image for the specified rental property.
@@ -1351,7 +1351,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}/material-options": {
+  "/rentalproperties/{id}/material-options": {
     /** Get room types with material options by rental property ID */
     get: {
       parameters: {
@@ -1370,7 +1370,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}/material-options/{materialOptionId}": {
+  "/rentalproperties/{id}/material-options/{materialOptionId}": {
     /** Get material option by ID for a specific rental property */
     get: {
       parameters: {
@@ -1391,7 +1391,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{apartmentId}/contracts/{contractId}/material-choices": {
+  "/rentalproperties/{apartmentId}/contracts/{contractId}/material-choices": {
     /** Get material choices for a specific apartment and contract */
     get: {
       parameters: {
@@ -1412,7 +1412,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}/rooms-with-material-choices": {
+  "/rentalproperties/{id}/rooms-with-material-choices": {
     /** Get rooms with material choices for a specific rental property */
     get: {
       parameters: {
@@ -1431,7 +1431,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}/material-choices": {
+  "/rentalproperties/{id}/material-choices": {
     /**
      * Get material choices for a specific rental property
      * @description Retrieve material choices associated with a rental property identified by {id}.
@@ -1478,7 +1478,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/material-choice-statuses": {
+  "/material-choice-statuses": {
     /**
      * Get material choice statuses for rental properties
      * @description Retrieves statuses of material choices associated with rental properties. Optionally includes rental property details if specified in query parameter.
@@ -1500,7 +1500,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/{id}": {
+  "/rentalproperties/{id}": {
     /**
      * Get rental property by ID
      * @description Retrieves details of a rental property based on the provided ID.
@@ -1524,7 +1524,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/parkingspaces/{parkingSpaceId}/leases": {
+  "/parkingspaces/{parkingSpaceId}/leases": {
     /**
      * Create lease for an external parking space
      * @description Creates a new lease for the specified external parking space.
@@ -1564,7 +1564,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/parkingspaces/{parkingSpaceId}/noteofinterests": {
+  "/parkingspaces/{parkingSpaceId}/noteofinterests": {
     /**
      * Create a note of interest for an internal parking space
      * @description Creates a new note of interest for the specified internal parking space.
@@ -1604,7 +1604,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/rentalproperties/by-rental-object-code/{rentalObjectCode}": {
+  "/rentalproperties/by-rental-object-code/{rentalObjectCode}": {
     /**
      * Get rental property information from Xpand
      * @description Retrieves detailed information about a rental property from Xpand based on the provided rental object code.
@@ -1626,7 +1626,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/maintenanceunits/by-rental-property/{rentalPropertyId}/{type}": {
+  "/maintenanceunits/by-rental-property/{rentalPropertyId}/{type}": {
     /**
      * Get maintenance units for a rental property
      * @description Retrieves maintenance units for a specific rental property, optionally filtered by type.
@@ -1650,7 +1650,7 @@ export interface paths {
       };
     };
   };
-  "/propertymanagement/maintenanceunits/by-contact/{contactCode}": {
+  "/maintenanceunits/by-contact/{contactCode}": {
     /**
      * Get maintenance units for a contact
      * @description Retrieves maintenance units for all active leases associated with a contact code.
@@ -1672,7 +1672,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/data/{identifier}": {
+  "/workorders/data/{identifier}": {
     /**
      * Get work order data by different identifiers
      * @description Retrieves work order data along with associated leases based on the provided identifier type.
@@ -1724,7 +1724,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/by-contact-code/{contactCode}": {
+  "/workorders/by-contact-code/{contactCode}": {
     /**
      * Get work orders by contact code
      * @description Retrieves work orders based on the provided contact code.
@@ -1760,7 +1760,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/by-rental-property-id/{rentalPropertyId}": {
+  "/workorders/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id
      * @description Retrieves work orders based on the provided rental property id.
@@ -1796,7 +1796,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/xpand/by-rental-property-id/{rentalPropertyId}": {
+  "/workorders/xpand/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id from xpand
      * @description Retrieves work orders based on the provided rental property id.
@@ -1832,7 +1832,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/xpand/{code}": {
+  "/workorders/xpand/{code}": {
     /**
      * Get work order details by rental property id from xpand
      * @description Retrieves work order details.
@@ -1874,7 +1874,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders": {
+  "/workorders": {
     /**
      * Create a new work order
      * @description Creates a new work order.
@@ -1939,7 +1939,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/{workOrderId}/update": {
+  "/workorders/{workOrderId}/update": {
     /**
      * Update a work order with a message
      * @description Adds a message to the specified work order.
@@ -1990,7 +1990,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/{workOrderId}/close": {
+  "/workorders/{workOrderId}/close": {
     /**
      * Close a work order
      * @description Closes a work order based on the provided work order ID.
@@ -2024,7 +2024,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/send-sms": {
+  "/workorders/send-sms": {
     /**
      * Send SMS for a work order
      * @description Sends an SMS message to the specified phone number for a work order.
@@ -2071,7 +2071,7 @@ export interface paths {
       };
     };
   };
-  "/workorder/workorders/send-email": {
+  "/workorders/send-email": {
     /**
      * Send email for a work order
      * @description Sends an email to the specified recipient for a work order.
@@ -2120,7 +2120,7 @@ export interface paths {
       };
     };
   };
-  "/property/buildings/by-building-code/{buildingCode}": {
+  "/buildings/by-building-code/{buildingCode}": {
     /**
      * Get building by building code
      * @description Retrieves building data by building code
@@ -2162,7 +2162,7 @@ export interface paths {
       };
     };
   };
-  "/property/companies": {
+  "/companies": {
     /**
      * Get all companies
      * @description Retrieves companies from property base
@@ -2189,7 +2189,7 @@ export interface paths {
       };
     };
   };
-  "/property/residences": {
+  "/residences": {
     /**
      * Get residences by building code and (optional) staircase code
      * @description Retrieves residences by building code and (optional) staircase code
@@ -2232,7 +2232,7 @@ export interface paths {
       };
     };
   };
-  "/property/properties": {
+  "/properties": {
     /**
      * Get properties by company code and (optional) tract
      * @description Retrieves properties by company code and (optional) tract
@@ -2275,7 +2275,7 @@ export interface paths {
       };
     };
   };
-  "/property/properties/search": {
+  "/properties/search": {
     /**
      * Search properties
      * @description Retrieves a list of all real estate properties by name.
@@ -2307,7 +2307,7 @@ export interface paths {
       };
     };
   };
-  "/property/properties/{propertyId}": {
+  "/properties/{propertyId}": {
     /**
      * Get property by property id
      * @description Retrieves property by property id
@@ -2349,7 +2349,7 @@ export interface paths {
       };
     };
   };
-  "/property/residences/by-rental-id/{rentalId}": {
+  "/residences/by-rental-id/{rentalId}": {
     /**
      * Get residence data by residence rental id
      * @description Retrieves residence data by residence rental id
@@ -2391,7 +2391,7 @@ export interface paths {
       };
     };
   };
-  "/property/residences/{residenceId}": {
+  "/residences/{residenceId}": {
     /**
      * Get residence data by residenceId
      * @description Retrieves residence data by residenceId
@@ -2433,7 +2433,7 @@ export interface paths {
       };
     };
   };
-  "/property/staircases": {
+  "/staircases": {
     /**
      * Get staircases for a building
      * @description Retrieves staircases for a building
@@ -2475,7 +2475,7 @@ export interface paths {
       };
     };
   };
-  "/property/rooms": {
+  "/rooms": {
     /**
      * Get rooms by residence id.
      * @description Returns all rooms belonging to a residence.
@@ -2507,7 +2507,7 @@ export interface paths {
       };
     };
   };
-  "/property/parking-spaces/by-rental-id/{rentalId}": {
+  "/parking-spaces/by-rental-id/{rentalId}": {
     /**
      * Get parking space data by rentalId
      * @description Retrieves parking space data by rentalId
@@ -2549,7 +2549,7 @@ export interface paths {
       };
     };
   };
-  "/property/maintenance-units/by-rental-id/{rentalId}": {
+  "/maintenance-units/by-rental-id/{rentalId}": {
     /**
      * Get maintenance units by rental id.
      * @description Returns all maintenance units belonging to a rental property.
@@ -2581,7 +2581,7 @@ export interface paths {
       };
     };
   };
-  "/property/maintenance-units/by-contact-code/{contactCode}": {
+  "/maintenance-units/by-contact-code/{contactCode}": {
     /**
      * Get maintenance units by contact code.
      * @description Returns all maintenance units belonging to a contact code.
@@ -2616,7 +2616,7 @@ export interface paths {
       };
     };
   };
-  "/property/facilities/by-rental-id/{rentalId}": {
+  "/facilities/by-rental-id/{rentalId}": {
     /**
      * Get facility by rental id.
      * @description Returns facility.
@@ -2648,7 +2648,7 @@ export interface paths {
       };
     };
   };
-  "/property/maintenance-units/by-property-code/{code}": {
+  "/maintenance-units/by-property-code/{code}": {
     /**
      * Get maintenance units by property code.
      * @description Returns all maintenance units belonging to a property.
