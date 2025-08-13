@@ -205,9 +205,10 @@ jobs:
           
       - name: Update version
         run: |
+          shopt -s globstar
           npm version ${{ needs.prepare.outputs.version_bump_type }} --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
           new_version=$(jq -r .version package.json)
-          git add **/package*.json
+          git add package*.json **/package*.json
           git commit -m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
  

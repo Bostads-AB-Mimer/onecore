@@ -35,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Bump version
@@ -57,9 +57,10 @@ jobs:
           BRANCH_NAME: ${{ steps.version.outputs.branch_name }}
           NEW_VERSION: ${{ steps.version.outputs.new_version }}
         run: |
+          shopt -s globstar
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git switch -c "$BRANCH_NAME"
-          git add **/package*.json
+          git add package*.json **/package*.json
           git commit -m "chore: Preparing for release $NEW_VERSION"
           git push origin "$BRANCH_NAME"
