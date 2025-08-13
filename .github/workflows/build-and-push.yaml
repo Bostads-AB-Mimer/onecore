@@ -140,8 +140,8 @@ jobs:
         id: render-build-args
         env:
           BUILD_ARGS_JSON: ${{ needs.prepare.outputs.build_type == 'release'
-                               && toJSON(matrix.build_args.release || {})
-                               || toJSON(matrix.build_args.test || {}) }}
+                               && toJSON(matrix.build_args.release || '{}')
+                               || toJSON(matrix.build_args.test || '{}') }}
         run: |
           printf "build_args<<EOF\n" >> "$GITHUB_OUTPUT"
           echo "$BUILD_ARGS_JSON" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' >> "$GITHUB_OUTPUT"
