@@ -43,9 +43,9 @@ jobs:
         run: |
           if [[ -n "${{ github.event.inputs.override_version }}" ]]; then
             new_version="${{ github.event.inputs.override_version }}"
-            npm version "$new_version" --no-git-tag-version
+            npm version "$new_version" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
           else
-            npm version minor --no-git-tag-version
+            npm version minor --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
             new_version=$(jq -r .version package.json)
           fi
       
@@ -60,6 +60,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git switch -c "$BRANCH_NAME"
-          git add package.json
-          git commit -m "Preparing for release $NEW_VERSION"
+          git add **/package*.json
+          git commit -m "chore: Preparing for release $NEW_VERSION"
           git push origin "$BRANCH_NAME"

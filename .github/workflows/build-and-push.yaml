@@ -204,6 +204,9 @@ jobs:
           
       - name: Update version
         run: |
-          npm version ${{ needs.prepare.outputs.version_bump_type }} -m "chore: bump version to %s [skip ci]"
+          npm version ${{ needs.prepare.outputs.version_bump_type }} --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
+          new_version=$(jq -r .version package.json)
+          git add **/package*.json
+          git commit -m "-m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
  
