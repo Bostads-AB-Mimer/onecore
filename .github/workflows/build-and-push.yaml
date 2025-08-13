@@ -205,8 +205,12 @@ jobs:
           
       - name: Update version
         run: |
-          npm version ${{ needs.prepare.outputs.version_bump_type }} --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
+          # Enforce global version, in case of version drift by first bumping the root version...
+          npm version ${{ needs.prepare.outputs.version_bump_type }} --no-commit-hooks --no-git-tag-version
+
+          # And then explicitly setting that version for the entire workspace
           new_version=$(jq -r .version package.json)
+          npm version ${{ new version }} --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
           git add $(git ls-files -m '*package*.json')
           git commit -m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
