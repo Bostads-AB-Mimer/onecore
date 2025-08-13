@@ -16,7 +16,7 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 
-describe('GET /leasing/listings', () => {
+describe('GET /listings', () => {
   it('responds with 200 on success with no filter', async () => {
     const listing = factory.listing.build({
       id: 1337,
@@ -30,7 +30,7 @@ describe('GET /leasing/listings', () => {
       .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [] })
 
-    const res = await request(app.callback()).get('/leasing/listings')
+    const res = await request(app.callback()).get('/listings')
 
     expect(getListingsSpy).toHaveBeenCalled()
     expect(res.status).toBe(200)
@@ -55,9 +55,7 @@ describe('GET /leasing/listings', () => {
       .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
-    const res = await request(app.callback()).get(
-      '/leasing/listings?published=true'
-    )
+    const res = await request(app.callback()).get('/listings?published=true')
 
     expect(getListingsSpy).toHaveBeenCalledWith({ published: true })
     expect(res.status).toBe(200)
@@ -84,9 +82,7 @@ describe('GET /leasing/listings', () => {
       .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
-    const res = await request(app.callback()).get(
-      '/leasing/listings?rentalRule=SCORED'
-    )
+    const res = await request(app.callback()).get('/listings?rentalRule=SCORED')
 
     expect(getListingsSpy).toHaveBeenCalledWith({
       rentalRule: 'SCORED',
@@ -118,7 +114,7 @@ describe('GET /leasing/listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
     const res = await request(app.callback()).get(
-      '/leasing/listings?validToRentForContactCode=abc123'
+      '/listings?validToRentForContactCode=abc123'
     )
 
     expect(getListingsSpy).toHaveBeenCalledWith({
@@ -135,7 +131,7 @@ describe('GET /leasing/listings', () => {
       .spyOn(tenantLeaseAdapter, 'getListings')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const res = await request(app.callback()).get('/leasing/listings')
+    const res = await request(app.callback()).get('/listings')
 
     expect(getListingsSpy).toHaveBeenCalled()
     expect(res.status).toBe(500)
