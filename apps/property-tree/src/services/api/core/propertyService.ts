@@ -5,7 +5,7 @@ export const propertyService = {
   // Get all properties
 
   async getFromCompany(company: Company) {
-    const { data, error } = await GET('/property/properties', {
+    const { data, error } = await GET('/properties', {
       params: { query: { companyCode: company.code } },
     })
     if (error) throw error
@@ -13,7 +13,7 @@ export const propertyService = {
   },
 
   async getPropertyById(propertyId: string) {
-    const { data, error } = await GET(`/property/properties/{propertyId}`, {
+    const { data, error } = await GET(`/properties/{propertyId}`, {
       params: { path: { propertyId } },
     })
     if (error) throw error

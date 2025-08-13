@@ -14,7 +14,7 @@ export const workOrderService = {
     rentalPropertyId: string
   ): Promise<WorkOrder[]> {
     const internalWorkOrders = await GET(
-      '/workorder/workorders/by-rental-property-id/{rentalPropertyId}',
+      '/workorders/by-rental-property-id/{rentalPropertyId}',
       {
         params: { path: { rentalPropertyId } },
       }
@@ -25,7 +25,7 @@ export const workOrderService = {
       throw new Error('No data returned from API')
 
     const externalWorkOrders = await GET(
-      '/workorder/workorders/xpand/by-rental-property-id/{rentalPropertyId}',
+      '/workorders/xpand/by-rental-property-id/{rentalPropertyId}',
       {
         params: { path: { rentalPropertyId } },
       }

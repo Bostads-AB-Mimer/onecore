@@ -6,7 +6,7 @@ type ResidenceDetails = components['schemas']['ResidenceDetails']
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
-    const { data, error } = await GET('/property/residences', {
+    const { data, error } = await GET('/residences', {
       params: { query: { buildingCode } },
     })
     if (error) throw error
@@ -14,7 +14,7 @@ export const residenceService = {
   },
 
   async getById(residenceId: string): Promise<ResidenceDetails> {
-    const { data, error } = await GET(`/property/residences/{residenceId}`, {
+    const { data, error } = await GET(`/residences/{residenceId}`, {
       params: { path: { residenceId } },
     })
 
