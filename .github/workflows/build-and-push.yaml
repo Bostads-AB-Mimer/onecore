@@ -46,6 +46,9 @@ jobs:
         env:
           PKGVER: ${{ steps.pkg-details.outputs.version }}
         run: |
+          echo "GITHUB_REF_TYPE=${GITHUB_REF_TYPE}"
+          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
+          echo "GITHUB_REF=${GITHUB_REF}"
           if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
             if [[ "$GITHUB_REF_NAME" == "main" ]]; then
               # Build CI snapshot
