@@ -28,7 +28,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - id: read-matrix
+      - name: Read build matrix
+        id: read-matrix
         shell: bash
         run: |
           MATRIX=$(cat ./.github/build.matrix.json | jq -c .)
@@ -37,8 +38,8 @@ jobs:
       - name: Read package.json/repository version
         id: pkg-details
         run: |
-          echo "version=$(cat package.json | jq .version -r)"
-          echo "description=$(cat package.json | jq .description -r)"
+          echo "version=$(cat package.json | jq .version -r)" >> $GITHUB_OUTPUT
+          echo "description=$(cat package.json | jq .description -r)" >> $GITHUB_OUTPUT
 
       - name: Determine build type
         id: build-type
