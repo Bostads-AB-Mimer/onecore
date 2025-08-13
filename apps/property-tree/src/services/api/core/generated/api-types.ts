@@ -2120,7 +2120,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/buildings/by-building-code/{buildingCode}": {
+  "/property/buildings/by-building-code/{buildingCode}": {
     /**
      * Get building by building code
      * @description Retrieves building data by building code
@@ -2162,7 +2162,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/companies": {
+  "/property/companies": {
     /**
      * Get all companies
      * @description Retrieves companies from property base
@@ -2189,7 +2189,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/residences": {
+  "/property/residences": {
     /**
      * Get residences by building code and (optional) staircase code
      * @description Retrieves residences by building code and (optional) staircase code
@@ -2232,7 +2232,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/properties": {
+  "/property/properties": {
     /**
      * Get properties by company code and (optional) tract
      * @description Retrieves properties by company code and (optional) tract
@@ -2275,7 +2275,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/properties/search": {
+  "/property/properties/search": {
     /**
      * Search properties
      * @description Retrieves a list of all real estate properties by name.
@@ -2307,7 +2307,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/properties/{propertyId}": {
+  "/property/properties/{propertyId}": {
     /**
      * Get property by property id
      * @description Retrieves property by property id
@@ -2349,7 +2349,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/residences/by-rental-id/{rentalId}": {
+  "/property/residences/by-rental-id/{rentalId}": {
     /**
      * Get residence data by residence rental id
      * @description Retrieves residence data by residence rental id
@@ -2391,7 +2391,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/residences/{residenceId}": {
+  "/property/residences/{residenceId}": {
     /**
      * Get residence data by residenceId
      * @description Retrieves residence data by residenceId
@@ -2433,7 +2433,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/staircases": {
+  "/property/staircases": {
     /**
      * Get staircases for a building
      * @description Retrieves staircases for a building
@@ -2475,7 +2475,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/rooms": {
+  "/property/rooms": {
     /**
      * Get rooms by residence id.
      * @description Returns all rooms belonging to a residence.
@@ -2507,7 +2507,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/parking-spaces/by-rental-id/{rentalId}": {
+  "/property/parking-spaces/by-rental-id/{rentalId}": {
     /**
      * Get parking space data by rentalId
      * @description Retrieves parking space data by rentalId
@@ -2549,7 +2549,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/maintenance-units/by-rental-id/{rentalId}": {
+  "/property/maintenance-units/by-rental-id/{rentalId}": {
     /**
      * Get maintenance units by rental id.
      * @description Returns all maintenance units belonging to a rental property.
@@ -2581,7 +2581,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/maintenance-units/by-contact-code/{contactCode}": {
+  "/property/maintenance-units/by-contact-code/{contactCode}": {
     /**
      * Get maintenance units by contact code.
      * @description Returns all maintenance units belonging to a contact code.
@@ -2616,7 +2616,7 @@ export interface paths {
       };
     };
   };
-  "/property-base/facilities/by-rental-id/{rentalId}": {
+  "/property/facilities/by-rental-id/{rentalId}": {
     /**
      * Get facility by rental id.
      * @description Returns facility.
@@ -2639,6 +2639,38 @@ export interface paths {
         };
         /** @description Not found. */
         404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/property/maintenance-units/by-property-code/{code}": {
+    /**
+     * Get maintenance units by property code.
+     * @description Returns all maintenance units belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve maintenance units. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
           content: never;
         };
         /** @description Internal server error. */
@@ -3090,12 +3122,12 @@ export interface components {
     };
     MaintenanceUnit: {
       id: string;
-      rentalPropertyId: string;
+      rentalPropertyId?: string;
       code: string;
-      caption: string;
-      type: string | null;
-      estateCode: string;
-      estate: string;
+      caption: string | null;
+      type?: string | null;
+      estateCode: string | null;
+      estate: string | null;
     };
     ResidenceByRentalIdDetails: {
       id: string;

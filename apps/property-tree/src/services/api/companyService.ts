@@ -5,7 +5,7 @@ import { GET } from './core/base-api'
 export const companyService = {
   // Get all companies
   async getAll(): Promise<Company[]> {
-    const { data, error } = await GET('/property-base/companies', {
+    const { data, error } = await GET('/property/companies', {
       params: {
         query: { limit: 100 },
       },
