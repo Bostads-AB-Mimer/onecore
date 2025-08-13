@@ -12,6 +12,9 @@ jobs:
     name: Lint and Type Check
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup and Build
         uses: ./.github/actions/setup-and-build
 
