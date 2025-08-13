@@ -3,7 +3,7 @@ import { GET } from '../api/core/base-api'
 
 export const roomService = {
   async getByResidenceId(residenceId: string): Promise<Room[]> {
-    const { data, error } = await GET('/property-base/rooms', {
+    const { data, error } = await GET('/property/rooms', {
       params: {
         query: {
           residenceId,
