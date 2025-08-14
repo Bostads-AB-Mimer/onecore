@@ -23,7 +23,6 @@ import {
 } from './adapters/xledger-adapter'
 
 const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
-  console.log('invoice', invoice)
   const fromDateString = xledgerDateString(invoice.fromdate as Date)
   const year = fromDateString.substring(0, 4)
   const roundOffInformation = await getRoundOffInformation(year)

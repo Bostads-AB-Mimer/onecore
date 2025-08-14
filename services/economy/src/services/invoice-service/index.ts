@@ -3,8 +3,9 @@ import { getInvoicesByContactCode } from './adapters/xledger-adapter'
 import {
   saveContacts,
   createBatch,
-  getContacts,
+  getContacts as getInvoiceContacts,
 } from './adapters/invoice-data-db-adapter'
+import { getContacts as getXpandContacts } from './adapters/xpand-db-adapter'
 import { syncContact, transformContact } from './adapters/xledger-adapter'
 import { generateRouteMetadata, logger } from 'onecore-utilities'
 import {
@@ -79,9 +80,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const contacts = ctx.request.body['contacts']
+      const contactCodes = ctx.request.body['contactCodes']
       const batchId = ctx.request.body['batchId']
 
+      const contacts = await getXpandContacts(contactCodes)
       const result = await saveContacts(contacts, batchId)
 
       ctx.status = 200
@@ -107,7 +109,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const batchId = ctx.request.body['batchId']
 
-      const contacts = await getContacts(batchId)
+      const contacts = await getInvoiceContacts(batchId)
 
       const errors: string[] = []
       let successfulContacts = 0
@@ -142,7 +144,7 @@ export const routes = (router: KoaRouter) => {
     console.log('get contacts', ctx.params.batchId)
     const metadata = generateRouteMetadata(ctx)
 
-    const contacts = await getContacts(ctx.params.batchId)
+    const contacts = await getInvoiceContacts(ctx.params.batchId)
     const xledgerContacts = contacts.map(transformContact)
 
     ctx.status = 200

@@ -1,3 +1,5 @@
+import { Contact } from 'onecore-types'
+
 export const TOTAL_ACCOUNT = '2970'
 export const CUSTOMER_LEDGER_ACCOUNT = '1530'
 
@@ -25,6 +27,12 @@ export const columnIndexes: Record<string, number> = {
   sumRow: 21,
 }
 
+export enum CustomerGroup {
+  OtherPaymentMethod = 'STD',
+  AutoGiro = 'AG',
+  CounterPart = 'KI',
+}
+
 export const columnNames: string[] = [
   'contractCode',
   'contactCode',
@@ -48,6 +56,10 @@ export const columnNames: string[] = [
   'freeCode',
   'sumRow',
 ]
+
+export type XpandContact = Contact & {
+  autogiro: boolean
+}
 
 export type InvoiceDataRow = Record<string, string | number>
 
