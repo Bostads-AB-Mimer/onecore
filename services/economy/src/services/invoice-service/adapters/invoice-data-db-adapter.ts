@@ -1,13 +1,14 @@
 import {
   AdapterResult,
+  CustomerGroup,
   CUSTOMER_LEDGER_ACCOUNT,
   InvoiceContract,
   InvoiceDataRow,
   TOTAL_ACCOUNT,
+  XpandContact,
 } from '../../../common/types'
 import knex from 'knex'
 import config from '../../../common/config'
-import { Contact } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 
 const db = knex({
@@ -34,6 +35,7 @@ const convertToDbRow = (row: InvoiceDataRow, batchId: string) => {
     contractCode: row.contractCode,
     contactCode: row.contactCode,
     tenantName: row.tenantName,
+    invoiceDate: row.invoiceDate,
     invoiceFromDate: row.invoiceFromDate,
     invoiceToDate: row.invoiceToDate,
     invoiceDueDate: row.invoiceDueDate,
@@ -82,7 +84,7 @@ export const saveInvoiceRows = async (
 }
 
 export const saveContacts = async (
-  contacts: Contact[],
+  contacts: XpandContact[],
   batchId: string
 ): Promise<
   AdapterResult<
@@ -100,6 +102,13 @@ export const saveContacts = async (
       (contact.fullName as string)?.startsWith(counterPart.CustomerName)
     )
 
+    let customerGroup = counterPart ? CustomerGroup.CounterPart : null
+    if (!customerGroup) {
+      customerGroup = contact.autogiro
+        ? CustomerGroup.AutoGiro
+        : CustomerGroup.OtherPaymentMethod
+    }
+
     try {
       await db('invoice_contact').insert({
         batchId,
@@ -114,6 +123,7 @@ export const saveContacts = async (
         postalCode: contact.address?.postalCode,
         city: contact.address?.city,
         counterPart: counterPart ? counterPart.CounterpartCode : '',
+        customerGroup: customerGroup,
       })
 
       successfulContacts++

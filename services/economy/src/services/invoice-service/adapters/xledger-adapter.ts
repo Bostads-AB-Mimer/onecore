@@ -337,8 +337,6 @@ export const createCustomerLedgerRow = async (
 
   customerInvoiceAmount = +customerInvoiceAmount.toFixed(2)
 
-  console.log(invoiceDataRows[0])
-
   return {
     voucherType: 'AR',
     voucherNo:
@@ -377,7 +375,8 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
     zipCode: contact.PostalCode,
     city: contact.City,
     invoiceDeliveryMethod: '',
-    counterPart: contact.CounterpartCode ?? '',
+    counterPart: contact.CounterPart ?? '',
+    group: contact.CustomerGroup,
   }
 }
 

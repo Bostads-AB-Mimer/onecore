@@ -2,7 +2,7 @@ import knex from 'knex'
 import config from '../../../common/config'
 import { InvoiceDataRow, Invoice } from '../../../common/types'
 import { logger } from 'onecore-utilities'
-import { xledgerDateString } from '../../../common/types'
+import { xledgerDateString, XpandContact } from '../../../common/types'
 
 type RentArticleDetails = Record<
   string,
@@ -189,8 +189,8 @@ const getAdditionalColumns = async (
   const rentArticle = rentArticleDetails[rentArticleName]
 
   if (!rentArticle) {
-    console.error({ rentArticleName }, 'Rent article details not found')
-    return {}
+    logger.error({ rentArticleName }, 'Rent article details not found')
+    throw new Error(`Rent article details for ${rentArticleName} not found`)
   }
   additionalColumns['account'] = rentArticle['account']?.toString().trimEnd()
   additionalColumns['costCode'] = rentArticle['costCode']?.toString().trimEnd()
@@ -213,6 +213,9 @@ const getAdditionalColumns = async (
         .trimEnd()
     } else {
       logger.error(row, 'Could not find cost code and property')
+      throw new Error(
+        `Could not find cost code and property for invoice ${row.invoiceNumber}`
+      )
     }
   }
   return additionalColumns
@@ -250,7 +253,7 @@ export const enrichInvoiceRows = async (
           row.invoiceNumber as string
         )
       })
-      console.log(
+      logger.error(
         row.invoiceNumber,
         'Invoice not found in XPand, removed invoice rows'
       )
@@ -289,4 +292,89 @@ export const enrichInvoiceRows = async (
   process.stdout.write('\n')
 
   return Promise.all(enrichedInvoiceRows)
+}
+
+export const getContacts = async (
+  contactCodes: string[]
+): Promise<XpandContact[]> => {
+  const contactQuery = db
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.fnamn as firstName',
+      'cmctc.enamn as lastName',
+      'cmctc.cmctcben as fullName',
+      'cmctc.persorgnr as nationalRegistrationNumber',
+      'cmctc.birthdate as birthDate',
+      'cmadr.adress1 as street',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city',
+      'cmeml.cmemlben as emailAddress',
+      'cmctc.keycmobj as keycmobj',
+      'cmctc.keycmctc as contactKey',
+      'cmctc.lagsokt as protectedIdentity',
+      'krknr.autogiro as autogiro'
+    )
+    .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
+    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+
+  const rows = await contactQuery
+    .distinct()
+    .where('cmadr.keycmtyp', 'adrfakt')
+    .andWhere((query) => {
+      query.where('cmeml.main', '1').orWhereNull('cmeml.main')
+    })
+    .andWhere((query) => {
+      query.whereNull('cmadr.keycmtyp').orWhere((query) => {
+        query
+          .where('cmadr.keycmtyp', 'adrfakt')
+          .andWhere((query) => {
+            query.whereNull('cmadr.fdate').orWhereRaw('cmadr.fdate < getdate()')
+          })
+          .andWhere((query) => {
+            query.whereNull('cmadr.tdate').orWhereRaw('cmadr.tdate > getdate()')
+          })
+      })
+    })
+    .whereIn('cmctc.cmctckod', contactCodes)
+
+  const contacts = rows.map((contactRow) => {
+    let nationalRegistrationNumber =
+      contactRow.nationalRegistrationNumber?.trimEnd()
+
+    if (nationalRegistrationNumber) {
+      nationalRegistrationNumber =
+        nationalRegistrationNumber.substring(
+          0,
+          nationalRegistrationNumber.length - 4
+        ) +
+        '-' +
+        nationalRegistrationNumber.substring(
+          nationalRegistrationNumber.length - 4
+        )
+    }
+
+    return {
+      contactCode: contactRow.contactCode?.trimEnd(),
+      contactKey: contactRow.contactKey?.trimEnd(),
+      firstName: contactRow.firstName?.trimEnd(),
+      lastName: contactRow.lastName?.trimEnd(),
+      fullName: contactRow.fullName?.trimEnd(),
+      nationalRegistrationNumber,
+      birthDate: contactRow.birthDate,
+      isTenant: true,
+      address: {
+        street: contactRow.street?.trimEnd(),
+        postalCode: contactRow.postalCode?.trimEnd(),
+        city: contactRow.city?.trimEnd(),
+        number: '',
+      },
+      phoneNumbers: undefined,
+      emailAddress: contactRow.emailAddress?.trimEnd(),
+      autogiro: contactRow.autogiro && contactRow.autogiro !== 0,
+    }
+  })
+
+  return contacts
 }
