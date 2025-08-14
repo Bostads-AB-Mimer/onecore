@@ -20,6 +20,12 @@ import {
 const db = knex({
   client: 'mssql',
   connection: Config.xpandDatabase,
+  pool: {
+    max: 20,
+    min: 0,
+    idleTimeoutMillis: 30000,
+    destroyTimeoutMillis: 5000,
+  },
 })
 
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }

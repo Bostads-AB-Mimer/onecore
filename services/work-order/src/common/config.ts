@@ -22,6 +22,10 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
   }
 }
 
@@ -45,6 +49,10 @@ const config = configPackage({
     health: {
       odoo: {
         systemName: 'odoo',
+        minimumMinutesBetweenRequests: 1,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
         minimumMinutesBetweenRequests: 1,
       },
     },
