@@ -1,12 +1,12 @@
-import { GET } from './core/base-api'
-import { components } from './core/generated/api-types'
+import { GET } from './base-api'
+import { components } from './generated/api-types'
 
 type Residence = components['schemas']['Residence']
 type ResidenceDetails = components['schemas']['ResidenceDetails']
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
-    const { data, error } = await GET('/propertyBase/residences', {
+    const { data, error } = await GET('/residences', {
       params: { query: { buildingCode } },
     })
     if (error) throw error
@@ -14,7 +14,7 @@ export const residenceService = {
   },
 
   async getById(residenceId: string): Promise<ResidenceDetails> {
-    const { data, error } = await GET('/propertyBase/residence/{residenceId}', {
+    const { data, error } = await GET(`/residences/{residenceId}`, {
       params: { path: { residenceId } },
     })
 

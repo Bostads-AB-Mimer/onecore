@@ -72,7 +72,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/vacant-parkingspaces', async (ctx) => {
+  router.get('/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await leasingAdapter.getAllVacantParkingSpaces()
     if (!result.ok) {
@@ -87,12 +87,12 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rental-object/by-code/{rentalObjectCode}:
+   * /rental-objects/by-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get a rental object
+   *     summary: Get a rental object by code
    *     description: Fetches a rental object by Rental Object Code.
    *     tags:
-   *       - RentalObject
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: rentalObjectCode
@@ -153,7 +153,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-object/by-code/:rentalObjectCode', async (ctx) => {
+  router.get('/rental-objects/by-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
     const result =

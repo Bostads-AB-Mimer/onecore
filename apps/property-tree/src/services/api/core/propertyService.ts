@@ -1,11 +1,11 @@
-import { Company } from '../types'
-import { GET } from './core/base-api'
+import { Company } from '../../types'
+import { GET } from './base-api'
 
 export const propertyService = {
   // Get all properties
 
   async getFromCompany(company: Company) {
-    const { data, error } = await GET('/propertyBase/properties', {
+    const { data, error } = await GET('/properties', {
       params: { query: { companyCode: company.code } },
     })
     if (error) throw error
@@ -13,7 +13,7 @@ export const propertyService = {
   },
 
   async getPropertyById(propertyId: string) {
-    const { data, error } = await GET(`/propertyBase/properties/{propertyId}`, {
+    const { data, error } = await GET(`/properties/{propertyId}`, {
       params: { path: { propertyId } },
     })
     if (error) throw error

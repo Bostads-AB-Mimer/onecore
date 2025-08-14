@@ -18,7 +18,7 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('work-order-service index', () => {
-  describe('GET /workOrderData/:identifier', () => {
+  describe('GET /workorders/data/:identifier', () => {
     const leaseMock = factory.lease.build()
     const contactMock = factory.contact.build()
     const rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
@@ -33,7 +33,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const res = await request(app.callback()).get(
-        '/workOrderData/123?handler=leaseId'
+        '/workorders/data/123?handler=leaseId'
       )
 
       expect(res.status).toBe(200)
@@ -52,7 +52,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get(
-        '/workOrderData/123-456-789?handler=rentalObjectId'
+        '/workorders/data/123-456-789?handler=rentalObjectId'
       )
 
       expect(res.status).toBe(200)
@@ -75,7 +75,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const res = await request(app.callback()).get(
-        '/workOrderData/123?handler=pnr'
+        '/workorders/data/123?handler=pnr'
       )
 
       expect(res.status).toBe(200)
@@ -101,7 +101,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const res = await request(app.callback()).get(
-        '/workOrderData/1234567890?handler=phoneNumber'
+        '/workorders/data/1234567890?handler=phoneNumber'
       )
 
       expect(res.status).toBe(200)
@@ -125,7 +125,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const res = await request(app.callback()).get(
-        '/workOrderData/P965339?handler=contactCode'
+        '/workorders/data/P965339?handler=contactCode'
       )
 
       expect(res.status).toBe(200)
@@ -139,7 +139,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('GET /workOrders/contactCode/:contactCode', () => {
+  describe('GET /workorders/by-contact-code/:contactCode', () => {
     it('should return work orders by contact code', async () => {
       const getWorkOrdersByContactCodeSpy = jest
         .spyOn(workOrderAdapter, 'getWorkOrdersByContactCode')
@@ -149,7 +149,7 @@ describe('work-order-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        '/api/workOrders/contactCode/P174958'
+        '/workorders/by-contact-code/P174958'
       )
 
       expect(res.status).toBe(200)
@@ -165,7 +165,7 @@ describe('work-order-service index', () => {
         .mockRejectedValue(new Error('error'))
 
       const res = await request(app.callback()).get(
-        '/api/workOrders/contactCode/P174958'
+        '/workorders/by-contact-code/P174958'
       )
 
       expect(res.status).toBe(500)
@@ -175,7 +175,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('GET /workOrders/xpand/rentalPropertyId/:rentalPropertyId', () => {
+  describe('GET /workorders/xpand/by-rental-property-id/:rentalPropertyId', () => {
     const rentalPropertyId = '406-028-02-0101'
 
     it('should return work orders by rentalPropertyId', async () => {
@@ -201,7 +201,7 @@ describe('work-order-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/rentalPropertyId/${rentalPropertyId}`
+        `/workorders/xpand/by-rental-property-id/${rentalPropertyId}`
       )
 
       expect(res.status).toBe(200)
@@ -217,7 +217,7 @@ describe('work-order-service index', () => {
 
     it('should return 400 on invalid query params', async () => {
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/rentalPropertyId/${rentalPropertyId}?skip=tjena`
+        `/workorders/xpand/by-rental-property-id/${rentalPropertyId}?skip=tjena`
       )
 
       expect(res.status).toBe(400)
@@ -229,7 +229,7 @@ describe('work-order-service index', () => {
         .mockRejectedValue(new Error('error'))
 
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/rentalPropertyId/${rentalPropertyId}`
+        `/workorders/xpand/by-rental-property-id/${rentalPropertyId}`
       )
 
       expect(res.status).toBe(500)
@@ -242,7 +242,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('GET /workOrders/xpand/:code', () => {
+  describe('GET /workorders/xpand/:code', () => {
     const workOrderCode = '25-000050'
     const xpandWorkOrderDetailsMock =
       factory.externalXpandWorkOrderDetails.build({
@@ -258,7 +258,7 @@ describe('work-order-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/${workOrderCode}`
+        `/workorders/xpand/${workOrderCode}`
       )
 
       expect(res.status).toBe(200)
@@ -278,7 +278,7 @@ describe('work-order-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/${workOrderCode}`
+        `/workorders/xpand/${workOrderCode}`
       )
 
       expect(res.status).toBe(404)
@@ -290,7 +290,7 @@ describe('work-order-service index', () => {
         .mockRejectedValue(new Error('error'))
 
       const res = await request(app.callback()).get(
-        `/api/workOrders/xpand/${workOrderCode}`
+        `/workorders/xpand/${workOrderCode}`
       )
 
       expect(res.status).toBe(500)
@@ -300,7 +300,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('GET /workOrders/rentalPropertyId/:rentalPropertyId', () => {
+  describe('GET /workorders/by-rental-property-id/:rentalPropertyId', () => {
     it('should return work orders by rental property id', async () => {
       const getWorkOrdersByRentalPropertyIdSpy = jest
         .spyOn(workOrderAdapter, 'getWorkOrdersByRentalPropertyId')
@@ -336,7 +336,7 @@ describe('work-order-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        '/api/workOrders/rentalPropertyId/406-028-02-0101'
+        '/workorders/by-rental-property-id/406-028-02-0101'
       )
 
       expect(res.status).toBe(200)
@@ -354,7 +354,7 @@ describe('work-order-service index', () => {
         .mockRejectedValue(new Error('error'))
 
       const res = await request(app.callback()).get(
-        '/api/workOrders/rentalPropertyId/406-028-02-0101'
+        '/workorders/by-rental-property-id/406-028-02-0101'
       )
 
       expect(res.status).toBe(500)
@@ -366,7 +366,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('POST /workOrders', () => {
+  describe('POST /workorders', () => {
     const rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
     const tenantMock = factory.tenant.build()
     const createWorkOrderDetailsMock = factory.createWorkOrderDetails.build()
@@ -385,7 +385,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue({ ok: true, data: { newWorkOrderId: 1 } })
 
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send(createWorkOrderDetailsMock)
 
       expect(res.status).toBe(200)
@@ -401,7 +401,7 @@ describe('work-order-service index', () => {
         ...workOrderDetailsWithoutContactCode
       } = createWorkOrderDetailsMock
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send(workOrderDetailsWithoutContactCode)
 
       expect(res.status).toBe(400)
@@ -414,7 +414,7 @@ describe('work-order-service index', () => {
         ...workOrderDetailsWithoutRentalObjectCode
       } = createWorkOrderDetailsMock
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send(workOrderDetailsWithoutRentalObjectCode)
 
       expect(res.status).toBe(400)
@@ -423,7 +423,7 @@ describe('work-order-service index', () => {
 
     it('should return 400 if no work orders found in request', async () => {
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send({ ...createWorkOrderDetailsMock, Rows: [] })
 
       expect(res.status).toBe(400)
@@ -436,7 +436,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(null)
 
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send(createWorkOrderDetailsMock)
 
       expect(res.status).toBe(404)
@@ -457,7 +457,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue({ ok: true, data: tenantMock })
 
       const res = await request(app.callback())
-        .post('/api/workOrders')
+        .post('/workorders')
         .send(createWorkOrderDetailsMock)
 
       expect(res.status).toBe(404)
@@ -467,13 +467,13 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('POST /workOrders/:workOrderId/close', () => {
+  describe('POST /workorders/:workOrderId/close', () => {
     it('should close work order', async () => {
       const closeWorkOrderSpy = jest
         .spyOn(workOrderAdapter, 'closeWorkOrder')
         .mockResolvedValue({ ok: true, data: 'Work order closed successfully' })
 
-      const res = await request(app.callback()).post('/api/workOrders/13/close')
+      const res = await request(app.callback()).post('/workorders/13/close')
 
       expect(res.status).toBe(200)
       expect(res.body.message).toBeDefined()
@@ -481,7 +481,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('POST /workOrders/:workOrderId/update', () => {
+  describe('POST /workorders/:workOrderId/update', () => {
     const workOrderId = '13'
     const message = 'test'
     const updateWorkOrderSpy = jest
@@ -494,7 +494,7 @@ describe('work-order-service index', () => {
 
     it('should update work order', async () => {
       const res = await request(app.callback())
-        .post(`/api/workOrders/${workOrderId}/update`)
+        .post(`/workorders/${workOrderId}/update`)
         .send({ message })
 
       expect(res.status).toBe(200)
@@ -504,7 +504,7 @@ describe('work-order-service index', () => {
 
     it('should return 400 if message body is missing', async () => {
       const res = await request(app.callback())
-        .post(`/api/workOrders/${workOrderId}/update`)
+        .post(`/workorders/${workOrderId}/update`)
         .send({})
 
       expect(res.status).toBe(400)
@@ -513,7 +513,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('POST /workOrders/sendSms', () => {
+  describe('POST /workorders/send-sms', () => {
     const sendWorkOrderSmsSpy = jest.spyOn(
       communicationAdapter,
       'sendWorkOrderSms'
@@ -528,7 +528,7 @@ describe('work-order-service index', () => {
         Promise.resolve({ ok: true, data: {} })
       )
       const res = await request(app.callback())
-        .post('/api/workOrders/sendSms')
+        .post('/workorders/send-sms')
         .send({
           phoneNumber: '1234567890',
           text: 'test',
@@ -545,7 +545,7 @@ describe('work-order-service index', () => {
       )
 
       const resMissingPhoneNumber = await request(app.callback())
-        .post('/api/workOrders/sendSms')
+        .post('/workorders/send-sms')
         .send({
           message: 'test',
         })
@@ -555,7 +555,7 @@ describe('work-order-service index', () => {
       expect(sendWorkOrderSmsSpy).not.toHaveBeenCalled()
 
       const resMissingMessage = await request(app.callback())
-        .post('/api/workOrders/sendSms')
+        .post('/workorders/send-sms')
         .send({
           phoneNumber: '1234567890',
         })
@@ -566,7 +566,7 @@ describe('work-order-service index', () => {
     })
   })
 
-  describe('POST /workOrders/sendEmail', () => {
+  describe('POST /workorders/send-email', () => {
     const sendWorkOrderEmailSpy = jest.spyOn(
       communicationAdapter,
       'sendWorkOrderEmail'
@@ -581,7 +581,7 @@ describe('work-order-service index', () => {
         Promise.resolve({ ok: true, data: {} })
       )
       const res = await request(app.callback())
-        .post('/api/workOrders/sendEmail')
+        .post('/workorders/send-email')
         .send({
           to: 'hello@example.com',
           subject: 'subject',
@@ -599,7 +599,7 @@ describe('work-order-service index', () => {
       )
 
       const resMissingTo = await request(app.callback())
-        .post('/api/workOrders/sendEmail')
+        .post('/workorders/send-email')
         .send({
           subject: 'subject',
           message: 'hello',
@@ -610,7 +610,7 @@ describe('work-order-service index', () => {
       expect(sendWorkOrderEmailSpy).not.toHaveBeenCalled()
 
       const resMissingMessage = await request(app.callback())
-        .post('/api/workOrders/sendEmail')
+        .post('/workorders/send-email')
         .send({
           to: 'hello@example.com',
           subject: 'subject',
@@ -621,7 +621,7 @@ describe('work-order-service index', () => {
       expect(sendWorkOrderEmailSpy).not.toHaveBeenCalled()
 
       const resMissingSubject = await request(app.callback())
-        .post('/api/workOrders/sendEmail')
+        .post('/workorders/send-email')
         .send({
           to: 'hello@example.com',
           message: 'hello',

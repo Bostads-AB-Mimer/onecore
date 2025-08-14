@@ -16,7 +16,7 @@ const getMaterialChoices = async (apartmentId: string, contractId?: string) => {
   let url
 
   if (contractId) {
-    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/${contractId}/material-choices`
+    url = `${coreBaseUrl}/rentalproperties/${apartmentId}/contracts/${contractId}/material-choices`
   } else {
     url = `${coreBaseUrl}/rentalproperties/${apartmentId}/material-choices`
   }

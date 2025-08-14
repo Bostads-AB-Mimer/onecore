@@ -66,7 +66,7 @@ describe('rental-property-service index', () => {
       expect(res.body.content.roomTypes).toBeDefined()
     })
   })
-  describe('GET /maintenanceUnits/rentalPropertyId/:rentalPropertyId/:type?', () => {
+  describe('GET /maintenanceunits/by-rental-property/:rentalPropertyId/:type?', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -84,7 +84,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/rentalPropertyId/705-022-04-0201'
+        '/maintenanceunits/by-rental-property/705-022-04-0201'
       )
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
@@ -102,7 +102,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/rentalPropertyId/705-022-04-0201/Miljöbod'
+        '/maintenanceunits/by-rental-property/705-022-04-0201/Miljöbod'
       )
 
       expect(res.status).toBe(200)
@@ -116,7 +116,7 @@ describe('rental-property-service index', () => {
     })
   })
 
-  describe('GET /maintenanceUnits/contactCode/:contactCode', () => {
+  describe('GET /maintenanceunits/by-contact/:contactCode', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -138,7 +138,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/contactCode/P965339'
+        '/maintenanceunits/by-contact/P965339'
       )
 
       expect(res.status).toBe(200)
@@ -159,7 +159,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue([])
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/contactCode/P965339'
+        '/maintenanceunits/by-contact/P965339'
       )
 
       expect(res.status).toBe(200)
