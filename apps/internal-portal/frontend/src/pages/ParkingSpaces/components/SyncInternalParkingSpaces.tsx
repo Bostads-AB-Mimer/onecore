@@ -10,49 +10,44 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { LoadingButton } from '@mui/lab'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { InternalParkingSpaceSyncSuccessResponse } from '@onecore/types'
 
 import { useSyncInternalParkingSpaces } from '../hooks/useSyncInternalParkingSpaces'
 
 export const SyncInternalParkingSpaces = () => {
   const syncInternalParkingSpaces = useSyncInternalParkingSpaces()
-  const [open, setOpen] = useState(false)
-  const onCloseModal = () => setOpen(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <>
-      <Button variant="dark-outlined" onClick={() => setOpen(true)}>
-        <Box
-          sx={{
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-          }}
-        >
-          Hämta publicerade bilplatser
-        </Box>
+    <React.Fragment>
+      <Button variant="dark-outlined" onClick={() => setIsOpen(true)}>
+        Hämta publicerade bilplatser
       </Button>
-      <Dialog onClose={onCloseModal} open={open} maxWidth="sm" fullWidth>
-        <Box paddingTop="0.5rem">
-          <Box display="flex">
-            <DialogTitle variant="h1" fontSize={24} textAlign="left">
-              Hämta publicerade bilplatser från XPand
-            </DialogTitle>
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              marginLeft="auto"
-              marginRight="1rem"
-            >
-              <IconButton onClick={() => setOpen(false)}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </Box>
-        <DialogContent sx={{ paddingTop: '0.5rem' }}>
+      <Dialog
+        onClose={() => setIsOpen(false)}
+        open={isOpen}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle variant="h1" fontSize={24} textAlign="left">
+          Hämta publicerade bilplatser från XPand
+        </DialogTitle>
+
+        <IconButton
+          aria-label="close"
+          onClick={() => setIsOpen(false)}
+          sx={(theme) => ({
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: theme.palette.grey[500],
+          })}
+        >
+          <CloseIcon />
+        </IconButton>
+
+        <DialogContent>
           <Box minHeight="500px" display="flex" flexDirection="column">
             <Box paddingX="0.5rem">
               <Typography variant="body1">
@@ -85,7 +80,7 @@ export const SyncInternalParkingSpaces = () => {
           </Box>
         </DialogContent>
       </Dialog>
-    </>
+    </React.Fragment>
   )
 }
 
@@ -98,25 +93,28 @@ const SyncInternalParkingSpacesResult = (props: {
         Resultat hämtning av bilplatser
       </Typography>
       <Box
-        maxHeight="500px"
         overflow="scroll"
         borderRadius="4px"
-        bgcolor="rgba(0,0,0,0.1)"
         flex="1"
         padding="1rem"
+        sx={(theme) => ({
+          backgroundColor: theme.palette.grey[300],
+        })}
+        marginBottom="1rem"
       >
-        <Box>
-          <Typography component="span">Inlagda: </Typography>
+        <Typography>
+          Inlagda:&nbsp;
           <Typography component="span" fontWeight="bold">
             {props.data.insertions.inserted.length}
           </Typography>
-        </Box>
-        <Box>
-          <Typography component="span">Icke inlagda: </Typography>
+        </Typography>
+
+        <Typography>
+          Ej inlagda:&nbsp;
           <Typography component="span" fontWeight="bold">
             {props.data.insertions.failed.length}
           </Typography>
-        </Box>
+        </Typography>
         {props.data.invalid.length && (
           <Box paddingTop="0.5rem">
             <Typography component="span">
