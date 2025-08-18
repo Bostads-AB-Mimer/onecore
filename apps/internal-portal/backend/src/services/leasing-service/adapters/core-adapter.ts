@@ -238,7 +238,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
     // todo: fix type
     const response = await getFromCore<any>({
       method: 'post',
-      url: `${coreBaseUrl}/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
+      url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/note-of-interests`,
       data: params,
     })
 
