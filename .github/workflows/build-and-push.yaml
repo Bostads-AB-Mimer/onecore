@@ -25,7 +25,7 @@ jobs:
       release_version: ${{ steps.build-type.outputs.release_version }}
       version: ${{ steps.pkg-details.outputs.version }}
       description: ${{ steps.pkg-details.outputs.description }}
-      build_tag: ${{ steps.incremental-tag.outputs.version }}
+      build_tag: ${{ steps.incremental-tag.outputs.build_tag }}
       version_bump_type: ${{ steps.build-type.outputs.version_bump_type }}
 
     steps:
