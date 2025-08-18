@@ -1329,7 +1329,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}/floorplan": {
+  "/rental-properties/{id}/floorplan": {
     /**
      * Get floor plan for a rental property
      * @description Returns the floor plan image for the specified rental property.
@@ -1351,7 +1351,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}/material-options": {
+  "/rental-properties/{id}/material-options": {
     /** Get room types with material options by rental property ID */
     get: {
       parameters: {
@@ -1370,7 +1370,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}/material-options/{materialOptionId}": {
+  "/rental-properties/{id}/material-options/{materialOptionId}": {
     /** Get material option by ID for a specific rental property */
     get: {
       parameters: {
@@ -1391,7 +1391,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{apartmentId}/contracts/{contractId}/material-choices": {
+  "/rental-properties/{apartmentId}/contracts/{contractId}/material-choices": {
     /** Get material choices for a specific apartment and contract */
     get: {
       parameters: {
@@ -1412,7 +1412,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}/rooms-with-material-choices": {
+  "/rental-properties/{id}/rooms-with-material-choices": {
     /** Get rooms with material choices for a specific rental property */
     get: {
       parameters: {
@@ -1431,7 +1431,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}/material-choices": {
+  "/rental-properties/{id}/material-choices": {
     /**
      * Get material choices for a specific rental property
      * @description Retrieve material choices associated with a rental property identified by {id}.
@@ -1500,7 +1500,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/{id}": {
+  "/rental-properties/{id}": {
     /**
      * Get rental property by ID
      * @description Retrieves details of a rental property based on the provided ID.
@@ -1604,7 +1604,7 @@ export interface paths {
       };
     };
   };
-  "/rentalproperties/by-rental-object-code/{rentalObjectCode}": {
+  "/rental-properties/by-rental-object-code/{rentalObjectCode}": {
     /**
      * Get rental property information from Xpand
      * @description Retrieves detailed information about a rental property from Xpand based on the provided rental object code.
@@ -1626,7 +1626,7 @@ export interface paths {
       };
     };
   };
-  "/maintenanceunits/by-rental-property/{rentalPropertyId}/{type}": {
+  "/maintenance-units/by-rental-property-id/{rentalPropertyId}/{type}": {
     /**
      * Get maintenance units for a rental property
      * @description Retrieves maintenance units for a specific rental property, optionally filtered by type.
@@ -1650,24 +1650,37 @@ export interface paths {
       };
     };
   };
-  "/maintenanceunits/by-contact/{contactCode}": {
+  "/maintenance-units/by-contact-code/{contactCode}": {
     /**
-     * Get maintenance units for a contact
-     * @description Retrieves maintenance units for all active leases associated with a contact code.
+     * Get maintenance units by contact code.
+     * @description Returns all maintenance units belonging to a contact code.
      */
     get: {
       parameters: {
         path: {
-          /** @description Contact code to fetch maintenance units for. */
+          /** @description The contact code for which to retrieve maintenance units. */
           contactCode: string;
         };
       };
       responses: {
-        /** @description Successful response with maintenance units */
+        /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": unknown[];
+            "application/json": {
+              content?: {
+                  ok?: boolean;
+                  data?: components["schemas"]["MaintenanceUnit"][];
+                }[];
+            };
           };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
         };
       };
     };
@@ -2567,41 +2580,6 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
-        /** @description Invalid query parameters. */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-contact-code/{contactCode}": {
-    /**
-     * Get maintenance units by contact code.
-     * @description Returns all maintenance units belonging to a contact code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The contact code for which to retrieve maintenance units. */
-          contactCode: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved the maintenance units. */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                  ok?: boolean;
-                  data?: components["schemas"]["MaintenanceUnit"][];
-                }[];
             };
           };
         };
