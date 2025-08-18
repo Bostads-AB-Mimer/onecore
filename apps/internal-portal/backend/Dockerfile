@@ -35,7 +35,7 @@ WORKDIR /app
 COPY --from=builder /app/libs ./libs
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/internal-portal/backend/package* ./
-COPY --from=builder /app/apps/internal-portal/backend/build ./
+COPY --from=builder /app/apps/internal-portal/backend/build ./build
 COPY --from=builder /app/apps/internal-portal/backend/assets ./build/assets
 
 ENV PORT=80
