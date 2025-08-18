@@ -1,10 +1,10 @@
-import { defineConfig } from 'eslint/config';
-import typescriptEslint from 'typescript-eslint';
-import nPlugin from 'eslint-plugin-n';
-import js from '@eslint/js';
-import prettier from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
-import globals from 'globals';
+import { defineConfig } from 'eslint/config'
+import typescriptEslint from 'typescript-eslint'
+import nPlugin from 'eslint-plugin-n'
+import js from '@eslint/js'
+import prettier from 'eslint-config-prettier'
+import importPlugin from 'eslint-plugin-import'
+import globals from 'globals'
 
 export default defineConfig([
   {
@@ -27,6 +27,11 @@ export default defineConfig([
       n: nPlugin,
     },
     settings: {
+      'import/resolver': {
+        node: {
+          extensions: ['.js', '.ts'],
+        },
+      },
       node: {
         tryExtensions: ['.js', '.ts'],
       },
@@ -40,6 +45,8 @@ export default defineConfig([
       ...prettier.rules,
       ...importPlugin.configs.typescript.rules,
       ...nPlugin.configs.recommended.rules,
+      'n/no-missing-import': 'off',
+      'import/no-unresolved': 'error',
       'n/no-unsupported-features/es-syntax': [
         'error',
         {
@@ -56,4 +63,4 @@ export default defineConfig([
       'n/no-unpublished-import': 'off',
     },
   },
-]);
+])

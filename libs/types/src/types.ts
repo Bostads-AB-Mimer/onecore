@@ -365,16 +365,6 @@ interface MaintenanceUnitInfo {
   estate: string
 }
 
-type SystemStatus = 'active' | 'impaired' | 'failure' | 'unknown'
-
-interface SystemHealth {
-  name: string
-  status: SystemStatus
-  subsystems?: SystemHealth[]
-  statusMessage?: string
-  timeStamp: Date
-}
-
 type ApplicationProfile = z.infer<typeof ApplicationProfileSchema>
 type ApplicationProfileHousingReference = z.infer<
   typeof ApplicationProfileHousingReferenceSchema
@@ -417,8 +407,6 @@ export type {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ResidentialArea,
-  SystemHealth,
-  SystemStatus,
   ApplicationProfile,
   ApplicationProfileHousingReference,
   CommentThreadId,
