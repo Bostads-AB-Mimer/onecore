@@ -13,7 +13,7 @@
     "package": "@onecore/leasing",
     "path": "services/leasing",
     "docker": true,
-    "imageName": "onecore-core"
+    "imageName": "onecore-leasing"
   },
   {
     "name": "property-management",

@@ -32,7 +32,7 @@ RUN npm prune --omit=dev
 FROM node:23-slim AS runner
 WORKDIR /app
 COPY --from=builder /app/libs ./libs
-COPY --from=builder /app/services/communication/build ./
+COPY --from=builder /app/services/communication/build ./build
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
