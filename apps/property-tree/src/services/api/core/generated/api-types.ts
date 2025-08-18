@@ -1685,7 +1685,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/data/{identifier}": {
+  "/work-orders/data/{identifier}": {
     /**
      * Get work order data by different identifiers
      * @description Retrieves work order data along with associated leases based on the provided identifier type.
@@ -1737,7 +1737,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/by-contact-code/{contactCode}": {
+  "/work-orders/by-contact-code/{contactCode}": {
     /**
      * Get work orders by contact code
      * @description Retrieves work orders based on the provided contact code.
@@ -1773,7 +1773,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/by-rental-property-id/{rentalPropertyId}": {
+  "/work-orders/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id
      * @description Retrieves work orders based on the provided rental property id.
@@ -1809,7 +1809,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/xpand/by-rental-property-id/{rentalPropertyId}": {
+  "/work-orders/xpand/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id from xpand
      * @description Retrieves work orders based on the provided rental property id.
@@ -1845,7 +1845,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/xpand/{code}": {
+  "/work-orders/xpand/{code}": {
     /**
      * Get work order details by rental property id from xpand
      * @description Retrieves work order details.
@@ -1887,7 +1887,7 @@ export interface paths {
       };
     };
   };
-  "/workorders": {
+  "/work-orders": {
     /**
      * Create a new work order
      * @description Creates a new work order.
@@ -1952,7 +1952,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/{workOrderId}/update": {
+  "/work-orders/{workOrderId}/update": {
     /**
      * Update a work order with a message
      * @description Adds a message to the specified work order.
@@ -2003,7 +2003,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/{workOrderId}/close": {
+  "/work-orders/{workOrderId}/close": {
     /**
      * Close a work order
      * @description Closes a work order based on the provided work order ID.
@@ -2037,7 +2037,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/send-sms": {
+  "/work-orders/send-sms": {
     /**
      * Send SMS for a work order
      * @description Sends an SMS message to the specified phone number for a work order.
@@ -2084,7 +2084,7 @@ export interface paths {
       };
     };
   };
-  "/workorders/send-email": {
+  "/work-orders/send-email": {
     /**
      * Send email for a work order
      * @description Sends an email to the specified recipient for a work order.
