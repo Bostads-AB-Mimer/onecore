@@ -1524,7 +1524,7 @@ export interface paths {
       };
     };
   };
-  "/parkingspaces/{parkingSpaceId}/leases": {
+  "/parking-spaces/{parkingSpaceId}/leases": {
     /**
      * Create lease for an external parking space
      * @description Creates a new lease for the specified external parking space.
@@ -1564,7 +1564,7 @@ export interface paths {
       };
     };
   };
-  "/parkingspaces/{parkingSpaceId}/noteofinterests": {
+  "/parking-spaces/{parkingSpaceId}/note-of-interests": {
     /**
      * Create a note of interest for an internal parking space
      * @description Creates a new note of interest for the specified internal parking space.
