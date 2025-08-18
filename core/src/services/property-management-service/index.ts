@@ -386,7 +386,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /parkingspaces/{parkingSpaceId}/leases:
+   * /parking-spaces/{parkingSpaceId}/leases:
    *   post:
    *     summary: Create lease for an external parking space
    *     tags:
@@ -446,7 +446,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/parkingspaces/:parkingSpaceId/leases', async (ctx) => {
+  router.post('/parking-spaces/:parkingSpaceId/leases', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const parkingSpaceId = ctx.params.parkingSpaceId
 
@@ -498,7 +498,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /parkingspaces/{parkingSpaceId}/noteofinterests:
+   * /parking-spaces/{parkingSpaceId}/note-of-interests:
    *   post:
    *     summary: Create a note of interest for an internal parking space
    *     tags:
@@ -556,52 +556,55 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/parkingspaces/:parkingSpaceId/noteofinterests', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const parkingSpaceId = ctx.params.parkingSpaceId
+  router.post(
+    '/parking-spaces/:parkingSpaceId/note-of-interests',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parkingSpaceId = ctx.params.parkingSpaceId
 
-    const contactCode = ctx.request.body.contactCode
+      const contactCode = ctx.request.body.contactCode
 
-    if (!contactCode) {
-      ctx.status = 400
-      ctx.body = {
-        reason:
-          'Contact code is missing. It needs to be passed in the body (contactCode)',
-        ...metadata,
+      if (!contactCode) {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Contact code is missing. It needs to be passed in the body (contactCode)',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    const applicationType = ctx.request.body.applicationType
-    if (applicationType && applicationType == '') {
-      ctx.status = 400
-      ctx.body = {
-        reason:
-          'Application type is missing. It needs to be passed in the body (applicationType)',
-        ...metadata,
+      const applicationType = ctx.request.body.applicationType
+      if (applicationType && applicationType == '') {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Application type is missing. It needs to be passed in the body (applicationType)',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    try {
-      const result = await createNoteOfInterestForInternalParkingSpace(
-        parkingSpaceId,
-        contactCode,
-        applicationType
-      )
+      try {
+        const result = await createNoteOfInterestForInternalParkingSpace(
+          parkingSpaceId,
+          contactCode,
+          applicationType
+        )
 
-      ctx.status = result.httpStatus
-      ctx.body = { content: result.response, ...metadata }
-    } catch (err) {
-      // Step 6: Communicate error to dev team and customer service
-      logger.error({ err }, 'Error when creating note of interest')
-      ctx.status = 500
-      ctx.body = {
-        error: 'A technical error has occured',
-        ...metadata,
+        ctx.status = result.httpStatus
+        ctx.body = { content: result.response, ...metadata }
+      } catch (err) {
+        // Step 6: Communicate error to dev team and customer service
+        logger.error({ err }, 'Error when creating note of interest')
+        ctx.status = 500
+        ctx.body = {
+          error: 'A technical error has occured',
+          ...metadata,
+        }
       }
     }
-  })
+  )
 
   /**
    * @swagger
