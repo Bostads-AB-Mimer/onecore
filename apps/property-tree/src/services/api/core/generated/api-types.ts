@@ -732,14 +732,14 @@ export interface paths {
       };
     };
   };
-  "/applicants/by-contact-code/{contactCode}": {
+  "/applicants": {
     /**
      * Get applicants by contact code
      * @description Retrieves applicants based on the contact code.
      */
     get: {
       parameters: {
-        path: {
+        query: {
           /** @description The contact code used to fetch applicants. */
           contactCode: string;
         };
