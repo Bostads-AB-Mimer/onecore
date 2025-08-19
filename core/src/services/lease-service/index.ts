@@ -568,7 +568,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contacts/by-contact-code/{contactCode}:
+   * /contacts/{contactCode}:
    *   get:
    *     summary: Get contact by contact code
    *     tags:
@@ -591,7 +591,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/contacts/by-contact-code/:contactCode', async (ctx) => {
+  router.get('/contacts/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getContactByContactCode(
       ctx.params.contactCode
