@@ -1157,14 +1157,14 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /applicants/by-contact-code/{contactCode}:
+   * /applicants:
    *   get:
    *     summary: Get applicants by contact code
    *     tags:
    *       - Lease service
    *     description: Retrieves applicants based on the contact code.
    *     parameters:
-   *       - in: path
+   *       - in: query
    *         name: contactCode
    *         required: true
    *         schema:
@@ -1180,14 +1180,31 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/applicants/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const responseData = await leasingAdapter.getApplicantsByContactCode(
-      ctx.params.contactCode
-    )
+  const GetApplicantsQueryParams = z.object({ contactCode: z.string() })
+  router.get('/applicants', async (ctx) => {
+    const queryParams = GetApplicantsQueryParams.safeParse(ctx.query)
 
-    ctx.body = { content: responseData, ...metadata }
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors }
+      return
+    }
+
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const responseData = await leasingAdapter.getApplicantsByContactCode(
+        queryParams.data.contactCode
+      )
+
+      ctx.status = 200
+      ctx.body = { content: responseData, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error getting applicants by contact code')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
   })
+
   /**
    * @swagger
    * /applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}:
