@@ -170,7 +170,6 @@ describe('replyToOffer', () => {
         ok: true,
         data: '123-123-123-123/1',
       })
-
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
         data: factory.offerWithRentalObjectCode.buildList(2, {
