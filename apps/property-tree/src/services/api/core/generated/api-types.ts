@@ -447,7 +447,7 @@ export interface paths {
       };
     };
   };
-  "/contacts/by-contact-code/{contactCode}": {
+  "/contacts/{contactCode}": {
     /**
      * Get contact by contact code
      * @description Retrieves a contact based on the provided contact code.

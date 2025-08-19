@@ -331,7 +331,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /contacts/by-contact-code/:contactCode', () => {
+  describe('GET /contacts/:contactCode', () => {
     it('returns 200 and a contact', async () => {
       const contact = factory.contact.build()
       const getContactByContactCodeSpy = jest
@@ -339,7 +339,7 @@ describe('lease-service', () => {
         .mockResolvedValueOnce({ ok: true, data: contact })
 
       const res = await request(app.callback()).get(
-        `/contacts/by-contact-code/${contact.contactCode}`
+        `/contacts/${contact.contactCode}`
       )
 
       expect(res.status).toBe(200)
@@ -354,7 +354,7 @@ describe('lease-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        `/contacts/by-contact-code/${contact.contactCode}`
+        `/contacts/${contact.contactCode}`
       )
 
       expect(res.status).toBe(404)

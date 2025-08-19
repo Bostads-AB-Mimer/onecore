@@ -156,7 +156,7 @@ const getContactByContactCode = async (
   try {
     const result = await getFromCore<{ content: Contact }>({
       method: 'get',
-      url: `${coreBaseUrl}/contacts/by-contact-code/${contactCode}`,
+      url: `${coreBaseUrl}/contacts/${contactCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
