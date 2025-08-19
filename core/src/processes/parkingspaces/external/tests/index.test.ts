@@ -13,7 +13,6 @@ import {
   mockedParkingSpace,
   successfulConsumerReport,
   failedConsumerReport,
-  mockedLease,
   mockedApplicantWithoutLeases,
   mockedApplicantWithLeases,
   mockedApplicantWithoutAddress,
@@ -84,7 +83,7 @@ describe('parkingspaces', () => {
         .mockResolvedValue({})
       createContractSpy = jest
         .spyOn(leasingAdapter, 'createLease')
-        .mockResolvedValue(mockedLease)
+        .mockResolvedValue({ ok: true, data: '123-123-123/1' })
     })
 
     it('gets the parking space', async () => {
