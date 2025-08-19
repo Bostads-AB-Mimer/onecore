@@ -104,9 +104,6 @@ export const PublishParkingSpacesListingsPage = () => {
 
   useEffect(() => {
     if (parkingSpaces) {
-      setSelectedIds(
-        parkingSpaces.map(({ rentalObjectCode }) => rentalObjectCode)
-      )
       // Initialize rental rules with default values
       initializeRentalRules(parkingSpaces)
     }
