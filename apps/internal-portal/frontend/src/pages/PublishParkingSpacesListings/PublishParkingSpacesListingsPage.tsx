@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, memo } from 'react'
 import {
   Box,
   Button,
@@ -14,50 +14,66 @@ import { DataGridTable } from '../../components'
 import { useVacantParkingSpaces } from '../ParkingSpaces/hooks/useVacantParkingSpaces'
 import { usePublishParkingSpaces } from './hooks/usePublishParkingSpaces'
 import { useRentalRules } from './hooks/useRentalRules'
-import { getParkingSpaceColumns, getRentalRuleActionColumn } from './utils/columnUtils'
+import {
+  getParkingSpaceColumns,
+  getRentalRuleActionColumn,
+} from './utils/columnUtils'
 
-const ParkingSpaces = ({
-  columns,
-  rows = [],
-  loading,
-  selectedIds,
-  onRowSelectionModelChange,
-}: {
-  columns: Array<GridColDef>
-  rows?: Array<RentalObject>
-  loading: boolean
-  selectedIds: Array<GridRowId>
-  onRowSelectionModelChange: (model: Array<GridRowId>) => void
-}) => (
-  <DataGridTable
-    slots={{
-      noRowsOverlay: () => (
-        <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
-          <Typography fontSize="14px">
-            Det finns inga annonser att visa.
-          </Typography>
-        </Stack>
-      ),
-    }}
-    columns={columns}
-    getRowId={(row) => row.rentalObjectCode}
-    rows={rows}
-    loading={loading}
-    rowHeight={72}
-    checkboxSelection
-    autoHeight
-    hideFooterPagination={false}
-    rowSelectionModel={selectedIds}
-    onRowSelectionModelChange={onRowSelectionModelChange}
-  />
+const ParkingSpaces = memo(
+  ({
+    columns,
+    rows = [],
+    loading,
+    selectedIds,
+    onRowSelectionModelChange,
+  }: {
+    columns: Array<GridColDef>
+    rows?: Array<RentalObject>
+    loading: boolean
+    selectedIds: Array<GridRowId>
+    onRowSelectionModelChange: (model: Array<GridRowId>) => void
+  }) => (
+    <DataGridTable
+      slots={{
+        noRowsOverlay: () => (
+          <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
+            <Typography fontSize="14px">
+              Det finns inga annonser att visa.
+            </Typography>
+          </Stack>
+        ),
+      }}
+      columns={columns}
+      getRowId={(row) => row.rentalObjectCode}
+      rows={rows}
+      loading={loading}
+      rowHeight={72}
+      checkboxSelection
+      autoHeight
+      hideFooterPagination={false}
+      rowSelectionModel={selectedIds}
+      onRowSelectionModelChange={onRowSelectionModelChange}
+    />
+  )
 )
 
 export const PublishParkingSpacesListingsPage = () => {
   const [selectedIds, setSelectedIds] = useState<GridRowId[]>([])
   const { data: parkingSpaces, isLoading } = useVacantParkingSpaces()
-  
-  const { rentalRules, handleRentalRuleChange, initializeRentalRules } = useRentalRules()
-  const { message, setMessage, handlePublishParkingSpaces, isPending } = usePublishParkingSpaces()
+
+  const { rentalRules, handleRentalRuleChange, initializeRentalRules } =
+    useRentalRules()
+  const { message, setMessage, handlePublishParkingSpaces, isPending } =
+    usePublishParkingSpaces()
+
+  // Memoize columns to prevent unnecessary re-renders
+  const columns = useMemo(
+    () => [
+      ...getParkingSpaceColumns(),
+      getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
+    ],
+    [rentalRules, handleRentalRuleChange]
+  )
 
   useEffect(() => {
     if (parkingSpaces) {
@@ -93,10 +109,7 @@ export const PublishParkingSpacesListingsPage = () => {
       <ParkingSpaces
         key="needs-republish"
         rows={parkingSpaces}
-        columns={[
-          ...getParkingSpaceColumns(),
-          getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
-        ]}
+        columns={columns}
         loading={isLoading}
         selectedIds={selectedIds}
         onRowSelectionModelChange={setSelectedIds}

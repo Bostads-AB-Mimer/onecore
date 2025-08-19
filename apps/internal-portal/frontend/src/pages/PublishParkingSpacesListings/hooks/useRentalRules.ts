@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { RentalObject } from '@onecore/types'
 
 interface UseRentalRulesResult {
@@ -15,17 +15,17 @@ export const useRentalRules = (): UseRentalRulesResult => {
     Record<string, 'SCORED' | 'NON_SCORED'>
   >({})
 
-  const handleRentalRuleChange = (
-    rentalObjectCode: string,
-    value: 'SCORED' | 'NON_SCORED'
-  ) => {
-    setRentalRules((prev) => ({
-      ...prev,
-      [rentalObjectCode]: value,
-    }))
-  }
+  const handleRentalRuleChange = useCallback(
+    (rentalObjectCode: string, value: 'SCORED' | 'NON_SCORED') => {
+      setRentalRules((prev) => ({
+        ...prev,
+        [rentalObjectCode]: value,
+      }))
+    },
+    []
+  )
 
-  const initializeRentalRules = (parkingSpaces: RentalObject[]) => {
+  const initializeRentalRules = useCallback((parkingSpaces: RentalObject[]) => {
     const initialRentalRules = parkingSpaces.reduce(
       (acc, ps) => {
         acc[ps.rentalObjectCode] = 'SCORED' // Default to 'SCORED' (Intern)
@@ -34,7 +34,7 @@ export const useRentalRules = (): UseRentalRulesResult => {
       {} as Record<string, 'SCORED' | 'NON_SCORED'>
     )
     setRentalRules(initialRentalRules)
-  }
+  }, [])
 
   return {
     rentalRules,

@@ -1,13 +1,48 @@
 import { GridColDef } from '@mui/x-data-grid'
 import { MenuItem, Select } from '@mui/material'
+import { memo, useCallback } from 'react'
 import { RentalObject } from '@onecore/types'
 
-export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
-  const numberFormatter = new Intl.NumberFormat('sv-SE', {
-    style: 'currency',
-    currency: 'SEK',
-  })
+// Memoized Select component to prevent unnecessary re-renders
+const RentalRuleSelect = memo(
+  ({
+    rentalObjectCode,
+    value,
+    onChange,
+  }: {
+    rentalObjectCode: string
+    value: 'SCORED' | 'NON_SCORED'
+    onChange: (rentalObjectCode: string, value: 'SCORED' | 'NON_SCORED') => void
+  }) => {
+    const handleChange = useCallback(
+      (e: any) => {
+        onChange(rentalObjectCode, e.target.value as 'SCORED' | 'NON_SCORED')
+      },
+      [rentalObjectCode, onChange]
+    )
 
+    return (
+      <Select
+        name="rentalRule"
+        value={value}
+        onChange={handleChange}
+        fullWidth
+        size="small"
+      >
+        <MenuItem value="SCORED">Intern</MenuItem>
+        <MenuItem value="NON_SCORED">Poängfri</MenuItem>
+      </Select>
+    )
+  }
+)
+
+// Create formatter outside of the function to avoid recreation on each call
+const numberFormatter = new Intl.NumberFormat('sv-SE', {
+  style: 'currency',
+  currency: 'SEK',
+})
+
+export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
   return [
     {
       field: 'address',
@@ -70,20 +105,11 @@ export const getRentalRuleActionColumn = (
       // `internal` queue.
       //
       // (Same as for the number of parking spaces per applicant)
-      <Select
-        name="rentalRule"
+      <RentalRuleSelect
+        rentalObjectCode={row.rentalObjectCode}
         value={rentalRules[row.rentalObjectCode] || 'SCORED'}
-        onChange={(e) =>
-          onRentalRuleChange(
-            row.rentalObjectCode,
-            e.target.value as 'SCORED' | 'NON_SCORED'
-          )
-        }
-        fullWidth
-      >
-        <MenuItem value="SCORED">Intern</MenuItem>
-        <MenuItem value="NON_SCORED">Poängfri</MenuItem>
-      </Select>
+        onChange={onRentalRuleChange}
+      />
     ),
   }
 }
