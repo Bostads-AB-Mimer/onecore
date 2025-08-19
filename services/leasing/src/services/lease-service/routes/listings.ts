@@ -164,6 +164,150 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /listings/batch:
+   *   post:
+   *     summary: Create multiple listings
+   *     description: Create multiple listings in a single request.
+   *     tags: [Listings]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - listings
+   *               properties:
+   *                 listings:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required:
+   *                       - rentalObjectCode
+   *                       - publishedFrom
+   *                       - status
+   *                       - rentalRule
+   *                       - listingCategory
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       publishedFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       publishedTo:
+   *                         type: string
+   *                         format: date-time
+   *                         description: Optional. If not provided, the listing will not have an expiration date (for NON_SCORED listings)
+   *                       status:
+   *                         type: string
+   *                         enum: [ACTIVE, INACTIVE, CLOSED, ASSIGNED, EXPIRED, NO_APPLICANTS]
+   *                       rentalRule:
+   *                         type: string
+   *                         enum: [SCORED, NON_SCORED]
+   *                       listingCategory:
+   *                         type: string
+   *                         enum: [PARKING_SPACE, APARTMENT, STORAGE]
+   *     responses:
+   *       201:
+   *         description: All listings created successfully.
+   *         content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       207:
+   *         description: Partial success. Some listings created, some failed.
+   *         content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 partialResults:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Bad request. Invalid input data.
+   *       500:
+   *         description: Internal server error. Failed to create listings.
+   */
+  router.post('(.*)/listings/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const requestBodySchema = z.object({
+        listings: z.array(
+          z.object({
+            rentalObjectCode: z.string(),
+            publishedFrom: z.coerce.date(),
+            publishedTo: z.coerce.date().optional(),
+            status: z.nativeEnum(ListingStatus),
+            rentalRule: z.enum(['SCORED', 'NON_SCORED']),
+            listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
+          })
+        ),
+      })
+
+      const parseResult = requestBodySchema.safeParse(ctx.request.body)
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: parseResult.error.issues,
+          ...metadata,
+        }
+        return
+      }
+
+      const { listings } = parseResult.data
+      const result = await listingAdapter.createMultipleListings(listings)
+
+      if (!result.ok) {
+        if (result.err === 'partial-failure') {
+          ctx.status = 207
+          ctx.body = {
+            error: 'Some listings failed to create',
+            message:
+              'Partial success - some listings were created successfully while others failed',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create listings',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: result.data,
+        message: `Successfully created ${result.data.length} listings`,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error in createMultipleListings endpoint')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = { error: error.message, ...metadata }
+      } else {
+        ctx.body = { error: 'An unexpected error occurred.', ...metadata }
+      }
+    }
+  })
+
   const CreateApplicantRequestParamsSchema = z.object({
     name: z.string().optional(),
     nationalRegistrationNumber: z.string().optional(),
