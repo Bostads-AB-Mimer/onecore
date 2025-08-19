@@ -272,7 +272,6 @@ export const routes = (router: KoaRouter) => {
       }
 
       const { listings } = parseResult.data
-
       const result = await listingAdapter.createMultipleListings(listings)
 
       if (!result.ok) {
