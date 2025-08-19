@@ -90,6 +90,92 @@ const createListing = async (
   }
 }
 
+const createMultipleListings = async (
+  listingsData: Array<Omit<ListingWithoutRentalObject, 'id'>>,
+  dbConnection = db
+): Promise<
+  AdapterResult<
+    Array<ListingWithoutRentalObject>,
+    'partial-failure' | 'unknown'
+  >
+> => {
+  if (listingsData.length === 0) {
+    return { ok: true, data: [] }
+  }
+
+  try {
+    const insertData = listingsData.map((listingData) => ({
+      RentalObjectCode: listingData.rentalObjectCode,
+      PublishedFrom: listingData.publishedFrom,
+      PublishedTo: listingData.publishedTo,
+      Status: listingData.status,
+      RentalRule: listingData.rentalRule,
+      ListingCategory: listingData.listingCategory,
+    }))
+
+    const insertedRows = await dbConnection<DbListing>('Listing')
+      .insert(insertData)
+      .returning('*')
+
+    const createdListings = insertedRows.map(transformFromDbListing)
+
+    logger.info(
+      { count: createdListings.length },
+      'listingAdapter.createMultipleListings - successfully created listings'
+    )
+
+    return { ok: true, data: createdListings }
+  } catch (err) {
+    if (err instanceof RequestError) {
+      if (err.message.includes('unique_rental_object_code_status')) {
+        logger.info(
+          { count: listingsData.length },
+          'listingAdapter.createMultipleListings - conflict with unique constraint, falling back to individual creation'
+        )
+
+        // Fallback to individual creation to handle conflicts gracefully
+        const results = await Promise.allSettled(
+          listingsData.map((listingData) =>
+            createListing(listingData, dbConnection)
+          )
+        )
+
+        const successfulListings: ListingWithoutRentalObject[] = []
+        let hasFailures = false
+
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value.ok) {
+            successfulListings.push(result.value.data)
+          } else {
+            hasFailures = true
+            const rentalObjectCode =
+              listingsData[index]?.rentalObjectCode || 'unknown'
+            logger.info(
+              { RentalObjectCode: rentalObjectCode },
+              'listingAdapter.createMultipleListings - failed to create individual listing'
+            )
+          }
+        })
+
+        if (successfulListings.length === 0) {
+          return { ok: false, err: 'unknown' }
+        }
+
+        return hasFailures
+          ? { ok: false, err: 'partial-failure' }
+          : { ok: true, data: successfulListings }
+      }
+
+      logger.error(
+        { count: listingsData.length, err },
+        'listingAdapter.createMultipleListings'
+      )
+    }
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 /**
  * Checks if an active listing already exists based on unique criteria.
  *
@@ -226,7 +312,7 @@ const createApplication = async (
 }
 
 const updateApplicantStatus = async (
-  dbConnection: Knex<any, unknown[]>,
+  dbConnection: Knex,
   params: {
     applicantId: number
     status: ApplicantStatus
@@ -490,7 +576,7 @@ const getExpiredListingsWithNoOffers = async (): Promise<
 const updateListingStatuses = async (
   listingIds: number[],
   status: ListingStatus,
-  dbConnection: Knex<any, unknown[]> = db
+  dbConnection: Knex = db
 ): Promise<AdapterResult<null, 'no-update' | 'unknown'>> => {
   try {
     const query = await dbConnection('listing')
@@ -528,6 +614,7 @@ const deleteListing = async (
 
 export {
   createListing,
+  createMultipleListings,
   createApplication,
   getListingById,
   getActiveListingByRentalObjectCode,
