@@ -485,6 +485,107 @@ describe('replyToOffer', () => {
       const callArgs = createLeaseSpy.mock.calls[0]
       expect(callArgs[2] && new Date(callArgs[2])).toBeSameDayAs(new Date())
     })
+
+    it('creates a lease with start date today even after 23:00 local time', async () => {
+      // Mock system time to 23:30 local time
+      const lateHour = new Date()
+      lateHour.setHours(23, 30, 0, 0)
+      jest.useFakeTimers().setSystemTime(lateHour)
+
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedOffer.build(),
+      })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+            vacantFrom: undefined,
+          })
+          .build(),
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      expect(createLeaseSpy).toHaveBeenCalledTimes(1)
+      const callArgs = createLeaseSpy.mock.calls[0]
+      // Kontrollera att datumet är samma dag i UTC som det mockade datumet
+      expect(callArgs[2] && new Date(callArgs[2])).toBeSameDayAs(
+        new Date(lateHour.toISOString())
+      )
+
+      jest.useRealTimers()
+    })
+
+    it('creates a lease with start date today when vacantFrom is today at 23:59', async () => {
+      // Sätt vacantFrom till idag kl 23:59 UTC
+      const now = new Date()
+      const vacantFrom = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          23,
+          59,
+          0,
+          0
+        )
+      )
+
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedOffer.build(),
+      })
+      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+            vacantFrom: vacantFrom,
+          })
+          .build(),
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      expect(createLeaseSpy).toHaveBeenCalledTimes(1)
+      const callArgs = createLeaseSpy.mock.calls[0]
+      // Kontrollera att lease-datumet är samma dag som idag (UTC)
+      expect(new Date(callArgs[2])).toBeSameDayAs(new Date())
+    })
   })
 
   describe('denyOffer', () => {

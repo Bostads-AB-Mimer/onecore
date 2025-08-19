@@ -110,17 +110,21 @@ export const acceptOffer = async (
     let lease: any
 
     try {
-      const leaseFromDate =
-        listing.rentalObject.vacantFrom &&
-        utils.date.getDateWithoutTime(listing.rentalObject.vacantFrom) >
-          utils.date.getDateWithoutTime(new Date())
-          ? new Date(listing.rentalObject.vacantFrom).toISOString()
-          : new Date().toISOString()
+      const todaysDate = utils.date.getUTCDateWithoutTime(new Date())
+      const vacantDate = listing.rentalObject.vacantFrom
+        ? utils.date.getUTCDateWithoutTime(
+            new Date(listing.rentalObject.vacantFrom)
+          )
+        : null
+      const fromDate =
+        vacantDate && vacantDate > todaysDate
+          ? vacantDate.toISOString()
+          : todaysDate.toISOString()
 
       lease = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
-        leaseFromDate,
+        fromDate,
         '001'
       )
 
