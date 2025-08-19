@@ -134,14 +134,14 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
-      const lease = await createLease(
+      const leaseId = await createLease(
         parkingSpace.parkingSpaceId,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
         '001'
       )
 
-      log.push(`Kontrakt skapat: ${lease.LeaseId}`)
+      log.push(`Kontrakt skapat: ${leaseId}`)
 
       log.push(
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
@@ -150,7 +150,7 @@ export const createLeaseForExternalParkingSpace = async (
       await sendNotificationToContact(
         applicantContact,
         'Godkänd ansökan om bilplats',
-        `Din ansökan om bilplats har godkänts!\n\nDet här händer nu:\n\n * Kontraktet: Du kommer snart få ett digitalt kontrakt att skriva under. En av våra medarbetare kommer att göra i ordning kontraktet och skicka det till dig för digital signering. Kontraktet skickas vanligtvis kommande arbetsdag men under semesterperioden kan det dröja lite längre, håll utkik i din inkorg. Kontraktsnumret är: ${lease.LeaseId}.\n\n * Faktura: Din första faktura finns på Mina sidor. Logga in och klicka på Mina fakturor för att se förfallodatum och betalningsuppgifter.\n\n * Eventuella nycklar: Om det behövs nycklar till bilplatsen så hämtar du dom på Mimers kundcenter, Gasverksgatan 7, efter kl. 12.00 den dag kontraktet börjar gälla. Om det är en helgdag, kan du hämta dem kommande vardag efter kl. 12.00.\n\nHälsningar\n\nBostads AB Mimer\n`
+        `Din ansökan om bilplats har godkänts!\n\nDet här händer nu:\n\n * Kontraktet: Du kommer snart få ett digitalt kontrakt att skriva under. En av våra medarbetare kommer att göra i ordning kontraktet och skicka det till dig för digital signering. Kontraktet skickas vanligtvis kommande arbetsdag men under semesterperioden kan det dröja lite längre, håll utkik i din inkorg. Kontraktsnumret är: ${leaseId}.\n\n * Faktura: Din första faktura finns på Mina sidor. Logga in och klicka på Mina fakturor för att se förfallodatum och betalningsuppgifter.\n\n * Eventuella nycklar: Om det behövs nycklar till bilplatsen så hämtar du dom på Mimers kundcenter, Gasverksgatan 7, efter kl. 12.00 den dag kontraktet börjar gälla. Om det är en helgdag, kan du hämta dem kommande vardag efter kl. 12.00.\n\nHälsningar\n\nBostads AB Mimer\n`
       )
       await sendNotificationToRole(
         'leasing',
@@ -160,9 +160,9 @@ export const createLeaseForExternalParkingSpace = async (
 
       return {
         processStatus: ProcessStatus.successful,
-        data: { lease },
+        data: { LeaseId: leaseId },
         response: {
-          lease,
+          leaseId,
           message: 'Parking space lease created.',
         },
         httpStatus: 200,

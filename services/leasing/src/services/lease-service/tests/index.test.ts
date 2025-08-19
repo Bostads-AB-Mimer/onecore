@@ -264,7 +264,7 @@ describe('lease-service', () => {
     it('calls xpand adapter and returns id of new lease', async () => {
       const xpandAdapterSpy = jest
         .spyOn(xpandSoapAdapter, 'createLease')
-        .mockResolvedValueOnce('123-123-123/1')
+        .mockResolvedValueOnce({ ok: true, data: '123-123-123/1' })
 
       const result = await request(app.callback()).post('/leases')
 
@@ -272,7 +272,32 @@ describe('lease-service', () => {
       expect(result.body.content).toEqual({ LeaseId: '123-123-123/1' })
     })
 
-    it('handles errors', async () => {
+    it('handles lease-not-found errors', async () => {
+      const xpandAdapterSpy = jest
+        .spyOn(xpandSoapAdapter, 'createLease')
+        .mockResolvedValueOnce({ ok: false, err: 'create-lease-not-allowed' })
+
+      const result = await request(app.callback()).post('/leases')
+
+      expect(xpandAdapterSpy).toHaveBeenCalled()
+      expect(result.status).toBe(404)
+      expect(result.body.error).toBe(
+        'Lease cannot be created on this rental object'
+      )
+    })
+    it('handles unknown errors', async () => {
+      const xpandAdapterSpy = jest
+        .spyOn(xpandSoapAdapter, 'createLease')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const result = await request(app.callback()).post('/leases')
+
+      expect(xpandAdapterSpy).toHaveBeenCalled()
+      expect(result.status).toBe(500)
+      expect(result.body.error).toBe('Unknown error when creating lease')
+    })
+
+    it('handles unhandled errors', async () => {
       const xpandAdapterSpy = jest
         .spyOn(xpandSoapAdapter, 'createLease')
         .mockImplementation(() => {

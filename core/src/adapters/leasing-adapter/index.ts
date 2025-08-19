@@ -195,7 +195,7 @@ const createLease = async (
   contactId: string,
   fromDate: string,
   companyCode: string
-) => {
+): Promise<AdapterResult<string, 'create-lease-failed' | 'unknown'>> => {
   const axiosOptions = {
     method: 'POST',
     data: {
@@ -208,7 +208,20 @@ const createLease = async (
 
   const result = await axios(tenantsLeasesServiceUrl + '/leases', axiosOptions)
 
-  return result.data.content
+  if (result.status == 200) {
+    return { ok: true, data: result.data.content }
+  } else if (
+    result.status == 404 &&
+    result.data.error === 'Lease cannot be created on this rental object'
+  ) {
+    logger.error(
+      `Lease could not be created for rental object ${objectId}, contact ${contactId}, fromDate: ${fromDate}`
+    )
+    return { ok: false, err: 'create-lease-failed' }
+  } else {
+    logger.error('Unknwn error when creating lease: ' + result.data.error)
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 const getCreditInformation = async (
