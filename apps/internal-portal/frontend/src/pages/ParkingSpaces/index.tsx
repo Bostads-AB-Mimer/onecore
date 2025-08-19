@@ -337,7 +337,8 @@ const getColumns = (
       field: 'publishedTo',
       headerName: 'Publicerad T.O.M',
       ...sharedColumnProps,
-      valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
+      valueFormatter: (v) =>
+        v.value ? dateFormatter.format(new Date(v.value)) : '-',
     },
     {
       field: 'vacantFrom',
