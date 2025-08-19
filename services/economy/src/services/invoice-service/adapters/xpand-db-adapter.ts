@@ -1,6 +1,11 @@
 import knex from 'knex'
 import config from '../../../common/config'
-import { InvoiceDataRow, Invoice } from '../../../common/types'
+import {
+  InvoiceDataRow,
+  Invoice,
+  InvoiceDeliveryMethod,
+} from '../../../common/types'
+import { Address } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { xledgerDateString, XpandContact } from '../../../common/types'
 
@@ -159,7 +164,7 @@ const getAdditionalColumns = async (
   row: InvoiceDataRow,
   rentArticleDetails: RentArticleDetails,
   rentalSpecificRules: RentalSpecificRules
-): Promise<InvoiceDataRow> => {
+): Promise<InvoiceDataRow | null> => {
   const rentArticleName = row.rentArticle
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
@@ -167,24 +172,6 @@ const getAdditionalColumns = async (
   if ('Öresutjämning' == row.invoiceRowText) {
     return {}
   }
-  //const year = (row.accountingDate as string).substring(0, 4)
-  //  const year = (row.invoiceFromDate as string).substring(0, 4)
-  /*  let rentArticleResult: any[]*/
-
-  /*  if ('Öresutjämning' == row.invoiceRowText) {
-    rentArticleResult = await db('repsk')
-      .where('keycode', 'ORESUTJ')
-      .andWhere('year', year)
-      .distinct()
-  } else {*/
-  /*const rentArticleQuery = db('cmart')
-    .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
-    .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
-    .where('code', rentArticleName)
-    .andWhere('keyrektk', 'INTAKT')
-    .andWhere('year', year)
-    .andWhere('keycmuni', 'month')
-    .distinct()*/
 
   const rentArticle = rentArticleDetails[rentArticleName]
 
@@ -213,24 +200,21 @@ const getAdditionalColumns = async (
         .trimEnd()
     } else {
       logger.error(row, 'Could not find cost code and property')
-      throw new Error(
-        `Could not find cost code and property for invoice ${row.invoiceNumber}`
-      )
+      return null
     }
   }
   return additionalColumns
-
-  //}
-  return {}
 }
 
 export const enrichInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[],
-  invoiceDate: string,
-  invoiceDueDate: string,
   invoices: Invoice[]
-): Promise<InvoiceDataRow[]> => {
+): Promise<{
+  rows: InvoiceDataRow[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
   let i = 1
+  const errors: { invoiceNumber: string; error: string }[] = []
 
   invoiceDataRows.forEach((row) => {
     const invoice = invoices.find((invoice) => {
@@ -245,6 +229,7 @@ export const enrichInvoiceRows = async (
       row.invoiceDate = xledgerDateString(invoice.invdate as Date)
       row.invoiceFromDate = xledgerDateString(invoice.fromdate as Date)
       row.invoiceToDate = xledgerDateString(invoice.todate as Date)
+      row.invoiceDueDate = xledgerDateString(invoice.expdate as Date)
     } else {
       // Invoice is not found in Xpand. A common reason is that it's an
       // invoice of the wrong type, for instance reminder.
@@ -257,6 +242,10 @@ export const enrichInvoiceRows = async (
         row.invoiceNumber,
         'Invoice not found in XPand, removed invoice rows'
       )
+      errors.push({
+        invoiceNumber: row.invoiceNumber as string,
+        error: 'Invoice not found in XPand, removed invoice rows',
+      })
     }
   })
 
@@ -268,31 +257,55 @@ export const enrichInvoiceRows = async (
 
   const rentalIds = Object.keys(rentalIdMap)
   const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
-
   const rentArticleDetails = await getRentArticleDetails('2025')
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
-      async (row: InvoiceDataRow): Promise<InvoiceDataRow> => {
+      async (row: InvoiceDataRow): Promise<InvoiceDataRow | null> => {
         const additionalColumns = await getAdditionalColumns(
           row,
           rentArticleDetails,
           rentalSpecificRules
         )
 
+        if (!additionalColumns) {
+          logger.error({}, 'No additional columns')
+          errors.push({
+            invoiceNumber: row.invoiceNumber as string,
+            error: 'Could not find costcode and property',
+          })
+          return null
+        }
+
         process.stdout.clearLine(0)
         process.stdout.cursorTo(0)
         process.stdout.write('Enriching ' + (i++).toString())
 
-        return { ...row, ...additionalColumns, invoiceDate, invoiceDueDate }
+        return { ...row, ...additionalColumns }
       }
     )
   )
 
   process.stdout.write('\n')
 
-  return Promise.all(enrichedInvoiceRows)
+  const rows = (await Promise.all(enrichedInvoiceRows)).filter((row) => row)
+
+  return { rows: rows as InvoiceDataRow[], errors }
 }
+
+/*const getContactEmail = async (contactCode: string): Promise<string> => {
+  const mailresult = await db('cmeml')
+    .select('cmlelben')
+    .innerJoin('cmctc', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    .where('cmctckod', contactCode)
+    .orderBy('main', 'desc')
+
+  if (mailresult) {
+    return mailresult[0].cmlelben?.trimEnd()
+  } else {
+    return ''
+  }
+}*/
 
 export const getContacts = async (
   contactCodes: string[]
@@ -306,44 +319,76 @@ export const getContacts = async (
       'cmctc.cmctcben as fullName',
       'cmctc.persorgnr as nationalRegistrationNumber',
       'cmctc.birthdate as birthDate',
-      'cmadr.adress1 as street',
-      'cmadr.adress3 as postalCode',
-      'cmadr.adress4 as city',
-      'cmeml.cmemlben as emailAddress',
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'krknr.autogiro as autogiro'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
-    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
 
   const rows = await contactQuery
     .distinct()
-    .where('cmadr.keycmtyp', 'adrfakt')
-    .andWhere((query) => {
-      query.where('cmeml.main', '1').orWhereNull('cmeml.main')
-    })
-    .andWhere((query) => {
-      query.whereNull('cmadr.keycmtyp').orWhere((query) => {
-        query
-          .where('cmadr.keycmtyp', 'adrfakt')
-          .andWhere((query) => {
-            query.whereNull('cmadr.fdate').orWhereRaw('cmadr.fdate < getdate()')
-          })
-          .andWhere((query) => {
-            query.whereNull('cmadr.tdate').orWhereRaw('cmadr.tdate > getdate()')
-          })
-      })
-    })
     .whereIn('cmctc.cmctckod', contactCodes)
+
+  const emailAddresses = await db('cmeml')
+    .select('cmemlben', 'cmctckod')
+    .innerJoin('cmctc', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    .whereIn('cmctckod', contactCodes)
+    .orderBy('main', 'desc')
+
+  const invoiceAddresses = await db('cmadr')
+    .select('cmctckod', 'adress1', 'adress3', 'adress4')
+    .innerJoin('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
+    .whereIn('cmctckod', contactCodes)
+    .orderBy('cmctckod', 'asc')
+    .orderBy('fdate', 'desc')
+    .orderBy('tdate', 'desc')
+
+  const getContactEmail = (contactCode: string): string => {
+    const emailAddress = emailAddresses.find((emailAddress) => {
+      return (
+        emailAddress['cmctckod'] &&
+        emailAddress['cmctckod'].localeCompare(contactCode) === 0
+      )
+    })
+
+    return emailAddress?.cmemlben ? emailAddress.cmemlben?.trimEnd() : ''
+  }
+
+  const getContactAddress = (contactCode: string): Address => {
+    const invoiceAddress = invoiceAddresses.find((invoiceAddress) => {
+      return (
+        invoiceAddress['cmctckod'] &&
+        invoiceAddress['cmctckod'].localeCompare(contactCode) === 0
+      )
+    })
+
+    if (invoiceAddress) {
+      return {
+        street: invoiceAddress.adress1?.trimEnd(),
+        postalCode: invoiceAddress.adress3?.trimEnd(),
+        city: invoiceAddress.adress4?.trimEnd(),
+        number: '',
+      }
+    } else {
+      return {
+        street: '',
+        postalCode: '',
+        number: '',
+        city: '',
+      }
+    }
+  }
 
   const contacts = rows.map((contactRow) => {
     let nationalRegistrationNumber =
       contactRow.nationalRegistrationNumber?.trimEnd()
 
     if (nationalRegistrationNumber) {
+      if (nationalRegistrationNumber.length > 11) {
+        nationalRegistrationNumber = nationalRegistrationNumber.substring(2)
+      }
+
       nationalRegistrationNumber =
         nationalRegistrationNumber.substring(
           0,
@@ -355,6 +400,9 @@ export const getContacts = async (
         )
     }
 
+    const contactCode = contactRow.contactCode?.trimEnd()
+    const emailAddress = getContactEmail(contactCode)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -364,15 +412,14 @@ export const getContacts = async (
       nationalRegistrationNumber,
       birthDate: contactRow.birthDate,
       isTenant: true,
-      address: {
-        street: contactRow.street?.trimEnd(),
-        postalCode: contactRow.postalCode?.trimEnd(),
-        city: contactRow.city?.trimEnd(),
-        number: '',
-      },
+      address: getContactAddress(contactCode),
       phoneNumbers: undefined,
-      emailAddress: contactRow.emailAddress?.trimEnd(),
+      emailAddress: emailAddress,
       autogiro: contactRow.autogiro && contactRow.autogiro !== 0,
+      invoiceDeliveryMethod:
+        emailAddress !== ''
+          ? InvoiceDeliveryMethod.Email
+          : InvoiceDeliveryMethod.Other,
     }
   })
 

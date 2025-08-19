@@ -374,7 +374,7 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
     streetAddress: contact.Street,
     zipCode: contact.PostalCode,
     city: contact.City,
-    invoiceDeliveryMethod: '',
+    invoiceDeliveryMethod: contact.InvoiceDeliveryMethod,
     counterPart: contact.CounterPart ?? '',
     group: contact.CustomerGroup,
   }

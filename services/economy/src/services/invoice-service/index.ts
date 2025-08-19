@@ -35,22 +35,18 @@ export const routes = (router: KoaRouter) => {
     try {
       const invoiceDataRows = ctx.request.body['invoiceDataRows']
       const batchId = ctx.request.body['batchId']
-      const invoiceDate = ctx.request.body['invoiceDate']
-      const invoiceDueDate = ctx.request.body['invoiceDueDate']
 
-      const contactCodes = await processInvoiceRows(
-        invoiceDataRows,
-        batchId,
-        invoiceDate,
-        invoiceDueDate
-      )
+      const contactCodes = await processInvoiceRows(invoiceDataRows, batchId)
 
       ctx.status = 200
       // Roundoff rows are missing contact codes, filter out the
       // 'undefined' entry that results in
-      ctx.body = contactCodes.filter(
-        (contactCode) => contactCode !== 'undefined'
-      )
+      ctx.body = {
+        contacts: contactCodes.contacts.filter(
+          (contactCode) => contactCode !== 'undefined'
+        ),
+        errors: contactCodes.errors,
+      }
     } catch (error: any) {
       console.error('Error', error)
       ctx.status = 500

@@ -57,10 +57,11 @@ const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
  */
 export const processInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[],
-  batchId: string,
-  invoiceDate: string,
-  invoiceDueDate: string
-): Promise<string[]> => {
+  batchId: string
+): Promise<{
+  contacts: string[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
   const addedContactCodes: Record<string, boolean> = {}
 
   const invoices = await getInvoices(invoiceDataRows)
@@ -72,15 +73,11 @@ export const processInvoiceRows = async (
     }
   }
 
-  const enrichedInvoiceRows = await enrichInvoiceRows(
-    invoiceDataRows,
-    invoiceDate,
-    invoiceDueDate,
-    invoices
-  )
+  const enrichedInvoiceRows = await enrichInvoiceRows(invoiceDataRows, invoices)
 
-  const enrichedInvoiceRowsWithAccounts =
-    await addAccountInformation(enrichedInvoiceRows)
+  const enrichedInvoiceRowsWithAccounts = await addAccountInformation(
+    enrichedInvoiceRows.rows
+  )
 
   enrichedInvoiceRowsWithAccounts.forEach((row) => {
     addedContactCodes[row.contactCode] = true
@@ -88,7 +85,10 @@ export const processInvoiceRows = async (
 
   await saveInvoiceRows(enrichedInvoiceRowsWithAccounts, batchId)
 
-  return Object.keys(addedContactCodes)
+  return {
+    contacts: Object.keys(addedContactCodes),
+    errors: enrichedInvoiceRows.errors,
+  }
 }
 
 export const createLedgerTotalRow = (
