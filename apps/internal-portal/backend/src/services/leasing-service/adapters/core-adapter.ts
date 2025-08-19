@@ -293,6 +293,46 @@ const createOffer = async (params: {
   }
 }
 
+const createListings = async (
+  listingData: Omit<Listing, 'id' | 'rentalObject'>
+): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Listing }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings`,
+      data: listingData,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === HttpStatusCode.Conflict) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createMultipleListings = async (
+  listingsData: Array<Omit<Listing, 'id' | 'rentalObject'>>
+): Promise<AdapterResult<Array<Listing>, 'partial-failure' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Array<Listing> }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings/batch`,
+      data: { listings: listingsData },
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === 207) {
+      return { ok: false, err: 'partial-failure', statusCode: 207 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 const syncInternalParkingSpacesFromXpand = async (): Promise<
   AdapterResult<InternalParkingSpaceSyncSuccessResponse, 'unknown'>
 > => {
@@ -632,6 +672,8 @@ export {
   getTenantByContactCode,
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
+  createListings,
+  createMultipleListings,
   createNoteOfInterestForInternalParkingSpace,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
