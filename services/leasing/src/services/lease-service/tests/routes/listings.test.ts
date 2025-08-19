@@ -295,3 +295,203 @@ describe('PUT /listings/:listingId/status', () => {
     expect(updateListingStatuses).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('POST /listings/batch', () => {
+  it('responds with 201 when creating multiple listings successfully', async () => {
+    const mockListings = [
+      factory.listingWithoutRentalObject.build({
+        id: 1,
+        rentalObjectCode: 'P001',
+      }),
+      factory.listingWithoutRentalObject.build({
+        id: 2,
+        rentalObjectCode: 'P002',
+      }),
+    ]
+
+    const createMultipleListingsSpy = jest
+      .spyOn(listingAdapter, 'createMultipleListings')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: mockListings,
+      })
+
+    const testData = {
+      listings: [
+        {
+          rentalObjectCode: 'P001',
+          publishedFrom: '2024-01-01T00:00:00Z',
+          publishedTo: '2024-12-31T23:59:59Z',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+        },
+        {
+          rentalObjectCode: 'P002',
+          publishedFrom: '2024-01-01T00:00:00Z',
+          publishedTo: '2024-12-31T23:59:59Z',
+          status: ListingStatus.Active,
+          rentalRule: 'NON_SCORED',
+          listingCategory: 'PARKING_SPACE',
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/listings/batch')
+      .send(testData)
+
+    expect(createMultipleListingsSpy).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: 'P001',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+        }),
+        expect.objectContaining({
+          rentalObjectCode: 'P002',
+          status: ListingStatus.Active,
+          rentalRule: 'NON_SCORED',
+          listingCategory: 'PARKING_SPACE',
+        }),
+      ])
+    )
+
+    expect(res.status).toBe(201)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(Number),
+          rentalObjectCode: expect.any(String),
+          publishedFrom: expect.any(String),
+          publishedTo: expect.any(String),
+          status: expect.any(Number),
+          rentalRule: expect.any(String),
+          listingCategory: expect.any(String),
+          applicants: expect.any(Array),
+        }),
+      ]),
+      message: 'Successfully created 2 listings',
+    })
+  })
+
+  it('responds with 207 when partial failure occurs', async () => {
+    const createMultipleListingsSpy = jest
+      .spyOn(listingAdapter, 'createMultipleListings')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: 'partial-failure',
+      })
+
+    const testData = {
+      listings: [
+        {
+          rentalObjectCode: 'P003',
+          publishedFrom: '2024-01-01T00:00:00Z',
+          publishedTo: '2024-12-31T23:59:59Z',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+        },
+        {
+          rentalObjectCode: 'P003', // Duplicate - should cause conflict
+          publishedFrom: '2024-01-01T00:00:00Z',
+          publishedTo: '2024-12-31T23:59:59Z',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/listings/batch')
+      .send(testData)
+
+    expect(createMultipleListingsSpy).toHaveBeenCalled()
+    expect(res.status).toBe(207)
+    expect(res.body).toEqual({
+      error: 'Some listings failed to create',
+      message:
+        'Partial success - some listings were created successfully while others failed',
+    })
+  })
+
+  it('responds with 400 when request body is invalid', async () => {
+    const testData = {
+      listings: [
+        {
+          rentalObjectCode: 'P004',
+          // Missing required fields
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/listings/batch')
+      .send(testData)
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({
+      error: 'Invalid request body',
+      details: expect.any(Array),
+    })
+  })
+
+  it('responds with 201 when creating empty listings array', async () => {
+    const createMultipleListingsSpy = jest
+      .spyOn(listingAdapter, 'createMultipleListings')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+
+    const testData = {
+      listings: [],
+    }
+
+    const res = await request(app.callback())
+      .post('/listings/batch')
+      .send(testData)
+
+    expect(createMultipleListingsSpy).toHaveBeenCalledWith([])
+    expect(res.status).toBe(201)
+    expect(res.body).toEqual({
+      content: [],
+      message: 'Successfully created 0 listings',
+    })
+  })
+
+  it('responds with 500 when adapter returns unknown error', async () => {
+    const createMultipleListingsSpy = jest
+      .spyOn(listingAdapter, 'createMultipleListings')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+    const testData = {
+      listings: [
+        {
+          rentalObjectCode: 'P005',
+          publishedFrom: '2024-01-01T00:00:00Z',
+          publishedTo: '2024-12-31T23:59:59Z',
+          status: ListingStatus.Active,
+          rentalRule: 'SCORED',
+          listingCategory: 'PARKING_SPACE',
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/listings/batch')
+      .send(testData)
+
+    expect(createMultipleListingsSpy).toHaveBeenCalled()
+    expect(res.status).toBe(500)
+    expect(res.body).toEqual({
+      error: 'Failed to create listings',
+    })
+  })
+})
