@@ -267,10 +267,57 @@ const getListings = async (
   }
 }
 
+const createMultipleListings = async (
+  listingsData: Array<Omit<Listing, 'id' | 'rentalObject'>>
+): Promise<AdapterResult<Listing[], 'partial-failure' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/listings/batch`,
+      { listings: listingsData }
+    )
+
+    if (response.status === HttpStatusCode.Created) {
+      return { ok: true, data: response.data.content }
+    }
+
+    // Handle partial success (207 Multi-Status)
+    if (response.status === 207) {
+      logger.warn(
+        {
+          listingsCount: listingsData.length,
+          responseData: response.data,
+        },
+        'Partial success when creating multiple listings'
+      )
+      return { ok: false, err: 'partial-failure' }
+    }
+
+    logger.error(
+      {
+        status: response.status,
+        data: response.data,
+        listingsCount: listingsData.length,
+      },
+      'Unexpected response when creating multiple listings'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      {
+        error,
+        listingsCount: listingsData.length,
+      },
+      'Error creating multiple listings'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
   createNewListing,
+  createMultipleListings,
   applyForListing,
   getListingByListingId,
   syncInternalParkingSpacesFromXpand,
