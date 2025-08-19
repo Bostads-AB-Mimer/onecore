@@ -1,5 +1,3 @@
-import { expect } from '@jest/globals'
-
 expect.extend({
   toBeSameDayAs(received, expected) {
     const pass =
@@ -29,3 +27,5 @@ declare global {
     }
   }
 }
+
+export {}
