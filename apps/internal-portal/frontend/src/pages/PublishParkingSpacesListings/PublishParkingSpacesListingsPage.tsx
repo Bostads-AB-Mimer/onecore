@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, memo } from 'react'
+import { useEffect, useState, useMemo, memo, useCallback } from 'react'
 import {
   Box,
   Button,
@@ -6,6 +6,10 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import { type GridRowId, type GridColDef } from '@mui/x-data-grid'
 import { RentalObject } from '@onecore/types'
@@ -53,12 +57,18 @@ const ParkingSpaces = memo(
       hideFooterPagination={false}
       rowSelectionModel={selectedIds}
       onRowSelectionModelChange={onRowSelectionModelChange}
+      // Enable pagination
+      initialState={{
+        pagination: { paginationModel: { pageSize: 50 } },
+      }}
+      pageSizeOptions={[50, 100]}
     />
   )
 )
 
 export const PublishParkingSpacesListingsPage = () => {
   const [selectedIds, setSelectedIds] = useState<GridRowId[]>([])
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false)
   const { data: parkingSpaces, isLoading } = useVacantParkingSpaces()
 
   const { rentalRules, handleRentalRuleChange, initializeRentalRules } =
@@ -75,11 +85,22 @@ export const PublishParkingSpacesListingsPage = () => {
     [rentalRules, handleRentalRuleChange]
   )
 
+  // Handle publish with batch size warning
+  const handlePublishClick = useCallback(() => {
+    if (selectedIds.length > 100) {
+      setShowBatchConfirm(true)
+    } else {
+      handlePublishParkingSpaces(selectedIds, rentalRules)
+    }
+  }, [selectedIds, rentalRules, handlePublishParkingSpaces])
+
+  const handleConfirmBatchPublish = useCallback(() => {
+    setShowBatchConfirm(false)
+    handlePublishParkingSpaces(selectedIds, rentalRules)
+  }, [selectedIds, rentalRules, handlePublishParkingSpaces])
+
   useEffect(() => {
     if (parkingSpaces) {
-      setSelectedIds(
-        parkingSpaces.map(({ rentalObjectCode }) => rentalObjectCode)
-      )
       // Initialize rental rules with default values
       initializeRentalRules(parkingSpaces)
     }
@@ -106,6 +127,15 @@ export const PublishParkingSpacesListingsPage = () => {
         </Alert>
       )}
 
+      {/* Selection info */}
+      {parkingSpaces && parkingSpaces.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {selectedIds.length} av {parkingSpaces.length} markerade
+          </Typography>
+        </Box>
+      )}
+
       <ParkingSpaces
         key="needs-republish"
         rows={parkingSpaces}
@@ -122,7 +152,7 @@ export const PublishParkingSpacesListingsPage = () => {
 
         <Button
           variant="contained"
-          onClick={() => handlePublishParkingSpaces(selectedIds, rentalRules)}
+          onClick={handlePublishClick}
           disabled={isPending || selectedIds.length === 0}
         >
           {isPending ? (
@@ -135,6 +165,28 @@ export const PublishParkingSpacesListingsPage = () => {
           )}
         </Button>
       </Box>
+
+      {/* Batch confirmation dialog */}
+      <Dialog
+        open={showBatchConfirm}
+        onClose={() => setShowBatchConfirm(false)}
+        aria-labelledby="batch-confirmation-title"
+      >
+        <DialogTitle id="batch-confirmation-title">
+          Stor batch detekterad
+        </DialogTitle>
+        <DialogContent>
+          Du är på väg att publicera {selectedIds.length} parkeringsplatser.
+          Detta kommer att delas upp i batchar för att undvika överlastning av
+          systemet. Vill du fortsätta?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBatchConfirm(false)}>Avbryt</Button>
+          <Button onClick={handleConfirmBatchPublish} variant="contained">
+            Fortsätt
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
