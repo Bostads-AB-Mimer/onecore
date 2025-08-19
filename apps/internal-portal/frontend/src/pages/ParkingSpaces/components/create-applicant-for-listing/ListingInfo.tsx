@@ -80,7 +80,9 @@ export const ListingInfo = (props: { listing: Listing }) => {
         <Typography>Datum tilldelas</Typography>
         <Box>
           <Typography>
-            {dateFormatter.format(new Date(props.listing.publishedTo))}
+            {props.listing.publishedTo
+              ? dateFormatter.format(new Date(props.listing.publishedTo))
+              : '-'}
           </Typography>
         </Box>
       </Box>

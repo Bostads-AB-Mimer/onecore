@@ -112,9 +112,11 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Datum tilldelas</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {dateFormatter.format(
-                  new Date(parkingSpaceListing.publishedTo)
-                )}
+                {parkingSpaceListing.publishedTo
+                  ? dateFormatter.format(
+                      new Date(parkingSpaceListing.publishedTo)
+                    )
+                  : '-'}
               </Typography>
             </Box>
           </Box>
