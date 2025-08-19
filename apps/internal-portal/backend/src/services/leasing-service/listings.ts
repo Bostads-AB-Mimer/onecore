@@ -3,6 +3,49 @@ import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
+  router.post('(.*)/listings', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+    const result = await coreAdapter.createListings(params)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  router.post('(.*)/listings/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+    const result = await coreAdapter.createMultipleListings(params.listings)
+
+    if (result.ok) {
+      ctx.status = 201
+      ctx.body = {
+        content: result.data,
+        message: `Successfully created ${result.data.length} listings`,
+        ...metadata,
+      }
+    } else if (result.err === 'partial-failure') {
+      ctx.status = 207
+      ctx.body = {
+        error: 'Some listings failed to create',
+        message:
+          'Partial success - some listings were created successfully while others failed',
+        ...metadata,
+      }
+    } else {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
   router.post('(.*)/listings/applicant', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = ctx.request.body
