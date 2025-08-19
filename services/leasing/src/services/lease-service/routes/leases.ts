@@ -381,15 +381,29 @@ export const routes = (router: KoaRouter) => {
     try {
       const request = <CreateLeaseRequest>ctx.request.body
 
-      const newLeaseId = await createLease(
+      const createLeaseResult = await createLease(
         new Date(request.fromDate),
         request.parkingSpaceId,
         request.contactCode,
         request.companyCode
       )
-      ctx.body = {
-        content: { LeaseId: newLeaseId },
-        ...metadata,
+      if (createLeaseResult.ok) {
+        ctx.body = {
+          content: { LeaseId: createLeaseResult.data },
+          ...metadata,
+        }
+      } else if (createLeaseResult.err === 'create-lease-not-allowed') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease cannot be created on this rental object',
+          ...metadata,
+        }
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Unknown error when creating lease',
+          ...metadata,
+        }
       }
     } catch (error: unknown) {
       ctx.status = 500
