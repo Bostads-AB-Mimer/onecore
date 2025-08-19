@@ -123,7 +123,8 @@ export const saveContacts = async (
         postalCode: contact.address?.postalCode,
         city: contact.address?.city,
         counterPart: counterPart ? counterPart.CounterpartCode : '',
-        customerGroup: customerGroup,
+        customerGroup,
+        invoiceDeliveryMethod: contact.invoiceDeliveryMethod,
       })
 
       successfulContacts++

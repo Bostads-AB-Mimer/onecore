@@ -33,6 +33,11 @@ export enum CustomerGroup {
   CounterPart = 'KI',
 }
 
+export enum InvoiceDeliveryMethod {
+  Email = '14001',
+  Other = '14002',
+}
+
 export const columnNames: string[] = [
   'contractCode',
   'contactCode',
@@ -59,6 +64,7 @@ export const columnNames: string[] = [
 
 export type XpandContact = Contact & {
   autogiro: boolean
+  invoiceDeliveryMethod: InvoiceDeliveryMethod
 }
 
 export type InvoiceDataRow = Record<string, string | number>
