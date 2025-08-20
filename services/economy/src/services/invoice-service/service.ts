@@ -146,6 +146,7 @@ export const createLedgerRows = async (
   while (currentStart < invoices.length) {
     const currentInvoices: LedgerInvoice[] = []
     const ledgerAccount = invoices[currentStart].ledgerAccount
+    const invoiceDate = invoices[currentStart].invoiceDate
     const chunkInvoiceRows: InvoiceDataRow[] = []
     const counterPartCustomers = await getCounterPartCustomers()
 
@@ -155,9 +156,12 @@ export const createLedgerRows = async (
       currentInvoiceIndex < invoices.length;
       currentInvoiceIndex++
     ) {
-      const currentContract = invoices[currentInvoiceIndex]
+      const currentInvoice = invoices[currentInvoiceIndex]
 
-      if (currentContract.ledgerAccount == ledgerAccount) {
+      if (
+        currentInvoice.ledgerAccount == ledgerAccount &&
+        currentInvoice.invoiceDate === invoiceDate
+      ) {
         currentInvoices.push(invoices[currentInvoiceIndex])
       } else {
         break
