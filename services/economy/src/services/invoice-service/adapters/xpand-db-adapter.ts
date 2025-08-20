@@ -367,7 +367,7 @@ export const getContacts = async (
       return {
         street: invoiceAddress.adress1?.trimEnd(),
         postalCode: invoiceAddress.adress3?.trimEnd(),
-        city: invoiceAddress.adress4?.trimEnd(),
+        city: invoiceAddress.address4?.trimEnd(),
         number: '',
       }
     } else {

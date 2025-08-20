@@ -30,6 +30,7 @@ const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
   return {
     account: roundOffInformation.account,
     costCode: roundOffInformation.costCode,
+    amount: invoice.roundoff as number,
     totalAmount: invoice.roundoff as number,
     invoiceDate: xledgerDateString(invoice.invdate as Date),
     invoiceNumber: (invoice.invoice as string).trimEnd(),
@@ -67,7 +68,7 @@ export const processInvoiceRows = async (
   const invoices = await getInvoices(invoiceDataRows)
 
   for (const invoice of invoices) {
-    if ((invoice.roundoff as number) > 0) {
+    if ((invoice.roundoff as number) !== 0) {
       const roundOffRow = await createRoundOffRow(invoice)
       invoiceDataRows.push(roundOffRow)
     }
