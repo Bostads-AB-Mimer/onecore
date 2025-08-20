@@ -76,6 +76,7 @@ export type LedgerInvoice = {
   invoiceNumber: string
   invoiceFromDate: string
   invoiceToDate: string
+  invoiceDate: string
   ledgerAccount: string
   totalAccount: string
   tenantName: string

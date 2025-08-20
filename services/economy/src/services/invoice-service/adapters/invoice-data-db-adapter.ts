@@ -163,6 +163,7 @@ export const getInvoices = async (
   const invoices = await db('invoice_data')
     .select(
       'ContractCode',
+      'InvoiceDate',
       'InvoiceNumber',
       'InvoiceFromDate',
       'InvoiceToDate',
@@ -173,11 +174,14 @@ export const getInvoices = async (
     .distinct()
     .where('batchId', batchId)
     .whereNull('importStatus')
+    .orderBy('InvoiceDate', 'ASC')
+    .orderBy('LedgerAccount', 'ASC')
 
   const ledgerInvoices = invoices.map((invoice) => {
     return {
       contractCode: invoice.ContractCode,
       invoiceNumber: invoice.InvoiceNumber,
+      invoiceDate: invoice.InvoiceDate,
       invoiceFromDate: invoice.InvoiceFromDate,
       invoiceToDate: invoice.InvoiceToDate,
       ledgerAccount: invoice.LedgerAccount,
