@@ -4,14 +4,16 @@ import {
   getContracts,
   getCounterPartCustomers,
   getInvoiceRows,
+  getInvoices,
   saveInvoiceRows,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
-  getInvoices,
+  getInvoices as getXpandInvoices,
   getRoundOffInformation,
 } from './adapters/xpand-db-adapter'
 import {
+  LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
   Invoice,
@@ -65,7 +67,7 @@ export const processInvoiceRows = async (
 }> => {
   const addedContactCodes: Record<string, boolean> = {}
 
-  const invoices = await getInvoices(invoiceDataRows)
+  const invoices = await getXpandInvoices(invoiceDataRows)
 
   for (const invoice of invoices) {
     if ((invoice.roundoff as number) !== 0) {
@@ -133,29 +135,30 @@ export const createLedgerRows = async (
 ): Promise<InvoiceDataRow[]> => {
   const transactionRows: InvoiceDataRow[] = []
 
-  // Do transaction rows in chunks of contracts to get different
+  // Do transaction rows in chunks of invoices to get different
   // voucher numbers.
-  const contracts = await getContracts(batchId)
+  const invoices = await getInvoices(batchId)
+  //  const contracts = await getContracts(batchId)
   const CHUNK_SIZE = 500
   let currentStart = 0
   let chunkNum = 0
 
-  while (currentStart < contracts.length) {
-    const currentContracts: InvoiceContract[] = []
-    const ledgerAccount = contracts[currentStart].ledgerAccount
-    const chunkContractRows: InvoiceDataRow[] = []
+  while (currentStart < invoices.length) {
+    const currentInvoices: LedgerInvoice[] = []
+    const ledgerAccount = invoices[currentStart].ledgerAccount
+    const chunkInvoiceRows: InvoiceDataRow[] = []
     const counterPartCustomers = await getCounterPartCustomers()
 
     for (
-      let currentContractIndex = currentStart;
-      currentContractIndex < CHUNK_SIZE + currentStart &&
-      currentContractIndex < contracts.length;
-      currentContractIndex++
+      let currentInvoiceIndex = currentStart;
+      currentInvoiceIndex < CHUNK_SIZE + currentStart &&
+      currentInvoiceIndex < invoices.length;
+      currentInvoiceIndex++
     ) {
-      const currentContract = contracts[currentContractIndex]
+      const currentContract = invoices[currentInvoiceIndex]
 
       if (currentContract.ledgerAccount == ledgerAccount) {
-        currentContracts.push(contracts[currentContractIndex])
+        currentInvoices.push(invoices[currentInvoiceIndex])
       } else {
         break
       }
@@ -163,35 +166,32 @@ export const createLedgerRows = async (
     console.log(
       'Ledger chunk',
       currentStart,
-      currentContracts.length + currentStart - 1
+      currentInvoices.length + currentStart - 1
     )
-    currentStart += currentContracts.length
+    currentStart += currentInvoices.length
 
-    for (const contract of currentContracts) {
-      const contractInvoiceRows = await getInvoiceRows(
-        contract.contractCode,
-        batchId
-      )
+    for (const invoice of currentInvoices) {
+      const invoiceRows = await getInvoiceRows(invoice.invoiceNumber, batchId)
 
       const counterPart = counterPartCustomers.find((counterPart) =>
-        (contractInvoiceRows[0].TenantName as string).startsWith(
+        (invoiceRows[0].TenantName as string).startsWith(
           counterPart.CustomerName
         )
       )
 
       const customerLedgerRow = await createCustomerLedgerRow(
-        contractInvoiceRows,
+        invoiceRows,
         batchId,
         chunkNum,
         counterPart ? counterPart.CounterpartCode : ''
       )
 
-      chunkContractRows.push(customerLedgerRow)
+      chunkInvoiceRows.push(customerLedgerRow)
     }
 
-    transactionRows.push(...chunkContractRows)
+    transactionRows.push(...chunkInvoiceRows)
 
-    const totalRow = createLedgerTotalRow(chunkContractRows)
+    const totalRow = createLedgerTotalRow(chunkInvoiceRows)
     transactionRows.push(totalRow)
 
     chunkNum++

@@ -2,6 +2,7 @@ import {
   AdapterResult,
   CustomerGroup,
   CUSTOMER_LEDGER_ACCOUNT,
+  LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
   TOTAL_ACCOUNT,
@@ -156,6 +157,38 @@ export const getContacts = async (batchId: string) => {
     .whereNull('importStatus')
 }
 
+export const getInvoices = async (
+  batchId: string
+): Promise<LedgerInvoice[]> => {
+  const invoices = await db('invoice_data')
+    .select(
+      'ContractCode',
+      'InvoiceNumber',
+      'InvoiceFromDate',
+      'InvoiceToDate',
+      'LedgerAccount',
+      'TotalAccount',
+      'TenantName'
+    )
+    .distinct()
+    .where('batchId', batchId)
+    .whereNull('importStatus')
+
+  const ledgerInvoices = invoices.map((invoice) => {
+    return {
+      contractCode: invoice.ContractCode,
+      invoiceNumber: invoice.InvoiceNumber,
+      invoiceFromDate: invoice.InvoiceFromDate,
+      invoiceToDate: invoice.InvoiceToDate,
+      ledgerAccount: invoice.LedgerAccount,
+      totalAccount: invoice.TotalAccount,
+      tenantName: invoice.TenantName,
+    }
+  })
+
+  return ledgerInvoices
+}
+
 /**
  * Gets all contracts for a batch, sorted by invoice from date
  * and to date to group periods later.
@@ -185,10 +218,13 @@ export const getContracts = async (
     ])
 }
 
-export const getInvoiceRows = async (contractCode: string, batchId: string) => {
+export const getInvoiceRows = async (
+  invoiceNumber: string,
+  batchId: string
+) => {
   return await db('invoice_data')
     .where('batchId', batchId)
-    .where('contractCode', contractCode)
+    .where('invoiceNumber', invoiceNumber)
 }
 
 export const getAggregatedInvoiceRows = async (
