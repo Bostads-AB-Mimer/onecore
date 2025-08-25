@@ -79,7 +79,7 @@ export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
     {
       field: 'numTimesPublishedInInternalQueue',
       flex: 1,
-      headerName: 'Antal publiceringar intern kö',
+      headerName: 'Antal publiceringar internt',
     },
   ]
 }
@@ -96,7 +96,7 @@ export const getRentalRuleActionColumn = (
     type: 'actions',
     flex: 1,
     minWidth: 250,
-    headerName: 'Publicera i kötyp',
+    headerName: 'Uthyrningsmetod',
     headerAlign: 'left',
     renderCell: ({ row }) => (
       // TODO: Rule-based selection of queue type depending on whether it has
