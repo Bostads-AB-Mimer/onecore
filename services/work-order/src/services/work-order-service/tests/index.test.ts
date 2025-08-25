@@ -7,20 +7,6 @@ import * as xpandAdapter from '../adapters/xpand-adapter'
 import { routes } from '../index'
 import * as factory from './factories'
 
-jest.mock('@onecore/utilities', () => {
-  return {
-    logger: {
-      info: () => {
-        return
-      },
-      error: () => {
-        return
-      },
-    },
-    generateRouteMetadata: jest.fn(() => ({})),
-  }
-})
-
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
