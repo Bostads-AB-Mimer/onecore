@@ -1031,6 +1031,12 @@ export const routes = (router: KoaRouter) => {
           )
 
         if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'No maintenance units found', ...metadata }
+            return
+          }
+
           logger.error(
             result.err,
             'Error getting maintenance units from property-base',
@@ -1038,6 +1044,12 @@ export const routes = (router: KoaRouter) => {
           )
           ctx.status = 500
           ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        if (result.data.length === 0) {
+          ctx.status = 404
+          ctx.body = { error: 'No maintenance units found', ...metadata }
           return
         }
 

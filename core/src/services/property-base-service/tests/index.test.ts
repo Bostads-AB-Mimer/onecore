@@ -420,6 +420,19 @@ describe('@onecore/property-service', () => {
       ).not.toThrow()
     })
 
+    it('returns 404 if building code is not found', async () => {
+      const getMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getMaintenanceUnitsByBuildingCode')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/maintenance-units/by-building-code/123-456'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('123-456')
+    })
+
     it('returns 500 if no maintenance units can be retrieved', async () => {
       const getMaintenanceUnitsSpy = jest
         .spyOn(propertyBaseAdapter, 'getMaintenanceUnitsByBuildingCode')

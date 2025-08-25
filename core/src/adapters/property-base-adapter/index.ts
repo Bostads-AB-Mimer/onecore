@@ -360,9 +360,7 @@ type GetMaintenanceUnitsByBuildingCodeResponse =
 
 export async function getMaintenanceUnitsByBuildingCode(
   buildingCode: string
-): Promise<
-  AdapterResult<GetMaintenanceUnitsByBuildingCodeResponse, 'unknown'>
-> {
+): Promise<AdapterResult<GetMaintenanceUnitsByBuildingCodeResponse, unknown>> {
   try {
     const fetchResponse = await client().GET(
       '/maintenance-units/by-building-code/{code}',
@@ -375,13 +373,17 @@ export async function getMaintenanceUnitsByBuildingCode(
       return { ok: true, data: fetchResponse.data.content }
     }
 
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error(
       { err },
       '@onecore/property-adapter.getMaintenanceUnitsByBuildingCode'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err }
   }
 }
 
