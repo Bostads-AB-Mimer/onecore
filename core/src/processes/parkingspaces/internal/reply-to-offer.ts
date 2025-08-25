@@ -12,11 +12,11 @@ import {
   ProcessStatus,
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { AdapterResult } from '../../../adapters/types'
 import { createOfferForInternalParkingSpace } from './create-offer'
+import * as utils from '../../../utils'
 
 type ReplyToOfferError =
   | ReplyToOfferErrorCodes.NoOffer
@@ -108,13 +108,23 @@ export const acceptOffer = async (
 
     //Create lease
     let lease: any
+
     try {
+      const todaysDate = utils.date.getUTCDateWithoutTime(new Date())
+      const vacantDate = listing.rentalObject.vacantFrom
+        ? utils.date.getUTCDateWithoutTime(
+            new Date(listing.rentalObject.vacantFrom)
+          )
+        : null
+      const fromDate =
+        vacantDate && vacantDate > todaysDate
+          ? vacantDate.toISOString()
+          : todaysDate.toISOString()
+
       lease = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
-        listing.rentalObject.vacantFrom != undefined
-          ? new Date(listing.rentalObject.vacantFrom).toISOString() // fix: vacantFrom is really a string...
-          : new Date().toISOString(),
+        fromDate,
         '001'
       )
 
@@ -123,6 +133,7 @@ export const acceptOffer = async (
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
       )
     } catch (err) {
+      //TODO: om vi får fel här, Kan vi göra ett uppslag mot xpanddb för att se om det går att se varför och ge ett mer specifikt felmeddelande? Ex spärr, giltigt kontrakt på det datum vi skickar in.
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.CreateLeaseFailure,

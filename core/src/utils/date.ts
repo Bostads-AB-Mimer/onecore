@@ -23,3 +23,9 @@ export function addBusinessDays(date: Date, days: number) {
 
   return d.toDate()
 }
+
+export const getUTCDateWithoutTime = (date: Date): Date => {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  )
+}
