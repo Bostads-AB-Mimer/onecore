@@ -1,6 +1,7 @@
 import {
   AdapterResult,
   CustomerGroup,
+  CounterPartCustomer,
   CUSTOMER_LEDGER_ACCOUNT,
   LedgerInvoice,
   InvoiceContract,
@@ -99,8 +100,9 @@ export const saveContacts = async (
   let successfulContacts = 0
   let failedContacts = 0
   for (const contact of contacts) {
-    const counterPart = counterPartCustomers.find((counterPart) =>
-      (contact.fullName as string)?.startsWith(counterPart.CustomerName)
+    const counterPart = counterPartCustomers.find(
+      counterPartCustomers.customers,
+      contact.fullName as string
     )
 
     let customerGroup = counterPart ? CustomerGroup.CounterPart : null
@@ -123,7 +125,7 @@ export const saveContacts = async (
         streetNumber: contact.address?.number,
         postalCode: contact.address?.postalCode,
         city: contact.address?.city,
-        counterPart: counterPart ? counterPart.CounterpartCode : '',
+        counterPart: counterPart ? counterPart.counterPartCode : '',
         customerGroup,
         invoiceDeliveryMethod: contact.invoiceDeliveryMethod,
       })
@@ -271,10 +273,39 @@ export const getAggregatedInvoiceRows = async (
   return rows
 }
 
-export const getCounterPartCustomers = async () => {
+export const getCounterPartCustomers = async (): Promise<{
+  customers: CounterPartCustomer[]
+  find: (
+    customers: CounterPartCustomer[],
+    customerName: string
+  ) => CounterPartCustomer | undefined
+}> => {
   const result = await db('invoice_counterpart')
 
-  return result
+  const counterPartCustomers = result.map((row) => {
+    return {
+      customerName: row.CustomerName,
+      counterPartCode: row.CounterpartCode,
+      ledgerAccount: row.LedgerAccount,
+      totalAccount: row.TotalAccount,
+    }
+  })
+
+  const findCounterPartCustomer = (
+    customers: CounterPartCustomer[],
+    customerName: string
+  ): CounterPartCustomer | undefined => {
+    return customers.find((counterPart) =>
+      customerName
+        .toLowerCase()
+        .startsWith(counterPart.customerName.toLowerCase())
+    )
+  }
+
+  return {
+    customers: counterPartCustomers,
+    find: findCounterPartCustomer,
+  }
 }
 
 export const addAccountInformation = async (
@@ -284,13 +315,14 @@ export const addAccountInformation = async (
   for (const row of invoiceDataRows) {
     if ('Öresutjämning'.localeCompare(row.invoiceRowText as string) !== 0) {
       try {
-        const counterPart = counterPartCustomers.find((counterPart) =>
-          (row.tenantName as string).startsWith(counterPart.CustomerName)
+        const counterPart = counterPartCustomers.find(
+          counterPartCustomers.customers,
+          row.tenantName as string
         )
 
         if (counterPart) {
-          row.ledgerAccount = counterPart.LedgerAccount
-          row.totalAccount = counterPart.TotalAccount
+          row.ledgerAccount = counterPart.ledgerAccount
+          row.totalAccount = counterPart.totalAccount
         } else {
           row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
           row.totalAccount = TOTAL_ACCOUNT

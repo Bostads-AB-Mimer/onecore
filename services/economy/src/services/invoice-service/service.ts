@@ -13,6 +13,7 @@ import {
   getRoundOffInformation,
 } from './adapters/xpand-db-adapter'
 import {
+  CounterPartCustomers,
   LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
@@ -24,10 +25,26 @@ import {
   transformAggregatedInvoiceRow,
 } from './adapters/xledger-adapter'
 
-const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
+const createRoundOffRow = async (
+  invoice: Invoice,
+  counterPartCustomers: CounterPartCustomers
+): Promise<InvoiceDataRow> => {
   const fromDateString = xledgerDateString(invoice.fromdate as Date)
   const year = fromDateString.substring(0, 4)
   const roundOffInformation = await getRoundOffInformation(year)
+  let totalAccount = '2970'
+  let ledgerAccount = '1530'
+  const tenantName = (invoice.cmctcben as string).trimEnd()
+
+  const counterPartCustomer = counterPartCustomers.find(
+    counterPartCustomers.customers,
+    tenantName
+  )
+
+  if (counterPartCustomer) {
+    totalAccount = counterPartCustomer.totalAccount
+    ledgerAccount = counterPartCustomer.ledgerAccount
+  }
 
   return {
     account: roundOffInformation.account,
@@ -40,10 +57,10 @@ const createRoundOffRow = async (invoice: Invoice): Promise<InvoiceDataRow> => {
     fromDate: fromDateString,
     toDate: xledgerDateString(invoice.todate as Date),
     contractCode: (invoice.reference as string).trimEnd(),
-    totalAccount: 2970,
-    ledgerAccount: 1530,
+    totalAccount,
+    ledgerAccount,
     contactCode: (invoice.cmctckod as string).trimEnd(),
-    tenantName: (invoice.cmctcben as string).trimEnd(),
+    tenantName,
   }
 }
 
@@ -68,10 +85,11 @@ export const processInvoiceRows = async (
   const addedContactCodes: Record<string, boolean> = {}
 
   const invoices = await getXpandInvoices(invoiceDataRows)
+  const counterPartCustomers = await getCounterPartCustomers()
 
   for (const invoice of invoices) {
     if ((invoice.roundoff as number) !== 0) {
-      const roundOffRow = await createRoundOffRow(invoice)
+      const roundOffRow = await createRoundOffRow(invoice, counterPartCustomers)
       invoiceDataRows.push(roundOffRow)
     }
   }
@@ -138,17 +156,16 @@ export const createLedgerRows = async (
   // Do transaction rows in chunks of invoices to get different
   // voucher numbers.
   const invoices = await getInvoices(batchId)
-  //  const contracts = await getContracts(batchId)
   const CHUNK_SIZE = 500
   let currentStart = 0
   let chunkNum = 0
+  const counterPartCustomers = await getCounterPartCustomers()
 
   while (currentStart < invoices.length) {
     const currentInvoices: LedgerInvoice[] = []
     const ledgerAccount = invoices[currentStart].ledgerAccount
     const invoiceDate = invoices[currentStart].invoiceDate
     const chunkInvoiceRows: InvoiceDataRow[] = []
-    const counterPartCustomers = await getCounterPartCustomers()
 
     for (
       let currentInvoiceIndex = currentStart;
@@ -159,7 +176,7 @@ export const createLedgerRows = async (
       const currentInvoice = invoices[currentInvoiceIndex]
 
       if (
-        currentInvoice.ledgerAccount == ledgerAccount &&
+        currentInvoice.ledgerAccount === ledgerAccount &&
         currentInvoice.invoiceDate === invoiceDate
       ) {
         currentInvoices.push(invoices[currentInvoiceIndex])
@@ -177,17 +194,16 @@ export const createLedgerRows = async (
     for (const invoice of currentInvoices) {
       const invoiceRows = await getInvoiceRows(invoice.invoiceNumber, batchId)
 
-      const counterPart = counterPartCustomers.find((counterPart) =>
-        (invoiceRows[0].TenantName as string).startsWith(
-          counterPart.CustomerName
-        )
+      const counterPart = counterPartCustomers.find(
+        counterPartCustomers.customers,
+        invoiceRows[0].TenantName as string
       )
 
       const customerLedgerRow = await createCustomerLedgerRow(
         invoiceRows,
         batchId,
         chunkNum,
-        counterPart ? counterPart.CounterpartCode : ''
+        counterPart ? counterPart.counterPartCode : ''
       )
 
       chunkInvoiceRows.push(customerLedgerRow)

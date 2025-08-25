@@ -91,6 +91,21 @@ export type InvoiceContract = {
   tenantName: string
 }
 
+export type CounterPartCustomer = {
+  customerName: string
+  counterPartCode: string
+  ledgerAccount: string
+  totalAccount: string
+}
+
+export type CounterPartCustomers = {
+  customers: CounterPartCustomer[]
+  find: (
+    customers: CounterPartCustomer[],
+    customerName: string
+  ) => CounterPartCustomer | undefined
+}
+
 export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
   | { ok: false; err: E; statusCode?: number }
