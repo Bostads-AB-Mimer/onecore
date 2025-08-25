@@ -311,7 +311,7 @@ const getColumns = (
     },
     {
       field: 'rentalRule',
-      headerName: 'Kötyp',
+      headerName: 'Uthyrningsmetod',
       ...sharedColumnProps,
       valueGetter: (params) => {
         if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
