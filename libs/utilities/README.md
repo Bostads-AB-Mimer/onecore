@@ -67,7 +67,7 @@ In unit tests, you usually want the logger to be mocked away. There are multiple
 If you are only using the logger, mock that away:
 
 ```
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       debug: () => { return },
@@ -84,7 +84,7 @@ If you are using loggedAxios you will also have to mock that away, since it uses
 
 ```
 import axios from 'axios'
-jest.mock('onecore-utilities', () => {
+jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       debug: () => { return },
@@ -99,17 +99,15 @@ jest.mock('onecore-utilities', () => {
 })
 ```
 
-
 ## Development
 
 ### Requirements
 
 This application requires the following to be installed on your system:
 
-
- * **nvm**
- * **npm**
- * **Node.js**
+- **nvm**
+- **npm**
+- **Node.js**
 
 ### Install Instructions
 
@@ -117,13 +115,11 @@ This application requires the following to be installed on your system:
 
 Install the required node version, if not already installed.
 
-
 ```sh
 $ nvm install
 ```
 
 Activate the required node version.
-
 
 ```sh
 $ nvm use
@@ -133,7 +129,6 @@ $ nvm use
 
 Install dependencies
 
-
 ```sh
 $ npm run install
 ```
@@ -141,4 +136,3 @@ $ npm run install
 ## License
 
 © 2025 Bostads AB Mimer. [AGPL-3.0-only Licensed](./LICENSE)
-

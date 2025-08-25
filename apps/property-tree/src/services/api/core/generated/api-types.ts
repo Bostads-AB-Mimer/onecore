@@ -237,6 +237,28 @@ export interface paths {
       };
     };
   };
+  "/leases/by-contact-code/{contactCode}": {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": Record<string, never>[];
+          };
+        };
+      };
+    };
+  };
   "/cas/getConsumerReport/{pnr}": {
     /**
      * Get consumer report for a specific Personal Number (PNR)
@@ -1171,10 +1193,12 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description The listing category, either PARKING_SPACE, APARTMENT or STORAGE. */
+          listingCategory?: string;
           /** @description true for published listings, false for unpublished listings. */
           published?: boolean;
-          /** @description ie "Bilplats (Intern)" or "Bilplats (Extern)". */
-          waitingListType?: string;
+          /** @description The rental rule for the listings, either SCORED or NON_SCORED. */
+          rentalRule?: string;
           /** @description A contact code to filter out listings that are not valid to rent for the contact. */
           validToRentForContactCode?: string;
         };
@@ -1184,6 +1208,96 @@ export interface paths {
         200: {
           content: {
             "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
+  "/vacant-parkingspaces": {
+    /**
+     * Get all vacant parking spaces
+     * @description Retrieves a list of all vacant parking spaces.
+     */
+    get: {
+      responses: {
+        /** @description A list of vacant parking spaces. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  rentalObjectCode?: string;
+                  address?: string;
+                  monthlyRent?: number;
+                  propertyCaption?: string;
+                  propertyCode?: string;
+                  residentialAreaCode?: string;
+                  residentialAreaCaption?: string;
+                  objectTypeCaption?: string;
+                  objectTypeCode?: string;
+                  /** Format: date-time */
+                  vacantFrom?: string;
+                  districtCaption?: string;
+                  districtCode?: string;
+                  braArea?: number;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve vacant parking spaces. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description Error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-object/by-code/{rentalObjectCode}": {
+    /**
+     * Get a rental object
+     * @description Fetches a rental object by Rental Object Code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the rental object to fetch. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  rentalObjectCode?: string;
+                  address?: string;
+                  monthlyRent?: number;
+                  propertyCaption?: string;
+                  propertyCode?: string;
+                  residentialAreaCode?: string;
+                  residentialAreaCaption?: string;
+                  objectTypeCaption?: string;
+                  objectTypeCode?: string;
+                  /** Format: date-time */
+                  vacantFrom?: string;
+                  districtCaption?: string;
+                  districtCode?: string;
+                  braArea?: number;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
           };
         };
       };
@@ -1384,33 +1498,6 @@ export interface paths {
       };
     };
   };
-  "/vacant-parkingspaces": {
-    /**
-     * Get all vacant parking spaces
-     * @description Retrieves a list of all vacant parking spaces.
-     */
-    get: {
-      responses: {
-        /** @description A list of vacant parking spaces. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["VacantParkingSpace"][];
-            };
-          };
-        };
-        /** @description Internal server error. Failed to retrieve vacant parking spaces. */
-        500: {
-          content: {
-            "application/json": {
-              /** @description Error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/parkingspaces/{parkingSpaceId}/leases": {
     /**
      * Create lease for an external parking space
@@ -1485,33 +1572,6 @@ export interface paths {
             "application/json": {
               /** @example A technical error has occured. */
               message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/rental-object/by-code/{rentalObjectCode}": {
-    /**
-     * Get a rental object
-     * @description Fetches a rental object by Rental Object Code.
-     */
-    get: {
-      responses: {
-        /** @description Successfully retrieved the rental object. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["RentalObject"][];
-            };
-          };
-        };
-        /** @description Internal server error. Failed to fetch rental object. */
-        500: {
-          content: {
-            "application/json": {
-              /** @description The error message. */
-              error?: string;
             };
           };
         };
@@ -1988,6 +2048,48 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/buildings/by-building-code/{buildingCode}": {
+    /**
+     * Get building by building code
+     * @description Retrieves building data by building code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved building */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"];
+            };
+          };
+        };
+        /** @description Building not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Building not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/propertyBase/companies": {
     /**
      * Get all companies
@@ -2097,6 +2199,38 @@ export interface paths {
               error?: string;
             };
           };
+        };
+      };
+    };
+  };
+  "/propertyBase/properties/search": {
+    /**
+     * Search properties
+     * @description Retrieves a list of all real estate properties by name.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The search query. */
+          q?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved list of properties. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Property"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
         };
       };
     };
@@ -2301,6 +2435,48 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/parking-spaces/by-rental-id/{rentalId}": {
+    /**
+     * Get parking space data by rentalId
+     * @description Retrieves parking space data by rentalId
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id to fetch parking space for */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved parking space. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ParkingSpace"];
+            };
+          };
+        };
+        /** @description Parking space not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Parking space not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve parking space data. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/propertyBase/maintenance-units/by-rental-id/{rentalId}": {
     /**
      * Get maintenance units by rental id.
@@ -2311,6 +2487,38 @@ export interface paths {
         path: {
           /** @description The ID of the rental property for which to retrieve maintenance units. */
           rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/maintenance-units/by-building-code/{buildingCode}": {
+    /**
+     * Get maintenance units by building code.
+     * @description Returns all maintenance units belonging to a building.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building for which to retrieve maintenance units. */
+          buildingCode: string;
         };
       };
       responses: {
@@ -2354,6 +2562,70 @@ export interface paths {
                   ok?: boolean;
                   data?: components["schemas"]["MaintenanceUnit"][];
                 }[];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/facilities/by-rental-id/{rentalId}": {
+    /**
+     * Get facility by rental id.
+     * @description Returns facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the facility. */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facility. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FacilityDetails"];
+            };
+          };
+        };
+        /** @description Not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/maintenance-units/by-property-code/{code}": {
+    /**
+     * Get maintenance units by property code.
+     * @description Returns all maintenance units belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve maintenance units. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
             };
           };
         };
@@ -2557,6 +2829,30 @@ export interface components {
       rentalObjectCode: string;
       status: string;
     };
+    Building: {
+      id: string;
+      code: string;
+      name: string;
+      buildingType: {
+        id: string;
+        code: string;
+        name: string;
+      };
+      construction: {
+        constructionYear: number;
+        renovationYear: number;
+        valueYear: number | null;
+      };
+      features: {
+        heating: string | null;
+        fireRating: string | null;
+      };
+      insurance: {
+        class: string | null;
+        value: number | null;
+      };
+      deleted: boolean;
+    };
     Company: {
       id: string;
       propertyObjectId: string;
@@ -2645,7 +2941,7 @@ export interface components {
         smokeFree: boolean;
         asbestos: boolean;
       };
-      entrance: string | null;
+      floor: string | null;
       partNo?: number | null;
       part?: string | null;
       deleted: boolean;
@@ -2757,14 +3053,41 @@ export interface components {
         timestamp: string;
       }) | null;
     };
+    ParkingSpace: {
+      rentalId: string;
+      companyCode: string;
+      companyName: string;
+      managementUnitCode: string;
+      managementUnitName: string;
+      propertyCode: string;
+      propertyName: string;
+      buildingCode: string | null;
+      buildingName: string | null;
+      parkingSpace: {
+        propertyObjectId: string;
+        code: string;
+        name: string;
+        parkingNumber: string;
+        parkingSpaceType: {
+          code: string;
+          name: string;
+        };
+      };
+      address: {
+        streetAddress: string | null;
+        streetAddress2: string | null;
+        postalCode: string | null;
+        city: string | null;
+      };
+    };
     MaintenanceUnit: {
       id: string;
-      rentalPropertyId: string;
+      rentalPropertyId?: string;
       code: string;
-      caption: string;
-      type: string | null;
-      estateCode: string;
-      estate: string;
+      caption: string | null;
+      type?: string | null;
+      estateCode: string | null;
+      estate: string | null;
     };
     ResidenceByRentalIdDetails: {
       id: string;
@@ -2778,12 +3101,43 @@ export interface components {
         hygieneFacility: string | null;
       };
       entrance: string | null;
+      floor: string | null;
       deleted: boolean;
       type: {
         code: string;
         name: string | null;
         roomCount: number | null;
         kitchen: number;
+      };
+      rentalInformation: ({
+        apartmentNumber: string | null;
+        rentalId: string | null;
+        type: {
+          code: string;
+          name: string | null;
+        };
+      }) | null;
+      property: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      building: {
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      areaSize: number | null;
+    };
+    FacilityDetails: {
+      id: string;
+      code: string;
+      name: string | null;
+      entrance: string | null;
+      deleted: boolean;
+      type: {
+        code: string;
+        name: string | null;
       };
       rentalInformation: ({
         apartmentNumber: string | null;
@@ -2829,7 +3183,7 @@ export interface components {
        */
       type: "building";
       /** @description Name of the building */
-      name: string;
+      name: string | null;
       property?: ({
         /** @description Property associated with the building */
         name: string | null;
@@ -2880,7 +3234,7 @@ export interface components {
        */
       type: "building";
       /** @description Name of the building */
-      name: string;
+      name: string | null;
       property?: ({
         /** @description Property associated with the building */
         name: string | null;
@@ -2910,10 +3264,6 @@ export interface components {
         name: string | null;
       };
     });
-    /** @description Represents a vacant parking space. */
-    VacantParkingSpace: Record<string, never>;
-    /** @description Represents a rental object. */
-    RentalObject: Record<string, never>;
   };
   responses: never;
   parameters: never;
