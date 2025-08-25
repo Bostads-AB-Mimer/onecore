@@ -93,5 +93,5 @@ export const transformMessages = (
     body: striptags(message.body, ['br']).replaceAll('<br>', '\n'),
     messageType: message.message_type,
     author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
-    createDate: new Date(message.create_date),
+    createDate: new Date(message.create_date + ' UTC'), // Create new date as UTC (odoo db stores dates without time zone)
   }))
