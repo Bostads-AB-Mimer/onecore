@@ -353,7 +353,7 @@ class Listing {
 +rentalObjectTypeCaption?: string
 +rentalObjectTypeCode?: string
 +publishedFrom: Date
-+publishedTo: Date
++publishedTo?: Date
 +vacantFrom: Date
 +status: ListingStatus
 +waitingListType?: string
