@@ -23,7 +23,7 @@
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
-    "start": "npm run migrate:up && node -r dotenv/config index",
+    "start": "npm run migrate:up && node -r dotenv/config build/index",
     "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv/config node_modules/jest/bin/jest --config jest.config.js",
     "test:ci": "DOTENV_CONFIG_PATH=.env.ci node -r dotenv/config node_modules/jest/bin/jest --config jest.config.js",
     "test:watch": "DOTENV_CONFIG_PATH=.env.test jest --watch",
