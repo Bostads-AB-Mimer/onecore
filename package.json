@@ -1,9 +1,9 @@
 {
   "name": "onecore-monorepo",
-  "version": "0.0.0",
+  "version": "1.3.4",
   "private": true,
   "author": "Bostads AB Mimer",
-  "packageManager": "npm",
+  "packageManager": "npm@10.9.2",
   "engines": {
     "node": ">=20"
   },
@@ -30,7 +30,9 @@
     "build:types": "npm run build --workspace=@onecore/types",
     "build:utilities": "npm run build --workspace=@onecore/utilities",
     "build:work-order": "npm run build --workspace=@onecore/work-order",
-    "dev:init": "npm run dev:init --workspaces --if-present",
+    "db:init": "./scripts/db/initialize.sh",
+    "dev:init": "npm run db:init && npm run dev:init --workspaces --if-present",
+    "dev": "turbo run dev",
     "generate:static": "npm run generate:static --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
@@ -42,6 +44,7 @@
     "eslint": "^9.31.0",
     "prettier": "^3.6.2",
     "syncpack": "^13.0.4",
+    "turbo": "^2.5.5",
     "typescript": "^5.6.2"
   }
 }

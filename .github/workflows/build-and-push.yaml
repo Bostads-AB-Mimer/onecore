@@ -4,104 +4,184 @@ on:
   push:
     branches:
       - main
+      - epic/**
+      - release/**
     tags:
-      - production*
-      - staging*
+      - v*.*.*
 
 jobs:
-  lint:
+  lint-and-check:
+    name: Lint and Type Check
     uses: ./.github/workflows/lint.yaml
+    secrets: inherit
 
-  determine-version:
-    needs: [lint]
+  prepare:
     runs-on: ubuntu-latest
     outputs:
-      bump_type: ${{ steps.bump.outputs.type }}
-    steps:
-      - name: Determine version bump type
-        id: bump
-        run: |
-          if [[ $GITHUB_REF == refs/tags/production* ]]; then
-            echo "type=major" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/tags/staging* ]]; then
-            echo "type=minor" >> $GITHUB_OUTPUT
-          else
-            echo "type=patch" >> $GITHUB_OUTPUT
-          fi
+      matrix: ${{ steps.read-matrix.outputs.matrix }}
+      build_type: ${{ steps.build-type.outputs.build_type }}
+      build_tag_base: ${{ steps.build-type.outputs.build_tag_base }}
+      build_tag_inc: ${{ steps.build-type.outputs.build_tag_inc }}
+      release_version: ${{ steps.build-type.outputs.release_version }}
+      version: ${{ steps.pkg-details.outputs.version }}
+      description: ${{ steps.pkg-details.outputs.description }}
+      build_tag: ${{ steps.incremental-tag.outputs.version }}
+      version_bump_type: ${{ steps.build-type.outputs.version_bump_type }}
 
-  build-and-push:
-    needs: determine-version
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: [property-base, property-tree]
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Read build matrix
+        id: read-matrix
+        shell: bash
+        run: |
+          MATRIX=$(cat ./.github/build.matrix.json | jq -c .)
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+
+      - name: Read package.json/repository version
+        id: pkg-details
+        run: |
+          echo "version=$(cat package.json | jq .version -r)" >> $GITHUB_OUTPUT
+          echo "description=$(cat package.json | jq .description -r)" >> $GITHUB_OUTPUT
+
+      - name: Determine build type
+        id: build-type
+        shell: bash
+        env:
+          PKGVER: ${{ steps.pkg-details.outputs.version }}
+        run: |
+          echo "GITHUB_REF_TYPE=${GITHUB_REF_TYPE}"
+          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
+          echo "GITHUB_REF=${GITHUB_REF}"
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+              # Build CI snapshot
+              echo "build_type=snapshot" >> $GITHUB_OUTPUT
+              echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
+              echo "version_bump_type=patch" >> $GITHUB_OUTPUT
+            elif [[ "$GITHUB_REF" == refs/heads/epic/* ]]; then
+              # Build incremental epic
+              echo "build_type=epic" >> $GITHUB_OUTPUT
+              echo "build_tag_inc=true" >> $GITHUB_OUTPUT
+              BASE=$(echo "$GITHUB_REF_NAME" | awk -F"/|-" '{print $1 "-" $2 "-" $3}')
+              echo "build_tag_base=${BASE}" >> $GITHUB_OUTPUT
+            elif [[ "$GITHUB_REF" == refs/heads/release/* ]]; then
+              # Build incremental release candidate
+              echo "build_type=rc" >> $GITHUB_OUTPUT
+              echo "build_tag_inc=true" >> $GITHUB_OUTPUT
+              echo "build_tag_base=${GITHUB_REF_NAME#release/}-rc" >> $GITHUB_OUTPUT
+              echo "release_version=${GITHUB_REF_NAME#release/}" >> $GITHUB_OUTPUT
+            fi
+          elif [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            # Build release for production
+            echo "build_type=release" >> $GITHUB_OUTPUT
+            echo "build_tag_base=release-${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            echo "version_bump_type=patch" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Determine incremental build tag
+        id: incremental-tag
+        if: steps.build-type.outputs.build_type_inc == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          OWNER_REPO="${GITHUB_REPOSITORY}"
+          COUNT=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${OWNER_REPO}/actions/runs?branch=${BRANCH}&event=push&per_page=100" \
+            | jq '[.workflow_runs[] | select(.status=="completed")] | length')
+          NUM=$((COUNT + 1))
+          echo "build_tag=${{ steps.build-type.outputs.build_tag_base }}.${NUM}" >> $GITHUB_OUTPUT
+
+      - name: Enforce package.json matches release version
+        if: steps.build-type.outputs.build_tag_version != ''
+        run: |
+          WANT="${{ steps.build-type.outputs.release_version }}"
+          HAVE="${{ steps.pkg-details.outputs.version }}"
+          if [[ "$WANT" != "$HAVE" ]]; then
+            echo "::error::package.json version ($HAVE) does not match release target version ($WANT)";
+            exit 1;
+          fi
+          
+  build-and-push:
+    needs: [prepare, lint-and-check]
+    if: ${{ always() && needs.lint-and-check.result == 'success' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
+        if: github.event.repository.fork == false
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get package version
-        id: package-version
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
-
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/${{ matrix.package }}
+          images: ghcr.io/${{ github.repository }}/${{ matrix.imageName || matrix.name }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.package-version.outputs.version }}
+            type=raw,value=${{ needs.prepare.outputs.build_tag || needs.prepare.outputs.build_tag_base }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.label }}
+            org.opencontainers.image.description=${{ needs.prepare.outputs.description }}
 
-      - name: Build and push property-base
-        if: matrix.package == 'property-base'
+      - name: Render build_args
+        id: render-build-args
+        env:
+          BUILD_TYPE:  ${{ needs.prepare.outputs.build_type }}
+          RELEASE_BUILD_ARGS: ${{ (matrix.build_args.release && toJSON(matrix.build_args.release)) }}
+          TEST_BUILD_ARGS: ${{ (matrix.build_args.test && toJSON(matrix.build_args.test)) }}
+        run: |
+          if [ "${BUILD_TYPE}" == "release" ]; then
+            BUILD_ARGS_JSON="${RELEASE_BUILD_ARGS}"
+          else
+            BUILD_ARGS_JSON="${TEST_BUILD_ARGS}"
+          fi
+
+          if [ -n "${BUILD_ARGS_JSON}" ]; then
+            {
+              printf "build_args<<EOF\n"
+              echo "$BUILD_ARGS_JSON" | jq -r 'to_entries | .[]? | "\(.key)=\(.value)"'
+              printf "EOF\n"
+            } >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push ${{ steps.meta.outputs.tags }}
         uses: docker/build-push-action@v5
+        if: matrix.docker
         with:
           context: .
-          file: ./packages/${{ matrix.package }}/Dockerfile
-          push: true
+          file: ./${{ matrix.path }}/Dockerfile
+          push: ${{ env.ACT != 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.package }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          build-args: ${{ steps.render-build-args.outputs.build_args }}
 
-      - name: Build and push property-tree
-        if: matrix.package == 'property-tree'
-        uses: docker/build-push-action@v5
-        with:
-          build-args: |
-            VITE_API_URL=http://property-base
-            VITE_CORE_API_URL=https://core-test-yg.mimer.nu
-            VITE_KEYCLOAK_URL=https://auth-test.mimer.nu/realms/onecore-test
-            VITE_KEYCLOAK_CLIENT_ID=onecore-test
-            VITE_KEYCLOAK_REDIRECT_URI=https://property-tree-test.mimer.nu/callback
-            VITE_KEYCLOAK_REALM=onecore-test
-          context: .
-          file: ./packages/${{ matrix.package }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.package }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.package }}
-
-  commit-version:
-    needs: [build-and-push, determine-version]
+  bump-version:
+    needs: [build-and-push, prepare]
+    if: ${{ needs.prepare.outputs.version_bump_type != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -117,14 +197,21 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-
+           
       - name: Configure Git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-
+          
       - name: Update version
         run: |
-          # Let npm handle version bump, commit, and tag creation
-          npm version ${{ needs.determine-version.outputs.bump_type }} -m "chore: bump version to %s [skip ci]"
+          # Enforce global version, in case of version drift by first bumping the root version...
+          npm version ${{ needs.prepare.outputs.version_bump_type }} --no-commit-hooks --no-git-tag-version
+
+          # And then explicitly setting that version for the entire workspace
+          new_version=$(jq -r .version package.json)
+          npm version "${new_version}" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root --allow-same-version
+          git add $(git ls-files -m '*package*.json')
+          git commit -m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
+ 

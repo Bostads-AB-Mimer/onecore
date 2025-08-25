@@ -1,0 +1,65 @@
+name: Create Release Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "Branch to create release from"
+        required: true
+        default: "main"
+      override_version:
+        description: "Override version (e.g. 1.8.0). Leave empty to auto-bump"
+        required: false
+        default: ""
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Validate source branch
+        run: |
+          ALLOWED_BRANCH="main"
+          if [[ "${{ github.event.inputs.source_branch }}" != "$ALLOWED_BRANCH" ]]; then
+            echo "Can only create release branches from '$ALLOWED_BRANCH'."
+            exit 1
+          fi
+
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_branch }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Bump version
+        id: version
+        run: |
+          if [[ -n "${{ github.event.inputs.override_version }}" ]]; then
+            new_version="${{ github.event.inputs.override_version }}"
+            npm version "$new_version" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root --allow-same-version
+          else
+            npm version minor --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
+            new_version=$(jq -r .version package.json)
+          fi
+      
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "branch_name=release/$new_version" >> $GITHUB_OUTPUT
+    
+      - name: Commit and push new branch
+        env:
+          BRANCH_NAME: ${{ steps.version.outputs.branch_name }}
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git switch -c "$BRANCH_NAME"
+          git add $(git ls-files -m '*package*.json')
+          git commit -m "chore: Preparing for release $NEW_VERSION"
+          git push origin "$BRANCH_NAME"
