@@ -42,7 +42,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/buildings/by-building-code/{buildingCode}:
+   * /buildings/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get building by building code
    *     tags:
@@ -88,43 +88,40 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '(.*)/propertyBase/buildings/by-building-code/:buildingCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { buildingCode } = ctx.params
+  router.get('(.*)/buildings/by-building-code/:buildingCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { buildingCode } = ctx.params
 
-      try {
-        const result = await propertyBaseAdapter.getBuildingByCode(buildingCode)
+    try {
+      const result = await propertyBaseAdapter.getBuildingByCode(buildingCode)
 
-        if (!result.ok) {
-          if (result.err === 'not-found') {
-            ctx.status = 404
-            ctx.body = { error: 'Building not found', ...metadata }
-            return
-          }
-
-          logger.error(result.err, 'Internal server error', metadata)
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Building not found', ...metadata }
           return
         }
 
-        ctx.body = {
-          content: result.data as schemas.Building,
-          ...metadata,
-        }
-      } catch (error) {
-        logger.error(error, 'Internal server error', metadata)
+        logger.error(result.err, 'Internal server error', metadata)
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
+        return
       }
+
+      ctx.body = {
+        content: result.data as schemas.Building,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   /**
    * @swagger
-   * /propertyBase/companies:
+   * /companies:
    *   get:
    *     summary: Get all companies
    *     tags:
@@ -155,7 +152,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/companies', async (ctx) => {
+  router.get('(.*)/companies', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
@@ -181,7 +178,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/residences:
+   * /residences:
    *   get:
    *     summary: Get residences by building code and (optional) staircase code
    *     tags:
@@ -234,7 +231,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/residences', async (ctx) => {
+  router.get('(.*)/residences', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.GetResidencesQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -269,7 +266,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/properties:
+   * /properties:
    *   get:
    *     summary: Get properties by company code and (optional) tract
    *     tags:
@@ -322,7 +319,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/properties', async (ctx) => {
+  router.get('(.*)/properties', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.GetPropertiesQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -355,7 +352,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/properties/search:
+   * /properties/search:
    *   get:
    *     summary: Search properties
    *     description: |
@@ -387,7 +384,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/properties/search', async (ctx) => {
+  router.get('(.*)/properties/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = z.object({ q: z.string() }).safeParse(ctx.query)
 
@@ -422,7 +419,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/properties/{propertyId}:
+   * /properties/{propertyId}:
    *   get:
    *     summary: Get property by property id
    *     tags:
@@ -468,7 +465,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/properties/:propertyId', async (ctx) => {
+  router.get('(.*)/properties/:propertyId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { propertyId } = ctx.params
 
@@ -501,7 +498,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/residence/rental-id/{rentalId}:
+   * /residences/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get residence data by residence rental id
    *     tags:
@@ -547,7 +544,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/residence/rental-id/:rentalId', async (ctx) => {
+  router.get('(.*)/residences/by-rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalId } = ctx.params
 
@@ -576,7 +573,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/residence/{residenceId}:
+   * /residences/{residenceId}:
    *   get:
    *     summary: Get residence data by residenceId
    *     tags:
@@ -622,7 +619,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/residence/:residenceId', async (ctx) => {
+  router.get('(.*)/residences/:residenceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
 
@@ -683,7 +680,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/staircases:
+   * /staircases:
    *   get:
    *     summary: Get staircases for a building
    *     tags:
@@ -731,7 +728,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyBase/staircases', async (ctx) => {
+  router.get('(.*)/staircases', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = schemas.StaircasesQueryParamsSchema.safeParse(ctx.query)
     if (!queryParams.success) {
@@ -763,7 +760,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/rooms:
+   * /rooms:
    *   get:
    *     summary: Get rooms by residence id.
    *     description: Returns all rooms belonging to a residence.
@@ -832,7 +829,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/parking-spaces/by-rental-id/{rentalId}:
+   * /parking-spaces/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get parking space data by rentalId
    *     tags:
@@ -878,45 +875,42 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '(.*)/propertyBase/parking-spaces/by-rental-id/:rentalId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { rentalId } = ctx.params
+  router.get('(.*)/parking-spaces/by-rental-id/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { rentalId } = ctx.params
 
-      try {
-        const response =
-          await propertyBaseAdapter.getParkingSpaceByRentalId(rentalId)
+    try {
+      const response =
+        await propertyBaseAdapter.getParkingSpaceByRentalId(rentalId)
 
-        if (!response.ok) {
-          if (response.err === 'not-found') {
-            ctx.status = 404
-            ctx.body = { error: 'Parking space not found', ...metadata }
-            return
-          }
-
-          logger.error(response.err, 'Internal server error', metadata)
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
+      if (!response.ok) {
+        if (response.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Parking space not found', ...metadata }
           return
         }
-        ctx.status = 200
 
-        ctx.body = {
-          content: schemas.ParkingSpaceSchema.parse(response.data),
-          ...metadata,
-        }
-      } catch (error) {
-        logger.error(error, 'Internal server error', metadata)
+        logger.error(response.err, 'Internal server error', metadata)
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
+        return
       }
+      ctx.status = 200
+
+      ctx.body = {
+        content: schemas.ParkingSpaceSchema.parse(response.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   /**
    * @swagger
-   * /propertyBase/maintenance-units/by-rental-id/{rentalId}:
+   * /maintenance-units/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get maintenance units by rental id.
    *     description: Returns all maintenance units belonging to a rental property.
@@ -981,7 +975,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/maintenance-units/by-contact-code/{contactCode}:
+   * /maintenance-units/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get maintenance units by contact code.
    *     description: Returns all maintenance units belonging to a contact code.
@@ -1072,7 +1066,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/facilities/by-rental-id/{rentalId}:
+   * /facilities/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get facility by rental id.
    *     description: Returns facility.
@@ -1138,7 +1132,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/maintenance-units/by-property-code/{code}:
+   * /maintenance-units/by-property-code/{code}:
    *   get:
    *     summary: Get maintenance units by property code.
    *     description: Returns all maintenance units belonging to a property.

@@ -32,7 +32,7 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('rental-property-service index', () => {
-  describe('GET /rentalproperties/:id/rooms-with-material-choices', () => {
+  describe('GET /rental-properties/:id/rooms-with-material-choices', () => {
     it('responds', async () => {
       const materialChoicesSpy = jest
         .spyOn(propertyManagementAdapter, 'getRoomsWithMaterialChoices')
@@ -58,7 +58,7 @@ describe('rental-property-service index', () => {
         })
 
       const res = await request(app.callback()).get(
-        '/rentalproperties/406-097-11-0201/rooms-with-material-choices'
+        '/rental-properties/406-097-11-0201/rooms-with-material-choices'
       )
 
       expect(res.status).toBe(200)
@@ -66,7 +66,7 @@ describe('rental-property-service index', () => {
       expect(res.body.content.roomTypes).toBeDefined()
     })
   })
-  describe('GET /maintenanceUnits/rentalPropertyId/:rentalPropertyId/:type?', () => {
+  describe('GET /maintenance-units/by-rental-property-id/:rentalPropertyId/:type?', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -84,7 +84,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/rentalPropertyId/705-022-04-0201'
+        '/maintenance-units/by-rental-property-id/705-022-04-0201'
       )
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
@@ -102,7 +102,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/rentalPropertyId/705-022-04-0201/Miljöbod'
+        '/maintenance-units/by-rental-property-id/705-022-04-0201/Miljöbod'
       )
 
       expect(res.status).toBe(200)
@@ -116,7 +116,7 @@ describe('rental-property-service index', () => {
     })
   })
 
-  describe('GET /maintenanceUnits/contactCode/:contactCode', () => {
+  describe('GET /maintenance-units/by-contact-code/:contactCode', () => {
     const maintenanceUnitInfoMock: MaintenanceUnitInfo[] =
       factory.maintenanceUnitInfo
         .buildList(4)
@@ -138,7 +138,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue(maintenanceUnitInfoMock)
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/contactCode/P965339'
+        '/maintenance-units/by-contact-code/P965339'
       )
 
       expect(res.status).toBe(200)
@@ -159,7 +159,7 @@ describe('rental-property-service index', () => {
         .mockResolvedValue([])
 
       const res = await request(app.callback()).get(
-        '/api/maintenanceUnits/contactCode/P965339'
+        '/maintenance-units/by-contact-code/P965339'
       )
 
       expect(res.status).toBe(200)

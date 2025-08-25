@@ -2,12 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
+import { buildingService } from '../../services/api'
 import {
-  buildingService,
+  propertyService,
   residenceService,
   staircaseService,
-  propertyService,
-} from '../../services/api'
+} from '../../services/api/core'
+
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
@@ -94,7 +95,7 @@ export function BuildingView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={building.name}
+        title={building.name ?? 'N/A'}
         subtitle={`Fastighet ${property?.designation}`}
         type="Byggnad"
         icon={Building}
@@ -122,7 +123,7 @@ export function BuildingView() {
         />
         <StatCard
           title="Byggnadstyp"
-          value={building.buildingType.name}
+          value={building.buildingType.name ?? 'N/A'}
           icon={Building}
         />
       </Grid>

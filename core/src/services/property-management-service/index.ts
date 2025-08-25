@@ -31,7 +31,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /rentalproperties/{id}/floorplan:
+   * /rental-properties/{id}/floorplan:
    *   get:
    *     summary: Get floor plan for a rental property
    *     description: Returns the floor plan image for the specified rental property.
@@ -55,7 +55,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rentalproperties/:id/floorplan', async (ctx) => {
+  router.get('/rental-properties/:id/floorplan', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const response = await getFloorPlanStream(ctx.params.id)
     ctx.type = response.headers['content-type']?.toString() ?? 'image/jpeg'
@@ -64,7 +64,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}/material-options:
+   * /rental-properties/{id}/material-options:
    *   get:
    *     summary: Get room types with material options by rental property ID
    *     tags:
@@ -86,7 +86,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rentalproperties/:id/material-options', async (ctx) => {
+  router.get('/rental-properties/:id/material-options', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const roomTypes =
       await propertyManagementAdapter.getRoomTypeWithMaterialOptions(
@@ -98,7 +98,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}/material-option/{materialOptionId}:
+   * /rental-properties/{id}/material-options/{materialOptionId}:
    *   get:
    *     summary: Get material option by ID for a specific rental property
    *     tags:
@@ -127,7 +127,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/rentalproperties/:id/material-option/:materialOptionId',
+    '/rental-properties/:id/material-options/:materialOptionId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const option = await propertyManagementAdapter.getMaterialOption(
@@ -141,7 +141,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{apartmentId}/{contractId}/material-choices:
+   * /rental-properties/{apartmentId}/contracts/{contractId}/material-choices:
    *   get:
    *     summary: Get material choices for a specific apartment and contract
    *     tags:
@@ -170,7 +170,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/rentalproperties/:apartmentId/:contractId/material-choices',
+    '/rental-properties/:apartmentId/contracts/:contractId/material-choices',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const materialChoices =
@@ -185,7 +185,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}/rooms-with-material-choices:
+   * /rental-properties/{id}/rooms-with-material-choices:
    *   get:
    *     summary: Get rooms with material choices for a specific rental property
    *     tags:
@@ -208,7 +208,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/rentalproperties/:id/rooms-with-material-choices',
+    '/rental-properties/:id/rooms-with-material-choices',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const materialChoices =
@@ -222,7 +222,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}/material-choices:
+   * /rental-properties/{id}/material-choices:
    *   get:
    *     summary: Get material choices for a specific rental property
    *     tags:
@@ -245,7 +245,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+  router.get('/rental-properties/:id/material-choices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const materialChoices = await propertyManagementAdapter.getMaterialChoices(
       ctx.params.id
@@ -256,7 +256,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/material-choice-statuses:
+   * /material-choice-statuses:
    *   get:
    *     summary: Get material choice statuses for rental properties
    *     tags:
@@ -280,7 +280,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rentalproperties/material-choice-statuses', async (ctx) => {
+  router.get('/material-choice-statuses', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeRentalProperties'])
     const materialChoiceStatuses =
       await propertyManagementAdapter.getMaterialChoiceStatuses(
@@ -301,7 +301,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}/material-choices:
+   * /rental-properties/{id}/material-choices:
    *   post:
    *     summary: Save material choices for a rental property
    *     tags:
@@ -330,7 +330,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/rentalproperties/:id/material-choices', async (ctx) => {
+  router.post('/rental-properties/:id/material-choices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     await propertyManagementAdapter.getMaterialChoices(ctx.params.id)
 
@@ -346,7 +346,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rentalproperties/{id}:
+   * /rental-properties/{id}:
    *   get:
    *     summary: Get rental property by ID
    *     tags:
@@ -372,7 +372,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rentalproperties/:id', async (ctx) => {
+  router.get('/rental-properties/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const responseData = await propertyManagementAdapter.getRentalProperty(
       ctx.params.id
@@ -386,7 +386,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /parkingspaces/{parkingSpaceId}/leases:
+   * /parking-spaces/{parkingSpaceId}/leases:
    *   post:
    *     summary: Create lease for an external parking space
    *     tags:
@@ -446,7 +446,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/parkingspaces/:parkingSpaceId/leases', async (ctx) => {
+  router.post('/parking-spaces/:parkingSpaceId/leases', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const parkingSpaceId = ctx.params.parkingSpaceId
 
@@ -498,7 +498,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /parkingspaces/{parkingSpaceId}/noteofinterests:
+   * /parking-spaces/{parkingSpaceId}/note-of-interests:
    *   post:
    *     summary: Create a note of interest for an internal parking space
    *     tags:
@@ -557,7 +557,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.post(
-    '(.*)/parkingspaces/:parkingSpaceId/noteofinterests',
+    '/parking-spaces/:parkingSpaceId/note-of-interests',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const parkingSpaceId = ctx.params.parkingSpaceId
@@ -608,7 +608,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyInfoFromXpand/{rentalObjectCode}:
+   * /rental-properties/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get rental property information from Xpand
    *     tags:
@@ -631,17 +631,52 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/propertyInfoFromXpand/:rentalObjectCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const res = await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
-      ctx.params.rentalObjectCode
-    )
-    ctx.status = res.status
-    ctx.body = { content: res.data, ...metadata }
-  })
-
   router.get(
-    '(.*)/maintenanceUnits/rentalPropertyId/:rentalPropertyId/:type?',
+    '/rental-properties/by-rental-object-code/:rentalObjectCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const res =
+        await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
+          ctx.params.rentalObjectCode
+        )
+      ctx.status = res.status
+      ctx.body = { content: res.data, ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /maintenance-units/by-rental-property-id/{rentalPropertyId}/{type}:
+   *   get:
+   *     summary: Get maintenance units for a rental property
+   *     tags:
+   *       - Property management service
+   *     description: Retrieves maintenance units for a specific rental property, optionally filtered by type.
+   *     parameters:
+   *       - in: path
+   *         name: rentalPropertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID of the rental property to fetch maintenance units for.
+   *       - in: path
+   *         name: type
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Optional type filter for maintenance units.
+   *     responses:
+   *       '200':
+   *         description: Successful response with maintenance units
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/maintenance-units/by-rental-property-id/:rentalPropertyId/:type?',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
@@ -680,7 +715,32 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  router.get('(.*)/maintenanceUnits/contactCode/:contactCode', async (ctx) => {
+  /**
+   * @swagger
+   * /maintenance-units/by-contact-code/{contactCode}:
+   *   get:
+   *     summary: Get maintenance units for a contact
+   *     tags:
+   *       - Property management service
+   *     description: Retrieves maintenance units for all active leases associated with a contact code.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Contact code to fetch maintenance units for.
+   *     responses:
+   *       '200':
+   *         description: Successful response with maintenance units
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/maintenance-units/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const leases = await leasingAdapter.getLeasesForContactCode(

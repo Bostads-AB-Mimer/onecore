@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { SidebarMenu } from '@/components/ui/Sidebar'
 import { ResidenceNavigation } from './Residence'
 import { useQuery } from '@tanstack/react-query'
-import { residenceService } from '@/services/api'
+import { residenceService } from '@/services/api/core'
 
 interface ResidenceListProps {
   building: Building

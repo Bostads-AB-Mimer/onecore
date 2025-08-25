@@ -96,13 +96,15 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /leases/for/:pnr', () => {
+  describe('GET /leases/by-pnr/:pnr', () => {
     it('responds with a list of leases', async () => {
       const getLeaseSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
         .mockResolvedValue([leaseMock])
 
-      const res = await request(app.callback()).get('/leases/for/101010-1010')
+      const res = await request(app.callback()).get(
+        '/leases/by-pnr/101010-1010'
+      )
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
       expect(res.body.content).toBeInstanceOf(Array)
@@ -127,14 +129,16 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /contact/:pnr', () => {
+  describe('GET /contacts/by-pnr/:pnr', () => {
     it('responds with a contact', async () => {
       const contact = factory.contact.build()
       const getContactSpy = jest
         .spyOn(tenantLeaseAdapter, 'getContactForPnr')
         .mockResolvedValue(contact)
 
-      const res = await request(app.callback()).get('/contact/194512121122')
+      const res = await request(app.callback()).get(
+        '/contacts/by-pnr/194512121122'
+      )
 
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
@@ -287,14 +291,14 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /cas/getConsumerReport/:pnr', () => {
+  describe('GET /consumer-reports/by-pnr/:pnr', () => {
     it('responds with a credit information', async () => {
       const getCreditInformationSpy = jest
         .spyOn(tenantLeaseAdapter, 'getCreditInformation')
         .mockResolvedValue(consumerReportMock)
 
       const res = await request(app.callback()).get(
-        '/cas/getConsumerReport/194512121122'
+        '/consumer-reports/by-pnr/194512121122'
       )
 
       expect(res.status).toBe(200)
@@ -305,7 +309,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /listing/:listingId/applicants/details', () => {
+  describe('GET /listings/:listingId/applicants/details', () => {
     it('responds with a listing with detailed applicant data', async () => {
       const detailedApplicants = [
         factory.detailedApplicant.build(),
@@ -316,7 +320,7 @@ describe('lease-service', () => {
         .mockResolvedValue({ ok: true, data: detailedApplicants })
 
       const res = await request(app.callback()).get(
-        '/listing/1337/applicants/details'
+        '/listings/1337/applicants/details'
       )
 
       expect(res.status).toBe(200)
@@ -327,7 +331,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /contact/contactCode/:contactCode', () => {
+  describe('GET /contacts/:contactCode', () => {
     it('returns 200 and a contact', async () => {
       const contact = factory.contact.build()
       const getContactByContactCodeSpy = jest
@@ -335,7 +339,7 @@ describe('lease-service', () => {
         .mockResolvedValueOnce({ ok: true, data: contact })
 
       const res = await request(app.callback()).get(
-        `/contact/contactCode/${contact.contactCode}`
+        `/contacts/${contact.contactCode}`
       )
 
       expect(res.status).toBe(200)
@@ -350,7 +354,7 @@ describe('lease-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        `/contact/contactCode/${contact.contactCode}`
+        `/contacts/${contact.contactCode}`
       )
 
       expect(res.status).toBe(404)
@@ -385,7 +389,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /offers/listing-id/:listingId', () => {
+  describe('GET /offers/by-listing-id/:listingId', () => {
     it('responds with 500 if adapter fails', async () => {
       const getOffersByListingIdSpy = jest
         .spyOn(tenantLeaseAdapter, 'getOffersByListingId')
@@ -394,7 +398,7 @@ describe('lease-service', () => {
           err: 'unknown',
         })
 
-      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+      const res = await request(app.callback()).get(`/offers/by-listing-id/1`)
 
       expect(res.status).toBe(500)
       expect(getOffersByListingIdSpy).toHaveBeenCalled()
@@ -409,7 +413,7 @@ describe('lease-service', () => {
           data: [],
         })
 
-      const res = await request(app.callback()).get(`/offers/listing-id/1`)
+      const res = await request(app.callback()).get(`/offers/by-listing-id/1`)
 
       expect(res.status).toBe(200)
       expect(getOffersByListingIdSpy).toHaveBeenCalled()
@@ -417,7 +421,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /listing-with-applicants', () => {
+  describe('GET /listings-with-applicants', () => {
     const getListingsWithApplicantsSpy = jest.spyOn(
       tenantLeaseAdapter,
       'getListingsWithApplicants'
@@ -475,7 +479,7 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /offers/listing-id/:listingId/active', () => {
+  describe('GET /offers/by-listing-id/:listingId/active', () => {
     const getActiveOfferByListingIdSpy = jest.spyOn(
       tenantLeaseAdapter,
       'getActiveOfferByListingId'
@@ -489,7 +493,7 @@ describe('lease-service', () => {
       })
 
       const res = await request(app.callback()).get(
-        `/offers/listing-id/${1}/active`
+        `/offers/by-listing-id/${1}/active`
       )
 
       expect(res.status).toBe(500)
@@ -504,7 +508,7 @@ describe('lease-service', () => {
       })
 
       const res = await request(app.callback()).get(
-        `/offers/listing-id/${1}/active`
+        `/offers/by-listing-id/${1}/active`
       )
 
       expect(res.status).toBe(404)
@@ -518,7 +522,7 @@ describe('lease-service', () => {
       })
 
       const res = await request(app.callback()).get(
-        `/offers/listing-id/${1}/active`
+        `/offers/by-listing-id/${1}/active`
       )
 
       expect(res.status).toBe(200)

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { searchService } from '@/services/api'
+import { searchService } from '@/services/api/core'
 
 export function useSearch(query: string) {
   return useQuery({
