@@ -28,6 +28,12 @@ export const usePublishParkingSpaces = (): UsePublishParkingSpacesResult => {
   const BATCH_SIZE = 50 // Process 50 parking spaces per batch
   const BATCH_DELAY = 500 // 500ms delay between batches
 
+  const getRentalRuleDisplayName = (
+    rentalRule: 'SCORED' | 'NON_SCORED'
+  ): string => {
+    return rentalRule === 'SCORED' ? 'Interna' : 'Poängfria'
+  }
+
   const groupParkingSpacesByRentalRule = (
     ids: GridRowId[],
     rentalRules: Record<string, 'SCORED' | 'NON_SCORED'>
@@ -123,14 +129,20 @@ export const usePublishParkingSpaces = (): UsePublishParkingSpacesResult => {
                 (i + 1) * BATCH_SIZE,
                 rentalObjectCodes.length
               )
+              const displayName = getRentalRuleDisplayName(
+                rentalRule as 'SCORED' | 'NON_SCORED'
+              )
               setMessage({
-                text: `Bearbetar ${rentalRule}... ${processed}/${rentalObjectCodes.length} klara`,
+                text: `Bearbetar ${displayName} bilplatser... ${processed}/${rentalObjectCodes.length} klara`,
                 severity: 'success',
               })
             }
           } catch (error) {
+            const displayName = getRentalRuleDisplayName(
+              rentalRule as 'SCORED' | 'NON_SCORED'
+            )
             console.error(
-              `Misslyckades med att bearbeta batch ${i + 1} för ${rentalRule}:`,
+              `Misslyckades med att bearbeta batch ${i + 1} för ${displayName}:`,
               error
             )
             allFailed += batch.length
@@ -142,24 +154,24 @@ export const usePublishParkingSpaces = (): UsePublishParkingSpacesResult => {
       // Final result message
       if (allFailed === 0) {
         setMessage({
-          text: `Skapade ${allSuccessful} annonser framgångsrikt`,
+          text: `Publicerade ${allSuccessful} bilplatser utan problem`,
           severity: 'success',
         })
       } else if (allSuccessful > 0) {
         setMessage({
-          text: `Skapade ${allSuccessful} annonser framgångsrikt, ${allFailed} misslyckades`,
+          text: `Publicerade ${allSuccessful} bilplatser utan problem, ${allFailed} misslyckades`,
           severity: 'error',
         })
       } else {
         setMessage({
-          text: 'Misslyckades med att skapa annonser',
+          text: 'Misslyckades med att publicera bilplatser',
           severity: 'error',
         })
       }
     } catch (error) {
       console.error('Oväntat fel under batchbearbetning:', error)
       setMessage({
-        text: 'Misslyckades med att skapa annonser på grund av ett oväntat fel',
+        text: 'Misslyckades med att publicera bilplatser på grund av ett oväntat fel',
         severity: 'error',
       })
     }
