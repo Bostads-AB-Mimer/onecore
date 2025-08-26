@@ -72,12 +72,14 @@ const createLease = async (
       return { data: parsedResponse.ObjectDescription, ok: true }
     } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
       logger.info(
-        `XPand could not create lease for rental object ${rentalPropertyId}, contact ${tenantCode}, fromDate: ${fromDate.toString()}. XPand error: ${parsedResponse.Message}`
+        { objectId: rentalPropertyId, contactId: tenantCode, fromDate },
+        'XPand could not create lease for rental object'
       )
       return { ok: false, err: 'create-lease-not-allowed' }
     } else {
       logger.error(
-        `Create lease response from XPand cannot be interpreted: ${parsedResponse.Message}`
+        { message: parsedResponse.Message },
+        'Create lease response from XPand cannot be interpreted'
       )
       return { ok: false, err: 'unknown' }
     }

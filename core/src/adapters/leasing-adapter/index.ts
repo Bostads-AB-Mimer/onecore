@@ -215,11 +215,15 @@ const createLease = async (
     result.data.error === 'Lease cannot be created on this rental object'
   ) {
     logger.error(
-      `Lease could not be created for rental object ${objectId}, contact ${contactId}, fromDate: ${fromDate}`
+      { objectId, contactId, fromDate },
+      'Lease could not be created for rental object'
     )
     return { ok: false, err: 'create-lease-failed' }
   } else {
-    logger.error('Unknwn error when creating lease: ' + result.data.error)
+    logger.error(
+      { error: result.data.error },
+      'Unknown error when creating lease'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
