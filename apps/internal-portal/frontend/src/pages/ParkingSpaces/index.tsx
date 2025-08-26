@@ -207,7 +207,7 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
         />,
         <CreateApplicantForListing
           key={1}
-          disabled={row.status !== ListingStatus.Active}
+          disabled={row.status !== ListingStatus.Active || row.rentalRule === 'NON_SCORED'}
           listing={row}
         />,
       ],
