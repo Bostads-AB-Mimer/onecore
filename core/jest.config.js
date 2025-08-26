@@ -4,4 +4,5 @@ module.exports = {
   testEnvironment: 'node',
   modulePathIgnorePatterns: ['<rootDir>/build/'],
   setupFiles: ['<rootDir>/.jest/common.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/common/test/matchers.ts'],
 }
