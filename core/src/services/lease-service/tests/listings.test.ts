@@ -259,7 +259,7 @@ describe('POST /listings/batch', () => {
     expect(createMultipleListingsSpy).toHaveBeenCalled()
     expect(res.status).toBe(207)
     expect(res.body).toEqual({
-      error: 'Some listings failed to create',
+      error: 'Some listings could not be created',
       message:
         'Partial success - some listings were created successfully while others failed',
     })
