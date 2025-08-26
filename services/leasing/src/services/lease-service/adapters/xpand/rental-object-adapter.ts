@@ -267,6 +267,7 @@ const buildSubQueries = () => {
     .whereIn('hyobj.keyhyobt', ['3', '5', '_1WP0JXVK8', '_1WP0KDMOO'])
     .whereNull('hyobj.makuldatum')
     .andWhere('hyobj.deletemark', '=', 0)
+
     //pick the last debit date from the active contracts
     .whereRaw(
       `hyobj.sistadeb = (
@@ -313,6 +314,7 @@ const getAllVacantParkingSpaces = async (): Promise<
       })
       //exclude parking spaces with active contracts
       .whereNull('ac.keycmobj')
+      .orWhere('ac.lastdebitdate', '>', xpandDb.fn.now())
       .orderBy('ps.rentalObjectCode', 'asc')
 
     console.log(results.slice(0, 50))
