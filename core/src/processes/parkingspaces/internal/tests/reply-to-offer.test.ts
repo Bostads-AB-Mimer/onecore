@@ -365,7 +365,7 @@ describe('replyToOffer', () => {
       })
     })
 
-    it('creates a lease with start date today if there is vacant from date', async () => {
+    it('creates a lease with start date today if there is no vacant from date', async () => {
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
 
       getOfferByIdSpy.mockResolvedValueOnce({
