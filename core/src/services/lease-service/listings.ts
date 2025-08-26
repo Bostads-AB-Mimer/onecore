@@ -6,14 +6,13 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { Listing } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
-import { Listing } from '@onecore/types'
-import { logger } from '@onecore/utilities'
-import { ProcessStatus } from 'core/src/common/types'
+import { ProcessStatus } from '../../common/types'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -130,7 +129,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a Listing by ID
    *     description: Deletes a listing by it's ID.
    *     tags:
-   *       - Listings
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: listingId
@@ -183,7 +182,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a listings status by ID
    *     description: Updates a listing status by it's ID.
    *     tags:
-   *       - Listings
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: listingId

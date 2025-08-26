@@ -438,7 +438,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get offers for a specific listing
    *     description: Get all offers for a listing.
-   *     tags: [Offer]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: listingId
@@ -478,7 +479,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Gets active offer for a specific listing
    *     description: Get an offer for a listing.
-   *     tags: [Offer]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: listingId
@@ -959,7 +961,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Validate property rental rules for applicant
    *     description: Validate property rental rules for an applicant based on contact code and listing ID.
-   *     tags: [Applicants]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
@@ -1086,7 +1089,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Validate residential area rental rules for applicant
    *     description: Validate residential area rental rules for an applicant based on contact code and district code.
-   *     tags: [Applicants]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
@@ -1399,7 +1403,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Gets an application profile by contact code
    *     description: Retrieve application profile information by contact code.
-   *     tags: [Contacts]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
@@ -1458,7 +1463,8 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     summary: Creates or updates an application profile by contact code
    *     description: Create or update application profile information by contact code.
-   *     tags: [Contacts]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
@@ -1597,7 +1603,8 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     summary: Creates or updates an application profile by contact code
    *     description: Create or update application profile information by contact code.
-   *     tags: [Contacts]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
@@ -1701,7 +1708,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Validate max num residents.
    *     description: Checks if application is allowed based on current number of residents.
-   *     tags: [Contacts]
+   *     tags:
+   *       - Lease service
    *     parameters:
    *       - in: path
    *         name: contactCode
