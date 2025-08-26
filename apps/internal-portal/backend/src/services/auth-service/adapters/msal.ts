@@ -1,7 +1,7 @@
 import config from '../../../common/config'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 // @ts-ignore
-// eslint-disable-next-line n/no-missing-import
+
 import msal from '@azure/msal-node'
 import axios from 'axios'
 import KoaRouter from '@koa/router'
