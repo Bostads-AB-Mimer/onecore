@@ -264,10 +264,10 @@ const buildSubQueries = () => {
       )
     })
     .innerJoin('hyinf', 'hyinf.keycmobj', 'hykop.keycmobj')
+    //contract types to include
     .whereIn('hyobj.keyhyobt', ['3', '5', '_1WP0JXVK8', '_1WP0KDMOO'])
     .whereNull('hyobj.makuldatum')
     .andWhere('hyobj.deletemark', '=', 0)
-
     //pick the last debit date from the active contracts
     .whereRaw(
       `hyobj.sistadeb = (
