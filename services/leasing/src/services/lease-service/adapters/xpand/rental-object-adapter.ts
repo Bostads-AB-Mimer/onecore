@@ -317,9 +317,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       .orWhere('ac.lastdebitdate', '>', xpandDb.fn.now())
       .orderBy('ps.rentalObjectCode', 'asc')
 
-    console.log(results.slice(0, 50))
-    console.log('antal: ', results.length)
-
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
