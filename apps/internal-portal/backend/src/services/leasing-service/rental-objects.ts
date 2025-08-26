@@ -8,6 +8,11 @@ export const routes = (router: KoaRouter) => {
     const vacantParkingSpaces = await coreAdapter.getVacantParkingSpaces()
     const publishedListings =
       await coreAdapter.getListingsWithApplicants('type=published')
+    const readyForOfferListings = await coreAdapter.getListingsWithApplicants(
+      'type=ready-for-offer'
+    )
+    const offeredListings =
+      await coreAdapter.getListingsWithApplicants('type=offered')
 
     if (!vacantParkingSpaces.ok) {
       ctx.status = vacantParkingSpaces.statusCode
@@ -15,19 +20,29 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const publishedRentalObjectCodesSet = new Set(
-      publishedListings.ok
+    const excludedRentalObjectCodesSet = new Set([
+      ...(publishedListings.ok
         ? (publishedListings.data || []).map(
             (listing: any) => listing.rentalObjectCode
           )
-        : []
-    )
+        : []),
+      ...(readyForOfferListings.ok
+        ? (readyForOfferListings.data || []).map(
+            (listing: any) => listing.rentalObjectCode
+          )
+        : []),
+      ...(offeredListings.ok
+        ? (offeredListings.data || []).map(
+            (listing: any) => listing.rentalObjectCode
+          )
+        : []),
+    ])
 
     const unpublishedVacantParkingSpaces = (
       vacantParkingSpaces.data || []
     ).filter(
       (parkingSpace: any) =>
-        !publishedRentalObjectCodesSet.has(parkingSpace.rentalObjectCode)
+        !excludedRentalObjectCodesSet.has(parkingSpace.rentalObjectCode)
     )
 
     ctx.status = 200
