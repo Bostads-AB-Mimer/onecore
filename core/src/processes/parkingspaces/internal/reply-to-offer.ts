@@ -133,7 +133,7 @@ export const acceptOffer = async (
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
       )
     } catch (err) {
-      //TODO: If we get an error here, can we perform a lookup against xpandDb to see if we can determine the reason and provide a more specific error message?
+      //TODO: If we get an error here, can we perform a lookup against xpandDb to see if we can determine the reason and provide a more specific error message? For example: a block, or a valid contract on the date we are submitting.
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.CreateLeaseFailure,
