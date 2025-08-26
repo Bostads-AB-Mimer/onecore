@@ -535,7 +535,7 @@ describe('replyToOffer', () => {
     })
 
     it('creates a lease with start date today when vacantFrom is today at 23:59', async () => {
-      // Sätt vacantFrom till idag kl 23:59 UTC
+      // Set vacantFrom to today at 23:59 UTC
       const now = new Date()
       const vacantFrom = new Date(
         Date.UTC(
