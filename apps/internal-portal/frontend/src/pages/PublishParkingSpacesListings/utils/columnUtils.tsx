@@ -79,7 +79,7 @@ export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
     {
       field: 'numTimesPublishedInInternalQueue',
       flex: 1,
-      headerName: 'Antal publiceringar internt',
+      headerName: 'Antal publiceringar som Intern',
     },
   ]
 }

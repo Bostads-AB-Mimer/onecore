@@ -274,7 +274,7 @@ export const routes = (router: KoaRouter) => {
         if (result.err === 'partial-failure') {
           ctx.status = 207
           ctx.body = {
-            error: 'Some listings failed to create',
+            error: 'Some listings could not be created',
             message:
               'Partial success - some listings were created successfully while others failed',
             ...metadata,
