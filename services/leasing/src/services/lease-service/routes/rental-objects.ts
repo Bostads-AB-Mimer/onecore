@@ -53,6 +53,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/parking-spaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    // TODO: Receive rentalObjectCodes as array from body instead of query params
+
     const codesParam = ctx.query.includeRentalObjectCodes as string | undefined
     const includeRentalObjectCodes = codesParam
       ? codesParam
@@ -60,7 +62,6 @@ export const routes = (router: KoaRouter) => {
           .map((s) => s.trim())
           .filter(Boolean)
       : undefined
-
     const result = await getParkingSpaces(includeRentalObjectCodes)
 
     if (result.ok) {
