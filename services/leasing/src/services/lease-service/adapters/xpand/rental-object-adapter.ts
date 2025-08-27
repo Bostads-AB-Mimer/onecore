@@ -318,8 +318,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       })
       .orderBy('ps.rentalObjectCode', 'asc')
 
-    console.log('antal lediga platser: ', results.length)
-
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
