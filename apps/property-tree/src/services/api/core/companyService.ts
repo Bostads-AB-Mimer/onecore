@@ -1,11 +1,11 @@
-import { Company } from '../types'
-import { GET as LegacyGET } from './baseApi'
-import { GET } from './core/base-api'
+import { Company } from '../../types'
+import { GET as LegacyGET } from '../baseApi'
+import { GET } from './base-api'
 
 export const companyService = {
   // Get all companies
   async getAll(): Promise<Company[]> {
-    const { data, error } = await GET('/propertyBase/companies', {
+    const { data, error } = await GET('/companies', {
       params: {
         query: { limit: 100 },
       },

@@ -71,17 +71,17 @@ const getListingWithApplicants = async (
 > => {
   const listing: Promise<Listing> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/listing/${listingId}`,
+    url: `${coreBaseUrl}/listings/${listingId}`,
   }).then((res) => res.data.content)
 
   const applicants: Promise<DetailedApplicant[]> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/listing/${listingId}/applicants/details`,
+    url: `${coreBaseUrl}/listings/${listingId}/applicants/details`,
   }).then((res) => res.data.content)
 
   const offers: Promise<Array<OfferWithOfferApplicants>> = getFromCore({
     method: 'get',
-    url: `${coreBaseUrl}/offers/listing-id/${listingId}`,
+    url: `${coreBaseUrl}/offers/by-listing-id/${listingId}`,
   }).then((res) => res.data.content)
 
   const [listingResult, applicantsResult, offersResult] = await Promise.all([
@@ -137,7 +137,7 @@ const getTenantByContactCode = async (
   try {
     const result = await getFromCore<{ content: Tenant }>({
       method: 'get',
-      url: `${coreBaseUrl}/tenants/contactCode/${contactCode}`,
+      url: `${coreBaseUrl}/tenants/by-contact-code/${contactCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -156,7 +156,7 @@ const getContactByContactCode = async (
   try {
     const result = await getFromCore<{ content: Contact }>({
       method: 'get',
-      url: `${coreBaseUrl}/contact/contactCode/${contactCode}`,
+      url: `${coreBaseUrl}/contacts/${contactCode}`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }
@@ -238,7 +238,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
     // todo: fix type
     const response = await getFromCore<any>({
       method: 'post',
-      url: `${coreBaseUrl}/parkingspaces/${params.parkingSpaceId}/noteofinterests`,
+      url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/note-of-interests`,
       data: params,
     })
 
@@ -395,7 +395,7 @@ const getActiveOfferByListingId = async (
   try {
     const result = await getFromCore<{ content: Offer }>({
       method: 'get',
-      url: `${coreBaseUrl}/offers/listing-id/${listingId}/active`,
+      url: `${coreBaseUrl}/offers/by-listing-id/${listingId}/active`,
     }).then((res) => res.data)
 
     return { ok: true, data: result.content }

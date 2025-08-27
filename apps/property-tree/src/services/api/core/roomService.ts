@@ -1,9 +1,9 @@
-import { Room } from '../types'
-import { GET } from '../api/core/base-api'
+import { Room } from '../../types'
+import { GET } from './base-api'
 
 export const roomService = {
   async getByResidenceId(residenceId: string): Promise<Room[]> {
-    const { data, error } = await GET('/propertyBase/rooms', {
+    const { data, error } = await GET('/rooms', {
       params: {
         query: {
           residenceId,
