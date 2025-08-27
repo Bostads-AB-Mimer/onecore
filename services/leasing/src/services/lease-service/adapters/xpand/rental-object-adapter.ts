@@ -313,9 +313,12 @@ const getAllVacantParkingSpaces = async (): Promise<
         )
       })
       //exclude parking spaces with active contracts
-      .whereNull('ac.keycmobj')
-      .orWhere('ac.lastdebitdate', '>', xpandDb.fn.now())
+      .where(function () {
+        this.whereNull('ac.keycmobj').orWhereNotNull('ac.lastdebitdate')
+      })
       .orderBy('ps.rentalObjectCode', 'asc')
+
+    console.log('antal lediga platser: ', results.length)
 
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
