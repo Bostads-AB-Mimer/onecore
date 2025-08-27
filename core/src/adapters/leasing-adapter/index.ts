@@ -637,6 +637,7 @@ export {
 export {
   applyForListing,
   createNewListing,
+  createMultipleListings,
   deleteListing,
   getListingByListingId,
   getActiveListingByRentalObjectCode,
