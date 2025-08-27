@@ -220,7 +220,7 @@ export function toInternalParkingSpaceListingsData(
     publishedFrom: new Date(item.PublishedFrom),
     publishedTo: new Date(item.PublishedTo),
     status: ListingStatus.Active,
-    rentalRule: 'NON_SCORED',
+    rentalRule: 'SCORED',
     listingCategory: 'PARKING_SPACE',
   }
 }
