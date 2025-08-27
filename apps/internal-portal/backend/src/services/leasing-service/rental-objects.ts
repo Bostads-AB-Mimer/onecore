@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { Listing, RentalObject } from 'libs/types/dist'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-objects/vacant-parkingspaces', async (ctx) => {
@@ -23,17 +24,17 @@ export const routes = (router: KoaRouter) => {
     const excludedRentalObjectCodesSet = new Set([
       ...(publishedListings.ok
         ? (publishedListings.data || []).map(
-            (listing: any) => listing.rentalObjectCode
+            (listing: Listing) => listing.rentalObjectCode
           )
         : []),
       ...(readyForOfferListings.ok
         ? (readyForOfferListings.data || []).map(
-            (listing: any) => listing.rentalObjectCode
+            (listing: Listing) => listing.rentalObjectCode
           )
         : []),
       ...(offeredListings.ok
         ? (offeredListings.data || []).map(
-            (listing: any) => listing.rentalObjectCode
+            (listing: Listing) => listing.rentalObjectCode
           )
         : []),
     ])
@@ -41,7 +42,7 @@ export const routes = (router: KoaRouter) => {
     const unpublishedVacantParkingSpaces = (
       vacantParkingSpaces.data || []
     ).filter(
-      (parkingSpace: any) =>
+      (parkingSpace: RentalObject) =>
         !excludedRentalObjectCodesSet.has(parkingSpace.rentalObjectCode)
     )
 
