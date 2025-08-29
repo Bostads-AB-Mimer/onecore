@@ -548,100 +548,6 @@ export interface paths {
       };
     };
   };
-  "/listings/{listingId}/applicants/details": {
-    /**
-     * Get listing by ID with detailed applicants
-     * @description Retrieves a listing by ID along with detailed information about its applicants.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to fetch along with detailed applicant information. */
-          listingId: string;
-        };
-      };
-      responses: {
-        /** @description Successful retrieval of the listing with detailed applicant information. */
-        200: {
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings/{id}": {
-    /**
-     * Get listing by ID
-     * @description Retrieves details of a listing based on the provided ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to retrieve. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with the requested listing details. */
-        200: {
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings-with-applicants": {
-    /**
-     * Get listings with applicants
-     * @description Retrieves a list of listings along with their associated applicants.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filters listings by one of the above types. Must be one of the specified values. */
-          type?: "published" | "ready-for-offer" | "offered" | "historical";
-        };
-      };
-      responses: {
-        /** @description Successful response with listings and their applicants. */
-        200: {
-          content: {
-            "application/json": Record<string, never>[];
-          };
-        };
-        /** @description Internal server error. Failed to retrieve listings with applicants. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/listings/{listingId}/offers": {
-    /**
-     * Create an offer for a listing
-     * @description Creates an offer for the specified listing.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to create an offer for. */
-          listingId: string;
-        };
-      };
-      responses: {
-        /** @description Offer creation successful. */
-        201: {
-          content: never;
-        };
-        /** @description Internal server error. Failed to create the offer. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/offers/{offerId}/accept": {
     /**
      * Accept an offer
@@ -708,24 +614,6 @@ export interface paths {
           content: never;
         };
         /** @description Internal server error. Failed to expire the offer. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/listings/sync-internal-from-xpand": {
-    /**
-     * Sync internal parking spaces from xpand to onecores database
-     * @description null
-     */
-    post: {
-      responses: {
-        /** @description Request ok. */
-        200: {
-          content: never;
-        };
-        /** @description Internal server error. Failed to sync internal parking spaces. */
         500: {
           content: never;
         };
@@ -888,77 +776,6 @@ export interface paths {
         200: {
           content: {
             "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings/{listingId}": {
-    /**
-     * Delete a Listing by ID
-     * @description Deletes a listing by it's ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description ID of the listing to delete. */
-          listingId: number;
-        };
-      };
-      responses: {
-        /** @description Successfully deleted listing. */
-        200: {
-          content: never;
-        };
-        /** @description Conflict. */
-        409: {
-          content: never;
-        };
-        /** @description Internal server error. */
-        500: {
-          content: {
-            "application/json": {
-              /** @description The error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/listings/{listingId}/status": {
-    /**
-     * Update a listings status by ID
-     * @description Updates a listing status by it's ID.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description ID of the listing to delete. */
-          listingId: number;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": Record<string, never>;
-        };
-      };
-      responses: {
-        /** @description Successfully updated listing. */
-        200: {
-          content: never;
-        };
-        /** @description Listing not found. */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error. */
-        500: {
-          content: {
-            "application/json": {
-              /** @description The error message. */
-              error?: string;
-            };
           };
         };
       };
@@ -1235,6 +1052,189 @@ export interface paths {
           content: {
             "application/json": Record<string, never>;
           };
+        };
+      };
+    };
+  };
+  "/listings/{listingId}": {
+    /**
+     * Delete a Listing by ID
+     * @description Deletes a listing by it's ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description ID of the listing to delete. */
+          listingId: number;
+        };
+      };
+      responses: {
+        /** @description Successfully deleted listing. */
+        200: {
+          content: never;
+        };
+        /** @description Conflict. */
+        409: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/listings/{listingId}/status": {
+    /**
+     * Update a listings status by ID
+     * @description Updates a listing status by it's ID.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description ID of the listing to delete. */
+          listingId: number;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": Record<string, never>;
+        };
+      };
+      responses: {
+        /** @description Successfully updated listing. */
+        200: {
+          content: never;
+        };
+        /** @description Listing not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/listings/sync-internal-from-xpand": {
+    /**
+     * Sync internal parking spaces from xpand to onecores database
+     * @description null
+     */
+    post: {
+      responses: {
+        /** @description Request ok. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. Failed to sync internal parking spaces. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/listings/{listingId}/offers": {
+    /**
+     * Create an offer for a listing
+     * @description Creates an offer for the specified listing.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to create an offer for. */
+          listingId: string;
+        };
+      };
+      responses: {
+        /** @description Offer creation successful. */
+        201: {
+          content: never;
+        };
+        /** @description Internal server error. Failed to create the offer. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/listings/{listingId}/applicants/details": {
+    /**
+     * Get listing by ID with detailed applicants
+     * @description Retrieves a listing by ID along with detailed information about its applicants.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to fetch along with detailed applicant information. */
+          listingId: string;
+        };
+      };
+      responses: {
+        /** @description Successful retrieval of the listing with detailed applicant information. */
+        200: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
+  "/listings/{id}": {
+    /**
+     * Get listing by ID
+     * @description Retrieves details of a listing based on the provided ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with the requested listing details. */
+        200: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
+  "/listings-with-applicants": {
+    /**
+     * Get listings with applicants
+     * @description Retrieves a list of listings along with their associated applicants.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filters listings by one of the above types. Must be one of the specified values. */
+          type?: "published" | "ready-for-offer" | "offered" | "historical";
+        };
+      };
+      responses: {
+        /** @description Successful response with listings and their applicants. */
+        200: {
+          content: {
+            "application/json": Record<string, never>[];
+          };
+        };
+        /** @description Internal server error. Failed to retrieve listings with applicants. */
+        500: {
+          content: never;
         };
       };
     };
