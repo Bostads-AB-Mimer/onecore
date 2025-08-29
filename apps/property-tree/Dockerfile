@@ -10,31 +10,29 @@ COPY package*.json tsconfig.json ./
 
 COPY apps/property-tree ./apps/property-tree
 
-ARG VITE_CORE_API_URL
-ARG VITE_KEYCLOAK_URL
-ARG VITE_KEYCLOAK_CLIENT_ID
-ARG VITE_KEYCLOAK_REDIRECT_URI
-ARG VITE_KEYCLOAK_REALM
-
-ENV VITE_CORE_API_URL=${VITE_CORE_API_URL}
-ENV VITE_KEYCLOAK_URL=${VITE_KEYCLOAK_URL}
-ENV VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID}
-ENV VITE_KEYCLOAK_REDIRECT_URI=${VITE_KEYCLOAK_REDIRECT_URI}
-ENV VITE_KEYCLOAK_REALM=${VITE_KEYCLOAK_REALM}
-
 # Install dependencies
 RUN npm ci
 
 # Build
 RUN npm run build:property-tree
 
-# Production image
+# ==========================
+# Run stage
+# ==========================
 FROM nginx:alpine
+
+RUN apk add --no-cache nodejs
+
+WORKDIR /app
 
 # Copy nginx configuration
 COPY --from=builder /app/apps/property-tree/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/apps/property-tree/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/property-tree/script ./script
 
+# Actual run config
 EXPOSE 80
+RUN chmod +x ./script/entrypoint.sh
 
+ENTRYPOINT ["script/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
