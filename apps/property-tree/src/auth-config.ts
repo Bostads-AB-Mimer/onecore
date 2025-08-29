@@ -1,22 +1,12 @@
-/**
- * Resolve config values from injected config, environment or defaults and
- * in that order.
- *
- * @param vblName - The name of the environment variable to resolve,
- *                  e.g, VITE_KEYCLOAK_URL
- * @param defaultValue - The value to return if neither injected config nor
- *                       env contains a value.
- */
-const resolve = (vblName: string, defaultValue: string) => {
-  return window.__ENV[vblName] || import.meta.env[vblName] || defaultValue
-}
+import { resolve } from '@/utils/env'
 
 export const authConfig = {
   keycloakUrl: resolve(
     'VITE_KEYCLOAK_URL',
     'https://auth-test.mimer.nu/realms/onecore-test'
   ),
-  clientId: resolve('VITE_KEYCLOAK_CLIENT_ID', 'onecore-test'),
+  keycloakRealm: resolve('VITE_KEYCLOAK_REALM', 'onecore'),
+  clientId: resolve('VITE_KEYCLOAK_CLIENT_ID', 'onecore'),
   apiUrl: resolve('VITE_CORE_API_URL', 'http://localhost:5010'),
   redirectUri: resolve(
     'VITE_KEYCLOAK_REDIRECT_URI',
