@@ -4,6 +4,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
 import * as listingAdapter from '../../adapters/listing-adapter'
+import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
 import * as factory from './../factories'
 import * as getTenantService from '../../get-tenant'
 
@@ -64,11 +65,19 @@ describe('GET /listing/:listingId/applicants/details', () => {
       .spyOn(getTenantService, 'getTenant')
       .mockResolvedValue({ ok: true, data: factory.tenant.build() })
 
+    const getRentalObjectSpy = jest
+      .spyOn(rentalObjectAdapter, 'getParkingSpace')
+      .mockResolvedValue({
+        ok: true,
+        data: factory.rentalObject.build(),
+      })
+
     const res = await request(app.callback()).get(
       '/listing/1337/applicants/details'
     )
     expect(getListingSpy).toHaveBeenCalled()
     expect(getTenantSpy).toHaveBeenCalled()
+    expect(getRentalObjectSpy).toHaveBeenCalled()
     expect(res.status).toBe(200)
     expect(res.body).toBeDefined()
   })
