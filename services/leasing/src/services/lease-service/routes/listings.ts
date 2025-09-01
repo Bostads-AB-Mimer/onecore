@@ -702,7 +702,6 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-      //TODO: get rental object from new xpand-adapter that gets rental objects from db
 
       const rentalObjectResult = await rentalObjectAdapter.getParkingSpace(
         listingWithoutRentalObject.rentalObjectCode
