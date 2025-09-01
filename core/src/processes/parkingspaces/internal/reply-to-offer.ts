@@ -107,7 +107,7 @@ export const acceptOffer = async (
     }
 
     //Create lease
-    let lease: any
+    let leaseId: string
 
     try {
       const todaysDate = utils.date.getUTCDateWithoutTime(new Date())
@@ -121,14 +121,36 @@ export const acceptOffer = async (
           ? vacantDate.toISOString()
           : todaysDate.toISOString()
 
-      lease = await leasingAdapter.createLease(
+      const createLeaseResult = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
         fromDate,
         '001'
       )
 
-      log.push(`Kontrakt skapat: ${lease.LeaseId}`)
+      if (!createLeaseResult.ok) {
+        log.push(
+          `Misslyckades med att skapa kontrakt för bilplats ${listingWithoutRentalObject.rentalObjectCode}.`
+        )
+        logger.error(
+          {
+            err: createLeaseResult.err,
+            rentalObjectCode: listingWithoutRentalObject.rentalObjectCode,
+            contactCode: offer.offeredApplicant.contactCode,
+          },
+          'Lease could not be created'
+        )
+        return endFailingProcess(
+          log,
+          ReplyToOfferErrorCodes.CreateLeaseFailure,
+          500,
+          `Lease could not be created`
+        )
+      }
+
+      leaseId = createLeaseResult.data
+
+      log.push(`Kontrakt skapat: ${leaseId}`)
       log.push(
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
       )

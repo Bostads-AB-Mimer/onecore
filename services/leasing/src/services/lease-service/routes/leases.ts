@@ -389,7 +389,7 @@ export const routes = (router: KoaRouter) => {
       )
       if (createLeaseResult.ok) {
         ctx.body = {
-          content: { LeaseId: createLeaseResult.data },
+          content: createLeaseResult.data,
           ...metadata,
         }
       } else if (createLeaseResult.err === 'create-lease-not-allowed') {
