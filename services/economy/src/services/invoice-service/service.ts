@@ -214,6 +214,20 @@ export const createLedgerRows = async (
     const totalRow = createLedgerTotalRow(chunkInvoiceRows)
     transactionRows.push(totalRow)
 
+    let ledgerChunkRowsTotal = chunkInvoiceRows.reduce((sum: number, row) => {
+      sum += row.amount as number
+      return sum
+    }, 0)
+
+    ledgerChunkRowsTotal =
+      Math.round(((ledgerChunkRowsTotal as number) + Number.EPSILON) * 100) /
+      100
+
+    console.log(
+      'Ledger chunk balance',
+      ledgerChunkRowsTotal + (totalRow.amount as number)
+    )
+
     chunkNum++
   }
 
@@ -313,6 +327,19 @@ export const createAggregateRows = async (batchId: string) => {
     const chunkTotalRow = createAggregateTotalRow(aggregatedRows)
 
     transactionRows.push(chunkTotalRow)
+
+    let aggregatedRowsTotal = aggregatedRows.reduce((sum: number, row) => {
+      sum += row.amount as number
+      return sum
+    }, 0)
+
+    aggregatedRowsTotal =
+      Math.round(((aggregatedRowsTotal as number) + Number.EPSILON) * 100) / 100
+
+    console.log(
+      'Aggregate chunk balance',
+      aggregatedRowsTotal + (chunkTotalRow.amount as number)
+    )
 
     chunkNum++
   }
