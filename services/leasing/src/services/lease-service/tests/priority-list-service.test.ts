@@ -290,7 +290,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -324,7 +324,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -392,7 +392,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -431,7 +431,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -546,7 +546,7 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'CEN',
+            residentialAreaCode: 'CEN',
           })
           .build(),
       })
@@ -581,7 +581,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -752,7 +752,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -827,7 +827,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       .params({
         rentalObject: factory.rentalObject
           .params({
-            districtCode: 'XYZ',
+            residentialAreaCode: 'XYZ',
           })
           .build(),
       })
@@ -896,8 +896,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
       publishedTo: new Date('2024-10-19T22:59:59.000Z'),
       status: 4,
       rentalObject: factory.rentalObject.build({
-        districtCaption: 'Vallby',
-        districtCode: 'VAL',
+        residentialAreaCode: 'VAL',
         objectTypeCaption: 'Parkeringsplats med el',
         objectTypeCode: 'PPLMEL',
         vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
