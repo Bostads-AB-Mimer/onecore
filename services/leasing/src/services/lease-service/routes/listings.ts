@@ -702,7 +702,6 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-
       const rentalObjectResult = await rentalObjectAdapter.getParkingSpace(
         listingWithoutRentalObject.rentalObjectCode
       )
