@@ -21,13 +21,14 @@ type RentArticleDetails = Record<
   }
 >
 
-type RentalSpecificRules = Record<
-  string,
-  {
-    costCode: string
-    property: string
-  }
->
+type RentalSpecificRule = {
+  costCode: string
+  property: string
+  projectCode?: string
+  freeCode?: string
+}
+
+type RentalSpecificRules = Record<string, RentalSpecificRule>
 
 type RoundOffInformation = {
   account: string
@@ -96,16 +97,24 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
 }
 
 const getRentArticleDetails = async (
-  year: string
+  year: string,
+  includeInternal: boolean
 ): Promise<RentArticleDetails> => {
   const rentArticleQuery = db('cmart')
     .innerJoin('repsk', 'cmart.keycmart', 'repsk.keycode')
     .innerJoin('repsr', 'repsk.keyrepsr', 'repsr.keyrepsr')
     .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
-    .andWhere('repsr.keycode', 'FADBT_HYRA')
     .andWhere('keyrektk', 'INTAKT')
     .andWhere('repsk.year', year)
-    .andWhere('keycmuni', 'month')
+    .andWhere((query) => {
+      if (includeInternal) {
+        query
+          .orWhere('repsr.keycode', 'FADBT_HYRA')
+          .orWhere('repsr.keycode', 'FADBT_INTHYRA')
+      } else {
+        query.where('repsr.keycode', 'FADBT_HYRA')
+      }
+    })
     .distinct()
 
   const rentArticleResult = await rentArticleQuery
@@ -152,12 +161,39 @@ const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
 
   specificRulesAreas.forEach((row) => {
     specificRules[row['hyresid'].toString().trimEnd()] = {
-      costCode: row['p2'].toString().trimEnd(),
-      property: row['p3'].toString().trimEnd(),
+      costCode: row['p2']?.toString().trimEnd(),
+      property: row['p3']?.toString().trimEnd(),
     }
   })
 
   return specificRules
+}
+
+const getRentalRowSpecificRule = async (
+  row: InvoiceDataRow
+): Promise<RentalSpecificRule | null> => {
+  const rowSpecificRuleResult = await db('repsk')
+    .innerJoin('repsr', 'repsk.keyrepsr', 'repsr.keyrepsr')
+    .innerJoin('repst', 'repst.keydbtbl', 'repsk.keydbtbl')
+    .innerJoin('hyrad', 'repsk.keycode', 'hyrad.keyhyrad')
+    .innerJoin('cmart', 'cmart.keycmart', 'hyrad.keycmart')
+    .innerJoin('hyobj', 'hyrad.keyhyobj', 'hyobj.keyhyobj')
+    .where('repsk.year', '2025')
+    .andWhere('keyrektk', 'INTAKT')
+    .andWhere('repst.name', 'Hyresrad')
+    .andWhere('hyobj.hyobjben', row.contractCode)
+    .andWhere('cmart.code', row.rentArticle)
+
+  if (rowSpecificRuleResult && rowSpecificRuleResult.length > 0) {
+    return {
+      costCode: rowSpecificRuleResult[0].p2?.toString().trimEnd(),
+      property: rowSpecificRuleResult[0].p3?.toString().trimEnd(),
+      projectCode: rowSpecificRuleResult[0].p4?.toString().trimEnd(),
+      freeCode: rowSpecificRuleResult[0].p5?.toString().trimEnd(),
+    }
+  } else {
+    return null
+  }
 }
 
 const getAdditionalColumns = async (
@@ -188,21 +224,34 @@ const getAdditionalColumns = async (
   additionalColumns['freeCode'] = rentArticle['freeCode']?.toString().trimEnd()
   additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()
 
-  if (!additionalColumns['costCode'] && contractCode) {
-    const specificRule = rentalSpecificRules[contractCode.split('/')[0]]
+  let specificRule: RentalSpecificRule | null = null
 
-    if (specificRule) {
-      additionalColumns['costCode'] = specificRule['costCode']
-        ?.toString()
-        .trimEnd()
-      additionalColumns['property'] = specificRule['property']
-        ?.toString()
-        .trimEnd()
-    } else {
-      logger.error(row, 'Could not find cost code and property')
+  if (row.company === '001' && !additionalColumns['costCode'] && contractCode) {
+    specificRule = rentalSpecificRules[contractCode.split('/')[0]]
+    if (!specificRule) {
+      logger.error(
+        row,
+        'Could not find cost code and property for normal rent row'
+      )
       return null
     }
+  } else if (row.company === '006') {
+    specificRule = await getRentalRowSpecificRule(row)
   }
+
+  if (specificRule) {
+    additionalColumns['costCode'] = specificRule['costCode']
+    additionalColumns['property'] = specificRule['property']
+
+    if (specificRule['projectCode']) {
+      additionalColumns['projectCode'] = specificRule['projectCode']
+    }
+
+    if (specificRule['freeCode']) {
+      additionalColumns['freeCode'] = specificRule['freeCode']
+    }
+  }
+
   return additionalColumns
 }
 
@@ -257,7 +306,10 @@ export const enrichInvoiceRows = async (
 
   const rentalIds = Object.keys(rentalIdMap)
   const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
-  const rentArticleDetails = await getRentArticleDetails('2025')
+  const rentArticleDetails = await getRentArticleDetails(
+    '2025',
+    invoiceDataRows[0].company === '006'
+  )
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
@@ -367,7 +419,7 @@ export const getContacts = async (
       return {
         street: invoiceAddress.adress1?.trimEnd(),
         postalCode: invoiceAddress.adress3?.trimEnd(),
-        city: invoiceAddress.address4?.trimEnd(),
+        city: invoiceAddress.adress4?.trimEnd(),
         number: '',
       }
     } else {
