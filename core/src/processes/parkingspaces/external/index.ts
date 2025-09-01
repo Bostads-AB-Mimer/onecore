@@ -134,12 +134,36 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
-      const leaseId = await createLease(
+      const createLeaseResult = await createLease(
         parkingSpace.parkingSpaceId,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
         '001'
       )
+
+      if (!createLeaseResult.ok) {
+        log.push(
+          `Misslyckades med att skapa kontrakt för bilplats ${parkingSpace.parkingSpaceId}.`
+        )
+        logger.error(
+          {
+            err: createLeaseResult.err,
+            rentalObjectCode: parkingSpace.parkingSpaceId,
+            contactCode: applicantContact.contactCode,
+          },
+          'Lease could not be created'
+        )
+        return {
+          processStatus: ProcessStatus.failed,
+          error: 'create-lease-failed',
+          httpStatus: 500,
+          response: {
+            message: `Lease could not be created.`,
+          },
+        }
+      }
+
+      const leaseId = createLeaseResult.data
 
       log.push(`Kontrakt skapat: ${leaseId}`)
 
