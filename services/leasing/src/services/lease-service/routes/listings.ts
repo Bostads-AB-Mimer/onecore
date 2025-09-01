@@ -15,6 +15,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
 import * as syncParkingSpacesFromXpandService from '../sync-internal-parking-space-listings-from-xpand'
 import * as listingAdapter from '../adapters/listing-adapter'
+import * as rentalObjectAdapter from '../adapters/xpand/rental-object-adapter'
 import { getTenant } from '../get-tenant'
 import { db } from '../adapters/db'
 
@@ -702,11 +703,31 @@ export const routes = (router: KoaRouter) => {
       }
 
       //TODO: get rental object from new xpand-adapter that gets rental objects from db
+
+      const rentalObjectResult = await rentalObjectAdapter.getParkingSpace(
+        listingWithoutRentalObject.rentalObjectCode
+      )
+
+      if (!rentalObjectResult.ok) {
+        logger.error(
+          {
+            err: rentalObjectResult.err,
+            rentalObjectCode: listingWithoutRentalObject.rentalObjectCode,
+          },
+          'Error getting rental object'
+        )
+
+        ctx.status = 404
+        ctx.body = {
+          reason: 'Rental object not found',
+          ...metadata,
+        }
+        return
+      }
+
       const listing = {
         ...listingWithoutRentalObject,
-        rentalObject: {
-          rentalObjectCode: listingWithoutRentalObject.rentalObjectCode,
-        },
+        rentalObject: rentalObjectResult.data,
       } as Listing
 
       const applicantsWithPriority =
