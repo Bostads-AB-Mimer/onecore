@@ -12,7 +12,7 @@ const createLease = async (
   rentalPropertyId: string,
   tenantCode: string,
   companyCode: string
-) => {
+): Promise<AdapterResult<string, 'create-lease-not-allowed' | 'unknown'>> => {
   const headers = getHeaders()
 
   const xml = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ser="http://incit.xpand.eu/service/" xmlns:inc="http://incit.xpand.eu/" xmlns:data="http://incit.xpand.eu/data/">
@@ -69,19 +69,26 @@ const createLease = async (
       parser.parse(body)['s:Envelope']['s:Body'].CreateNewEntityResult
 
     if (parsedResponse.Success === true) {
-      return parsedResponse.ObjectDescription
+      return { data: parsedResponse.ObjectDescription, ok: true }
     } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
-      throw createHttpError(
-        404,
-        'Parking space not found when creating lease',
-        rentalPropertyId
+      logger.info(
+        { objectId: rentalPropertyId, contactId: tenantCode, fromDate },
+        'XPand could not create lease for rental object'
       )
+      return { ok: false, err: 'create-lease-not-allowed' }
+    } else {
+      logger.error(
+        { message: parsedResponse.Message },
+        'Create lease response from XPand cannot be interpreted'
+      )
+      return { ok: false, err: 'unknown' }
     }
-    throw createHttpError(500, parsedResponse.Message)
     //TODO: handle more errors...
   } catch (error: unknown) {
-    logger.error(error, 'Error creating lease Xpand SOAP API')
-    throw error
+    let errorMsg = 'Error creating lease Xpand SOAP API: '
+    if (error instanceof Error) errorMsg += error.message
+    logger.error(error, errorMsg)
+    return { ok: false, err: 'unknown' }
   }
 }
 

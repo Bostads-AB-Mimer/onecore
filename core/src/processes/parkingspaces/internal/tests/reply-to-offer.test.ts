@@ -166,7 +166,11 @@ describe('replyToOffer', () => {
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
         data: factory.offerWithRentalObjectCode.buildList(2, {
@@ -251,7 +255,10 @@ describe('replyToOffer', () => {
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
         data: factory.offerWithRentalObjectCode.buildList(2, {
@@ -299,7 +306,10 @@ describe('replyToOffer', () => {
       })
 
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
 
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
@@ -346,7 +356,10 @@ describe('replyToOffer', () => {
       })
 
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
-      createLeaseSpy.mockResolvedValueOnce(factory.lease.build())
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
 
       getOffersForContactSpy.mockResolvedValueOnce({
         ok: true,
