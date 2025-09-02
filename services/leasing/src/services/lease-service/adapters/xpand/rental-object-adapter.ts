@@ -89,6 +89,9 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom = new Date(lastBlockEndDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  } else if (lastBlockStartDate && !lastBlockEndDate) {
+    //TODO: if lastBlockStartDate is present and lastBlockEndDate is missing then vacantFrom should be undefined
+    vacantFrom = undefined
   } else if (lastDebitDate) {
     vacantFrom = new Date(lastDebitDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
@@ -98,11 +101,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom = new Date()
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
-
-  //TODO: if lastBlockStartDate is present and lastBlockEndDate is missing then vacantFrom should be undefined
-  // if (lastBlockStartDate && !lastBlockEndDate) {
-  //   vacantFrom = undefined
-  // }
 
   return {
     rentalObjectCode: row.rentalObjectCode,
