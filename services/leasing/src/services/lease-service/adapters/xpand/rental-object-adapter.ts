@@ -81,15 +81,28 @@ function transformFromXpandRentalObject(row: any): RentalObject {
 
   // Determine vacantFrom date
   const lastDebitDate = row.lastdebitdate
+  const lastBlockStartDate = row.blockstartdate
+  const lastBlockEndDate = row.blockenddate
   let vacantFrom
-  if (lastDebitDate) {
+  if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
+    //if there is a block end date, vacantFrom should be the day after
+    vacantFrom = new Date(lastBlockEndDate)
+    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  } else if (lastDebitDate) {
     vacantFrom = new Date(lastDebitDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   } else {
-    //when last debit date is missing, the parking space is vacant as of today
+    //when last debit date is missing and there is no block, the parking space is vacant as of today
     vacantFrom = new Date()
+    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
-  vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+
+  //TODO: if lastBlockStartDate is present and lastBlockEndDate is missing then vacantFrom should be undefined
+  // if (lastBlockStartDate && !lastBlockEndDate) {
+  //   vacantFrom = undefined
+  // }
 
   return {
     rentalObjectCode: row.rentalObjectCode,
@@ -112,6 +125,7 @@ const buildMainQuery = (queries: {
   parkingSpacesQuery: any
   activeRentalBlocksQuery?: any
   activeContractsQuery?: any
+  rentalBlockDatesQuery?: any
   contractsWithLastDebitDate?: any
 }) => {
   let query = xpandDb
@@ -161,6 +175,12 @@ const buildMainQuery = (queries: {
         'ac.keycmobj',
         'ps.keycmobj'
       )
+  }
+
+  if (queries.rentalBlockDatesQuery) {
+    query = query
+      .select('orb.blockstartdate', 'orb.blockenddate')
+      .leftJoin(queries.rentalBlockDatesQuery, 'orb.keycmobj', 'ps.keycmobj')
   }
 
   if (queries.contractsWithLastDebitDate) {
@@ -326,11 +346,32 @@ const buildSubQueries = () => {
       [1, '3', '5', '_1WP0JXVK8', '_1WP0KDMOO']
     )
 
+  //query that gets contracts with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
+  const rentalBlockDatesQuery = xpandDb.raw(`
+    (
+      SELECT sub.keycmobj, sub.fdate AS blockstartdate, sub.tdate AS blockenddate
+      FROM (
+        SELECT
+          hyspt.keycmobj,
+          hyspt.fdate,
+          hyspt.tdate,
+          ROW_NUMBER() OVER (
+            PARTITION BY hyspt.keycmobj
+            ORDER BY CASE WHEN hyspt.tdate IS NULL THEN 1 ELSE 0 END DESC, hyspt.tdate DESC
+          ) AS rn
+        FROM hyspt
+        INNER JOIN hyspa ON hyspa.keyhyspa = hyspt.keyhyspa
+      ) AS sub
+      WHERE sub.rn = 1
+    ) AS orb
+  `)
+
   return {
     parkingSpacesQuery,
     activeRentalBlocksQuery,
     activeContractsQuery,
     contractsWithLastDebitDate,
+    rentalBlockDatesQuery,
   }
 }
 
@@ -376,14 +417,21 @@ const getParkingSpace = async (
   AdapterResult<RentalObject, 'unknown' | 'parking-space-not-found'>
 > => {
   try {
-    const { parkingSpacesQuery, contractsWithLastDebitDate } = buildSubQueries()
-
-    const result = await buildMainQuery({
+    const {
       parkingSpacesQuery,
       contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    } = buildSubQueries()
+
+    const mainQuery = buildMainQuery({
+      parkingSpacesQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
     })
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
       .first()
+
+    const result = await mainQuery
 
     if (!result) {
       logger.error(
@@ -406,11 +454,16 @@ const getParkingSpaces = async (
   AdapterResult<RentalObject[], 'unknown' | 'parking-spaces-not-found'>
 > => {
   try {
-    const { parkingSpacesQuery, contractsWithLastDebitDate } = buildSubQueries()
+    const {
+      parkingSpacesQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    } = buildSubQueries()
 
     let query = buildMainQuery({
       parkingSpacesQuery,
       contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
     })
     if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
       query = query.whereIn('ps.rentalObjectCode', includeRentalObjectCodes)
