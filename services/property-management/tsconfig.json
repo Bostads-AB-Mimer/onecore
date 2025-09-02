@@ -6,7 +6,6 @@
       "./test"
     ],
     "outDir": "./build",
-    "resolveJsonModule": true,
     "types": [
       "koa-body",
       "jest",
