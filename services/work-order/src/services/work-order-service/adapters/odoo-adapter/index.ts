@@ -444,7 +444,7 @@ export const addMessageToWorkOrder = async (
       [workOrderId],
       {
         body: striptags(message).replaceAll('\n', '<br>'),
-        message_type: 'from_tenant',
+        message_type: 'notification',
         body_is_html: true,
       },
     ])
