@@ -1283,7 +1283,6 @@ export interface paths {
   };
   "/rental-objects/by-code/{rentalObjectCode}": {
     /**
-     * Get a rental object by code
      * @description Fetches a rental object by Rental Object Code.
      */
     get: {
@@ -1329,7 +1328,7 @@ export interface paths {
       };
     };
   };
-  "/rental-properties/{id}/floorplan": {
+  "/rentalproperties/{id}/floorplan": {
     /**
      * Get floor plan for a rental property
      * @description Returns the floor plan image for the specified rental property.
@@ -2627,6 +2626,70 @@ export interface paths {
     };
   };
   "/maintenance-units/by-property-code/{code}": {
+    /**
+     * Get maintenance units by property code.
+     * @description Returns all maintenance units belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve maintenance units. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/facilities/by-rental-id/{rentalId}": {
+    /**
+     * Get facility by rental id.
+     * @description Returns facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the facility. */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facility. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FacilityDetails"];
+            };
+          };
+        };
+        /** @description Not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/maintenance-units/by-property-code/{code}": {
     /**
      * Get maintenance units by property code.
      * @description Returns all maintenance units belonging to a property.
