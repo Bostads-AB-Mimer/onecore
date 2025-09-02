@@ -1,4 +1,4 @@
-import { render, RenderResult, RenderOptions } from '@testing-library/react'
+import { render, RenderResult } from '@testing-library/react'
 
 const customRender = (ui: React.ReactElement, options = {}): RenderResult =>
   render(ui, {
