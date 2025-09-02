@@ -1283,7 +1283,6 @@ export interface paths {
   };
   "/rental-objects/by-code/{rentalObjectCode}": {
     /**
-     * Get a rental object by code
      * @description Fetches a rental object by Rental Object Code.
      */
     get: {
@@ -1329,7 +1328,7 @@ export interface paths {
       };
     };
   };
-  "/rental-properties/{id}/floorplan": {
+  "/rentalproperties/{id}/floorplan": {
     /**
      * Get floor plan for a rental property
      * @description Returns the floor plan image for the specified rental property.
