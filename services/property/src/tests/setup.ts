@@ -1,5 +1,8 @@
 jest.mock('@onecore/utilities', () => {
+  const actual = jest.requireActual('@onecore/utilities')
+
   return {
+    ...actual,
     logger: {
       info: () => {
         return
