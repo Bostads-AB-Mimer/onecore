@@ -15,7 +15,7 @@ import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'
 import * as createOfferProcesses from '../create-offer'
 import * as factory from '../../../../../test/factories'
-import { AdapterResult } from 'core/src/adapters/types'
+import { AdapterResult } from '@/adapters/types'
 
 describe('replyToOffer', () => {
   // Mock out all top level functions, such as get, put, delete and post:
