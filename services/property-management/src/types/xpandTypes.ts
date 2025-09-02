@@ -26,4 +26,4 @@ interface XpandParkingSpace {
   waitingListType: string
 }
 
-export { XpandParkingSpace }
+export type { XpandParkingSpace }
