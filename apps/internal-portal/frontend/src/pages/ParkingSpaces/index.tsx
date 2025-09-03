@@ -18,9 +18,9 @@ import {
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
 import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
-import { DeleteListing } from './components/DeleteListing'
 import { CloseListing } from './components/CloseListing'
 import { printVacantFrom } from '../../common/formattingUtils'
+import { UnpublishListing } from './components/UnpublishListing'
 
 const ParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
@@ -121,9 +121,7 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
-              )}
+              columns={getColumns(dateFormatter, numberFormatter)}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="historical"
@@ -191,13 +189,7 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       minWidth: 250,
       cellClassName: 'actions',
       getActions: ({ row }) => [
-        <DeleteListing
-          key={0}
-          address={row.rentalObject.address}
-          rentalObjectCode={row.rentalObjectCode}
-          disabled={row.status !== ListingStatus.Active}
-          id={row.id}
-        />,
+        <UnpublishListing key={1} listingId={row.id} />,
         <CreateApplicantForListing
           key={1}
           disabled={row.status !== ListingStatus.Active}
