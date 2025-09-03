@@ -85,24 +85,23 @@ function transformFromXpandRentalObject(row: any): RentalObject {
   const lastBlockEndDate = row.blockenddate
   let vacantFrom
   if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
-    //if there is a block end date, vacantFrom should be the day after
+    //if the object is blocked to a date in the future, vacantFrom should be the day after
     vacantFrom = new Date(lastBlockEndDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  } else if (lastBlockStartDate && !lastBlockEndDate) {
+    //if there is a block but no end date, vacantFrom should be undefined
+    vacantFrom = undefined
   } else if (lastDebitDate) {
+    //if there is no block but a last debit date, vacantFrom should be the day after
     vacantFrom = new Date(lastDebitDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   } else {
-    //when last debit date is missing and there is no block, the parking space is vacant as of today
+    //there is no block and no last debit date, the parking space is vacant as of today
     vacantFrom = new Date()
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
-
-  //TODO: if lastBlockStartDate is present and lastBlockEndDate is missing then vacantFrom should be undefined
-  // if (lastBlockStartDate && !lastBlockEndDate) {
-  //   vacantFrom = undefined
-  // }
 
   return {
     rentalObjectCode: row.rentalObjectCode,
@@ -257,7 +256,7 @@ const buildSubQueries = () => {
     })
     .leftJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
-    .where('babuf.cmpcode', '=', '001')
+    .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
   const activeRentalBlocksQuery = xpandDb
     .from('hyspt')
@@ -346,7 +345,7 @@ const buildSubQueries = () => {
       [1, '3', '5', '_1WP0JXVK8', '_1WP0KDMOO']
     )
 
-  //query that gets contracts with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
+  //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
   const rentalBlockDatesQuery = xpandDb.raw(`
     (
       SELECT sub.keycmobj, sub.fdate AS blockstartdate, sub.tdate AS blockenddate
@@ -435,7 +434,8 @@ const getParkingSpace = async (
 
     if (!result) {
       logger.error(
-        `Parking space not found by Rental Object Code: ${rentalObjectCode}`
+        { rentalObjectCode },
+        'Parking space not found by Rental Object Code'
       )
       return { ok: false, err: 'parking-space-not-found' }
     }
@@ -443,7 +443,10 @@ const getParkingSpace = async (
     const rentalObject = trimRow(transformFromXpandRentalObject(result))
     return { ok: true, data: rentalObject }
   } catch (err) {
-    logger.error(err, 'tenantLeaseAdapter.getRentalObject')
+    logger.error(
+      { err, rentalObjectCode },
+      'Unknown error in rentalObjectAdapter.getRentalObject'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -473,9 +476,24 @@ const getParkingSpaces = async (
 
     if (!results || results.length === 0) {
       logger.error(
-        `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`
+        { includeRentalObjectCodes: includeRentalObjectCodes },
+        `No parking spaces found for rental object codes`
       )
       return { ok: false, err: 'parking-spaces-not-found' }
+    }
+
+    if (
+      includeRentalObjectCodes &&
+      results.length < includeRentalObjectCodes.length
+    ) {
+      logger.error(
+        {
+          includeRentalObjectCodes: includeRentalObjectCodes.filter(
+            (code) => !results.some((row) => row.rentalObjectCode === code)
+          ),
+        },
+        `Some rental object codes could not be found (the rest will be returned)`
+      )
     }
 
     const rentalObjects = results.map((row) =>
@@ -483,7 +501,10 @@ const getParkingSpaces = async (
     )
     return { ok: true, data: rentalObjects }
   } catch (err) {
-    logger.error(err, 'tenantLeaseAdapter.getRentalObjects')
+    logger.error(
+      { err, includeRentalObjectCodes },
+      'Unknown error in rentalObjectAdapter.getRentalObjects'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

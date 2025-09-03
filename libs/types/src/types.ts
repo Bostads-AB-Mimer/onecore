@@ -349,7 +349,7 @@ interface RentalObject {
   residentialAreaCode: string
   objectTypeCaption: string
   objectTypeCode: string
-  vacantFrom: Date
+  vacantFrom?: Date
   braArea?: number
   btaArea?: number
   boaArea?: number
