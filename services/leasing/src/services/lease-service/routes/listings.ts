@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import {
   ApplicantStatus,
   DetailedApplicant,
-  InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
@@ -13,7 +12,6 @@ import { match, P } from 'ts-pattern'
 
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
-import * as syncParkingSpacesFromXpandService from '../sync-internal-parking-space-listings-from-xpand'
 import * as listingAdapter from '../adapters/listing-adapter'
 import * as rentalObjectAdapter from '../adapters/xpand/rental-object-adapter'
 import { getTenant } from '../get-tenant'
@@ -693,59 +691,6 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = {
       content: listings.data,
-      ...metadata,
-    }
-  })
-
-  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result =
-      await syncParkingSpacesFromXpandService.syncInternalParkingSpaces(db)
-
-    if (!result.ok) {
-      logger.error(
-        'Error when syncing internal parking spaces from Xpand SOAP API'
-      )
-
-      ctx.status = 500
-      ctx.body = { err: 'Internal server error', ...metadata }
-      return
-    }
-
-    logger.info('Finished syncing listings from Xpand SOAP API')
-    if (result.data.insertions.failed.length) {
-      logger.info(
-        result.data.insertions.failed.map((v) => ({
-          rentalObjectCode: v.listing.rentalObjectCode,
-          status: v.listing.status,
-          err: v.err,
-        })),
-        'Failed to insert the following listings when syncing from Xpand SOAP API:'
-      )
-    }
-
-    const mapToResponseData = (
-      data: (typeof result)['data']
-    ): InternalParkingSpaceSyncSuccessResponse => ({
-      invalid: result.data.invalid,
-      insertions: {
-        inserted: data.insertions.inserted.map((v) => ({
-          id: v.id,
-          rentalObjectCode: v.rentalObjectCode,
-        })),
-        failed: data.insertions.failed.map((v) => ({
-          rentalObjectCode: v.listing.rentalObjectCode,
-          err:
-            v.err === 'conflict-active-listing'
-              ? 'active-listing-exists'
-              : v.err,
-        })),
-      },
-    })
-
-    ctx.status = 200
-    ctx.body = {
-      content: mapToResponseData(result.data),
       ...metadata,
     }
   })
