@@ -2,7 +2,6 @@ import { HttpStatusCode } from 'axios'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import {
   Applicant,
-  InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
@@ -117,23 +116,6 @@ const getListingByListingId = async (
   } catch (error) {
     logger.error(error, 'Error fetching listing by rental object code')
     return undefined
-  }
-}
-
-const syncInternalParkingSpacesFromXpand = async () => {
-  try {
-    const res = await axios.post<{
-      content: InternalParkingSpaceSyncSuccessResponse
-    }>(`${tenantsLeasesServiceUrl}/listings/sync-internal-from-xpand`)
-
-    if (res.status !== 200) {
-      return { ok: false, err: 'unknown' } as const
-    }
-
-    return { ok: true, data: res.data.content } as const
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.syncInternalParkingSpacesFromXpand')
-    return { ok: false, err: 'unknown' } as const
   }
 }
 
@@ -320,7 +302,6 @@ export {
   createMultipleListings,
   applyForListing,
   getListingByListingId,
-  syncInternalParkingSpacesFromXpand,
   deleteListing,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
