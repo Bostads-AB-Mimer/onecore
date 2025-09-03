@@ -434,7 +434,8 @@ const getParkingSpace = async (
 
     if (!result) {
       logger.error(
-        `Parking space not found by Rental Object Code: ${rentalObjectCode}`
+        { rentalObjectCode },
+        'Parking space not found by Rental Object Code'
       )
       return { ok: false, err: 'parking-space-not-found' }
     }
@@ -442,7 +443,10 @@ const getParkingSpace = async (
     const rentalObject = trimRow(transformFromXpandRentalObject(result))
     return { ok: true, data: rentalObject }
   } catch (err) {
-    logger.error(err, 'tenantLeaseAdapter.getRentalObject')
+    logger.error(
+      { err, rentalObjectCode },
+      'Unknown error in rentalObjectAdapter.getRentalObject'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -472,9 +476,24 @@ const getParkingSpaces = async (
 
     if (!results || results.length === 0) {
       logger.error(
-        `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`
+        { includeRentalObjectCodes: includeRentalObjectCodes },
+        `No parking spaces found for rental object codes`
       )
       return { ok: false, err: 'parking-spaces-not-found' }
+    }
+
+    if (
+      includeRentalObjectCodes &&
+      results.length < includeRentalObjectCodes.length
+    ) {
+      logger.error(
+        {
+          includeRentalObjectCodes: includeRentalObjectCodes.filter(
+            (code) => !results.some((row) => row.rentalObjectCode === code)
+          ),
+        },
+        `Some rental object codes could not be found (the rest will be returned)`
+      )
     }
 
     const rentalObjects = results.map((row) =>
@@ -482,7 +501,10 @@ const getParkingSpaces = async (
     )
     return { ok: true, data: rentalObjects }
   } catch (err) {
-    logger.error(err, 'tenantLeaseAdapter.getRentalObjects')
+    logger.error(
+      { err, includeRentalObjectCodes },
+      'Unknown error in rentalObjectAdapter.getRentalObjects'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
