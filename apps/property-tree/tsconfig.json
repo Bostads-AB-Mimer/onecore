@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.react.base.json",
   "compilerOptions": {
     "target": "ES2020",
     "lib": [
@@ -7,13 +7,7 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {
@@ -32,10 +26,7 @@
       "react-dom"
     ],
     "allowJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler"
+    "esModuleInterop": true
   },
   "include": [
     "src/**/*",

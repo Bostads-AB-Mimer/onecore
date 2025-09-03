@@ -1,12 +1,11 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDirs": [
       "./src",
       "./test"
     ],
     "outDir": "./build",
-    "resolveJsonModule": true,
     "types": [
       "koa-body",
       "jest",

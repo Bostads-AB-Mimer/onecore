@@ -1,15 +1,23 @@
 /// <reference types="vitest" />
 /// <reference types="vite/client" />
-import { defineConfig } from 'vite'
+import * as path from 'node:path'
+import { defineConfig, UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import eslintPlugin from '@nabla/vite-plugin-eslint'
 
+const isTest = !!process.env.VITEST // Vitest sets this
+
 export default defineConfig({
-  plugins: [react(), eslintPlugin()],
+  plugins: [react(), ...(isTest ? [] : [eslintPlugin()])],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setupTests.ts',
+    setupFiles: ['./test/setup/setupTests.ts'],
   },
   server: {
     port: 7003,
@@ -21,4 +29,4 @@ export default defineConfig({
       },
     },
   },
-})
+} as UserConfig)

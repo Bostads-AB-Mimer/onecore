@@ -4,6 +4,16 @@ import errorHandler from './error-handler'
 
 describe('errorHandler', () => {
   let app: Koa<Koa.DefaultState, Koa.DefaultContext>
+  let errSpy: jest.SpyInstance
+
+  beforeAll(() => {
+    errSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterAll(() => {
+    errSpy.mockRestore()
+  })
+
   beforeEach(() => {
     app = new Koa()
     app.use(errorHandler())

@@ -14,7 +14,8 @@
     "lint:fix": "eslint src/ --fix",
     "prettier": "prettier --check ./src",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "ts:watch": "tsc --watch --noEmit",
     "typecheck": "tsc --noEmit"

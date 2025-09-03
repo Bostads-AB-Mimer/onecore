@@ -21,6 +21,7 @@ export default async function migrate() {
     })
     .catch((error) => {
       console.error('Error applying migrations', error)
+      process.exit(1)
     })
 
   await db.destroy()

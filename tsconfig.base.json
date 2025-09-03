@@ -1,21 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "moduleDetection": "force",
     "lib": [
-      "ES2020"
+      "ES2022"
     ],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "baseUrl": "."
+    "isolatedModules": true
   },
   "exclude": [
     "node_modules",
-    "dist",
-    "build"
+    "**/dist",
+    "**/build"
   ]
 }
