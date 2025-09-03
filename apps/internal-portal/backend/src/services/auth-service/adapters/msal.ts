@@ -211,7 +211,6 @@ const handleRedirect = (_options: AuthOptions = defaultOptions) => {
       return ctx.redirect(state.successRedirect)
     } catch (error) {
       console.log('error: ', error)
-      ctx.next(error)
     }
   }
 }
