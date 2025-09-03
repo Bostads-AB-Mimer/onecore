@@ -345,7 +345,7 @@ const buildSubQueries = () => {
       [1, '3', '5', '_1WP0JXVK8', '_1WP0KDMOO']
     )
 
-  //query that gets contracts with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
+  //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
   const rentalBlockDatesQuery = xpandDb.raw(`
     (
       SELECT sub.keycmobj, sub.fdate AS blockstartdate, sub.tdate AS blockenddate
