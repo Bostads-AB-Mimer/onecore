@@ -18,6 +18,16 @@ expect.extend({
         `expected ${actual} and ${expected} to be less than 100ms apart`,
     }
   },
+  toBeStartOfDayUTC(actual: Date) {
+    const pass =
+      actual.getUTCHours() === 0 &&
+      actual.getUTCMinutes() === 0 &&
+      actual.getUTCSeconds() === 0
+    return {
+      pass,
+      message: () => `expected ${actual} to be start of day UTC`,
+    }
+  },
 })
 
 declare global {
@@ -26,6 +36,7 @@ declare global {
     interface Matchers<R> {
       toBeSameDayAs(expected: Date): R
       toBeNearDate(expected: Date): R
+      toBeStartOfDayUTC(): R
     }
   }
 }
