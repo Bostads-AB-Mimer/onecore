@@ -1,4 +1,5 @@
 import * as rentalObjectAdapter from '../../../adapters/xpand/rental-object-adapter'
+import { addDays, addMonths } from 'date-fns'
 
 describe('transformFromXpandRentalObject', () => {
   it('should set vacantFrom to today when lastDebitDate and blockEndDate are missing', () => {
@@ -10,10 +11,9 @@ describe('transformFromXpandRentalObject', () => {
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
     const today = new Date()
-    const vacantFrom = new Date(result.vacantFrom)
-    expect(vacantFrom.getUTCFullYear()).toBe(today.getUTCFullYear())
-    expect(vacantFrom.getUTCMonth()).toBe(today.getUTCMonth())
-    expect(vacantFrom.getUTCDate()).toBe(today.getUTCDate())
+
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeSameDayAs(today)
   })
 
   it('should set vacantFrom to the day after lastDebitDate when lastDebitDate is present and blockEndDate is missing', () => {
@@ -27,10 +27,9 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    const vacantFrom = new Date(result.vacantFrom)
-    expect(vacantFrom.getUTCFullYear()).toBe(lastDebitDate.getUTCFullYear())
-    expect(vacantFrom.getUTCMonth()).toBe(lastDebitDate.getUTCMonth())
-    expect(vacantFrom.getUTCDate()).toBe(lastDebitDate.getUTCDate() + 1)
+    let expectedVacantFrom = addDays(lastDebitDate, 1)
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
 
   it('should set vacantFrom to the day after blockEndDate when blockEndDate is in the future', () => {
@@ -44,10 +43,9 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    const vacantFrom = new Date(result.vacantFrom)
-    expect(vacantFrom.getUTCFullYear()).toBe(blockEndDate.getUTCFullYear())
-    expect(vacantFrom.getUTCMonth()).toBe(blockEndDate.getUTCMonth())
-    expect(vacantFrom.getUTCDate()).toBe(blockEndDate.getUTCDate() + 1)
+    let expectedVacantFrom = addDays(blockEndDate, 1)
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
 
   it('should set vacantFrom to the day after lastDebitDate when blockEndDate is in the past and lastDebitDate is present', () => {
@@ -64,10 +62,9 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    const vacantFrom = new Date(result.vacantFrom)
-    expect(vacantFrom.getUTCFullYear()).toBe(lastDebitDate.getUTCFullYear())
-    expect(vacantFrom.getUTCMonth()).toBe(lastDebitDate.getUTCMonth())
-    expect(vacantFrom.getUTCDate()).toBe(lastDebitDate.getUTCDate() + 1)
+    let expectedVacantFrom = addDays(lastDebitDate, 1)
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
 
   it('should set vacantFrom to today when blockEndDate is in the past and lastDebitDate is missing', () => {
@@ -81,11 +78,9 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    const vacantFrom = new Date(result.vacantFrom)
     const today = new Date()
-    expect(vacantFrom.getUTCFullYear()).toBe(today.getUTCFullYear())
-    expect(vacantFrom.getUTCMonth()).toBe(today.getUTCMonth())
-    expect(vacantFrom.getUTCDate()).toBe(today.getUTCDate())
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeSameDayAs(today)
   })
 
   it('should set vacantFrom to start of day UTC', () => {
@@ -96,9 +91,19 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    const vacantFrom = new Date(result.vacantFrom)
-    expect(vacantFrom.getUTCHours()).toBe(0)
-    expect(vacantFrom.getUTCMinutes()).toBe(0)
-    expect(vacantFrom.getUTCSeconds()).toBe(0)
+    expect(result.vacantFrom).toBeDefined()
+    expect(result.vacantFrom).toBeStartOfDayUTC()
+  })
+
+  it('should set vacantFrom to undefined when there is a block without an end date', () => {
+    const row = {
+      blockstartdate: new Date(),
+      blockenddate: null,
+      lastdebitdate: null,
+    }
+
+    const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
+
+    expect(result.vacantFrom).toBeUndefined()
   })
 })

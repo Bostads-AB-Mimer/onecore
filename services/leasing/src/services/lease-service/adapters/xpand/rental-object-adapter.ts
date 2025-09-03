@@ -85,19 +85,20 @@ function transformFromXpandRentalObject(row: any): RentalObject {
   const lastBlockEndDate = row.blockenddate
   let vacantFrom
   if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
-    //if there is a block end date, vacantFrom should be the day after
+    //if the object is blocked to a date in the future, vacantFrom should be the day after
     vacantFrom = new Date(lastBlockEndDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   } else if (lastBlockStartDate && !lastBlockEndDate) {
-    //TODO: if lastBlockStartDate is present and lastBlockEndDate is missing then vacantFrom should be undefined
+    //TODO: if there is a block but no end date, vacantFrom should be undefined
     vacantFrom = undefined
   } else if (lastDebitDate) {
+    //if there is no block but a last debit date, vacantFrom should be the day after
     vacantFrom = new Date(lastDebitDate)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   } else {
-    //when last debit date is missing and there is no block, the parking space is vacant as of today
+    //there is no block and no last debit date, the parking space is vacant as of today
     vacantFrom = new Date()
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
@@ -255,7 +256,7 @@ const buildSubQueries = () => {
     })
     .leftJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
-    .where('babuf.cmpcode', '=', '001')
+    .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
   const activeRentalBlocksQuery = xpandDb
     .from('hyspt')
