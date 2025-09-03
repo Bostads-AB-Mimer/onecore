@@ -27,7 +27,7 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    let expectedVacantFrom = addDays(lastDebitDate, 1)
+    const expectedVacantFrom = addDays(lastDebitDate, 1)
     expect(result.vacantFrom).toBeDefined()
     expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
@@ -43,7 +43,7 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    let expectedVacantFrom = addDays(blockEndDate, 1)
+    const expectedVacantFrom = addDays(blockEndDate, 1)
     expect(result.vacantFrom).toBeDefined()
     expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
@@ -62,7 +62,7 @@ describe('transformFromXpandRentalObject', () => {
 
     const result = rentalObjectAdapter.transformFromXpandRentalObject(row)
 
-    let expectedVacantFrom = addDays(lastDebitDate, 1)
+    const expectedVacantFrom = addDays(lastDebitDate, 1)
     expect(result.vacantFrom).toBeDefined()
     expect(result.vacantFrom).toBeSameDayAs(expectedVacantFrom)
   })
