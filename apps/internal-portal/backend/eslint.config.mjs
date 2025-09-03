@@ -1,10 +1,10 @@
-import { defineConfig } from 'eslint/config';
-import typescriptEslint from 'typescript-eslint';
-import nPlugin from 'eslint-plugin-n';
-import js from '@eslint/js';
-import prettier from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
-import globals from 'globals';
+import { defineConfig } from 'eslint/config'
+import typescriptEslint from 'typescript-eslint'
+import nPlugin from 'eslint-plugin-n'
+import js from '@eslint/js'
+import prettier from 'eslint-config-prettier'
+import importPlugin from 'eslint-plugin-import'
+import globals from 'globals'
 
 export default defineConfig([
   {
@@ -47,8 +47,16 @@ export default defineConfig([
         },
       ],
       'no-useless-catch': 'warn',
-      'no-unused-vars': 'warn',
-      'n/no-missing-import': 'off'
+      'n/no-missing-import': 'off',
+      'no-unused-vars': [
+        'warn',
+        {
+          ignoreRestSiblings: true,
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
@@ -57,4 +65,4 @@ export default defineConfig([
       'n/no-unpublished-import': 'off',
     },
   },
-]);
+])
