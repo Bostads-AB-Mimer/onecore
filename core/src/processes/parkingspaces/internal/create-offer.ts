@@ -25,6 +25,7 @@ import config from '../../../common/config'
 type CreateOfferError =
   | CreateOfferErrorCodes.NoListing
   | CreateOfferErrorCodes.ListingNotExpired
+  | CreateOfferErrorCodes.RentalObjectNotVacant
   | CreateOfferErrorCodes.NoApplicants
   | CreateOfferErrorCodes.CreateOfferFailure
   | CreateOfferErrorCodes.UpdateApplicantStatusFailure
@@ -84,7 +85,7 @@ export const createOfferForInternalParkingSpace = async (
     if (!listing.rentalObject.vacantFrom) {
       return endFailingProcess(
         log,
-        CreateOfferErrorCodes.NoApplicants,
+        CreateOfferErrorCodes.RentalObjectNotVacant,
         500,
         `Listing with id ${listingId} has no vacantFrom date`
       )

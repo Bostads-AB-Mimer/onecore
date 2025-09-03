@@ -90,7 +90,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   } else if (lastBlockStartDate && !lastBlockEndDate) {
-    //TODO: if there is a block but no end date, vacantFrom should be undefined
+    //if there is a block but no end date, vacantFrom should be undefined
     vacantFrom = undefined
   } else if (lastDebitDate) {
     //if there is no block but a last debit date, vacantFrom should be the day after
