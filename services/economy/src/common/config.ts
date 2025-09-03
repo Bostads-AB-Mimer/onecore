@@ -44,7 +44,7 @@ const config = configPackage({
       port: 1438,
     },
     procurementInvoices: {
-      directory: './procurement-invoices',
+      directory: './procurement-invoices/invoices',
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',

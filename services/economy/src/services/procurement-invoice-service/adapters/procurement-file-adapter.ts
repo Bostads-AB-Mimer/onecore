@@ -16,6 +16,7 @@ enum ProcurementInvoiceType {
   water = 2,
   heating = 3,
   cooling = 4,
+  solar = 5,
 }
 
 // How many months to backdate costs, index is month number
@@ -48,6 +49,9 @@ const accountMap: Record<ProcurementInvoiceType, { costAccount: string }> = {
   },
   [ProcurementInvoiceType.cooling]: {
     costAccount: '4651',
+  },
+  [ProcurementInvoiceType.solar]: {
+    costAccount: '3692',
   },
 }
 
@@ -95,24 +99,36 @@ const transformXmlToInvoiceRows = (
 
   let invoiceType: ProcurementInvoiceType | undefined
 
-  switch (
-    procurementInvoice['InvoiceLine'][0].Note.split(' ')[0].toLowerCase()
-  ) {
-    case 'elhandel':
-      invoiceType = ProcurementInvoiceType.electricity
-      break
-    case 'elnät':
-      invoiceType = ProcurementInvoiceType.electricity
-      break
-    case 'vatten':
-      invoiceType = ProcurementInvoiceType.water
-      break
-    case 'fjärrvärme':
-      invoiceType = ProcurementInvoiceType.heating
-      break
-    case 'fjärrkyla':
-      invoiceType = ProcurementInvoiceType.cooling
-      break
+  let isCredit = false
+
+  if (procurementInvoice['ID'].toString().startsWith('5')) {
+    // Reimbursment for solar production, reverse amounts
+    invoiceType = ProcurementInvoiceType.solar
+    isCredit = true
+  } else if (procurementInvoice['ID'].toString().startsWith('3')) {
+    // Credit invoice, reverse amounts
+    isCredit = true
+  } else {
+    // Normal invoice
+    switch (
+      procurementInvoice['InvoiceLine'][0].Note.split(' ')[0].toLowerCase()
+    ) {
+      case 'elhandel':
+        invoiceType = ProcurementInvoiceType.electricity
+        break
+      case 'elnät':
+        invoiceType = ProcurementInvoiceType.electricity
+        break
+      case 'vatten':
+        invoiceType = ProcurementInvoiceType.water
+        break
+      case 'fjärrvärme':
+        invoiceType = ProcurementInvoiceType.heating
+        break
+      case 'fjärrkyla':
+        invoiceType = ProcurementInvoiceType.cooling
+        break
+    }
   }
 
   if (!invoiceType) {
@@ -124,11 +140,16 @@ const transformXmlToInvoiceRows = (
   }
 
   const periodInfo = getPeriodInfo(procurementInvoice)
-  const invoiceAmount =
+  let invoiceAmount =
     procurementInvoice.LegalTotal.TaxInclusiveTotalAmount['#text']
   const facilityId = procurementInvoice.Delivery.DeliveryAddress.ID.toString()
   const invoiceNumber = procurementInvoice.ID
-  const vatAmount = procurementInvoice.TaxTotal.TotalTaxAmount['#text']
+  let vatAmount = procurementInvoice.TaxTotal.TotalTaxAmount['#text']
+
+  if (isCredit) {
+    invoiceAmount = -invoiceAmount
+    vatAmount = -vatAmount
+  }
 
   return [
     {
@@ -142,17 +163,6 @@ const transformXmlToInvoiceRows = (
       numPeriods: '',
       subledgerNumber: subledgerNumber,
     },
-    /*    {
-      invoiceNumber,
-      account: debtAccount,
-      totalAmount: invoiceAmount,
-      invoiceDate: procurementInvoice.IssueDate,
-      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
-      facilityId,
-      periodStart: '',
-      numPeriods: '',
-      subledgerNumber: 'F044966',
-    },*/
     {
       invoiceNumber,
       account: accountMap[invoiceType].costAccount,
@@ -165,17 +175,6 @@ const transformXmlToInvoiceRows = (
       numPeriods: periodInfo.numPeriods,
       subledgerNumber: subledgerNumber,
     },
-    /*    {
-      invoiceNumber,
-      account: debtAccount,
-      totalAmount: -invoiceAmount,
-      invoiceDate: procurementInvoice.IssueDate,
-      dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,
-      facilityId,
-      periodStart: periodInfo.periodStart,
-      numPeriods: periodInfo.numPeriods,
-      subledgerNumber: 'F044966',
-    },*/
   ]
 }
 
@@ -216,7 +215,7 @@ export const getNewProcurementInvoiceRows = async () => {
   const files = await fs.readdir(config.procurementInvoices.directory)
 
   const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.xml')
+    return file.endsWith('.xml') || file.endsWith('.old')
   })
 
   const invoiceRows: InvoiceDataRow[] = []
@@ -229,7 +228,7 @@ export const getNewProcurementInvoiceRows = async () => {
 
       invoiceRows.push(...fileInvoiceRows)
     } catch (err) {
-      logger.error({ xmlFile }, 'Error transforming xml file')
+      logger.error({ err }, 'Error transforming xml file')
     }
   }
 
