@@ -1,6 +1,6 @@
 export const printVacantFrom = (
   dateFormatter: Intl.DateTimeFormat,
-  vacantFrom: string | Date
+  vacantFrom?: string | Date
 ) => {
   if (!vacantFrom) return '(Saknas - spärr)'
   else if (new Date(vacantFrom) > new Date())
