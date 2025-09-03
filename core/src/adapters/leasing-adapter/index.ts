@@ -659,7 +659,6 @@ export {
   getListingByListingId,
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
-  syncInternalParkingSpacesFromXpand,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
   getListings,
