@@ -6,14 +6,19 @@ import { Listing, RentalObject } from 'libs/types/dist'
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-objects/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const vacantParkingSpaces = await coreAdapter.getVacantParkingSpaces()
-    const publishedListings =
-      await coreAdapter.getListingsWithApplicants('type=published')
-    const readyForOfferListings = await coreAdapter.getListingsWithApplicants(
-      'type=ready-for-offer'
-    )
-    const offeredListings =
-      await coreAdapter.getListingsWithApplicants('type=offered')
+
+    // Run all requests in parallel for better performance
+    const [
+      vacantParkingSpaces,
+      publishedListings,
+      readyForOfferListings,
+      offeredListings,
+    ] = await Promise.all([
+      coreAdapter.getVacantParkingSpaces(),
+      coreAdapter.getListingsWithApplicants('type=published'),
+      coreAdapter.getListingsWithApplicants('type=ready-for-offer'),
+      coreAdapter.getListingsWithApplicants('type=offered'),
+    ])
 
     if (!vacantParkingSpaces.ok) {
       ctx.status = vacantParkingSpaces.statusCode
