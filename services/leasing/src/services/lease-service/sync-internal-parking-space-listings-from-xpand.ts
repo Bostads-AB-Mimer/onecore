@@ -1,4 +1,4 @@
-import { Listing, ListingStatus } from '@onecore/types'
+import { ListingStatus } from '@onecore/types'
 import { Knex } from 'knex'
 import { z } from 'zod'
 
@@ -164,7 +164,7 @@ export function parseInternalParkingSpacesToInsertableListings(
     (acc, curr) => {
       const parseResult = ValidInternalParkingSpace.safeParse(curr)
       if (!parseResult.success) {
-        const errors = parseResult.error.errors.map((e) => {
+        const errors = parseResult.error.issues.map((e) => {
           return { path: String(e.path[0]), code: e.code }
         })
 
