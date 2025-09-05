@@ -32,14 +32,13 @@ const getParkingSpaces = async (
   rentalObjectCodes?: string[]
 ): Promise<AdapterResult<RentalObject[], 'not-found' | 'unknown'>> => {
   try {
-    let url = `${tenantsLeasesServiceUrl}/parking-spaces`
+    const url = `${tenantsLeasesServiceUrl}/parking-spaces`
 
-    if (rentalObjectCodes && rentalObjectCodes.length) {
-      const codesParam = rentalObjectCodes.join(',')
-      url += `?includeRentalObjectCodes=${encodeURIComponent(codesParam)}`
-    }
+    const requestBody = rentalObjectCodes?.length
+      ? { includeRentalObjectCodes: rentalObjectCodes }
+      : undefined
 
-    const response = await axios.get(url)
+    const response = await axios.post(url, requestBody)
 
     if (response.status === 404) {
       logger.error(
