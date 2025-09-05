@@ -355,6 +355,38 @@ export async function getMaintenanceUnitsForRentalProperty(
   }
 }
 
+type GetMaintenanceUnitsByBuildingCodeResponse =
+  components['schemas']['MaintenanceUnit'][]
+
+export async function getMaintenanceUnitsByBuildingCode(
+  buildingCode: string
+): Promise<AdapterResult<GetMaintenanceUnitsByBuildingCodeResponse, unknown>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/maintenance-units/by-building-code/{code}',
+      {
+        params: { path: { code: buildingCode } },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      '@onecore/property-adapter.getMaintenanceUnitsByBuildingCode'
+    )
+    return { ok: false, err }
+  }
+}
+
 type GetFacilityByRentalIdResponse =
   components['schemas']['GetFacilityByRentalIdResponse']['content']
 

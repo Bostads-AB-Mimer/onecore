@@ -981,6 +981,92 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /propertyBase/maintenance-units/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get maintenance units by building code.
+   *     description: Returns all maintenance units belonging to a building.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the building for which to retrieve maintenance units.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get(
+    '(.*)/maintenance-units/by-building-code/:buildingCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { buildingCode } = ctx.params
+
+      logger.info(
+        `GET /maintenance-units/by-building-code/${buildingCode}`,
+        metadata
+      )
+
+      try {
+        const result =
+          await propertyBaseAdapter.getMaintenanceUnitsByBuildingCode(
+            buildingCode
+          )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'No maintenance units found', ...metadata }
+            return
+          }
+
+          logger.error(
+            result.err,
+            'Error getting maintenance units from property-base',
+            metadata
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        if (result.data.length === 0) {
+          ctx.status = 404
+          ctx.body = { error: 'No maintenance units found', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: result.data satisfies Array<schemas.MaintenanceUnit>,
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /propertyBase/maintenance-units/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get maintenance units by contact code.
