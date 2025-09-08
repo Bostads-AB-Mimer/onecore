@@ -6,11 +6,10 @@ import {
   MaterialChoice,
   MaterialOption,
   ParkingSpace,
-  RentalObject,
   RentalProperty,
   RentalPropertyInfo,
 } from '@onecore/types'
-import { AxiosError, HttpStatusCode } from 'axios'
+import { AxiosError } from 'axios'
 
 import config from '../common/config'
 import { AdapterResult } from './types'

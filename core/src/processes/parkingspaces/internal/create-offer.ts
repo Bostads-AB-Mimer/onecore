@@ -15,7 +15,6 @@ import {
   ProcessError,
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
