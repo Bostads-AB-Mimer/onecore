@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
-import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+
+import * as coreAdapter from './adapters/core-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/listings/applicant', async (ctx) => {
@@ -119,8 +120,8 @@ export const routes = (router: KoaRouter) => {
     const addComment = await coreAdapter.addComment(
       { targetType: 'listing', targetId: Number(ctx.params.listingId) },
       {
-        authorId: 'foo',
-        authorName: 'bar',
+        authorId: ctx.session?.account.username,
+        authorName: ctx.session?.account.name,
         comment: 'Bilplatsannons avpublicerad',
         type: 'COMMENT',
       }
