@@ -7,7 +7,7 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { Listing, ListingStatus } from '@onecore/types'
+import { DetailedApplicant, Listing, ListingStatus } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -75,6 +75,8 @@ export const routes = (router: KoaRouter) => {
       })
       const query = querySchema.safeParse(ctx.query)
 
+      logger.info({ query }, 'Parsed query parameters for GET /listings')
+
       const result = await leasingAdapter.getListings({
         listingCategory: query.data?.listingCategory,
         published: query.data?.published,
@@ -114,8 +116,63 @@ export const routes = (router: KoaRouter) => {
         })
         .filter((item): item is Listing => !!item)
 
-      ctx.status = 200
-      ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      logger.info(
+        {
+          numberOfListings: listingsWithRentalObjects.length,
+        },
+        'Listings Retrieved from Leasing GET /listings'
+      )
+
+      if (!query.data?.validToRentForContactCode) {
+        ctx.status = 200
+        ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      } else {
+        //get contact with leases to filter listings on areas where the contact is allowed to rent
+        const contact = await leasingAdapter.getTenantByContactCode(
+          query.data?.validToRentForContactCode
+        )
+
+        if (!contact.ok) {
+          ctx.status = 500
+          ctx.body = { error: 'Contact Could not be retrieved', ...metadata }
+          return
+        }
+
+        var listings = listingsWithRentalObjects.filter((listing) => {
+          //flytta senare
+          const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (
+            districtCode: string,
+            applicant: Pick<DetailedApplicant, 'parkingSpaceContracts'>
+          ) => {
+            if (!applicant.parkingSpaceContracts) {
+              return false
+            }
+
+            return applicant.parkingSpaceContracts.some(
+              (parkingSpaceContract) =>
+                parkingSpaceContract.residentialArea?.code === districtCode
+            )
+          }
+          return (
+            listing.rentalObject.residentialAreaCode &&
+            doesApplicantHaveParkingSpaceContractsInSameAreaAsListing(
+              listing.rentalObject.residentialAreaCode,
+              contact.data
+            )
+          )
+        })
+
+        logger.info(
+          {
+            numberOfListings: listings.length,
+            contactCode: contact.data.contactCode,
+          },
+          'Listings filtered on contact GET /listings'
+        )
+
+        ctx.status = 200
+        ctx.body = { content: listings, ...metadata }
+      }
     } catch (error) {
       logger.error(error, 'Error fetching listings with rental objects')
       ctx.status = 500
