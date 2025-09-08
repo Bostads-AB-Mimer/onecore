@@ -142,7 +142,7 @@ export function CommandPalette() {
                       .with({ type: 'building' }, (v) => (
                         <Building
                           key={v.id}
-                          name={v.name ?? 'N/A'}
+                          name={v.name ?? '-'}
                           property={v.property}
                           className={
                             selectedIndex === index

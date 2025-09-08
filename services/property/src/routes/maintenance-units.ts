@@ -1,7 +1,8 @@
 import KoaRouter from '@koa/router'
 import {
-  getMaintenanceUnitsByRentalId,
   getMaintenanceUnitsByPropertyCode,
+  getMaintenanceUnitsByBuildingCode,
+  getMaintenanceUnitsByRentalId,
 } from '@src/adapters/maintenance-units-adapter'
 import {
   MaintenanceUnit,
@@ -68,6 +69,63 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: responseContent,
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /maintenance-units/by-building-code/{code}:
+   *   get:
+   *     summary: Get all maintenance units for a specific building code
+   *     description: |
+   *       Retrieves all maintenance units associated with a given building code.
+   *     tags:
+   *       - Maintenance units
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building code for which to retrieve maintenance units.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the maintenance units.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/maintenance-units/by-building-code/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const code = ctx.params.code
+    logger.info(`GET /maintenance-units/by-building-code/${code}`, metadata)
+
+    try {
+      const response = await getMaintenanceUnitsByBuildingCode(code)
+
+      if (!response) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.body = {
+        content: response satisfies MaintenanceUnit[],
         ...metadata,
       }
     } catch (err) {

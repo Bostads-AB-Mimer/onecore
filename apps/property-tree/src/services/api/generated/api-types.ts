@@ -632,6 +632,38 @@ export interface paths {
       };
     };
   };
+  "/maintenance-units/by-building-code/{code}": {
+    /**
+     * Get all maintenance units for a specific building code
+     * @description Retrieves all maintenance units associated with a given building code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The building code for which to retrieve maintenance units. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/maintenance-units/by-property-code/{code}": {
     /**
      * Get all maintenance units for a specific property code

@@ -2658,6 +2658,70 @@ export interface paths {
       };
     };
   };
+  "/propertyBase/facilities/by-rental-id/{rentalId}": {
+    /**
+     * Get facility by rental id.
+     * @description Returns facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the facility. */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facility. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FacilityDetails"];
+            };
+          };
+        };
+        /** @description Not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/propertyBase/maintenance-units/by-property-code/{code}": {
+    /**
+     * Get maintenance units by property code.
+     * @description Returns all maintenance units belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve maintenance units. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities

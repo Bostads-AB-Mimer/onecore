@@ -95,7 +95,7 @@ export function BuildingView() {
   return (
     <div className="p-8 animate-in">
       <ViewHeader
-        title={building.name ?? 'N/A'}
+        title={building.name ?? ''}
         subtitle={`Fastighet ${property?.designation}`}
         type="Byggnad"
         icon={Building}
@@ -123,7 +123,7 @@ export function BuildingView() {
         />
         <StatCard
           title="Byggnadstyp"
-          value={building.buildingType.name ?? 'N/A'}
+          value={building.buildingType.name ?? '-'}
           icon={Building}
         />
       </Grid>
