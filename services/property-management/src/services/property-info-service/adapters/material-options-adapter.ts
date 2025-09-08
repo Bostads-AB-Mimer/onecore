@@ -9,9 +9,15 @@ import knex from 'knex'
 import config from '../../../common/config'
 import { logger } from '@onecore/utilities'
 
-const db = knex({
+export const db = knex({
   client: 'mssql',
   connection: config.propertyManagementDatabase,
+  pool: {
+    min: 0,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    destroyTimeoutMillis: 5000,
+  },
 })
 
 const cancelPreviousChoice = async (

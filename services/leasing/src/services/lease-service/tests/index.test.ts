@@ -269,7 +269,7 @@ describe('lease-service', () => {
       const result = await request(app.callback()).post('/leases')
 
       expect(xpandAdapterSpy).toHaveBeenCalled()
-      expect(result.body.content).toEqual({ LeaseId: '123-123-123/1' })
+      expect(result.body.content).toEqual('123-123-123/1')
     })
 
     it('handles lease-not-found errors', async () => {

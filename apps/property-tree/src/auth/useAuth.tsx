@@ -2,8 +2,18 @@ import { authConfig } from '@/auth-config'
 
 export function useAuth() {
   const login = (currentClientPath?: string) => {
+    let keycloakBaseUrl = authConfig.keycloakUrl
+    if (keycloakBaseUrl?.match(/realms\/[a-zA-Z0-9-]+$/)) {
+      console.warn(
+        'VITE_KEYCLOAK_URL should not contain realm path - use VITE_KEYCLOAK_REALM'
+      )
+      keycloakBaseUrl = keycloakBaseUrl.slice(
+        0,
+        keycloakBaseUrl.indexOf('/realms/')
+      )
+    }
     const authUrl = new URL(
-      `${authConfig.keycloakUrl}/protocol/openid-connect/auth`
+      `${keycloakBaseUrl}/realms/${authConfig.keycloakRealm}/protocol/openid-connect/auth`
     )
     authUrl.searchParams.append('client_id', authConfig.clientId)
     authUrl.searchParams.append('redirect_uri', authConfig.redirectUri)

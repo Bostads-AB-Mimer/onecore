@@ -349,7 +349,7 @@ interface RentalObject {
   residentialAreaCode: string
   objectTypeCaption: string
   objectTypeCode: string
-  vacantFrom: Date
+  vacantFrom?: Date
   braArea?: number
   btaArea?: number
   boaArea?: number
@@ -363,16 +363,6 @@ interface MaintenanceUnitInfo {
   type: string
   estateCode: string
   estate: string
-}
-
-type SystemStatus = 'active' | 'impaired' | 'failure' | 'unknown'
-
-interface SystemHealth {
-  name: string
-  status: SystemStatus
-  subsystems?: SystemHealth[]
-  statusMessage?: string
-  timeStamp: Date
 }
 
 type ApplicationProfile = z.infer<typeof ApplicationProfileSchema>
@@ -417,8 +407,6 @@ export type {
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
   ResidentialArea,
-  SystemHealth,
-  SystemStatus,
   ApplicationProfile,
   ApplicationProfileHousingReference,
   CommentThreadId,

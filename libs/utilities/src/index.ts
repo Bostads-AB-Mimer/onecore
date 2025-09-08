@@ -4,6 +4,8 @@ import { storage, getCorrelationId } from './logging/loggingStorage'
 import { generateRouteMetadata } from './routes/generateRouteMetadata'
 import * as axiosTypes from 'axios'
 
+export * from './health-check'
+
 export {
   logger,
   loggedAxios,

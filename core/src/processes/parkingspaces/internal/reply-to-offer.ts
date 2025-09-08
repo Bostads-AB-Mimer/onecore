@@ -12,11 +12,11 @@ import {
   ProcessStatus,
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import * as propertyMgmtAdapter from '../../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { makeProcessError } from '../utils'
 import { AdapterResult } from '../../../adapters/types'
 import { createOfferForInternalParkingSpace } from './create-offer'
+import * as utils from '../../../utils'
 
 type ReplyToOfferError =
   | ReplyToOfferErrorCodes.NoOffer
@@ -107,22 +107,55 @@ export const acceptOffer = async (
     }
 
     //Create lease
-    let lease: any
+    let leaseId: string
+
     try {
-      lease = await leasingAdapter.createLease(
+      const todaysDate = utils.date.getUTCDateWithoutTime(new Date())
+      const vacantDate = listing.rentalObject.vacantFrom
+        ? utils.date.getUTCDateWithoutTime(
+            new Date(listing.rentalObject.vacantFrom)
+          )
+        : null
+      const fromDate =
+        vacantDate && vacantDate > todaysDate
+          ? vacantDate.toISOString()
+          : todaysDate.toISOString()
+
+      const createLeaseResult = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
-        listing.rentalObject.vacantFrom != undefined
-          ? new Date(listing.rentalObject.vacantFrom).toISOString() // fix: vacantFrom is really a string...
-          : new Date().toISOString(),
+        fromDate,
         '001'
       )
 
-      log.push(`Kontrakt skapat: ${lease.LeaseId}`)
+      if (!createLeaseResult.ok) {
+        log.push(
+          `Misslyckades med att skapa kontrakt för bilplats ${listingWithoutRentalObject.rentalObjectCode}.`
+        )
+        logger.error(
+          {
+            err: createLeaseResult.err,
+            rentalObjectCode: listingWithoutRentalObject.rentalObjectCode,
+            contactCode: offer.offeredApplicant.contactCode,
+          },
+          'Lease could not be created'
+        )
+        return endFailingProcess(
+          log,
+          ReplyToOfferErrorCodes.CreateLeaseFailure,
+          500,
+          `Lease could not be created`
+        )
+      }
+
+      leaseId = createLeaseResult.data
+
+      log.push(`Kontrakt skapat: ${leaseId}`)
       log.push(
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
       )
     } catch (err) {
+      //TODO: If we get an error here, can we perform a lookup against xpandDb to see if we can determine the reason and provide a more specific error message? For example: a block, or a valid contract on the date we are submitting.
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.CreateLeaseFailure,

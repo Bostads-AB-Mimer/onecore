@@ -1,10 +1,15 @@
+import { resolve } from '@/utils/env'
+
 export const authConfig = {
-  keycloakUrl:
-    import.meta.env.VITE_KEYCLOAK_URL ||
-    'https://auth-test.mimer.nu/realms/onecore-test',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'onecore-test',
-  apiUrl: import.meta.env.VITE_CORE_API_URL || 'http://localhost:5010',
-  redirectUri:
-    import.meta.env.VITE_KEYCLOAK_REDIRECT_URI ||
-    'http://localhost:3000/callback',
+  keycloakUrl: resolve(
+    'VITE_KEYCLOAK_URL',
+    'https://auth-test.mimer.nu/realms/onecore-test'
+  ),
+  keycloakRealm: resolve('VITE_KEYCLOAK_REALM', 'onecore'),
+  clientId: resolve('VITE_KEYCLOAK_CLIENT_ID', 'onecore'),
+  apiUrl: resolve('VITE_CORE_API_URL', 'http://localhost:5010'),
+  redirectUri: resolve(
+    'VITE_KEYCLOAK_REDIRECT_URI',
+    'http://localhost:3000/callback'
+  ),
 }

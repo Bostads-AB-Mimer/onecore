@@ -1,6 +1,6 @@
 {
   "name": "@onecore/leasing",
-  "version": "1.3.7",
+  "version": "1.4.0",
   "private": "true",
   "description": "",
   "license": "MIT",
@@ -22,8 +22,8 @@
     "migrate:up": "knex migrate:latest --env dev",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "script:expire-listings": "node scripts/expire-listings.js",
-    "start": "npm run migrate:up && node -r dotenv/config index",
+    "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
+    "start": "npm run migrate:up && node -r dotenv/config build/index",
     "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv/config ../../node_modules/.bin/jest --config jest.config.js",
     "test:ci": "DOTENV_CONFIG_PATH=.env.ci node -r dotenv/config ../../node_modules/.bin/jest --config jest.config.js",
     "test:watch": "DOTENV_CONFIG_PATH=.env.test jest --watch",

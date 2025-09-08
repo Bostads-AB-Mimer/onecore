@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
-import { residenceService } from '@/services/api'
+import { residenceService } from '@/services/api/core'
 import { ResidenceWorkOrders } from '../shared/ResidenceWorkOrders'
 import { ResidenceBasicInfo } from '../residence/ResidenceBasicInfo'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'

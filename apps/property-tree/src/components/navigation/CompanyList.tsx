@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { companyService } from '@/services/api'
+import { companyService } from '@/services/api/core'
 import { CompanyNavigation } from './Company'
 import { SidebarGroup, SidebarMenu } from '@/components/ui/Sidebar'
 

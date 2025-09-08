@@ -1,80 +1,44 @@
 import KoaRouter from '@koa/router'
-import { SystemHealth, ListingStatus } from '@onecore/types'
+import { ListingStatus } from '@onecore/types'
+import {
+  DbConnection,
+  collectDbPoolMetrics,
+  HealthCheckTarget,
+  SystemHealth,
+  pollSystemHealth,
+  probe,
+} from '@onecore/utilities'
 import config from '../../common/config'
 import { healthCheck as xpandSoapApiHealthCheck } from '../lease-service/adapters/xpand/xpand-soap-adapter'
 import { healthCheck as creditSafeHealthCheck } from '../creditsafe/adapters/creditsafe-adapter'
-import knex from 'knex'
+import { db as leasingDb } from '../lease-service/adapters/db'
+import { xpandDb } from '../lease-service/adapters/xpand/xpandDb'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
 
-const probe = async (
-  systemName: string,
-  minimumMinutesBetweenRequests: number,
-  checkFunction: () => any,
-  activeMessage?: string
-): Promise<SystemHealth> => {
-  let currentHealth = healthChecks.get(systemName)
+/**
+ * Round-up of DB connections used by this service
+ */
+const CONNECTIONS: DbConnection[] = [
+  {
+    name: 'leasing',
+    connection: leasingDb,
+  },
+  {
+    name: 'xpand',
+    connection: xpandDb,
+  },
+]
 
-  if (
-    !currentHealth ||
-    Math.floor(
-      (new Date().getTime() - currentHealth.timeStamp.getTime()) / 60000
-    ) >= minimumMinutesBetweenRequests
-  ) {
-    try {
-      const result = await checkFunction()
-
-      if (result) {
-        currentHealth = {
-          status: result.status,
-          name: result.name,
-          subsystems: result.subsystems,
-          timeStamp: new Date(),
-        }
-      } else {
-        currentHealth = {
-          status: 'active',
-          name: systemName,
-          timeStamp: new Date(),
-        }
-        if (activeMessage) currentHealth.statusMessage = activeMessage
-      }
-    } catch (error: any) {
-      if (error instanceof ReferenceError) {
-        currentHealth = {
-          status: 'impaired',
-          statusMessage: error.message || 'Reference error ' + systemName,
-          name: systemName,
-          timeStamp: new Date(),
-        }
-      } else {
-        currentHealth = {
-          status: 'failure',
-          statusMessage: error.message || 'Failed to access ' + systemName,
-          name: systemName,
-          timeStamp: new Date(),
-        }
-      }
-    }
-
-    healthChecks.set(systemName, currentHealth)
-  }
-  return currentHealth
-}
-
-const subsystems = [
+const subsystems: HealthCheckTarget[] = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await probe(
         config.health.leasingDatabase.systemName,
+        healthChecks,
         config.health.leasingDatabase.minimumMinutesBetweenRequests,
         async () => {
-          const db = knex({
-            client: 'mssql',
-            connection: config.leasingDatabase,
-          })
-
-          await db.table('listing').limit(1)
+          await leasingDb.table('listing').limit(1)
         }
       )
     },
@@ -83,14 +47,10 @@ const subsystems = [
     probe: async (): Promise<SystemHealth> => {
       return await probe(
         config.health.xpandDatabase.systemName,
+        healthChecks,
         config.health.xpandDatabase.minimumMinutesBetweenRequests,
         async () => {
-          const db = knex({
-            client: 'mssql',
-            connection: config.xpandDatabase,
-          })
-
-          await db.table('cmctc').limit(1)
+          await xpandDb.table('cmctc').limit(1)
         }
       )
     },
@@ -99,13 +59,10 @@ const subsystems = [
     probe: async (): Promise<SystemHealth> => {
       return await probe(
         config.health.expiredListingsScript.systemName,
+        healthChecks,
         config.health.expiredListingsScript.minimumMinutesBetweenRequests,
         async () => {
-          const db = knex({
-            client: 'mssql',
-            connection: config.leasingDatabase,
-          })
-          const expiredActiveListings = await db('listing')
+          const expiredActiveListings = await leasingDb('listing')
             .where('PublishedTo', '<', new Date(Date.now() - 86400000))
             .andWhere('Status', ListingStatus.Active)
 
@@ -123,6 +80,7 @@ const subsystems = [
     probe: async (): Promise<SystemHealth> => {
       return await probe(
         config.health.xpandSoapApi.systemName,
+        healthChecks,
         config.health.xpandSoapApi.minimumMinutesBetweenRequests,
         xpandSoapApiHealthCheck
       )
@@ -132,6 +90,7 @@ const subsystems = [
     probe: async (): Promise<SystemHealth> => {
       return await probe(
         config.health.creditsafe.systemName,
+        healthChecks,
         config.health.creditsafe.minimumMinutesBetweenRequests,
         creditSafeHealthCheck
       )
@@ -188,41 +147,51 @@ export const routes = (router: KoaRouter) => {
    *                         description: Additional details about the subsystem status.
    */
   router.get('(.*)/health', async (ctx) => {
-    const health: SystemHealth = {
-      name: 'leasing',
-      status: 'active',
-      subsystems: [],
-      statusMessage: '',
-      timeStamp: new Date(),
-    }
+    ctx.body = await pollSystemHealth('leasing', subsystems)
+  })
 
-    // Iterate over subsystems
-    for (const subsystem of subsystems) {
-      const subsystemHealth = await subsystem.probe()
-      health.subsystems?.push(subsystemHealth)
-
-      switch (subsystemHealth.status) {
-        case 'failure':
-          health.status = 'failure'
-          health.statusMessage = 'Failure because of failing subsystem'
-          break
-        case 'impaired':
-          if (health.status !== 'failure') {
-            health.status = 'impaired'
-            health.statusMessage = 'Failure because of impaired subsystem'
-          }
-          break
-        case 'unknown':
-          if (health.status !== 'failure' && health.status !== 'impaired') {
-            health.status = 'unknown'
-            health.statusMessage = 'Unknown because subsystem status is unknown'
-          }
-          break
-        default:
-          break
-      }
-    }
-
-    ctx.body = health
+  /**
+   * @openapi
+   * /health/db:
+   *   get:
+   *     summary: Database connection pool metrics
+   *     tags: [Health]
+   *     responses:
+   *       '200':
+   *         description: Connection pool stats per configured DB connection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 connectionPools:
+   *                   type: integer
+   *                   minimum: 0
+   *                 metrics:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       name:
+   *                         type: string
+   *                       pool:
+   *                         type: object
+   *                         properties:
+   *                           used: { type: integer, minimum: 0 }
+   *                           free: { type: integer, minimum: 0 }
+   *                           pendingCreates: { type: integer, minimum: 0 }
+   *                           pendingAcquires: { type: integer, minimum: 0 }
+   *             examples:
+   *               sample:
+   *                 value:
+   *                   connectionPools: 2
+   *                   metrics:
+   *                     - name: "primary"
+   *                       pool: { used: 3, free: 5, pendingCreates: 0, pendingAcquires: 1 }
+   *                     - name: "reporting"
+   *                       pool: { used: 0, free: 8, pendingCreates: 0, pendingAcquires: 0 }
+   */
+  router.get('(.*)/health/db', async (ctx) => {
+    ctx.body = collectDbPoolMetrics(CONNECTIONS)
   })
 }

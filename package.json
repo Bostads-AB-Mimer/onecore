@@ -1,6 +1,6 @@
 {
   "name": "onecore-monorepo",
-  "version": "1.3.7",
+  "version": "1.4.0",
   "private": true,
   "author": "Bostads AB Mimer",
   "packageManager": "npm@10.9.2",
@@ -38,6 +38,9 @@
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "prettier": "npm run prettier --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.9.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.38.0",

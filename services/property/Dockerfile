@@ -32,6 +32,9 @@ RUN npm run generate:static
 # ==========================
 FROM node:23-slim AS runner
 
+# Run on the same version of openssl as the prisma build
+RUN apt-get update -y && apt-get install -y openssl
+
 WORKDIR /app
 
 COPY --from=builder /app/libs ./libs

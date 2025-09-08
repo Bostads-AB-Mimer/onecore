@@ -25,6 +25,7 @@ import config from '../../../common/config'
 type CreateOfferError =
   | CreateOfferErrorCodes.NoListing
   | CreateOfferErrorCodes.ListingNotExpired
+  | CreateOfferErrorCodes.RentalObjectNotVacant
   | CreateOfferErrorCodes.NoApplicants
   | CreateOfferErrorCodes.CreateOfferFailure
   | CreateOfferErrorCodes.UpdateApplicantStatusFailure
@@ -78,6 +79,15 @@ export const createOfferForInternalParkingSpace = async (
         CreateOfferErrorCodes.ListingNotExpired,
         500,
         `Listing with id ${listingId} not expired`
+      )
+    }
+
+    if (!listing.rentalObject.vacantFrom) {
+      return endFailingProcess(
+        log,
+        CreateOfferErrorCodes.RentalObjectNotVacant,
+        500,
+        `Listing with id ${listingId} has no vacantFrom date`
       )
     }
 
@@ -158,9 +168,18 @@ export const createOfferForInternalParkingSpace = async (
       ...eligibleApplicant,
       status: ApplicantStatus.Offered,
     }
+
+    const offerExpiresDate = utils.date.addBusinessDays(new Date(), 3)
+    // Set swedish time (CET/CEST) 23:59:59
+    offerExpiresDate.setHours(23, 59, 59, 0)
+    // Convert to UTC time
+    const utcOfferExpiresDate = new Date(
+      offerExpiresDate.getTime() - offerExpiresDate.getTimezoneOffset() * 60000
+    )
+
     const offer = await leasingAdapter.createOffer({
       applicantId: eligibleApplicant.id,
-      expiresAt: utils.date.addBusinessDays(new Date(), 3),
+      expiresAt: utcOfferExpiresDate,
       listingId: listing.id,
       status: OfferStatus.Active,
       selectedApplicants: [updatedApplicant, ...activeApplicants].map(
