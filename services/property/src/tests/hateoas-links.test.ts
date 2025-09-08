@@ -45,7 +45,7 @@ describe('HATEOAS Links Navigation', () => {
       residencesResponse.body.content &&
       residencesResponse.body.content.length > 0
     ) {
-      const residence = residencesResponse.body.content[0]
+      //      const residence = residencesResponse.body.content[0]
       /*
       // Follow link to rooms
       expect(residence._links.rooms).toBeDefined()
