@@ -1,5 +1,10 @@
 import { defineConfig } from 'eslint/config';
+import typescriptEslint from 'typescript-eslint';
+import nPlugin from 'eslint-plugin-n';
 import js from '@eslint/js';
+import globals from 'globals';
+import importPlugin from 'eslint-plugin-import';
+import prettier from 'eslint-config-prettier';
 
 export default defineConfig([
   js.configs.recommended,
@@ -8,7 +13,48 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      parser: typescriptEslint.parser,
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
     },
-    rules: {},
+    plugins: {
+      '@typescript-eslint': typescriptEslint.plugin,
+      import: importPlugin,
+      n: nPlugin,
+    },
+    settings: {
+      node: {
+        tryExtensions: ['.js', '.ts'],
+      },
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: true,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...typescriptEslint.configs.recommended.rules,
+      ...prettier.rules,
+      ...importPlugin.configs.typescript.rules,
+      ...nPlugin.configs.recommended.rules,
+      'n/no-unsupported-features/es-syntax': [
+        'error',
+        {
+          ignores: ['modules'],
+        },
+      ],
+      'no-useless-catch': 'warn',
+      'n/no-missing-import': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
 ]);
