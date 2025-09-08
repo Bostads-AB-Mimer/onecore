@@ -7,12 +7,13 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { DetailedApplicant, Listing, ListingStatus } from '@onecore/types'
+import { Listing, ListingStatus } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from './helpers/lease'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -81,7 +82,6 @@ export const routes = (router: KoaRouter) => {
         listingCategory: query.data?.listingCategory,
         published: query.data?.published,
         rentalRule: query.data?.rentalRule,
-        validToRentForContactCode: query.data?.validToRentForContactCode,
       })
 
       if (!result.ok) {
@@ -127,45 +127,40 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = { content: listingsWithRentalObjects, ...metadata }
       } else {
-        //get contact with leases to filter listings on areas where the contact is allowed to rent
-        const contact = await leasingAdapter.getTenantByContactCode(
+        //filter listings on validToRentForContactCode
+        const tenantResult = await leasingAdapter.getTenantByContactCode(
           query.data?.validToRentForContactCode
         )
+        let isTenant = true
 
-        if (!contact.ok) {
-          ctx.status = 500
-          ctx.body = { error: 'Contact Could not be retrieved', ...metadata }
-          return
+        if (!tenantResult.ok) {
+          if (tenantResult.err === 'contact-not-tenant') {
+            isTenant = false
+          } else {
+            ctx.status = 500
+            ctx.body = { error: 'Tenant could not be retrieved', ...metadata }
+            return
+          }
         }
 
         var listings = listingsWithRentalObjects.filter((listing) => {
-          //flytta senare
-          const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (
-            districtCode: string,
-            applicant: Pick<DetailedApplicant, 'parkingSpaceContracts'>
-          ) => {
-            if (!applicant.parkingSpaceContracts) {
-              return false
-            }
-
-            return applicant.parkingSpaceContracts.some(
-              (parkingSpaceContract) =>
-                parkingSpaceContract.residentialArea?.code === districtCode
-            )
-          }
           return (
-            listing.rentalObject.residentialAreaCode &&
-            doesApplicantHaveParkingSpaceContractsInSameAreaAsListing(
-              listing.rentalObject.residentialAreaCode,
-              contact.data
-            )
+            listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
+            (listing.rentalRule == 'SCORED' &&
+              isTenant &&
+              tenantResult.ok &&
+              listing.rentalObject.residentialAreaCode &&
+              isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+                listing.rentalObject.residentialAreaCode,
+                tenantResult.data
+              )) // all SCORED where tenant is allowed to rent will be included
           )
         })
 
         logger.info(
           {
             numberOfListings: listings.length,
-            contactCode: contact.data.contactCode,
+            contactCode: query.data?.validToRentForContactCode,
           },
           'Listings filtered on contact GET /listings'
         )
