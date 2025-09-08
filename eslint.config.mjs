@@ -63,6 +63,12 @@ export default defineConfig([
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      'n/no-unpublished-import': [
+        'error',
+        {
+          allowModules: ['onecore-types'],
+        },
+      ],
     },
   },
 ]);
