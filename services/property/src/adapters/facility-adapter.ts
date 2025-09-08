@@ -80,6 +80,107 @@ export const getFacilityByRentalId = async (rentalId: string) => {
   }
 }
 
+export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
+  try {
+    const result = await prisma.propertyStructure.findMany({
+      where: {
+        propertyCode,
+        propertyObject: { objectTypeId: 'balok' },
+      },
+      select: {
+        propertyObject: {
+          select: {
+            facility: {
+              select: {
+                id: true,
+                location: true,
+                entrance: true,
+                usage: true,
+                name: true,
+                code: true,
+                propertyObjectId: true,
+                availableFrom: true,
+                availableTo: true,
+                deleteMark: true,
+                facilityType: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    assert(result, 'property-structure-not-found')
+
+    const facilities = result
+      .map((item) => item.propertyObject.facility)
+      .filter((facility) => facility)
+
+    return trimStrings(facilities)
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      err.message === 'property-structure-not-found'
+    ) {
+      return null
+    }
+
+    logger.error({ err }, 'facility-adapter.getFacilitiesByPropertyCode')
+    throw err
+  }
+}
+
+export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
+  try {
+    const result = await prisma.propertyStructure.findMany({
+      where: {
+        buildingCode,
+        propertyObject: { objectTypeId: 'balok' },
+      },
+      select: {
+        buildingCode: true,
+        propertyObject: {
+          select: {
+            facility: {
+              select: {
+                id: true,
+                location: true,
+                entrance: true,
+                usage: true,
+                name: true,
+                code: true,
+                propertyObjectId: true,
+                availableFrom: true,
+                availableTo: true,
+                deleteMark: true,
+                facilityType: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    assert(result, 'property-structure-not-found')
+
+    const facilities = result
+      .map((item) => item.propertyObject.facility)
+      .filter((facility) => facility)
+
+    return trimStrings(facilities)
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      err.message === 'property-structure-not-found'
+    ) {
+      return null
+    }
+
+    logger.error({ err }, 'facility-adapter.getFacilitiesByPropertyCode')
+    throw err
+  }
+}
+
 export const getFacilitySizeByRentalId = async (rentalId: string) => {
   try {
     const propertyInfo = await prisma.propertyStructure.findFirst({
