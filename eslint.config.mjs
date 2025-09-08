@@ -71,4 +71,17 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: [
+      '**/*.{test,spec}.{ts,tsx,js,jsx}',
+      '**/__tests__/**',
+      'test/**',
+      'tests/**',
+      'src/test/**',
+      'src/tests/**'
+    ],
+    rules: {
+      'n/no-unpublished-import': 'off',
+    }
+  }
 ]);
