@@ -396,7 +396,7 @@ describe('@onecore/property-service', () => {
       expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('1234')
     })
   })
-  
+
   describe('GET /property/maintenance-units/by-building-code/:buildingCode', () => {
     it('returns 200 and a list of maintenance units for a building', async () => {
       const maintenanceUnitsMock =
@@ -492,7 +492,7 @@ describe('@onecore/property-service', () => {
       expect(getFacilitySpy).toHaveBeenCalledWith('1234')
     })
   })
-  
+
   describe('GET /property/maintenance-units/by-property-code/:code', () => {
     it('returns 200 and a list of maintenance units for a property', async () => {
       const maintenanceUnitsMock =
