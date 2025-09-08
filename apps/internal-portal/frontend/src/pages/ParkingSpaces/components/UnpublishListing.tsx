@@ -2,20 +2,20 @@ import { useState } from 'react'
 import { Button, Typography } from '@mui/material'
 import { toast } from 'react-toastify'
 
-import { useCloseParkingSpaceListing } from '../hooks/useCloseParkingSpaceListing'
+import { useUnpublishParkingSpaceListing } from '../hooks/useUnpublishParkingSpaceListing'
 import { ActionDialog } from '../../ParkingSpace/components/ActionDialog'
 
 export const UnpublishListing = (props: { listingId: number }) => {
-  const closeListing = useCloseParkingSpaceListing()
+  const unpublishListing = useUnpublishParkingSpaceListing()
   const [open, setOpen] = useState(false)
 
-  const onClose = () => {
+  const onUnpublish = () => {
     setOpen(false)
-    closeListing.reset()
+    unpublishListing.reset()
   }
 
-  const onCloseListing = () =>
-    closeListing.mutate(
+  const onUnpublishListing = () =>
+    unpublishListing.mutate(
       { listingId: props.listingId },
       {
         onSuccess: () => {
@@ -35,14 +35,14 @@ export const UnpublishListing = (props: { listingId: number }) => {
       </Button>
       <ActionDialog
         open={open}
-        onClose={onClose}
-        onConfirm={onCloseListing}
+        onClose={onUnpublish}
+        onConfirm={onUnpublishListing}
         title="Avpublicera bilplatsannons"
-        content="Bekräfta att du vill avpublicera denna bilplatsannons"
+        content="Bekräfta att du vill avpublicera denna bilplatsannons. En kommentar kommer att läggas till om att du avpublicerat denna bilplatsannons."
         submitButtonText="Bekräfta"
-        isPending={closeListing.isPending}
+        isPending={unpublishListing.isPending}
         error={
-          closeListing.error ? (
+          unpublishListing.error ? (
             <Typography
               color="error"
               textAlign="center"
