@@ -14,6 +14,9 @@ export default defineConfig([
       ecmaVersion: 'latest',
       sourceType: 'module',
       parser: typescriptEslint.parser,
+      parserOptions: {
+        projectService: true,
+      },
       globals: {
         ...globals.node,
         ...globals.jest,
@@ -25,6 +28,11 @@ export default defineConfig([
       n: nPlugin,
     },
     settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+        },
+      },
       node: {
         tryExtensions: ['.js', '.ts'],
       },
