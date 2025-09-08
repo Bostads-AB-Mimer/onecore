@@ -1,7 +1,7 @@
 import { RentalProperty, RoomType } from '@onecore/types'
 
 const getRentalProperty = async (
-  rentalPropertyId: string
+  _rentalPropertyId: string
 ): Promise<RentalProperty> => {
   return {
     rentalPropertyId: '102-008-03-0202', //property-info.contact.RentalPropertyId
@@ -27,7 +27,7 @@ const getRentalProperty = async (
   }
 }
 
-const getRoomTypes = async (aparmentId: string): Promise<Array<RoomType>> => {
+const getRoomTypes = async (_apartmentId: string): Promise<Array<RoomType>> => {
   const roomTypes: Array<RoomType> = [
     { roomTypeId: 'BADRUM', name: 'BADRUM' },
     { roomTypeId: 'VARDAGSRUM', name: 'VARDAGSRUM' },

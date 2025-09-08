@@ -103,7 +103,7 @@ const getPublishedParkingSpaceFromSoapService = async (
         'Getting parking space from Xpand SOAP API complete'
       )
       return parkingSpace
-    } catch (e) {
+    } catch {
       logger.error(
         { parkingSpaceId },
         'Unknown error parsing body when getting parking space from Xpand SOAP API'

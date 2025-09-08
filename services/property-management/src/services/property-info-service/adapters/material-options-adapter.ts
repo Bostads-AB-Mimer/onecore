@@ -357,7 +357,7 @@ const getMaterialChoicesByApartmentId = async (apartmentId: string) => {
   return rows
 }
 
-const getApartmentMaterialChoiceStatuses = async (projectCode: string) => {
+const getApartmentMaterialChoiceStatuses = async (_projectCode: string) => {
   const choiceStatuses = await db
     .from('MaterialChoice')
     .rightJoin(
