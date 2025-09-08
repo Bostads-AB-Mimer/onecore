@@ -20,10 +20,10 @@ describe('errorHandler', () => {
   })
 
   it('catches errors and passes the error message along to the response', async () => {
-    app.use(async (ctx, next) => {
+    app.use(async (_ctx, _next) => {
       throw new Error('I should be caught')
     })
-    app.use(async (ctx, next) => {
+    app.use(async (ctx, _next) => {
       ctx.status = 200
       ctx.body = 'All is good'
     })

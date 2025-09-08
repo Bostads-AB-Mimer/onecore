@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { Comment, leasing } from '@onecore/types'
-import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/comments/:targetType/thread/:targetId', async (ctx) => {

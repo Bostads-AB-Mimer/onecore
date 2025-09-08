@@ -56,7 +56,7 @@ const getListingsWithApplicants = async (
     )
 
     return { ok: true, data: withOffers }
-  } catch (err) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -289,7 +289,7 @@ const syncInternalParkingSpacesFromXpand = async (): Promise<
     })
 
     return { ok: true, data: response.data.content }
-  } catch (err) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -328,7 +328,7 @@ const closeListing = async (
     })
 
     return { ok: true, data: null }
-  } catch (err) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -494,7 +494,7 @@ const createOrUpdateApplicationProfile = async (
     })
 
     return { ok: true, data: response.data.content }
-  } catch (err) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -509,7 +509,7 @@ const getCommentThread = async (
     })
 
     return { ok: true, data: response.data.content }
-  } catch (err) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -529,7 +529,7 @@ const addComment = async (
       data: comment,
     })
     return { ok: true, data: response.data.content }
-  } catch (e) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -545,7 +545,7 @@ const removeComment = async (
     })
 
     return { ok: true, data: response.data.content }
-  } catch (e) {
+  } catch {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
