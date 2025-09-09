@@ -1,11 +1,12 @@
 name: Lint and Type Check
 
 on:
-  pull_request:
-    branches: [main, release/**, epic/**]
-  push:
-    branches: [main, release/**, epic/**]
-  workflow_call:
+  workflow_dispatch: {}
+#   pull_request:
+#     branches: [main, release/**, epic/**]
+#   push:
+#     branches: [main, release/**, epic/**]
+#   workflow_call:
 
 jobs:
   lint:

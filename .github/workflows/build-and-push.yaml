@@ -1,13 +1,14 @@
 name: Build and Push Images
 
 on:
-  push:
-    branches:
-      - main
-      - epic/**
-      - release/**
-    tags:
-      - v*.*.*
+  workflow_dispatch: {}
+#  push:
+#    branches:
+#      - main
+#      - epic/**
+#      - release/**
+#    tags:
+#      - v*.*.*
 
 jobs:
   lint-and-check:

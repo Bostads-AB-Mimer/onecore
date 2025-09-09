@@ -21,11 +21,11 @@ jobs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       # Node + caches + npm ci (only on cache miss)
       - name: Setup npm
-      - uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/npm-setup
 
       # Compute a cache key that changes when lib sources / tsconfig / lockfile change
       - name: Compute dist cache key
@@ -106,7 +106,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
  
       - name: Setup
         uses: ./.github/actions/npm-setup
@@ -129,7 +129,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
  
       - name: Setup
         uses: ./.github/actions/npm-setup
@@ -154,7 +154,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
  
       - name: Setup
         uses: ./.github/actions/npm-setup
