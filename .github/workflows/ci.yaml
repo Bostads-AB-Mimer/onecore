@@ -50,7 +50,7 @@ jobs:
         id: restore-prepare-cache
         uses: actions/cache@v4
         with:
-          path: ${{ steps.cache.outputs.cache-path
+          path: ${{ steps.cache.outputs.cache-path }}
           key: ${{ steps.cache.outputs.key }}
           
       # Run generate:static once for downstrea jobs, unless cached
@@ -131,7 +131,6 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-        with:
           path: ${{ needs.prepare.outputs.cache-path }}
           key: ${{ needs.prepare.outputs.cache-key }}
 
@@ -155,7 +154,6 @@ jobs:
       
       - name: Restore Cache
         uses: actions/cache@v4
-        with:
         with:
           path: ${{ needs.prepare.outputs.cache-path }}
           key: ${{ needs.prepare.outputs.cache-key }}
