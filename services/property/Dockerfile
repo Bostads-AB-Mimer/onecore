@@ -9,8 +9,7 @@ RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /app
 
 # Copy root package files for dependency installation
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY package*.json tsconfig*.json ./
 
 # Copy relevant packages
 COPY libs/types ./libs/types

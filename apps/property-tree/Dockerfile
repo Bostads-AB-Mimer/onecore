@@ -6,7 +6,7 @@ FROM node:23-slim AS builder
 WORKDIR /app
 
 # Copy package files for dependency installation
-COPY package*.json tsconfig.json ./
+COPY package*.json tsconfig*.json ./
 
 COPY apps/property-tree ./apps/property-tree
 
