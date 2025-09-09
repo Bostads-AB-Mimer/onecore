@@ -10,6 +10,9 @@
 const fs = require('fs')
 const semver = require('semver')
 
+/**
+ * Read package.json from `path`
+ */
 const readPkgJson = (path) => {
   try {
     return {
@@ -21,11 +24,32 @@ const readPkgJson = (path) => {
   }
 }
 
+/**
+ * Strips the version property from a parsed package.json
+ */
+const stripVersion = (pkgJson) => {
+  const c = { ...pkgJson }
+  delete c.version
+  return c
+}
+
+/**
+ * Check if a and b serializes to the same JSON string
+ */
+const equal = (a, b) => {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 // Read ancestor, our version and their version of package.json
 const [, , basePath, oursPath, theirsPath] = process.argv
 const files = [basePath, oursPath, theirsPath].map(readPkgJson)
 
-const [, ourFile] = files
+const [, ourFile, theirFile] = files
+
+// If there are other changes than version, bail and let the conflict stand
+if (!equal(stripVersion(ourFile), stripVersion(theirFile))) {
+  process.exit(1)
+}
 
 // Sort versions and pick the highest semver version number
 const versions = files
