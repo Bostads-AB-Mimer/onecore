@@ -1,21 +1,20 @@
 name: Build and Push Images
 
 on:
-  workflow_dispatch: {}
-#  push:
-#    branches:
-#      - main
-#      - epic/**
-#      - release/**
-#    tags:
-#      - v*.*.*
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+      - epic/**
+      - feature/**
+      - release/**
+    tags:
+      - v*.*.*
 
 jobs:
-  lint-and-check:
-    name: Lint and Type Check
-    uses: ./.github/workflows/lint.yaml
-    secrets: inherit
-
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -109,8 +108,7 @@ jobs:
           fi
           
   build-and-push:
-    needs: [prepare, lint-and-check]
-    if: ${{ always() && needs.lint-and-check.result == 'success' }}
+    needs: prepare
     runs-on: ubuntu-latest
     strategy:
       matrix:
