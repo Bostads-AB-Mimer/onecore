@@ -13,6 +13,7 @@ import { z } from 'zod'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from './helpers/lease'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -75,11 +76,12 @@ export const routes = (router: KoaRouter) => {
       })
       const query = querySchema.safeParse(ctx.query)
 
+      logger.debug({ query }, 'Parsed query parameters for GET /listings')
+
       const result = await leasingAdapter.getListings({
         listingCategory: query.data?.listingCategory,
         published: query.data?.published,
         rentalRule: query.data?.rentalRule,
-        validToRentForContactCode: query.data?.validToRentForContactCode,
       })
 
       if (!result.ok) {
@@ -114,8 +116,58 @@ export const routes = (router: KoaRouter) => {
         })
         .filter((item): item is Listing => !!item)
 
-      ctx.status = 200
-      ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      logger.info(
+        {
+          numberOfListings: listingsWithRentalObjects.length,
+        },
+        'Listings Retrieved from Leasing GET /listings'
+      )
+
+      if (!query.data?.validToRentForContactCode) {
+        ctx.status = 200
+        ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      } else {
+        //filter listings on validToRentForContactCode
+        const tenantResult = await leasingAdapter.getTenantByContactCode(
+          query.data?.validToRentForContactCode
+        )
+        let isTenant = true
+
+        if (!tenantResult.ok) {
+          if (tenantResult.err === 'contact-not-tenant') {
+            isTenant = false
+          } else {
+            ctx.status = 500
+            ctx.body = { error: 'Tenant could not be retrieved', ...metadata }
+            return
+          }
+        }
+
+        var listings = listingsWithRentalObjects.filter((listing) => {
+          return (
+            listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
+            (listing.rentalRule == 'SCORED' &&
+              isTenant &&
+              tenantResult.ok &&
+              listing.rentalObject.residentialAreaCode &&
+              isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+                listing.rentalObject.residentialAreaCode,
+                tenantResult.data
+              )) // all SCORED where tenant is allowed to rent will be included
+          )
+        })
+
+        logger.debug(
+          {
+            numberOfListings: listings.length,
+            contactCode: query.data?.validToRentForContactCode,
+          },
+          'Listings filtered on contact GET /listings'
+        )
+
+        ctx.status = 200
+        ctx.body = { content: listings, ...metadata }
+      }
     } catch (error) {
       logger.error(error, 'Error fetching listings with rental objects')
       ctx.status = 500
