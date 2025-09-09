@@ -34,7 +34,10 @@ const createRoundOffRow = async (
   const roundOffInformation = await getRoundOffInformation(year)
   let totalAccount = '2970'
   let ledgerAccount = '1530'
-  const tenantName = (invoice.cmctcben as string).trimEnd()
+  const tenantName =
+    invoice.tenantName as string /*(invoice.cmctcben as string).trimEnd()*/
+
+  console.log('Creating roundoff for', invoice)
 
   const counterPartCustomer = counterPartCustomers.find(
     counterPartCustomers.customers,
