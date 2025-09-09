@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
-      cachekey: ${{ steps.distkey.outputs.key }}
+      cache-key: ${{ steps.cache.outputs.key }}
+      cache-path: ${{ steps.cache.outputs.path }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,20 +30,34 @@ jobs:
         uses: ./.github/actions/npm-setup
 
       # Compute a cache key that changes when lib sources / tsconfig / lockfile change
-      - name: Compute dist cache key
-        id: distkey
+      - name: Compute cache key & path
+        id: cache
         run: |
+          # Key
           echo "key=${{ runner.os }}-node-20-dist-${{ hashFiles('libs/**/src/**','packages/**/src/**','**/tsconfig*.json','**/package-lock.json') }}" >> $GITHUB_OUTPUT
 
-      # Try to restore dist; on cache miss, we'll build once here and store results to
-      # cache upon completion
-      - name: Restore libs dist cache
-        id: restore-libs-cache
+          # Path
+          {
+            echo 'path<<EOF'
+            echo 'libs/**/dist'
+            echo 'node_modules/.prisma'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # Try to restore dist; on cache miss, we'll build and generate here once, and store
+      # the results to cache upon completion
+      - name: Restore prepare cache
+        id: restore-prepare-cache
         uses: actions/cache@v4
         with:
-          path: libs/**/dist
-          key: ${{ steps.distkey.outputs.key }}
+          path: ${{ steps.cache.outputs.cache-path
+          key: ${{ steps.cache.outputs.key }}
           
+      # Run generate:static once for downstrea jobs, unless cached
+      - name: Build libs
+        if: steps.restore-libs-cache.outputs.cache-hit != 'true'
+        run: npm run generate:static
+
       # Build shared libs once for downstream jobs that need compiled deps
       - name: Build libs
         if: steps.restore-libs-cache.outputs.cache-hit != 'true'
@@ -57,7 +72,7 @@ jobs:
           echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
 
   lint:
-    name: Lint - ${{ matrix.package }}
+    name: ${{ matrix.package }} - Lint
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -74,14 +89,14 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: libs/**/dist
-          key: ${{ needs.prepare.outputs.cachekey }}
+          path: ${{ needs.prepare.outputs.cache-path }}
+          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run Lint
         run: npm run --workspace ${{ matrix.package }} lint
 
   prettier:
-    name: Prettier check - ${{ matrix.package }}
+    name: ${{ matrix.package }} - Prettier check
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -99,7 +114,7 @@ jobs:
         run: npm run --workspace ${{ matrix.package }} prettier
 
   typecheck:
-    name: Typecheck - ${{ matrix.package }}
+    name: ${{ matrix.package }} - Typecheck
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -116,14 +131,15 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: libs/**/dist
-          key: ${{ needs.prepare.outputs.cachekey }}
+        with:
+          path: ${{ needs.prepare.outputs.cache-path }}
+          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run Typecheck
         run: npm run --workspace ${{ matrix.package }} typecheck
 
   build:
-    name: Build - ${{ matrix.package }}
+    name: ${{ matrix.package }} - Build
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -140,15 +156,16 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: libs/**/dist
-          key: ${{ needs.prepare.outputs.cachekey }}
+        with:
+          path: ${{ needs.prepare.outputs.cache-path }}
+          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Build
         run: npm run --workspace ${{ matrix.package }} build
 
 
   test:
-    name: Run Tests (${{ matrix.pkg }})
+    name: ${{ matrix.package }} - Run Tests
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -165,8 +182,8 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: libs/**/dist
-          key: ${{ needs.prepare.outputs.cachekey }}
+          path: ${{ needs.prepare.outputs.cache-path }}
+          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run tests
         run: npm run --workspace "${{ matrix.package }}" test
