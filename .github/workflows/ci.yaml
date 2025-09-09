@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
+      cachekey: ${{ steps.distkey.outputs.key }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,12 +40,10 @@ jobs:
         id: restore-libs-cache
         uses: actions/cache@v4
         with:
-          path: |
-            libs/**/dist
-            packages/**/dist
+          path: libs/**/dist
           key: ${{ steps.distkey.outputs.key }}
           
-      # Build shared libs ONCE for downstream jobs that need compiled deps
+      # Build shared libs once for downstream jobs that need compiled deps
       - name: Build libs
         if: steps.restore-libs-cache.outputs.cache-hit != 'true'
         run: npm run build:libs
@@ -58,7 +57,7 @@ jobs:
           echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
 
   lint:
-    name: Lint - ${{ matrix.workspace }}
+    name: Lint - ${{ matrix.package }}
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -74,14 +73,14 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: "**/*.tsbuildinfo"
-          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+          path: libs/**/dist
+          key: ${{ needs.prepare.outputs.cachekey }}
 
       - name: Run Lint
         run: npm run --workspace ${{ matrix.package }} lint
 
   prettier:
-    name: Prettier check - ${{ matrix.workspace }}
+    name: Prettier check - ${{ matrix.package }}
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -98,7 +97,7 @@ jobs:
         run: npm run --workspace ${{ matrix.package }} prettier
 
   typecheck:
-    name: Typecheck - ${{ matrix.workspace }}
+    name: Typecheck - ${{ matrix.package }}
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -114,14 +113,14 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: "**/*.tsbuildinfo"
-          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+          path: libs/**/dist
+          key: ${{ needs.prepare.outputs.cachekey }}
 
       - name: Run Typecheck
         run: npm run --workspace ${{ matrix.package }} typecheck
 
   build:
-    name: Build - ${{ matrix.workspace }}
+    name: Build - ${{ matrix.package }}
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -137,8 +136,8 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: "**/*.tsbuildinfo"
-          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+          path: libs/**/dist
+          key: ${{ needs.prepare.outputs.cachekey }}
 
       - name: Build
         run: npm run --workspace ${{ matrix.package }} build
@@ -162,8 +161,8 @@ jobs:
       - name: Restore Cache
         uses: actions/cache@v4
         with:
-          path: "**/*.tsbuildinfo"
-          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+          path: libs/**/dist
+          key: ${{ needs.prepare.outputs.cachekey }}
 
       - name: Run tests
         run: npm run --workspace "${{ matrix.package }}" test
