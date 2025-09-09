@@ -208,7 +208,6 @@ type GetListingsParams = {
   listingCategory?: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   published?: boolean
   rentalRule?: 'SCORED' | 'NON_SCORED'
-  validToRentForContactCode?: string
 }
 
 const getListings = async (
@@ -220,11 +219,6 @@ const getListings = async (
   if (params.published !== undefined)
     queryParams.append('published', params.published.toString())
   if (params.rentalRule) queryParams.append('rentalRule', params.rentalRule)
-  if (params.validToRentForContactCode)
-    queryParams.append(
-      'validToRentForContactCode',
-      params.validToRentForContactCode
-    )
 
   try {
     const response = await axios.get(
@@ -233,8 +227,12 @@ const getListings = async (
 
     if (response.status !== 200) {
       logger.error(
-        { status: response.status, data: response.data },
-        `Error getting listings from leasing, by: published ${params.published}, rentalRule ${params.rentalRule} and validToRentForContactCode ${params.validToRentForContactCode}`
+        {
+          status: response.status,
+          data: response.data,
+          query: queryParams.toString(),
+        },
+        `Error getting listings from leasing`
       )
       return { ok: false, err: 'unknown' }
     }
@@ -242,8 +240,8 @@ const getListings = async (
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
-      error,
-      `Unknown error fetching listings by published ${params.published}, rentalRule ${params.rentalRule} and validToRentForContactCode ${params.validToRentForContactCode}`
+      { error: error, queryParams: queryParams.toString() },
+      `Unknown error fetching listings by published`
     )
     return { ok: false, err: 'unknown' }
   }
