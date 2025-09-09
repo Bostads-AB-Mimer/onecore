@@ -1,9 +1,9 @@
-import config from '../../../common/config'
-// @ts-ignore
 import msal from '@azure/msal-node'
 import axios from 'axios'
 import KoaRouter from '@koa/router'
 import { DefaultContext, DefaultState, ParameterizedContext } from 'koa'
+
+import config from '../../../common/config'
 
 const redirectUri = config.msal.redirectUri
 const postLogoutRedirectUri = config.msal.postLogoutRedirectUri
