@@ -18,6 +18,7 @@ async function updateExpiredListings() {
     }
   }
   console.log('Expired listings updated successfully')
+  // eslint-disable-next-line n/no-process-exit
   process.exit(0)
 }
 

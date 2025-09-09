@@ -1,7 +1,6 @@
 import { HttpStatusCode } from 'axios'
 import {
   parkingSpaceApplicationCategoryTranslation,
-  ParkingSpaceApplicationCategory,
   Applicant,
   ApplicantStatus,
   Contact,
@@ -12,7 +11,6 @@ import {
 import { logger } from '@onecore/utilities'
 
 import {
-  getLeasesForPnr,
   addApplicantToWaitingList,
   getActiveListingByRentalObjectCode,
   createNewListing,

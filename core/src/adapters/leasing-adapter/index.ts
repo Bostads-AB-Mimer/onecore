@@ -185,7 +185,7 @@ const getContactByPhoneNumber = async (
       tenantsLeasesServiceUrl + '/contact/phoneNumber/' + phoneNumber
     )
     return contactResponse.data.content
-  } catch (error) {
+  } catch {
     return undefined
   }
 }

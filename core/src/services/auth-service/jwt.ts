@@ -18,11 +18,14 @@ const getUser = async (username: string) => {
   return user
 }
 
-const setUserFailedLoginAttempts = async (userId: string, attempts: number) => {
+const setUserFailedLoginAttempts = async (
+  _userId: string,
+  _attempts: number
+) => {
   return
 }
 
-const setUserLocked = async (userId: string, locked: boolean) => {
+const setUserLocked = async (_userId: string, _locked: boolean) => {
   return
 }
 

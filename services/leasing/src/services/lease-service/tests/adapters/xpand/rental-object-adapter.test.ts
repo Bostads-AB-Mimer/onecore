@@ -1,5 +1,5 @@
 import * as rentalObjectAdapter from '../../../adapters/xpand/rental-object-adapter'
-import { addDays, addMonths } from 'date-fns'
+import { addDays } from 'date-fns'
 
 describe('transformFromXpandRentalObject', () => {
   it('should set vacantFrom to today when lastDebitDate and blockEndDate are missing', () => {

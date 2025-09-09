@@ -145,7 +145,7 @@ export const sendWorkOrderSms = async ({
     }
 
     return { ok: true, data: result.data.content }
-  } catch (error) {
+  } catch {
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
@@ -177,7 +177,7 @@ export const sendWorkOrderEmail = async ({
     }
 
     return { ok: true, data: result.data.content }
-  } catch (error) {
+  } catch {
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }

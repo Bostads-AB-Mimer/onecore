@@ -206,7 +206,7 @@ export const routes = (router: KoaRouter) => {
 
         ctx.status = 200
         ctx.body = { content: null, ...metadata }
-      } catch (e) {
+      } catch {
         ctx.status = 500
         ctx.body = { error: 'unknown', ...metadata }
       }

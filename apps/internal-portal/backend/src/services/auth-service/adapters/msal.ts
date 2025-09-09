@@ -1,7 +1,5 @@
 import config from '../../../common/config'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-// eslint-disable-next-line n/no-missing-import
 import msal from '@azure/msal-node'
 import axios from 'axios'
 import KoaRouter from '@koa/router'
@@ -40,7 +38,7 @@ const msalConfig: msal.Configuration = {
   },
   system: {
     loggerOptions: {
-      loggerCallback(loglevel: any, message: any, containsPii: any) {
+      loggerCallback(_loglevel: any, message: any, _containsPii: any) {
         console.log(message)
       },
       piiLoggingEnabled: false,
@@ -171,7 +169,7 @@ const acquireToken = (options: AuthOptions = defaultOptions) => {
   }
 }
 
-const handleRedirect = (options: AuthOptions = defaultOptions) => {
+const handleRedirect = (_options: AuthOptions = defaultOptions) => {
   return async (ctx: Context) => {
     if (!ctx.request.body || !ctx.request.body.state) {
       return ctx.next(new Error('Error: response not found'))
@@ -315,18 +313,14 @@ const redirectToAuthCodeUrl = (
 const getCloudDiscoveryMetadata = async (authority: string) => {
   const endpoint = 'https://login.microsoftonline.com/common/discovery/instance'
 
-  try {
-    const response = await axios.get(endpoint, {
-      params: {
-        'api-version': '1.1',
-        authorization_endpoint: `${authority}/oauth2/v2.0/authorize`,
-      },
-    })
+  const response = await axios.get(endpoint, {
+    params: {
+      'api-version': '1.1',
+      authorization_endpoint: `${authority}/oauth2/v2.0/authorize`,
+    },
+  })
 
-    return await response.data
-  } catch (error) {
-    throw error
-  }
+  return await response.data
 }
 
 /**
