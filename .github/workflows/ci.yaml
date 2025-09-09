@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v4
+
+      # Node + caches + npm ci (only on cache miss)
+      - name: Setup npm
+      - uses: ./.github/actions/npm-setup
+
+      # Compute a cache key that changes when lib sources / tsconfig / lockfile change
+      - name: Compute dist cache key
+        id: distkey
+        run: |
+          echo "key=${{ runner.os }}-node-20-dist-${{ hashFiles('libs/**/src/**','packages/**/src/**','**/tsconfig*.json','**/package-lock.json') }}" >> $GITHUB_OUTPUT
+
+      # Try to restore dist; on cache miss, we'll build once here and store results to
+      # cache upon completion
+      - name: Restore libs dist cache
+        id: restore-libs-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            libs/**/dist
+            packages/**/dist
+          key: ${{ steps.distkey.outputs.key }}
+          
+      # Build shared libs ONCE for downstream jobs that need compiled deps
+      - name: Build libs
+        if: steps.restore-libs-cache.outputs.cache-hit != 'true'
+        run: npm run build:libs
+
+      # Read build matrix (later used to run jobs in parallel, per package)
+      - name: Read build matrix
+        id: read-matrix
+        shell: bash
+        run: |
+          MATRIX=$(cat ./.github/build.matrix.json | jq -c .)
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+
+  lint:
+    name: Lint - ${{ matrix.workspace }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/npm-setup
+
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: "**/*.tsbuildinfo"
+          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+
+      - name: Run Lint
+        run: npm run --workspace ${{ matrix.package }} lint
+
+  prettier:
+    name: Prettier check - ${{ matrix.workspace }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/npm-setup
+
+      - name: Run Prettier
+        run: npm run --workspace ${{ matrix.package }} prettier
+
+  typecheck:
+    name: Typecheck - ${{ matrix.workspace }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v4
+ 
+      - name: Setup
+        uses: ./.github/actions/npm-setup
+      
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: "**/*.tsbuildinfo"
+          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+
+      - name: Run Typecheck
+        run: npm run --workspace ${{ matrix.package }} typecheck
+
+  build:
+    name: Build - ${{ matrix.workspace }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v4
+ 
+      - name: Setup
+        uses: ./.github/actions/npm-setup
+      
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: "**/*.tsbuildinfo"
+          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+
+      - name: Build
+        run: npm run --workspace ${{ matrix.package }} build
+
+
+  test:
+    name: Run Tests (${{ matrix.pkg }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v4
+ 
+      - name: Setup
+        uses: ./.github/actions/npm-setup
+      
+      - name: Restore Cache
+        uses: actions/cache@v4
+        with:
+          path: "**/*.tsbuildinfo"
+          key: ${{ runner.os }}-ts-${{ hashFiles('**/tsconfig*.json') }}
+
+      - name: Run tests
+        run: npm run --workspace "${{ matrix.package }}" test
