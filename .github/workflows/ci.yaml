@@ -54,7 +54,7 @@ jobs:
           key: ${{ steps.cache.outputs.key }}
           
       # Run generate:static once for downstrea jobs, unless cached
-      - name: Build libs
+      - name: Run generate:static
         if: steps.restore-libs-cache.outputs.cache-hit != 'true'
         run: npm run generate:static
 
@@ -184,4 +184,4 @@ jobs:
           key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run tests
-        run: npm run --workspace "${{ matrix.package }}" test
+        run: npm run --workspace "${{ matrix.package }}" test --if-present
