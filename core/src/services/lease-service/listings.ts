@@ -76,7 +76,7 @@ export const routes = (router: KoaRouter) => {
       })
       const query = querySchema.safeParse(ctx.query)
 
-      logger.info({ query }, 'Parsed query parameters for GET /listings')
+      logger.debug({ query }, 'Parsed query parameters for GET /listings')
 
       const result = await leasingAdapter.getListings({
         listingCategory: query.data?.listingCategory,
@@ -157,7 +157,7 @@ export const routes = (router: KoaRouter) => {
           )
         })
 
-        logger.info(
+        logger.debug(
           {
             numberOfListings: listings.length,
             contactCode: query.data?.validToRentForContactCode,

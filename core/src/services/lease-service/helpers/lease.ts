@@ -1,4 +1,4 @@
-import { Tenant } from 'libs/types/dist'
+import { Tenant } from '@onecore/types'
 
 export const isTenantAllowedToRentAParkingSpaceInThisResidentialArea = (
   residentialAreaCode: string,
