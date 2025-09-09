@@ -18,14 +18,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Validate source branch
-        run: |
-          ALLOWED_BRANCH="main"
-          if [[ "${{ github.event.inputs.source_branch }}" != "$ALLOWED_BRANCH" ]]; then
-            echo "Can only create release branches from '$ALLOWED_BRANCH'."
-            exit 1
-          fi
-
       - name: Checkout source branch
         uses: actions/checkout@v4
         with:
