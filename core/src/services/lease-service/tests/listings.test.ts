@@ -132,6 +132,7 @@ describe('GET /listings', () => {
     })
     const parkingSpace = factory.vacantParkingSpace.build({
       rentalObjectCode: '12345',
+      residentialAreaCode: 'AREA123',
     })
 
     const getListingsSpy = jest
@@ -141,6 +142,15 @@ describe('GET /listings', () => {
     jest
       .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
+        }),
+      })
 
     const res = await request(app.callback()).get(
       '/listings?rentalObjectCode=12345'
