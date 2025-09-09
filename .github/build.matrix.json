@@ -50,6 +50,7 @@
   {
     "name": "internal-portal",
     "label": "ONECore Internal Portal Application",
+    "package": "@onecore/internal-portal",
     "path": "apps/internal-portal/frontend",
     "docker": true,
     "imageName": "onecore-internal-portal-frontend",
@@ -65,6 +66,7 @@
   {
     "name": "internal-portal-backend",
     "label": "ONECore Internal Portal Backend API",
+    "package": "@onecore/internal-portal-backend",
     "path": "apps/internal-portal/backend",
     "docker": true,
     "imageName": "onecore-internal-portal-backend"
@@ -72,6 +74,7 @@
   {
     "name": "property-tree",
     "label": "ONECore Property Tree Application",
+    "package": "@onecore/property-tree",
     "path": "apps/property-tree",
     "docker": true,
     "imageName": "property-tree",
