@@ -425,7 +425,7 @@ export async function getFacilityByRentalId(
 
 type GetBuildingsResponse = components['schemas']['Building'][]
 
-export async function getBuildings(
+export async function getBuildingsByPropertyCode(
   propertyCode: string
 ): Promise<AdapterResult<GetBuildingsResponse, unknown>> {
   try {
@@ -439,7 +439,10 @@ export async function getBuildings(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, '@onecore/property-adapter.getBuildings')
+    logger.error(
+      { err },
+      '@onecore/property-adapter.getBuildingsByPropertyCode'
+    )
     return { ok: false, err }
   }
 }

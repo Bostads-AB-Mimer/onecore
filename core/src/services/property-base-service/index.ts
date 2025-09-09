@@ -172,7 +172,8 @@ export const routes = (router: KoaRouter) => {
       const { propertyCode } = ctx.params
 
       try {
-        const result = await propertyBaseAdapter.getBuildings(propertyCode)
+        const result =
+          await propertyBaseAdapter.getBuildingsByPropertyCode(propertyCode)
         if (!result.ok) {
           logger.error(result.err, 'Internal server error', metadata)
           ctx.status = 500
