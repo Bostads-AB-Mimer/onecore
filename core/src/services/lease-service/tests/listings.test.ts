@@ -103,6 +103,7 @@ describe('GET /listings', () => {
     })
     const parkingSpace = factory.vacantParkingSpace.build({
       rentalObjectCode: '12345',
+      residentialAreaCode: 'AREA123',
     })
 
     const getListingsSpy = jest
@@ -113,17 +114,83 @@ describe('GET /listings', () => {
       .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
+    jest
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
+        }),
+      })
+
     const res = await request(app.callback()).get(
       '/listings?validToRentForContactCode=abc123'
     )
 
     expect(getListingsSpy).toHaveBeenCalledWith({
-      validToRentForContactCode: 'abc123',
+      listingCategory: undefined,
+      published: undefined,
+      rentalRule: undefined,
     })
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: [expect.objectContaining({ id: 1337 })],
     })
+  })
+
+  it('responds with a filtered list with filter on validToRentForContactCode', async () => {
+    const listings = [
+      factory.listing.build({
+        id: 1337,
+        rentalObjectCode: '12345',
+      }),
+      factory.listing.build({
+        id: 1339,
+        rentalObjectCode: '32345',
+      }),
+    ]
+    const parkingSpaces = [
+      factory.vacantParkingSpace.build({
+        rentalObjectCode: '12345',
+        residentialAreaCode: 'AREA123',
+      }),
+      factory.vacantParkingSpace.build({
+        rentalObjectCode: '32345',
+        residentialAreaCode: 'ANOTHER_AREA',
+      }),
+    ]
+
+    const getListingsSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getListings')
+      .mockResolvedValueOnce({ ok: true, data: listings })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
+      .mockResolvedValueOnce({ ok: true, data: parkingSpaces })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
+        }),
+      })
+
+    const res = await request(app.callback()).get(
+      '/listings?validToRentForContactCode=abc123'
+    )
+
+    expect(getListingsSpy).toHaveBeenCalledWith({
+      listingCategory: undefined,
+      published: undefined,
+      rentalRule: undefined,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: [expect.objectContaining({ id: 1337 })],
+    })
+    expect(res.body.content).toHaveLength(1)
   })
 
   it('responds with 500 on error', async () => {
