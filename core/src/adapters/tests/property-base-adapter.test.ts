@@ -612,6 +612,43 @@ describe('@onecore/property-adapter', () => {
     })
   })
 
+  describe('getBuildings', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getBuildings('001-001')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/buildings`, () =>
+          HttpResponse.json(
+            {
+              content: buildingsMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getBuildings('001-001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: buildingsMock,
+      })
+    })
+  })
+
   describe('getMaintenanceUnitsByPropertyCode', () => {
     it('returns maintenance units for a property', async () => {
       const maintenanceUnitsMock = factory.maintenanceUnitInfo.buildList(3)
