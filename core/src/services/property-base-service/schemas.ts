@@ -3,20 +3,20 @@ import { z } from 'zod'
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
   buildingType: z.object({
-    id: z.string(),
-    code: z.string(),
-    name: z.string(),
+    id: z.string().nullable(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
   }),
   construction: z.object({
-    constructionYear: z.number(),
-    renovationYear: z.number(),
+    constructionYear: z.number().nullable(),
+    renovationYear: z.number().nullable(),
     valueYear: z.number().nullable(),
   }),
   features: z.object({
-    heating: z.string().nullable(),
-    fireRating: z.string().nullable(),
+    heating: z.string().nullable().optional(),
+    fireRating: z.string().nullable().optional(),
   }),
   insurance: z.object({
     class: z.string().nullable(),

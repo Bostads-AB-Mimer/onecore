@@ -10,6 +10,7 @@ import * as leasingAdapter from '../../../adapters/leasing-adapter'
 
 import * as factory from '../../../../test/factories'
 import {
+  BuildingSchema,
   CompanySchema,
   PropertySchema,
   ResidenceSchema,
@@ -71,6 +72,39 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(500)
       expect(getBuildingSpy).toHaveBeenCalledWith('123-456')
+    })
+  })
+
+  describe('GET /propertyBase/buildings/by-property-code/:propertyCode', () => {
+    it('returns 200 and a list of buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .mockResolvedValueOnce({ ok: true, data: buildingsMock })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/buildings/by-property-code/001-001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(buildingsMock)
+      )
+      expect(() => z.array(BuildingSchema).parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 500 if no buildings can be retrieved', async () => {
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/propertyBase/buildings/by-property-code/001-001'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
     })
   })
 
