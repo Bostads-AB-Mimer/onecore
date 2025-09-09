@@ -121,7 +121,9 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter)}
+              columns={getColumns(dateFormatter, numberFormatter).concat(
+                getHistoricalActionColumns()
+              )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
               key="historical"
@@ -214,6 +216,24 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
     },
   ]
 }
+
+const getHistoricalActionColumns = (): Array<GridColDef<ListingWithOffer>> => [
+  {
+    field: 'action-link',
+    headerName: '',
+    sortable: false,
+    filterable: false,
+    flex: 0.5,
+    disableColumnMenu: true,
+    renderCell: (v) => (
+      <Link to={`/bilplatser/${v.id}`}>
+        <IconButton sx={{ color: 'black' }}>
+          <Chevron />
+        </IconButton>
+      </Link>
+    ),
+  },
+]
 
 const getRepublishActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
   return [
