@@ -217,4 +217,23 @@ describe(leasingAdapter.getListings, () => {
       ]),
     })
   })
+
+  it('returns a list listings filtered on published and rentalObjectCode', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/listings')
+      .query({ rentalObjectCode: 'ABC1234', published: true })
+      .reply(200, { content: factory.listing.buildList(4) })
+
+    const result = await leasingAdapter.getListings({
+      rentalObjectCode: 'ABC1234',
+      published: true,
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
 })
