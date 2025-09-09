@@ -290,7 +290,74 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies:
+   * /propertyBase/buildings/by-property-code/{propertyCode}:
+   *   get:
+   *     summary: Get buildings by property code
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves buildings by property code
+   *     parameters:
+   *       - in: path
+   *         name: propertyCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the property to fetch buildings for
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved buildings
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Building'
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/propertyBase/buildings/by-property-code/:propertyCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { propertyCode } = ctx.params
+
+      try {
+        const result = await propertyBaseAdapter.getBuildings(propertyCode)
+        if (!result.ok) {
+          logger.error(result.err, 'Internal server error', metadata)
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: result.data satisfies schemas.Building[],
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Internal server error', metadata)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /propertyBase/companies:
    *   get:
    *     summary: Get all companies
    *     tags:

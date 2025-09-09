@@ -467,6 +467,27 @@ export async function getFacilityByRentalId(
   }
 }
 
+type GetBuildingsResponse = components['schemas']['Building'][]
+
+export async function getBuildings(
+  propertyCode: string
+): Promise<AdapterResult<GetBuildingsResponse, unknown>> {
+  try {
+    const fetchResponse = await client().GET('/buildings', {
+      params: { query: { propertyCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getBuildings')
+    return { ok: false, err }
+  }
+}
+
 type GetMaintenanceUnitsByPropertyCodeResponse =
   components['schemas']['MaintenanceUnit'][]
 
