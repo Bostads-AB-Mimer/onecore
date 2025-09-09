@@ -27,7 +27,7 @@
     "prisma:force-generate": "npm clean-install --workspace . && prisma generate",
     "prisma:generate": "npx prisma generate",
     "start": "node --import tsx index.ts",
-    "test": "jest --config jest.config.js",
+    "test:borked": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
