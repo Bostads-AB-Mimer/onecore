@@ -73,10 +73,10 @@ export const getRoundOffInformation = async (
 }
 
 export const getInvoices = async (rows: InvoiceDataRow[]) => {
-  const uniqueInvoiceNumbers: Record<string, boolean> = {}
+  const uniqueInvoiceNumbers: Record<string, string> = {}
 
   rows.forEach((row) => {
-    uniqueInvoiceNumbers[row.invoiceNumber as string] = true
+    uniqueInvoiceNumbers[row.invoiceNumber as string] = row.tenantName as string
   })
 
   const invoiceNumbers = Object.keys(uniqueInvoiceNumbers)
@@ -90,8 +90,12 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
 
   const invoiceTypes: Record<string, boolean> = {}
   invoices.forEach((invoice) => {
+    invoice.tenantName =
+      uniqueInvoiceNumbers[(invoice.invoice as string).trimEnd()]
     invoiceTypes[invoice.name] = true
   })
+
+  console.log('invoices', invoices)
 
   return invoices
 }
