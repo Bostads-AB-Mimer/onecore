@@ -79,7 +79,7 @@ describe('@onecore/property-service', () => {
     it('returns 200 and a list of buildings', async () => {
       const buildingsMock = factory.building.buildList(3)
       const getBuildingsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .spyOn(propertyBaseAdapter, 'getBuildingsByPropertyCode')
         .mockResolvedValueOnce({ ok: true, data: buildingsMock })
 
       const res = await request(app.callback()).get(
@@ -91,12 +91,14 @@ describe('@onecore/property-service', () => {
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(buildingsMock)
       )
-      expect(() => z.array(BuildingSchema).parse(res.body.content)).not.toThrow()
+      expect(() =>
+        z.array(BuildingSchema).parse(res.body.content)
+      ).not.toThrow()
     })
 
     it('returns 500 if no buildings can be retrieved', async () => {
       const getBuildingsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .spyOn(propertyBaseAdapter, 'getBuildingsByPropertyCode')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
