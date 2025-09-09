@@ -709,7 +709,8 @@ describe('@onecore/property-adapter', () => {
         )
       )
 
-      const result = await propertyBaseAdapter.getBuildings('001-001')
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
 
       expect(result.ok).toBe(false)
       if (!result.ok) expect(result.err).toBe('unknown')
@@ -728,7 +729,8 @@ describe('@onecore/property-adapter', () => {
         )
       )
 
-      const result = await propertyBaseAdapter.getBuildings('001-001')
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
 
       expect(result).toMatchObject({
         ok: true,
