@@ -1411,7 +1411,7 @@ export interface components {
         name: string | null;
         code: string | null;
       };
-      area: number | null;
+      areaSize: number | null;
     };
     GetFacilityByRentalIdResponse: {
       content: {
@@ -1442,7 +1442,7 @@ export interface components {
           name: string | null;
           code: string | null;
         };
-        area: number | null;
+        areaSize: number | null;
       };
       _links: {
         self: {
@@ -1483,7 +1483,7 @@ export interface components {
             name: string | null;
             code: string | null;
           };
-          area: number | null;
+          areaSize: number | null;
         })[];
       _links: {
         self: {
@@ -1524,7 +1524,7 @@ export interface components {
             name: string | null;
             code: string | null;
           };
-          area: number | null;
+          areaSize: number | null;
         })[];
       _links: {
         self: {
