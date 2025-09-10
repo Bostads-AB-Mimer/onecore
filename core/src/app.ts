@@ -15,6 +15,7 @@ import { routes as swagggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
 
 const app = new Koa()
+app.proxy = true
 
 app.use(
   cors({
