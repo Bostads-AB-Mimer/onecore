@@ -127,7 +127,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/buildings/by-property-code/{propertyCode}:
+   * /buildings/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get buildings by property code
    *     tags:
@@ -165,33 +165,30 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '(.*)/propertyBase/buildings/by-property-code/:propertyCode',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { propertyCode } = ctx.params
+  router.get('(.*)/buildings/by-property-code/:propertyCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { propertyCode } = ctx.params
 
-      try {
-        const result =
-          await propertyBaseAdapter.getBuildingsByPropertyCode(propertyCode)
-        if (!result.ok) {
-          logger.error(result.err, 'Internal server error', metadata)
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
-          return
-        }
-
-        ctx.body = {
-          content: result.data satisfies schemas.Building[],
-          ...metadata,
-        }
-      } catch (error) {
-        logger.error(error, 'Internal server error', metadata)
+    try {
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode(propertyCode)
+      if (!result.ok) {
+        logger.error(result.err, 'Internal server error', metadata)
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
+        return
       }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Building[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   /**
    * @swagger
