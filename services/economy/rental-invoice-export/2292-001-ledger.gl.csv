@@ -1,0 +1,4 @@
+Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount
+AR;202292000;20250814;1530;;;;;;;;P189925;20250814;552509353553755;552509353553755;20250831;;;12343
+AR;202292000;20250814;1530;;;;;;;;P151122;20250814;552509353311956;552509353311956;20250831;;;10761
+AR;202292000;20250814;2970;;;;;;;;;;;;;;;-23104

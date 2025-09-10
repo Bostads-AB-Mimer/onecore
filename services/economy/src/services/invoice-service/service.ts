@@ -1,4 +1,5 @@
 import {
+  createBatch,
   addAccountInformation,
   getAggregatedInvoiceRows,
   getContracts,
@@ -6,11 +7,14 @@ import {
   getInvoiceRows,
   getInvoices,
   saveInvoiceRows,
+  saveContacts,
+  getContacts as getInvoiceContacts,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
   getInvoices as getXpandInvoices,
   getRoundOffInformation,
+  getContacts as getXpandContacts,
 } from './adapters/xpand-db-adapter'
 import {
   CounterPartCustomers,
@@ -23,7 +27,20 @@ import {
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
+  uploadFile as uploadFileToXledger,
 } from './adapters/xledger-adapter'
+import { Contact } from 'onecore-types'
+import { excelFileToInvoiceDataRows } from './adapters/excel-adapter'
+/*import {
+  createInvoiceBatch,
+  enrichInvoiceDataRows,
+  getBatchAggregatedRows,
+  getBatchContacts,
+  getBatchLedgerRows,
+  saveInvoiceContactsToDb,
+  uploadInvoiceFile as uploadInvoiceFileEconomy,
+} from './adapters/economy-adapter'*/
+import { logger } from 'onecore-utilities'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -36,8 +53,6 @@ const createRoundOffRow = async (
   let ledgerAccount = '1530'
   const tenantName =
     invoice.tenantName as string /*(invoice.cmctcben as string).trimEnd()*/
-
-  console.log('Creating roundoff for', invoice)
 
   const counterPartCustomer = counterPartCustomers.find(
     counterPartCustomers.customers,
@@ -348,4 +363,171 @@ export const createAggregateRows = async (batchId: string) => {
   }
 
   return transactionRows
+}
+
+export const uploadFile = async (filename: string, csvFile: string) => {
+  return await uploadFileToXledger(filename, csvFile)
+}
+
+export const getContactFromInvoiceRows = (
+  contactCode: string,
+  invoiceDataRows: InvoiceDataRow[]
+): Contact | null => {
+  const invoiceRow = invoiceDataRows.find((row) => {
+    return (row.contactCode as string) === contactCode
+  })
+
+  if (!invoiceRow) {
+    logger.error({ contactCode }, 'Could not find contact in invoiceDataRows')
+    return null
+  }
+
+  return {
+    contactCode: invoiceRow.contactCode as string,
+    address: {
+      street: invoiceRow.rentalObjectName as string,
+      city: 'Västerås',
+      postalCode: '',
+      number: '',
+    },
+    contactKey: '',
+    firstName: '',
+    lastName: '',
+    fullName: invoiceRow.tenantName as string,
+    nationalRegistrationNumber: '',
+    isTenant: true,
+    phoneNumbers: [],
+    birthDate: new Date(),
+  }
+}
+
+export const processInvoiceDataFile = async (
+  invoiceDataFileName: string,
+  companyId: string
+): Promise<{
+  batchId: string
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
+  try {
+    const errors: { invoiceNumber: string; error: string }[] = []
+    const CHUNK_SIZE = 500
+
+    const invoiceDataRows = (
+      await excelFileToInvoiceDataRows(invoiceDataFileName)
+    ).filter((row) => (row.company as string) === companyId)
+
+    console.log(
+      'Importing',
+      invoiceDataRows.length,
+      'rows for company',
+      companyId
+    )
+
+    let chunkNum = 0
+    const batchId = await createBatch()
+    logger.info(`Created new batch: ${batchId}`)
+
+    while (CHUNK_SIZE * chunkNum < invoiceDataRows.length) {
+      const startNum = chunkNum * CHUNK_SIZE
+      const endNum = Math.min(
+        (chunkNum + 1) * CHUNK_SIZE,
+        invoiceDataRows.length
+      )
+      const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
+      logger.info(
+        { startNum, endNum, totalrows: currentInvoiceDataRows.length },
+        'Processing rows'
+      )
+      const contactCodes = await processInvoiceRows(
+        currentInvoiceDataRows,
+        batchId
+      )
+      const contacts = await getXpandContacts(contactCodes.contacts)
+      const result = await saveContacts(contacts, batchId)
+
+      /*if (contactCodes.errors && contactCodes.errors.length > 0) {
+        errors.push(contactCodes.err  ors)
+      }*/
+
+      chunkNum++
+    }
+
+    return {
+      batchId,
+      errors,
+    }
+  } catch (error: any) {
+    logger.error(
+      error,
+      'Error processing invoice data file - batch could not be created'
+    )
+
+    throw error
+  }
+}
+
+export const getBatchContactsCsv = async (batchId: string) => {
+  const contacts = await getInvoiceContacts(batchId)
+  const csvContent: string[] = []
+
+  csvContent.push(
+    'Code;Description;Company No;Email;Street Address;Zip Code;City;Invoice Delivery Method;GL Object Value 5;Group;Collection Code'
+  )
+
+  contacts.forEach((contact) => {
+    csvContent.push(
+      `${contact.code};${contact.description};${contact.companyNo};${contact.email};${contact.streetAddress};${contact.zipCode};${contact.city};${contact.invoiceDeliveryMethod};${contact.counterPart};${contact.group};${contact.counterPart ? contact.group : ''}`
+    )
+  })
+
+  return csvContent.join('\n')
+}
+
+export const getBatchAggregatedRowsCsv = async (batchId: string) => {
+  const transactionRows = await createAggregateRows(batchId)
+  const csvContent: string[] = []
+
+  csvContent.push(
+    'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
+  )
+
+  transactionRows.forEach((transactionRow) => {
+    csvContent.push(
+      `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1 || ''};${transactionRow.posting2 || ''};${transactionRow.posting3 || ''};${transactionRow.posting4 || ''};${transactionRow.posting5 || ''};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
+    )
+  })
+
+  return csvContent.join('\n')
+}
+
+export const getBatchLedgerRowsCsv = async (batchId: string) => {
+  const transactionRows = await createLedgerRows(batchId)
+
+  const csvContent: string[] = []
+
+  csvContent.push(
+    'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
+  )
+
+  transactionRows.forEach((transactionRow) => {
+    csvContent.push(
+      `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1};${transactionRow.posting2};${transactionRow.posting3};${transactionRow.posting4};${transactionRow.posting5};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
+    )
+  })
+
+  return csvContent.join('\n')
+}
+
+export const transformDate = (value: string | number) => {
+  if (value == undefined || typeof value === 'number' || value === '') {
+    return ''
+  }
+  return (value as string).replaceAll('-', '')
+}
+
+export const uploadInvoiceFile = async (
+  filename: string,
+  csvContent: string
+) => {
+  await uploadFileToXledger(filename, csvContent)
 }

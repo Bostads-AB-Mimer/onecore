@@ -21,9 +21,20 @@ export interface Config {
   xledger: {
     url: string
     apiToken: string
+    sftp: {
+      host: string
+      username: string
+      password: string
+      glDirectory: string
+      arDirectory: string
+    }
   }
   procurementInvoices: {
     directory: string
+  }
+  rentalInvoices: {
+    importDirectory: string
+    exportDirectory: string
   }
   health: {
     xledger: {
@@ -37,6 +48,10 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5080,
+    rentalInvoices: {
+      importDirectory: './rental-invoice-files',
+      exportDirectory: './rental-invoice-export',
+    },
     xpandDatabase: {
       port: 1433,
     },
@@ -49,6 +64,13 @@ const config = configPackage({
     xledger: {
       url: 'https://www.xledger.net/graphql',
       apiToken: '',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        glDirectory: '/GL',
+        arDirectory: '/AR',
+      },
     },
     health: {
       xledger: {
@@ -65,5 +87,6 @@ export default {
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
   procurementInvoices: config.get('procurementInvoices'),
+  rentalInvoices: config.get('rentalInvoices'),
   health: config.get('health'),
 } as Config
