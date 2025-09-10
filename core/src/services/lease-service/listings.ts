@@ -49,6 +49,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: A contact code to filter out listings that are not valid to rent for the contact.
+   *       - in: query
+   *         name: rentalObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: A Rental Object Code to filter the listings.
    *     responses:
    *       '200':
    *         description: Successful response with the requested list of listings.
@@ -73,6 +79,7 @@ export const routes = (router: KoaRouter) => {
           .transform((value) => (value ? value === 'true' : undefined)),
         rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
         validToRentForContactCode: z.string().optional(),
+        rentalObjectCode: z.string().optional(),
       })
       const query = querySchema.safeParse(ctx.query)
 
@@ -82,6 +89,7 @@ export const routes = (router: KoaRouter) => {
         listingCategory: query.data?.listingCategory,
         published: query.data?.published,
         rentalRule: query.data?.rentalRule,
+        rentalObjectCode: query.data?.rentalObjectCode,
       })
 
       if (!result.ok) {

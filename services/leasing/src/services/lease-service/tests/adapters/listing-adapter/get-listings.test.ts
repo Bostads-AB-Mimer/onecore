@@ -94,6 +94,38 @@ describe(listingAdapter.getListings, () => {
       }
     }))
 
+  it('should filter on rentalObjectCode', () =>
+    withContext(async (ctx) => {
+      // Create listings
+      await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '1',
+          rentalRule: 'SCORED',
+          status: ListingStatus.Active,
+        }),
+        ctx.db
+      )
+
+      await listingAdapter.createListing(
+        factory.listing.build({
+          rentalObjectCode: '2',
+          rentalRule: 'NON_SCORED',
+          status: ListingStatus.Active,
+        }),
+        ctx.db
+      )
+
+      const result = await listingAdapter.getListings(
+        { rentalObjectCode: '1' },
+        ctx.db
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].rentalObjectCode).toEqual('1')
+      }
+    }))
   it('should return a list of listings', () =>
     withContext(async (ctx) => {
       // Create listings

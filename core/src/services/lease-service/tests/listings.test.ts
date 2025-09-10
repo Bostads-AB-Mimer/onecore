@@ -64,6 +64,34 @@ describe('GET /listings', () => {
     })
   })
 
+  it('responds with 200 on success with filter on published', async () => {
+    const listing = factory.listing.build({
+      id: 1337,
+      publishedFrom: new Date(),
+      publishedTo: new Date(),
+      rentalObjectCode: '12345',
+    })
+    const parkingSpace = factory.vacantParkingSpace.build({
+      rentalObjectCode: '12345',
+    })
+
+    const getListingsSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getListings')
+      .mockResolvedValueOnce({ ok: true, data: [listing] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
+      .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+
+    const res = await request(app.callback()).get('/listings?published=true')
+
+    expect(getListingsSpy).toHaveBeenCalledWith({ published: true })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: [expect.objectContaining({ id: 1337 })],
+    })
+  })
+
   it('responds with 200 on success with filter on rentalRule', async () => {
     const listing = factory.listing.build({
       id: 1337,
@@ -86,6 +114,40 @@ describe('GET /listings', () => {
 
     expect(getListingsSpy).toHaveBeenCalledWith({
       rentalRule: 'SCORED',
+      published: undefined,
+      listingCategory: undefined,
+      validToRentForContactCode: undefined,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: [expect.objectContaining({ id: 1337 })],
+    })
+  })
+
+  it('responds with 200 on success with filter on rentalObjectCode', async () => {
+    const listing = factory.listing.build({
+      id: 1337,
+      rentalRule: 'SCORED',
+      rentalObjectCode: '12345',
+    })
+    const parkingSpace = factory.vacantParkingSpace.build({
+      rentalObjectCode: '12345',
+    })
+
+    const getListingsSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getListings')
+      .mockResolvedValueOnce({ ok: true, data: [listing] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
+      .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+
+    const res = await request(app.callback()).get(
+      '/listings?rentalObjectCode=12345'
+    )
+
+    expect(getListingsSpy).toHaveBeenCalledWith({
+      rentalObjectCode: '12345',
       published: undefined,
       listingCategory: undefined,
       validToRentForContactCode: undefined,

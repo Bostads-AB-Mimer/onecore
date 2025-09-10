@@ -208,6 +208,7 @@ type GetListingsParams = {
   listingCategory?: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   published?: boolean
   rentalRule?: 'SCORED' | 'NON_SCORED'
+  rentalObjectCode?: string
 }
 
 const getListings = async (
@@ -219,6 +220,8 @@ const getListings = async (
   if (params.published !== undefined)
     queryParams.append('published', params.published.toString())
   if (params.rentalRule) queryParams.append('rentalRule', params.rentalRule)
+  if (params.rentalObjectCode)
+    queryParams.append('rentalObjectCode', params.rentalObjectCode)
 
   try {
     const response = await axios.get(

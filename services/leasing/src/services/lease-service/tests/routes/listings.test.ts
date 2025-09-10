@@ -129,6 +129,33 @@ describe('GET /listings', () => {
     })
   })
 
+  it('responds with 200 and listings with filter for a published rentalObjectCode', async () => {
+    const getListingsSpy = jest
+      .spyOn(listingAdapter, 'getListings')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.listing.buildList(1),
+      })
+
+    const res = await request(app.callback()).get(
+      '/listings?rentalObjectCode=1&published=true'
+    )
+
+    expect(getListingsSpy).toHaveBeenCalledWith({
+      rentalObjectCode: '1',
+      published: true,
+      rentalRule: undefined,
+      listingCategory: undefined,
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      content: expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(Number) }),
+      ]),
+    })
+  })
+
   it('responds with 500 on unknown error', async () => {
     jest.spyOn(listingAdapter, 'getListings').mockResolvedValueOnce({
       ok: false,
