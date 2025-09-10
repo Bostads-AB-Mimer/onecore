@@ -70,8 +70,12 @@ const schemas = {
     name: 'FacilityDetails',
     target: 'openApi3',
   }).definitions,
-  ...zodToJsonSchema(types.GetFacilityByRentalIdResponseSchema, {
-    name: 'GetFacilityByRentalIdResponse',
+  ...zodToJsonSchema(types.GetFacilitySchema, {
+    name: 'GetFacility',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.GetFacilitiesSchema, {
+    name: 'GetFacilities',
     target: 'openApi3',
   }).definitions,
 }

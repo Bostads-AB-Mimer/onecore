@@ -726,6 +726,70 @@ export interface paths {
       };
     };
   };
+  "/facilities/by-property-code/{propertyCode}": {
+    /**
+     * Get facilities by property code
+     * @description Returns a list of facilities for the specified property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property code of the property */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facilities */
+        200: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Facilities not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/facilities/by-building-code/{buildingCode}": {
+    /**
+     * Get facilities by building code
+     * @description Returns a list of facilities for the specified building code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The building code of the building */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facilities */
+        200: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Facilities not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
