@@ -6,7 +6,11 @@ import {
   getFacilitiesByPropertyCode,
   getFacilityByRentalId,
 } from '@src/adapters/facility-adapter'
-import { GetFacility, GetFacilities } from '@src/types/facility'
+import {
+  GetFacilityByRentalIdResponse,
+  GetFacilitiesByPropertyCodeResponse,
+  GetFacilitiesByBuildingCodeResponse,
+} from '@src/types/facility'
 
 /**
  * @swagger
@@ -55,7 +59,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const payload: GetFacility = {
+      const payload: GetFacilityByRentalIdResponse = {
         content: facility,
         ...metadata,
       }
@@ -91,12 +95,7 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
+   *               $ref: '#/components/schemas/GetFacilitiesByPropertyCodeResponse'
    *       404:
    *         description: Facilities not found
    *       500:
@@ -119,7 +118,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const payload: GetFacilities = {
+      const payload: GetFacilitiesByPropertyCodeResponse = {
         content: facilities,
         ...metadata,
       }
@@ -155,12 +154,7 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
+   *               $ref: '#/components/schemas/GetFacilitiesByBuildingCodeResponse'
    *       404:
    *         description: Facilities not found
    *       500:
@@ -187,7 +181,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const payload: GetFacilities = {
+      const payload: GetFacilitiesByBuildingCodeResponse = {
         content: facilities,
         ...metadata,
       }

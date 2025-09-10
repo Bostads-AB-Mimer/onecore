@@ -397,7 +397,7 @@ export async function getFacilityByRentalId(
 > {
   try {
     const fetchResponse = await client().GET(
-      '/facilities/rental-id/{rentalId}',
+      '/facilities/by-rental-id/{rentalId}',
       {
         params: { path: { rentalId } },
       }
@@ -477,7 +477,7 @@ export async function getMaintenanceUnitsByPropertyCode(
 }
 
 type GetFacilitiesByPropertyCodeResponse =
-  components['schemas']['GetFacilityByRentalIdResponse']['content']
+  components['schemas']['GetFacilitiesByPropertyCodeResponse']['content']
 
 export async function getFacilitiesByPropertyCode(
   propertyCode: string
@@ -507,12 +507,12 @@ export async function getFacilitiesByPropertyCode(
   }
 }
 
-type GetFacilityByBuildingCodeResponse =
-  components['schemas']['GetFacilityByBuildingCodeResponse']['content']
+type GetFacilitiesByBuildingCodeResponse =
+  components['schemas']['GetFacilitiesByBuildingCodeResponse']['content']
 export async function getFacilitiesByBuildingCode(
   buildingCode: string
 ): Promise<
-  AdapterResult<GetFacilityByBuildingCodeResponse, 'not-found' | 'unknown'>
+  AdapterResult<GetFacilitiesByBuildingCodeResponse, 'not-found' | 'unknown'>
 > {
   try {
     const fetchResponse = await client().GET(

@@ -35,14 +35,24 @@ export const FacilityDetailsSchema = z.object({
   area: z.number().nullable(),
 })
 
-export const GetFacilitySchema = createGenericResponseSchema(
+export const GetFacilityByRentalIdResponseSchema = createGenericResponseSchema(
   FacilityDetailsSchema
 )
 
-export type GetFacility = z.infer<typeof GetFacilitySchema>
+export type GetFacilityByRentalIdResponse = z.infer<
+  typeof GetFacilityByRentalIdResponseSchema
+>
 
-export const GetFacilitiesSchema = createGenericResponseSchema(
-  z.array(FacilityDetailsSchema)
-)
+export const GetFacilitiesByPropertyCodeResponseSchema =
+  createGenericResponseSchema(z.array(FacilityDetailsSchema))
 
-export type GetFacilities = z.infer<typeof GetFacilitiesSchema>
+export type GetFacilitiesByPropertyCodeResponse = z.infer<
+  typeof GetFacilitiesByPropertyCodeResponseSchema
+>
+
+export const GetFacilitiesByBuildingCodeResponseSchema =
+  createGenericResponseSchema(z.array(FacilityDetailsSchema))
+
+export type GetFacilitiesByBuildingCodeResponse = z.infer<
+  typeof GetFacilitiesByBuildingCodeResponseSchema
+>
