@@ -5,9 +5,8 @@ import {
   getFacilitiesByBuildingCode,
   getFacilitiesByPropertyCode,
   getFacilityByRentalId,
-  getFacilitySizeByRentalId,
 } from '@src/adapters/facility-adapter'
-import { GetFacilityByRentalIdResponse } from '@src/types/facility'
+import { GetFacility, GetFacilities } from '@src/types/facility'
 
 /**
  * @swagger
@@ -19,7 +18,7 @@ import { GetFacilityByRentalIdResponse } from '@src/types/facility'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /facilities/rental-id/{rentalId}:
+   * /facilities/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get a facility by rental ID
    *     description: Returns a facility with the specified rental ID
@@ -44,8 +43,9 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/facilities/rental-id/:rentalId', async (ctx) => {
+  router.get('/facilities/by-rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    logger.info(`GET /facilities/by-rental-id/${ctx.params.rentalId}`, metadata)
 
     try {
       const facility = await getFacilityByRentalId(ctx.params.rentalId)
@@ -55,42 +55,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const areaSize = await getFacilitySizeByRentalId(ctx.params.rentalId)
-
-      const payload: GetFacilityByRentalIdResponse = {
-        content: {
-          id: facility.propertyObject.facility.id,
-          code: facility.propertyObject.facility.code,
-          name: facility.propertyObject.facility.name,
-          entrance: facility.propertyObject.facility.entrance,
-          deleted: Boolean(facility.propertyObject.facility.deleteMark),
-          type: {
-            code: facility.propertyObject.facility.facilityType.code,
-            name: facility.propertyObject.facility.facilityType.name,
-          },
-          areaSize: areaSize?.value ?? null,
-          building: {
-            id: facility.buildingId,
-            code: facility.buildingCode,
-            name: facility.buildingName,
-          },
-          property: {
-            id: facility.propertyId,
-            code: facility.propertyCode,
-            name: facility.propertyName,
-          },
-          rentalInformation: {
-            rentalId: facility.rentalId,
-            apartmentNumber:
-              facility.propertyObject.rentalInformation.apartmentNumber,
-            type: {
-              code: facility.propertyObject.rentalInformation
-                .rentalInformationType.code,
-              name: facility.propertyObject.rentalInformation
-                .rentalInformationType.name,
-            },
-          },
-        },
+      const payload: GetFacility = {
+        content: facility,
         ...metadata,
       }
 
@@ -106,7 +72,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /facilities/property-code/{propertyCode}:
+   * /facilities/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get facilities by property code
    *     description: Returns a list of facilities for the specified property code
@@ -125,13 +91,18 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/GetFacilityByRentalIdResponse'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
    *       404:
-   *         description: Facility not found
+   *         description: Facilities not found
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/facilities/property-code/:propertyCode', async (ctx) => {
+  router.get('/facilities/by-property-code/:propertyCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(
       `GET /facilities/property-code/${ctx.params.propertyCode}`,
@@ -142,55 +113,21 @@ export const routes = (router: KoaRouter) => {
       const facilities = await getFacilitiesByPropertyCode(
         ctx.params.propertyCode
       )
-      if (!facilities) {
+      if (!facilities || facilities.length === 0) {
         ctx.status = 404
-        ctx.body = { reason: 'facility-not-found', ...metadata }
+        ctx.body = { reason: 'facilities-not-found', ...metadata }
         return
       }
 
-      const payload = facilities
-
-      // const payload: GetFacilityByRentalIdResponse = {
-      //   content: {
-      //     id: facility.propertyObject.facility.id,
-      //     code: facility.propertyObject.facility.code,
-      //     name: facility.propertyObject.facility.name,
-      //     entrance: facility.propertyObject.facility.entrance,
-      //     deleted: Boolean(facility.propertyObject.facility.deleteMark),
-      //     type: {
-      //       code: facility.propertyObject.facility.facilityType.code,
-      //       name: facility.propertyObject.facility.facilityType.name,
-      //     },
-      //     areaSize: areaSize?.value ?? null,
-      //     building: {
-      //       id: facility.buildingId,
-      //       code: facility.buildingCode,
-      //       name: facility.buildingName,
-      //     },
-      //     property: {
-      //       id: facility.propertyId,
-      //       code: facility.propertyCode,
-      //       name: facility.propertyName,
-      //     },
-      //     rentalInformation: {
-      //       rentalId: facility.rentalId,
-      //       apartmentNumber:
-      //         facility.propertyObject.rentalInformation.apartmentNumber,
-      //       type: {
-      //         code: facility.propertyObject.rentalInformation
-      //           .rentalInformationType.code,
-      //         name: facility.propertyObject.rentalInformation
-      //           .rentalInformationType.name,
-      //       },
-      //     },
-      //   },
-      //   ...metadata,
-      // }
+      const payload: GetFacilities = {
+        content: facilities,
+        ...metadata,
+      }
 
       ctx.status = 200
       ctx.body = payload
     } catch (err) {
-      logger.error(err, 'Error fetching facility by rental id')
+      logger.error(err, 'Error fetching facilities by property code')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
@@ -199,7 +136,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /facilities/building-code/{buildingCode}:
+   * /facilities/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get facilities by building code
    *     description: Returns a list of facilities for the specified building code
@@ -218,13 +155,18 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/GetFacilityByRentalIdResponse'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
    *       404:
-   *         description: Facility not found
+   *         description: Facilities not found
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/facilities/building-code/:buildingCode', async (ctx) => {
+  router.get('/facilities/by-building-code/:buildingCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(
       `GET /facilities/building-code/${ctx.params.buildingCode}`,
@@ -232,58 +174,28 @@ export const routes = (router: KoaRouter) => {
     )
 
     try {
+      console.log(
+        'Fetching facilities by building code:',
+        ctx.params.buildingCode
+      )
       const facilities = await getFacilitiesByBuildingCode(
         ctx.params.buildingCode
       )
-      if (!facilities) {
+      if (!facilities || facilities.length === 0) {
         ctx.status = 404
-        ctx.body = { reason: 'facility-not-found', ...metadata }
+        ctx.body = { reason: 'facilities-not-found', ...metadata }
         return
       }
 
-      const payload = facilities
-
-      // const payload: GetFacilityByRentalIdResponse = {
-      //   content: {
-      //     id: facility.propertyObject.facility.id,
-      //     code: facility.propertyObject.facility.code,
-      //     name: facility.propertyObject.facility.name,
-      //     entrance: facility.propertyObject.facility.entrance,
-      //     deleted: Boolean(facility.propertyObject.facility.deleteMark),
-      //     type: {
-      //       code: facility.propertyObject.facility.facilityType.code,
-      //       name: facility.propertyObject.facility.facilityType.name,
-      //     },
-      //     areaSize: areaSize?.value ?? null,
-      //     building: {
-      //       id: facility.buildingId,
-      //       code: facility.buildingCode,
-      //       name: facility.buildingName,
-      //     },
-      //     property: {
-      //       id: facility.propertyId,
-      //       code: facility.propertyCode,
-      //       name: facility.propertyName,
-      //     },
-      //     rentalInformation: {
-      //       rentalId: facility.rentalId,
-      //       apartmentNumber:
-      //         facility.propertyObject.rentalInformation.apartmentNumber,
-      //       type: {
-      //         code: facility.propertyObject.rentalInformation
-      //           .rentalInformationType.code,
-      //         name: facility.propertyObject.rentalInformation
-      //           .rentalInformationType.name,
-      //       },
-      //     },
-      //   },
-      //   ...metadata,
-      // }
+      const payload: GetFacilities = {
+        content: facilities,
+        ...metadata,
+      }
 
       ctx.status = 200
       ctx.body = payload
     } catch (err) {
-      logger.error(err, 'Error fetching facility by rental id')
+      logger.error(err, 'Error fetching facilities by building code')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

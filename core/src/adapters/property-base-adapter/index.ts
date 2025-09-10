@@ -475,3 +475,64 @@ export async function getMaintenanceUnitsByPropertyCode(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetFacilitiesByPropertyCodeResponse =
+  components['schemas']['GetFacilityByRentalIdResponse']['content']
+
+export async function getFacilitiesByPropertyCode(
+  propertyCode: string
+): Promise<
+  AdapterResult<GetFacilitiesByPropertyCodeResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/facilities/by-property-code/{propertyCode}',
+      {
+        params: { path: { propertyCode } },
+      }
+    )
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (!fetchResponse.data?.content) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getFacilitiesByPropertyCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetFacilityByBuildingCodeResponse =
+  components['schemas']['GetFacilityByBuildingCodeResponse']['content']
+export async function getFacilitiesByBuildingCode(
+  buildingCode: string
+): Promise<
+  AdapterResult<GetFacilityByBuildingCodeResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/facilities/by-building-code/{buildingCode}',
+      {
+        params: { path: { buildingCode } },
+      }
+    )
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (!fetchResponse.data?.content) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getFacilitiesByBuildingCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
