@@ -95,8 +95,6 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
     invoiceTypes[invoice.name] = true
   })
 
-  console.log('invoices', invoices)
-
   return invoices
 }
 

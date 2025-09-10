@@ -3,6 +3,8 @@ import { Invoice, InvoiceTransactionType, PaymentStatus } from 'onecore-types'
 import { logger } from 'onecore-utilities'
 import { loggedAxios as axios } from 'onecore-utilities'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import SftpClient from 'ssh2-sftp-client'
+import { Readable } from 'stream'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -446,6 +448,52 @@ export const transformAggregatedInvoiceRow = (
   }
 
   return transformedRow
+}
+
+export const uploadFile = async (filename: string, csvFile: string) => {
+  const sftpConfig: SftpClient.ConnectOptions = {
+    host: config.xledger.sftp.host,
+    username: config.xledger.sftp.username,
+    password: config.xledger.sftp.password,
+    algorithms: {
+      serverHostKey: ['ssh-dss'],
+    },
+    //    debug: console.log,
+  }
+
+  let remoteDir = ''
+
+  if (filename.endsWith('.gl.csv')) {
+    remoteDir = config.xledger.sftp.glDirectory
+  } else if (filename.endsWith('.ar.csv')) {
+    remoteDir = config.xledger.sftp.arDirectory
+  } else {
+    logger.error(
+      { filename },
+      'Unknown file type, accepted types are .gl.csv and .ar.csv'
+    )
+    throw new Error('Unknown file type, accepted types are .gl.csv and .ar.csv')
+  }
+
+  const stream = new Readable()
+  stream.push(csvFile)
+  stream.push(null)
+
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info({ file: remoteDir + '/' + filename }, 'Uploading file to sftp')
+    await sftp.put(stream, remoteDir + '/' + filename)
+    logger.info(
+      { file: remoteDir + '/' + filename },
+      'File uploaded successfully'
+    )
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
 }
 
 export const healthCheck = async () => {

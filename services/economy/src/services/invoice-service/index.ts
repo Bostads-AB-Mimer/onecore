@@ -12,6 +12,7 @@ import {
   createAggregateRows,
   createLedgerRows,
   processInvoiceRows,
+  uploadFile,
 } from './service'
 
 export const routes = (router: KoaRouter) => {
@@ -201,4 +202,26 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  router.post('(.*)/invoices/import/upload-file', async (ctx) => {
+    ctx.request.socket.setTimeout(0)
+    const metadata = generateRouteMetadata(ctx)
+    const filename = ctx.request.body.filename
+    const csvFile = ctx.request.body.fileContents
+
+    try {
+      await uploadFile(filename, csvFile)
+      ctx.status = 200
+      ctx.body = {
+        content: 'File upload completed',
+        ...metadata,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Error getting invoice transaction rows')
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
 }
