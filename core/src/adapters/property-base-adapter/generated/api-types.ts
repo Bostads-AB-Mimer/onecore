@@ -696,7 +696,7 @@ export interface paths {
       };
     };
   };
-  "/facilities/rental-id/{rentalId}": {
+  "/facilities/by-rental-id/{rentalId}": {
     /**
      * Get a facility by rental ID
      * @description Returns a facility with the specified rental ID
@@ -742,9 +742,7 @@ export interface paths {
         /** @description Successfully retrieved the facilities */
         200: {
           content: {
-            "application/json": {
-              content?: Record<string, never>[];
-            };
+            "application/json": components["schemas"]["GetFacilitiesByPropertyCodeResponse"];
           };
         };
         /** @description Facilities not found */
@@ -774,9 +772,7 @@ export interface paths {
         /** @description Successfully retrieved the facilities */
         200: {
           content: {
-            "application/json": {
-              content?: Record<string, never>[];
-            };
+            "application/json": components["schemas"]["GetFacilitiesByBuildingCodeResponse"];
           };
         };
         /** @description Facilities not found */
@@ -1415,7 +1411,7 @@ export interface components {
         name: string | null;
         code: string | null;
       };
-      areaSize: number | null;
+      area: number | null;
     };
     GetFacilityByRentalIdResponse: {
       content: {
@@ -1446,8 +1442,90 @@ export interface components {
           name: string | null;
           code: string | null;
         };
-        areaSize: number | null;
+        area: number | null;
       };
+      _links: {
+        self: {
+          href: string;
+        };
+        link: {
+          href: string;
+          templated: boolean;
+        };
+      };
+    };
+    GetFacilitiesByPropertyCodeResponse: {
+      content: ({
+          id: string;
+          code: string;
+          name: string | null;
+          entrance: string | null;
+          deleted: boolean;
+          type: {
+            code: string;
+            name: string | null;
+          };
+          rentalInformation: ({
+            apartmentNumber: string | null;
+            rentalId: string | null;
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          property: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          building: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          area: number | null;
+        })[];
+      _links: {
+        self: {
+          href: string;
+        };
+        link: {
+          href: string;
+          templated: boolean;
+        };
+      };
+    };
+    GetFacilitiesByBuildingCodeResponse: {
+      content: ({
+          id: string;
+          code: string;
+          name: string | null;
+          entrance: string | null;
+          deleted: boolean;
+          type: {
+            code: string;
+            name: string | null;
+          };
+          rentalInformation: ({
+            apartmentNumber: string | null;
+            rentalId: string | null;
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          property: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          building: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          area: number | null;
+        })[];
       _links: {
         self: {
           href: string;

@@ -31,6 +31,6 @@ export const FacilityDetailsFactory = Factory.define<FacilityDetails>(
       code: 'BuildingCode',
       name: 'BuildingName',
     },
-    areaSize: 100,
+    area: 100,
   })
 )
