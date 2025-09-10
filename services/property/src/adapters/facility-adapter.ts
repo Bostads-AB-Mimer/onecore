@@ -49,11 +49,11 @@ export const getFacilityByRentalId = async (rentalId: string) => {
     )
 
     // Get area for this facility
-    const areaMap = await getAreasByPropertyObjectIds([
+    const areaSizeMap = await getAreasByPropertyObjectIds([
       result.propertyObject.facility.propertyObjectId,
     ])
-    const area =
-      areaMap.get(result.propertyObject.facility.propertyObjectId) ?? null
+    const areaSize =
+      areaSizeMap.get(result.propertyObject.facility.propertyObjectId) ?? null
 
     const facility = {
       id: result.propertyObject.facility.id,
@@ -65,7 +65,7 @@ export const getFacilityByRentalId = async (rentalId: string) => {
         code: result.propertyObject.facility.facilityType?.code || '',
         name: result.propertyObject.facility.facilityType?.name || null,
       },
-      area,
+      areaSize,
       building: {
         id: result.buildingId,
         code: result.buildingCode,
@@ -155,7 +155,7 @@ export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => item.propertyObject.facility!.propertyObjectId)
 
-    const areaMap = await getAreasByPropertyObjectIds(propertyObjectIds)
+    const areaSizeMap = await getAreasByPropertyObjectIds(propertyObjectIds)
 
     const facilities = result
       .filter((item) => item.propertyObject.facility)
@@ -169,8 +169,9 @@ export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
           code: item.propertyObject.facility!.facilityType?.code,
           name: item.propertyObject.facility!.facilityType?.name || null,
         },
-        area:
-          areaMap.get(item.propertyObject.facility!.propertyObjectId) ?? null,
+        areaSize:
+          areaSizeMap.get(item.propertyObject.facility!.propertyObjectId) ??
+          null,
         building: {
           id: item.buildingId,
           code: item.buildingCode,
@@ -261,7 +262,7 @@ export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => item.propertyObject.facility!.propertyObjectId)
 
-    const areaMap = await getAreasByPropertyObjectIds(propertyObjectIds)
+    const areaSizeMap = await getAreasByPropertyObjectIds(propertyObjectIds)
 
     const facilities = result
       .filter((item) => item.propertyObject.facility)
@@ -275,8 +276,9 @@ export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
           code: item.propertyObject.facility!.facilityType?.code,
           name: item.propertyObject.facility!.facilityType?.name || null,
         },
-        area:
-          areaMap.get(item.propertyObject.facility!.propertyObjectId) ?? null,
+        areaSize:
+          areaSizeMap.get(item.propertyObject.facility!.propertyObjectId) ??
+          null,
         building: {
           id: item.buildingId,
           code: item.buildingCode,

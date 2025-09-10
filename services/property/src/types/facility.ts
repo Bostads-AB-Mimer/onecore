@@ -32,7 +32,7 @@ export const FacilityDetailsSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
-  area: z.number().nullable(),
+  areaSize: z.number().nullable(),
 })
 
 export const GetFacilityByRentalIdResponseSchema = createGenericResponseSchema(
