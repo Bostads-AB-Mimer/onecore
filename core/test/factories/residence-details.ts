@@ -91,12 +91,15 @@ export const ResidenceByRentalIdDetailsFactory = Factory.define<
     id: 'staircase-1',
     code: 'A',
     name: 'Staircase A',
-    floorPlan: 'Plan A',
-    accessibleByElevator: true,
-    deleted: false,
-    validityPeriod: {
-      fromDate: '2024-01-01T00:00:00Z',
-      toDate: '2025-12-31T23:59:59Z',
+    features: {
+      floorPlan: 'Plan A',
+      accessibleByElevator: true,
     },
+    dates: {
+      from: '2024-01-01T00:00:00Z',
+      to: '2025-12-31T23:59:59Z',
+    },
+    deleted: false,
+    timestamp: '2024-01-01T00:00:00Z',
   },
 }))
