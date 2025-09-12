@@ -1179,6 +1179,23 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      staircase: ({
+        id: string;
+        code: string;
+        name: string | null;
+        features: {
+          floorPlan: string | null;
+          accessibleByElevator: boolean;
+        };
+        dates: {
+          /** Format: date-time */
+          from: string;
+          /** Format: date-time */
+          to: string;
+        };
+        deleted: boolean;
+        timestamp: string;
+      }) | null;
       areaSize: number | null;
     };
     GetResidenceByRentalIdResponse: {
@@ -1220,6 +1237,23 @@ export interface components {
           name: string | null;
           code: string | null;
         };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          deleted: boolean;
+          timestamp: string;
+        }) | null;
         areaSize: number | null;
       };
       _links: {

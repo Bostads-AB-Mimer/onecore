@@ -87,6 +87,7 @@ export const getResidenceByRentalId = async (rentalId: string) => {
             deleteMark: true,
             fromDate: true,
             toDate: true,
+            timestamp: true,
           },
         },
         propertyObject: {
