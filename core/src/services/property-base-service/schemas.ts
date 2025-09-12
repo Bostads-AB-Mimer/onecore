@@ -260,6 +260,18 @@ export const ResidenceByRentalIdSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
+  staircase: z.object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+    floorPlan: z.string().nullable(),
+    accessibleByElevator: z.boolean(),
+    deleted: z.boolean(),
+    validityPeriod: z.object({
+      fromDate: z.string().datetime(),
+      toDate: z.string().datetime(),
+    }),
+  }).nullable(),
   areaSize: z.number().nullable(),
 })
 
