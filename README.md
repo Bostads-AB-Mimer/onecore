@@ -33,6 +33,83 @@ Apart from the core orchestration service, packages belong to one of three categ
     └── work-order/
 ```
 
+### Getting started
+
+#### Requirements
+
+After cloning the repository, make sure that you have the following installed on your system:
+
+- **nvm**
+- **npm**
+- **Node.js**
+- **Docker**
+
+#### Install runtime
+
+Install the required node version using `nvm`, if not already installed.
+
+```sh
+$ nvm install
+```
+
+Activate the required node version.
+
+```sh
+$ nvm use
+```
+
+#### Install dependencies
+
+Install dependencies. This may take 1-2 minutes, as it will resolve and download all packages required by all ONECore modules, as well as check for version conflicts.
+
+```sh
+$ npm run install
+```
+
+#### Run dev:init
+
+This will run any one-off initialization scripts in all modules that provide them.  
+Nearly all modules use dotenv/.env-files that are required to run with a local configuration, and these will be created with default values.
+Some of these still require manual attention after running this script, as some applications depend on non-public resources.
+
+```sh
+$ npm run dev:init
+```
+
+#### Run generate:static
+
+This will generate required code that is not subject to version control.
+
+```sh
+$ npm run generate:static
+```
+
+#### Build libs
+
+Most projects rely on the projects under libs/ and will not run or build unless they are built in your local project tree.
+
+```sh
+$ npm run build:libs
+```
+
+#### Dockerized services
+
+Some services depend on databases and kibana/elastic-search for logging. These can all be started as local Docker containers using `docker compose`
+
+```sh
+$ docker compose up -d
+```
+
+These services will apply schema migrations/updates as needed on startup, but they will not create the logical schema/database.
+
+Once the SQL container is running, you can create these by running:
+
+```sh
+$ npm run db:init
+
+```
+
+
 ### Local development
 
 [Turborepo](https://turborepo.com/) lets us run multiple packages simultaneously in a tidy manner using its "tui" configuration.
