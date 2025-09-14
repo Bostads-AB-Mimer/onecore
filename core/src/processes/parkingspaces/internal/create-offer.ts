@@ -82,15 +82,6 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    if (!listing.rentalObject.vacantFrom) {
-      return endFailingProcess(
-        log,
-        CreateOfferErrorCodes.RentalObjectNotVacant,
-        500,
-        `Listing with id ${listingId} has no vacantFrom date`
-      )
-    }
-
     const allApplicants =
       await leasingAdapter.getDetailedApplicantsByListingId(listingId)
 
