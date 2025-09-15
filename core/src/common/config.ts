@@ -32,6 +32,9 @@ export interface Config {
   propertyBaseService: {
     url: string
   }
+  economyService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -97,6 +100,9 @@ const config = configPackage({
     },
     propertyBaseService: {
       url: 'http://localhost:5050',
+    },
+    economyService: {
+      url: 'http://localhost:5080',
     },
     auth: {
       secret: 'very secret. replace this',
