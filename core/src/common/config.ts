@@ -152,6 +152,7 @@ export default {
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
+  economyService: config.get('economyService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),

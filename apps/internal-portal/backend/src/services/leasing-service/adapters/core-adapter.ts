@@ -1,3 +1,4 @@
+import { AxiosError, HttpStatusCode } from 'axios'
 import {
   Contact,
   CreateNoteOfInterestErrorCodes,
@@ -16,17 +17,13 @@ import {
   CommentThread,
   CommentThreadId,
 } from '@onecore/types'
-
-import { AxiosError, HttpStatusCode } from 'axios'
 import { z } from 'zod'
+
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
+import { AdapterResult } from '@/services/types'
 
 const coreBaseUrl = Config.core.url
-
-type AdapterResult<T, E> =
-  | { ok: false; err: E; statusCode: number }
-  | { ok: true; data: T }
 
 const getListingsWithApplicants = async (
   querystring: string
