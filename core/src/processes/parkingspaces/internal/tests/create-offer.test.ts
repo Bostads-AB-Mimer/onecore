@@ -499,7 +499,7 @@ describe('createOfferForInternalParkingSpace', () => {
     expect(expiresAt.getUTCMinutes()).toBe(59)
   })
 
-  it('creates offer on a listing with an undefined vacantFrom date', async () => {
+  it('should fail on attempting to create listing on rental object with no vacantFrom date', async () => {
     const listing = factory.listing.build({ status: ListingStatus.Expired })
     jest
       .spyOn(leasingAdapter, 'getListingByListingId')
@@ -514,39 +514,15 @@ describe('createOfferForInternalParkingSpace', () => {
         })
         .build(),
     })
-    jest
-      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: factory.detailedApplicant.buildList(1),
-      })
-    jest
-      .spyOn(leasingAdapter, 'getContactByContactCode')
-      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
-    jest
-      .spyOn(leasingAdapter, 'updateApplicantStatus')
-      .mockResolvedValueOnce(null)
-
-    jest
-      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
-      .mockResolvedValueOnce(null)
-
-    jest
-      .spyOn(leasingAdapter, 'createOffer')
-      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
-
-    const updateOfferSentAtSpy = jest
-      .spyOn(leasingAdapter, 'updateOfferSentAt')
-      .mockResolvedValue({ ok: true, data: null })
 
     const result = await createOfferForInternalParkingSpace(123)
 
-    expect(result).toEqual({
-      processStatus: ProcessStatus.successful,
-      data: null,
-      httpStatus: 200,
+    expect(result).toMatchObject({
+      processStatus: ProcessStatus.failed,
+      httpStatus: 500,
+      response: {
+        errorCode: 'rental-object-not-vacant',
+      },
     })
-
-    expect(updateOfferSentAtSpy).toHaveBeenCalledTimes(1)
   })
 })
