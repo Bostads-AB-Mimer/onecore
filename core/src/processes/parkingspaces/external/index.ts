@@ -70,7 +70,7 @@ export const createLeaseForExternalParkingSpace = async (
         error: 'parkingspace-not-external',
         httpStatus: 404,
         response: {
-          message: `This process currently only handles external parking spaces. The parking space provided is not external (it is ${listing.rentalRule}, ${parkingSpaceApplicationCategoryTranslation.external}).`,
+          message: `This process currently only handles NON-SCORED parking spaces. The listing provided is not NON-SCORED (it is ${listing.rentalRule}).`,
         },
       }
     }
