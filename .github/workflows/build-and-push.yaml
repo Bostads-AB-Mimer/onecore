@@ -59,34 +59,34 @@ jobs:
         shell: bash
         env:
           PKGVER: ${{ steps.pkg-details.outputs.version }}
-          run: |
-            if [[ -n "$HEAD_TAG" ]]; then
-              # Build release for production
-              echo "build_type=release" >> $GITHUB_OUTPUT
-              echo "build_tag_base=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
-              echo "release_version=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
-              echo "version_bump_type=patch" >> $GITHUB_OUTPUT
+        run: |
+          if [[ -n "$HEAD_TAG" ]]; then
+            # Build release for production
+            echo "build_type=release" >> $GITHUB_OUTPUT
+            echo "build_tag_base=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
+            echo "release_version=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
+            echo "version_bump_type=patch" >> $GITHUB_OUTPUT
 
-            elif [[ "$HEAD_BRANCH" == "main" ]]; then
-              # Build CI snapshot
-              echo "build_type=snapshot" >> $GITHUB_OUTPUT
-              echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
-              echo "version_bump_type=patch" >> $GITHUB_OUTPUT
+          elif [[ "$HEAD_BRANCH" == "main" ]]; then
+            # Build CI snapshot
+            echo "build_type=snapshot" >> $GITHUB_OUTPUT
+            echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
+            echo "version_bump_type=patch" >> $GITHUB_OUTPUT
 
-            elif [[ "$HEAD_BRANCH" == epic/* ]]; then
-              # Build incremental epic
-              echo "build_type=epic" >> $GITHUB_OUTPUT
-              echo "build_tag_inc=true" >> $GITHUB_OUTPUT
-              BASE=$(echo "$HEAD_BRANCH" | awk -F"/|-" '{print $1 "-" $2 "-" $3}')
-              echo "build_tag_base=${BASE}" >> $GITHUB_OUTPUT
+          elif [[ "$HEAD_BRANCH" == epic/* ]]; then
+            # Build incremental epic
+            echo "build_type=epic" >> $GITHUB_OUTPUT
+            echo "build_tag_inc=true" >> $GITHUB_OUTPUT
+            BASE=$(echo "$HEAD_BRANCH" | awk -F"/|-" '{print $1 "-" $2 "-" $3}')
+            echo "build_tag_base=${BASE}" >> $GITHUB_OUTPUT
 
-            elif [[ "$HEAD_BRANCH" == release/* ]]; then
-              # Build incremental release candidate
-              echo "build_type=rc" >> $GITHUB_OUTPUT
-              echo "build_tag_inc=true" >> $GITHUB_OUTPUT
-              echo "build_tag_base=${HEAD_BRANCH#release/}-rc" >> $GITHUB_OUTPUT
-              echo "release_version=${HEAD_BRANCH#release/}" >> $GITHUB_OUTPUT
-            fi
+          elif [[ "$HEAD_BRANCH" == release/* ]]; then
+            # Build incremental release candidate
+            echo "build_type=rc" >> $GITHUB_OUTPUT
+            echo "build_tag_inc=true" >> $GITHUB_OUTPUT
+            echo "build_tag_base=${HEAD_BRANCH#release/}-rc" >> $GITHUB_OUTPUT
+            echo "release_version=${HEAD_BRANCH#release/}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Determine incremental build tag
         id: incremental-tag
