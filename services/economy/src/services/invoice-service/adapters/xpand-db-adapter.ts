@@ -35,7 +35,7 @@ type RoundOffInformation = {
   costCode: string
 }
 
-export const db = knex({
+const db = knex({
   connection: {
     host: config.xpandDatabase.host,
     user: config.xpandDatabase.user,
@@ -44,8 +44,13 @@ export const db = knex({
     database: config.xpandDatabase.database,
     requestTimeout: 15000,
   },
+  pool: { min: 0, max: 10 },
   client: 'mssql',
 })
+
+export const closeDb = () => {
+  db.destroy()
+}
 
 let roundOffInformation: RoundOffInformation | undefined = undefined
 
@@ -330,10 +335,6 @@ export const enrichInvoiceRows = async (
           })
           return null
         }
-
-        process.stdout.clearLine(0)
-        process.stdout.cursorTo(0)
-        process.stdout.write('Enriching ' + (i++).toString())
 
         return { ...row, ...additionalColumns }
       }
