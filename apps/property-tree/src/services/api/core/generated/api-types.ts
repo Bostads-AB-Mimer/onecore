@@ -2208,7 +2208,7 @@ export interface paths {
       };
     };
   };
-  "/propertyBase/companies": {
+  "/companies": {
     /**
      * Get all companies
      * @description Retrieves companies from property base
