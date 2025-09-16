@@ -498,4 +498,31 @@ describe('createOfferForInternalParkingSpace', () => {
     expect(expiresAt.getUTCHours()).toBe(23)
     expect(expiresAt.getUTCMinutes()).toBe(59)
   })
+
+  it('should fail on attempting to create listing on rental object with no vacantFrom date', async () => {
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({
+          rentalObjectCode: listing.rentalObjectCode,
+          vacantFrom: undefined,
+        })
+        .build(),
+    })
+
+    const result = await createOfferForInternalParkingSpace(123)
+
+    expect(result).toMatchObject({
+      processStatus: ProcessStatus.failed,
+      httpStatus: 500,
+      response: {
+        errorCode: 'rental-object-not-vacant',
+      },
+    })
+  })
 })
