@@ -3,6 +3,11 @@ import { MenuItem, Select } from '@mui/material'
 import { memo, useCallback } from 'react'
 import { RentalObject } from '@onecore/types'
 
+// Local extension of RentalObject for frontend features
+interface RentalObjectWithAttempts extends RentalObject {
+  listingAttemptsCount?: number
+}
+
 // Memoized Select component to prevent unnecessary re-renders
 const RentalRuleSelect = memo(
   ({
@@ -42,7 +47,9 @@ const numberFormatter = new Intl.NumberFormat('sv-SE', {
   currency: 'SEK',
 })
 
-export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
+export const getParkingSpaceColumns = (): Array<
+  GridColDef<RentalObjectWithAttempts>
+> => {
   return [
     {
       field: 'address',
@@ -77,9 +84,10 @@ export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
       valueFormatter: ({ value }) => `${numberFormatter.format(value)}/mån`,
     },
     {
-      field: 'numTimesPublishedInInternalQueue',
+      field: 'listingAttemptsCount',
       flex: 1,
       headerName: 'Antal publiceringar som Intern',
+      valueFormatter: ({ value }) => (value ?? 0).toString(),
     },
   ]
 }
