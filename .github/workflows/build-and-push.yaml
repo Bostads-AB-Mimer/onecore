@@ -11,12 +11,18 @@ on:
       - epic/**
       - feature/**
       - release/**
+  push:
     tags:
       - v*.*.*
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    env:
+      # Prefer workflow_run context if present, otherwise fall back defaults
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || (github.ref_type == 'branch' && github.ref_name) }}
+      HEAD_TAG:    ${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name || '' }}
+      HEAD_SHA:    ${{ github.event.workflow_run.head_sha || github.sha }}
     outputs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
       build_type: ${{ steps.build-type.outputs.build_type }}
@@ -32,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
 
       - name: Read build matrix
@@ -53,37 +59,35 @@ jobs:
         shell: bash
         env:
           PKGVER: ${{ steps.pkg-details.outputs.version }}
-        run: |
-          echo "GITHUB_REF_TYPE=${GITHUB_REF_TYPE}"
-          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
-          echo "GITHUB_REF=${GITHUB_REF}"
-          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
-            if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+          run: |
+            if [[ -n "$HEAD_TAG" ]]; then
+              # Build release for production
+              echo "build_type=release" >> $GITHUB_OUTPUT
+              echo "build_tag_base=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
+              echo "release_version=${HEAD_TAG#v}" >> $GITHUB_OUTPUT
+              echo "version_bump_type=patch" >> $GITHUB_OUTPUT
+
+            elif [[ "$HEAD_BRANCH" == "main" ]]; then
               # Build CI snapshot
               echo "build_type=snapshot" >> $GITHUB_OUTPUT
               echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
               echo "version_bump_type=patch" >> $GITHUB_OUTPUT
-            elif [[ "$GITHUB_REF" == refs/heads/epic/* ]]; then
+
+            elif [[ "$HEAD_BRANCH" == epic/* ]]; then
               # Build incremental epic
               echo "build_type=epic" >> $GITHUB_OUTPUT
               echo "build_tag_inc=true" >> $GITHUB_OUTPUT
-              BASE=$(echo "$GITHUB_REF_NAME" | awk -F"/|-" '{print $1 "-" $2 "-" $3}')
+              BASE=$(echo "$HEAD_BRANCH" | awk -F"/|-" '{print $1 "-" $2 "-" $3}')
               echo "build_tag_base=${BASE}" >> $GITHUB_OUTPUT
-            elif [[ "$GITHUB_REF" == refs/heads/release/* ]]; then
+
+            elif [[ "$HEAD_BRANCH" == release/* ]]; then
               # Build incremental release candidate
               echo "build_type=rc" >> $GITHUB_OUTPUT
               echo "build_tag_inc=true" >> $GITHUB_OUTPUT
-              echo "build_tag_base=${GITHUB_REF_NAME#release/}-rc" >> $GITHUB_OUTPUT
-              echo "release_version=${GITHUB_REF_NAME#release/}" >> $GITHUB_OUTPUT
+              echo "build_tag_base=${HEAD_BRANCH#release/}-rc" >> $GITHUB_OUTPUT
+              echo "release_version=${HEAD_BRANCH#release/}" >> $GITHUB_OUTPUT
             fi
-          elif [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            # Build release for production
-            echo "build_type=release" >> $GITHUB_OUTPUT
-            echo "build_tag_base=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-            echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-            echo "version_bump_type=patch" >> $GITHUB_OUTPUT
-          fi
-          
+
       - name: Determine incremental build tag
         id: incremental-tag
         if: steps.build-type.outputs.build_tag_inc == 'true'
