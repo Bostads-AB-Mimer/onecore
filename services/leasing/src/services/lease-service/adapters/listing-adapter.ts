@@ -357,7 +357,9 @@ const getListings = async (
         builder
           .where('Status', '=', ListingStatus.Active)
           .andWhere('PublishedFrom', '<=', now)
-          .andWhere('PublishedTo', '>=', now)
+          .andWhere(function () {
+            this.whereNull('PublishedTo').orWhere('PublishedTo', '>=', now)
+          })
       }
       if (params.rentalRule) {
         builder.andWhere('RentalRule', '=', params.rentalRule)
