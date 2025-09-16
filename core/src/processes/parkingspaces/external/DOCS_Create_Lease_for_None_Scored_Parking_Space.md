@@ -4,8 +4,8 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Get Parking Space)
-B --> C{Is the Parking<br/>Space Non Scored?}
+A[Start] -->B(Get Listing)
+B --> C{Is the Listing Non Scored?}
 C --> |No| O[End]
 C --> |Yes| D[Get Applicant with Leases]
 D --> Q{Does Applicant have an Address?}
