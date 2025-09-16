@@ -1,5 +1,8 @@
 import KoaRouter from '@koa/router'
-import { getInvoicesByContactCode } from './adapters/xledger-adapter'
+import {
+  getInvoiceByInvoiceNumber,
+  getInvoicesByContactCode,
+} from './adapters/xledger-adapter'
 import {
   saveContacts,
   createBatch,
@@ -20,6 +23,24 @@ export const routes = (router: KoaRouter) => {
     const contactCode = ctx.params.contactCode
     try {
       const result = await getInvoicesByContactCode(contactCode)
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
+    try {
+      const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
+      if (!result) {
+        ctx.status = 404
+        return
+      }
+
       ctx.status = 200
       ctx.body = result
     } catch (error: any) {
