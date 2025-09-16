@@ -8,7 +8,7 @@
     "test": "jest",
     "build": "holidays2json --pick SE --min && tsc",
     "test:watch": "TZ=UTC jest --watch",
-    "start": "npm run migrate:up && node index",
+    "start": "npm run migrate:up && node -r dotenv/config build/index",
     "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "dev:init": "npm run prepare:dotenv",
     "lint": "eslint src/",
