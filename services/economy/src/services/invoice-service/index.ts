@@ -7,7 +7,7 @@ import {
 } from './adapters/invoice-data-db-adapter'
 import { getContacts as getXpandContacts } from './adapters/xpand-db-adapter'
 import { syncContact, transformContact } from './adapters/xledger-adapter'
-import { generateRouteMetadata, logger } from 'onecore-utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
   createAggregateRows,
   createLedgerRows,

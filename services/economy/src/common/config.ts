@@ -41,6 +41,14 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    economyDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
   }
 }
 
@@ -75,6 +83,14 @@ const config = configPackage({
     health: {
       xledger: {
         systemName: 'xledger',
+        minimumMinutesBetweenRequests: 5,
+      },
+      economyDatabase: {
+        systemName: 'economy database',
+        minimumMinutesBetweenRequests: 5,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
         minimumMinutesBetweenRequests: 5,
       },
     },

@@ -1,7 +1,6 @@
 import knex from 'knex'
 import config from '../../../common/config'
 import { InvoiceDataRow } from '../../../common/types'
-import { logger } from 'onecore-utilities'
 
 type FacilityDistributions = Record<
   string,
@@ -78,7 +77,7 @@ const getDistributions = async (
   })
 
   // If distributionPercentage is 0, there is no distribution. Set to 1.
-  for (const [propertyId, distribution] of Object.entries(distributions)) {
+  for (const [_propertyId, distribution] of Object.entries(distributions)) {
     if (distribution.distributionPercentage === 0) {
       distribution.distributionPercentage = 1
     }

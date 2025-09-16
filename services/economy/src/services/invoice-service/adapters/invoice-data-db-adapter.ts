@@ -11,9 +11,9 @@ import {
 } from '../../../common/types'
 import knex from 'knex'
 import config from '../../../common/config'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
-const db = knex({
+export const db = knex({
   connection: {
     host: config.economyDatabase.host,
     user: config.economyDatabase.user,
@@ -327,7 +327,7 @@ export const addAccountInformation = async (
           row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
           row.totalAccount = TOTAL_ACCOUNT
         }
-      } catch (error: any) {
+      } catch {
         console.log(row)
       }
     }

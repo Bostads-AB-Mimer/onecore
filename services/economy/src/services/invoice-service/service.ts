@@ -29,7 +29,7 @@ import {
   transformAggregatedInvoiceRow,
   uploadFile as uploadFileToXledger,
 } from './adapters/xledger-adapter'
-import { Contact } from 'onecore-types'
+import { Contact } from '@onecore/types'
 import { excelFileToInvoiceDataRows } from './adapters/excel-adapter'
 /*import {
   createInvoiceBatch,
@@ -40,7 +40,7 @@ import { excelFileToInvoiceDataRows } from './adapters/excel-adapter'
   saveInvoiceContactsToDb,
   uploadInvoiceFile as uploadInvoiceFileEconomy,
 } from './adapters/economy-adapter'*/
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -443,7 +443,7 @@ export const processInvoiceDataFile = async (
         batchId
       )
       const contacts = await getXpandContacts(contactCodes.contacts)
-      const result = await saveContacts(contacts, batchId)
+      await saveContacts(contacts, batchId)
 
       /*if (contactCodes.errors && contactCodes.errors.length > 0) {
         errors.push(contactCodes.err  ors)
