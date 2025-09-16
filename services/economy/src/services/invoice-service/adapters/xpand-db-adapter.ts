@@ -5,8 +5,8 @@ import {
   Invoice,
   InvoiceDeliveryMethod,
 } from '../../../common/types'
-import { Address } from 'onecore-types'
-import { logger } from 'onecore-utilities'
+import { Address } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { xledgerDateString, XpandContact } from '../../../common/types'
 
 type RentArticleDetails = Record<
@@ -35,7 +35,7 @@ type RoundOffInformation = {
   costCode: string
 }
 
-const db = knex({
+export const db = knex({
   connection: {
     host: config.xpandDatabase.host,
     user: config.xpandDatabase.user,

@@ -3,7 +3,7 @@ import config from '../../../common/config'
 import { XMLParser } from 'fast-xml-parser'
 import path from 'path'
 import { InvoiceDataRow } from '../../../common/types'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 
 const xmlParserOptions = {
   ignoreAttributes: false,
@@ -189,7 +189,7 @@ const readXmlFiles = async (xmlFileNames: string[]) => {
       const parser = new XMLParser(xmlParserOptions)
       const xmlContents = parser.parse(xmlFile)['Invoice']
       xmlFiles.push(xmlContents)
-    } catch (err) {
+    } catch {
       logger.error({ xmlFileName }, 'Error reading xml file')
     }
   }
@@ -235,6 +235,6 @@ export const getNewProcurementInvoiceRows = async () => {
   return invoiceRows
 }
 
-export const markProcurementFilesAsImported = async (files: string[]) => {
+export const markProcurementFilesAsImported = async (_files: string[]) => {
   return
 }

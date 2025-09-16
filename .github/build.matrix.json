@@ -8,6 +8,14 @@
     "imageName": "onecore-communication"
   },
   {
+    "name": "economy",
+    "label": "ONECore Economy Service",
+    "package": "@onecore/economy",
+    "path": "services/economy",
+    "docker": true,
+    "imageName": "onecore-economy"
+  },
+  {
     "name": "leasing",
     "label": "ONECore Leasing Service",
     "package": "@onecore/leasing",

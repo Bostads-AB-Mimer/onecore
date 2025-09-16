@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import { importNewFiles } from './service'
 
 export const routes = (router: KoaRouter) => {

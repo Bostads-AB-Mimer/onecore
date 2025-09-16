@@ -1,4 +1,4 @@
-import { logger } from 'onecore-utilities'
+import { logger } from '@onecore/utilities'
 import config from '../common/config'
 import fs from 'fs/promises'
 import { sep } from 'node:path'
