@@ -273,7 +273,9 @@ export const routes = (router: KoaRouter) => {
                 name: result.staircase.name,
                 features: {
                   floorPlan: result.staircase.floorPlan,
-                  accessibleByElevator: Boolean(result.staircase.accessibleByElevator),
+                  accessibleByElevator: Boolean(
+                    result.staircase.accessibleByElevator
+                  ),
                 },
                 dates: {
                   from: result.staircase.fromDate,

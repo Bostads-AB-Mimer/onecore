@@ -130,7 +130,6 @@ export const ResidenceDetailedSchema = z.object({
   size: z.number().nullable(),
 })
 
-
 export const ResidenceByRentalIdSchema = z.object({
   id: z.string(),
   code: z.string(),
