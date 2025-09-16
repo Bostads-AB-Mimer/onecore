@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
-import * as economyAdapter from '@/services/economy-service/core-adapter'
+import * as economyAdapter from './core-adapter'
 import { makeResponseBody } from '../utils'
 
 export const routes = (router: KoaRouter) => {

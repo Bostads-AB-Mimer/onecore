@@ -1,7 +1,7 @@
 import { Invoice } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-import { getFromCore } from '@/services/common/adapters/core-adapter'
+import { getFromCore } from '../../services/common/adapters/core-adapter'
 import { AdapterResult } from '@/services/types'
 
 import config from '../../common/config'
