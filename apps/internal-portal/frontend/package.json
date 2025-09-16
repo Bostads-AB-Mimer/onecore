@@ -1,6 +1,6 @@
 {
   "name": "@onecore/internal-portal",
-  "version": "1.4.19",
+  "version": "1.4.20",
   "type": "module",
   "private": true,
   "packageManager": "npm",
