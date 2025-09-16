@@ -71,6 +71,14 @@ jobs:
           MATRIX=$(cat ./.github/build.matrix.json | jq -c .)
           echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
 
+      # Emit ref/branch info for dependent workflows triggered with workflow_run
+      - name: Emit ref/branch
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.ref_name: ${{ github.ref_name }}"
+          echo "head_branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "head_sha: ${{ github.event.workflow_run.head_sha }}"
+
   lint:
     name: ${{ matrix.package }} - Lint
     needs: prepare
