@@ -1,6 +1,6 @@
 {
   "name": "@onecore/property",
-  "version": "1.4.21",
+  "version": "1.4.22",
   "description": "POC to investigate Prisma as data-layer between Xpand and ONECore",
   "license": "MIT",
   "homepage": "https://github.com/Bostads-AB-Mimer/property-base#readme",

@@ -1,6 +1,6 @@
 {
   "name": "@onecore/economy",
-  "version": "1.4.20",
+  "version": "1.4.22",
   "description": "ONECore Economy Service",
   "main": "./src/index.ts",
   "private": "true",
