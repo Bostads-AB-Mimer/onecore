@@ -8,6 +8,7 @@ import {
   getBatchAggregatedRowsCsv,
   getBatchLedgerRowsCsv,
   uploadInvoiceFile,
+  markBatchAsProcessed,
 } from '../services/invoice-service/service'
 
 const companies = ['001', '006']
@@ -59,7 +60,6 @@ const importRentalInvoicesScript = async () => {
         ledgerCsv
       )
 
-      // TODO: Upload files
       await uploadInvoiceFile(contactsFilename, contactsCsv)
       logger.info({ contactsFilename }, 'Uploaded file')
       await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
@@ -67,7 +67,7 @@ const importRentalInvoicesScript = async () => {
       await uploadInvoiceFile(ledgerFilename, ledgerCsv)
       logger.info({ ledgerFilename }, 'Uploaded file')
 
-      // TODO: Mark invoices as processed
+      await markBatchAsProcessed(parseInt(batchId))
     }
 
     logger.info(
@@ -84,6 +84,7 @@ const importRentalInvoicesScript = async () => {
   }
 
   logger.info('All files processed.')
+  return
 }
 
 importRentalInvoicesScript()

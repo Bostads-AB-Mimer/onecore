@@ -281,8 +281,7 @@ const getAccountDbId = async (account: string) => {
   }
 }
 
-// FIXME: Unused?
-export const createAggregatedTransaction = async (
+const createAggregatedTransaction = async (
   account: string,
   postedDate: string,
   amount: number,
@@ -320,7 +319,7 @@ export const createAggregatedTransaction = async (
   try {
     const result = await makeXledgerRequest(transactionQuery)
     return result.data.addGLImportItems.edges
-  } catch {
+  } catch (error) {
     return
   }
 }

@@ -30,7 +30,8 @@ export interface Config {
     }
   }
   procurementInvoices: {
-    directory: string
+    importDirectory: string
+    exportDirectory: string
   }
   rentalInvoices: {
     importDirectory: string
@@ -38,14 +39,6 @@ export interface Config {
   }
   health: {
     xledger: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    economyDatabase: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    xpandDatabase: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -67,7 +60,8 @@ const config = configPackage({
       port: 1438,
     },
     procurementInvoices: {
-      directory: './procurement-invoices/invoices',
+      importDirectory: './procurement-invoices/invoices',
+      exportDirectory: './procurement-invoices/export',
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -83,14 +77,6 @@ const config = configPackage({
     health: {
       xledger: {
         systemName: 'xledger',
-        minimumMinutesBetweenRequests: 5,
-      },
-      economyDatabase: {
-        systemName: 'economy database',
-        minimumMinutesBetweenRequests: 5,
-      },
-      xpandDatabase: {
-        systemName: 'xpand database',
         minimumMinutesBetweenRequests: 5,
       },
     },

@@ -1,7 +1,17 @@
-import { getNewProcurementInvoiceRows } from './adapters/procurement-file-adapter'
-import { enrichProcurementInvoiceRows } from './adapters/xpand-db-adapter'
-import { getCounterPartCustomers } from './adapters/invoice-data-db-adapter'
+import {
+  getNewProcurementInvoiceRows,
+  markProcurementFilesAsImported,
+} from './adapters/procurement-file-adapter'
+import {
+  enrichProcurementInvoiceRows,
+  closeDb as closeXpandDb,
+} from './adapters/xpand-db-adapter'
+import {
+  getCounterPartCustomers,
+  closeDb as closeInvoiceDb,
+} from './adapters/invoice-data-db-adapter'
 import { InvoiceDataRow } from '../../common/types'
+import { logger } from '@onecore/utilities'
 
 const createVoucherNumbers = (invoiceDataRows: InvoiceDataRow[]) => {
   let lastRow = invoiceDataRows[0]
@@ -70,8 +80,14 @@ const convertInvoiceRowsToCsv = async (invoiceDataRows: InvoiceDataRow[]) => {
 
 export const importNewFiles = async () => {
   const importedInvoiceRows = await getNewProcurementInvoiceRows()
+  logger.info(
+    { rows: importedInvoiceRows.length },
+    'Read invoice rows from files'
+  )
   const enrichedInvoiceRows =
     await enrichProcurementInvoiceRows(importedInvoiceRows)
+
+  logger.info({ rows: importedInvoiceRows.length }, 'Enriched invoice rows')
   const batchedInvoiceRows = await createVoucherNumbers(
     enrichedInvoiceRows.rows
   )
@@ -82,5 +98,12 @@ export const importNewFiles = async () => {
 
   const csvLines = convertInvoiceRowsToCsv(batchedInvoiceRows)
 
+  await markProcurementFilesAsImported()
+
   return csvLines
+}
+
+export const closeDatabases = () => {
+  closeXpandDb()
+  closeInvoiceDb()
 }
