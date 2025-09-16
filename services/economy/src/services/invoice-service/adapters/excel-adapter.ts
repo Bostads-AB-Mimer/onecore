@@ -46,5 +46,7 @@ export const excelFileToInvoiceDataRows = async (
     }
   }
 
+  excelDataStream.destroy()
+
   return invoiceRows
 }

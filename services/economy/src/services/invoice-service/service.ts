@@ -9,12 +9,16 @@ import {
   saveInvoiceRows,
   saveContacts,
   getContacts as getInvoiceContacts,
+  markInvoicesAsImported,
+  excludeExportedInvoices,
+  closeDb as closeInvoiceDb,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
   getInvoices as getXpandInvoices,
   getRoundOffInformation,
   getContacts as getXpandContacts,
+  closeDb as closeXpandDb,
 } from './adapters/xpand-db-adapter'
 import {
   CounterPartCustomers,
@@ -27,19 +31,11 @@ import {
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
+  transformContact,
   uploadFile as uploadFileToXledger,
 } from './adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
 import { excelFileToInvoiceDataRows } from './adapters/excel-adapter'
-/*import {
-  createInvoiceBatch,
-  enrichInvoiceDataRows,
-  getBatchAggregatedRows,
-  getBatchContacts,
-  getBatchLedgerRows,
-  saveInvoiceContactsToDb,
-  uploadInvoiceFile as uploadInvoiceFileEconomy,
-} from './adapters/economy-adapter'*/
 import { logger } from '@onecore/utilities'
 
 const createRoundOffRow = async (
@@ -412,14 +408,18 @@ export const processInvoiceDataFile = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    const invoiceDataRows = (
+    const fileInvoiceDataRows = (
       await excelFileToInvoiceDataRows(invoiceDataFileName)
     ).filter((row) => (row.company as string) === companyId)
 
+    const invoiceDataRows = await excludeExportedInvoices(fileInvoiceDataRows)
+
     console.log(
-      'Importing',
+      'Read',
+      fileInvoiceDataRows.length,
+      'rows, importing',
       invoiceDataRows.length,
-      'rows for company',
+      'for company',
       companyId
     )
 
@@ -435,7 +435,11 @@ export const processInvoiceDataFile = async (
       )
       const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
       logger.info(
-        { startNum, endNum, totalrows: currentInvoiceDataRows.length },
+        {
+          chunkStart: startNum,
+          chunkEnd: endNum,
+          totalRows: invoiceDataRows.length,
+        },
         'Processing rows'
       )
       const contactCodes = await processInvoiceRows(
@@ -443,7 +447,7 @@ export const processInvoiceDataFile = async (
         batchId
       )
       const contacts = await getXpandContacts(contactCodes.contacts)
-      await saveContacts(contacts, batchId)
+      const result = await saveContacts(contacts, batchId)
 
       /*if (contactCodes.errors && contactCodes.errors.length > 0) {
         errors.push(contactCodes.err  ors)
@@ -467,7 +471,9 @@ export const processInvoiceDataFile = async (
 }
 
 export const getBatchContactsCsv = async (batchId: string) => {
-  const contacts = await getInvoiceContacts(batchId)
+  const invoiceContacts = await getInvoiceContacts(batchId)
+  const contacts = invoiceContacts.map(transformContact)
+
   const csvContent: string[] = []
 
   csvContent.push(
@@ -530,4 +536,13 @@ export const uploadInvoiceFile = async (
   csvContent: string
 ) => {
   await uploadFileToXledger(filename, csvContent)
+}
+
+export const markBatchAsProcessed = async (batchId: number) => {
+  await markInvoicesAsImported(batchId)
+}
+
+export const closeDatabases = () => {
+  closeXpandDb()
+  closeInvoiceDb()
 }

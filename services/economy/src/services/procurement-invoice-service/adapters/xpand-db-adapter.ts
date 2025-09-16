@@ -19,6 +19,10 @@ const db = knex({
   client: 'mssql',
 })
 
+export const closeDb = () => {
+  db.destroy()
+}
+
 const getDistributions = async (
   facilityId: string,
   year: string
@@ -77,7 +81,7 @@ const getDistributions = async (
   })
 
   // If distributionPercentage is 0, there is no distribution. Set to 1.
-  for (const [_propertyId, distribution] of Object.entries(distributions)) {
+  for (const [propertyId, distribution] of Object.entries(distributions)) {
     if (distribution.distributionPercentage === 0) {
       distribution.distributionPercentage = 1
     }

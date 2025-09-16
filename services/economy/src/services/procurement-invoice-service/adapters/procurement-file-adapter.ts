@@ -19,8 +19,15 @@ enum ProcurementInvoiceType {
   solar = 5,
 }
 
-// How many months to backdate costs, index is month number
-// according to Date.getMonth() - i.e. 0 = January
+/**
+ * How many months to backdate costs from IssueDate
+ * Index is month number according to Date.getMonth()
+ * - i.e. 0 = January
+ *
+ * Example:
+ * Invoice has issue date 2025-06-05, with invoice period 2025-05-01 to 2025-05-31
+ * Issue date month index is 5, and costs will be
+ */
 const periodMonthInformation: Record<number, number> = {
   0: -1,
   1: -1,
@@ -184,12 +191,12 @@ const readXmlFiles = async (xmlFileNames: string[]) => {
   for (const xmlFileName of xmlFileNames) {
     try {
       const xmlFile = await fs.readFile(
-        path.join(config.procurementInvoices.directory, xmlFileName)
+        path.join(config.procurementInvoices.importDirectory, xmlFileName)
       )
       const parser = new XMLParser(xmlParserOptions)
       const xmlContents = parser.parse(xmlFile)['Invoice']
       xmlFiles.push(xmlContents)
-    } catch {
+    } catch (err) {
       logger.error({ xmlFileName }, 'Error reading xml file')
     }
   }
@@ -212,10 +219,10 @@ const readXmlFiles = async (xmlFileNames: string[]) => {
 }
 
 export const getNewProcurementInvoiceRows = async () => {
-  const files = await fs.readdir(config.procurementInvoices.directory)
+  const files = await fs.readdir(config.procurementInvoices.importDirectory)
 
   const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.xml') || file.endsWith('.old')
+    return file.endsWith('.xml')
   })
 
   const invoiceRows: InvoiceDataRow[] = []
@@ -235,6 +242,20 @@ export const getNewProcurementInvoiceRows = async () => {
   return invoiceRows
 }
 
-export const markProcurementFilesAsImported = async (_files: string[]) => {
-  return
+export const markProcurementFilesAsImported = async () => {
+  const files = await fs.readdir(config.procurementInvoices.importDirectory)
+
+  const xmlFileNames = files.filter((file) => {
+    return file.endsWith('.xml')
+  })
+
+  for (const file of xmlFileNames) {
+    await fs.rename(
+      path.join(config.procurementInvoices.importDirectory, file),
+      path.join(
+        config.procurementInvoices.importDirectory,
+        file.replace('.xml', '.xml-imported')
+      )
+    )
+  }
 }

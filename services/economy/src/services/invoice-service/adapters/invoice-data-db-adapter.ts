@@ -13,7 +13,7 @@ import knex from 'knex'
 import config from '../../../common/config'
 import { logger } from '@onecore/utilities'
 
-export const db = knex({
+const db = knex({
   connection: {
     host: config.economyDatabase.host,
     user: config.economyDatabase.user,
@@ -21,8 +21,13 @@ export const db = knex({
     port: config.economyDatabase.port,
     database: config.economyDatabase.database,
   },
+  pool: { min: 0, max: 10 },
   client: 'mssql',
 })
+
+export const closeDb = () => {
+  db.destroy()
+}
 
 export const createBatch = async () => {
   const batchResult = await db('invoice_batch').insert({}).returning('Id')
@@ -62,15 +67,10 @@ export const saveInvoiceRows = async (
   rows: InvoiceDataRow[],
   batchId: string
 ) => {
-  let i = 0
-
   for (const row of rows) {
     const dbRow = convertToDbRow(row, batchId)
     try {
       await db('invoice_data').insert(dbRow)
-      process.stdout.clearLine(0)
-      process.stdout.cursorTo(0)
-      process.stdout.write('Saving ' + (++i).toString())
     } catch (error: any) {
       logger.error({
         error,
@@ -79,8 +79,6 @@ export const saveInvoiceRows = async (
       })
     }
   }
-
-  process.stdout.write('\n')
 
   return null
 }
@@ -327,11 +325,60 @@ export const addAccountInformation = async (
           row.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
           row.totalAccount = TOTAL_ACCOUNT
         }
-      } catch {
+      } catch (error: any) {
         console.log(row)
       }
     }
   }
 
   return invoiceDataRows
+}
+
+export const markInvoicesAsImported = async (batchId: number) => {
+  const updateQuery = db
+    .into(
+      db.raw('?? (??, ??, ??, ??)', [
+        'invoice_import_status',
+        'InvoiceType',
+        'ImportedDate',
+        'InvoiceNumber',
+        'Amount',
+      ])
+    )
+    .insert((query: any) => {
+      query
+        .select(
+          { InvoiceType: db.raw("'invoice'") },
+          { ImportedDate: db.raw('GETDATE()') },
+          'InvoiceNumber'
+        )
+        .sum({ Amount: 'TotalAmount' })
+        .from('invoice_data')
+        .where('BatchId', batchId)
+        .groupBy('InvoiceNumber')
+    })
+
+  await updateQuery
+}
+
+export const excludeExportedInvoices = async (
+  importedInvoiceRows: InvoiceDataRow[]
+) => {
+  const importedInvoices = await db('invoice_import_status')
+
+  const invoiceRowsToImport = importedInvoiceRows.filter(
+    (invoiceRow: InvoiceDataRow) => {
+      const alreadyImported = importedInvoices.find((importedInvoice) => {
+        const exists =
+          (importedInvoice.InvoiceNumber as string).localeCompare(
+            invoiceRow.invoiceNumber as string
+          ) === 0
+        return exists
+      })
+
+      return alreadyImported === undefined
+    }
+  )
+
+  return invoiceRowsToImport
 }

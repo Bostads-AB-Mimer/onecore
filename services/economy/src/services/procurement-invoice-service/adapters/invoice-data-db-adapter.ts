@@ -12,6 +12,10 @@ const db = knex({
   client: 'mssql',
 })
 
+export const closeDb = () => {
+  db.destroy()
+}
+
 export const getCounterPartCustomers = async () => {
   const result = await db('invoice_counterpart')
 
