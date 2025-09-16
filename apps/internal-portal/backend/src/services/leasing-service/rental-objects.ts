@@ -19,12 +19,14 @@ export const routes = (router: KoaRouter) => {
       readyForOfferListings,
       offeredListings,
       needsRepublishListings,
+      closedRepublishedListings,
     ] = await Promise.all([
       coreAdapter.getVacantParkingSpaces(),
       coreAdapter.getListingsWithApplicants('type=published'),
       coreAdapter.getListingsWithApplicants('type=ready-for-offer'),
       coreAdapter.getListingsWithApplicants('type=offered'),
       coreAdapter.getListingsWithApplicants('type=needs-republish'),
+      coreAdapter.getListingsWithApplicants('type=closed-republished'),
     ])
 
     if (!vacantParkingSpaces.ok) {
@@ -64,33 +66,39 @@ export const routes = (router: KoaRouter) => {
         (parkingSpace: RentalObject): RentalObjectWithAttempts => {
           let listingAttemptsCount = 0
 
+          // Combine needs-republish and closed-republished listings
+          const allAttemptListings: Listing[] = []
           if (needsRepublishListings.ok) {
-            const parkingSpaceRepublishListings =
-              needsRepublishListings.data.filter(
-                (listing: Listing) =>
-                  listing.rentalObjectCode === parkingSpace.rentalObjectCode &&
-                  listing.rentalRule === 'SCORED' // Only count SCORED listings
-              )
+            allAttemptListings.push(...needsRepublishListings.data)
+          }
+          if (closedRepublishedListings && closedRepublishedListings.ok) {
+            allAttemptListings.push(...closedRepublishedListings.data)
+          }
 
-            if (parkingSpace.vacantFrom) {
-              // Count SCORED listings that were published since the vacantFrom date and need republishing
-              listingAttemptsCount = parkingSpaceRepublishListings.filter(
-                (listing: Listing) =>
-                  listing.publishedFrom &&
-                  new Date(listing.publishedFrom) >=
-                    new Date(parkingSpace.vacantFrom!)
-              ).length
-            } else {
-              // Fallback: count SCORED listing attempts in the last 12 months
-              const twelveMonthsAgo = new Date()
-              twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
+          const parkingSpaceAttemptListings = allAttemptListings.filter(
+            (listing: Listing) =>
+              listing.rentalObjectCode === parkingSpace.rentalObjectCode &&
+              listing.rentalRule === 'SCORED' // Only count SCORED listings
+          )
 
-              listingAttemptsCount = parkingSpaceRepublishListings.filter(
-                (listing: Listing) =>
-                  listing.publishedFrom &&
-                  new Date(listing.publishedFrom) >= twelveMonthsAgo
-              ).length
-            }
+          if (parkingSpace.vacantFrom) {
+            // Count SCORED listings that were published since the vacantFrom date
+            listingAttemptsCount = parkingSpaceAttemptListings.filter(
+              (listing: Listing) =>
+                listing.publishedFrom &&
+                new Date(listing.publishedFrom) >=
+                  new Date(parkingSpace.vacantFrom!)
+            ).length
+          } else {
+            // Fallback: count SCORED listing attempts in the last 12 months
+            const twelveMonthsAgo = new Date()
+            twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
+
+            listingAttemptsCount = parkingSpaceAttemptListings.filter(
+              (listing: Listing) =>
+                listing.publishedFrom &&
+                new Date(listing.publishedFrom) >= twelveMonthsAgo
+            ).length
           }
 
           return {

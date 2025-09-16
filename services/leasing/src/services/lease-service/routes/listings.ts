@@ -272,6 +272,46 @@ export const routes = (router: KoaRouter) => {
       }
 
       const { listings } = parseResult.data
+
+      // Before creating new listings, close any existing active listings for the same rental objects
+      const rentalObjectCodes = listings.map((l) => l.rentalObjectCode)
+      const existingListingsToClose: number[] = []
+
+      for (const rentalObjectCode of rentalObjectCodes) {
+        const existingListing =
+          await listingAdapter.getActiveListingByRentalObjectCode(
+            rentalObjectCode
+          )
+        if (existingListing) {
+          existingListingsToClose.push(existingListing.id)
+        }
+      }
+
+      // Close existing active listings by setting them to Expired status
+      if (existingListingsToClose.length > 0) {
+        const closeResult = await listingAdapter.updateListingStatuses(
+          existingListingsToClose,
+          ListingStatus.ClosedRepublished
+        )
+        if (!closeResult.ok) {
+          logger.warn(
+            {
+              existingListingsToClose,
+              rentalObjectCodes,
+            },
+            'Failed to close existing active listings, proceeding with creation anyway'
+          )
+        } else {
+          logger.info(
+            {
+              closedCount: existingListingsToClose.length,
+              rentalObjectCodes,
+            },
+            'Successfully closed existing active listings before creating new ones'
+          )
+        }
+      }
+
       const result = await listingAdapter.createMultipleListings(listings)
 
       if (!result.ok) {
