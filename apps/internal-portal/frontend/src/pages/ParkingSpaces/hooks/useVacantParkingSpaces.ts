@@ -4,8 +4,13 @@ import { RentalObject } from '@onecore/types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
+// Local extension of RentalObject for frontend features
+interface RentalObjectWithAttempts extends RentalObject {
+  listingAttemptsCount?: number
+}
+
 export const useVacantParkingSpaces = () =>
-  useQuery<Array<RentalObject>, AxiosError>({
+  useQuery<Array<RentalObjectWithAttempts>, AxiosError>({
     queryKey: ['vacantParkingSpaces'],
     queryFn: () =>
       axios

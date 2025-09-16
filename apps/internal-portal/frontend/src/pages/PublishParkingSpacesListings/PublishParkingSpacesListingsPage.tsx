@@ -14,6 +14,11 @@ import {
 import { type GridRowId, type GridColDef } from '@mui/x-data-grid'
 import { RentalObject } from '@onecore/types'
 
+// Local extension of RentalObject for frontend features
+interface RentalObjectWithAttempts extends RentalObject {
+  listingAttemptsCount?: number
+}
+
 import { DataGridTable } from '../../components'
 import { useVacantParkingSpaces } from '../ParkingSpaces/hooks/useVacantParkingSpaces'
 import { usePublishParkingSpaces } from './hooks/usePublishParkingSpaces'
@@ -32,7 +37,7 @@ const ParkingSpaces = memo(
     onRowSelectionModelChange,
   }: {
     columns: Array<GridColDef>
-    rows?: Array<RentalObject>
+    rows?: Array<RentalObjectWithAttempts>
     loading: boolean
     selectedIds: Array<GridRowId>
     onRowSelectionModelChange: (model: Array<GridRowId>) => void
@@ -102,6 +107,7 @@ export const PublishParkingSpacesListingsPage = () => {
   useEffect(() => {
     if (parkingSpaces) {
       // Initialize rental rules with default values
+      console.log('parkingSpaces', parkingSpaces)
       initializeRentalRules(parkingSpaces)
     }
   }, [parkingSpaces, initializeRentalRules])
