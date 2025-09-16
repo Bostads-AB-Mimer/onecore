@@ -51,6 +51,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental rule for the listings, either SCORED or NON_SCORED.
+   *       - in: query
+   *         name: rentalObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The rental object code for the listings.
    *     responses:
    *       '200':
    *         description: Successful response with the requested list of listings.
@@ -73,6 +79,7 @@ export const routes = (router: KoaRouter) => {
         .optional()
         .transform((value) => value === 'true'),
       rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
+      rentalObjectCode: z.string().optional(),
     })
     const query = querySchema.safeParse(ctx.query)
 
@@ -80,9 +87,8 @@ export const routes = (router: KoaRouter) => {
       listingCategory: query.data?.listingCategory,
       published: query.data?.published,
       rentalRule: query.data?.rentalRule,
+      rentalObjectCode: query.data?.rentalObjectCode,
     })
-
-    //TODO: get correponding rental objects from xpand-adapter and add them to the listings
 
     if (!result.ok) {
       ctx.status = 500

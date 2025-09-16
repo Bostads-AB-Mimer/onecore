@@ -342,6 +342,7 @@ type GetListingsParams = {
   listingCategory?: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   published?: boolean
   rentalRule?: 'SCORED' | 'NON_SCORED'
+  rentalObjectCode?: string
 }
 
 const getListings = async (
@@ -363,6 +364,9 @@ const getListings = async (
       }
       if (params.listingCategory) {
         builder.andWhere('ListingCategory', '=', params.listingCategory)
+      }
+      if (params.rentalObjectCode) {
+        builder.andWhere('RentalObjectCode', '=', params.rentalObjectCode)
       }
     })
 
