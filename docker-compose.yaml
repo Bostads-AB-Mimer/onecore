@@ -1,7 +1,8 @@
 services:
   sql:
     # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
-    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    image: mcr.microsoft.com/mssql/server:2022-CU16-ubuntu-20.04 # use this for M* Macs
+    platform: linux/amd64
     container_name: onecore-sql
     environment:
       - ACCEPT_EULA=Y
@@ -9,7 +10,7 @@ services:
     networks:
       - onecore
     ports:
-      - '1433:1433'
+      - '1438:1433'
     volumes:
       - sql:/var/opt/mssql
 
