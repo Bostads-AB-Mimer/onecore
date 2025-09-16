@@ -54,6 +54,7 @@ enum ListingStatus {
   Closed = 3,
   Expired = 4,
   NoApplicants = 5,
+  ClosedRepublished = 6, // Listing was closed and republished as a new listing
 }
 
 enum ApplicantStatus {
