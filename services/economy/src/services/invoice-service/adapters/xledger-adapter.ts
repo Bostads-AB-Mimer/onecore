@@ -222,16 +222,80 @@ const getContactDbId = async (contactCode: string): Promise<string> => {
   return result.data.customers.edges[0].node.dbId
 }
 
+const invoiceNodeFragment = `
+  invoiceNumber
+  invoiceRemaining
+  invoiceAmount
+  dueDate
+  amount
+  invoiceDate
+  text
+  subledger {
+    code
+    description
+  } 
+  period {
+    fromDate
+    toDate
+  }
+  slTransactionType {
+    name
+  }
+  invoiceFile {
+    url
+  }
+`
+
 export const getInvoicesByContactCode = async (contactCode: string) => {
   const xledgerId = await getContactDbId(contactCode)
 
   const query = {
-    query: `{arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) { edges { node { invoiceNumber invoiceRemaining invoiceAmount dueDate amount invoiceDate subledger { code description } period { fromDate toDate } slTransactionType { name } invoiceFile { url } } } }}`,
+    query: `{
+      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) { 
+        edges {
+          node {
+            ${invoiceNodeFragment}
+        } 
+      }
+    }`,
   }
 
   const result = await makeXledgerRequest(query)
 
   return transformToInvoice(result.data.arTransactions.edges)
+}
+
+export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
+  const q = {
+    query: `query {
+      arTransactions(
+        first: 1
+        filter: {
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797]
+        }
+      ) {
+          edges {
+            node {
+              ${invoiceNodeFragment}
+            }
+          }
+        } 
+    }`,
+  }
+
+  try {
+    const result = await makeXledgerRequest(q)
+
+    if (!result.data.arTransactions.edges.length) {
+      return null
+    }
+
+    const [invoice] = transformToInvoice(result.data.arTransactions.edges)
+    return invoice
+  } catch (err) {
+    logger.error(err, 'Error getting invoice from Xledger')
+    throw err
+  }
 }
 
 export const syncContact = async (
