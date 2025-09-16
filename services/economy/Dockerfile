@@ -20,7 +20,7 @@ RUN npm ci
 RUN npm run build:libs
 
 # Build application
-RUN npm run build:leasing
+RUN npm run build:economy
 
 # Remove stuff in node_modules we no longer need
 RUN npm prune --omit=dev
