@@ -2,6 +2,7 @@ import {
   ConsumerReport,
   Contact,
   Listing,
+  ListingStatus,
   ParkingSpaceApplicationCategory,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
@@ -60,6 +61,11 @@ describe('parkingspaces', () => {
       ],
       any
     >
+    let updateListingStatusSpy: jest.SpyInstance<
+      Promise<AdapterResult<null, 'bad-request' | 'not-found' | 'unknown'>>,
+      [listingId: number, status: ListingStatus],
+      any
+    >
     const mockedListing = factory.listing.build({
       id: 1,
       publishedFrom: new Date('2024-03-26T09:06:56.000Z'),
@@ -91,6 +97,9 @@ describe('parkingspaces', () => {
       createContractSpy = jest
         .spyOn(leasingAdapter, 'createLease')
         .mockResolvedValue({ ok: true, data: '123-123-123/1' })
+      updateListingStatusSpy = jest
+        .spyOn(leasingAdapter, 'updateListingStatus')
+        .mockResolvedValue({ ok: true, data: null })
     })
 
     it('gets the parking space', async () => {
@@ -293,6 +302,28 @@ describe('parkingspaces', () => {
         mockedApplicantWithLeases.contactCode,
         expect.any(String),
         '001'
+      )
+    })
+
+    it('should update listing status if create lease succeeds', async () => {
+      updateListingStatusSpy.mockReset()
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      getContactSpy.mockResolvedValue({
+        ok: true,
+        data: mockedApplicantWithLeases,
+      })
+      getInternalCreditInformationSpy.mockReset().mockResolvedValue(true)
+      getCreditInformationSpy.mockReset()
+
+      expect(updateListingStatusSpy).toHaveBeenCalledWith(
+        mockedListing.id,
+        ListingStatus.Assigned
       )
     })
 
