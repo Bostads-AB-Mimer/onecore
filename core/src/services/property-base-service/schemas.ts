@@ -232,6 +232,20 @@ export const StaircaseSchema = z.object({
     from: z.string().datetime(),
     to: z.string().datetime(),
   }),
+  property: z
+    .object({
+      propertyId: z.string().nullable(),
+      propertyName: z.string().nullable(),
+      propertyCode: z.string().nullable(),
+    })
+    .optional(),
+  building: z
+    .object({
+      buildingId: z.string().nullable(),
+      buildingName: z.string().nullable(),
+      buildingCode: z.string().nullable(),
+    })
+    .optional(),
   deleted: z.boolean(),
   timestamp: z.string().datetime(),
 })
