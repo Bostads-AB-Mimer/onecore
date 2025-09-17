@@ -12,13 +12,13 @@
     "url": "https://github.com/Bostads-AB-Mimer/property-base/issues"
   },
   "author": "",
-  "packageManager": "npm",
+  "packageManager": "pnpm@10.6.1",
   "engines": {
     "node": ">=20"
   },
   "main": "index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "dev": "node --import tsx --watch index.ts",
     "dev:init": "pnpm run prepare:dotenv",
     "generate:static": "pnpm run prisma:generate",
@@ -26,7 +26,7 @@
     "prettier": "prettier --check ./src",
     "prisma:force-generate": "pnpm clean-install --workspace . && prisma generate",
     "prisma:generate": "npx prisma generate",
-    "start": "node --import tsx index.ts",
+    "start": "ts-node src/index.ts",
     "test:borked": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
     "lint": "eslint src/",
@@ -46,6 +46,7 @@
     "lodash": "^4.17.21",
     "prisma": "^5.21.1",
     "swagger-jsdoc": "^6.2.8",
+    "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.2",
     "zod": "^3.25.67",
