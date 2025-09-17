@@ -1,4 +1,4 @@
-import { Contact } from 'onecore-types'
+import { Contact } from '@onecore/types'
 
 export const TOTAL_ACCOUNT = '2970'
 export const CUSTOMER_LEDGER_ACCOUNT = '1530'
