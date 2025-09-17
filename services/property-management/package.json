@@ -5,15 +5,11 @@
   "description": "",
   "license": "MIT",
   "author": "",
-  "packageManager": "npm",
-  "engines": {
-    "node": ">=20"
-  },
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "npm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
-    "dev:init": "npm run prepare:dotenv",
+    "dev": "pnpm run migrate:up && nodemon -e ts,js --exec ts-node src/index ",
+    "dev:init": "pnpm run prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "migrate:down": "knex migrate:down --env dev",
@@ -22,7 +18,7 @@
     "migrate:up": "knex migrate:latest --env dev",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "start": "npm run migrate:up && node -r dotenv/config build/index",
+    "start": "pnpm run migrate:up && node -r dotenv/config build/index",
     "test": "jest",
     "test:ci": "jest --silent",
     "ts:watch": "tsc --watch --noEmit",
