@@ -259,6 +259,25 @@ export const routes = (router: KoaRouter) => {
             code: result.propertyCode,
             name: result.propertyName,
           },
+          staircase: result.staircase
+            ? {
+                id: result.staircase.id,
+                code: result.staircase.code,
+                name: result.staircase.name,
+                features: {
+                  floorPlan: result.staircase.floorPlan,
+                  accessibleByElevator: Boolean(
+                    result.staircase.accessibleByElevator
+                  ),
+                },
+                dates: {
+                  from: result.staircase.fromDate,
+                  to: result.staircase.toDate,
+                },
+                deleted: Boolean(result.staircase.deleteMark),
+                timestamp: result.staircase.timestamp,
+              }
+            : null,
           rentalInformation: {
             rentalId: result.rentalId,
             apartmentNumber:
