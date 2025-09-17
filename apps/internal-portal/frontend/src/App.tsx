@@ -20,6 +20,7 @@ import ParkingSpaces from './pages/ParkingSpaces'
 import ParkingSpace from './pages/ParkingSpace'
 import { mdTheme } from './theme'
 import Residences from './pages/Residences/Residences'
+import SearchParkingSpaces from './pages/ParkingSpaces/search'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +62,10 @@ function App() {
               <Routes>
                 <Route element={<PageBase />}>
                   <Route path="/" element={<ParkingSpaces />} />
+                  <Route
+                    path="/sok-bilplats"
+                    element={<SearchParkingSpaces />}
+                  />
                   <Route path="/bilplatser" element={<ParkingSpaces />} />
                   <Route path="/bilplatser/:id" element={<ParkingSpace />} />
                   <Route path="/materialval" element={<Home />} />
