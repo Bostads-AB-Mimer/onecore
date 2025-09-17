@@ -6,3 +6,4 @@ packages:
  - services/*
 
 minimumReleaseAge: 20160
+injectWorkspacePackages: true

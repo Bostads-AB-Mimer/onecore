@@ -5,34 +5,33 @@ FROM node:23-slim AS builder
 
 WORKDIR /app
 
+ENV CI=true
+
+# Install pnpm
+# TODO: pnpm latest?
+RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+
 # Copy package files for dependency installation
-COPY package*.json tsconfig*.json ./
+COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy relevant packages
 COPY libs/types ./libs/types
 COPY libs/utilities ./libs/utilities
 COPY core ./core
 
-RUN npm ci
-
-RUN npm run build:libs
-RUN npm run build:core
-
-# Remove stuff in node_modules we no longer need
-RUN npm prune --omit=dev
-
+RUN pnpm install
+RUN pnpm run --filter @onecore/core... build
+RUN pnpm install --only=prod
+RUN pnpm deploy --filter @onecore/core --prod /out
 
 # ==========================
 # Run stage
 # ==========================
 FROM node:23-slim AS runner
 WORKDIR /app
-COPY --from=builder /app/libs ./libs
-COPY --from=builder /app/core/build/src ./build
-COPY --from=builder /app/core/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /out ./
 
 ENV PORT=80
 EXPOSE 80
 
-CMD ["node", "build/index.js"]
+CMD ["node", "build/src/index.js"]

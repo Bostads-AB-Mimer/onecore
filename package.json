@@ -27,7 +27,7 @@
     "db:init": "./scripts/db/initialize.sh",
     "dev:init": "pnpm run git:configure && pnpm run db:init && pnpm -r dev:init",
     "dev": "turbo run dev",
-    "generate:static": "pnpm run generate:static --workspaces --if-present",
+    "generate:static": "pnpm -r run generate:static",
     "git:configure": "git config merge.semver.driver \"scripts/git/merge-semver.js %O %A %B\"",
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
