@@ -12,6 +12,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
+<<<<<<< HEAD
     "dev": "pnpm run migrate:up && pnpx nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
@@ -20,6 +21,16 @@
     "migrate:make": "pnpx knex migrate:make",
     "migrate:seed": "pnpx knex seed:run --env dev",
     "migrate:up": "pnpx knex migrate:latest --env dev",
+=======
+    "dev": "cross-env DOTENV_CONFIG_PATH=.env pnpm run migrate:up && nodemon -e ts,js --exec ts-node -r dotenv/config src/index ",
+    "dev:init": "pnpm prepare:dotenv",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "migrate:down": "knex migrate:down --env dev",
+    "migrate:make": "knex migrate:make",
+    "migrate:seed": "knex seed:run --env dev",
+    "migrate:up": "knex migrate:latest --env dev",
+>>>>>>> c6cf8dd7 (added cross-env for cross plattform env use)
     "prepare:dotenv": "if not exist .env copy .env.template .env",
     "prettier": "prettier --check ./src",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
