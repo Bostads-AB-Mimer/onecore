@@ -1110,6 +1110,16 @@ export interface components {
         /** Format: date-time */
         to: string;
       };
+      property?: {
+        propertyId: string | null;
+        propertyName: string | null;
+        propertyCode: string | null;
+      };
+      building?: {
+        buildingId: string | null;
+        buildingName: string | null;
+        buildingCode: string | null;
+      };
       deleted: boolean;
       timestamp: string;
     };
@@ -1238,6 +1248,33 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      staircase: ({
+        id: string;
+        code: string;
+        name: string | null;
+        features: {
+          floorPlan: string | null;
+          accessibleByElevator: boolean;
+        };
+        dates: {
+          /** Format: date-time */
+          from: string;
+          /** Format: date-time */
+          to: string;
+        };
+        property?: {
+          propertyId: string | null;
+          propertyName: string | null;
+          propertyCode: string | null;
+        };
+        building?: {
+          buildingId: string | null;
+          buildingName: string | null;
+          buildingCode: string | null;
+        };
+        deleted: boolean;
+        timestamp: string;
+      }) | null;
       areaSize: number | null;
     };
     ResidenceSummary: {
@@ -1314,6 +1351,33 @@ export interface components {
           name: string | null;
           code: string | null;
         };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          timestamp: string;
+        }) | null;
         areaSize: number | null;
       };
       _links: {

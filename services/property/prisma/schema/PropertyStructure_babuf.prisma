@@ -67,6 +67,7 @@ model PropertyStructure {
   parkingSpace    ParkingSpace?    @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufobjbps")
   propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
   maintenanceUnit MaintenanceUnit? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
+  staircase       Staircase?       @relation(fields: [staircaseId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
 
   // Ny relation baserad på maintenanceUnitCode
   maintenanceUnitByCode MaintenanceUnit? @relation("MaintenanceUnitCodeRelation", fields: [maintenanceUnitCode], references: [id], onDelete: NoAction, onUpdate: NoAction)
