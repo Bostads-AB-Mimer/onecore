@@ -1238,10 +1238,16 @@ export interface components {
       companyName: string;
       managementUnitCode: string;
       managementUnitName: string;
-      propertyCode: string;
-      propertyName: string;
-      buildingCode: string | null;
-      buildingName: string | null;
+      property: {
+        id: string;
+        code: string;
+        name: string;
+      };
+      building: {
+        id: string | null;
+        code: string | null;
+        name: string | null;
+      };
       parkingSpace: {
         propertyObjectId: string;
         code: string;

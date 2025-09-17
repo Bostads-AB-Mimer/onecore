@@ -2175,7 +2175,40 @@ export interface paths {
       };
     };
   };
-  "/companies": {
+  "/buildings/by-property-code/{propertyCode}": {
+    /**
+     * Get buildings by property code
+     * @description Retrieves buildings by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property to fetch buildings for */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved buildings */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/propertyBase/companies": {
     /**
      * Get all companies
      * @description Retrieves companies from property base
@@ -2594,6 +2627,38 @@ export interface paths {
       };
     };
   };
+  "/maintenance-units/by-building-code/{buildingCode}": {
+    /**
+     * Get maintenance units by building code.
+     * @description Returns all maintenance units belonging to a building.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building for which to retrieve maintenance units. */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/facilities/by-rental-id/{rentalId}": {
     /**
      * Get facility by rental id.
@@ -2850,20 +2915,20 @@ export interface components {
     Building: {
       id: string;
       code: string;
-      name: string;
+      name: string | null;
       buildingType: {
-        id: string;
-        code: string;
-        name: string;
+        id: string | null;
+        code: string | null;
+        name: string | null;
       };
       construction: {
-        constructionYear: number;
-        renovationYear: number;
+        constructionYear: number | null;
+        renovationYear: number | null;
         valueYear: number | null;
       };
       features: {
-        heating: string | null;
-        fireRating: string | null;
+        heating?: string | null;
+        fireRating?: string | null;
       };
       insurance: {
         class: string | null;
@@ -3077,10 +3142,16 @@ export interface components {
       companyName: string;
       managementUnitCode: string;
       managementUnitName: string;
-      propertyCode: string;
-      propertyName: string;
-      buildingCode: string | null;
-      buildingName: string | null;
+      building: {
+        id: string | null;
+        code: string | null;
+        name: string | null;
+      };
+      property: {
+        id: string;
+        code: string;
+        name: string;
+      };
       parkingSpace: {
         propertyObjectId: string;
         code: string;
