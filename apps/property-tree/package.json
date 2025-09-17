@@ -3,14 +3,14 @@
   "version": "1.4.22",
   "type": "module",
   "private": true,
-  "packageManager": "npm",
+  "packageManager": "pnpm@10.6.1",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "vite build",
-    "dev": "wait-on http://localhost:5050/swagger && wait-on http://localhost:5010/swagger && npm run generate-api-types && npm run generate-api-types:core && vite",
-    "dev:init": "npm run prepare:dotenv",
+    "dev": "wait-on http://localhost:5050/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
+    "dev:init": "pnpm run prepare:dotenv",
     "format": "prettier --write .",
     "generate-api-types": "npx openapi-typescript http://localhost:5050/swagger.json -o ./src/services/api/generated/api-types.ts",
     "generate-api-types:core": "npx openapi-typescript http://localhost:5010/swagger.json -o ./src/services/api/core/generated/api-types.ts",
