@@ -192,7 +192,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/companies:
+   * /companies:
    *   get:
    *     summary: Get all companies
    *     tags:

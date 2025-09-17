@@ -2175,6 +2175,39 @@ export interface paths {
       };
     };
   };
+  "/buildings/by-property-code/{propertyCode}": {
+    /**
+     * Get buildings by property code
+     * @description Retrieves buildings by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property to fetch buildings for */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved buildings */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/companies": {
     /**
      * Get all companies
@@ -2882,20 +2915,20 @@ export interface components {
     Building: {
       id: string;
       code: string;
-      name: string;
+      name: string | null;
       buildingType: {
-        id: string;
-        code: string;
-        name: string;
+        id: string | null;
+        code: string | null;
+        name: string | null;
       };
       construction: {
-        constructionYear: number;
-        renovationYear: number;
+        constructionYear: number | null;
+        renovationYear: number | null;
         valueYear: number | null;
       };
       features: {
-        heating: string | null;
-        fireRating: string | null;
+        heating?: string | null;
+        fireRating?: string | null;
       };
       insurance: {
         class: string | null;
@@ -3058,6 +3091,16 @@ export interface components {
         /** Format: date-time */
         to: string;
       };
+      property?: {
+        propertyId: string | null;
+        propertyName: string | null;
+        propertyCode: string | null;
+      };
+      building?: {
+        buildingId: string | null;
+        buildingName: string | null;
+        buildingCode: string | null;
+      };
       deleted: boolean;
       /** Format: date-time */
       timestamp: string;
@@ -3177,6 +3220,34 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      staircase: ({
+        id: string;
+        code: string;
+        name: string | null;
+        features: {
+          floorPlan: string | null;
+          accessibleByElevator: boolean;
+        };
+        dates: {
+          /** Format: date-time */
+          from: string;
+          /** Format: date-time */
+          to: string;
+        };
+        property?: {
+          propertyId: string | null;
+          propertyName: string | null;
+          propertyCode: string | null;
+        };
+        building?: {
+          buildingId: string | null;
+          buildingName: string | null;
+          buildingCode: string | null;
+        };
+        deleted: boolean;
+        /** Format: date-time */
+        timestamp: string;
+      }) | null;
       areaSize: number | null;
     };
     FacilityDetails: {
