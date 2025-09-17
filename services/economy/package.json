@@ -19,6 +19,7 @@
     "migrate:down": "knex migrate:down --env dev",
     "prettier": "prettier --check ./src",
     "seed": "knex seed:run --env dev",
+    "scripts:import-rental-invoices": "ts-node src/scripts/import-rental-invoices",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",
     "ts:ci": "tsc --noEmit",
