@@ -3,6 +3,8 @@
 # ==========================
 FROM node:23-slim AS builder
 
+ENV CI=true
+
 # Prisma requires openssl to generate client
 RUN apt-get update -y && apt-get install -y openssl
 

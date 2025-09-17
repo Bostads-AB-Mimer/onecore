@@ -2,13 +2,11 @@
 # Build stage
 # ==========================
 FROM node:23-slim AS builder
+ENV CI=true
 
 WORKDIR /app
 
-ENV CI=true
-
 # Install pnpm
-# TODO: pnpm latest?
 RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
 
 # Copy package files for dependency installation
