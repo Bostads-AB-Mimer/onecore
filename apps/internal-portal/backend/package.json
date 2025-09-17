@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "nodemon -e ts,js --exec npm run start",
-    "dev:init": "npm run prepare:dotenv",
+    "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
