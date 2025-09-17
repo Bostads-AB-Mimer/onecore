@@ -341,8 +341,6 @@ export const enrichInvoiceRows = async (
     )
   )
 
-  process.stdout.write('\n')
-
   const rows = (await Promise.all(enrichedInvoiceRows)).filter((row) => row)
 
   return { rows: rows as InvoiceDataRow[], errors }

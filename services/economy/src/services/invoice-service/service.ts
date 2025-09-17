@@ -198,11 +198,15 @@ export const createLedgerRows = async (
         break
       }
     }
-    console.log(
-      'Ledger chunk',
-      currentStart,
-      currentInvoices.length + currentStart - 1
+
+    logger.info(
+      {
+        startNum: currentStart,
+        endNum: currentInvoices.length + currentStart - 1,
+      },
+      'Creating ledger chunk'
     )
+
     currentStart += currentInvoices.length
 
     for (const invoice of currentInvoices) {
@@ -237,9 +241,11 @@ export const createLedgerRows = async (
       Math.round(((ledgerChunkRowsTotal as number) + Number.EPSILON) * 100) /
       100
 
-    console.log(
-      'Ledger chunk balance',
-      ledgerChunkRowsTotal + (totalRow.amount as number)
+    logger.info(
+      {
+        difference: ledgerChunkRowsTotal + (totalRow.amount as number),
+      },
+      'Ledger chunk created'
     )
 
     chunkNum++

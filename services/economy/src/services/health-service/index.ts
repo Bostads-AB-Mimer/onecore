@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { SystemHealth } from 'onecore-types'
+import { SystemHealth } from '@onecore/utilities'
 import config from '../../common/config'
 import { healthCheck as xledgerHealthCheck } from '../invoice-service/adapters/xledger-adapter'
 
