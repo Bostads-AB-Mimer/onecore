@@ -4,7 +4,7 @@
   "description": "",
   "license": "ISC",
   "author": "",
-  "packageManager": "npm",
+  "packageManager": "pnpm@10.6.1",
   "engines": {
     "node": ">=20"
   },
@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "nodemon -e ts,js --exec ts-node src/index ",
-    "dev:init": "npm run prepare:dotenv",
+    "dev:init": "pnpm run prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
