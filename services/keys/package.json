@@ -4,6 +4,25 @@
   "version": "0.1.0",
   "description": "MIT",
   "packageManager": "pnpm@10.17.0+sha512.fce8a3dd29a4ed2ec566fb53efbb04d8c44a0f05bc6f24a73046910fb9c3ce7afa35a0980500668fa3573345bd644644fa98338fa168235c80f4aa17aa17fbef",
+   "engines": {
+    "node": ">=20"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "cross-env DOTENV_CONFIG_PATH=.env pnpm run migrate:up && nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
+    "dev:init": "pnpm run prepare:dotenv",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "migrate:down": "knex migrate:down --env dev",
+    "migrate:make": "knex migrate:make",
+    "migrate:seed": "knex seed:run --env dev",
+    "migrate:up": "knex migrate:latest --env dev",
+    "prepare:dotenv": "if not exist .env copy .env.template .env",
+    "start": "pnpm run migrate:up && node -r dotenv/config build/index",
+    "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv-config ../../node_modules/.bin/jest --config jest.config.js",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@koa/cors": "5.0.0",
     "@koa/router": "14.0.0",
