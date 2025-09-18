@@ -28,13 +28,17 @@ description: Setup Node 20 and restore pnpm caches
 runs:
   using: "composite"
   steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.16.1
+
     - uses: actions/setup-node@v4
       with:
         node-version: 20
         cache: pnpm
         cache-dependency-path: |
           **/pnpm-lock.yaml
-        pnpm: 10.16.1
 
     # Cache pnpm store (fast reuse across jobs, keyed on lockfile)
     - name: Cache pnpm store
