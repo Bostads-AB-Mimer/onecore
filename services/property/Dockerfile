@@ -23,8 +23,9 @@ COPY services/property ./services/property
 
 RUN pnpm install
 
+RUN pnpm build:libs
 RUN pnpm run generate:static
-RUN pnpm run --filter ...@onecore/property build
+RUN pnpm run --filter @onecore/property build
 RUN pnpm deploy --filter @onecore/property --prod /out
 # Regenerate the prisma client, as pnpm will be unware of it and prune it away
 RUN cd /out && pnpm generate:static

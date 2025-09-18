@@ -19,7 +19,8 @@ COPY libs/utilities ./libs/utilities
 COPY services/leasing ./services/leasing
 
 RUN pnpm install
-RUN pnpm run --filter ...@onecore/leasing build
+RUN pnpm build:libs
+RUN pnpm run --filter @onecore/leasing build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/leasing --prod /out
 
