@@ -19,7 +19,8 @@ COPY libs/utilities ./libs/utilities
 COPY services/communication ./services/communication
 
 RUN pnpm install
-RUN pnpm run --filter ...@onecore/communication build
+RUN pnpm build:libs
+RUN pnpm run --filter @onecore/communication build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/communication --prod /out
 
