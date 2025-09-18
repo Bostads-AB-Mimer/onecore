@@ -44,7 +44,6 @@ runs:
         cache: pnpm
         cache-dependency-path: |
           **/pnpm-lock.yaml
-        pnpm: 10.16.1
 
     # Cache pnpm store (fast reuse across jobs, keyed on lockfile)
     - name: Cache pnpm store
