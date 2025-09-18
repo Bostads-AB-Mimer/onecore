@@ -8,8 +8,8 @@ exports.up = function (knex) {
   return knex.schema.createTable('keys', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('NEWID()'))
     table.string('key_name').notNullable()
-    table.string('key_sequence_number')
-    table.string('flex_number')
+    table.integer('key_sequence_number')
+    table.integer('flex_number')
     table.string('rental_object')
     table.enum('key_type', ['LGH', 'PB', 'FS', 'HN']).notNullable()
     table.uuid('key_system_id').references('id').inTable('key_systems')
