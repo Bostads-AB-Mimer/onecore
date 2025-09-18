@@ -37,9 +37,11 @@ runs:
 
     # Enable corepack and install pnpm
     - name: Enable corepack
+      shell: bash
       run: corepack enable
 
     - name: Prepare pnpm
+      shell: bash
       run: corepack prepare pnpm@10.16.1 --activate
 
     # Cache pnpm store (fast reuse across jobs, keyed on lockfile)
