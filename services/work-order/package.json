@@ -4,10 +4,6 @@
   "description": "",
   "license": "ISC",
   "author": "",
-  "packageManager": "npm",
-  "engines": {
-    "node": ">=20"
-  },
   "main": "./src/index.ts",
   "keywords": [],
   "scripts": {
