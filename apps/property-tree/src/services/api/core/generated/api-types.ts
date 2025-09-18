@@ -3175,8 +3175,16 @@ export interface components {
       code: string;
       caption: string | null;
       type?: string | null;
-      estateCode: string | null;
-      estate: string | null;
+      property: {
+        id: string | null;
+        code: string | null;
+        name: string | null;
+      };
+      building: {
+        id: string | null;
+        code: string | null;
+        name: string | null;
+      };
     };
     ResidenceByRentalIdDetails: {
       id: string;
