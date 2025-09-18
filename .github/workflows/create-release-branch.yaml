@@ -24,20 +24,20 @@ jobs:
           ref: ${{ github.event.inputs.source_branch }}
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js + pnpm
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: pnpm
 
       - name: Bump version
         id: version
         run: |
           if [[ -n "${{ github.event.inputs.override_version }}" ]]; then
             new_version="${{ github.event.inputs.override_version }}"
-            npm version "$new_version" --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root --allow-same-version
+            pnpm version "$new_version" -r --include-workspace-root --allow-same-version --no-git-tag-version
           else
-            npm version minor --no-commit-hooks --no-git-tag-version --workspaces --include-workspace-root
+            pnpm version minor -r --include-workspace-root --no-git-tag-version
             new_version=$(jq -r .version package.json)
           fi
       
