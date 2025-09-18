@@ -17,6 +17,7 @@ on:
 
 jobs:
   prepare:
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       # Prefer workflow_run context if present, otherwise fall back defaults
