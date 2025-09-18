@@ -20,8 +20,13 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "node --import tsx --watch index.ts",
+<<<<<<< HEAD
     "dev:init": "pnpm prepare:dotenv",
     "generate:static": "pnpm prisma:generate",
+=======
+    "dev:init": "pnpm run prepare:dotenv",
+    "generate:static": "pnpm run prisma:generate",
+>>>>>>> 62704b01 (Build, test, lint, typecheck all the things with pnpm)
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
     "prisma:force-generate": "pnpm clean-install --workspace . && prisma generate",
