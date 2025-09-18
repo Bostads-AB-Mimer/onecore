@@ -116,6 +116,8 @@ jobs:
   build-and-push:
     needs: prepare
     runs-on: ubuntu-latest
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     strategy:
       matrix:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
@@ -126,6 +128,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.HEAD_SHA }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -194,6 +198,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
