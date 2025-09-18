@@ -44,7 +44,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/facilities/rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /facilities/rental-id/${ctx.params.rentalId}`, metadata)
 
     try {
       const facility = await getFacilityByRentalId(ctx.params.rentalId)

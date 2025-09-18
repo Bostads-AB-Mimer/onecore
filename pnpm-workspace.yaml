@@ -1,0 +1,12 @@
+packages:
+ - apps/*
+ - apps/internal-portal/*
+ - core
+ - libs/*
+ - services/*
+
+minimumReleaseAge: 20160
+<<<<<<< HEAD
+injectWorkspacePackages: true
+=======
+>>>>>>> 62704b01 (Build, test, lint, typecheck all the things with pnpm)

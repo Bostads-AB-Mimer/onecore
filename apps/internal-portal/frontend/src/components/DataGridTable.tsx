@@ -1,5 +1,6 @@
 import { DataGrid, gridClasses } from '@mui/x-data-grid'
-import { styled } from '@mui/material'
+import { styled, Theme } from '@mui/material'
+import React from 'react'
 
 export const DataGridTable = styled(DataGrid)(({ theme: _theme }) => ({
   [`& .${gridClasses.main}`]: {
@@ -18,4 +19,4 @@ export const DataGridTable = styled(DataGrid)(({ theme: _theme }) => ({
   [`& .${gridClasses.footerContainer}`]: {
     border: 'none',
   },
-}))
+})) as typeof DataGrid
