@@ -53,4 +53,4 @@ runs:
     # Always run install, but use --frozen-lockfile for safety
     - name: Install dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile --prefer-offline --no-fund
+      run: pnpm install --frozen-lockfile --prefer-offline
