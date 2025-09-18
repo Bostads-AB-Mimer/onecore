@@ -1,0 +1,8 @@
+packages:
+ - apps/*
+ - apps/internal-portal/*
+ - core
+ - libs/*
+ - services/*
+
+minimumReleaseAge: 20160

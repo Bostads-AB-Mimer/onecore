@@ -47,8 +47,8 @@
     "tedious": "^18.6.1",
     "zod": "^3.25.67",
     "zod-to-json-schema": "^3.24.5",
-    "@onecore/types": "*",
-    "@onecore/utilities": "*"
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",

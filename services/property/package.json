@@ -20,11 +20,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "node --import tsx --watch index.ts",
-    "dev:init": "npm run prepare:dotenv",
-    "generate:static": "npm run prisma:generate",
+    "dev:init": "pnpm run prepare:dotenv",
+    "generate:static": "pnpm run prisma:generate",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "prisma:force-generate": "npm clean-install --workspace . && prisma generate",
+    "prisma:force-generate": "pnpm clean-install --workspace . && prisma generate",
     "prisma:generate": "npx prisma generate",
     "start": "node --import tsx index.ts",
     "test:borked": "jest --config jest.config.js",
@@ -36,7 +36,7 @@
   "dependencies": {
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
-    "@onecore/utilities": "*",
+    "@onecore/utilities": "workspace:*",
     "@prisma/client": "^5.20.0",
     "axios": "^1.9.0",
     "dotenv": "^16.4.5",
