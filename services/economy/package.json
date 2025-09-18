@@ -8,6 +8,7 @@
   "packageManager": "pnpm@10.6.1",
   "main": "./src/index.ts",
   "scripts": {
+    "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "test": "jest",
     "build": "holidays2json --pick SE --min && tsc",
     "test:watch": "TZ=UTC jest --watch",
