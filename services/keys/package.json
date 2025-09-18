@@ -18,7 +18,7 @@
     "migrate:make": "knex migrate:make",
     "migrate:seed": "knex seed:run --env dev",
     "migrate:up": "knex migrate:latest --env dev",
-    "prepare:dotenv": "if not exist .env copy .env.template .env",
+    "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "start": "pnpm run migrate:up && node -r dotenv/config build/index",
     "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv-config ../../node_modules/.bin/jest --config jest.config.js",
     "typecheck": "tsc --noEmit"
