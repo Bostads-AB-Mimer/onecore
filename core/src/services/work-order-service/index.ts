@@ -326,9 +326,8 @@ export const routes = (router: KoaRouter) => {
         }
       } else {
         logger.error(
-          result.err,
-          'Error getting workOrders by contact code',
-          metadata
+          { error: result.err, metadata },
+          'Error getting workOrders by contact code'
         )
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
@@ -429,9 +428,11 @@ export const routes = (router: KoaRouter) => {
           }
         } else {
           logger.error(
-            result.err,
-            'Error getting workOrders by rental property id',
-            metadata
+            {
+              err: result.err,
+              metadata,
+            },
+            'Error getting workOrders by rental property id'
           )
           ctx.status = result.statusCode || 500
           ctx.body = { error: result.err, ...metadata }
@@ -540,9 +541,11 @@ export const routes = (router: KoaRouter) => {
           }
         } else {
           logger.error(
-            result.err,
-            'Error getting workOrders by rental property id from xpand',
-            metadata
+            {
+              err: result.err,
+              metadata,
+            },
+            'Error getting workOrders by rental property id from xpand'
           )
           ctx.status = result.statusCode || 500
           ctx.body = { error: result.err, ...metadata }
@@ -645,9 +648,11 @@ export const routes = (router: KoaRouter) => {
         }
 
         logger.error(
-          result.err,
-          'Error getting workOrders by rental property id from xpand',
-          metadata
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting workOrders by rental property id from xpand'
         )
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
@@ -1106,7 +1111,7 @@ export const routes = (router: KoaRouter) => {
         }
       } else {
         logger.error(
-          result.err,
+          { error: result.err },
           `Error sending sms to ${phoneNumber}, status: ${result.statusCode}`
         )
         ctx.status = result.statusCode ?? 500
@@ -1212,7 +1217,7 @@ export const routes = (router: KoaRouter) => {
       }
     } else {
       logger.error(
-        result.err,
+        { error: result.err },
         `Error sending email to ${to}, status: ${result.statusCode}`
       )
 

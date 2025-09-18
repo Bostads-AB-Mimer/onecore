@@ -514,7 +514,7 @@ export const routes = (router: KoaRouter) => {
 
     if (!listingsWithApplicants.ok) {
       logger.error(
-        listingsWithApplicants.err,
+        { err: listingsWithApplicants.err },
         'Error fetching listings with applicants:'
       )
       ctx.status = 500

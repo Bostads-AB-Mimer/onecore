@@ -342,8 +342,7 @@ const getApplicantsAndListingByContactCode = async (
   } catch (error) {
     logger.error(
       error,
-      'Error fetching applicants and listings by contact code:',
-      error
+      'Error fetching applicants and listings by contact code:'
     )
     return undefined
   }
@@ -424,7 +423,7 @@ const withdrawApplicantByManager = async (
     )
     return response.data
   } catch (error) {
-    logger.error(error, 'Error patching applicant status:', error)
+    logger.error(error, 'Error patching applicant status:')
     throw new Error(`Failed to update status for applicant ${applicantId}`)
   }
 }
@@ -440,7 +439,7 @@ const withdrawApplicantByUser = async (
     )
     return response.data
   } catch (error) {
-    logger.error(error, 'Error withdrawing applicant by user:', error)
+    logger.error(error, 'Error withdrawing applicant by user:')
     return undefined
   }
 }

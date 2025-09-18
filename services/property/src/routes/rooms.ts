@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 import { getRoomById, getRooms } from '@src/adapters/room-adapter'
 import { Room, roomsQueryParamsSchema } from '@src/types/room'
@@ -53,7 +53,6 @@ export const routes = (router: KoaRouter) => {
       const { residenceId } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(`GET /rooms?residenceId=${residenceId}`, metadata)
 
       try {
         const rooms = await getRooms(residenceId)
@@ -124,7 +123,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/rooms/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /rooms/${id}`, metadata)
 
     try {
       const room = await getRoomById(id)
