@@ -39,15 +39,7 @@ runs:
         cache: pnpm
         cache-dependency-path: |
           **/pnpm-lock.yaml
-
-    # Enable corepack and install pnpm
-    - name: Enable corepack
-      shell: bash
-      run: corepack enable
-
-    - name: Prepare pnpm
-      shell: bash
-      run: corepack prepare pnpm@10.16.1 --activate
+        pnpm: 10.16.1
 
     # Cache pnpm store (fast reuse across jobs, keyed on lockfile)
     - name: Cache pnpm store
