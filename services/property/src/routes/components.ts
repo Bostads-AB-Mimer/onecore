@@ -4,7 +4,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
 import {
   componentsQueryParamsSchema,
@@ -88,18 +88,10 @@ export const routes = (router: KoaRouter) => {
       try {
         let components
         if (queryParams.type === 'maintenance') {
-          logger.info(
-            `GET /components?type=maintenance&maintenanceUnit=${queryParams.maintenanceUnit}`,
-            metadata
-          )
           components = await getComponentByMaintenanceUnitCode(
             queryParams.maintenanceUnit
           )
         } else {
-          logger.info(
-            `GET /components?type=residence&residenceCode=${queryParams.residenceCode}`,
-            metadata
-          )
           components = await getComponentByMaintenanceUnitCode(
             queryParams.residenceCode
           ) // TODO: Implement getComponentByResidenceCode

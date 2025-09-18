@@ -55,7 +55,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/maintenance-units/by-rental-id/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /maintenance-units/by-rental-id/${id}`, metadata)
 
     try {
       const response = await getMaintenanceUnitsByRentalId(id)
@@ -114,7 +113,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/maintenance-units/by-building-code/:code', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const code = ctx.params.code
-    logger.info(`GET /maintenance-units/by-building-code/${code}`, metadata)
 
     try {
       const response = await getMaintenanceUnitsByBuildingCode(code)
@@ -171,7 +169,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/maintenance-units/by-property-code/:code', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { code } = ctx.params
-    logger.info(`GET /maintenance-units/by-property-code/${code}`, metadata)
 
     try {
       const response = await getMaintenanceUnitsByPropertyCode(code)

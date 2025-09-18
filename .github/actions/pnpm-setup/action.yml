@@ -1,0 +1,51 @@
+# Re-usable setup action for pnpm
+#
+#
+# Cache key = pnpm-lock.yaml hash
+# -------------------------------
+# Invalidates automatically on dependency changes
+#
+#
+# Cached path = pnpm store
+# ------------------------
+# Fast relink from cache, no need to re-download package tarballs
+#
+#
+# No node_modules cache
+# ---------------------
+# Keeps things simple, and avoids clashes. node_modules will instead be restored
+# by pnpm with symlinks from the cached pnpm store
+#
+#
+# --frozen-lockfile
+# -----------------
+# Guarantees that CI builds uses exactly the intended lockfile and fails fast if
+# it's out of sync. This means that builds will fail if declared dependencies does
+# not match the lockfile.
+
+name: pnpm-setup
+description: Setup Node 20 and restore pnpm caches
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: |
+          **/pnpm-lock.yaml
+
+    # Cache pnpm store (fast reuse across jobs, keyed on lockfile)
+    - name: Cache pnpm store
+      id: pnpm-store
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/pnpm/store
+        key: ${{ runner.os }}-node-20-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-node-20-pnpm-
+
+    # Always run install, but use --frozen-lockfile for safety
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline --no-fund

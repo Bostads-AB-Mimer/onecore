@@ -3,18 +3,22 @@
 # ==========================
 FROM node:23-slim AS builder
 
+ENV CI=true
+
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+
 # Copy package files for dependency installation
-COPY package*.json tsconfig*.json ./
+COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 COPY apps/property-tree ./apps/property-tree
 
-# Install dependencies
-RUN npm ci
-
-# Build
-RUN npm run build:property-tree
+RUN pnpm install
+RUN pnpm run --filter ...@onecore/property-tree build
+RUN pnpm install --only=prod
+RUN pnpm deploy --filter @onecore/property-tree --prod /out
 
 # ==========================
 # Run stage
@@ -27,8 +31,8 @@ WORKDIR /app
 
 # Copy nginx configuration
 COPY --from=builder /app/apps/property-tree/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/apps/property-tree/dist /usr/share/nginx/html
 COPY --from=builder /app/apps/property-tree/script ./script
+COPY --from=builder /out/dist /user/share/nginx/html
 
 # Actual run config
 EXPOSE 80

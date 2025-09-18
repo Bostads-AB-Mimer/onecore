@@ -4,7 +4,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import { etagMiddleware } from '../middleware/etag'
@@ -76,10 +76,6 @@ export const routes = (router: KoaRouter) => {
       const { companyCode, tract } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(
-        `GET /properties?companyCode=${companyCode}&tract=${tract}`,
-        metadata
-      )
 
       try {
         const properties = await getProperties(companyCode, tract)
@@ -231,7 +227,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/properties/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /properties/${id}`, metadata)
 
     try {
       const property = await getPropertyById(id)

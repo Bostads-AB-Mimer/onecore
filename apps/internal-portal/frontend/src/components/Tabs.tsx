@@ -24,4 +24,4 @@ export const Tab = styled(MuiTab)(() => ({
   paddingLeft: '0.4rem',
   paddingRight: '0.4rem',
   marginRight: '1rem',
-}))
+})) as typeof MuiTab

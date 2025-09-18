@@ -7,7 +7,7 @@ export const requireAuth = async (ctx: Context, next: Next) => {
   try {
     await auth.middleware.extractJwtToken(ctx, next)
   } catch (error) {
-    logger.error('Authentication error:', error)
+    logger.error(error, 'Authentication error:')
     ctx.status = 401
     ctx.body = { message: 'Authentication required' }
   }
@@ -33,7 +33,7 @@ export const requireRole = (requiredRoles: string | string[]) => {
 
       return next()
     } catch (error) {
-      logger.error('Role verification error:', error)
+      logger.error(error, 'Role verification error:')
       ctx.status = 401
       ctx.body = { message: 'Authentication required' }
     }

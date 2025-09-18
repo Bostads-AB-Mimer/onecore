@@ -44,7 +44,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.get(['(.*)/companies'], async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info('GET /companies', metadata)
 
     try {
       const companies = await getCompanies()
@@ -98,10 +97,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/companies/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /companies/${id}`, metadata)
 
     try {
-      const company = await getCompany(ctx.params.id)
+      const company = await getCompany(id)
 
       if (!company) {
         ctx.status = 404

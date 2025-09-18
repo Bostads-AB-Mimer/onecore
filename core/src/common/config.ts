@@ -1,6 +1,5 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
-// eslint-disable-next-line n/no-extraneous-import
 import ms from 'ms'
 dotenv.config()
 

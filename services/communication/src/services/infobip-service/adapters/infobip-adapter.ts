@@ -51,7 +51,7 @@ export const sendEmail = async (message: Email) => {
 }
 
 export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
-  logger.info('Sending template email', config.infobip.baseUrl)
+  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending template email')
   try {
     const toField = JSON.stringify({
       to: email.to,
@@ -121,7 +121,7 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error('Error sending SMS:', error)
+    logger.error(error, 'Error sending SMS')
     throw error
   }
 }
@@ -155,7 +155,7 @@ export const sendParkingSpaceAssignedToOther = async (
 }
 
 export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
-  logger.info('Sending work order email', config.infobip.baseUrl)
+  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending work order email')
   try {
     const toField = JSON.stringify({
       to: email.to,
@@ -188,7 +188,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
 }
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
-  logger.info('Sending work order sms', config.infobip.baseUrl)
+  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending work order sms')
   const message = he.decode(striptags(sms.text.replace(/<br\s*\/?>/gi, '\n')))
   const noreply = sms.externalContractorName
     ? `Hälsningar, ${sms.externalContractorName} i uppdrag från Mimer`
@@ -211,7 +211,7 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
       throw new Error(response.body)
     }
   } catch (error) {
-    logger.error('Error sending SMS:', error)
+    logger.error(error, 'Error sending SMS')
     throw error
   }
 }

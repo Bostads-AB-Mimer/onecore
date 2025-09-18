@@ -4,7 +4,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 import { getStaircasesByBuildingCode } from '../adapters/staircase-adapter'
 import { staircasesQueryParamsSchema } from '../types/staircase'
@@ -58,7 +58,6 @@ export const routes = (router: KoaRouter) => {
       const { buildingCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(`GET /staircases?buildingCode=${buildingCode}`, metadata)
 
       try {
         const response = await getStaircasesByBuildingCode(buildingCode)

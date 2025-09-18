@@ -1,2 +1,2 @@
-package.json merge=semver
-**/package.json merge=semver
+#package.json merge=semver
+#**/package.json merge=semver

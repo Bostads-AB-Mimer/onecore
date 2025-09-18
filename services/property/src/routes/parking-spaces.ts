@@ -49,7 +49,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/parking-spaces/by-rental-id/:id', async (ctx) => {
     const id = ctx.params.id
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /parking-spaces/by-rental-id/${id}`, metadata)
 
     try {
       // Fetch the parking space associated with the rental property id
