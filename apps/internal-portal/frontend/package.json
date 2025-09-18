@@ -3,7 +3,6 @@
   "version": "1.4.22",
   "type": "module",
   "private": true,
-  "packageManager": "npm",
   "engines": {
     "node": ">=20"
   },
