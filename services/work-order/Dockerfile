@@ -19,7 +19,8 @@ COPY libs/utilities ./libs/utilities
 COPY services/work-order ./services/work-order
 
 RUN pnpm install
-RUN pnpm run --filter ...@onecore/work-order build
+RUN pnpm build:libs
+RUN pnpm run --filter @onecore/work-order build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/work-order --prod /out
 

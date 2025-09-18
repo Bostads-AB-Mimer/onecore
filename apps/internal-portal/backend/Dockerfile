@@ -19,7 +19,8 @@ COPY libs/utilities ./libs/utilities
 COPY apps/internal-portal/backend ./apps/internal-portal/backend
 
 RUN pnpm install
-RUN pnpm run --filter ...@onecore/internal-portal-backend build
+RUN pnpm build:libs
+RUN pnpm run --filter @onecore/internal-portal-backend build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/internal-portal-backend --prod /out
 
