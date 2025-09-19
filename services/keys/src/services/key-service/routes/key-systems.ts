@@ -5,8 +5,36 @@ import { db } from '../adapters/db'
 const TABLE = 'key_systems'
 const ALLOWED_TYPES = new Set(['MECHANICAL', 'ELECTRONIC', 'HYBRID'])
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Key Systems
+ *     description: Endpoints for managing key systems
+ */
 export const routes = (router: KoaRouter) => {
-  // LIST
+  /**
+   * @swagger
+   * /key-systems:
+   *   get:
+   *     summary: List all key systems
+   *     description: Retrieve a list of all key systems
+   *     tags: [Key Systems]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved key systems
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     description: Key system details
+   *       500:
+   *         description: Internal server error
+   */
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -20,7 +48,36 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // GET by id
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   get:
+   *     summary: Get key system by ID
+   *     description: Retrieve a specific key system by its ID
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the key system
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved key system
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: Key system details
+   *       404:
+   *         description: Key system not found
+   *       500:
+   *         description: Internal server error
+   */
   router.get('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -39,7 +96,55 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // CREATE
+  /**
+   * @swagger
+   * /key-systems:
+   *   post:
+   *     summary: Create a new key system
+   *     description: Create a new key system
+   *     tags: [Key Systems]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               system_code:
+   *                 type: string
+   *                 description: Unique system code
+   *               name:
+   *                 type: string
+   *                 description: Name of the key system
+   *               type:
+   *                 type: string
+   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
+   *                 description: Type of key system
+   *               description:
+   *                 type: string
+   *                 description: Description of the key system
+   *             required:
+   *               - system_code
+   *               - name
+   *               - type
+   *     responses:
+   *       201:
+   *         description: Key system created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: Created key system details
+   *       400:
+   *         description: Invalid type
+   *       409:
+   *         description: Key system with this system code already exists
+   *       500:
+   *         description: Internal server error
+   */
   router.post('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -77,7 +182,60 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // UPDATE (partial)
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   patch:
+   *     summary: Update a key system
+   *     description: Partially update a key system
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the key system to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               system_code:
+   *                 type: string
+   *                 description: Unique system code
+   *               name:
+   *                 type: string
+   *                 description: Name of the key system
+   *               type:
+   *                 type: string
+   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
+   *                 description: Type of key system
+   *               description:
+   *                 type: string
+   *                 description: Description of the key system
+   *     responses:
+   *       200:
+   *         description: Key system updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: Updated key system details
+   *       400:
+   *         description: Invalid type
+   *       404:
+   *         description: Key system not found
+   *       409:
+   *         description: Key system with this system code already exists
+   *       500:
+   *         description: Internal server error
+   */
   router.patch('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -126,7 +284,28 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // DELETE
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   delete:
+   *     summary: Delete a key system
+   *     description: Delete a key system by ID
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the key system to delete
+   *     responses:
+   *       200:
+   *         description: Key system deleted successfully
+   *       404:
+   *         description: Key system not found
+   *       500:
+   *         description: Internal server error
+   */
   router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
