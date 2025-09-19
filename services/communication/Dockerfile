@@ -1,40 +1,42 @@
-FROM node:20-slim AS builder
+# ==========================
+# Build stage
+# ==========================
+FROM node:23-slim AS builder
 
 WORKDIR /app
 
-# Copy root workspace files first
+# Copy root package files for dependency installation
 COPY package*.json ./
 COPY tsconfig.json ./
-COPY libs ./libs/
-COPY services/communication ./services/communication/
-# Copy communication's own tsconfig.json to override root config
-COPY services/communication/tsconfig.json ./services/communication/
 
-# Install all workspace dependencies from root
+# Copy relevant packages
+COPY libs/types ./libs/types
+COPY libs/utilities ./libs/utilities
+COPY services/communication ./services/communication
+
+# Install dependencies
 RUN npm ci
 
-# Build only types (skip utilities due to segmentation fault)
-RUN npm run build:types
+# Build required libraries
+RUN npm run build:libs
 
-# Generate and build communication
-WORKDIR /app/services/communication
-RUN npm run build
+# Build application
+RUN npm run build:communication
 
 # Remove stuff in node_modules we no longer need
-ENV NODE_ENV production
-RUN npm prune --production
+RUN npm prune --omit=dev
 
-# A slimmed down runner image with only the bare necessities
-FROM node:20-slim AS runner
+# ==========================
+# Run stage
+# ==========================
+FROM node:23-slim AS runner
 WORKDIR /app
-
-# Copy built application and dependencies
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/libs ./libs
-COPY --from=builder /app/services/communication/package*.json ./
-COPY --from=builder /app/services/communication/build ./build
+COPY --from=builder /app/services/communication/build ./
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 ENV PORT 80
 EXPOSE 80
 
-CMD node build/index.js
+CMD ["node", "build/index.js"]
