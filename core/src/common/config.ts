@@ -104,6 +104,9 @@ const config = configPackage({
     economyService: {
       url: 'http://localhost:5080',
     },
+    keysService: {
+      url: 'http://localhost:5058',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
