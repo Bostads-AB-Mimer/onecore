@@ -101,7 +101,7 @@ const applyForListing = async (
 
     return { ok: true, data: res.data.content }
   } catch (error) {
-    logger.error(error, 'Error applying for listing:', error)
+    logger.error(error, 'Error applying for listing:')
     return { ok: false, err: 'unknown' }
   }
 }

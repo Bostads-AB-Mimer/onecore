@@ -102,7 +102,13 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -113,7 +119,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -224,7 +230,13 @@ export const routes = (router: KoaRouter) => {
       const response = await propertyBaseAdapter.getCompanies()
 
       if (!response.ok) {
-        logger.error(response.err, 'Internal server error', metadata)
+        logger.error(
+          {
+            err: response.err,
+            metadata,
+          },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -235,7 +247,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -312,7 +324,13 @@ export const routes = (router: KoaRouter) => {
         staircaseCode
       )
       if (!result.ok) {
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -323,7 +341,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -398,7 +416,13 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.getProperties(companyCode, tract)
 
       if (!result.ok) {
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -409,7 +433,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -465,7 +489,13 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.searchProperties(q)
 
       if (!result.ok) {
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -476,7 +506,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -544,7 +574,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error({ err: result.err, metadata }, 'Internal server error')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -555,7 +585,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ metadata, error }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -623,7 +653,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      logger.error(getResidence.err, 'Internal server error', metadata)
+      logger.error({ err: getResidence.err, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
       return
@@ -699,7 +729,10 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        logger.error(getResidence.err, 'Internal server error', metadata)
+        logger.error(
+          { err: getResidence.err, metadata },
+          'Internal server error'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -737,7 +770,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -806,7 +839,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await propertyBaseAdapter.getStaircases(buildingCode)
       if (!result.ok) {
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error({ metadata, err: result.err }, 'Internal server error')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -817,7 +850,8 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
+
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -866,15 +900,13 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /rooms?residenceId=${residenceId}`, metadata)
 
     try {
       const result = await propertyBaseAdapter.getRooms(residenceId)
       if (!result.ok) {
         logger.error(
-          result.err,
-          'Error getting rooms from property-base',
-          metadata
+          { err: result.err, metadata },
+          'Error getting rooms from property-base'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -886,7 +918,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -955,7 +987,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        logger.error(response.err, 'Internal server error', metadata)
+        logger.error({ metadata, err: response.err }, 'Internal server error')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -967,7 +999,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -1011,16 +1043,16 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalId } = ctx.params
 
-    logger.info(`GET /maintenance-units/by-rental-id/${rentalId}`, metadata)
-
     try {
       const result =
         await propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(rentalId)
       if (!result.ok) {
         logger.error(
-          result.err,
-          'Error getting maintenance units from property-base',
-          metadata
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting maintenance units from property-base'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -1032,7 +1064,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ metadata, error }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -1079,8 +1111,8 @@ export const routes = (router: KoaRouter) => {
       const { buildingCode } = ctx.params
 
       logger.info(
-        `GET /maintenance-units/by-building-code/${buildingCode}`,
-        metadata
+        metadata,
+        `GET /maintenance-units/by-building-code/${buildingCode}`
       )
 
       try {
@@ -1097,9 +1129,8 @@ export const routes = (router: KoaRouter) => {
           }
 
           logger.error(
-            result.err,
-            'Error getting maintenance units from property-base',
-            metadata
+            { err: result.err, metadata },
+            'Error getting maintenance units from property-base'
           )
           ctx.status = 500
           ctx.body = { error: 'Internal server error', ...metadata }
@@ -1117,7 +1148,7 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (error) {
-        logger.error(error, 'Internal server error', metadata)
+        logger.error({ error, metadata }, 'Internal server error')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
       }
@@ -1251,7 +1282,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalId } = ctx.params
 
-    logger.info(`GET /facilities/by-rental-id/${rentalId}`, metadata)
+    logger.info(metadata, `GET /facilities/by-rental-id/${rentalId}`)
 
     try {
       const result = await propertyBaseAdapter.getFacilityByRentalId(rentalId)
@@ -1263,7 +1294,10 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        logger.error(result.err, 'Error getting facility from property-base')
+        logger.error(
+          { err: result.err },
+          'Error getting facility from property-base'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -1274,7 +1308,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
 
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1319,16 +1353,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { code } = ctx.params
 
-    logger.info(`GET /maintenance-units/by-property-code/${code}`, metadata)
+    logger.info(metadata, `GET /maintenance-units/by-property-code/${code}`)
 
     try {
       const result =
         await propertyBaseAdapter.getMaintenanceUnitsByPropertyCode(code)
       if (!result.ok) {
         logger.error(
-          result.err,
-          'Error getting maintenance units from property-base',
-          metadata
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting maintenance units from property-base'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -1340,7 +1376,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

@@ -15,7 +15,7 @@ const getParkingSpaceByCode = async (
       `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
     )
     if (response.status === 404) {
-      logger.error('Parking space not found for code:', rentalObjectCode)
+      logger.error({ rentalObjectCode }, 'Parking space not found for code:')
       return { ok: false, err: 'not-found' }
     }
     return { ok: true, data: response.data.content }

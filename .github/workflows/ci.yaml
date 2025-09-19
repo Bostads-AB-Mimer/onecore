@@ -4,6 +4,12 @@ on:
   pull_request:
   push:
     branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run CI workflow on?"
+        required: true
+        default: "main"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -24,19 +30,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
-      # Node + caches + npm ci (only on cache miss)
-      - name: Setup npm
-        uses: ./.github/actions/npm-setup
+      # Node + caches + pnpm install (only on cache miss)
+      - name: Setup pnpm
+        uses: ./.github/actions/pnpm-setup
 
       # Compute a cache key that changes when lib sources / tsconfig / lockfile change
       - name: Compute cache key & path
         id: cache
         run: |
-          # Key
-          echo "key=${{ runner.os }}-node-20-dist-${{ hashFiles('libs/**/src/**','packages/**/src/**','**/tsconfig*.json','**/package-lock.json') }}" >> $GITHUB_OUTPUT
+          # Key (hash sources + tsconfigs + lockfile)
+          echo "key=${{ runner.os }}-node-20-dist-${{ hashFiles('libs/**/src/**','packages/**/src/**','**/tsconfig*.json','**/pnpm-lock.yaml') }}" >> $GITHUB_OUTPUT
 
-          # Path
+          # Path (things we want to reuse later)
           {
             echo 'path<<EOF'
             echo 'libs/**/dist'
@@ -53,15 +61,15 @@ jobs:
           path: ${{ steps.cache.outputs.path }}
           key: ${{ steps.cache.outputs.key }}
           
-      # Run generate:static once for downstrea jobs, unless cached
+      # Run generate:static once for downstreams jobs, unless cached
       - name: Run generate:static
-        if: steps.restore-libs-cache.outputs.cache-hit != 'true'
-        run: npm run generate:static
+        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
+        run: pnpm run generate:static
 
-      # Build shared libs once for downstream jobs that need compiled deps
+      # Build shared libs once for downstreams jobs that need compiled deps
       - name: Build libs
-        if: steps.restore-libs-cache.outputs.cache-hit != 'true'
-        run: npm run build:libs
+        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
+        run: pnpm run build:libs
 
       # Read build matrix (later used to run jobs in parallel, per package)
       - name: Read build matrix
@@ -90,9 +98,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup
-        uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/pnpm-setup
 
       - name: Restore Cache
         uses: actions/cache@v4
@@ -101,7 +111,7 @@ jobs:
           key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run Lint
-        run: npm run --workspace ${{ matrix.package }} lint
+        run: pnpm run --filter ${{ matrix.package }} lint
 
   prettier:
     name: ${{ matrix.package }} - Prettier check
@@ -114,12 +124,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup
-        uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/pnpm-setup
 
       - name: Run Prettier
-        run: npm run --workspace ${{ matrix.package }} prettier
+        run: pnpm run --filter ${{ matrix.package }} prettier
 
   typecheck:
     name: ${{ matrix.package }} - Typecheck
@@ -132,9 +144,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
  
       - name: Setup
-        uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/pnpm-setup
       
       - name: Restore Cache
         uses: actions/cache@v4
@@ -143,7 +157,7 @@ jobs:
           key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run Typecheck
-        run: npm run --workspace ${{ matrix.package }} typecheck
+        run: pnpm run --filter ${{ matrix.package }} typecheck
 
   build:
     name: ${{ matrix.package }} - Build
@@ -156,9 +170,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
  
       - name: Setup
-        uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/pnpm-setup
       
       - name: Restore Cache
         uses: actions/cache@v4
@@ -167,7 +183,7 @@ jobs:
           key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Build
-        run: npm run --workspace ${{ matrix.package }} build
+        run: pnpm run --filter ${{ matrix.package }} build
 
 
   test:
@@ -181,9 +197,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
  
       - name: Setup
-        uses: ./.github/actions/npm-setup
+        uses: ./.github/actions/pnpm-setup
       
       - name: Restore Cache
         uses: actions/cache@v4
@@ -192,4 +210,4 @@ jobs:
           key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run tests
-        run: npm run --workspace "${{ matrix.package }}" test --if-present
+        run: pnpm run --filter "${{ matrix.package }}" test

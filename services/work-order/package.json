@@ -4,16 +4,12 @@
   "description": "",
   "license": "ISC",
   "author": "",
-  "packageManager": "npm",
-  "engines": {
-    "node": ">=20"
-  },
   "main": "./src/index.ts",
   "keywords": [],
   "scripts": {
     "build": "tsc",
     "dev": "nodemon -e ts,js --exec ts-node src/index ",
-    "dev:init": "npm run prepare:dotenv",
+    "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "migrate:down": "knex migrate:down --env dev",
@@ -47,8 +43,8 @@
     "tedious": "^18.6.1",
     "zod": "^3.25.67",
     "zod-to-json-schema": "^3.24.5",
-    "@onecore/types": "*",
-    "@onecore/utilities": "*"
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",

@@ -76,12 +76,6 @@ export const routes = (router: KoaRouter) => {
       const { buildingCode, staircaseCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(
-        `GET /residences?buildingCode=${buildingCode}${
-          staircaseCode ? `&staircaseCode=${staircaseCode}` : ''
-        }`,
-        metadata
-      )
 
       try {
         let dbResidences
@@ -226,7 +220,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /residences/rental-id/${ctx.params.rentalId}`, metadata)
 
     try {
       const result = await getResidenceByRentalId(ctx.params.rentalId)
@@ -343,7 +336,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /residences/${id}`, metadata)
 
     try {
       const residence = await getResidenceById(id)
