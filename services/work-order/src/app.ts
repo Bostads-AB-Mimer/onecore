@@ -4,12 +4,15 @@ import cors from '@koa/cors'
 
 import api from './api'
 import errorHandler from './middlewares/error-handler'
-import { logger, loggerMiddlewares } from '@onecore/utilities'
+import {
+  logger,
+  loggerMiddlewares,
+  swaggerMiddleware,
+} from '@onecore/utilities'
 
 const app = new Koa()
 
 import { koaSwagger } from 'koa2-swagger-ui'
-import { swaggerMiddleware } from './middlewares/swagger-middleware'
 
 app.use(cors())
 

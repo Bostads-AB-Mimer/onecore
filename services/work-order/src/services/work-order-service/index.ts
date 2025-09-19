@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  registerSchema,
+} from '@onecore/utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateWorkOrderBodySchema,
@@ -15,7 +19,6 @@ import {
   XpandWorkOrderSchema,
 } from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
-import { registerSchema } from '../../middlewares/swagger-middleware'
 
 /**
  * @swagger
