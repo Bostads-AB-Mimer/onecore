@@ -14,7 +14,7 @@ export interface Config {
 
 const config = configPackage({
   defaults: {
-    port: 5020,
+    port: 5080,
     keysDatabase: {
       host: process.env.KEYS_DATABASE__HOST ?? 'localhost',
       user: process.env.KEYS_DATABASE__USER ?? 'sa',
