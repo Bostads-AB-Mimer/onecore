@@ -10,6 +10,7 @@ exports.up = function (knex) {
     table.string('system_code').unique().notNullable()
     table.string('name').notNullable()
     table.string('manufacturer').notNullable()
+    table.string('managing_supplier')
     table.enum('type', ['MECHANICAL', 'ELECTRONIC', 'HYBRID']).notNullable()
     table.text('property_ids').defaultTo('[]')
     table.date('installation_date')
