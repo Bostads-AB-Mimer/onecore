@@ -1,0 +1,115 @@
+{
+  "launchConfigs": {
+    "Everything": {
+      "components": {
+        "property-tree": {
+          "selected": true
+        },
+        "backend": {
+          "selected": true
+        },
+        "frontend": {
+          "selected": true
+        },
+        "core": {
+          "selected": true
+        },
+        "types": {
+          "selected": true
+        },
+        "utilities": {
+          "selected": true
+        },
+        "communication": {
+          "selected": true
+        },
+        "leasing": {
+          "selected": true
+        },
+        "property": {
+          "selected": true
+        },
+        "property-management": {
+          "selected": true
+        },
+        "work-order": {
+          "selected": true
+        }
+      }
+    },
+    "Property Tree": {
+      "components": {
+        "property-tree": {
+          "selected": true
+        },
+        "backend": {
+          "selected": false
+        },
+        "frontend": {
+          "selected": false
+        },
+        "core": {
+          "selected": true
+        },
+        "types": {
+          "selected": false
+        },
+        "utilities": {
+          "selected": false
+        },
+        "communication": {
+          "selected": false
+        },
+        "leasing": {
+          "selected": false
+        },
+        "property": {
+          "selected": true
+        },
+        "property-management": {
+          "selected": true
+        },
+        "work-order": {
+          "selected": false
+        }
+      }
+    },
+    "Internal Portal": {
+      "components": {
+        "property-tree": {
+          "selected": false
+        },
+        "backend": {
+          "selected": true
+        },
+        "frontend": {
+          "selected": true
+        },
+        "core": {
+          "selected": true
+        },
+        "types": {
+          "selected": false
+        },
+        "utilities": {
+          "selected": false
+        },
+        "communication": {
+          "selected": false
+        },
+        "leasing": {
+          "selected": true
+        },
+        "property": {
+          "selected": true
+        },
+        "property-management": {
+          "selected": true
+        },
+        "work-order": {
+          "selected": false
+        }
+      }
+    }
+  }
+}
