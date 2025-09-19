@@ -98,6 +98,9 @@ const config = configPackage({
     propertyBaseService: {
       url: 'http://localhost:5050',
     },
+    keysService: {
+      url: 'http://localhost:5058',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
