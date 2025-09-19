@@ -6,16 +6,9 @@ import {
   CommercialSpaceInfo,
   ParkingSpaceInfo,
   MaintenanceUnitInfo,
-  ParkingSpace,
 } from '@onecore/types'
 
 import Config from '../../../common/config'
-import {
-  getParkingSpaceApplicationCategory,
-  getParkingSpaceType,
-  getStreet,
-  getStreetNumber,
-} from '../../../utils/parking-spaces'
 
 const db = knex({
   client: 'mssql',
@@ -286,56 +279,9 @@ const getMaintenanceUnits = async (
   return transformFromDbMaintenanceUnits(rows)
 }
 
-const getParkingSpaceOld = async (
-  parkingSpaceId: string
-): Promise<ParkingSpace | undefined> => {
-  try {
-    const url = `${Config.xpandService.url}/publishedrentalobjects/parkings/${parkingSpaceId}`
-
-    const response = await axios({
-      method: 'get',
-      url: url,
-    })
-
-    const parkingSpace: ParkingSpace = {
-      parkingSpaceId: response.data.rentalObjectCode,
-      address: {
-        street: getStreet(response.data.postalAddress),
-        number: getStreetNumber(response.data.postalAddress),
-        postalCode: response.data.zipCode,
-        city: response.data.city,
-      },
-      vacantFrom: response.data.vacantFrom,
-      rent: {
-        currentRent: {
-          leaseId: undefined,
-          rentId: undefined,
-          currentRent: response.data.monthRent,
-          vat: response.data.vatIncluded ?? 0,
-          additionalChargeAmount: undefined,
-          additionalChargeDescription: undefined,
-          rentStartDate: undefined,
-          rentEndDate: undefined,
-        },
-        futureRents: [],
-      },
-      type: getParkingSpaceType(response.data.objectTypeCode),
-      applicationCategory: getParkingSpaceApplicationCategory(
-        response.data.waitingListType
-      ),
-    }
-
-    return parkingSpace
-  } catch (error) {
-    logger.error(error, 'Error getting parking space')
-    return undefined
-  }
-}
-
 export {
   getRentalPropertyInfo,
   getMaintenanceUnits,
-  getParkingSpaceOld,
   getApartmentRentalPropertyInfo,
   db,
 }
