@@ -17,7 +17,6 @@ import {
 } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
-import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
 import { DeleteListing } from './components/DeleteListing'
 import { CloseListing } from './components/CloseListing'
 import { printVacantFrom } from '../../common/formattingUtils'
@@ -59,8 +58,6 @@ const ParkingSpaces = () => {
       >
         <Typography variant="h1">Bilplatser</Typography>
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
-          <SyncInternalParkingSpaces />
-
           <Link to="/bilplatser/publicera">
             <Button variant="dark-outlined">
               Publicera bilplatser från Xpand
