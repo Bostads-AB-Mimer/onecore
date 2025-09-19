@@ -4,8 +4,84 @@ import { db } from '../adapters/db'
 
 const TABLE = 'key_loans'
 
+
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Key Loans
+ *     description: Endpoints related to key loan operations
+ */
 export const routes = (router: KoaRouter) => {
-  // LIST
+   /**
+   * @swagger
+   * /key_loans:
+   *   get:
+   *     summary: List all key loans
+   *     description: Fetches a list of all key loans ordered by creation date.
+   *     tags: [Key Loans]
+   *     responses:
+   *       200:
+   *         description: A list of key loans.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         description: The unique ID of the key loan.
+   *                       keys:
+   *                         type: string
+   *                         description: JSON string array of key IDs.
+   *                       contact:
+   *                         type: string
+   *                         description: Contact information.
+   *                       lease:
+   *                         type: string
+   *                         description: Lease identifier.
+   *                       returned_at:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When keys were returned.
+   *                       available_to_next_tenant_from:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When keys become available for next tenant if early return.
+   *                       picked_up_at:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When keys were picked up.
+   *                       created_at:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When the record was created.
+   *                       updated_at:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When the record was last updated.
+   *                       created_by:
+   *                         type: string
+   *                         description: Who created this record.
+   *                       updated_by:
+   *                         type: string
+   *                         description: Who last updated this record.
+   *       500:
+   *         description: An error occurred while listing key loans.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
   router.get('/key_loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -19,7 +95,90 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // GET by id
+ /**
+   * @swagger
+   * /key_loans/{id}:
+   *   get:
+   *     summary: Get key loan by ID
+   *     description: Fetch a specific key loan by its ID.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the key loan to retrieve.
+   *     responses:
+   *       200:
+   *         description: A key loan object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       description: The unique ID of the key loan.
+   *                     keys:
+   *                       type: string
+   *                       description: JSON string array of key IDs.
+   *                     contact:
+   *                       type: string
+   *                       description: Contact information.
+   *                     lease:
+   *                       type: string
+   *                       description: Lease identifier.
+   *                     returned_at:
+   *                       type: string
+   *                       format: date-time
+   *                       description: When keys were returned.
+   *                     available_to_next_tenant_from:
+   *                       type: string
+   *                       format: date-time
+   *                       description: When keys become available for next tenant.
+   *                     picked_up_at:
+   *                       type: string
+   *                       format: date-time
+   *                       description: When keys were picked up.
+   *                     created_at:
+   *                       type: string
+   *                       format: date-time
+   *                       description: When the record was created.
+   *                     updated_at:
+   *                       type: string
+   *                       format: date-time
+   *                       description: When the record was last updated.
+   *                     created_by:
+   *                       type: string
+   *                       description: Who created this record.
+   *                     updated_by:
+   *                       type: string
+   *                       description: Who last updated this record.
+   *       404:
+   *         description: Key loan not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Key loan with provided id not found
+   *       500:
+   *         description: An error occurred while fetching the key loan.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
   router.get('/key_loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -38,7 +197,68 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // CREATE
+  /**
+   * @swagger
+   * /key_loans:
+   *   post:
+   *     summary: Create a new key loan
+   *     description: Create a new key loan record.
+   *     tags: [Key Loans]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               keys:
+   *                 type: string
+   *                 description: JSON string array of key IDs.
+   *                 example: "[1, 2, 3]"
+   *               contact:
+   *                 type: string
+   *                 description: Contact information (email, phone, etc.).
+   *                 example: "john.doe@email.com"
+   *               lease:
+   *                 type: string
+   *                 description: Lease identifier or reference.
+   *                 example: "LEASE-2025-001"
+   *               picked_up_at:
+   *                 type: string
+   *                 format: date-time
+   *                 description: When keys were picked up.
+   *                 example: "2025-09-19T14:30:00.000Z"
+   *               available_to_next_tenant_from:
+   *                 type: string
+   *                 format: date-time
+   *                 description: When keys become available for next tenant.
+   *                 example: "2025-12-01T00:00:00.000Z"
+   *               created_by:
+   *                 type: string
+   *                 description: Who created this record.
+   *                 example: "admin-user-123"
+   *     responses:
+   *       201:
+   *         description: Key loan created successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: The created key loan object.
+   *       500:
+   *         description: An error occurred while creating the key loan.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
   router.post('/key_loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -54,7 +274,88 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // UPDATE (partial)
+  /**
+   * @swagger
+   * /key_loans/{id}:
+   *   patch:
+   *     summary: Update a key loan
+   *     description: Partially update an existing key loan.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the key loan to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               keys:
+   *                 type: string
+   *                 description: JSON string array of key IDs.
+   *                 example: "[1, 2]"
+   *               contact:
+   *                 type: string
+   *                 description: Contact information.
+   *                 example: "updated.email@email.com"
+   *               lease:
+   *                 type: string
+   *                 description: Lease identifier.
+   *                 example: "LEASE-2025-002"
+   *               returned_at:
+   *                 type: string
+   *                 format: date-time
+   *                 description: When keys were returned.
+   *                 example: "2025-09-19T16:00:00.000Z"
+   *               available_to_next_tenant_from:
+   *                 type: string
+   *                 format: date-time
+   *                 description: When keys become available for next tenant.
+   *               picked_up_at:
+   *                 type: string
+   *                 format: date-time
+   *                 description: When keys were picked up.
+   *               updated_by:
+   *                 type: string
+   *                 description: Who updated this record.
+   *                 example: "admin-user-456"
+   *     responses:
+   *       200:
+   *         description: Key loan updated successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: The updated key loan object.
+   *       404:
+   *         description: Key loan not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Key loan with id 12345678-1234-1234-1234-123456789abc not found
+   *       500:
+   *         description: An error occurred while updating the key loan.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
   router.patch('/key_loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -80,7 +381,48 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // DELETE
+  /**
+   * @swagger
+   * /key_loans/{id}:
+   *   delete:
+   *     summary: Delete a key loan
+   *     description: Delete an existing key loan by ID.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the key loan to delete.
+   *     responses:
+   *       200:
+   *         description: Key loan deleted successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       404:
+   *         description: Key loan not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: Key loan with id 12345678-1234-1234-1234-123456789abc not found
+   *       500:
+   *         description: An error occurred while deleting the key loan.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
   router.delete('/key_loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
