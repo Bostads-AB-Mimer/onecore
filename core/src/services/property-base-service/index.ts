@@ -336,7 +336,7 @@ export const routes = (router: KoaRouter) => {
       const result =
         await propertyBaseAdapter.getBuildingsByPropertyCode(propertyCode)
       if (!result.ok) {
-        logger.error(result.err, 'Internal server error', metadata)
+        logger.error({ err: result.err, metadata }, 'Internal server error')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
@@ -347,7 +347,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
