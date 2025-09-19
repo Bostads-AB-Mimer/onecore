@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+
 import * as coreAdapter from './adapters/core-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/listings/applicant', async (ctx) => {
@@ -98,6 +99,40 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     }
+  })
+
+  router.put('(.*)/listings/:listingId/unpublish', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const unpublish = await coreAdapter.closeListing(
+      Number(ctx.params.listingId)
+    )
+
+    if (!unpublish.ok) {
+      ctx.status = 500
+      ctx.body = {
+        ...metadata,
+      }
+
+      logger.error('Failed to close listing', unpublish.err)
+      return
+    }
+
+    const addComment = await coreAdapter.addComment(
+      { targetType: 'listing', targetId: Number(ctx.params.listingId) },
+      {
+        authorId: ctx.session?.account.username,
+        authorName: ctx.session?.account.name,
+        comment: 'Bilplatsannons avpublicerad',
+        type: 'COMMENT',
+      }
+    )
+
+    if (!addComment.ok) {
+      logger.error('Failed to add comment', addComment.err)
+    }
+
+    ctx.status = 200
+    ctx.body = metadata
   })
 
   // /listings/with-applicants
