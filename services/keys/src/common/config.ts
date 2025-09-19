@@ -16,11 +16,11 @@ const config = configPackage({
   defaults: {
     port: 5020,
     keysDatabase: {
-      host: process.env.KEYS_DB_HOST ?? 'localhost',
-      user: process.env.KEYS_DB_USER ?? 'sa',
-      password: process.env.KEYS_DB_PASSWORD ?? '',
-      port: Number(process.env.KEYS_DB_PORT ?? 1433),
-      database: process.env.KEYS_DB_NAME ?? 'keys-management',
+      host: process.env.KEYS_DATABASE__HOST ?? 'localhost',
+      user: process.env.KEYS_DATABASE__USER ?? 'sa',
+      password: process.env.KEYS_DATABASE__PASSWORD ?? '',
+      port: Number(process.env.KEYS_DATABASE__PORT ?? 1433),
+      database: process.env.KEYS_DATABASE__DATABASE ?? 'keys-management',
     },
   },
 })
