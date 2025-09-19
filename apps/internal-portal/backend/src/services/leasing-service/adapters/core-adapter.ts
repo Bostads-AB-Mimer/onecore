@@ -339,9 +339,13 @@ const deleteListing = async (
   listingId: number
 ): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
   try {
+<<<<<<< HEAD
     await getFromCore<{
       content: InternalParkingSpaceSyncSuccessResponse
     }>({
+=======
+    await getFromCore({
+>>>>>>> b72f1372 (correct error handling in deleteListing)
       method: 'delete',
       url: `${coreBaseUrl}/listings/${listingId}`,
     })
