@@ -105,7 +105,7 @@ const config = configPackage({
       url: 'http://localhost:5080',
     },
     keysService: {
-      url: 'http://localhost:5058',
+      url: 'http://localhost:5080',
     },
     auth: {
       secret: 'very secret. replace this',
