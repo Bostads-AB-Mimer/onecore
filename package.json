@@ -8,13 +8,14 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "turbo run build",
     "build:apps": "pnpm run build:internal-portal && pnpm run build:property-tree",
     "build:communication": "pnpm run --filter @onecore/communication build ",
     "build:core": "pnpm run --filter @onecore/core build ",
     "build:economy": "pnpm run --filter @onecore/economy build",
     "build:internal-portal": "pnpm run --filter @onecore/internal-portal build && pnpm run build:internal-portal-backend",
     "build:internal-portal-backend": "pnpm run --filter @onecore/internal-portal-backend  build ",
+    "build:keys": "turbo run --filter @onecore/keys build",
     "build:leasing": "pnpm run --filter @onecore/leasing build ",
     "build:libs": "pnpm run build:types && pnpm run build:utilities",
     "build:property": "pnpm run --filter @onecore/property build ",
@@ -37,15 +38,18 @@
     "typecheck": "pnpm -r run typecheck"
   },
   "dependencies": {
-    "@azure/msal-node": "^2.9.2",
-    "cross-env": "10.0.0"
+    "@azure/msal-node": "^2.9.2"
   },
   "devDependencies": {
+<<<<<<< HEAD
 <<<<<<< HEAD
     "cross-env": "10.0.0",
     "eslint": "^9.31.0",
 =======
 >>>>>>> d2d87ecc (added cross-env)
+=======
+    "cross-env": "10.0.0",
+>>>>>>> de65642b (added pnpx before cross env and knex scripts)
     "@eslint/js": "9.32.0",
     "@iteam/eslint-config-react": "^0.4.0",
     "eslint": "^9.31.0",
