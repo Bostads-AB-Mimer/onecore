@@ -76,12 +76,6 @@ export const routes = (router: KoaRouter) => {
       const { buildingCode, staircaseCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
-      logger.info(
-        `GET /residences?buildingCode=${buildingCode}${
-          staircaseCode ? `&staircaseCode=${staircaseCode}` : ''
-        }`,
-        metadata
-      )
 
       try {
         let dbResidences
@@ -226,7 +220,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(`GET /residences/rental-id/${ctx.params.rentalId}`, metadata)
 
     try {
       const result = await getResidenceByRentalId(ctx.params.rentalId)
@@ -266,6 +259,25 @@ export const routes = (router: KoaRouter) => {
             code: result.propertyCode,
             name: result.propertyName,
           },
+          staircase: result.staircase
+            ? {
+                id: result.staircase.id,
+                code: result.staircase.code,
+                name: result.staircase.name,
+                features: {
+                  floorPlan: result.staircase.floorPlan,
+                  accessibleByElevator: Boolean(
+                    result.staircase.accessibleByElevator
+                  ),
+                },
+                dates: {
+                  from: result.staircase.fromDate,
+                  to: result.staircase.toDate,
+                },
+                deleted: Boolean(result.staircase.deleteMark),
+                timestamp: result.staircase.timestamp,
+              }
+            : null,
           rentalInformation: {
             rentalId: result.rentalId,
             apartmentNumber:
@@ -324,7 +336,6 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    logger.info(`GET /residences/${id}`, metadata)
 
     try {
       const residence = await getResidenceById(id)

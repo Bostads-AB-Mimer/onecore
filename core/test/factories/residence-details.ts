@@ -87,4 +87,19 @@ export const ResidenceByRentalIdDetailsFactory = Factory.define<
     type: { code: '1RK', name: '1 rum och kök' },
   },
   floor: '1',
+  staircase: {
+    id: 'staircase-1',
+    code: 'A',
+    name: 'Staircase A',
+    features: {
+      floorPlan: 'Plan A',
+      accessibleByElevator: true,
+    },
+    dates: {
+      from: '2024-01-01T00:00:00Z',
+      to: '2025-12-31T23:59:59Z',
+    },
+    deleted: false,
+    timestamp: '2024-01-01T00:00:00Z',
+  },
 }))

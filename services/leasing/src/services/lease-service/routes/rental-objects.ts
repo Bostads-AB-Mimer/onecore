@@ -179,13 +179,13 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info('Fetching all vacant parking spaces', metadata)
+    logger.info(metadata, 'Fetching all vacant parking spaces')
 
     const vacantParkingSpaces = await getAllVacantParkingSpaces()
 
     if (!vacantParkingSpaces.ok) {
       logger.error(
-        vacantParkingSpaces.err,
+        { err: vacantParkingSpaces.err },
         'Error fetching vacant parking spaces:'
       )
       ctx.status = 500
