@@ -1,39 +1,26 @@
-# ==========================
-# Build stage
-# ==========================
-FROM node:23-slim AS builder
+FROM node:20-slim as builder
 
-ENV CI=true
+WORKDIR /home/app
 
-WORKDIR /app
+# Help Docker cache npm install if neither of these files have changed
+ADD ./package.json ./package-lock.json ./
+RUN npm ci
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+ADD ./ ./
+RUN npm run build
 
-# Copy package files for dependency installation
-COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Remove stuff in node_modules we no longer need
+ENV NODE_ENV production
+RUN npm prune --production
 
-# Copy relevant packages
-COPY libs/types ./libs/types
-COPY libs/utilities ./libs/utilities
-COPY services/work-order ./services/work-order
-
-RUN pnpm install
-RUN pnpm build:libs
-RUN pnpm run --filter @onecore/work-order build
-RUN pnpm install --only=prod
-RUN pnpm deploy --filter @onecore/work-order --prod /out
-
-# ==========================
-# Run stage
-# ==========================
-FROM node:23-slim AS runner
-
-WORKDIR /app
-
-COPY --from=builder /out ./
+# A slimmed down runner image with only the bare necessities
+FROM node:20-slim AS runner
+WORKDIR /home/app
+COPY --from=BUILDER /home/app/node_modules ./node_modules
+COPY --from=BUILDER /home/app/package* ./
+COPY --from=BUILDER /home/app/build ./
 
 ENV PORT 80
 EXPOSE 80
 
-CMD ["node", "build/index.js"]
+CMD node index.js
