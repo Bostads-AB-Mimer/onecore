@@ -248,7 +248,7 @@ export const routes = (router: KoaRouter) => {
     const params = schemas.GetResidencesQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
       ctx.status = 400
-      ctx.body = { error: params.error.errors }
+      ctx.body = { error: params.error.issues }
       return
     }
     const { buildingCode, staircaseCode } = params.data
@@ -342,7 +342,7 @@ export const routes = (router: KoaRouter) => {
     const params = schemas.GetPropertiesQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
       ctx.status = 400
-      ctx.body = { error: params.error.errors }
+      ctx.body = { error: params.error.issues }
       return
     }
     const { companyCode, tract } = params.data
@@ -414,7 +414,7 @@ export const routes = (router: KoaRouter) => {
 
     if (!params.success) {
       ctx.status = 400
-      ctx.body = { error: params.error.errors }
+      ctx.body = { error: params.error.issues }
       return
     }
 
@@ -766,7 +766,7 @@ export const routes = (router: KoaRouter) => {
     const queryParams = schemas.StaircasesQueryParamsSchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
+      ctx.body = { errors: queryParams.error.issues }
       return
     }
     const { buildingCode } = queryParams.data
@@ -828,7 +828,7 @@ export const routes = (router: KoaRouter) => {
     const queryParams = schemas.GetRoomsQueryParamsSchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
+      ctx.body = { errors: queryParams.error.issues }
       return
     }
 

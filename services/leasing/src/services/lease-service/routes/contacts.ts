@@ -125,7 +125,7 @@ export const routes = (router: KoaRouter) => {
         .optional()
         .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({ includeTerminatedLeases: false })
 
   router.get('(.*)/contact/nationalRegistrationNumber/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
@@ -189,7 +189,7 @@ export const routes = (router: KoaRouter) => {
         .optional()
         .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({ includeTerminatedLeases: false })
 
   router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
@@ -350,7 +350,7 @@ export const routes = (router: KoaRouter) => {
         .optional()
         .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({ includeTerminatedLeases: false })
 
   router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

@@ -1,4 +1,4 @@
-import { schemas, leasing } from '@onecore/types'
+import { leasing, ApplicationProfile } from '@onecore/types'
 import { Knex } from 'knex'
 import { z } from 'zod'
 
@@ -9,8 +9,6 @@ import { addMonths } from 'date-fns'
 type Params = z.infer<
   typeof leasing.v1.CreateOrUpdateApplicationProfileRequestParamsSchema
 >
-
-type ApplicationProfile = z.infer<typeof schemas.v1.ApplicationProfileSchema>
 
 async function create(
   db: Knex,

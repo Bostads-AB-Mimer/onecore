@@ -77,9 +77,9 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       // Add default type=residence if residenceCode is provided
       const queryWithType =
-        'residenceCode' in ctx.request.parsedQuery
-          ? { ...ctx.request.parsedQuery, type: 'residence' }
-          : { ...ctx.request.parsedQuery, type: 'maintenance' }
+        'residenceCode' in ctx.state.parsedQuery
+          ? { ...ctx.state.parsedQuery, type: 'residence' }
+          : { ...ctx.state.parsedQuery, type: 'maintenance' }
 
       const queryParams = componentsQueryParamsSchema.parse(queryWithType)
 

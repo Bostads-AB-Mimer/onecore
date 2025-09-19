@@ -50,7 +50,7 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rooms',
     parseRequest({ query: roomsQueryParamsSchema }),
     async (ctx) => {
-      const { residenceId } = ctx.request.parsedQuery
+      const { residenceId } = ctx.state.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
