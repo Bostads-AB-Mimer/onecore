@@ -42,3 +42,17 @@ export const GetFacilityByRentalIdResponseSchema = createGenericResponseSchema(
 export type GetFacilityByRentalIdResponse = z.infer<
   typeof GetFacilityByRentalIdResponseSchema
 >
+
+export const GetFacilitiesByPropertyCodeResponseSchema =
+  createGenericResponseSchema(z.array(FacilityDetailsSchema))
+
+export type GetFacilitiesByPropertyCodeResponse = z.infer<
+  typeof GetFacilitiesByPropertyCodeResponseSchema
+>
+
+export const GetFacilitiesByBuildingCodeResponseSchema =
+  createGenericResponseSchema(z.array(FacilityDetailsSchema))
+
+export type GetFacilitiesByBuildingCodeResponse = z.infer<
+  typeof GetFacilitiesByBuildingCodeResponseSchema
+>
