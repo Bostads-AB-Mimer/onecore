@@ -66,7 +66,7 @@ export const routes = (router: KoaRouter) => {
       query: buildingsQueryParamsSchema,
     }),
     async (ctx) => {
-      const { propertyCode } = ctx.request.parsedQuery
+      const { propertyCode } = ctx.state.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
@@ -140,7 +140,7 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const buildings = await searchBuildings(ctx.request.parsedQuery.q)
+        const buildings = await searchBuildings(ctx.state.parsedQuery.q)
         const responseContent = buildings.map(
           (b): z.infer<typeof BuildingSchema> => ({
             id: b.id,
