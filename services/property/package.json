@@ -16,10 +16,10 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "index.ts",
+  "main": "./src/index.ts",
   "scripts": {
     "build": "tsc && tsc-alias",
-    "dev": "node --import tsx --watch index.ts",
+    "dev": "node --import tsx --watch src/index.ts",
     "dev:init": "pnpm prepare:dotenv",
     "generate:static": "pnpm prisma:generate",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
