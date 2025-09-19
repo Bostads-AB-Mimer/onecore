@@ -3,40 +3,38 @@
 # ==========================
 FROM node:23-slim AS builder
 
-ENV CI=true
-
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
-
 # Copy package files for dependency installation
-COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package*.json tsconfig.json ./
 
 COPY apps/property-tree ./apps/property-tree
 
-RUN pnpm install
-RUN pnpm run --filter ...@onecore/property-tree build
-RUN pnpm install --only=prod
-RUN pnpm deploy --filter @onecore/property-tree --prod /out
+ARG VITE_CORE_API_URL
+ARG VITE_KEYCLOAK_URL
+ARG VITE_KEYCLOAK_CLIENT_ID
+ARG VITE_KEYCLOAK_REDIRECT_URI
+ARG VITE_KEYCLOAK_REALM
 
-# ==========================
-# Run stage
-# ==========================
+ENV VITE_CORE_API_URL=${VITE_CORE_API_URL}
+ENV VITE_KEYCLOAK_URL=${VITE_KEYCLOAK_URL}
+ENV VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID}
+ENV VITE_KEYCLOAK_REDIRECT_URI=${VITE_KEYCLOAK_REDIRECT_URI}
+ENV VITE_KEYCLOAK_REALM=${VITE_KEYCLOAK_REALM}
+
+# Install dependencies
+RUN npm ci
+
+# Build
+RUN npm run build:property-tree
+
+# Production image
 FROM nginx:alpine
-
-RUN apk add --no-cache nodejs
-
-WORKDIR /app
 
 # Copy nginx configuration
 COPY --from=builder /app/apps/property-tree/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/apps/property-tree/script ./script
-COPY --from=builder /out/dist /user/share/nginx/html
+COPY --from=builder /app/apps/property-tree/dist /usr/share/nginx/html
 
-# Actual run config
 EXPOSE 80
-RUN chmod +x ./script/entrypoint.sh
 
-ENTRYPOINT ["script/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

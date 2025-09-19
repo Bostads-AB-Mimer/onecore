@@ -3,47 +3,41 @@
 # ==========================
 FROM node:23-slim AS builder
 
-ENV CI=true
-
 # Prisma requires openssl to generate client
 RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
-
-# Copy package files for dependency installation
-COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copy root package files for dependency installation
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Copy relevant packages
 COPY libs/types ./libs/types
 COPY libs/utilities ./libs/utilities
 COPY services/property ./services/property
 
-RUN pnpm install
+# Install dependencies
+RUN npm ci
 
-RUN pnpm build:libs
-RUN pnpm run generate:static
-RUN pnpm run --filter @onecore/property build
-RUN pnpm deploy --filter @onecore/property --prod /out
-# Regenerate the prisma client, as pnpm will be unware of it and prune it away
-RUN cd /out && pnpm generate:static
+# Build required libraries
+RUN npm run build:libs
+
+# Generate Prisma client
+WORKDIR /app/services/property
+RUN npm run generate:static
 
 # ==========================
 # Run stage
 # ==========================
 FROM node:23-slim AS runner
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
-
-# Run on the same version of openssl as the prisma build
-RUN apt-get update -y && apt-get install -y openssl
-
 WORKDIR /app
-COPY --from=builder /out ./
+
+COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/services/property ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]

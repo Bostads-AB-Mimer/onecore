@@ -6,6 +6,164 @@
 
 Monorepo containing all base services and applications of the ONECore platform.
 
+## Snabbstart för nya utvecklare
+
+### Förutsättningar
+
+Se till att du har följande installerat på din maskin:
+
+- [Docker](https://docs.docker.com/get-docker/) (version 20.10 eller senare)
+- [Docker Compose](https://docs.docker.com/compose/install/) (version 2.0 eller senare)
+- [Node.js](https://nodejs.org/) (version 20 eller senare)
+- [npm](https://www.npmjs.com/) (kommer med Node.js)
+
+### Komma igång
+
+1. **Klona repositoryt:**
+   ```bash
+   git clone <repository-url>
+   cd onecore
+   ```
+
+2. **Installera dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Starta alla tjänster med Docker Compose:**
+   ```bash
+   docker-compose up --build
+   ```
+
+   Detta kommer att:
+   - Bygga alla Docker-images
+   - Starta alla tjänster på sina respektive portar
+   - Sätta upp nätverket mellan tjänsterna
+
+### Tillgängliga tjänster
+
+När alla tjänster är igång kan du komma åt dem på följande portar:
+
+| Tjänst | Port | URL |
+|--------|------|-----|
+| Core API | 5010 | http://localhost:5010 |
+| Property Service | 5050 | http://localhost:5050 |
+| Leasing Service | 5020 | http://localhost:5020 |
+| Property Management | 5030 | http://localhost:5030 |
+| Work Order Service | 5070 | http://localhost:5070 |
+| Communication Service | 5040 | http://localhost:5040 |
+| Internal Portal Backend | 5060 | http://localhost:5060 |
+| Internal Portal Frontend | 3000 | http://localhost:3000 |
+| Property Tree App | 3001 | http://localhost:3001 |
+
+### Utveckling
+
+#### Arbeta med enskilda tjänster
+
+För att starta endast specifika tjänster:
+
+```bash
+# Starta endast core och dess dependencies
+docker-compose up core
+
+# Starta endast property-tree appen
+docker-compose up property-tree
+
+# Starta flera specifika tjänster
+docker-compose up core property leasing
+```
+
+#### Bygga om tjänster
+
+När du gör ändringar i koden:
+
+```bash
+# Bygga om alla tjänster
+docker-compose build
+
+# Bygga om en specifik tjänst
+docker-compose build core
+
+# Bygga om och starta
+docker-compose up --build
+```
+
+#### Visa loggar
+
+```bash
+# Visa loggar för alla tjänster
+docker-compose logs
+
+# Visa loggar för en specifik tjänst
+docker-compose logs core
+
+# Följa loggar i realtid
+docker-compose logs -f core
+```
+
+#### Stoppa tjänster
+
+```bash
+# Stoppa alla tjänster
+docker-compose down
+
+# Stoppa och ta bort volymer
+docker-compose down -v
+
+# Stoppa och ta bort images
+docker-compose down --rmi all
+```
+
+### Vanliga kommandon
+
+```bash
+# Installera dependencies för alla paket
+npm install
+
+# Bygga alla paket
+npm run build
+
+# Köra linting för alla paket
+npm run lint
+
+# Köra linting och fixa problem
+npm run lint:fix
+
+# Köra prettier för alla paket
+npm run prettier
+
+# Köra typechecking för alla paket
+npm run typecheck
+```
+
+### Felsökning
+
+#### Portkonflikt
+Om du får felmeddelanden om att portar redan används, kontrollera vilka processer som använder portarna:
+
+```bash
+# macOS/Linux
+lsof -i :5010
+
+# Stoppa en specifik process
+kill -9 <PID>
+```
+
+#### Docker-problem
+Om du får Docker-relaterade fel:
+
+```bash
+# Rensa Docker-cache
+docker system prune -a
+
+# Starta om Docker Desktop
+# (på macOS/Windows)
+```
+
+#### Minnesanvändning
+Om Docker använder för mycket minne, justera inställningarna i Docker Desktop eller lägg till resource limits i docker-compose.yml.
+
+>>>>>>> 39cc86ff (feat: lägg till docker-compose och uppdatera README för enkel onboarding)
 ## Overview
 
 ### Repository structure
@@ -35,100 +193,14 @@ Apart from the core orchestration service, packages belong to one of three categ
 
 ### Getting started
 
-#### Requirements
+### Bidra till projektet
 
-After cloning the repository, make sure that you have the following installed on your system:
+1. Skapa en ny branch för din feature/bugfix
+2. Gör dina ändringar
+3. Kör tester och linting
+4. Skapa en pull request
 
-- **nvm**
-- **npm**
-- **Node.js**
-- **Docker**
-
-#### Install runtime
-
-Install the required node version using `nvm`, if not already installed.
-
-```sh
-$ nvm install
-```
-
-Activate the required node version.
-
-```sh
-$ nvm use
-```
-
-#### Install dependencies
-
-Install dependencies. This may take 1-2 minutes, as it will resolve and download all packages required by all ONECore modules, as well as check for version conflicts.
-
-```sh
-$ npm run install
-```
-
-#### Run dev:init
-
-This will run any one-off initialization scripts in all modules that provide them.  
-Nearly all modules use dotenv/.env-files that are required to run with a local configuration, and these will be created with default values.
-Some of these still require manual attention after running this script, as some applications depend on non-public resources.
-
-```sh
-$ npm run dev:init
-```
-
-#### Run generate:static
-
-This will generate required code that is not subject to version control.
-
-```sh
-$ npm run generate:static
-```
-
-#### Build libs
-
-Most projects rely on the projects under libs/ and will not run or build unless they are built in your local project tree.
-
-```sh
-$ npm run build:libs
-```
-
-#### Dockerized services
-
-Some services depend on databases and kibana/elastic-search for logging. These can all be started as local Docker containers using `docker compose`
-
-```sh
-$ docker compose up -d
-```
-
-These services will apply schema migrations/updates as needed on startup, but they will not create the logical schema/database.
-
-Once the SQL container is running, you can create these by running:
-
-```sh
-$ npm run db:init
-
-```
-
-
-### Local development
-
-[Turborepo](https://turborepo.com/) lets us run multiple packages simultaneously in a tidy manner using its "tui" configuration.
-
-```sh
-npm run dev # runs everything
-npm run dev -- --filter='!@onecore/property' # runs everything except for @onecore/property
-npm run dev -- --filter='@onecore/property' # runs only @onecore/property
-```
-
-Furthermore, turborepo handles different packages dependencies. If we run @onecore/leasing, which uses libs/types and libs/utilities, both of these packages will be built before leasing starts.
-
-More information on running tasks [can be found here](https://turborepo.com/docs/crafting-your-repository/running-tasks).
-
-More information on filtering [can be found here](https://turborepo.com/docs/reference/run#advanced-filtering-examples).
-
-More information on the terminal UI [can be found here](https://turborepo.com/docs/crafting-your-repository/developing-applications#using-the-terminal-ui).
-
-See the respective packages of this repository for more information.
+För mer detaljerad information om specifika tjänster, se README-filerna i respektive katalog.
 
 ## License
 
