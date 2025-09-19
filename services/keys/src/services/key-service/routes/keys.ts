@@ -5,8 +5,131 @@ import { db } from '../adapters/db'
 const TABLE = 'keys'
 const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Keys
+ *     description: CRUD operations for keys
+ *
+ * components:
+ *   schemas:
+ *     Key:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         key_name:
+ *           type: string
+ *         key_sequence_number:
+ *           type: integer
+ *         flex_number:
+ *           type: integer
+ *         rental_object:
+ *           type: string
+ *         key_type:
+ *           type: string
+ *           enum: [LGH, PB, FS, HN]
+ *         key_system_id:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *
+ *     CreateKeyRequest:
+ *       type: object
+ *       required: [key_name, key_type]
+ *       properties:
+ *         key_name:
+ *           type: string
+ *           example: "Front door A"
+ *         key_sequence_number:
+ *           type: integer
+ *           example: 101
+ *         flex_number:
+ *           type: integer
+ *           example: 1
+ *         rental_object:
+ *           type: string
+ *           example: "APT-1001"
+ *         key_type:
+ *           type: string
+ *           enum: [LGH, PB, FS, HN]
+ *           example: "LGH"
+ *         key_system_id:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           example: null
+ *
+ *     UpdateKeyRequest:
+ *       type: object
+ *       description: Partial update; provide any subset of fields
+ *       properties:
+ *         key_name:
+ *           type: string
+ *           example: "Front door A (updated)"
+ *         key_sequence_number:
+ *           type: integer
+ *         flex_number:
+ *           type: integer
+ *         rental_object:
+ *           type: string
+ *         key_type:
+ *           type: string
+ *           enum: [LGH, PB, FS, HN]
+ *         key_system_id:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         error:
+ *           type: string
+ *           example: "Internal server error"
+ *
+ *     NotFoundResponse:
+ *       type: object
+ *       properties:
+ *         reason:
+ *           type: string
+ *           example: "Key not found"
+ */
+
 export const routes = (router: KoaRouter) => {
-  // LIST
+  /**
+   * @swagger
+   * /keys:
+   *   get:
+   *     summary: List keys
+   *     description: Returns keys ordered by created_at (desc).
+   *     tags: [Keys]
+   *     responses:
+   *       200:
+   *         description: List of keys
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Key'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -20,7 +143,42 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // GET by id
+  /**
+   * @swagger
+   * /keys/{id}:
+   *   get:
+   *     summary: Get key by ID
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Key found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
+   *       404:
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   router.get('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -39,7 +197,41 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // CREATE
+  /**
+   * @swagger
+   * /keys:
+   *   post:
+   *     summary: Create a key
+   *     tags: [Keys]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateKeyRequest'
+   *     responses:
+   *       201:
+   *         description: Created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
+   *       400:
+   *         description: Invalid key_type
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   router.post('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -66,7 +258,54 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // UPDATE (partial)
+  /**
+   * @swagger
+   * /keys/{id}:
+   *   patch:
+   *     summary: Update a key (partial)
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateKeyRequest'
+   *     responses:
+   *       200:
+   *         description: Updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
+   *       400:
+   *         description: Invalid key_type
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   router.patch('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
@@ -101,7 +340,35 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // DELETE
+  /**
+   * @swagger
+   * /keys/{id}:
+   *   delete:
+   *     summary: Delete a key
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Deleted
+   *       404:
+   *         description: Not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   router.delete('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
