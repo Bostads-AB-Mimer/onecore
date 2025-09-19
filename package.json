@@ -52,6 +52,7 @@
     "eslint-plugin-react-refresh": "^0.4.11",
     "eslint-plugin-testing-library": "^7.6.1",
     "globals": "^15.9.0",
+    "launch-goblin": "^0.1.0",
     "prettier": "^3.6.2",
     "semver": "^7.7.2",
     "syncpack": "^13.0.4",
