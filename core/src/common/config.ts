@@ -32,6 +32,10 @@ export interface Config {
   propertyBaseService: {
     url: string
   }
+  keysService: {
+    url: string
+  }
+
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -67,6 +71,10 @@ export interface Config {
       minimumMinutesBetweenRequests: number
     }
     workOrder: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    keys: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -137,6 +145,10 @@ const config = configPackage({
         systemName: 'work-order',
         minimumMinutesBetweenRequests: 1,
       },
+      keys: {
+        systemName: 'keys',
+        minimumMinutesBetweenRequests: 1,
+      }
     },
   },
 })
@@ -153,4 +165,5 @@ export default {
   auth: config.get('auth'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
+  keysService: config.get('keysService'),
 } as Config
