@@ -16,7 +16,6 @@ import {
   getApartmentRentalPropertyInfo,
 } from './adapters/xpand-adapter'
 
-import { routes as parkingspaceRoutes } from './routes/parking-spaces'
 import { routes as materialChoiceRoutes } from './routes/materialChoices'
 /**
  * The routes of this service are exported as the routes object. The service can also have
@@ -31,7 +30,6 @@ import { routes as materialChoiceRoutes } from './routes/materialChoices'
  *     description: Operations related to property management
  */
 export const routes = (router: KoaRouter) => {
-  parkingspaceRoutes(router)
   materialChoiceRoutes(router)
 
   /**

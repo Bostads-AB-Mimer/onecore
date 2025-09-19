@@ -122,6 +122,7 @@ const getColumns = (expiresAt: Date): Array<GridColDef> => {
       field: 'expiresAt',
       headerName: 'Svara senast',
       valueFormatter: () => dateFormatter.format(new Date(expiresAt)),
+      ...sharedProps,
     },
     {
       field: 'applicationType',
