@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "MIT",
   "packageManager": "pnpm@10.6.1",
-   "engines": {
+  "engines": {
     "node": ">=20"
   },
   "main": "./src/index.ts",
@@ -26,6 +26,8 @@
   "dependencies": {
     "@koa/cors": "5.0.0",
     "@koa/router": "14.0.0",
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*",
     "dotenv": "17.2.2",
     "knex": "3.1.0",
     "koa": "3.0.1",
@@ -37,6 +39,7 @@
   },
   "devDependencies": {
     "@tsconfig/node20": "20.1.6",
+    "@types/node": "^24.5.2",
     "cross-env": "10.0.0",
     "nodemon": "3.1.10",
     "ts-node": "10.9.2",
