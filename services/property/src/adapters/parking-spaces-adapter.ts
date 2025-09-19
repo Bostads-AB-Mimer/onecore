@@ -42,8 +42,10 @@ export async function getParkingSpaceByRentalPropertyId(
       companyName: true,
       managementUnitCode: true,
       managementUnitName: true,
+      propertyId: true,
       propertyCode: true,
       propertyName: true,
+      buildingId: true,
       buildingCode: true,
       buildingName: true,
       parkingSpace: {
@@ -86,7 +88,22 @@ export async function getParkingSpaceByRentalPropertyId(
   })
 
   return {
-    ...propertyStructureResponse,
+    rentalId: propertyStructureResponse.rentalId,
+    companyCode: propertyStructureResponse.companyCode,
+    companyName: propertyStructureResponse.companyName,
+    managementUnitCode: propertyStructureResponse.managementUnitCode,
+    managementUnitName: propertyStructureResponse.managementUnitName,
+    property: {
+      id: propertyStructureResponse.propertyId,
+      code: propertyStructureResponse.propertyCode,
+      name: propertyStructureResponse.propertyName,
+    },
+    building: {
+      id: propertyStructureResponse.buildingId,
+      code: propertyStructureResponse.buildingCode,
+      name: propertyStructureResponse.buildingName,
+    },
+    parkingSpace: propertyStructureResponse.parkingSpace,
     address: {
       ...addressResponse,
     },

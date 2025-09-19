@@ -6,20 +6,26 @@ export const getMaintenanceUnitsByBuildingCode = async (
   buildingCode: string
 ): Promise<MaintenanceUnit[]> => {
   // Use buildingCode to find the propertyCode first
-  const propertyStructure = await prisma.propertyStructure.findFirst({
-    where: {
-      buildingCode: buildingCode,
-      NOT: {
-        buildingCode: null,
-        propertyCode: null,
-        propertyName: null,
+  const propertyStructure = await prisma.propertyStructure
+    .findFirst({
+      where: {
+        buildingCode: buildingCode,
+        NOT: {
+          buildingCode: null,
+          propertyCode: null,
+          propertyName: null,
+        },
       },
-    },
-    select: {
-      propertyCode: true,
-      propertyName: true,
-    },
-  })
+      select: {
+        propertyId: true,
+        propertyCode: true,
+        propertyName: true,
+        buildingId: true,
+        buildingCode: true,
+        buildingName: true,
+      },
+    })
+    .then(trimStrings)
 
   if (!propertyStructure) {
     console.error(`No property found for building code: ${buildingCode}`)
@@ -52,8 +58,16 @@ export const getMaintenanceUnitsByBuildingCode = async (
       code: item.code,
       caption: item.name,
       type: item.maintenanceUnitType?.name ?? null,
-      estateCode: propertyStructure?.propertyCode ?? null,
-      estate: propertyStructure?.propertyName ?? null,
+      property: {
+        id: propertyStructure?.propertyId,
+        code: propertyStructure?.propertyCode,
+        name: propertyStructure?.propertyName,
+      },
+      building: {
+        id: propertyStructure?.buildingId ?? null,
+        code: propertyStructure?.buildingCode ?? null,
+        name: propertyStructure?.buildingName ?? null,
+      },
     }
   })
 }
@@ -69,6 +83,9 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
       propertyCode: true,
       propertyName: true,
       propertyObjectId: true,
+      buildingId: true,
+      buildingCode: true,
+      buildingName: true,
     },
     where: {
       rentalId: rentalId,
@@ -113,8 +130,18 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
       code: item.maintenanceUnit?.code,
       caption: item?.maintenanceUnit?.name,
       type: item.maintenanceUnit?.maintenanceUnitType?.name,
-      estateCode: rentalPropertyInfoTrimmed.propertyCode,
-      estate: rentalPropertyInfoTrimmed.propertyName,
+      property: {
+        id: rentalPropertyInfoTrimmed.propertyObjectId,
+        code: rentalPropertyInfoTrimmed.propertyCode,
+        name: rentalPropertyInfoTrimmed.propertyName,
+      },
+      building: {
+        id: rentalPropertyInfoTrimmed.buildingId,
+        code: rentalPropertyInfoTrimmed.buildingCode,
+        name: rentalPropertyInfoTrimmed.buildingName,
+      },
+      //estateCode: rentalPropertyInfoTrimmed.propertyCode,
+      //estate: rentalPropertyInfoTrimmed.propertyName,
     }
   })
 
@@ -143,8 +170,12 @@ export const getMaintenanceUnitsByPropertyCode = async (
       },
       propertyStructures: {
         select: {
+          propertyId: true,
           propertyCode: true,
           propertyName: true,
+          buildingId: true,
+          buildingCode: true,
+          buildingName: true,
         },
       },
     },
@@ -156,8 +187,18 @@ export const getMaintenanceUnitsByPropertyCode = async (
       code: item.code,
       caption: item.name,
       type: item.maintenanceUnitType?.name ?? null,
-      estateCode: item.propertyStructures[0]?.propertyCode ?? null,
-      estate: item.propertyStructures[0]?.propertyName ?? null,
+      property: {
+        id: item.propertyStructures[0]?.propertyId ?? null,
+        code: item.propertyStructures[0]?.propertyCode ?? null,
+        name: item.propertyStructures[0]?.propertyName ?? null,
+      },
+      building: {
+        id: item.propertyStructures[0]?.buildingId ?? null,
+        code: item.propertyStructures[0]?.buildingCode ?? null,
+        name: item.propertyStructures[0]?.buildingName ?? null,
+      },
+      //estateCode: item.propertyStructures[0]?.propertyCode ?? null,
+      //estate: item.propertyStructures[0]?.propertyName ?? null,
     }
   })
 }
