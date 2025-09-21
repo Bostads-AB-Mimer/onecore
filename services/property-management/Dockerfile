@@ -3,40 +3,43 @@
 # ==========================
 FROM node:23-slim AS builder
 
-ENV CI=true
-
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
-
 # Copy package files for dependency installation
-COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package*.json tsconfig.json ./
 
 # Copy relevant packages
 COPY libs/types ./libs/types
 COPY libs/utilities ./libs/utilities
 COPY services/property-management ./services/property-management
 
-RUN pnpm install
-RUN pnpm build:libs
-RUN pnpm run --filter @onecore/property-management build
-RUN pnpm install --only=prod
-RUN pnpm deploy --filter @onecore/property-management --prod /out
+# Install dependencies
+RUN npm ci
+
+# Build required libraries
+RUN npm run build:libs
+
+# Build application
+RUN npm run build:property-management
+
+# Remove stuff in node_modules we no longer need
+RUN npm prune --omit=dev
 
 # ==========================
 # Run stage
 # ==========================
 FROM node:23-slim AS runner
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
-
 WORKDIR /app
 
-COPY --from=builder /out ./
+COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/services/property-management/build ./build
+COPY --from=builder /app/services/property-management/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY services/property-management/knexfile.js .
+COPY services/property-management/migrations ./migrations
 
 ENV PORT 80
 EXPOSE 80
 
-CMD ["pnpm", "start"]
+CMD ["npm", "run", "start"]
