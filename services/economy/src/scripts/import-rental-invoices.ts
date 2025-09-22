@@ -19,7 +19,6 @@ const sftpConfig: SftpClient.ConnectOptions = {
   username: config.rentalInvoices.sftp.username,
   password: config.rentalInvoices.sftp.password,
   port: config.rentalInvoices.sftp.port ?? 22,
-  debug: console.log,
 }
 
 if (config.rentalInvoices.sftp.useSshDss) {
