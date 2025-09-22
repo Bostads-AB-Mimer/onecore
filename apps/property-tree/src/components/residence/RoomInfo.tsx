@@ -74,6 +74,8 @@ export const RoomInfo = (props: RoomInfoProps) => {
           </CardContent>
         </Card>
 
+        {/* Hiding for demo purposes */}
+        {/*
         <Card>
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl">Orientering</CardTitle>
@@ -98,6 +100,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
             </div>
           </CardContent>
         </Card>
+        */}
       </div>
 
       <Card className="mt-6">
