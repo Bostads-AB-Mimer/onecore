@@ -4,11 +4,12 @@ import { Contact, Invoice } from '@onecore/types'
 
 import apiClient from '../../../utils/api-client'
 
-type ContactResponse = Contact & { invoices: Invoice[] }
+export type ContactResponse = Contact & { invoices: Invoice[] }
 
-export const useContact = (contactCode: string) => {
+export const useContact = (contactCode: string | null) => {
   return useQuery<ContactResponse, AxiosError>({
     queryKey: ['contact', contactCode],
+    enabled: Boolean(contactCode),
     queryFn: () =>
       apiClient
         .get<{ content: ContactResponse }>(`/contact-cards/${contactCode}`, {

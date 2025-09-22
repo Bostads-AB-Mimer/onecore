@@ -13,19 +13,14 @@ const FormSchema = z.object({
 
 export function Contact() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const contactCode = searchParams.get('contactCode')
+  const contactCode = searchParams.get('contact_code')
 
-  const {
-    handleSubmit,
-    register,
-    formState: { errors },
-  } = useForm({
+  const { handleSubmit, register, formState } = useForm({
     resolver: zodResolver(FormSchema),
   })
 
-  const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    setSearchParams({ contactCode: data.contactCode })
-  }
+  const onSubmit = (data: z.infer<typeof FormSchema>) =>
+    setSearchParams({ contact_code: data.contactCode })
 
   return (
     <>
@@ -45,9 +40,9 @@ export function Contact() {
                 Sök
               </Button>
             </Box>
-            {errors.contactCode && (
+            {formState.errors.contactCode && (
               <Typography color="error">
-                {errors.contactCode.message}
+                {formState.errors.contactCode.message}
               </Typography>
             )}
           </Box>
