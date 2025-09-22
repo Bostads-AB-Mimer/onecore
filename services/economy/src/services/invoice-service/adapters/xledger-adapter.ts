@@ -454,18 +454,20 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     host: config.xledger.sftp.host,
     username: config.xledger.sftp.username,
     password: config.xledger.sftp.password,
-    algorithms: {
+  }
+
+  if (config.xledger.sftp.useSshDss) {
+    sftpConfig.algorithms = {
       serverHostKey: ['ssh-dss'],
-    },
-    //    debug: console.log,
+    }
   }
 
   let remoteDir = ''
 
   if (filename.endsWith('.gl.csv')) {
-    remoteDir = config.xledger.sftp.glDirectory
+    remoteDir = config.xledger.sftp.glDirectory ?? ''
   } else if (filename.endsWith('.ar.csv')) {
-    remoteDir = config.xledger.sftp.arDirectory
+    remoteDir = config.xledger.sftp.arDirectory ?? ''
   } else {
     logger.error(
       { filename },
