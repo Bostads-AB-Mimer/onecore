@@ -89,6 +89,7 @@ export function CompanyView() {
           value={propertiesQuery.data?.length || '0'}
           icon={Building2}
         />
+        {/* Hiding for demo purposes
         <StatCard
           title="Lägenheter"
           value={'? st'}
@@ -97,6 +98,7 @@ export function CompanyView() {
         />
         <StatCard title="Hyresgäster" value={'?'} icon={Users} />
         <StatCard title="Årshyra" value={`? kr`} icon={Wallet} />
+          */}
       </Grid>
 
       <motion.div
@@ -116,6 +118,7 @@ export function CompanyView() {
               companyName={company.name}
             />
           </Card>
+          {/* Hiding for demo purposes
           <Card title="Status" icon={Building2}>
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg opacity-50">
@@ -136,6 +139,7 @@ export function CompanyView() {
               </div>
             </div>
           </Card>
+          */}
         </div>
       </motion.div>
     </div>
