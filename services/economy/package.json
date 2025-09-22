@@ -20,6 +20,8 @@
     "prettier": "prettier --check ./src",
     "seed": "knex seed:run --env dev",
     "scripts:import-rental-invoices": "ts-node src/scripts/import-rental-invoices",
+    "scripts:import-procurement-invoices": "ts-node src/scripts/import-procurement-invoices",
+    "scripts:get-contact-details": "ts-node src/scripts/get-contact-details",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",
     "ts:ci": "tsc --noEmit",
