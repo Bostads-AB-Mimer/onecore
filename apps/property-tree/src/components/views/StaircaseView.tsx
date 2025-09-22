@@ -185,7 +185,8 @@ export function StaircaseView() {
               ))}
             </Grid>
           </Card>
-
+          {/* Hiding for demo purposes */}
+          {/*
           {mockIssues.length > 0 && (
             <Card title="Pågående ärenden" icon={AlertCircle}>
               <div className="space-y-4">
@@ -229,6 +230,7 @@ export function StaircaseView() {
               </div>
             </Card>
           )}
+          */}
         </div>
 
         <div className="space-y-6">
