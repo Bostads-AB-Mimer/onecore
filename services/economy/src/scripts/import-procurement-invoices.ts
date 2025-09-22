@@ -7,6 +7,7 @@ import {
   closeDatabases,
   uploadInvoiceFile,
 } from '../services/invoice-service/service'
+import { markProcurementFilesAsImported } from '../services/procurement-invoice-service/adapters/procurement-file-adapter'
 
 const importProcurementInvoicesScript = async () => {
   logger.info('Checking for new procurement invoice files')
@@ -18,6 +19,8 @@ const importProcurementInvoicesScript = async () => {
   )
   await uploadInvoiceFile('mälarenergi.gl.csv', csvContent)
   logger.info('Uploaded file')
+
+  markProcurementFilesAsImported()
 
   logger.info('All files processed.')
   closeDatabases()

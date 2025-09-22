@@ -32,8 +32,6 @@ if (!config.rentalInvoices.sftp.directory) {
 }
 const directory = config.rentalInvoices.sftp.directory
 
-console.log(config.rentalInvoices.sftp)
-
 const getExcelFilenames = async () => {
   /*const files = await fs.readdir(config.rentalInvoices.importDirectory)
 
