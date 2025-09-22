@@ -84,6 +84,8 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
                 {residence.malarEnergiFacilityId || 'N/A'}
               </p>
             </div>
+            {/* Hiding for demo purposes*/}
+            {/*
             <div>
               <p className="text-sm text-muted-foreground">
                 Befintligt kontrakt från
@@ -104,6 +106,7 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
                 )}
               </p>
             </div>
+            */}
           </div>
         </CardContent>
       </Card>
