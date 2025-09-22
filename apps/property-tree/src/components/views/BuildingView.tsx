@@ -200,7 +200,8 @@ export function BuildingView() {
             </Card>
           </div>
         </div>
-
+        {/* Hiding for demo purposes */}
+        {/*
         <div className="space-y-6">
           <Card title="Status" icon={Building}>
             <div className="space-y-4">
@@ -238,6 +239,7 @@ export function BuildingView() {
             </div>
           </Card>
         </div>
+        */}
       </motion.div>
     </div>
   )
