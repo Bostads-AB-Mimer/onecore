@@ -101,6 +101,7 @@ export const columnNames: string[] = [
 export type XpandContact = Contact & {
   autogiro: boolean
   invoiceDeliveryMethod: InvoiceDeliveryMethod
+  careOf?: string
 }
 
 export type InvoiceDataRow = Record<string, string | number>
