@@ -1,4 +1,4 @@
-import { Box, IconButton, Stack, Typography } from '@mui/material'
+import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
 import { type GridColDef } from '@mui/x-data-grid'
 import Chevron from '@mui/icons-material/ChevronRight'
@@ -17,7 +17,6 @@ import {
 } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
-import { SyncInternalParkingSpaces } from './components/SyncInternalParkingSpaces'
 import { CloseListing } from './components/CloseListing'
 import { printVacantFrom } from '../../common/formattingUtils'
 import { UnpublishListing } from './components/UnpublishListing'
@@ -59,7 +58,12 @@ const ParkingSpaces = () => {
       >
         <Typography variant="h1">Bilplatser</Typography>
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
-          <SyncInternalParkingSpaces />
+          <Link to="/bilplatser/publicera">
+            <Button variant="dark-outlined">
+              Publicera bilplatser från Xpand
+            </Button>
+          </Link>
+
           <SearchBar
             onChange={onSearch}
             disabled={parkingSpaces.isLoading}
@@ -194,7 +198,10 @@ const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
         <UnpublishListing key={1} listingId={row.id} />,
         <CreateApplicantForListing
           key={1}
-          disabled={row.status !== ListingStatus.Active}
+          disabled={
+            row.status !== ListingStatus.Active ||
+            row.rentalRule === 'NON_SCORED'
+          }
           listing={row}
         />,
       ],
@@ -316,7 +323,7 @@ const getColumns = (
     },
     {
       field: 'rentalRule',
-      headerName: 'Kötyp',
+      headerName: 'Uthyrningsmetod',
       ...sharedColumnProps,
       valueGetter: (params) => {
         if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
@@ -342,7 +349,8 @@ const getColumns = (
       field: 'publishedTo',
       headerName: 'Publicerad T.O.M',
       ...sharedColumnProps,
-      valueFormatter: (v) => dateFormatter.format(new Date(v.value)),
+      valueFormatter: (v) =>
+        v.value ? dateFormatter.format(new Date(v.value)) : '-',
     },
     {
       field: 'vacantFrom',

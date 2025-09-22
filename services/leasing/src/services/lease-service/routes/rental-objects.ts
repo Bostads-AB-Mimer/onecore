@@ -17,17 +17,24 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /parking-spaces:
-   *   get:
+   *   post:
    *     summary: Get parking spaces by codes
    *     description: Fetches parking spaces filtered by includeRentalObjectCodes.
    *     tags:
    *       - RentalObject
-   *     parameters:
-   *       - in: query
-   *         name: includeRentalObjectCodes
-   *         schema:
-   *           type: string
-   *         description: Comma-separated list of rental object codes to include.
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               includeRentalObjectCodes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of rental object codes to include.
+   *                 example: ["ABC123", "DEF456", "GHI789"]
    *     responses:
    *       '200':
    *         description: Successfully retrieved the parking spaces.
@@ -51,15 +58,14 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    */
-  router.get('(.*)/parking-spaces', async (ctx) => {
+  router.post('(.*)/parking-spaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const codesParam = ctx.query.includeRentalObjectCodes as string | undefined
-    const includeRentalObjectCodes = codesParam
-      ? codesParam
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : undefined
+
+    const requestBody = ctx.request.body as
+      | { includeRentalObjectCodes?: string[] }
+      | undefined
+    const includeRentalObjectCodes =
+      requestBody?.includeRentalObjectCodes?.filter(Boolean)
 
     const result = await getParkingSpaces(includeRentalObjectCodes)
 

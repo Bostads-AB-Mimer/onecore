@@ -48,7 +48,7 @@ export const DeleteListing = (props: {
         variant="dark"
         onClick={() => setOpen(true)}
       >
-        Ta bort annons
+        Radera
       </Button>
       <Dialog
         onClose={onClose}
@@ -59,7 +59,7 @@ export const DeleteListing = (props: {
         <Box paddingTop="0.5rem">
           <Box display="flex">
             <DialogTitle variant="h1" fontSize={24} textAlign="left">
-              Ta bort bilplatsannons
+              Radera bilplatsannons
             </DialogTitle>
             <Box
               display="flex"
