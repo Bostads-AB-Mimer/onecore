@@ -4,8 +4,48 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { Listing, RentalObject } from '@onecore/types'
 
 // Local extension of RentalObject for internal portal features
-interface RentalObjectWithAttempts extends RentalObject {
-  listingAttemptsCount: number
+interface RentalObjectWithListingHistory extends RentalObject {
+  previousListingsCount: number
+}
+
+const calculatePreviousListingsCount = (
+  parkingSpace: RentalObject,
+  closedListings: Listing[]
+): number => {
+  const scoredListings = closedListings.filter(
+    (listing) =>
+      listing.rentalObjectCode === parkingSpace.rentalObjectCode &&
+      listing.rentalRule === 'SCORED'
+  )
+
+  if (parkingSpace.vacantFrom) {
+    // Count SCORED listings published since the vacantFrom date
+    return scoredListings.filter(
+      (listing) =>
+        listing.publishedFrom &&
+        new Date(listing.publishedFrom) >= new Date(parkingSpace.vacantFrom!)
+    ).length
+  }
+
+  // Fallback: count SCORED listings in the last 12 months
+  const twelveMonthsAgo = new Date()
+  twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
+
+  return scoredListings.filter(
+    (listing) =>
+      listing.publishedFrom &&
+      new Date(listing.publishedFrom) >= twelveMonthsAgo
+  ).length
+}
+
+const getExcludedRentalObjectCodes = (
+  publishedListings: Listing[],
+  readyForOfferListings: Listing[]
+): Set<string> => {
+  return new Set([
+    ...publishedListings.map((listing) => listing.rentalObjectCode),
+    ...readyForOfferListings.map((listing) => listing.rentalObjectCode),
+  ])
 }
 
 export const routes = (router: KoaRouter) => {
@@ -17,16 +57,12 @@ export const routes = (router: KoaRouter) => {
       vacantParkingSpaces,
       publishedListings,
       readyForOfferListings,
-      offeredListings,
-      needsRepublishListings,
-      closedRepublishedListings,
+      closedListings,
     ] = await Promise.all([
       coreAdapter.getVacantParkingSpaces(),
       coreAdapter.getListingsWithApplicants('type=published'),
       coreAdapter.getListingsWithApplicants('type=ready-for-offer'),
-      coreAdapter.getListingsWithApplicants('type=offered'),
-      coreAdapter.getListingsWithApplicants('type=needs-republish'),
-      coreAdapter.getListingsWithApplicants('type=closed-republished'),
+      coreAdapter.getListingsWithApplicants('type=closed'),
     ])
 
     if (!vacantParkingSpaces.ok) {
@@ -35,84 +71,32 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const excludedRentalObjectCodesSet = new Set([
-      ...(publishedListings.ok
-        ? (publishedListings.data || []).map(
-            (listing: Listing) => listing.rentalObjectCode
-          )
-        : []),
-      ...(readyForOfferListings.ok
-        ? (readyForOfferListings.data || []).map(
-            (listing: Listing) => listing.rentalObjectCode
-          )
-        : []),
-      ...(offeredListings.ok
-        ? (offeredListings.data || []).map(
-            (listing: Listing) => listing.rentalObjectCode
-          )
-        : []),
-    ])
+    const excludedRentalObjectCodes = getExcludedRentalObjectCodes(
+      publishedListings.ok ? publishedListings.data || [] : [],
+      readyForOfferListings.ok ? readyForOfferListings.data || [] : []
+    )
 
     const unpublishedVacantParkingSpaces = (
       vacantParkingSpaces.data || []
     ).filter(
       (parkingSpace: RentalObject) =>
-        !excludedRentalObjectCodesSet.has(parkingSpace.rentalObjectCode)
+        !excludedRentalObjectCodes.has(parkingSpace.rentalObjectCode)
     )
 
-    // Calculate listing attempts count based on needs-republish listings
-    const parkingSpacesWithAttemptsCount: RentalObjectWithAttempts[] =
-      unpublishedVacantParkingSpaces.map(
-        (parkingSpace: RentalObject): RentalObjectWithAttempts => {
-          let listingAttemptsCount = 0
-
-          // Combine needs-republish and closed-republished listings
-          const allAttemptListings: Listing[] = []
-          if (needsRepublishListings.ok) {
-            allAttemptListings.push(...needsRepublishListings.data)
-          }
-          if (closedRepublishedListings && closedRepublishedListings.ok) {
-            allAttemptListings.push(...closedRepublishedListings.data)
-          }
-
-          const parkingSpaceAttemptListings = allAttemptListings.filter(
-            (listing: Listing) =>
-              listing.rentalObjectCode === parkingSpace.rentalObjectCode &&
-              listing.rentalRule === 'SCORED' // Only count SCORED listings
-          )
-
-          if (parkingSpace.vacantFrom) {
-            // Count SCORED listings that were published since the vacantFrom date
-            listingAttemptsCount = parkingSpaceAttemptListings.filter(
-              (listing: Listing) =>
-                listing.publishedFrom &&
-                new Date(listing.publishedFrom) >=
-                  new Date(parkingSpace.vacantFrom!)
-            ).length
-          } else {
-            // Fallback: count SCORED listing attempts in the last 12 months
-            const twelveMonthsAgo = new Date()
-            twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
-
-            listingAttemptsCount = parkingSpaceAttemptListings.filter(
-              (listing: Listing) =>
-                listing.publishedFrom &&
-                new Date(listing.publishedFrom) >= twelveMonthsAgo
-            ).length
-          }
-
-          return {
-            ...parkingSpace,
-            listingAttemptsCount,
-          }
-        }
-      )
-    console.log('needsRepublishListings', needsRepublishListings)
-    console.log(parkingSpacesWithAttemptsCount)
+    // Calculate previous listings count since vacant date based on closed listings
+    const allClosedListings = closedListings.ok ? closedListings.data || [] : []
+    const parkingSpacesWithListingHistory: RentalObjectWithListingHistory[] =
+      unpublishedVacantParkingSpaces.map((parkingSpace: RentalObject) => ({
+        ...parkingSpace,
+        previousListingsCount: calculatePreviousListingsCount(
+          parkingSpace,
+          allClosedListings
+        ),
+      }))
 
     ctx.status = 200
     ctx.body = {
-      content: parkingSpacesWithAttemptsCount,
+      content: parkingSpacesWithListingHistory,
       ...metadata,
     }
   })
