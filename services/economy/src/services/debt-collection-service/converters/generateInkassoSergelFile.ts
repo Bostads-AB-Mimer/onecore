@@ -135,7 +135,13 @@ const createDebtorSection = (debtor: DebtorSection): string => {
       rightPad(debtor.contact.address.street, 36, ' '),
       debtor.contact.address.postalCode.replaceAll(' ', ''),
       rightPad(debtor.contact.address.city, 28, ' '),
-      rightPad(getContactPhoneNumber(debtor.contact) ?? '', 12, ' '),
+      rightPad(
+        getContactPhoneNumber(debtor.contact)
+          ?.replaceAll('-', '')
+          .replaceAll(' ', '') ?? '',
+        12,
+        ' '
+      ),
       'J', // Kan denna vara B?
     ])
   )
