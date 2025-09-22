@@ -1,7 +1,6 @@
 services:
   sql:
-    # image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
-    image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/azure-sql-edge}
     container_name: onecore-sql
     environment:
       - ACCEPT_EULA=Y
