@@ -1,7 +1,7 @@
 import { logger } from '@onecore/utilities'
 import config from '../common/config'
 import fs from 'fs/promises'
-import { sep } from 'node:path'
+import path, { sep } from 'node:path'
 import {
   processInvoiceDataFile,
   getBatchContactsCsv,
@@ -10,16 +10,85 @@ import {
   uploadInvoiceFile,
   markBatchAsProcessed,
 } from '../services/invoice-service/service'
+import SftpClient from 'ssh2-sftp-client'
 
 const companies = ['001', '006']
 
-const importRentalInvoicesScript = async () => {
-  logger.info('Checking for new rental invoices file')
-  const files = await fs.readdir(config.rentalInvoices.importDirectory)
+const sftpConfig: SftpClient.ConnectOptions = {
+  host: config.rentalInvoices.sftp.host,
+  username: config.rentalInvoices.sftp.username,
+  password: config.rentalInvoices.sftp.password,
+  port: config.rentalInvoices.sftp.port ?? 22,
+  debug: console.log,
+}
+
+if (config.rentalInvoices.sftp.useSshDss) {
+  sftpConfig.algorithms = {
+    serverHostKey: ['ssh-dss'],
+  }
+}
+
+if (!config.rentalInvoices.sftp.directory) {
+  throw new Error('Rental invoices sftp config is missing directory property')
+}
+const directory = config.rentalInvoices.sftp.directory
+
+console.log(config.rentalInvoices.sftp)
+
+const getExcelFilenames = async () => {
+  /*const files = await fs.readdir(config.rentalInvoices.importDirectory)
 
   const excelFileNames = files.filter((file) => {
     return file.endsWith('.xlsx')
-  })
+  })*/
+
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info('Connected to sftp')
+    const files = await sftp.list(directory, (fileInfo) => {
+      return fileInfo.name.toLowerCase().endsWith('.xlsx')
+    })
+    logger.info('Got .xslx files')
+
+    return files.map((fileInfo) => fileInfo.name)
+  } catch (err) {
+    logger.error(err, 'SFTP error')
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
+const renameExcelFile = async (excelFileName: string) => {
+  /*await fs.rename(
+    `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`,
+    `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`.replace(
+      '.xlsx',
+      '.xlsx-imported'
+    )
+  )*/
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info('Connected to sftp')
+    await sftp.rename(
+      path.join(directory, excelFileName),
+      path.join(directory, excelFileName.replace('.xlsx', '.xlsx-imported'))
+    )
+    logger.info({ excelFileName }, 'Renamed file')
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
+const importRentalInvoicesScript = async () => {
+  logger.info('Checking for new rental invoices file')
+  const excelFileNames = await getExcelFilenames()
 
   for (const excelFileName of excelFileNames) {
     for (const companyId of companies) {
@@ -74,13 +143,8 @@ const importRentalInvoicesScript = async () => {
       { excelFileName },
       'Finished processing file, renaming to mark as processed'
     )
-    await fs.rename(
-      `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`,
-      `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`.replace(
-        '.xlsx',
-        '.xlsx-imported'
-      )
-    )
+
+    await renameExcelFile(excelFileName)
   }
 
   logger.info('All files processed.')

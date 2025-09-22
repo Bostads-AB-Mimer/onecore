@@ -2,6 +2,17 @@ import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 dotenv.config()
 
+type SftpConfig = {
+  host: string
+  username: string
+  password: string
+  port?: number
+  directory?: string
+  glDirectory?: string
+  arDirectory?: string
+  useSshDss?: boolean
+}
+
 export interface Config {
   port: number
   xpandDatabase: {
@@ -21,21 +32,17 @@ export interface Config {
   xledger: {
     url: string
     apiToken: string
-    sftp: {
-      host: string
-      username: string
-      password: string
-      glDirectory: string
-      arDirectory: string
-    }
+    sftp: SftpConfig
   }
   procurementInvoices: {
     importDirectory: string
     exportDirectory: string
+    sftp: SftpConfig
   }
   rentalInvoices: {
     importDirectory: string
     exportDirectory: string
+    sftp: SftpConfig
   }
   health: {
     xledger: {
@@ -52,6 +59,12 @@ const config = configPackage({
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
     },
     xpandDatabase: {
       port: 1433,
@@ -62,6 +75,12 @@ const config = configPackage({
     procurementInvoices: {
       importDirectory: './procurement-invoices/invoices',
       exportDirectory: './procurement-invoices/export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -72,6 +91,7 @@ const config = configPackage({
         password: '',
         glDirectory: '/GL',
         arDirectory: '/AR',
+        useSshDss: true,
       },
     },
     health: {
