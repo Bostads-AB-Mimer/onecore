@@ -1,10 +1,6 @@
 import { useState, useCallback } from 'react'
-import { RentalObject } from '@onecore/types'
 
-// Local extension of RentalObject for frontend features
-interface RentalObjectWithAttempts extends RentalObject {
-  listingAttemptsCount?: number
-}
+import { RentalObjectWithListingHistory } from '../../../types'
 
 interface UseRentalRulesResult {
   rentalRules: Record<string, 'SCORED' | 'NON_SCORED'>
@@ -12,7 +8,9 @@ interface UseRentalRulesResult {
     rentalObjectCode: string,
     value: 'SCORED' | 'NON_SCORED'
   ) => void
-  initializeRentalRules: (parkingSpaces: RentalObjectWithAttempts[]) => void
+  initializeRentalRules: (
+    parkingSpaces: RentalObjectWithListingHistory[]
+  ) => void
 }
 
 export const useRentalRules = (): UseRentalRulesResult => {
@@ -31,12 +29,12 @@ export const useRentalRules = (): UseRentalRulesResult => {
   )
 
   const initializeRentalRules = useCallback(
-    (parkingSpaces: RentalObjectWithAttempts[]) => {
+    (parkingSpaces: RentalObjectWithListingHistory[]) => {
       const initialRentalRules = parkingSpaces.reduce(
         (acc, ps) => {
-          // If listing attempts >= 1, default to NON_SCORED, otherwise SCORED
-          const hasAttempts = (ps.listingAttemptsCount ?? 0) >= 1
-          acc[ps.rentalObjectCode] = hasAttempts ? 'NON_SCORED' : 'SCORED'
+          // If previous listings >= 1, default to NON_SCORED
+          const hasPreviousListings = (ps.previousListingsCount ?? 0) >= 1
+
           return acc
         },
         {} as Record<string, 'SCORED' | 'NON_SCORED'>
