@@ -15,9 +15,9 @@ const getCellValue = (cell: Cell): string | number => {
 }
 
 export const excelFileToInvoiceDataRows = async (
-  invoiceRowsExcelFilePath: string
+  invoiceRowsExcelFileName: string
 ) => {
-  const excelDataStream = await createReadStream(invoiceRowsExcelFilePath)
+  const excelDataStream = await createReadStream(invoiceRowsExcelFileName)
   const workbook = new Workbook()
   await workbook.xlsx.read(excelDataStream)
   const rowCount = workbook.worksheets[0].rowCount
