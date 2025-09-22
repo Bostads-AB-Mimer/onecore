@@ -31,6 +31,7 @@ Apart from the core orchestration service, packages belong to one of three categ
     ├── property/
     ├── property-management/
     └── work-order/
+    └── economy/
 ```
 
 ### Getting started
@@ -49,13 +50,13 @@ After cloning the repository, make sure that you have the following installed on
 Install the required node version using `nvm`, if not already installed.
 
 ```sh
-$ nvm install
+nvm install
 ```
 
 Activate the required node version.
 
 ```sh
-$ nvm use
+nvm use
 ```
 
 #### Install dependencies
@@ -63,7 +64,7 @@ $ nvm use
 Install dependencies. This may take 1-2 minutes, as it will resolve and download all packages required by all ONECore modules, as well as check for version conflicts.
 
 ```sh
-$ npm run install
+npm install
 ```
 
 #### Run dev:init
@@ -73,7 +74,7 @@ Nearly all modules use dotenv/.env-files that are required to run with a local c
 Some of these still require manual attention after running this script, as some applications depend on non-public resources.
 
 ```sh
-$ npm run dev:init
+npm run dev:init
 ```
 
 #### Run generate:static
@@ -81,7 +82,7 @@ $ npm run dev:init
 This will generate required code that is not subject to version control.
 
 ```sh
-$ npm run generate:static
+npm run generate:static
 ```
 
 #### Build libs
@@ -89,7 +90,7 @@ $ npm run generate:static
 Most projects rely on the projects under libs/ and will not run or build unless they are built in your local project tree.
 
 ```sh
-$ npm run build:libs
+npm run build:libs
 ```
 
 #### Dockerized services
@@ -97,7 +98,7 @@ $ npm run build:libs
 Some services depend on databases and kibana/elastic-search for logging. These can all be started as local Docker containers using `docker compose`
 
 ```sh
-$ docker compose up -d
+docker compose up -d
 ```
 
 These services will apply schema migrations/updates as needed on startup, but they will not create the logical schema/database.
@@ -105,10 +106,8 @@ These services will apply schema migrations/updates as needed on startup, but th
 Once the SQL container is running, you can create these by running:
 
 ```sh
-$ npm run db:init
-
+npm run db:init
 ```
-
 
 ### Local development
 

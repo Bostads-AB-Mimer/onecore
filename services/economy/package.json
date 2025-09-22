@@ -13,6 +13,7 @@
     "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
+    "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "migrate:make": "knex migrate:make",
     "migrate:up": "knex migrate:latest --env dev",
     "migrate:down": "knex migrate:down --env dev",
