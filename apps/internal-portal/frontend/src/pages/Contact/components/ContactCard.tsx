@@ -10,7 +10,13 @@ import {
   TableHead,
   CircularProgress,
 } from '@mui/material'
-import { Invoice, LeaseStatus, PaymentStatus } from '@onecore/types'
+import {
+  Contact,
+  Invoice,
+  Lease,
+  LeaseStatus,
+  PaymentStatus,
+} from '@onecore/types'
 
 import { useContact } from '../hooks/useContact'
 
@@ -38,98 +44,102 @@ export function ContactCard(props: { contactCode: string }) {
       </Typography>
       <Divider />
       <Typography variant="h2">Basinformation</Typography>
-      <Grid container sx={{ marginTop: 1 }}>
-        <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
-          <b>Kontaktkod</b>
-        </Grid>
-        <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
-          {contact.contactCode}
-        </Grid>
-        <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
-          <b>Personnummer</b>
-        </Grid>
-        <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
-          {contact.nationalRegistrationNumber}
-        </Grid>
-        <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
-          <b>Adress</b>
-        </Grid>
-        <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
-          {contact.address?.street} {contact.address?.number}
-          <br />
-          {contact.address?.postalCode}
-          <br />
-          {contact.address?.city}
-          <br />
-        </Grid>
-      </Grid>
-      {contact.leases && (
-        <>
-          <Divider />
-          <Typography variant="h2">Kontrakt</Typography>
-          {contact.leases
-            ?.sort((lease1, lease2) => {
-              return lease1.status < lease2.status ? -1 : 1
-            })
-            .map((lease) => (
-              <>
-                <Grid
-                  container
-                  sx={{ marginLeft: 1, marginTop: 1 }}
-                  key={lease.leaseId}
-                >
-                  <Grid item xs={12} key={lease.leaseId}>
-                    {
-                      <Typography variant="h3">
-                        {lease.leaseId} ({getStatusName(lease.status)})
-                      </Typography>
-                    }
-                  </Grid>
-                  <Grid item xs={12} md={4} lg={2}>
-                    <b>Typ</b>
-                  </Grid>
-                  <Grid item xs={12} md={8} lg={4}>
-                    {lease.type}
-                  </Grid>
-                  <Grid item xs={12} md={4} lg={2}>
-                    <b>Startdatum</b>
-                  </Grid>
-                  <Grid item xs={12} md={8} lg={4}>
-                    {lease.leaseStartDate.toString().substring(0, 10)}
-                  </Grid>
-                  <Grid item xs={12} md={4} lg={2}>
-                    <b>Slutdatum</b>
-                  </Grid>
-                  <Grid item xs={12} md={8} lg={4}>
-                    {lease.leaseEndDate?.toString()}
-                  </Grid>
-                  <Grid item xs={12} md={4} lg={2}>
-                    <b>Adress</b>
-                  </Grid>
-                  <Grid item xs={12} md={8} lg={4}>
-                    {lease.address?.street}
-                  </Grid>
-                  <Grid item xs={12} md={4} lg={2}>
-                    <b>Startdatum</b>
-                  </Grid>
-                  <Grid item xs={12} md={8} lg={4}>
-                    {lease.rentalProperty?.address?.street.toString()}
-                  </Grid>
-                </Grid>
-              </>
-            ))}
-        </>
+      <ContactInfo contact={contact} />
+      <Divider />
+      <Typography variant="h2">Kontrakt</Typography>
+      {!contact.leases?.length ? (
+        <Typography fontStyle="italic">Inga kontrakt hittades</Typography>
+      ) : (
+        <Leases
+          leases={contact.leases.sort((a, b) => (a.status < b.status ? -1 : 1))}
+        />
       )}
-      {contact.invoices.length > 0 ? (
+      <Divider />
+      <Typography variant="h2">Fakturor</Typography>
+      {!contact.invoices.length ? (
+        <Typography fontStyle="italic">Inga fakturor hittades</Typography>
+      ) : (
         <>
-          <Divider />
-          <Typography variant="h2">Fakturor</Typography>
           <Invoices invoices={contact.invoices} />
         </>
-      ) : null}
+      )}
       <Divider />
     </Box>
   )
+}
+
+function ContactInfo(props: { contact: Contact }) {
+  return (
+    <Grid container sx={{ marginTop: 1 }}>
+      <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
+        <b>Kontaktkod</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
+        {props.contact.contactCode}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
+        <b>Personnummer</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
+        {props.contact.nationalRegistrationNumber}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2} sx={{ marginBottom: 2 }}>
+        <b>Adress</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4} sx={{ marginBottom: 2 }}>
+        {props.contact.address?.street} {props.contact.address?.number}
+        <br />
+        {props.contact.address?.postalCode}
+        <br />
+        {props.contact.address?.city}
+        <br />
+      </Grid>
+    </Grid>
+  )
+}
+
+function Leases(props: { leases: Lease[] }) {
+  return props.leases.map((lease) => (
+    <Grid container sx={{ marginLeft: 1, marginTop: 1 }} key={lease.leaseId}>
+      <Grid item xs={12} key={lease.leaseId}>
+        {
+          <Typography variant="h3">
+            {lease.leaseId} ({getStatusName(lease.status)})
+          </Typography>
+        }
+      </Grid>
+      <Grid item xs={12} md={4} lg={2}>
+        <b>Typ</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4}>
+        {lease.type}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2}>
+        <b>Startdatum</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4}>
+        {lease.leaseStartDate.toString().substring(0, 10)}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2}>
+        <b>Slutdatum</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4}>
+        {lease.leaseEndDate?.toString()}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2}>
+        <b>Adress</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4}>
+        {lease.address?.street}
+      </Grid>
+      <Grid item xs={12} md={4} lg={2}>
+        <b>Startdatum</b>
+      </Grid>
+      <Grid item xs={12} md={8} lg={4}>
+        {lease.rentalProperty?.address?.street.toString()}
+      </Grid>
+    </Grid>
+  ))
 }
 
 function Invoices(props: { invoices: Invoice[] }) {

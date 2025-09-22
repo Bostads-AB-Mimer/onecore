@@ -12,13 +12,16 @@ export const useContact = (contactCode: string | null) => {
     enabled: Boolean(contactCode),
     queryFn: () =>
       apiClient
-        .get<{ content: ContactResponse }>(`/contact-cards/${contactCode}`, {
-          headers: {
-            Accept: 'application/json',
-            Authorization: 'Bearer sometoken',
-          },
-          withCredentials: true,
-        })
+        .get<{ content: ContactResponse }>(
+          `/contacts/${contactCode}/contact-card`,
+          {
+            headers: {
+              Accept: 'application/json',
+              Authorization: 'Bearer sometoken',
+            },
+            withCredentials: true,
+          }
+        )
         .then((res) => res.data.content),
     refetchOnWindowFocus: false,
     retry: (failureCount: number, error: AxiosError) => {

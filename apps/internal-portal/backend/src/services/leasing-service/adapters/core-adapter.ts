@@ -16,7 +16,9 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
+  Invoice,
 } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import Config from '../../../common/config'
@@ -547,6 +549,26 @@ const removeComment = async (
   }
 }
 
+async function getInvoicesByContactCode(
+  contactCode: string
+): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+  const response = await getFromCore<{ content: Invoice[] }>({
+    method: 'get',
+    url: `${coreBaseUrl}/invoices/by-contact-code/${contactCode}`,
+  })
+
+  if (response.status === 404) {
+    return { ok: false, err: 'not-found', statusCode: 404 }
+  }
+
+  if (response.status !== 200) {
+    logger.error(response.data, 'core-adapter.getInvoicesByContactCode')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+
+  return { ok: true, data: response.data.content }
+}
+
 export {
   addComment,
   removeComment,
@@ -569,4 +591,5 @@ export {
   getActiveOfferByListingId,
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
+  getInvoicesByContactCode,
 }

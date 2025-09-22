@@ -1,7 +1,11 @@
 import KoaRouter from '@koa/router'
-import * as coreAdapter from './adapters/core-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { LeaseStatus, RouteErrorResponse } from '@onecore/types'
+
+import * as coreAdapter from './adapters/core-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/contacts', async (ctx) => {
@@ -217,4 +221,31 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  router.get('(.*)/contacts/:contactCode/contact-card', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const getContact = await coreAdapter.getContactByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!getContact.ok) {
+      ctx.status = getContact.statusCode
+      return
+    }
+
+    const getInvoices = await coreAdapter.getInvoicesByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!getInvoices.ok) {
+      ctx.status = getInvoices.statusCode
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(
+      { ...getContact.data, invoices: getInvoices.data },
+      metadata
+    )
+  })
 }
