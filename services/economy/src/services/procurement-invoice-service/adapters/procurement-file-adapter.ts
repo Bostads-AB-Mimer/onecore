@@ -26,8 +26,6 @@ if (!config.procurementInvoices.sftp.directory) {
 }
 const directory = config.procurementInvoices.sftp.directory
 
-console.log(config.procurementInvoices.sftp)
-
 const xmlParserOptions = {
   ignoreAttributes: false,
   ignoreNameSpace: false,
@@ -264,7 +262,7 @@ const getXmlFilenames = async () => {
 /**
  * Copy file from sftp to local filesystem
  *
- * @param filename C
+ * @param filename
  * @returns
  */
 const getFile = async (filename: string) => {
@@ -272,7 +270,7 @@ const getFile = async (filename: string) => {
   try {
     await sftp.connect(sftpConfig)
     logger.info({ filename }, 'Connected to sftp to read file')
-    // TODO: replace with memory stream and read directly into it.
+    // TODO: replace with memory stream/Buffer and read directly into it.
     await sftp.get(
       path.join(directory, filename),
       path.join(config.procurementInvoices.importDirectory, filename)
@@ -282,6 +280,24 @@ const getFile = async (filename: string) => {
       'Copied file'
     )
     return filename
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
+const markAsImportedSftp = async (filename: string) => {
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info({ filename }, 'Connected to sftp to rename file')
+    await sftp.rename(
+      path.join(directory, filename),
+      path.join(directory, filename.replace('.xml', '.xml-imported'))
+    )
+    logger.info({ filename }, 'Renamed file')
   } catch (err) {
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
@@ -302,7 +318,7 @@ export const getNewProcurementInvoiceRows = async () => {
   */
 
   const xmlFilenames = await getXmlFilenames()
-  for (const xmlFilename in xmlFilenames) {
+  for (const xmlFilename of xmlFilenames) {
     await getFile(xmlFilename)
   }
 
@@ -331,12 +347,7 @@ export const markProcurementFilesAsImported = async () => {
   })
 
   for (const file of xmlFileNames) {
-    await fs.rename(
-      path.join(config.procurementInvoices.importDirectory, file),
-      path.join(
-        config.procurementInvoices.importDirectory,
-        file.replace('.xml', '.xml-imported')
-      )
-    )
+    await fs.unlink(path.join(config.procurementInvoices.importDirectory, file))
+    await markAsImportedSftp(file)
   }
 }

@@ -98,8 +98,6 @@ export const importNewFiles = async () => {
 
   const csvLines = convertInvoiceRowsToCsv(batchedInvoiceRows)
 
-  await markProcurementFilesAsImported()
-
   return csvLines
 }
 
