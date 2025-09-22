@@ -15,6 +15,7 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
+  RentalObject,
 } from '@onecore/types'
 
 import { AxiosError, HttpStatusCode } from 'axios'
@@ -274,6 +275,46 @@ const createOffer = async (params: {
     return { ok: true, data: response.data.content }
   } catch (err) {
     return { ok: false, err, statusCode: 500 }
+  }
+}
+
+const createListings = async (
+  listingData: Omit<Listing, 'id' | 'rentalObject'>
+): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Listing }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings`,
+      data: listingData,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === HttpStatusCode.Conflict) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createMultipleListings = async (
+  listingsData: Array<Omit<Listing, 'id' | 'rentalObject'>>
+): Promise<AdapterResult<Array<Listing>, 'partial-failure' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Array<Listing> }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings/batch`,
+      data: { listings: listingsData },
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === 207) {
+      return { ok: false, err: 'partial-failure', statusCode: 207 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 
@@ -550,6 +591,40 @@ const removeComment = async (
   }
 }
 
+const getVacantParkingSpaces = async (): Promise<
+  AdapterResult<RentalObject[], unknown>
+> => {
+  try {
+    const response = await getFromCore<{ content: RentalObject[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/vacant-parkingspaces`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    if (e instanceof AxiosError && e.response?.status === 401) {
+      return { ok: false, err: 'unauthorized', statusCode: 401 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const getVacantParkingSpaces = async (): Promise<
+  AdapterResult<RentalObject[], unknown>
+> => {
+  try {
+    const response = await getFromCore<{ content: RentalObject[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/vacant-parkingspaces`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    if (e instanceof AxiosError && e.response?.status === 401) {
+      return { ok: false, err: 'unauthorized', statusCode: 401 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addComment,
   removeComment,
@@ -560,6 +635,8 @@ export {
   getContactsDataBySearchQuery,
   getTenantByContactCode,
   getContactByContactCode,
+  createListings,
+  createMultipleListings,
   createNoteOfInterestForInternalParkingSpace,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
@@ -572,4 +649,5 @@ export {
   getActiveOfferByListingId,
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
+  getVacantParkingSpaces,
 }

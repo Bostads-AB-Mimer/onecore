@@ -23,7 +23,7 @@ describe('parking spaces', () => {
         .spyOn(rentalObjectAdapter, 'getParkingSpaces')
         .mockResolvedValue({ ok: true, data: [parkingSpace] })
 
-      const res = await request(app.callback()).get('/parking-spaces')
+      const res = await request(app.callback()).post('/parking-spaces')
 
       expect(res.status).toBe(200)
       expect(getParkingSpacesSpy).toHaveBeenCalled()
@@ -43,9 +43,9 @@ describe('parking spaces', () => {
         .spyOn(rentalObjectAdapter, 'getParkingSpaces')
         .mockResolvedValue({ ok: true, data: [parkingSpace1, parkingSpace2] })
 
-      const res = await request(app.callback()).get(
-        '/parking-spaces?includeRentalObjectCodes=code-1,code-2'
-      )
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({ includeRentalObjectCodes: ['code-1', 'code-2'] })
 
       expect(res.status).toBe(200)
       expect(getParkingSpacesSpy).toHaveBeenCalledWith(['code-1', 'code-2'])
@@ -59,7 +59,7 @@ describe('parking spaces', () => {
         err: 'unknown',
       })
 
-      const res = await request(app.callback()).get('/parking-spaces')
+      const res = await request(app.callback()).post('/parking-spaces')
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe(

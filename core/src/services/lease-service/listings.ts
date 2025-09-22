@@ -7,12 +7,13 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { Listing } from '@onecore/types'
+import { Listing, ListingStatus } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from './helpers/lease'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -48,6 +49,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: A contact code to filter out listings that are not valid to rent for the contact.
+   *       - in: query
+   *         name: rentalObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: A Rental Object Code to filter the listings.
    *     responses:
    *       '200':
    *         description: Successful response with the requested list of listings.
@@ -72,14 +79,17 @@ export const routes = (router: KoaRouter) => {
           .transform((value) => (value ? value === 'true' : undefined)),
         rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
         validToRentForContactCode: z.string().optional(),
+        rentalObjectCode: z.string().optional(),
       })
       const query = querySchema.safeParse(ctx.query)
+
+      logger.debug({ query }, 'Parsed query parameters for GET /listings')
 
       const result = await leasingAdapter.getListings({
         listingCategory: query.data?.listingCategory,
         published: query.data?.published,
         rentalRule: query.data?.rentalRule,
-        validToRentForContactCode: query.data?.validToRentForContactCode,
+        rentalObjectCode: query.data?.rentalObjectCode,
       })
 
       if (!result.ok) {
@@ -114,8 +124,58 @@ export const routes = (router: KoaRouter) => {
         })
         .filter((item): item is Listing => !!item)
 
-      ctx.status = 200
-      ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      logger.info(
+        {
+          numberOfListings: listingsWithRentalObjects.length,
+        },
+        'Listings Retrieved from Leasing GET /listings'
+      )
+
+      if (!query.data?.validToRentForContactCode) {
+        ctx.status = 200
+        ctx.body = { content: listingsWithRentalObjects, ...metadata }
+      } else {
+        //filter listings on validToRentForContactCode
+        const tenantResult = await leasingAdapter.getTenantByContactCode(
+          query.data?.validToRentForContactCode
+        )
+        let isTenant = true
+
+        if (!tenantResult.ok) {
+          if (tenantResult.err === 'contact-not-tenant') {
+            isTenant = false
+          } else {
+            ctx.status = 500
+            ctx.body = { error: 'Tenant could not be retrieved', ...metadata }
+            return
+          }
+        }
+
+        var listings = listingsWithRentalObjects.filter((listing) => {
+          return (
+            listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
+            (listing.rentalRule == 'SCORED' &&
+              isTenant &&
+              tenantResult.ok &&
+              listing.rentalObject.residentialAreaCode &&
+              isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+                listing.rentalObject.residentialAreaCode,
+                tenantResult.data
+              )) // all SCORED where tenant is allowed to rent will be included
+          )
+        })
+
+        logger.debug(
+          {
+            numberOfListings: listings.length,
+            contactCode: query.data?.validToRentForContactCode,
+          },
+          'Listings filtered on contact GET /listings'
+        )
+
+        ctx.status = 200
+        ctx.body = { content: listings, ...metadata }
+      }
     } catch (error) {
       logger.error(error, 'Error fetching listings with rental objects')
       ctx.status = 500
@@ -231,36 +291,6 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /listings/sync-internal-from-xpand:
-   *   post:
-   *     summary: Sync internal parking spaces from xpand to onecores database
-   *     tags:
-   *       - Lease service
-   *     description:
-   *     responses:
-   *       '200':
-   *         description: Request ok.
-   *       '500':
-   *         description: Internal server error. Failed to sync internal parking spaces.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.syncInternalParkingSpacesFromXpand()
-
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { error: 'Unknown error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
   })
 
   /**
@@ -469,7 +499,6 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    //TODO flytta til leasing när adaptern flyttats från property-mgmt
     const listingsWithRentalObjects: Listing[] = result.data
       .map((listing) => {
         const rentalObject = parkingSpacesResult.data.find(
@@ -483,5 +512,185 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: listingsWithRentalObjects, ...metadata }
+  })
+  /**
+   * @swagger
+   * /listings/batch:
+   *   post:
+   *     summary: Create multiple listings
+   *     tags:
+   *       - Lease service
+   *     description: Create multiple listings in a single request.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - listings
+   *               properties:
+   *                 listings:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required:
+   *                       - rentalObjectCode
+   *                       - publishedFrom
+   *                       - publishedTo
+   *                       - status
+   *                       - rentalRule
+   *                       - listingCategory
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       publishedFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       publishedTo:
+   *                         type: string
+   *                         format: date-time
+   *                       status:
+   *                         type: string
+   *                         enum: [ACTIVE, INACTIVE, CLOSED, ASSIGNED, EXPIRED, NO_APPLICANTS]
+   *                       rentalRule:
+   *                         type: string
+   *                         enum: [SCORED, NON_SCORED]
+   *                       listingCategory:
+   *                         type: string
+   *                         enum: [PARKING_SPACE, APARTMENT, STORAGE]
+   *     responses:
+   *       201:
+   *         description: All listings created successfully.
+   *         content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       207:
+   *         description: Partial success. Some listings created, some failed.
+   *       400:
+   *         description: Bad request. Invalid input data.
+   *       500:
+   *         description: Internal server error. Failed to create listings.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/listings/batch', async (ctx) => {
+    try {
+      const metadata = generateRouteMetadata(ctx)
+
+      const requestBodySchema = z.object({
+        listings: z.array(
+          z.object({
+            rentalObjectCode: z.string(),
+            publishedFrom: z.coerce.date(),
+            publishedTo: z.coerce.date().optional(),
+            status: z.nativeEnum(ListingStatus),
+            rentalRule: z.enum(['SCORED', 'NON_SCORED']),
+            listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
+          })
+        ),
+      })
+
+      const parseResult = requestBodySchema.safeParse(ctx.request.body)
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: parseResult.error.issues,
+          ...metadata,
+        }
+        return
+      }
+
+      const { listings } = parseResult.data
+
+      // Call the leasing service adapter to create multiple listings
+      const result = await leasingAdapter.createMultipleListings(listings)
+
+      if (!result.ok) {
+        if (result.err === 'partial-failure') {
+          ctx.status = 207
+          ctx.body = {
+            error: 'Some listings could not be created',
+            message:
+              'Partial success - some listings were created successfully while others failed',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create listings',
+          ...metadata,
+        }
+        return
+      }
+
+      // Try to get rental objects for the created listings
+      try {
+        const rentalObjectCodes = result.data.map(
+          (listing) => listing.rentalObjectCode
+        )
+        const parkingSpacesResult =
+          await leasingAdapter.getParkingSpaces(rentalObjectCodes)
+
+        if (parkingSpacesResult.ok) {
+          // Add rental objects to listings
+          const listingsWithRentalObjects = result.data.map((listing) => {
+            const rentalObject = parkingSpacesResult.data.find(
+              (ps) => ps.rentalObjectCode === listing.rentalObjectCode
+            )
+            if (rentalObject) {
+              return { ...listing, rentalObject }
+            }
+            return listing
+          })
+
+          ctx.status = 201
+          ctx.body = {
+            content: listingsWithRentalObjects,
+            message: `Successfully created ${result.data.length} listings`,
+            ...metadata,
+          }
+        } else {
+          // Return listings without rental objects if we can't fetch them
+          logger.warn(
+            { rentalObjectCodes },
+            'Could not fetch rental objects for created listings'
+          )
+          ctx.status = 201
+          ctx.body = {
+            content: result.data,
+            message: `Successfully created ${result.data.length} listings`,
+            ...metadata,
+          }
+        }
+      } catch (rentalObjectError) {
+        logger.error(
+          rentalObjectError,
+          'Error fetching rental objects for created listings'
+        )
+        // Return listings without rental objects if there's an error
+        ctx.status = 201
+        ctx.body = {
+          content: result.data,
+          message: `Successfully created ${result.data.length} listings`,
+          ...metadata,
+        }
+      }
+    } catch (error) {
+      logger.error(error, 'Error in createMultipleListings endpoint')
+      ctx.status = 500
+      const metadata = generateRouteMetadata(ctx)
+      ctx.body = { error: 'An unexpected error occurred', ...metadata }
+    }
   })
 }
