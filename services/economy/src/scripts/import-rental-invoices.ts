@@ -48,7 +48,6 @@ const getExcelFilenames = async () => {
     const files = await sftp.list(directory, (fileInfo) => {
       return fileInfo.name.toLowerCase().endsWith('.xlsx')
     })
-    logger.info('Got .xslx files')
 
     return files.map((fileInfo) => fileInfo.name)
   } catch (err) {
@@ -60,23 +59,42 @@ const getExcelFilenames = async () => {
   }
 }
 
-const renameExcelFile = async (excelFileName: string) => {
-  /*await fs.rename(
-    `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`,
-    `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`.replace(
-      '.xlsx',
-      '.xlsx-imported'
-    )
-  )*/
+const renameExcelFile = async (excelFilename: string) => {
+  await fs.unlink(
+    `${config.rentalInvoices.importDirectory}${sep}${excelFilename}`
+  )
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
-    logger.info('Connected to sftp')
+    logger.info({ excelFilename }, 'Connected to sftp to rename file')
     await sftp.rename(
-      path.join(directory, excelFileName),
-      path.join(directory, excelFileName.replace('.xlsx', '.xlsx-imported'))
+      path.join(directory, excelFilename),
+      path.join(directory, excelFilename.replace('.xlsx', '.xlsx-imported'))
     )
-    logger.info({ excelFileName }, 'Renamed file')
+    logger.info({ excelFilename }, 'Renamed file')
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
+const getFile = async (filename: string) => {
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info({ filename }, 'Connected to sftp to read file')
+    // TODO: replace with memory stream and read directly into it.
+    await sftp.get(
+      path.join(directory, filename),
+      path.join(config.rentalInvoices.importDirectory, filename)
+    )
+    logger.info(
+      { filename, destination: config.rentalInvoices.importDirectory },
+      'Copied file'
+    )
+    return filename
   } catch (err) {
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
@@ -92,8 +110,9 @@ const importRentalInvoicesScript = async () => {
   for (const excelFileName of excelFileNames) {
     for (const companyId of companies) {
       logger.info({ excelFileName, companyId }, 'Creating batch for file')
+      const localExcelFileName = await getFile(excelFileName)
       const result = await processInvoiceDataFile(
-        `${config.rentalInvoices.importDirectory}${sep}${excelFileName}`,
+        path.join(config.rentalInvoices.importDirectory, localExcelFileName),
         companyId
       )
       const batchId = result.batchId

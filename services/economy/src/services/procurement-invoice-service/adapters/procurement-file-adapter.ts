@@ -4,6 +4,29 @@ import { XMLParser } from 'fast-xml-parser'
 import path from 'path'
 import { InvoiceDataRow } from '../../../common/types'
 import { logger } from '@onecore/utilities'
+import SftpClient from 'ssh2-sftp-client'
+
+const sftpConfig: SftpClient.ConnectOptions = {
+  host: config.procurementInvoices.sftp.host,
+  username: config.procurementInvoices.sftp.username,
+  password: config.procurementInvoices.sftp.password,
+  port: config.procurementInvoices.sftp.port ?? 22,
+}
+
+if (config.procurementInvoices.sftp.useSshDss) {
+  sftpConfig.algorithms = {
+    serverHostKey: ['ssh-dss'],
+  }
+}
+
+if (!config.procurementInvoices.sftp.directory) {
+  throw new Error(
+    'Procurement invoices sftp config is missing directory property'
+  )
+}
+const directory = config.procurementInvoices.sftp.directory
+
+console.log(config.procurementInvoices.sftp)
 
 const xmlParserOptions = {
   ignoreAttributes: false,
@@ -218,16 +241,74 @@ const readXmlFiles = async (xmlFileNames: string[]) => {
   return sortedXmlFiles
 }
 
+const getXmlFilenames = async () => {
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info('Connected to sftp')
+    const files = await sftp.list(directory, (fileInfo) => {
+      return fileInfo.name.toLowerCase().endsWith('.xml')
+    })
+    logger.info('Got .xml files')
+
+    return files.map((fileInfo) => fileInfo.name)
+  } catch (err) {
+    logger.error(err, 'SFTP error')
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
+/**
+ * Copy file from sftp to local filesystem
+ *
+ * @param filename C
+ * @returns
+ */
+const getFile = async (filename: string) => {
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+    logger.info({ filename }, 'Connected to sftp to read file')
+    // TODO: replace with memory stream and read directly into it.
+    await sftp.get(
+      path.join(directory, filename),
+      path.join(config.procurementInvoices.importDirectory, filename)
+    )
+    logger.info(
+      { filename, destination: config.procurementInvoices.importDirectory },
+      'Copied file'
+    )
+    return filename
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+    logger.info('Terminated sftp connection')
+  }
+}
+
 export const getNewProcurementInvoiceRows = async () => {
+  /*
   const files = await fs.readdir(config.procurementInvoices.importDirectory)
 
   const xmlFileNames = files.filter((file) => {
     return file.endsWith('.xml')
   })
 
-  const invoiceRows: InvoiceDataRow[] = []
-
   const xmlFiles = await readXmlFiles(xmlFileNames)
+  */
+
+  const xmlFilenames = await getXmlFilenames()
+  for (const xmlFilename in xmlFilenames) {
+    await getFile(xmlFilename)
+  }
+
+  const xmlFiles = await readXmlFiles(xmlFilenames)
+
+  const invoiceRows: InvoiceDataRow[] = []
 
   for (const xmlFile of xmlFiles) {
     try {
