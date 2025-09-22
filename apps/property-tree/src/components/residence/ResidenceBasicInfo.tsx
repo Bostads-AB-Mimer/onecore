@@ -20,10 +20,12 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
           Lägenhet {residence.code}
         </h1>
+        {/* Hiding for demo purposes */}
+        {/*
         <p className="text-muted-foreground">
-          {/* {property?.replace('-', ' ')}, {district} */}
           Byggnad/Fastighet: N/A
         </p>
+        */}
       </div>
 
       <Card>

@@ -81,13 +81,15 @@ export function PropertyView() {
           title="Byggnader"
           value={buildingsQuery.data?.length || 0}
           icon={Home}
-          subtitle={`?st uthyrda`}
+          subtitle={``}
         />
         <StatCard
           title="Byggnader"
           value={buildingsQuery.data?.length || 0}
           icon={Building2}
         />
+        {/* Hiding for demo purposes */}
+        {/* 
         <StatCard
           title="Registreringsdatum"
           value={propertyQuery.data.registrationDate || 'Ej angivet'}
@@ -98,6 +100,7 @@ export function PropertyView() {
           value={propertyQuery.data.propertyIndexNumber || 'Ej angivet'}
           icon={Wrench}
         />
+        */}
       </Grid>
 
       <motion.div
@@ -124,6 +127,8 @@ export function PropertyView() {
         </div>
 
         <div className="space-y-6">
+          {/* Hiding for demo purposes */}
+          {/*
           <Card title="Hyresgäster" icon={Users}>
             <div className="space-y-4">
               <motion.div
@@ -182,6 +187,7 @@ export function PropertyView() {
               </div>
             </div>
           </Card>
+          */}
         </div>
       </motion.div>
     </div>
