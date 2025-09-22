@@ -137,9 +137,13 @@ export function StaircaseView() {
           title="Bostäder"
           value={residencesQuery.data?.length || 0}
           icon={Home}
-          subtitle={`? st uthyrda`}
+          //subtitle={`? st uthyrda`}
+          subtitle=""
         />
+        {/* Hiding for demo purposes */}
+        {/*
         <StatCard title="Uthyrningsgrad" value={`? %`} icon={Users} />
+        */}
         <StatCard
           title="Våningar"
           value={Math.ceil((residencesQuery.data?.length || 0) / 2)}
@@ -175,9 +179,12 @@ export function StaircaseView() {
                       <h3 className="font-medium group-hover:text-blue-500 transition-colors">
                         Lägenhet {residence.code}
                       </h3>
+                      {/* Hiding for demo purposes */}
+                      {/*
                       <p className="text-sm text-gray-500">
                         3 rum och kök, 75m²
                       </p>
+                      */}
                     </div>
                     <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
                   </div>
@@ -185,7 +192,8 @@ export function StaircaseView() {
               ))}
             </Grid>
           </Card>
-
+          {/* Hiding for demo purposes */}
+          {/*
           {mockIssues.length > 0 && (
             <Card title="Pågående ärenden" icon={AlertCircle}>
               <div className="space-y-4">
@@ -229,9 +237,12 @@ export function StaircaseView() {
               </div>
             </Card>
           )}
+          */}
         </div>
 
         <div className="space-y-6">
+          {/* Hiding for demo purposes */}
+          {/*
           <Card title="Status" icon={Layers}>
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -269,6 +280,7 @@ export function StaircaseView() {
               </div>
             </div>
           </Card>
+          */}
         </div>
       </motion.div>
     </div>

@@ -24,8 +24,11 @@ export function ViewHeader({
           <Icon className="h-4 w-4 mr-2" />
           <span>{type}</span>
         </div>
+        {/* Hiding for demo purposes */}
+        {/*
         <span>•</span>
         <span>{subtitle}</span>
+        */}
       </div>
     </div>
   )
