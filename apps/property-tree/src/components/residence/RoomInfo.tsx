@@ -56,6 +56,8 @@ export const RoomInfo = (props: RoomInfoProps) => {
                   {rooms.filter((room) => room.features.isHeated).length}
                 </p>
               </div>
+              {/* Hiding for demo purposes */}
+              {/*
               <div>
                 <p className="text-sm text-muted-foreground">
                   Med termostatventil
@@ -67,6 +69,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
                   }
                 </p>
               </div>
+              */}
             </div>
           </CardContent>
         </Card>
