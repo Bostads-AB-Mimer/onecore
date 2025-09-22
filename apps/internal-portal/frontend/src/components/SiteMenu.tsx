@@ -51,9 +51,9 @@ const SiteMenu = () => (
                 <Typography>Sökandeprofil</Typography>
               </MenuItem>
             </Link>
-            <Link to="/fakturor">
+            <Link to="/kundkort">
               <MenuItem onClick={popupState.close}>
-                <Typography>Fakturor</Typography>
+                <Typography>Kundkort</Typography>
               </MenuItem>
             </Link>
           </Menu>

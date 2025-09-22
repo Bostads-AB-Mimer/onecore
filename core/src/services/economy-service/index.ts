@@ -1,4 +1,8 @@
 import KoaRouter from '@koa/router'
+import {
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 
 import * as ecnomyAdapter from '../../adapters/economy-adapter'
 
@@ -19,6 +23,7 @@ import * as ecnomyAdapter from '../../adapters/economy-adapter'
  */
 export const routes = (router: KoaRouter) => {
   router.get('/invoices/:invoiceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const result = await ecnomyAdapter.getInvoiceByInvoiceId(
       ctx.params.invoiceId
     )
@@ -28,11 +33,12 @@ export const routes = (router: KoaRouter) => {
       return
     } else {
       ctx.status = 200
-      ctx.body = result.data
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
   })
 
   router.get('/invoices/by-contact-code/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const result = await ecnomyAdapter.getInvoicesByContactCode(
       ctx.params.contactCode
     )
@@ -42,7 +48,7 @@ export const routes = (router: KoaRouter) => {
       return
     } else {
       ctx.status = 200
-      ctx.body = result.data
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
   })
 }

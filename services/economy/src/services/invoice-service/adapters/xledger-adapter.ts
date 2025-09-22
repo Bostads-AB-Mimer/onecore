@@ -255,6 +255,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
         edges {
           node {
             ${invoiceNodeFragment}
+          }
         } 
       }
     }`,
