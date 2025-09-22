@@ -3,8 +3,8 @@ type GetListingWithApplicantFilterByType =
   | 'ready-for-offer'
   | 'offered'
   | 'historical'
-  | 'needs-republish'
   | 'all'
+  | 'closed'
 
 type GetListingsWithApplicantsFilterParams = {
   by?: { type?: GetListingWithApplicantFilterByType }

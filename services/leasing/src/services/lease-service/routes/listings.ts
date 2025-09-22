@@ -273,45 +273,6 @@ export const routes = (router: KoaRouter) => {
 
       const { listings } = parseResult.data
 
-      // Before creating new listings, close any existing active listings for the same rental objects
-      const rentalObjectCodes = listings.map((l) => l.rentalObjectCode)
-      const existingListingsToClose: number[] = []
-
-      for (const rentalObjectCode of rentalObjectCodes) {
-        const existingListing =
-          await listingAdapter.getActiveListingByRentalObjectCode(
-            rentalObjectCode
-          )
-        if (existingListing) {
-          existingListingsToClose.push(existingListing.id)
-        }
-      }
-
-      // Close existing active listings by setting them to Expired status
-      if (existingListingsToClose.length > 0) {
-        const closeResult = await listingAdapter.updateListingStatuses(
-          existingListingsToClose,
-          ListingStatus.ClosedRepublished
-        )
-        if (!closeResult.ok) {
-          logger.warn(
-            {
-              existingListingsToClose,
-              rentalObjectCodes,
-            },
-            'Failed to close existing active listings, proceeding with creation anyway'
-          )
-        } else {
-          logger.info(
-            {
-              closedCount: existingListingsToClose.length,
-              rentalObjectCodes,
-            },
-            'Successfully closed existing active listings before creating new ones'
-          )
-        }
-      }
-
       const result = await listingAdapter.createMultipleListings(listings)
 
       if (!result.ok) {
@@ -642,7 +603,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [published, ready-for-offer, offered, historical, needs-republish]
+   *           enum: [published, ready-for-offer, offered, historical, closed]
    *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
@@ -691,7 +652,7 @@ export const routes = (router: KoaRouter) => {
           'ready-for-offer',
           'offered',
           'historical',
-          'needs-republish'
+          'closed'
         ),
         (type) => ({ by: { type } })
       )

@@ -400,8 +400,8 @@ const tabMap: Record<
   published: 'published',
   offered: 'offered',
   historical: 'historical',
-  'needs-republish': 'needs-republish',
   all: 'all',
+  closed: 'closed',
 }
 
 const getTab = (v: string | null): GetListingWithApplicantFilterByType => {

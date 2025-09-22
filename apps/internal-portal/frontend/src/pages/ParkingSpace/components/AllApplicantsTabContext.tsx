@@ -62,9 +62,7 @@ const listingFormatMap: Record<ListingStatus, string> = {
   [ListingStatus.Active]: 'Publicerad',
   [ListingStatus.Assigned]: 'Tilldelad',
   [ListingStatus.Closed]: 'Stängd',
-  [ListingStatus.NoApplicants]: 'Inga sökande',
   [ListingStatus.Expired]: 'Klar för erbjudande',
-  [ListingStatus.ClosedRepublished]: 'Ompublicerad',
 }
 
 const formatStatus = (listingStatus: ListingStatus) => {
