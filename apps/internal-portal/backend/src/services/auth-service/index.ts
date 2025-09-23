@@ -1,18 +1,45 @@
 import KoaRouter from '@koa/router'
-import { login, handleRedirect, logout } from './adapters/msal'
+import config from '../../common/config'
+import { msalAdapter } from './adapters/msal'
+import { coreAdapter } from './adapters/core'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { AuthAdapter, AuthAdapterFactory } from './adapters/types'
+
+/**
+ * Available authentication provider implementations
+ *
+ * The authentication provider is configured by specifying either
+ * `core` or `msal` for `config.auth.adapter`/`AUTH__ADAPTER`
+ */
+const ADAPTERS: Record<string, AuthAdapterFactory> = {
+  core: coreAdapter,
+  msal: msalAdapter,
+}
+
+/**
+ * Instance of conigured authentication adapter
+ */
+const adapter: AuthAdapter = ADAPTERS[config.auth.adapter]()
+
+if (!adapter) {
+  throw new Error('No auth adapter configured')
+}
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/auth/login', async (ctx) => {
-    await login()(ctx)
+    await adapter.login(ctx)
   })
 
   router.get('(.*)/auth/logout', async (ctx) => {
-    await logout()(ctx)
+    await adapter.logout(ctx)
   })
 
   router.post('(.*)/auth/redirect', async (ctx) => {
-    await handleRedirect()(ctx)
+    await adapter.handleRedirect(ctx)
+  })
+
+  router.get('(.*)/auth/callback', async (ctx) => {
+    await adapter.handleCallback(ctx)
   })
 
   router.get('(.*)/auth/profile', async (ctx) => {
