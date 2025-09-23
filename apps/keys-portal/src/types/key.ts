@@ -2,15 +2,15 @@ export type KeyType = 'LGH' | 'PB' | 'FS' | 'HN';
 
 export interface Key {
   id: string;
-  key_name: string;
-  key_sequence_number?: number;
-  flex_number?: number;
-  rental_object?: string;
-  key_type: KeyType;
-  key_system_id?: string;
-  key_system_name?: string; // For display purposes
-  created_at: string;
-  updated_at: string;
+  keyName: string;
+  keySequenceNumber?: number;
+  flexNumber?: number;
+  rentalObject?: string;
+  keyType: KeyType;
+  keySystemId?: string;
+  keySystemName?: string; // For display purposes
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface KeySystem {
