@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
+    "dev": "wait-on http://localhost:5080/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
     "dev:init": "pnpm run prepare:dotenv",
     "format": "prettier --write .",
     "generate-api-types": "npx openapi-typescript http://localhost:5080/swagger.json -o ./src/services/api/generated/api-types.ts",
@@ -35,6 +35,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.344.0",
+    "openapi-fetch": "^0.13.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.2",
