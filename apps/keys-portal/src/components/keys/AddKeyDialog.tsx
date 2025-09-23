@@ -21,52 +21,53 @@ import { Key, KeyType, KeyTypeLabels } from "@/types/key";
 interface AddKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (key: Omit<Key, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSave: (key: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>) => void;
   editingKey?: Key | null;
 }
 
+
 export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyDialogProps) {
   const [formData, setFormData] = useState({
-    key_name: editingKey?.key_name || '',
-    key_sequence_number: editingKey?.key_sequence_number || '',
-    flex_number: editingKey?.flex_number || '',
-    rental_object: editingKey?.rental_object || '',
-    key_type: editingKey?.key_type || 'LGH' as KeyType,
-    key_system_name: editingKey?.key_system_name || '',
+    keyName: editingKey?.keyName || '',
+    keySequenceNumber: editingKey?.keySequenceNumber || '',
+    flexNumber: editingKey?.flexNumber || '',
+    rentalObject: editingKey?.rentalObject || '',
+    keyType: editingKey?.keyType || 'LGH' as KeyType,
+    keySystemName: editingKey?.keySystemName || '',
   });
 
   const handleSave = () => {
-    if (!formData.key_name || !formData.key_type) return;
+    if (!formData.keyName || !formData.keyType) return;
 
     onSave({
-      key_name: formData.key_name,
-      key_sequence_number: formData.key_sequence_number ? Number(formData.key_sequence_number) : undefined,
-      flex_number: formData.flex_number ? Number(formData.flex_number) : undefined,
-      rental_object: formData.rental_object || undefined,
-      key_type: formData.key_type,
-      key_system_name: formData.key_system_name || undefined,
-      key_system_id: undefined,
+      keyName: formData.keyName,
+      keySequenceNumber: formData.keySequenceNumber ? Number(formData.keySequenceNumber) : undefined,
+      flexNumber: formData.flexNumber ? Number(formData.flexNumber) : undefined,
+      rentalObject: formData.rentalObject || undefined,
+      keyType: formData.keyType,
+      keySystemName: formData.keySystemName || undefined,
+      keySystemId: undefined,
     });
     
     setFormData({
-      key_name: '',
-      key_sequence_number: '',
-      flex_number: '',
-      rental_object: '',
-      key_type: 'LGH',
-      key_system_name: '',
+      keyName: '',
+      keySequenceNumber: '',
+      flexNumber: '',
+      rentalObject: '',
+      keyType: 'LGH',
+      keySystemName: '',
     });
   };
 
   const handleClose = () => {
     onOpenChange(false);
     setFormData({
-      key_name: '',
-      key_sequence_number: '',
-      flex_number: '',
-      rental_object: '',
-      key_type: 'LGH',
-      key_system_name: '',
+      keyName: '',
+      keySequenceNumber: '',
+      flexNumber: '',
+      rentalObject: '',
+      keyType: 'LGH',
+      keySystemName: '',
     });
   };
 
@@ -81,30 +82,30 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="key_name">Nyckelnamn *</Label>
+            <Label htmlFor="keyName">Nyckelnamn *</Label>
             <Input
-              id="key_name"
-              value={formData.key_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, key_name: e.target.value }))}
+              id="keyName"
+              value={formData.keyName}
+              onChange={(e) => setFormData(prev => ({ ...prev, keyName: e.target.value }))}
               placeholder="t.ex. CFG, BGH, BCD"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="rental_object">Objekt</Label>
+            <Label htmlFor="rentalObject">Objekt</Label>
             <Input
-              id="rental_object"
-              value={formData.rental_object}
-              onChange={(e) => setFormData(prev => ({ ...prev, rental_object: e.target.value }))}
+              id="rentalObject"
+              value={formData.rentalObject}
+              onChange={(e) => setFormData(prev => ({ ...prev, rentalObject: e.target.value }))}
               placeholder="t.ex. 811-039-05-0347"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="key_type">Typ *</Label>
+            <Label htmlFor="keyType">Typ *</Label>
             <Select 
-              value={formData.key_type} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, key_type: value as KeyType }))}
+              value={formData.keyType} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, keyType: value as KeyType }))}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -120,34 +121,34 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="key_system_name">Låssystem</Label>
+            <Label htmlFor="keySystemName">Låssystem</Label>
             <Input
-              id="key_system_name"
-              value={formData.key_system_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, key_system_name: e.target.value }))}
+              id="keySystemName"
+              value={formData.keySystemName}
+              onChange={(e) => setFormData(prev => ({ ...prev, keySystemName: e.target.value }))}
               placeholder="t.ex. ABC123"
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="key_sequence_number">Löpnummer</Label>
+              <Label htmlFor="keySequenceNumber">Löpnummer</Label>
               <Input
-                id="key_sequence_number"
+                id="keySequenceNumber"
                 type="number"
-                value={formData.key_sequence_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, key_sequence_number: e.target.value }))}
+                value={formData.keySequenceNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, keySequenceNumber: e.target.value }))}
                 placeholder="1, 2, 3..."
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="flex_number">Flexnr</Label>
+              <Label htmlFor="flexNumber">Flexnr</Label>
               <Input
-                id="flex_number"
+                id="flexNumber"
                 type="number"
-                value={formData.flex_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, flex_number: e.target.value }))}
+                value={formData.flexNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, flexNumber: e.target.value }))}
                 placeholder="1"
               />
             </div>
@@ -160,7 +161,7 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!formData.key_name || !formData.key_type}
+            disabled={!formData.keyName || !formData.keyType}
           >
             {editingKey ? 'Uppdatera' : 'Lägg till'}
           </Button>
