@@ -52,10 +52,17 @@ const readFile = async (client: SftpClient, fileName: string) => {
   return contents.toString()
 }
 
-const renameCsvFile = async (client: SftpClient, fileName: string) => {
+const markCsvFileAsCompleted = async (client: SftpClient, fileName: string) => {
   await client.rename(
     path.join(importDirectory, fileName),
     path.join(importDirectory, fileName.replace(/\.csv/i, '.csv-imported'))
+  )
+}
+
+const markCsvFileAsFailed = async (client: SftpClient, fileName: string) => {
+  await client.rename(
+    path.join(importDirectory, fileName),
+    path.join(importDirectory, fileName.replace(/\.csv/i, '.csv-failed'))
   )
 }
 
@@ -78,9 +85,9 @@ const processDebtCollectionFiles = async () => {
       const fileContents = await readFile(importClient, csvFileName)
       const response = await enrichRentCases(fileContents)
       if (!response.ok) {
-        console.log(response)
-        // TODO what to do if a file fails
-        throw response.error
+        logger.error(response.error, `Failed to process file ${csvFileName}`)
+        await markCsvFileAsFailed(importClient, csvFileName)
+        continue
       }
 
       const fp = getExportFilePath(csvFileName)
@@ -97,7 +104,7 @@ const processDebtCollectionFiles = async () => {
         },
       })
 
-      await renameCsvFile(importClient, csvFileName)
+      await markCsvFileAsCompleted(importClient, csvFileName)
     }
   } catch (err) {
     logger.error(err)
