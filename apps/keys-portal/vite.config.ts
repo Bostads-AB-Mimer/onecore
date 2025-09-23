@@ -1,8 +1,8 @@
-<<<<<<< HEAD
 import path from 'path'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { injectEnv } from './script/inject-env.js'
+import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -34,23 +34,19 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
-=======
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
 
+
+//export default defineConfig(({ mode }) => ({
+//   server: {
+//     host: "::",
+//     port: 8080,
+//   },
+//   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+//   resolve: {
+//     alias: {
+//       "@": path.resolve(__dirname, "./src"),
+//     },
+//   },
+// }));
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-}));
->>>>>>> 429a627e9c24b0411b26ddb4161456004d612244
+
