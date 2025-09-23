@@ -14,6 +14,10 @@ const db = knex({
     database: config.xpandDatabase.database,
     requestTimeout: 15000,
   },
+  pool: {
+    min: 0,
+    idleTimeoutMillis: 5000,
+  },
   client: 'mssql',
 })
 
