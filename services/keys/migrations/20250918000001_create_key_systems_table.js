@@ -7,19 +7,19 @@
 exports.up = function (knex) {
   return knex.schema.createTable('key_systems', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('NEWID()'))
-    table.string('system_code').unique().notNullable()
+    table.string('systemCode').unique().notNullable()
     table.string('name').notNullable()
     table.string('manufacturer').notNullable()
-    table.string('managing_supplier')
+    table.string('managingSupplier')
     table.enum('type', ['MECHANICAL', 'ELECTRONIC', 'HYBRID']).notNullable()
-    table.text('property_ids').defaultTo('[]')
-    table.date('installation_date')
-    table.boolean('is_active').defaultTo(true)
+    table.text('propertyIds').defaultTo('[]')
+    table.date('installationDate')
+    table.boolean('isActive').defaultTo(true)
     table.text('description')
-    table.timestamp('created_at').defaultTo(knex.fn.now())
-    table.timestamp('updated_at').defaultTo(knex.fn.now())
-    table.string('created_by')
-    table.string('updated_by')
+    table.timestamp('createdAt').defaultTo(knex.fn.now())
+    table.timestamp('updatedAt').defaultTo(knex.fn.now())
+    table.string('createdBy')
+    table.string('updatedBy')
   })
 }
 

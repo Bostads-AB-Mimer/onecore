@@ -19,49 +19,49 @@ const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
  *         id:
  *           type: string
  *           format: uuid
- *         key_name:
+ *         keyName:
  *           type: string
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
- *         flex_number:
+ *         flexNumber:
  *           type: integer
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
- *         created_at:
+ *         createdAt:
  *           type: string
  *           format: date-time
- *         updated_at:
+ *         updatedAt:
  *           type: string
  *           format: date-time
  *
  *     CreateKeyRequest:
  *       type: object
- *       required: [key_name, key_type]
+ *       required: [keyName, keyType]
  *       properties:
- *         key_name:
+ *         keyName:
  *           type: string
  *           example: "Front door A"
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
  *           example: 101
- *         flex_number:
+ *         flexNumber:
  *           type: integer
  *           example: 1
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
  *           example: "APT-1001"
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
  *           example: "LGH"
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
@@ -71,19 +71,19 @@ const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
  *       type: object
  *       description: Partial update; provide any subset of fields
  *       properties:
- *         key_name:
+ *         keyName:
  *           type: string
  *           example: "Front door A (updated)"
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
- *         flex_number:
+ *         flexNumber:
  *           type: integer
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
@@ -109,7 +109,7 @@ export const routes = (router: KoaRouter) => {
    * /keys:
    *   get:
    *     summary: List keys
-   *     description: Returns keys ordered by created_at (desc).
+   *     description: Returns keys ordered by createdAt (desc).
    *     tags: [Keys]
    *     responses:
    *       200:
@@ -133,7 +133,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
@@ -220,7 +220,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Key'
    *       400:
-   *         description: Invalid key_type
+   *         description: Invalid keyType
    *         content:
    *           application/json:
    *             schema:
@@ -238,13 +238,13 @@ export const routes = (router: KoaRouter) => {
       const payload: any = ctx.request.body || {}
 
       // Minimal normalization (no zod yet)
-      if (typeof payload.key_type === 'string') {
-        payload.key_type = payload.key_type.toUpperCase()
+      if (typeof payload.keyType === 'string') {
+        payload.keyType = payload.keyType.toUpperCase()
       }
       // Optional tiny guard to avoid obvious typos
-      if (payload.key_type && !ALLOWED_KEY_TYPES.has(payload.key_type)) {
+      if (payload.keyType && !ALLOWED_KEY_TYPES.has(payload.keyType)) {
         ctx.status = 400
-        ctx.body = { error: 'Invalid key_type', ...metadata }
+        ctx.body = { error: 'Invalid keyType', ...metadata }
         return
       }
 
@@ -288,7 +288,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Key'
    *       400:
-   *         description: Invalid key_type
+   *         description: Invalid keyType
    *         content:
    *           application/json:
    *             schema:
@@ -311,18 +311,18 @@ export const routes = (router: KoaRouter) => {
     try {
       const payload: any = ctx.request.body || {}
 
-      if (typeof payload.key_type === 'string') {
-        payload.key_type = payload.key_type.toUpperCase()
+      if (typeof payload.keyType === 'string') {
+        payload.keyType = payload.keyType.toUpperCase()
       }
-      if (payload.key_type && !ALLOWED_KEY_TYPES.has(payload.key_type)) {
+      if (payload.keyType && !ALLOWED_KEY_TYPES.has(payload.keyType)) {
         ctx.status = 400
-        ctx.body = { error: 'Invalid key_type', ...metadata }
+        ctx.body = { error: 'Invalid keyType', ...metadata }
         return
       }
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
-        .update({ ...payload, updated_at: db.fn.now() })
+        .update({ ...payload, updatedAt: db.fn.now() })
         .returning('*')
 
       if (!row) {

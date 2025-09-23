@@ -7,14 +7,14 @@
 exports.up = function (knex) {
   return knex.schema.createTable('keys', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('NEWID()'))
-    table.string('key_name').notNullable()
-    table.integer('key_sequence_number')
-    table.integer('flex_number')
-    table.string('rental_object')
-    table.enum('key_type', ['LGH', 'PB', 'FS', 'HN']).notNullable()
-    table.uuid('key_system_id').references('id').inTable('key_systems')
-    table.timestamp('created_at').defaultTo(knex.fn.now())
-    table.timestamp('updated_at').defaultTo(knex.fn.now())
+    table.string('keyName').notNullable()
+    table.integer('keySequenceNumber')
+    table.integer('flexNumber')
+    table.string('rentalObjectCode')
+    table.enum('keyType', ['LGH', 'PB', 'FS', 'HN']).notNullable()
+    table.uuid('keySystemId').references('id').inTable('key_systems')
+    table.timestamp('createdAt').defaultTo(knex.fn.now())
+    table.timestamp('updatedAt').defaultTo(knex.fn.now())
   })
 }
 
