@@ -17,7 +17,7 @@ const importProcurementInvoicesScript = async () => {
     path.join(config.procurementInvoices.exportDirectory, 'mälarenergi.csv'),
     csvContent
   )
-  await uploadInvoiceFile('mälarenergi.gl.csv', csvContent)
+  await uploadInvoiceFile('malarenergi-${Date.now()}.gl.csv', csvContent)
   logger.info('Uploaded file')
 
   markProcurementFilesAsImported()
