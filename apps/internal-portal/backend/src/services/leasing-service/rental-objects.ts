@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { Listing, RentalObject } from 'libs/types/dist'
+import { Listing, RentalObject } from '@onecore/types'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-objects/vacant-parkingspaces', async (ctx) => {

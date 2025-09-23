@@ -4,7 +4,6 @@ import {
   CreateNoteOfInterestErrorCodes,
   DetailedApplicant,
   GetActiveOfferByListingIdErrorCodes,
-  InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   Offer,
@@ -333,29 +332,12 @@ const createMultipleListings = async (
   }
 }
 
-const syncInternalParkingSpacesFromXpand = async (): Promise<
-  AdapterResult<InternalParkingSpaceSyncSuccessResponse, 'unknown'>
-> => {
-  try {
-    const response = await getFromCore<{
-      content: InternalParkingSpaceSyncSuccessResponse
-    }>({
-      method: 'post',
-      url: `${coreBaseUrl}/listings/sync-internal-from-xpand`,
-    })
-
-    return { ok: true, data: response.data.content }
-  } catch {
-    return { ok: false, err: 'unknown', statusCode: 500 }
-  }
-}
-
 const deleteListing = async (
   listingId: number
 ): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
   try {
     await getFromCore<{
-      content: InternalParkingSpaceSyncSuccessResponse
+      content: null
     }>({
       method: 'delete',
       url: `${coreBaseUrl}/listings/${listingId}`,
@@ -677,7 +659,6 @@ export {
   createNoteOfInterestForInternalParkingSpace,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
-  syncInternalParkingSpacesFromXpand,
   createOffer,
   deleteListing,
   closeListing,
