@@ -216,15 +216,15 @@ export interface paths {
                  * Format: date-time
                  * @description When the record was last updated.
                  */
-                updatedAt?: string
+                updated_at?: string;
                 /** @description Who created this record. */
-                createdBy?: string
+                created_by?: string;
                 /** @description Who last updated this record. */
-                updatedBy?: string
-              }
-            }
-          }
-        }
+                updated_by?: string;
+              };
+            };
+          };
+        };
         /** @description Key loan not found. */
         404: {
           content: {
@@ -367,6 +367,21 @@ export interface paths {
           'application/json': components['schemas']['CreateKeySystemRequest']
         }
       }
+          "application/json": {
+            /** @description Unique system code */
+            systemCode: string;
+            /** @description Name of the key system */
+            name: string;
+            /**
+             * @description Type of key system
+             * @enum {string}
+             */
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            /** @description Description of the key system */
+            description?: string;
+          };
+        };
+      };
       responses: {
         /** @description Key system created successfully */
         201: {
@@ -773,12 +788,12 @@ export interface paths {
         /** @description Key updated successfully. */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['Key']
-            }
-          }
-        }
-        /** @description Invalid request body. */
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
+          };
+        };
+        /** @description Invalid key_type */
         400: {
           content: {
             'application/json': {
@@ -990,9 +1005,19 @@ export interface paths {
       responses: {
         /** @description Receipt */
         200: {
-          content: never
-        }
-        /** @description Receipt not found */
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"];
+            };
+          };
+        };
+        /** @description Invalid event_type or object_type */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Not found */
         404: {
           content: never
         }
@@ -1025,97 +1050,113 @@ export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
-    CreateKeyRequest: components['schemas']['CreateKeyRequest']
-    UpdateKeyRequest: components['schemas']['UpdateKeyRequest']
-    Key: components['schemas']['Key']
-    PaginationMeta: {
-      totalRecords: number
-      page: number
-      limit: number
-      count: number
-    }
-    PaginationLinks: {
-      href: string
+    Key: {
+      /** Format: uuid */
+      id?: string;
+      key_name?: string;
+      key_sequence_number?: number;
+      flex_number?: number;
+      rental_object?: string;
       /** @enum {string} */
-      rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-    }
-    PaginatedKeysResponse: {
-      content: {
-        /** Format: uuid */
-        id: string
-        keyName: string
-        keySequenceNumber?: number
-        flexNumber?: number
-        rentalObjectCode?: string
-        /** @enum {string} */
-        keyType: 'LGH' | 'PB' | 'FS' | 'HN'
-        /** Format: uuid */
-        keySystemId?: string | null
-        /** Format: date-time */
-        createdAt: string
-        /** Format: date-time */
-        updatedAt: string
-      }[]
-      _meta: {
-        totalRecords: number
-        page: number
-        limit: number
-        count: number
-      }
-      _links: {
-        href: string
-        /** @enum {string} */
-        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-      }[]
-    }
-    CreateKeySystemRequest: components['schemas']['CreateKeySystemRequest']
-    UpdateKeySystemRequest: components['schemas']['UpdateKeySystemRequest']
-    KeySystem: components['schemas']['KeySystem']
-    PaginatedKeySystemsResponse: {
-      content: {
-        /** Format: uuid */
-        id: string
-        systemCode: string
-        name: string
-        manufacturer: string
-        managingSupplier?: string | null
-        /** @enum {string} */
-        type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
-        propertyIds?: string
-        /** Format: date-time */
-        installationDate?: string | null
-        isActive?: boolean
-        description?: string | null
-        /** Format: date-time */
-        createdAt: string
-        /** Format: date-time */
-        updatedAt: string
-        createdBy?: string | null
-        updatedBy?: string | null
-      }[]
-      _meta: {
-        totalRecords: number
-        page: number
-        limit: number
-        count: number
-      }
-      _links: {
-        href: string
-        /** @enum {string} */
-        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-      }[]
-    }
-    CreateKeyLoanRequest: components['schemas']['CreateKeyLoanRequest']
-    UpdateKeyLoanRequest: components['schemas']['UpdateKeyLoanRequest']
-    KeyLoan: components['schemas']['KeyLoan']
-    CreateLogRequest: components['schemas']['CreateLogRequest']
-    Log: components['schemas']['Log']
-  }
-  responses: never
-  parameters: never
-  requestBodies: never
-  headers: never
-  pathItems: never
+      key_type?: "LGH" | "PB" | "FS" | "HN";
+      /** Format: uuid */
+      key_system_id?: string | null;
+      /** Format: date-time */
+      created_at?: string;
+      /** Format: date-time */
+      updated_at?: string;
+    };
+    CreateKeyRequest: {
+      /** @example Front door A */
+      key_name: string;
+      /** @example 101 */
+      key_sequence_number?: number;
+      /** @example 1 */
+      flex_number?: number;
+      /** @example APT-1001 */
+      rental_object?: string;
+      /**
+       * @example LGH
+       * @enum {string}
+       */
+      key_type: "LGH" | "PB" | "FS" | "HN";
+      /**
+       * Format: uuid
+       * @example null
+       */
+      key_system_id?: string | null;
+    };
+    /** @description Partial update; provide any subset of fields */
+    UpdateKeyRequest: {
+      /** @example Front door A (updated) */
+      key_name?: string;
+      key_sequence_number?: number;
+      flex_number?: number;
+      rental_object?: string;
+      /** @enum {string} */
+      key_type?: "LGH" | "PB" | "FS" | "HN";
+      /** Format: uuid */
+      key_system_id?: string | null;
+    };
+    ErrorResponse: {
+      /** @example Internal server error */
+      error?: string;
+    };
+    NotFoundResponse: {
+      /** @example Log not found */
+      reason?: string;
+    };
+    Log: {
+      /** Format: uuid */
+      id?: string;
+      /** @example seb */
+      user_name?: string;
+      /**
+       * @example creation
+       * @enum {string}
+       */
+      event_type?: "creation" | "update" | "delete";
+      /**
+       * @example key
+       * @enum {string}
+       */
+      object_type?: "key" | "key_system" | "key_loan";
+      /** Format: date-time */
+      event_time?: string;
+      /** @example Created key APT-1001 */
+      description?: string;
+    };
+    CreateLogRequest: {
+      /** @example seb */
+      user_name: string;
+      /**
+       * @example creation
+       * @enum {string}
+       */
+      event_type: "creation" | "update" | "delete";
+      /**
+       * @example key
+       * @enum {string}
+       */
+      object_type: "key" | "key_system" | "key_loan";
+      /** @example Initial import */
+      description?: string;
+    };
+    /** @description Partial update; provide any subset of fields */
+    UpdateLogRequest: {
+      user_name?: string;
+      /** @enum {string} */
+      event_type?: "creation" | "update" | "delete";
+      /** @enum {string} */
+      object_type?: "key" | "key_system" | "key_loan";
+      description?: string;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 
 export type $defs = Record<string, never>
