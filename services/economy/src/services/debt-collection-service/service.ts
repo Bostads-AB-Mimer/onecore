@@ -25,7 +25,7 @@ const importInvoicesFromCsv = (
   csv: string,
   separator = ','
 ): XledgerRentCase[] => {
-  const lines = csv.split('\n')
+  const lines = csv.trim().split('\n')
   const header = lines[0]
   const numColumns = header.split(separator).length
 
@@ -55,7 +55,7 @@ const importBalanceCorrectionsFromCsv = (
   csv: string,
   separator = ','
 ): XledgerBalanceCorrection[] => {
-  const lines = csv.split('\n')
+  const lines = csv.trim().split('\n')
   const header = lines[0]
   const numColumns = header.split(separator).length
 

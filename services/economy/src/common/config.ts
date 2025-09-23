@@ -44,6 +44,10 @@ export interface Config {
     exportDirectory: string
     sftp: SftpConfig
   }
+  debtCollection: {
+    xledgerSftp: SftpConfig
+    sergelSftp: SftpConfig
+  }
   health: {
     xledger: {
       systemName: string
@@ -64,6 +68,21 @@ const config = configPackage({
         username: '',
         password: '',
         directory: 'economy',
+      },
+    },
+    debtCollection: {
+      xledgerSftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: '',
+        useSshDss: true,
+      },
+      sergelSftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: '',
       },
     },
     xpandDatabase: {
@@ -110,5 +129,6 @@ export default {
   xledger: config.get('xledger'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
+  debtCollection: config.get('debtCollection'),
   health: config.get('health'),
 } as Config
