@@ -2,6 +2,17 @@ import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 dotenv.config()
 
+type SftpConfig = {
+  host: string
+  username: string
+  password: string
+  port?: number
+  directory?: string
+  glDirectory?: string
+  arDirectory?: string
+  useSshDss?: boolean
+}
+
 export interface Config {
   port: number
   xpandDatabase: {
@@ -21,31 +32,24 @@ export interface Config {
   xledger: {
     url: string
     apiToken: string
-    sftp: {
-      host: string
-      username: string
-      password: string
-      glDirectory: string
-      arDirectory: string
-    }
+    sftp: SftpConfig
   }
   procurementInvoices: {
-    directory: string
+    importDirectory: string
+    exportDirectory: string
+    sftp: SftpConfig
   }
   rentalInvoices: {
     importDirectory: string
     exportDirectory: string
+    sftp: SftpConfig
+  }
+  debtCollection: {
+    xledgerSftp: SftpConfig
+    sergelSftp: SftpConfig
   }
   health: {
     xledger: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    economyDatabase: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    xpandDatabase: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -59,6 +63,27 @@ const config = configPackage({
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
+    },
+    debtCollection: {
+      xledgerSftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: '',
+        useSshDss: true,
+      },
+      sergelSftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: '',
+      },
     },
     xpandDatabase: {
       port: 1433,
@@ -67,7 +92,14 @@ const config = configPackage({
       port: 1438,
     },
     procurementInvoices: {
-      directory: './procurement-invoices/invoices',
+      importDirectory: './procurement-invoices/invoices',
+      exportDirectory: './procurement-invoices/export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -78,19 +110,12 @@ const config = configPackage({
         password: '',
         glDirectory: '/GL',
         arDirectory: '/AR',
+        useSshDss: true,
       },
     },
     health: {
       xledger: {
         systemName: 'xledger',
-        minimumMinutesBetweenRequests: 5,
-      },
-      economyDatabase: {
-        systemName: 'economy database',
-        minimumMinutesBetweenRequests: 5,
-      },
-      xpandDatabase: {
-        systemName: 'xpand database',
         minimumMinutesBetweenRequests: 5,
       },
     },
@@ -104,5 +129,6 @@ export default {
   xledger: config.get('xledger'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
+  debtCollection: config.get('debtCollection'),
   health: config.get('health'),
 } as Config
