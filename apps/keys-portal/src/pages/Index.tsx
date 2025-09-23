@@ -5,25 +5,50 @@ import { KeysTable } from "@/components/keys/KeysTable";
 import { AddKeyDialog } from "@/components/keys/AddKeyDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Key } from "@/types/key";
-
-import { keyService } from "@/services/api/keyService"; // <-- use your alias/path
+import { keyService } from "@/services/api/keyService";
 import type { components } from "@/services/api/generated/api-types";
 
 type KeyDto = components["schemas"]["Key"];
+type CreateKeyRequest = components["schemas"]["CreateKeyRequest"];
+type UpdateKeyRequest = components["schemas"]["UpdateKeyRequest"];
 
 const toUIKey = (k: KeyDto): Key => ({
   id: k.id ?? "",
-  key_name: k.key_name ?? "",
-  key_sequence_number: k.key_sequence_number,
-  flex_number: k.flex_number,
-  rental_object: k.rental_object,
-  key_type: k.key_type as Key["key_type"],
+  key_name: k.keyName ?? "",
+  key_sequence_number: k.keySequenceNumber,
+  flex_number: k.flexNumber,
+  rental_object: k.rentalObjectCode,
+  key_type: k.keyType as Key["key_type"],
   // API gives key_system_id; your UI type has key_system_name (optional).
-  // Leave it undefined for now, or later join with /key-systems to populate it.
   key_system_name: undefined,
-  created_at: k.created_at,
-  updated_at: k.updated_at,
+  created_at: k.createdAt,
+  updated_at: k.updatedAt,
 });
+
+const toCreateReq = (
+  k: Omit<Key, "id" | "created_at" | "updated_at">
+): CreateKeyRequest => ({
+  keyName: k.key_name,
+  keySequenceNumber: k.key_sequence_number,
+  flexNumber: k.flex_number,
+  rentalObjectCode: k.rental_object,
+  keyType: k.key_type,
+  // key_system_id: someUuidOrNull, // add when you wire key systems
+});
+
+const toUpdateReq = (
+  before: Key,
+  after: Omit<Key, "id" | "created_at" | "updated_at">
+): UpdateKeyRequest => {
+  const payload: UpdateKeyRequest = {};
+  if (before.key_name !== after.key_name) payload.keyName = after.key_name;
+  if (before.key_sequence_number !== after.key_sequence_number) payload.keySequenceNumber = after.key_sequence_number;
+  if (before.flex_number !== after.flex_number) payload.flexNumber = after.flex_number;
+  if (before.rental_object !== after.rental_object) payload.rentalObjectCode = after.rental_object;
+  if (before.key_type !== after.key_type) payload.keyType = after.key_type;
+  // if (before.key_system_id !== mappedId) payload.key_system_id = mappedId ?? null;
+  return payload;
+};
 
 const Index = () => {
   const [keys, setKeys] = useState<Key[]>([]);
@@ -73,7 +98,6 @@ const Index = () => {
     });
   }, [keys, searchQuery, selectedType]);
 
-  // Keep edit/delete/add for UI demo if you like; they still only affect local state.
   const handleAddNew = () => {
     setEditingKey(null);
     setDialogOpen(true);
@@ -84,43 +108,58 @@ const Index = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = (keyData: Omit<Key, "id" | "created_at" | "updated_at">) => {
-    // Local-only changes for now; when you’re ready, wire to POST/PATCH.
+  const handleSave = async (keyData: Omit<Key, "id" | "created_at" | "updated_at">) => {
     if (editingKey) {
-      setKeys((prev) =>
-        prev.map((key) =>
-          key.id === editingKey.id
-            ? { ...key, ...keyData, updated_at: new Date().toISOString() }
-            : key
-        )
-      );
-      toast({
-        title: "Nyckel uppdaterad",
-        description: `${keyData.key_name} har uppdaterats.`,
-      });
-    } else {
-      const newKey: Key = {
-        ...keyData,
-        id: Math.random().toString(36).slice(2, 11),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setKeys((prev) => [...prev, newKey]);
-      toast({
-        title: "Nyckel tillagd",
-        description: `${keyData.key_name} har lagts till.`,
-      });
+      try {
+        const payload = toUpdateReq(editingKey, keyData);
+        if (Object.keys(payload).length === 0) {
+          setDialogOpen(false);
+          return;
+        }
+        const updated = await keyService.updateKey(editingKey.id, payload);
+        setKeys(prev => prev.map(k => (k.id === editingKey.id ? toUIKey(updated) : k)));
+        toast({
+          title: "Nyckel uppdaterad",
+          description: `${updated.keyName ?? keyData.key_name} har uppdaterats.`,
+        });
+        setDialogOpen(false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Okänt fel vid uppdatering";
+        toast({ title: "Kunde inte uppdatera nyckel", description: msg, variant: "destructive" });
+      }
+      return;
     }
-    setDialogOpen(false);
+
+    // Create
+    try {
+      const created = await keyService.createKey(toCreateReq(keyData));
+      setKeys((prev) => [...prev, toUIKey(created)]);
+      // or await fetchKeys() if you prefer server ordering immediately
+      toast({ title: "Nyckel tillagd", description: `${keyData.key_name} har lagts till.` });
+      setDialogOpen(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Okänt fel vid skapande";
+      toast({ title: "Kunde inte skapa nyckel", description: msg, variant: "destructive" });
+    }
   };
 
-  const handleDelete = (keyId: string) => {
+  const handleDelete = async (keyId: string) => {
     const key = keys.find((k) => k.id === keyId);
-    if (key) {
+    if (!key) return;
+
+    try {
+      await keyService.deleteKey(keyId);
       setKeys((prev) => prev.filter((k) => k.id !== keyId));
       toast({
         title: "Nyckel borttagen",
-        description: `${key.key_name} har tagits bort (lokalt).`,
+        description: `${key.key_name} har tagits bort.`,
+        variant: "destructive",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Okänt fel vid borttagning";
+      toast({
+        title: "Kunde inte ta bort nyckel",
+        description: msg,
         variant: "destructive",
       });
     }
@@ -131,7 +170,6 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <KeysHeader totalKeys={keys.length} displayedKeys={filteredKeys.length} />
 
-        {/* If you want a manual refresh, you could add a refresh button in KeysToolbar later */}
         <KeysToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
