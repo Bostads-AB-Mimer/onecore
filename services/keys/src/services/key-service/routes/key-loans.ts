@@ -45,30 +45,30 @@ export const routes = (router: KoaRouter) => {
    *                       lease:
    *                         type: string
    *                         description: Lease identifier.
-   *                       returned_at:
+   *                       returnedAt:
    *                         type: string
    *                         format: date-time
    *                         description: When keys were returned.
-   *                       available_to_next_tenant_from:
+   *                       availableToNextTenantFrom:
    *                         type: string
    *                         format: date-time
    *                         description: When keys become available for next tenant if early return.
-   *                       picked_up_at:
+   *                       pickedUpAt:
    *                         type: string
    *                         format: date-time
    *                         description: When keys were picked up.
-   *                       created_at:
+   *                       createdAt:
    *                         type: string
    *                         format: date-time
    *                         description: When the record was created.
-   *                       updated_at:
+   *                       updatedAt:
    *                         type: string
    *                         format: date-time
    *                         description: When the record was last updated.
-   *                       created_by:
+   *                       createdBy:
    *                         type: string
    *                         description: Who created this record.
-   *                       updated_by:
+   *                       updatedBy:
    *                         type: string
    *                         description: Who last updated this record.
    *       500:
@@ -85,7 +85,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
@@ -132,30 +132,30 @@ export const routes = (router: KoaRouter) => {
    *                     lease:
    *                       type: string
    *                       description: Lease identifier.
-   *                     returned_at:
+   *                     returnedAt:
    *                       type: string
    *                       format: date-time
    *                       description: When keys were returned.
-   *                     available_to_next_tenant_from:
+   *                     availableToNextTenantFrom:
    *                       type: string
    *                       format: date-time
    *                       description: When keys become available for next tenant.
-   *                     picked_up_at:
+   *                     pickedUpAt:
    *                       type: string
    *                       format: date-time
    *                       description: When keys were picked up.
-   *                     created_at:
+   *                     createdAt:
    *                       type: string
    *                       format: date-time
    *                       description: When the record was created.
-   *                     updated_at:
+   *                     updatedAt:
    *                       type: string
    *                       format: date-time
    *                       description: When the record was last updated.
-   *                     created_by:
+   *                     createdBy:
    *                       type: string
    *                       description: Who created this record.
-   *                     updated_by:
+   *                     updatedBy:
    *                       type: string
    *                       description: Who last updated this record.
    *       404:
@@ -223,17 +223,17 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 description: Lease identifier or reference.
    *                 example: "LEASE-2025-001"
-   *               picked_up_at:
+   *               pickedUpAt:
    *                 type: string
    *                 format: date-time
    *                 description: When keys were picked up.
    *                 example: "2025-09-19T14:30:00.000Z"
-   *               available_to_next_tenant_from:
+   *               availableToNextTenantFrom:
    *                 type: string
    *                 format: date-time
    *                 description: When keys become available for next tenant.
    *                 example: "2025-12-01T00:00:00.000Z"
-   *               created_by:
+   *               createdBy:
    *                 type: string
    *                 description: Who created this record.
    *                 example: "admin-user-123"
@@ -307,20 +307,20 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 description: Lease identifier.
    *                 example: "LEASE-2025-002"
-   *               returned_at:
+   *               returnedAt:
    *                 type: string
    *                 format: date-time
    *                 description: When keys were returned.
    *                 example: "2025-09-19T16:00:00.000Z"
-   *               available_to_next_tenant_from:
+   *               availableToNextTenantFrom:
    *                 type: string
    *                 format: date-time
    *                 description: When keys become available for next tenant.
-   *               picked_up_at:
+   *               pickedUpAt:
    *                 type: string
    *                 format: date-time
    *                 description: When keys were picked up.
-   *               updated_by:
+   *               updatedBy:
    *                 type: string
    *                 description: Who updated this record.
    *                 example: "admin-user-456"
@@ -363,7 +363,7 @@ export const routes = (router: KoaRouter) => {
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
-        .update({ ...payload, updated_at: db.fn.now() })
+        .update({ ...payload, updatedAt: db.fn.now() })
         .returning('*')
 
       if (!row) {
