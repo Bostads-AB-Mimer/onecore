@@ -38,7 +38,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
@@ -110,7 +110,7 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             properties:
-   *               system_code:
+   *               systemCode:
    *                 type: string
    *                 description: Unique system code
    *               name:
@@ -124,7 +124,7 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 description: Description of the key system
    *             required:
-   *               - system_code
+   *               - systemCode
    *               - name
    *               - type
    *     responses:
@@ -160,10 +160,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // Check for duplicate system_code
-      if (payload.system_code) {
+      // Check for duplicate systemCode
+      if (payload.systemCode) {
         const existing = await db(TABLE)
-          .where({ system_code: payload.system_code })
+          .where({ systemCode: payload.systemCode })
           .first()
         if (existing) {
           ctx.status = 409
@@ -203,7 +203,7 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             properties:
-   *               system_code:
+   *               systemCode:
    *                 type: string
    *                 description: Unique system code
    *               name:
@@ -251,10 +251,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // Check for duplicate system_code if being updated
-      if (payload.system_code) {
+      // Check for duplicate systemCode if being updated
+      if (payload.systemCode) {
         const existing = await db(TABLE)
-          .where({ system_code: payload.system_code })
+          .where({ systemCode: payload.systemCode })
           .whereNot({ id: ctx.params.id })
           .first()
         if (existing) {
@@ -266,7 +266,7 @@ export const routes = (router: KoaRouter) => {
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
-        .update({ ...payload, updated_at: db.fn.now() })
+        .update({ ...payload, updatedAt: db.fn.now() })
         .returning('*')
 
       if (!row) {
