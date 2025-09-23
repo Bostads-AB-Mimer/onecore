@@ -9,14 +9,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-plugins: [
-  react(),                    // Plugin 1: React support
-  ...(mode === "development" ? [componentTagger()] : []), // Plugin 2: ComponentTagger (conditional)
-  {                          // Plugin 3: Custom HTML transform
-    name: 'transform-html',
-    transformIndexHtml: (html) => injectEnv(html, env),
-  },
-],
+    plugins: [
+      react(),                    // Plugin 1: React support
+      ...(mode === "development" ? [componentTagger()] : []), // Plugin 2: ComponentTagger (conditional)
+      {                          // Plugin 3: Custom HTML transform
+        name: 'transform-html',
+        transformIndexHtml: (html) => injectEnv(html, env),
+      },
+    ],
     server: {
       port: Number(env.PORT) || 3000,
       proxy: {
