@@ -14,38 +14,38 @@ type UpdateKeyRequest = components["schemas"]["UpdateKeyRequest"];
 
 const toUIKey = (k: KeyDto): Key => ({
   id: k.id ?? "",
-  key_name: k.keyName ?? "",
-  key_sequence_number: k.keySequenceNumber,
-  flex_number: k.flexNumber,
-  rental_object: k.rentalObjectCode,
-  key_type: k.keyType as Key["key_type"],
-  // API gives key_system_id; your UI type has key_system_name (optional).
-  key_system_name: undefined,
-  created_at: k.createdAt,
-  updated_at: k.updatedAt,
+  keyName: k.keyName ?? "",
+  keySequenceNumber: k.keySequenceNumber,
+  flexNumber: k.flexNumber,
+  rentalObject: k.rentalObjectCode,
+  keyType: k.keyType as Key["keyType"],
+  // API gives key_system_id; your UI type has keySystemName (optional).
+  keySystemName: undefined,
+  createdAt: k.createdAt,
+  updatedAt: k.updatedAt,
 });
 
 const toCreateReq = (
-  k: Omit<Key, "id" | "created_at" | "updated_at">
+  k: Omit<Key, "id" | "createdAt" | "updatedAt">
 ): CreateKeyRequest => ({
-  keyName: k.key_name,
-  keySequenceNumber: k.key_sequence_number,
-  flexNumber: k.flex_number,
-  rentalObjectCode: k.rental_object,
-  keyType: k.key_type,
+  keyName: k.keyName,
+  keySequenceNumber: k.keySequenceNumber,
+  flexNumber: k.flexNumber,
+  rentalObjectCode: k.rentalObject,
+  keyType: k.keyType,
   // key_system_id: someUuidOrNull, // add when you wire key systems
 });
 
 const toUpdateReq = (
   before: Key,
-  after: Omit<Key, "id" | "created_at" | "updated_at">
+  after: Omit<Key, "id" | "createdAt" | "updatedAt">
 ): UpdateKeyRequest => {
   const payload: UpdateKeyRequest = {};
-  if (before.key_name !== after.key_name) payload.keyName = after.key_name;
-  if (before.key_sequence_number !== after.key_sequence_number) payload.keySequenceNumber = after.key_sequence_number;
-  if (before.flex_number !== after.flex_number) payload.flexNumber = after.flex_number;
-  if (before.rental_object !== after.rental_object) payload.rentalObjectCode = after.rental_object;
-  if (before.key_type !== after.key_type) payload.keyType = after.key_type;
+  if (before.keyName !== after.keyName) payload.keyName = after.keyName;
+  if (before.keySequenceNumber !== after.keySequenceNumber) payload.keySequenceNumber = after.keySequenceNumber;
+  if (before.flexNumber !== after.flexNumber) payload.flexNumber = after.flexNumber;
+  if (before.rentalObject !== after.rentalObject) payload.rentalObjectCode = after.rentalObject;
+  if (before.keyType !== after.keyType) payload.keyType = after.keyType;
   // if (before.key_system_id !== mappedId) payload.key_system_id = mappedId ?? null;
   return payload;
 };
@@ -88,11 +88,11 @@ const Index = () => {
     return keys.filter((key) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
-        key.key_name.toLowerCase().includes(q) ||
-        key.rental_object?.toLowerCase().includes(q) ||
-        key.key_system_name?.toLowerCase().includes(q);
+        key.keyName.toLowerCase().includes(q) ||
+        key.rentalObject?.toLowerCase().includes(q) ||
+        key.keySystemName?.toLowerCase().includes(q);
 
-      const matchesType = selectedType === "all" || key.key_type === selectedType;
+      const matchesType = selectedType === "all" || key.keyType === selectedType;
 
       return matchesSearch && matchesType;
     });
@@ -108,7 +108,7 @@ const Index = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = async (keyData: Omit<Key, "id" | "created_at" | "updated_at">) => {
+  const handleSave = async (keyData: Omit<Key, "id" | "createdAt" | "updatedAt">) => {
     if (editingKey) {
       try {
         const payload = toUpdateReq(editingKey, keyData);
@@ -120,7 +120,7 @@ const Index = () => {
         setKeys(prev => prev.map(k => (k.id === editingKey.id ? toUIKey(updated) : k)));
         toast({
           title: "Nyckel uppdaterad",
-          description: `${updated.keyName ?? keyData.key_name} har uppdaterats.`,
+          description: `${updated.keyName ?? keyData.keyName} har uppdaterats.`,
         });
         setDialogOpen(false);
       } catch (e) {
@@ -135,7 +135,7 @@ const Index = () => {
       const created = await keyService.createKey(toCreateReq(keyData));
       setKeys((prev) => [...prev, toUIKey(created)]);
       // or await fetchKeys() if you prefer server ordering immediately
-      toast({ title: "Nyckel tillagd", description: `${keyData.key_name} har lagts till.` });
+      toast({ title: "Nyckel tillagd", description: `${keyData.keyName} har lagts till.` });
       setDialogOpen(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Okänt fel vid skapande";
@@ -152,7 +152,7 @@ const Index = () => {
       setKeys((prev) => prev.filter((k) => k.id !== keyId));
       toast({
         title: "Nyckel borttagen",
-        description: `${key.key_name} har tagits bort.`,
+        description: `${key.keyName} har tagits bort.`,
         variant: "destructive",
       });
     } catch (e) {
