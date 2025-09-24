@@ -45,6 +45,9 @@ export const routes = (router: KoaRouter) => {
 
     if (!result.ok) {
       ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.body = {
+        error: result.err === 'not-found' ? 'Not found' : 'Unknown error',
+      }
       return
     } else {
       ctx.status = 200
