@@ -140,6 +140,10 @@ const config = configPackage({
         systemName: 'work-order',
         minimumMinutesBetweenRequests: 1,
       },
+      economy: {
+        systemName: 'economy',
+        minimumMinutesBetweenRequests: 1,
+      },
     },
   },
 })

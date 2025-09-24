@@ -212,14 +212,14 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
   }
 }
 
-const getContactDbId = async (contactCode: string): Promise<string> => {
+const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{customers (first: 10000, filter: { code: "${contactCode}" }) { edges { node { code description dbId }}}}`,
   }
 
   const result = await makeXledgerRequest(query)
 
-  return result.data.customers.edges[0].node.dbId
+  return result.data.customers.edges?.[0].node.dbId
 }
 
 const invoiceNodeFragment = `
@@ -247,10 +247,14 @@ const invoiceNodeFragment = `
 `
 
 export const getInvoicesByContactCode = async (contactCode: string) => {
-  const xledgerId = await getContactDbId(contactCode)
+  try {
+    const xledgerId = await getContactDbId(contactCode)
+    if (!xledgerId) {
+      return null
+    }
 
-  const query = {
-    query: `{
+    const query = {
+      query: `{
       arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) { 
         edges {
           node {
@@ -258,12 +262,15 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
           }
         } 
       }
-    }`,
+     }`,
+    }
+
+    const result = await makeXledgerRequest(query)
+    return transformToInvoice(result.data.arTransactions.edges)
+  } catch (error) {
+    logger.error(error, 'Error getting invoices by contact code')
+    throw error
   }
-
-  const result = await makeXledgerRequest(query)
-
-  return transformToInvoice(result.data.arTransactions.edges)
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {

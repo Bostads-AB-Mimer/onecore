@@ -25,10 +25,14 @@ export async function getInvoiceByInvoiceId(
 
 export async function getInvoicesByContactCode(
   contactCode: string
-): Promise<AdapterResult<Invoice[], 'unknown'>> {
+): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
   const response = await axios.get(
     `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   )
+
+  if (response.status === 404) {
+    return { ok: false, err: 'not-found' }
+  }
 
   if (response.status === 200) {
     return { ok: true, data: response.data }

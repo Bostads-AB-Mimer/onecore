@@ -552,7 +552,7 @@ const removeComment = async (
 async function getInvoicesByContactCode(
   contactCode: string
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
-  const response = await getFromCore<{ content: Invoice[] }>({
+  const response = await getFromCore<{ content: { data: Invoice[] } }>({
     method: 'get',
     url: `${coreBaseUrl}/invoices/by-contact-code/${contactCode}`,
   })
@@ -566,7 +566,7 @@ async function getInvoicesByContactCode(
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 
-  return { ok: true, data: response.data.content }
+  return { ok: true, data: response.data.content.data }
 }
 
 export {

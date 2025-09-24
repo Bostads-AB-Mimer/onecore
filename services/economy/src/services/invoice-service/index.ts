@@ -23,6 +23,11 @@ export const routes = (router: KoaRouter) => {
     const contactCode = ctx.params.contactCode
     try {
       const result = await getInvoicesByContactCode(contactCode)
+      if (!result) {
+        ctx.status = 404
+        return
+      }
+
       ctx.status = 200
       ctx.body = result
     } catch (error: any) {
