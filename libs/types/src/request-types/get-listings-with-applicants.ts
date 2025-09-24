@@ -4,6 +4,7 @@ type GetListingWithApplicantFilterByType =
   | 'offered'
   | 'historical'
   | 'needs-republish'
+  | 'all'
 
 type GetListingsWithApplicantsFilterParams = {
   by?: { type?: GetListingWithApplicantFilterByType }
