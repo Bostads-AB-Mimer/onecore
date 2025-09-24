@@ -31,7 +31,8 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   }, [shouldAutoExpand])
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected
+    isSelected: isDirectlySelected,
+    itemType: 'company'
   })
 
   return (

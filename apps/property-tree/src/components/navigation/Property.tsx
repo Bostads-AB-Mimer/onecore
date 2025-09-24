@@ -32,7 +32,8 @@ export function PropertyNavigation({ property, companyId }: PropertyNavigationPr
   }, [shouldAutoExpand])
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected
+    isSelected: isDirectlySelected,
+    itemType: 'property'
   })
 
   return (

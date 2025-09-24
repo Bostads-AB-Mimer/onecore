@@ -33,7 +33,8 @@ export function BuildingNavigation({ building, property, companyId }: BuildingNa
   }, [shouldAutoExpand])
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected
+    isSelected: isDirectlySelected,
+    itemType: 'building'
   })
 
   return (

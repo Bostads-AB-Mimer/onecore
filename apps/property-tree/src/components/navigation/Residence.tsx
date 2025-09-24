@@ -26,7 +26,8 @@ export function ResidenceNavigation({
   const isSelected = isResidenceSelected(residence.id)
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isSelected
+    isSelected: isSelected,
+    itemType: 'residence'
   })
 
   return (

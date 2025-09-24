@@ -2,30 +2,37 @@ import { useEffect, useRef } from 'react'
 
 interface UseScrollToSelectedOptions {
   isSelected: boolean
+  itemType?: 'property' | 'building' | 'residence' | 'company'
   delay?: number
   behavior?: ScrollBehavior
 }
 
 export function useScrollToSelected<T extends HTMLElement = HTMLElement>({
   isSelected,
+  itemType,
   delay = 100,
-  behavior = 'smooth'
+  behavior = 'smooth',
 }: UseScrollToSelectedOptions) {
   const elementRef = useRef<T>(null)
 
   useEffect(() => {
-    if (isSelected && elementRef.current) {
+    const shouldScroll = isSelected &&
+      elementRef.current &&
+      itemType &&
+      ['property', 'building', 'residence'].includes(itemType)
+
+    if (shouldScroll) {
       const timeout = setTimeout(() => {
         elementRef.current?.scrollIntoView({
           behavior,
           block: 'center',
-          inline: 'nearest'
+          inline: 'nearest',
         })
       }, delay)
 
       return () => clearTimeout(timeout)
     }
-  }, [isSelected, delay, behavior])
+  }, [isSelected, itemType, delay, behavior])
 
   return elementRef
 }
