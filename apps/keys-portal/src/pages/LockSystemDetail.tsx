@@ -61,8 +61,8 @@ const sampleLockSystems: LockSystem[] = [
     installation_date: "2023-01-15T00:00:00Z",
     is_active: true,
     description: "Elektroniskt låssystem för huvudentréer",
-    created_at: "2023-01-15T10:00:00Z",
-    updated_at: "2023-01-15T10:00:00Z",
+    createdAt: "2023-01-15T10:00:00Z",
+    updatedAt: "2023-01-15T10:00:00Z",
     created_by: "admin",
     updated_by: "admin",
   },
@@ -76,8 +76,8 @@ const sampleLockSystems: LockSystem[] = [
     installation_date: "2022-06-20T00:00:00Z",
     is_active: true,
     description: "Mekaniskt system för källarutrymmen",
-    created_at: "2022-06-20T10:00:00Z",
-    updated_at: "2022-06-20T10:00:00Z",
+    createdAt: "2022-06-20T10:00:00Z",
+    updatedAt: "2022-06-20T10:00:00Z",
     created_by: "admin",
     updated_by: "admin",
   },
@@ -91,8 +91,8 @@ const sampleLockSystems: LockSystem[] = [
     installation_date: "2023-08-10T00:00:00Z",
     is_active: false,
     description: "Hybrid system med både elektroniska och mekaniska komponenter",
-    created_at: "2023-08-10T10:00:00Z",
-    updated_at: "2023-09-01T10:00:00Z",
+    createdAt: "2023-08-10T10:00:00Z",
+    updatedAt: "2023-09-01T10:00:00Z",
     created_by: "admin",
     updated_by: "admin",
   },
@@ -122,14 +122,14 @@ const generateSampleKeys = (systemCode: string): Key[] => {
     for (let i = 0; i < numLghKeys; i++) {
       keys.push({
         id: `${systemCode}-${keyId}`,
-        key_name: `${buildingPrefix}-${apartmentNumber}-LGH-${i + 1}`,
-        key_sequence_number: keyId,
-        flex_number: objIndex + 1,
-        rental_object: rentalObject,
-        key_type: 'LGH',
-        key_system_name: systemCode,
-        created_at: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
-        updated_at: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
+        keyName: `${buildingPrefix}-${apartmentNumber}-LGH-${i + 1}`,
+        keySequenceNumber: keyId,
+        flexNumber: objIndex + 1,
+        rentalObject: rentalObject,
+        keyType: 'LGH',
+        keySystemName: systemCode,
+        createdAt: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
+        updatedAt: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
       });
       keyId++;
     }
@@ -139,14 +139,14 @@ const generateSampleKeys = (systemCode: string): Key[] => {
     for (let i = 0; i < numPbKeys; i++) {
       keys.push({
         id: `${systemCode}-${keyId}`,
-        key_name: `${buildingPrefix}-${apartmentNumber}-PB-${i + 1}`,
-        key_sequence_number: keyId,
-        flex_number: objIndex + 1,
-        rental_object: rentalObject,
-        key_type: 'PB',
-        key_system_name: systemCode,
-        created_at: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
-        updated_at: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
+        keyName: `${buildingPrefix}-${apartmentNumber}-PB-${i + 1}`,
+        keySequenceNumber: keyId,
+        flexNumber: objIndex + 1,
+        rentalObject: rentalObject,
+        keyType: 'PB',
+        keySystemName: systemCode,
+        createdAt: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
+        updatedAt: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
       });
       keyId++;
     }
@@ -156,14 +156,14 @@ const generateSampleKeys = (systemCode: string): Key[] => {
     for (let i = 0; i < numFsKeys; i++) {
       keys.push({
         id: `${systemCode}-${keyId}`,
-        key_name: `${buildingPrefix}-${apartmentNumber}-FS-${i + 1}`,
-        key_sequence_number: keyId,
-        flex_number: objIndex + 1,
-        rental_object: rentalObject,
-        key_type: 'FS',
-        key_system_name: systemCode,
-        created_at: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
-        updated_at: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
+        keyName: `${buildingPrefix}-${apartmentNumber}-FS-${i + 1}`,
+        keySequenceNumber: keyId,
+        flexNumber: objIndex + 1,
+        rentalObject: rentalObject,
+        keyType: 'FS',
+        keySystemName: systemCode,
+        createdAt: new Date(2023, Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 28) + 1).toISOString(),
+        updatedAt: new Date(2023, Math.floor(Math.random() * 6) + 7, Math.floor(Math.random() * 28) + 1).toISOString(),
       });
       keyId++;
     }
@@ -174,13 +174,13 @@ const generateSampleKeys = (systemCode: string): Key[] => {
   for (let i = 0; i < numHnKeys; i++) {
     keys.push({
       id: `${systemCode}-${keyId}`,
-      key_name: `${systemCode}-HUVUD-${i + 1}`,
-      key_sequence_number: keyId,
-      flex_number: 999, // Special flex number for master keys
-      key_type: 'HN',
-      key_system_name: systemCode,
-      created_at: new Date(2023, 0, 15 + i).toISOString(), // Created early in the system setup
-      updated_at: new Date(2023, 0, 15 + i).toISOString(),
+      keyName: `${systemCode}-HUVUD-${i + 1}`,
+      keySequenceNumber: keyId,
+      flexNumber: 999, // Special flex number for master keys
+      keyType: 'HN',
+      keySystemName: systemCode,
+      createdAt: new Date(2023, 0, 15 + i).toISOString(), // Created early in the system setup
+      updatedAt: new Date(2023, 0, 15 + i).toISOString(),
     });
     keyId++;
   }
@@ -198,7 +198,7 @@ export default function LockSystemDetail() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKeyType, setSelectedKeyType] = useState("all");
-  const [sortBy, setSortBy] = useState("key_name");
+  const [sortBy, setSortBy] = useState("keyName");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -232,10 +232,10 @@ export default function LockSystemDetail() {
   const filteredAndSortedKeys = useMemo(() => {
     let filtered = allKeys.filter(key => {
       const matchesSearch = 
-        key.key_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (key.rental_object && key.rental_object.toLowerCase().includes(searchQuery.toLowerCase()));
+        key.keyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (key.rentalObject && key.rentalObject.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesType = selectedKeyType === "all" || key.key_type === selectedKeyType;
+      const matchesType = selectedKeyType === "all" || key.keyType === selectedKeyType;
       
       return matchesSearch && matchesType;
     });
@@ -262,7 +262,7 @@ export default function LockSystemDetail() {
   const getKeyTypeCount = (keys: Key[]) => {
     const counts = { LGH: 0, PB: 0, FS: 0, HN: 0 };
     keys.forEach(key => {
-      counts[key.key_type as keyof typeof counts]++;
+      counts[key.keyType as keyof typeof counts]++;
     });
     return counts;
   };
@@ -272,7 +272,7 @@ export default function LockSystemDetail() {
     const groups: Record<string, Key[]> = {};
     
     filteredAndSortedKeys.forEach(key => {
-      const rentalObject = key.rental_object || "Ingen hyresobjekt";
+      const rentalObject = key.rentalObject || "Ingen hyresobjekt";
       if (!groups[rentalObject]) {
         groups[rentalObject] = [];
       }
@@ -502,34 +502,34 @@ export default function LockSystemDetail() {
                 <TableRow>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort("key_name")}
+                    onClick={() => handleSort("keyName")}
                   >
-                    Nyckelnamn {sortBy === "key_name" && (sortOrder === "asc" ? "↑" : "↓")}
+                    Nyckelnamn {sortBy === "keyName" && (sortOrder === "asc" ? "↑" : "↓")}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort("key_sequence_number")}
+                    onClick={() => handleSort("keySequenceNumber")}
                   >
-                    Sekvens {sortBy === "key_sequence_number" && (sortOrder === "asc" ? "↑" : "↓")}
+                    Sekvens {sortBy === "keySequenceNumber" && (sortOrder === "asc" ? "↑" : "↓")}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort("flex_number")}
+                    onClick={() => handleSort("flexNumber")}
                   >
-                    Flex Nr {sortBy === "flex_number" && (sortOrder === "asc" ? "↑" : "↓")}
+                    Flex Nr {sortBy === "flexNumber" && (sortOrder === "asc" ? "↑" : "↓")}
                   </TableHead>
                   <TableHead>Hyresobjekt</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort("key_type")}
+                    onClick={() => handleSort("keyType")}
                   >
-                    Typ {sortBy === "key_type" && (sortOrder === "asc" ? "↑" : "↓")}
+                    Typ {sortBy === "keyType" && (sortOrder === "asc" ? "↑" : "↓")}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleSort("created_at")}
+                    onClick={() => handleSort("createdAt")}
                   >
-                    Skapad {sortBy === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
+                    Skapad {sortBy === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -543,17 +543,17 @@ export default function LockSystemDetail() {
                 ) : (
                   paginatedKeys.map((key) => (
                     <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.key_name}</TableCell>
-                      <TableCell>{key.key_sequence_number || '-'}</TableCell>
-                      <TableCell>{key.flex_number || '-'}</TableCell>
-                      <TableCell className="text-sm">{key.rental_object || '-'}</TableCell>
+                      <TableCell className="font-medium">{key.keyName}</TableCell>
+                      <TableCell>{key.keySequenceNumber || '-'}</TableCell>
+                      <TableCell>{key.flexNumber || '-'}</TableCell>
+                      <TableCell className="text-sm">{key.rentalObject || '-'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {KeyTypeLabels[key.key_type]}
+                          {KeyTypeLabels[key.keyType]}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDate(key.created_at)}
+                        {formatDate(key.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -608,16 +608,16 @@ export default function LockSystemDetail() {
                           <TableBody>
                             {keys.map((key) => (
                               <TableRow key={key.id}>
-                                <TableCell className="font-medium pl-4">{key.key_name}</TableCell>
-                                <TableCell>{key.key_sequence_number || '-'}</TableCell>
-                                <TableCell>{key.flex_number || '-'}</TableCell>
+                                <TableCell className="font-medium pl-4">{key.keyName}</TableCell>
+                                <TableCell>{key.keySequenceNumber || '-'}</TableCell>
+                                <TableCell>{key.flexNumber || '-'}</TableCell>
                                 <TableCell>
                                   <Badge variant="secondary">
-                                    {KeyTypeLabels[key.key_type]}
+                                    {KeyTypeLabels[key.keyType]}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-sm pr-4">
-                                  {formatDate(key.created_at)}
+                                  {formatDate(key.createdAt)}
                                 </TableCell>
                               </TableRow>
                             ))}
