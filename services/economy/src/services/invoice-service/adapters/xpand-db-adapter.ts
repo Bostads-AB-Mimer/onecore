@@ -205,7 +205,7 @@ const getRentalRowSpecificRule = async (
 
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
-  rentArticleDetails: RentArticleDetails,
+  /*rentArticleDetails: RentArticleDetails,*/
   rentalSpecificRules: RentalSpecificRules
 ): Promise<InvoiceDataRow | null> => {
   const rentArticleName = row.rentArticle
@@ -216,7 +216,7 @@ const getAdditionalColumns = async (
     return {}
   }
 
-  const rentArticle = rentArticleDetails[rentArticleName]
+  /*  const rentArticle = rentArticleDetails[rentArticleName]
 
   if (!rentArticle) {
     logger.error({ rentArticleName }, 'Rent article details not found')
@@ -229,7 +229,7 @@ const getAdditionalColumns = async (
     ?.toString()
     .trimEnd()
   additionalColumns['freeCode'] = rentArticle['freeCode']?.toString().trimEnd()
-  additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()
+  additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()*/
 
   let specificRule: RentalSpecificRule | null = null
 
@@ -264,7 +264,7 @@ const getAdditionalColumns = async (
 
 export const enrichInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[],
-  invoices: Invoice[]
+  invoices: Record<string, Invoice>
 ): Promise<{
   rows: InvoiceDataRow[]
   errors: { invoiceNumber: string; error: string }[]
@@ -273,13 +273,14 @@ export const enrichInvoiceRows = async (
   const errors: { invoiceNumber: string; error: string }[] = []
 
   invoiceDataRows.forEach((row) => {
-    const invoice = invoices.find((invoice) => {
+    /*const invoice = invoices.find((invoice) => {
       return (
         (row.invoiceNumber as string).localeCompare(
           (invoice.invoice as string).trimEnd()
         ) === 0
       )
-    })
+    })*/
+    const invoice = invoices[row.invoiceNumber]
 
     if (invoice) {
       row.invoiceDate = xledgerDateString(invoice.invdate as Date)
@@ -313,17 +314,17 @@ export const enrichInvoiceRows = async (
 
   const rentalIds = Object.keys(rentalIdMap)
   const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
-  const rentArticleDetails = await getRentArticleDetails(
+  /*const rentArticleDetails = await getRentArticleDetails(
     '2025',
     invoiceDataRows[0].company === '006'
-  )
+  )*/
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
       async (row: InvoiceDataRow): Promise<InvoiceDataRow | null> => {
         const additionalColumns = await getAdditionalColumns(
           row,
-          rentArticleDetails,
+          /*rentArticleDetails,*/
           rentalSpecificRules
         )
 
@@ -477,4 +478,93 @@ export const getContacts = async (
   })
 
   return contacts
+}
+
+export const getRentalInvoices = async (fromDate: Date) => {
+  const rentalInvoiceNumbers = await db.raw(
+    'select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
+	inner join cmart on cmart.code = krfkr.code \
+	  inner join cmarg" on cmart.keycmarg = cmarg.keycmarg \
+      inner Join "repsk" on "cmart"."keycmart" = "repsk"."keycode" \
+      inner join "repsr" on "repsk"."keyrepsr" = "repsr"."keyrepsr" \
+      where ("repsr"."keycode" = \'FADBT_HYRA\' OR repsr.keycode = \'FADBT_INTHYRA\') \
+      and krfkh.fromdate >= \'2025-10-01\''
+  )
+
+  return rentalInvoiceNumbers
+}
+
+export const getInvoiceRows = async (
+  fromDate: Date,
+  endDate: Date,
+  companyId: string
+) => {
+  /*invoiceRows = await db('krfkh')
+    .innerJoin('krfkr', 'krfkr.keykrfkh', 'krfkh.keykrfkh')
+    .innerJoin('cmart', 'cmart.code', 'krfkr.code')
+	  .innerJoin('cmarg',' cmart.keycmarg','cmarg.keycmarg')
+      .innerJoin('repsk',' cmart.keycmart','repsk.keycode')
+      .innerJoin repsr','repsk.keyrepsr',' repsr.keyrepsr
+      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA')
+      and keyrektk = 'INTAKT'
+      and repsk.year = '2025'
+      and krfkh.fromdate >= '2025-10-01' --AND krfkh.todate <= '2025-10-31'*/
+
+  const invoiceRows = await db.raw(
+    "select top 5000 cmart.code as rentArticle, krfkr.reduction as rowReduction, \
+      krfkr.amount as rowAmount, krfkr.vat as rowVat, * \
+      from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
+      inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
+    	inner join cmart on cmart.code = krfkr.code \
+	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
+      inner Join repsk on cmart.keycmart = repsk.keycode \
+      inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
+      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
+      and keyrektk = 'INTAKT' \
+      and repsk.year = '2025' \
+      and krfkh.fromdate >= '2025-10-01' AND krfkh.todate <= '2025-10-31'"
+  )
+
+  const sumColumns = (...args: any[]) => {
+    let sum = 0
+
+    args.forEach((arg) => {
+      sum += arg as number
+    })
+
+    return sum
+  }
+
+  const trim = (column: any): string => {
+    return (column as string).trimEnd()
+  }
+
+  const convertedInvoiceRows = invoiceRows.map(
+    (invoiceRow: any): InvoiceDataRow => {
+      return {
+        rentArticle: trim(invoiceRow['rentArticle']),
+        invoiceRowText: trim(invoiceRow['text']),
+        totalAmount: sumColumns(
+          invoiceRow['rowAmount'],
+          invoiceRow['rowReduction'],
+          invoiceRow['rowVat']
+        ),
+        amount: sumColumns(invoiceRow['rowAmount']),
+        vat: sumColumns(invoiceRow['rowVat']),
+        deduction: sumColumns(invoiceRow['rowReduction']),
+        company: '001',
+        invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
+        finalPaymentDate: xledgerDateString(invoiceRow['expdate'] as Date),
+        invoiceNumber: trim(invoiceRow['invoice']),
+        contactCode: trim(invoiceRow['cmctckod']),
+        contractCode: trim(invoiceRow['reference']),
+        tenantName: trim(invoiceRow['cmctcben']),
+        account: trim(invoiceRow['p1']),
+        projectCode: trim(invoiceRow['p4']),
+        freeCode: trim(invoiceRow['p5']),
+      }
+    }
+  )
+
+  return convertedInvoiceRows
 }
