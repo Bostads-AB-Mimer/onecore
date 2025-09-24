@@ -1151,6 +1151,14 @@ export interface components {
       object_type?: "key" | "key_system" | "key_loan";
       description?: string;
     };
+    ErrorResponse: {
+      /** @example Internal server error */
+      error?: string;
+    };
+    NotFoundResponse: {
+      /** @example Log not found */
+      reason?: string;
+    };
   };
   responses: never;
   parameters: never;
