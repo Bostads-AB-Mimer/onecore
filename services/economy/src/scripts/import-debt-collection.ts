@@ -113,10 +113,6 @@ const markCsvFileAsCompleted = async (client: SftpClient, filePath: string) => {
   await client.rename(filePath, filePath.replace(/\.csv/i, '.csv-imported'))
 }
 
-const markCsvFileAsFailed = async (client: SftpClient, filePath: string) => {
-  await client.rename(filePath, filePath.replace(/\.csv/i, '.csv-failed'))
-}
-
 const getExportFilePath = (fileName: string) => {
   return path.join(exportDirectory, fileName.replace(/\.csv/i, '.txt'))
 }
@@ -137,13 +133,20 @@ const enrichers: Record<
 const processDebtCollectionFiles = async () => {
   const importClient = new SftpClient()
   const exportClient = new SftpClient()
+  const errors: string[] = []
 
   try {
     await importClient.connect(importSftpConfig)
     await exportClient.connect(exportSftpConfig)
 
     const debtCollectionFiles = await getDebtCollectionFiles(importClient)
-    logger.info(debtCollectionFiles)
+    logger.info(
+      `Processing files: ${JSON.stringify(
+        debtCollectionFiles.map((file) => file.fileName),
+        null,
+        2
+      )}`
+    )
 
     for (const debtCollectionFile of debtCollectionFiles) {
       const fileContents = await readFile(
@@ -158,10 +161,7 @@ const processDebtCollectionFiles = async () => {
           response.error,
           `Failed to process file ${debtCollectionFile}`
         )
-        await markCsvFileAsFailed(
-          importClient,
-          path.join(debtCollectionFile.directory, debtCollectionFile.fileName)
-        )
+        errors.push(debtCollectionFile.fileName)
         continue
       }
 
@@ -180,6 +180,14 @@ const processDebtCollectionFiles = async () => {
         path.join(debtCollectionFile.directory, debtCollectionFile.fileName)
       )
     }
+
+    logger.info(`${debtCollectionFiles.length} files processed.`)
+
+    if (errors.length > 0) {
+      logger.error(
+        `${errors.length} errors: ${JSON.stringify(errors, null, 2)}`
+      )
+    }
   } catch (err) {
     logger.error(err)
     throw err
@@ -188,9 +196,6 @@ const processDebtCollectionFiles = async () => {
     await exportClient.end()
     logger.info('Terminated sftp connections')
   }
-
-  logger.info('All files processed.')
-  return
 }
 
 processDebtCollectionFiles()
