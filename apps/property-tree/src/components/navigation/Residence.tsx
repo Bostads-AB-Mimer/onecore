@@ -3,6 +3,7 @@ import { Hotel } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
+import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
 
 interface ResidenceNavigationProps {
   residence: Residence
@@ -24,8 +25,12 @@ export function ResidenceNavigation({
 
   const isSelected = isResidenceSelected(residence.id)
 
+  const scrollRef = useScrollToSelected<HTMLLIElement>({
+    isSelected: isSelected
+  })
+
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
         onClick={() => {
           navigate(`/residences/${residence.id}`, {

@@ -5,6 +5,7 @@ import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { BuildingList } from './BuildingList'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
+import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
 
 interface PropertyNavigationProps {
   property: Property
@@ -21,8 +22,12 @@ export function PropertyNavigation({ property, companyId }: PropertyNavigationPr
   const isDirectlySelected = selectionState.selectedPropertyId === property.id &&
                             location.pathname.startsWith('/properties/')
 
+  const scrollRef = useScrollToSelected<HTMLLIElement>({
+    isSelected: isDirectlySelected || (isInHierarchy && !isDirectlySelected)
+  })
+
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
         onClick={() => {
           setIsExpanded(!isExpanded)

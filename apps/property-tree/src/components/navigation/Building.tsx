@@ -5,6 +5,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
 
 interface BuildingNavigationProps {
   building: Building
@@ -22,8 +23,12 @@ export function BuildingNavigation({ building, property, companyId }: BuildingNa
   const isDirectlySelected = selectionState.selectedBuildingId === building.id &&
                             location.pathname.startsWith('/buildings/')
 
+  const scrollRef = useScrollToSelected<HTMLLIElement>({
+    isSelected: isDirectlySelected || (isInHierarchy && !isDirectlySelected)
+  })
+
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem ref={scrollRef}>
       <div className="flex items-center justify-between pr-2">
         <SidebarMenuButton
           onClick={() => {
