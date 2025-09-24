@@ -1,9 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { schemas } from '@onecore/types'
+import { z } from 'zod'
 import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 const TABLE = 'keys'
-const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
+
+// Type definitions based on schemas
+type CreateKeyRequest = z.infer<typeof schemas.CreateKeyRequestSchema>
+type UpdateKeyRequest = z.infer<typeof schemas.UpdateKeyRequestSchema>
+type KeyResponse = z.infer<typeof schemas.KeySchema>
 
 /**
  * @swagger
@@ -19,49 +26,49 @@ const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
  *         id:
  *           type: string
  *           format: uuid
- *         key_name:
+ *         keyName:
  *           type: string
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
- *         flex_number:
+ *         flexNumber:
  *           type: integer
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
- *         created_at:
+ *         createdAt:
  *           type: string
  *           format: date-time
- *         updated_at:
+ *         updatedAt:
  *           type: string
  *           format: date-time
  *
  *     CreateKeyRequest:
  *       type: object
- *       required: [key_name, key_type]
+ *       required: [keyName, keyType]
  *       properties:
- *         key_name:
+ *         keyName:
  *           type: string
  *           example: "Front door A"
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
  *           example: 101
- *         flex_number:
+ *         flexNumber:
  *           type: integer
  *           example: 1
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
  *           example: "APT-1001"
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
  *           example: "LGH"
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
@@ -71,19 +78,19 @@ const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
  *       type: object
  *       description: Partial update; provide any subset of fields
  *       properties:
- *         key_name:
+ *         keyName:
  *           type: string
  *           example: "Front door A (updated)"
- *         key_sequence_number:
+ *         keySequenceNumber:
  *           type: integer
- *         flex_number:
+ *         flexNumber:
  *           type: integer
- *         rental_object:
+ *         rentalObjectCode:
  *           type: string
- *         key_type:
+ *         keyType:
  *           type: string
  *           enum: [LGH, PB, FS, HN]
- *         key_system_id:
+ *         keySystemId:
  *           type: string
  *           format: uuid
  *           nullable: true
@@ -109,7 +116,7 @@ export const routes = (router: KoaRouter) => {
    * /keys:
    *   get:
    *     summary: List keys
-   *     description: Returns keys ordered by created_at (desc).
+   *     description: Returns keys ordered by createdAt (desc).
    *     tags: [Keys]
    *     responses:
    *       200:
@@ -133,9 +140,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { content: rows satisfies KeyResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing keys')
       ctx.status = 500
@@ -189,7 +196,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching key')
       ctx.status = 500
@@ -220,7 +227,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Key'
    *       400:
-   *         description: Invalid key_type
+   *         description: Invalid keyType
    *         content:
    *           application/json:
    *             schema:
@@ -232,25 +239,14 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/keys', async (ctx) => {
+  router.post('/keys', parseRequestBody(schemas.CreateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      // Minimal normalization (no zod yet)
-      if (typeof payload.key_type === 'string') {
-        payload.key_type = payload.key_type.toUpperCase()
-      }
-      // Optional tiny guard to avoid obvious typos
-      if (payload.key_type && !ALLOWED_KEY_TYPES.has(payload.key_type)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid key_type', ...metadata }
-        return
-      }
+      const payload: CreateKeyRequest = ctx.request.body
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating key')
       ctx.status = 500
@@ -288,7 +284,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Key'
    *       400:
-   *         description: Invalid key_type
+   *         description: Invalid keyType
    *         content:
    *           application/json:
    *             schema:
@@ -306,23 +302,14 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.patch('/keys/:id', async (ctx) => {
+  router.patch('/keys/:id', parseRequestBody(schemas.UpdateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      if (typeof payload.key_type === 'string') {
-        payload.key_type = payload.key_type.toUpperCase()
-      }
-      if (payload.key_type && !ALLOWED_KEY_TYPES.has(payload.key_type)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid key_type', ...metadata }
-        return
-      }
+      const payload: UpdateKeyRequest = ctx.request.body
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
-        .update({ ...payload, updated_at: db.fn.now() })
+        .update({ ...payload, updatedAt: db.fn.now() })
         .returning('*')
 
       if (!row) {
@@ -332,7 +319,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating key')
       ctx.status = 500

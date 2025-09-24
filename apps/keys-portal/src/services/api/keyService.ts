@@ -3,6 +3,8 @@ import type { components } from './generated/api-types'
 
 type KeyLoan = components['schemas']['KeyLoan']
 type Key = components['schemas']['Key']
+type CreateKeyRequest = components['schemas']['CreateKeyRequest']
+type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
 
 export const keyService = {
   // Key Loans
@@ -41,5 +43,27 @@ export const keyService = {
     })
     if (error) throw error
     return data?.content
+  },
+
+  async createKey(payload: CreateKeyRequest): Promise<Key> {
+    const { data, error } = await POST('/keys', { body: payload })
+    if (error) throw error
+    return data?.content as Key
+  },
+
+  async updateKey(id: string, payload: UpdateKeyRequest): Promise<Key> {
+    const { data, error } = await PATCH('/keys/{id}', {
+      params: { path: { id } },
+      body: payload,
+    })
+    if (error) throw error
+    return data?.content as Key
+  },
+
+  async deleteKey(id: string): Promise<void> {
+    const { error } = await DELETE('/keys/{id}', {
+      params: { path: { id } },
+    })
+    if (error) throw error
   },
 }

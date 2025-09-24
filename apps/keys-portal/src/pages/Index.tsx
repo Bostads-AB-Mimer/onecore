@@ -1,64 +1,99 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { KeysHeader } from "@/components/keys/KeysHeader";
 import { KeysToolbar } from "@/components/keys/KeysToolbar";
 import { KeysTable } from "@/components/keys/KeysTable";
 import { AddKeyDialog } from "@/components/keys/AddKeyDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Key } from "@/types/key";
+import { keyService } from "@/services/api/keyService";
+import type { components } from "@/services/api/generated/api-types";
 
-// Sample data for demo purposes
-const initialKeys: Key[] = [
-  {
-    id: '1',
-    key_name: 'CFG',
-    key_sequence_number: 1,
-    flex_number: 1,
-    rental_object: '811-039-05-0347',
-    key_type: 'LGH',
-    key_system_name: 'ABC123',
-    created_at: '2025-09-16T00:00:00Z',
-    updated_at: '2025-09-16T00:00:00Z',
-  },
-  {
-    id: '2',
-    key_name: 'CFG',
-    key_sequence_number: 2,
-    flex_number: 1,
-    rental_object: '811-039-05-0347',
-    key_type: 'LGH',
-    key_system_name: 'ABC123',
-    created_at: '2025-09-22T00:00:00Z',
-    updated_at: '2025-09-22T00:00:00Z',
-  },
-  {
-    id: '3',
-    key_name: 'BGH',
-    key_sequence_number: 1,
-    flex_number: 1,
-    rental_object: '819-005-09-0703',
-    key_type: 'PB',
-    key_system_name: 'DEF456',
-    created_at: '2025-08-09T00:00:00Z',
-    updated_at: '2025-08-09T00:00:00Z',
-  },
-];
+type KeyDto = components["schemas"]["Key"];
+type CreateKeyRequest = components["schemas"]["CreateKeyRequest"];
+type UpdateKeyRequest = components["schemas"]["UpdateKeyRequest"];
+
+const toUIKey = (k: KeyDto): Key => ({
+  id: k.id ?? "",
+  keyName: k.keyName ?? "",
+  keySequenceNumber: k.keySequenceNumber,
+  flexNumber: k.flexNumber,
+  rentalObject: k.rentalObjectCode,
+  keyType: k.keyType as Key["keyType"],
+  // API gives key_system_id; your UI type has keySystemName (optional).
+  keySystemName: undefined,
+  createdAt: k.createdAt,
+  updatedAt: k.updatedAt,
+});
+
+const toCreateReq = (
+  k: Omit<Key, "id" | "createdAt" | "updatedAt">
+): CreateKeyRequest => ({
+  keyName: k.keyName,
+  keySequenceNumber: k.keySequenceNumber,
+  flexNumber: k.flexNumber,
+  rentalObjectCode: k.rentalObject,
+  keyType: k.keyType,
+  // key_system_id: someUuidOrNull, // add when you wire key systems
+});
+
+const toUpdateReq = (
+  before: Key,
+  after: Omit<Key, "id" | "createdAt" | "updatedAt">
+): UpdateKeyRequest => {
+  const payload: UpdateKeyRequest = {};
+  if (before.keyName !== after.keyName) payload.keyName = after.keyName;
+  if (before.keySequenceNumber !== after.keySequenceNumber) payload.keySequenceNumber = after.keySequenceNumber;
+  if (before.flexNumber !== after.flexNumber) payload.flexNumber = after.flexNumber;
+  if (before.rentalObject !== after.rentalObject) payload.rentalObjectCode = after.rentalObject;
+  if (before.keyType !== after.keyType) payload.keyType = after.keyType;
+  // if (before.key_system_id !== mappedId) payload.key_system_id = mappedId ?? null;
+  return payload;
+};
 
 const Index = () => {
-  const [keys, setKeys] = useState<Key[]>(initialKeys);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
+  const [keys, setKeys] = useState<Key[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<Key | null>(null);
   const { toast } = useToast();
 
+  const fetchKeys = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const list = await keyService.getAllKeys();
+      setKeys(list.map(toUIKey));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Okänt fel";
+      setError(msg);
+      toast({
+        title: "Kunde inte hämta nycklar",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
+
   const filteredKeys = useMemo(() => {
-    return keys.filter(key => {
-      const matchesSearch = key.key_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          key.rental_object?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          key.key_system_name?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesType = selectedType === 'all' || key.key_type === selectedType;
-      
+    return keys.filter((key) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        key.keyName.toLowerCase().includes(q) ||
+        key.rentalObject?.toLowerCase().includes(q) ||
+        key.keySystemName?.toLowerCase().includes(q);
+
+      const matchesType = selectedType === "all" || key.keyType === selectedType;
+
       return matchesSearch && matchesType;
     });
   }, [keys, searchQuery, selectedType]);
@@ -73,42 +108,58 @@ const Index = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = (keyData: Omit<Key, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleSave = async (keyData: Omit<Key, "id" | "createdAt" | "updatedAt">) => {
     if (editingKey) {
-      // Update existing key
-      setKeys(prev => prev.map(key => 
-        key.id === editingKey.id 
-          ? { ...key, ...keyData, updated_at: new Date().toISOString() }
-          : key
-      ));
-      toast({
-        title: "Nyckel uppdaterad",
-        description: `${keyData.key_name} har uppdaterats framgångsrikt.`,
-      });
-    } else {
-      // Add new key
-      const newKey: Key = {
-        ...keyData,
-        id: Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setKeys(prev => [...prev, newKey]);
-      toast({
-        title: "Nyckel tillagd",
-        description: `${keyData.key_name} har lagts till framgångsrikt.`,
-      });
+      try {
+        const payload = toUpdateReq(editingKey, keyData);
+        if (Object.keys(payload).length === 0) {
+          setDialogOpen(false);
+          return;
+        }
+        const updated = await keyService.updateKey(editingKey.id, payload);
+        setKeys(prev => prev.map(k => (k.id === editingKey.id ? toUIKey(updated) : k)));
+        toast({
+          title: "Nyckel uppdaterad",
+          description: `${updated.keyName ?? keyData.keyName} har uppdaterats.`,
+        });
+        setDialogOpen(false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Okänt fel vid uppdatering";
+        toast({ title: "Kunde inte uppdatera nyckel", description: msg, variant: "destructive" });
+      }
+      return;
     }
-    setDialogOpen(false);
+
+    // Create
+    try {
+      const created = await keyService.createKey(toCreateReq(keyData));
+      setKeys((prev) => [...prev, toUIKey(created)]);
+      // or await fetchKeys() if you prefer server ordering immediately
+      toast({ title: "Nyckel tillagd", description: `${keyData.keyName} har lagts till.` });
+      setDialogOpen(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Okänt fel vid skapande";
+      toast({ title: "Kunde inte skapa nyckel", description: msg, variant: "destructive" });
+    }
   };
 
-  const handleDelete = (keyId: string) => {
-    const key = keys.find(k => k.id === keyId);
-    if (key) {
-      setKeys(prev => prev.filter(k => k.id !== keyId));
+  const handleDelete = async (keyId: string) => {
+    const key = keys.find((k) => k.id === keyId);
+    if (!key) return;
+
+    try {
+      await keyService.deleteKey(keyId);
+      setKeys((prev) => prev.filter((k) => k.id !== keyId));
       toast({
         title: "Nyckel borttagen",
-        description: `${key.key_name} har tagits bort.`,
+        description: `${key.keyName} har tagits bort.`,
+        variant: "destructive",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Okänt fel vid borttagning";
+      toast({
+        title: "Kunde inte ta bort nyckel",
+        description: msg,
         variant: "destructive",
       });
     }
@@ -117,11 +168,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <KeysHeader 
-          totalKeys={keys.length}
-          displayedKeys={filteredKeys.length}
-        />
-        
+        <KeysHeader totalKeys={keys.length} displayedKeys={filteredKeys.length} />
+
         <KeysToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -129,13 +177,16 @@ const Index = () => {
           onTypeChange={setSelectedType}
           onAddNew={handleAddNew}
         />
-        
-        <KeysTable
-          keys={filteredKeys}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-        
+
+        {loading && (
+          <div className="text-sm text-muted-foreground py-4">Hämtar nycklar…</div>
+        )}
+        {error && (
+          <div className="text-sm text-red-600 py-2">Fel: {error}</div>
+        )}
+
+        <KeysTable keys={filteredKeys} onEdit={handleEdit} onDelete={handleDelete} />
+
         <AddKeyDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

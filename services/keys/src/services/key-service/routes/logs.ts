@@ -20,18 +20,18 @@ const OBJECT_TYPES = new Set(['key_system', 'key', 'key_loan'])
  *         id:
  *           type: string
  *           format: uuid
- *         user_name:
+ *         userName:
  *           type: string
  *           example: "seb"
- *         event_type:
+ *         eventType:
  *           type: string
  *           enum: [creation, update, delete]
  *           example: "creation"
- *         object_type:
+ *         objectType:
  *           type: string
  *           enum: [key, key_system, key_loan]
  *           example: "key"
- *         event_time:
+ *         eventTime:
  *           type: string
  *           format: date-time
  *         description:
@@ -40,16 +40,16 @@ const OBJECT_TYPES = new Set(['key_system', 'key', 'key_loan'])
  *
  *     CreateLogRequest:
  *       type: object
- *       required: [user_name, event_type, object_type]
+ *       required: [userName, eventType, objectType]
  *       properties:
- *         user_name:
+ *         userName:
  *           type: string
  *           example: "seb"
- *         event_type:
+ *         eventType:
  *           type: string
  *           enum: [creation, update, delete]
  *           example: "creation"
- *         object_type:
+ *         objectType:
  *           type: string
  *           enum: [key, key_system, key_loan]
  *           example: "key"
@@ -61,12 +61,12 @@ const OBJECT_TYPES = new Set(['key_system', 'key', 'key_loan'])
  *       type: object
  *       description: Partial update; provide any subset of fields
  *       properties:
- *         user_name:
+ *         userName:
  *           type: string
- *         event_type:
+ *         eventType:
  *           type: string
  *           enum: [creation, update, delete]
- *         object_type:
+ *         objectType:
  *           type: string
  *           enum: [key, key_system, key_loan]
  *         description:
@@ -93,7 +93,7 @@ export const routes = (router: KoaRouter) => {
    * /logs:
    *   get:
    *     summary: List logs
-   *     description: Returns logs ordered by event_time (desc).
+   *     description: Returns logs ordered by eventTime (desc).
    *     tags: [Logs]
    *     responses:
    *       200:
@@ -117,7 +117,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('event_time', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('eventTime', 'desc')
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
@@ -220,11 +220,11 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: any = ctx.request.body || {}
-      if (typeof payload.event_type === 'string') payload.event_type = payload.event_type.toLowerCase()
+      if (typeof payload.eventType === 'string') payload.eventType = payload.eventType.toLowerCase()
 
-      if (!payload.user_name || !EVENT_TYPES.has(payload.event_type) || !OBJECT_TYPES.has(payload.object_type)) {
+      if (!payload.userName || !EVENT_TYPES.has(payload.eventType) || !OBJECT_TYPES.has(payload.objectType)) {
         ctx.status = 400
-        ctx.body = { error: 'Invalid or missing fields: user_name, event_type, object_type', ...metadata }
+        ctx.body = { error: 'Invalid or missing fields: userName, eventType, objectType', ...metadata }
         return
       }
 
@@ -268,7 +268,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Log'
    *       400:
-   *         description: Invalid event_type or object_type
+   *         description: Invalid eventType or objectType
    *         content:
    *           application/json:
    *             schema:
@@ -290,12 +290,12 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: any = ctx.request.body || {}
-      if (typeof payload.event_type === 'string') payload.event_type = payload.event_type.toLowerCase()
-      if (payload.event_type && !EVENT_TYPES.has(payload.event_type)) {
-        ctx.status = 400; ctx.body = { error: 'Invalid event_type', ...metadata }; return
+      if (typeof payload.eventType === 'string') payload.eventType = payload.eventType.toLowerCase()
+      if (payload.eventType && !EVENT_TYPES.has(payload.eventType)) {
+        ctx.status = 400; ctx.body = { error: 'Invalid eventType', ...metadata }; return
       }
-      if (payload.object_type && !OBJECT_TYPES.has(payload.object_type)) {
-        ctx.status = 400; ctx.body = { error: 'Invalid object_type', ...metadata }; return
+      if (payload.objectType && !OBJECT_TYPES.has(payload.objectType)) {
+        ctx.status = 400; ctx.body = { error: 'Invalid objectType', ...metadata }; return
       }
 
       const [row] = await db(TABLE).where({ id: ctx.params.id }).update(payload).returning('*')
