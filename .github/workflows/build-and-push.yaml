@@ -135,7 +135,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install crane
-        uses: imjasonh/setup-crane@v0.4
+        run: |
+          curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/crane_Linux_x86_64.tar.gz \
+          | tar -xz crane
+          sudo mv crane /usr/local/bin/
 
       - name: Determine incremental build tag
         id: incremental-tag
@@ -145,7 +148,7 @@ jobs:
         run: |
           BRANCH_TAG="${{ steps.build-type.outputs.build_tag_base }}"
 
-          LATEST=$(crane ls "ghcr.io/bostads-ab-mimer/onecore/onecore-core" \
+          LATEST=$(crane ls $IMAGE \
             | grep "^${BRANCH_TAG}\." \
             | sed "s/^${BRANCH_TAG}\.//" \
             | sort -n \
@@ -158,7 +161,6 @@ jobs:
           fi
 
           echo "build_tag=${BRANCH_TAG}.${NEXT}" >> $GITHUB_OUTPUT
-          echo "Using tag: ${BRANCH_TAG}.${NEXT}"
 
       - name: Enforce package.json matches release version
         if: steps.build-type.outputs.build_tag_version != ''
