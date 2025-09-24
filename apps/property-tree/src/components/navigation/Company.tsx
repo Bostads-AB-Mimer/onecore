@@ -14,15 +14,24 @@ interface CompanyNavigationProps {
 export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isExpanded, setIsExpanded] = React.useState(false)
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
 
   const isInHierarchy = isCompanyInHierarchy(company.id)
   const isDirectlySelected = selectionState.selectedCompanyId === company.id &&
                             location.pathname.startsWith('/companies/')
 
+  const shouldAutoExpand = isInHierarchy || isDirectlySelected
+  const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
+
+  // Auto-expand when this company is in the selection hierarchy
+  React.useEffect(() => {
+    if (shouldAutoExpand) {
+      setIsExpanded(true)
+    }
+  }, [shouldAutoExpand])
+
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected || (isInHierarchy && !isDirectlySelected)
+    isSelected: isDirectlySelected
   })
 
   return (

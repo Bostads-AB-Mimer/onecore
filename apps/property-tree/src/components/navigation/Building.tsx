@@ -16,15 +16,24 @@ interface BuildingNavigationProps {
 export function BuildingNavigation({ building, property, companyId }: BuildingNavigationProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isExpanded, setIsExpanded] = React.useState(false)
   const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
 
   const isInHierarchy = isBuildingInHierarchy(building.code, property.id, building.id)
   const isDirectlySelected = selectionState.selectedBuildingId === building.id &&
                             location.pathname.startsWith('/buildings/')
 
+  const shouldAutoExpand = isInHierarchy || isDirectlySelected
+  const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
+
+  // Auto-expand when this building is in the selection hierarchy
+  React.useEffect(() => {
+    if (shouldAutoExpand) {
+      setIsExpanded(true)
+    }
+  }, [shouldAutoExpand])
+
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected || (isInHierarchy && !isDirectlySelected)
+    isSelected: isDirectlySelected
   })
 
   return (

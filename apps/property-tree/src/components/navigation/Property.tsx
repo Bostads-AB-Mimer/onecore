@@ -15,15 +15,24 @@ interface PropertyNavigationProps {
 export function PropertyNavigation({ property, companyId }: PropertyNavigationProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isExpanded, setIsExpanded] = React.useState(false)
   const { isPropertyInHierarchy, selectionState } = useHierarchicalSelection()
 
   const isInHierarchy = isPropertyInHierarchy(property.id)
   const isDirectlySelected = selectionState.selectedPropertyId === property.id &&
                             location.pathname.startsWith('/properties/')
 
+  const shouldAutoExpand = isInHierarchy || isDirectlySelected
+  const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
+
+  // Auto-expand when this property is in the selection hierarchy
+  React.useEffect(() => {
+    if (shouldAutoExpand) {
+      setIsExpanded(true)
+    }
+  }, [shouldAutoExpand])
+
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isDirectlySelected || (isInHierarchy && !isDirectlySelected)
+    isSelected: isDirectlySelected
   })
 
   return (
