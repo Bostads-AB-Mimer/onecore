@@ -194,18 +194,18 @@ export const getInvoices = async (
 }
 
 /**
- * Gets all contracts for a batch, sorted by invoice from date
+ * Gets all invoices for a batch, sorted by invoice from date
  * and to date to group periods later.
  *
  * @param batchId
  * @returns
  */
-export const getContracts = async (
+export const getInvoicesByChunks = async (
   batchId: string
 ): Promise<InvoiceContract[]> => {
   return await db('invoice_data')
     .select(
-      'contractCode',
+      'invoiceNumber',
       'invoiceFromDate',
       'invoiceToDate',
       'ledgerAccount',
@@ -233,7 +233,7 @@ export const getInvoiceRows = async (
 
 export const getAggregatedInvoiceRows = async (
   batchId: string,
-  contractCodes: string[]
+  invoiceNumbers: string[]
 ): Promise<InvoiceDataRow[]> => {
   const rows = await db('invoice_data')
     .sum({ totalAmount: 'TotalAmount', totalVat: 'VAT' })
@@ -266,7 +266,7 @@ export const getAggregatedInvoiceRows = async (
       'TotalAccount'
     )
     .where('batchId', batchId)
-    .whereIn('ContractCode', contractCodes)
+    .whereIn('InvoiceNumber', invoiceNumbers)
 
   return rows
 }
