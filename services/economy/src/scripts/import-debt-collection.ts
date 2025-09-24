@@ -3,7 +3,6 @@ import config from '../common/config'
 import path from 'node:path'
 import { enrichRentCases } from '../services/debt-collection-service/service'
 import SftpClient from 'ssh2-sftp-client'
-import { Readable } from 'node:stream'
 
 const importSftpConfig: SftpClient.ConnectOptions = {
   host: config.debtCollection.xledgerSftp.host,
@@ -92,14 +91,9 @@ const processDebtCollectionFiles = async () => {
 
       const fp = getExportFilePath(csvFileName)
 
-      const stream = new Readable()
-      stream.push(response.file)
-      stream.push(null)
-
-      await exportClient.put(stream, fp, {
+      await exportClient.put(Buffer.from(response.file, 'latin1'), fp, {
         writeStreamOptions: {
           flags: 'w',
-          encoding: 'latin1',
           mode: 0o666,
         },
       })
