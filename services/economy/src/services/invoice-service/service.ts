@@ -2,7 +2,6 @@ import {
   createBatch,
   addAccountInformation,
   getAggregatedInvoiceRows,
-  getContracts,
   getCounterPartCustomers,
   getInvoiceRows,
   getInvoices,
@@ -12,6 +11,7 @@ import {
   markInvoicesAsImported,
   excludeExportedInvoices,
   closeDb as closeInvoiceDb,
+  getInvoicesByChunks,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
@@ -294,34 +294,34 @@ export const createAggregateRows = async (batchId: string) => {
 
   // Do transaction rows in chunks of contracts to get different
   // voucher numbers.
-  const contracts = await getContracts(batchId)
+  const invoices = await getInvoicesByChunks(batchId)
   const CHUNK_SIZE = 500
   let currentStart = 0
   let chunkNum = 0
 
-  while (currentStart < contracts.length) {
-    // Create chunks of maximum CHUNK_SIZE contracts
-    // where all contracts invoices have the same start
+  while (currentStart < invoices.length) {
+    // Create chunks of maximum CHUNK_SIZE invoices
+    // where all invoices invoices have the same start
     // and end dates, and totalAccount.
-    const currentContracts: InvoiceContract[] = []
-    const startDate = contracts[currentStart].invoiceFromDate
-    const endDate = contracts[currentStart].invoiceToDate
-    const totalAccount = contracts[currentStart].totalAccount
+    const currentInvoices: InvoiceContract[] = []
+    const startDate = invoices[currentStart].invoiceFromDate
+    const endDate = invoices[currentStart].invoiceToDate
+    const totalAccount = invoices[currentStart].totalAccount
 
     for (
-      let currentContractIndex = currentStart;
-      currentContractIndex < CHUNK_SIZE + currentStart &&
-      currentContractIndex < contracts.length;
-      currentContractIndex++
+      let currentInvoicesIndex = currentStart;
+      currentInvoicesIndex < CHUNK_SIZE + currentStart &&
+      currentInvoicesIndex < invoices.length;
+      currentInvoicesIndex++
     ) {
-      const currentContract = contracts[currentContractIndex]
+      const currentInvoice = invoices[currentInvoicesIndex]
 
       if (
-        currentContract.invoiceFromDate == startDate &&
-        currentContract.invoiceToDate == endDate &&
-        currentContract.totalAccount == totalAccount
+        currentInvoice.invoiceFromDate == startDate &&
+        currentInvoice.invoiceToDate == endDate &&
+        currentInvoice.totalAccount == totalAccount
       ) {
-        currentContracts.push(contracts[currentContractIndex])
+        currentInvoices.push(invoices[currentInvoicesIndex])
       } else {
         break
       }
@@ -329,14 +329,14 @@ export const createAggregateRows = async (batchId: string) => {
     console.log(
       'Aggregate chunk',
       currentStart,
-      currentContracts.length + currentStart - 1
+      currentInvoices.length + currentStart - 1
     )
-    currentStart += currentContracts.length
+    currentStart += currentInvoices.length
 
     // Get aggregated rows for chunk
     const aggregatedDbRows = await getAggregatedInvoiceRows(
       batchId,
-      currentContracts.map((contract) => contract.contractCode)
+      currentInvoices.map((invoice) => invoice.invoiceNumber)
     )
     const aggregatedRows = aggregatedDbRows.map((row) => {
       return transformAggregatedInvoiceRow(row, chunkNum)

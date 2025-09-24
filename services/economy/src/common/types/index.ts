@@ -119,7 +119,7 @@ export type LedgerInvoice = {
 }
 
 export type InvoiceContract = {
-  contractCode: string
+  invoiceNumber: string
   invoiceFromDate: string
   invoiceToDate: string
   ledgerAccount: string
