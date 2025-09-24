@@ -237,6 +237,35 @@ export interface paths {
       };
     };
   };
+  "/leases/by-pnr/{pnr}/includingAllLeases": {
+    /**
+     * Get all leases (active, upcoming, and terminated) for a PNR
+     * @description Retrieves lease information along with related entities (tenants, properties, etc.) for the specified PNR. Includes **active**, **upcoming**, and **terminated** leases.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+              [key: string]: unknown;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-contact-code/{contactCode}": {
     /**
      * Get leases with related entities for a specific contact code
