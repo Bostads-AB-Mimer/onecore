@@ -89,19 +89,41 @@ jobs:
             echo "release_version=${HEAD_BRANCH#release/}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Login to GHCR
+        if: steps.build-type.outputs.build_tag_inc == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install crane
+        run: |
+          curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/crane_Linux_x86_64.tar.gz \
+          | tar -xz crane
+          sudo mv crane /usr/local/bin/
+
       - name: Determine incremental build tag
         id: incremental-tag
         if: steps.build-type.outputs.build_tag_inc == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          OWNER_REPO="${GITHUB_REPOSITORY}"
-          COUNT=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${OWNER_REPO}/actions/runs?branch=${BRANCH}&event=push&per_page=100" \
-            | jq '[.workflow_runs[] | select(.status=="completed")] | length')
-          NUM=$((COUNT + 1))
-          echo "build_tag=${{ steps.build-type.outputs.build_tag_base }}.${NUM}" >> $GITHUB_OUTPUT
+          BRANCH_TAG="${{ steps.build-type.outputs.build_tag_base }}"
+
+          LATEST=$(crane ls $IMAGE \
+            | grep "^${BRANCH_TAG}\." \
+            | sed "s/^${BRANCH_TAG}\.//" \
+            | sort -n \
+            | tail -1)
+
+          if [ -z "$LATEST" ]; then
+            NEXT=1
+          else
+            NEXT=$((LATEST + 1))
+          fi
+
+          echo "build_tag=${BRANCH_TAG}.${NEXT}" >> $GITHUB_OUTPUT
 
       - name: Enforce package.json matches release version
         if: steps.build-type.outputs.build_tag_version != ''
@@ -112,7 +134,7 @@ jobs:
             echo "::error::package.json version ($HAVE) does not match release target version ($WANT)";
             exit 1;
           fi
-          
+
   build-and-push:
     needs: prepare
     runs-on: ubuntu-latest
@@ -130,7 +152,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ env.HEAD_SHA }}
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -212,12 +234,12 @@ jobs:
         with:
           node-version: '22'
           cache: pnpm
-           
+
       - name: Configure Git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
+
       - name: Update version
         run: |
           # Enforce global version, in case of version drift by first bumping the root version...
@@ -229,4 +251,4 @@ jobs:
           git add $(git ls-files -m '*package*.json')
           git commit -m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
- 
+
