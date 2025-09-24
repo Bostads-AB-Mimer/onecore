@@ -525,147 +525,250 @@ export interface paths {
      */
     get: {
       responses: {
-        /** @description List of keys */
+        /** @description A list of keys. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"][];
-            };
+            "application/json": Record<string, never>;
           };
         };
-        /** @description Server error */
+        /** @description An error occurred while listing keys. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
           };
         };
       };
     };
-    /** Create a key */
+    /**
+     * Create a key
+     * @description Create a new key record.
+     */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyRequest"];
+          "application/json": {
+            /**
+             * @description The name of the key.
+             * @example Front door A
+             */
+            key_name: string;
+            /**
+             * @description The type of key.
+             * @example LGH
+             * @enum {string}
+             */
+            key_type: "LGH" | "PB" | "FS" | "HN";
+            /**
+             * @description The sequence number of the key.
+             * @example 101
+             */
+            key_sequence_number?: number;
+            /**
+             * @description The flex number of the key.
+             * @example 1
+             */
+            flex_number?: number;
+            /**
+             * @description The rental object associated with the key.
+             * @example APT-1001
+             */
+            rental_object?: string;
+            /**
+             * @description The key system ID.
+             * @example 123e4567-e89b-12d3-a456-426614174000
+             */
+            key_system_id?: string;
+          };
         };
       };
       responses: {
-        /** @description Created */
+        /** @description Key created successfully. */
         201: {
           content: {
+            "application/json": Record<string, never>;
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: {
             "application/json": {
-              content?: components["schemas"]["Key"];
+              /** @example Invalid request body */
+              error?: string;
             };
           };
         };
-        /** @description Invalid keyType */
-        400: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Server error */
+        /** @description An error occurred while creating the key. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
           };
         };
       };
     };
   };
   "/keys/{id}": {
-    /** Get key by ID */
+    /**
+     * Get key by ID
+     * @description Fetch a specific key by its ID.
+     */
     get: {
       parameters: {
         path: {
+          /** @description The unique ID of the key to retrieve. */
           id: string;
         };
       };
       responses: {
-        /** @description Key found */
+        /** @description A key object. */
         200: {
           content: {
+            "application/json": Record<string, never>;
+          };
+        };
+        /** @description Key not found. */
+        404: {
+          content: {
             "application/json": {
-              content?: components["schemas"]["Key"];
+              /** @example Key not found */
+              reason?: string;
             };
           };
         };
-        /** @description Not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description Server error */
+        /** @description An error occurred while fetching the key. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
           };
         };
       };
     };
-    /** Delete a key */
+    /**
+     * Delete a key
+     * @description Delete an existing key by ID.
+     */
     delete: {
       parameters: {
         path: {
+          /** @description The unique ID of the key to delete. */
           id: string;
         };
       };
       responses: {
-        /** @description Deleted */
+        /** @description Key deleted successfully. */
         200: {
-          content: never;
-        };
-        /** @description Not found */
-        404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
+            "application/json": Record<string, never>;
           };
         };
-        /** @description Server error */
+        /** @description Key not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Key not found */
+              reason?: string;
+            };
+          };
+        };
+        /** @description An error occurred while deleting the key. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
           };
         };
       };
     };
-    /** Update a key (partial) */
+    /**
+     * Update a key
+     * @description Partially update an existing key.
+     */
     patch: {
       parameters: {
         path: {
+          /** @description The unique ID of the key to update. */
           id: string;
         };
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyRequest"];
+          "application/json": {
+            /**
+             * @description The name of the key.
+             * @example Front door A (updated)
+             */
+            key_name?: string;
+            /**
+             * @description The type of key.
+             * @example LGH
+             * @enum {string}
+             */
+            key_type?: "LGH" | "PB" | "FS" | "HN";
+            /**
+             * @description The sequence number of the key.
+             * @example 102
+             */
+            key_sequence_number?: number;
+            /**
+             * @description The flex number of the key.
+             * @example 2
+             */
+            flex_number?: number;
+            /**
+             * @description The rental object associated with the key.
+             * @example APT-1002
+             */
+            rental_object?: string;
+            /**
+             * @description The key system ID.
+             * @example 123e4567-e89b-12d3-a456-426614174000
+             */
+            key_system_id?: string;
+          };
         };
       };
       responses: {
-        /** @description Updated */
+        /** @description Key updated successfully. */
         200: {
           content: {
+            "application/json": Record<string, never>;
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: {
             "application/json": {
-              content?: components["schemas"]["Key"];
+              /** @example Invalid request body */
+              error?: string;
             };
           };
         };
-        /** @description Invalid keyType */
-        400: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Not found */
+        /** @description Key not found. */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
+            "application/json": {
+              /** @example Key not found */
+              reason?: string;
+            };
           };
         };
-        /** @description Server error */
+        /** @description An error occurred while updating the key. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
           };
         };
       };
@@ -830,62 +933,6 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    Key: {
-      /** Format: uuid */
-      id?: string;
-      keyName?: string;
-      keySequenceNumber?: number;
-      flexNumber?: number;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType?: "LGH" | "PB" | "FS" | "HN";
-      /** Format: uuid */
-      keySystemId?: string | null;
-      /** Format: date-time */
-      createdAt?: string;
-      /** Format: date-time */
-      updatedAt?: string;
-    };
-    CreateKeyRequest: {
-      /** @example Front door A */
-      keyName: string;
-      /** @example 101 */
-      keySequenceNumber?: number;
-      /** @example 1 */
-      flexNumber?: number;
-      /** @example APT-1001 */
-      rentalObjectCode?: string;
-      /**
-       * @example LGH
-       * @enum {string}
-       */
-      keyType: "LGH" | "PB" | "FS" | "HN";
-      /**
-       * Format: uuid
-       * @example null
-       */
-      keySystemId?: string | null;
-    };
-    /** @description Partial update; provide any subset of fields */
-    UpdateKeyRequest: {
-      /** @example Front door A (updated) */
-      keyName?: string;
-      keySequenceNumber?: number;
-      flexNumber?: number;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType?: "LGH" | "PB" | "FS" | "HN";
-      /** Format: uuid */
-      keySystemId?: string | null;
-    };
-    ErrorResponse: {
-      /** @example Internal server error */
-      error?: string;
-    };
-    NotFoundResponse: {
-      /** @example Log not found */
-      reason?: string;
-    };
     Log: {
       /** Format: uuid */
       id?: string;
@@ -930,6 +977,14 @@ export interface components {
       /** @enum {string} */
       objectType?: "key" | "key_system" | "key_loan";
       description?: string;
+    };
+    ErrorResponse: {
+      /** @example Internal server error */
+      error?: string;
+    };
+    NotFoundResponse: {
+      /** @example Log not found */
+      reason?: string;
     };
   };
   responses: never;
