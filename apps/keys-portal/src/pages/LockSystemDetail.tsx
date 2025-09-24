@@ -230,7 +230,7 @@ export default function LockSystemDetail() {
 
   // Filter and sort keys
   const filteredAndSortedKeys = useMemo(() => {
-    let filtered = allKeys.filter(key => {
+    const filtered = allKeys.filter(key => {
       const matchesSearch = 
         key.key_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (key.rental_object && key.rental_object.toLowerCase().includes(searchQuery.toLowerCase()));
