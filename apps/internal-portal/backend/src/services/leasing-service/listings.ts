@@ -140,7 +140,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
 
-      logger.error('Failed to close listing', unpublish.err)
+      logger.error({ error: unpublish.err }, 'Failed to close listing')
       return
     }
 
@@ -155,7 +155,7 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!addComment.ok) {
-      logger.error('Failed to add comment', addComment.err)
+      logger.error({ error: addComment.err }, 'Failed to add comment')
     }
 
     ctx.status = 200
