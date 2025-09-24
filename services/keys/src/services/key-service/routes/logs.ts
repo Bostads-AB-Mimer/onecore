@@ -1,10 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { db } from '../adapters/db' 
+import { schemas } from '@onecore/types'
+import { z } from 'zod'
+import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 const TABLE = 'logs'
-const EVENT_TYPES = new Set(['update', 'creation', 'delete'])
-const OBJECT_TYPES = new Set(['key_system', 'key', 'key_loan'])
+
+// Type definitions based on schemas
+type CreateLogRequest = z.infer<typeof schemas.CreateLogRequestSchema>
+type UpdateLogRequest = z.infer<typeof schemas.UpdateLogRequestSchema>
+type LogResponse = z.infer<typeof schemas.LogSchema)
 
 /**
  * @swagger
@@ -119,7 +125,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('eventTime', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { content: rows satisfies LogResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing logs')
       ctx.status = 500
@@ -167,13 +173,13 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const row = await db(TABLE).where({ id: ctx.params.id }).first()
-      if (!row) { 
-        ctx.status = 404; 
-        ctx.body = { reason: 'Log not found', ...metadata }; 
-        return 
+      if (!row) {
+        ctx.status = 404;
+        ctx.body = { reason: 'Log not found', ...metadata };
+        return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies LogResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching log')
       ctx.status = 500
@@ -216,21 +222,14 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/logs', async (ctx) => {
+  router.post('/logs', parseRequestBody(schemas.CreateLogRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-      if (typeof payload.eventType === 'string') payload.eventType = payload.eventType.toLowerCase()
-
-      if (!payload.userName || !EVENT_TYPES.has(payload.eventType) || !OBJECT_TYPES.has(payload.objectType)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid or missing fields: userName, eventType, objectType', ...metadata }
-        return
-      }
+      const payload: CreateLogRequest = ctx.request.body
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies LogResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating log')
       ctx.status = 500
@@ -286,26 +285,19 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.patch('/logs/:id', async (ctx) => {
+  router.patch('/logs/:id', parseRequestBody(schemas.UpdateLogRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-      if (typeof payload.eventType === 'string') payload.eventType = payload.eventType.toLowerCase()
-      if (payload.eventType && !EVENT_TYPES.has(payload.eventType)) {
-        ctx.status = 400; ctx.body = { error: 'Invalid eventType', ...metadata }; return
-      }
-      if (payload.objectType && !OBJECT_TYPES.has(payload.objectType)) {
-        ctx.status = 400; ctx.body = { error: 'Invalid objectType', ...metadata }; return
-      }
+      const payload: UpdateLogRequest = ctx.request.body
 
       const [row] = await db(TABLE).where({ id: ctx.params.id }).update(payload).returning('*')
-      if (!row) { 
-        ctx.status = 404; 
-        ctx.body = { reason: 'Log not found', ...metadata }; 
-        return 
+      if (!row) {
+        ctx.status = 404;
+        ctx.body = { reason: 'Log not found', ...metadata };
+        return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies LogResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating log')
       ctx.status = 500
