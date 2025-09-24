@@ -29,31 +29,31 @@ export interface paths {
                    * Format: date-time
                    * @description When keys were returned.
                    */
-                  returned_at?: string;
+                  returnedAt?: string;
                   /**
                    * Format: date-time
                    * @description When keys become available for next tenant if early return.
                    */
-                  available_to_next_tenant_from?: string;
+                  availableToNextTenantFrom?: string;
                   /**
                    * Format: date-time
                    * @description When keys were picked up.
                    */
-                  picked_up_at?: string;
+                  pickedUpAt?: string;
                   /**
                    * Format: date-time
                    * @description When the record was created.
                    */
-                  created_at?: string;
+                  createdAt?: string;
                   /**
                    * Format: date-time
                    * @description When the record was last updated.
                    */
-                  updated_at?: string;
+                  updatedAt?: string;
                   /** @description Who created this record. */
-                  created_by?: string;
+                  createdBy?: string;
                   /** @description Who last updated this record. */
-                  updated_by?: string;
+                  updatedBy?: string;
                 }[];
             };
           };
@@ -97,18 +97,18 @@ export interface paths {
              * @description When keys were picked up.
              * @example 2025-09-19T14:30:00.000Z
              */
-            picked_up_at?: string;
+            pickedUpAt?: string;
             /**
              * Format: date-time
              * @description When keys become available for next tenant.
              * @example 2025-12-01T00:00:00.000Z
              */
-            available_to_next_tenant_from?: string;
+            availableToNextTenantFrom?: string;
             /**
              * @description Who created this record.
              * @example admin-user-123
              */
-            created_by?: string;
+            createdBy?: string;
           };
         };
       };
@@ -164,31 +164,31 @@ export interface paths {
                  * Format: date-time
                  * @description When keys were returned.
                  */
-                returned_at?: string;
+                returnedAt?: string;
                 /**
                  * Format: date-time
                  * @description When keys become available for next tenant.
                  */
-                available_to_next_tenant_from?: string;
+                availableToNextTenantFrom?: string;
                 /**
                  * Format: date-time
                  * @description When keys were picked up.
                  */
-                picked_up_at?: string;
+                pickedUpAt?: string;
                 /**
                  * Format: date-time
                  * @description When the record was created.
                  */
-                created_at?: string;
+                createdAt?: string;
                 /**
                  * Format: date-time
                  * @description When the record was last updated.
                  */
-                updated_at?: string;
+                updatedAt?: string;
                 /** @description Who created this record. */
-                created_by?: string;
+                createdBy?: string;
                 /** @description Who last updated this record. */
-                updated_by?: string;
+                updatedBy?: string;
               };
             };
           };
@@ -285,22 +285,22 @@ export interface paths {
              * @description When keys were returned.
              * @example 2025-09-19T16:00:00.000Z
              */
-            returned_at?: string;
+            returnedAt?: string;
             /**
              * Format: date-time
              * @description When keys become available for next tenant.
              */
-            available_to_next_tenant_from?: string;
+            availableToNextTenantFrom?: string;
             /**
              * Format: date-time
              * @description When keys were picked up.
              */
-            picked_up_at?: string;
+            pickedUpAt?: string;
             /**
              * @description Who updated this record.
              * @example admin-user-456
              */
-            updated_by?: string;
+            updatedBy?: string;
           };
         };
       };
@@ -365,7 +365,7 @@ export interface paths {
         content: {
           "application/json": {
             /** @description Unique system code */
-            system_code: string;
+            systemCode: string;
             /** @description Name of the key system */
             name: string;
             /**
@@ -476,7 +476,7 @@ export interface paths {
         content: {
           "application/json": {
             /** @description Unique system code */
-            system_code?: string;
+            systemCode?: string;
             /** @description Name of the key system */
             name?: string;
             /**
@@ -521,7 +521,7 @@ export interface paths {
   "/keys": {
     /**
      * List keys
-     * @description Returns keys ordered by created_at (desc).
+     * @description Returns keys ordered by createdAt (desc).
      */
     get: {
       responses: {
@@ -557,7 +557,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid key_type */
+        /** @description Invalid keyType */
         400: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -650,7 +650,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid key_type */
+        /** @description Invalid keyType */
         400: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -674,7 +674,7 @@ export interface paths {
   "/logs": {
     /**
      * List logs
-     * @description Returns logs ordered by event_time (desc).
+     * @description Returns logs ordered by eventTime (desc).
      */
     get: {
       responses: {
@@ -803,7 +803,7 @@ export interface paths {
             };
           };
         };
-        /** @description Invalid event_type or object_type */
+        /** @description Invalid eventType or objectType */
         400: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -833,50 +833,50 @@ export interface components {
     Key: {
       /** Format: uuid */
       id?: string;
-      key_name?: string;
-      key_sequence_number?: number;
-      flex_number?: number;
-      rental_object?: string;
+      keyName?: string;
+      keySequenceNumber?: number;
+      flexNumber?: number;
+      rentalObjectCode?: string;
       /** @enum {string} */
-      key_type?: "LGH" | "PB" | "FS" | "HN";
+      keyType?: "LGH" | "PB" | "FS" | "HN";
       /** Format: uuid */
-      key_system_id?: string | null;
+      keySystemId?: string | null;
       /** Format: date-time */
-      created_at?: string;
+      createdAt?: string;
       /** Format: date-time */
-      updated_at?: string;
+      updatedAt?: string;
     };
     CreateKeyRequest: {
       /** @example Front door A */
-      key_name: string;
+      keyName: string;
       /** @example 101 */
-      key_sequence_number?: number;
+      keySequenceNumber?: number;
       /** @example 1 */
-      flex_number?: number;
+      flexNumber?: number;
       /** @example APT-1001 */
-      rental_object?: string;
+      rentalObjectCode?: string;
       /**
        * @example LGH
        * @enum {string}
        */
-      key_type: "LGH" | "PB" | "FS" | "HN";
+      keyType: "LGH" | "PB" | "FS" | "HN";
       /**
        * Format: uuid
        * @example null
        */
-      key_system_id?: string | null;
+      keySystemId?: string | null;
     };
     /** @description Partial update; provide any subset of fields */
     UpdateKeyRequest: {
       /** @example Front door A (updated) */
-      key_name?: string;
-      key_sequence_number?: number;
-      flex_number?: number;
-      rental_object?: string;
+      keyName?: string;
+      keySequenceNumber?: number;
+      flexNumber?: number;
+      rentalObjectCode?: string;
       /** @enum {string} */
-      key_type?: "LGH" | "PB" | "FS" | "HN";
+      keyType?: "LGH" | "PB" | "FS" | "HN";
       /** Format: uuid */
-      key_system_id?: string | null;
+      keySystemId?: string | null;
     };
     ErrorResponse: {
       /** @example Internal server error */
@@ -890,45 +890,45 @@ export interface components {
       /** Format: uuid */
       id?: string;
       /** @example seb */
-      user_name?: string;
+      userName?: string;
       /**
        * @example creation
        * @enum {string}
        */
-      event_type?: "creation" | "update" | "delete";
+      eventType?: "creation" | "update" | "delete";
       /**
        * @example key
        * @enum {string}
        */
-      object_type?: "key" | "key_system" | "key_loan";
+      objectType?: "key" | "key_system" | "key_loan";
       /** Format: date-time */
-      event_time?: string;
+      eventTime?: string;
       /** @example Created key APT-1001 */
       description?: string;
     };
     CreateLogRequest: {
       /** @example seb */
-      user_name: string;
+      userName: string;
       /**
        * @example creation
        * @enum {string}
        */
-      event_type: "creation" | "update" | "delete";
+      eventType: "creation" | "update" | "delete";
       /**
        * @example key
        * @enum {string}
        */
-      object_type: "key" | "key_system" | "key_loan";
+      objectType: "key" | "key_system" | "key_loan";
       /** @example Initial import */
       description?: string;
     };
     /** @description Partial update; provide any subset of fields */
     UpdateLogRequest: {
-      user_name?: string;
+      userName?: string;
       /** @enum {string} */
-      event_type?: "creation" | "update" | "delete";
+      eventType?: "creation" | "update" | "delete";
       /** @enum {string} */
-      object_type?: "key" | "key_system" | "key_loan";
+      objectType?: "key" | "key_system" | "key_loan";
       description?: string;
     };
   };
