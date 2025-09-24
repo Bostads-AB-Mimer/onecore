@@ -26,7 +26,6 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           display: 'flex',
           justifyContent: 'space-between',
           gap: '4rem',
-          height: '21rem',
           '@media (max-width: 62.5rem)': {
             flexDirection: 'column',
             gap: '2rem',
@@ -137,6 +136,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           sx={{
             width: '100%',
             cursor: 'pointer',
+            maxHeight: '21rem',
           }}
           onClick={() =>
             window.open(
