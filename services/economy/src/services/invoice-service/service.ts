@@ -19,6 +19,8 @@ import {
   getRoundOffInformation,
   getContacts as getXpandContacts,
   closeDb as closeXpandDb,
+  getRentalInvoices,
+  getInvoiceRows as getXpandInvoiceRows,
 } from './adapters/xpand-db-adapter'
 import {
   CounterPartCustomers,
@@ -47,7 +49,7 @@ const createRoundOffRow = async (
   const roundOffInformation = await getRoundOffInformation(year)
   let totalAccount = '2970'
   let ledgerAccount = '1530'
-  const tenantName = invoice.tenantName as string
+  const tenantName = (invoice.cmctcben as string).trimEnd()
 
   const counterPartCustomer = counterPartCustomers.find(
     counterPartCustomers.customers,
@@ -107,7 +109,15 @@ export const processInvoiceRows = async (
     }
   }
 
-  const enrichedInvoiceRows = await enrichInvoiceRows(invoiceDataRows, invoices)
+  const invoiceTable: Record<string, Invoice> = {}
+  invoices.forEach((invoice) => {
+    invoiceTable[(invoice.invoice as string).trimEnd()] = invoice
+  })
+
+  const enrichedInvoiceRows = await enrichInvoiceRows(
+    invoiceDataRows,
+    invoiceTable
+  )
 
   const enrichedInvoiceRowsWithAccounts = await addAccountInformation(
     enrichedInvoiceRows.rows
@@ -326,10 +336,9 @@ export const createAggregateRows = async (batchId: string) => {
         break
       }
     }
-    console.log(
-      'Aggregate chunk',
-      currentStart,
-      currentInvoices.length + currentStart - 1
+    logger.info(
+      { start: currentStart, end: currentInvoices.length + currentStart - 1 },
+      'Aggregate chunk'
     )
     currentStart += currentInvoices.length
 
@@ -355,9 +364,9 @@ export const createAggregateRows = async (batchId: string) => {
     aggregatedRowsTotal =
       Math.round(((aggregatedRowsTotal as number) + Number.EPSILON) * 100) / 100
 
-    console.log(
-      'Aggregate chunk balance',
-      aggregatedRowsTotal + (chunkTotalRow.amount as number)
+    logger.info(
+      { difference: aggregatedRowsTotal + (chunkTotalRow.amount as number) },
+      'Aggregate chunk created'
     )
 
     chunkNum++
@@ -550,4 +559,98 @@ export const markBatchAsProcessed = async (batchId: number) => {
 export const closeDatabases = () => {
   closeXpandDb()
   closeInvoiceDb()
+}
+
+export const missingInvoices = async (batchId: string) => {
+  console.log('Finding missing invoices')
+  const invoiceDbInvoices = (await getInvoices(batchId))
+    .filter((invoice) => invoice.invoiceFromDate.localeCompare('20251001') >= 0)
+    .map((invoice) => invoice.invoiceNumber)
+  const xpandInvoices: string[] = (
+    await getRentalInvoices(new Date(2025, 9, 1))
+  ).map((invoice: any): string => (invoice.invoice as string).trimEnd())
+
+  const onlyInInvoiceDb = invoiceDbInvoices.filter((dbInvoice) => {
+    return !xpandInvoices.includes(dbInvoice)
+  })
+
+  const onlyInXpandDb = xpandInvoices.filter((xpandInvoice) => {
+    return !invoiceDbInvoices.includes(xpandInvoice)
+  })
+
+  console.log(
+    'Invoice db',
+    invoiceDbInvoices.length,
+    'Xpand',
+    xpandInvoices.length
+  )
+
+  console.log('Only in invoice db', onlyInInvoiceDb)
+  console.log('Only in xpand db', onlyInXpandDb)
+}
+
+export const importInvoiceRows = async (
+  fromDate: Date,
+  toDate: Date,
+  companyId: string
+) => {
+  try {
+    const errors: { invoiceNumber: string; error: string }[] = []
+    const CHUNK_SIZE = 500
+
+    const invoiceRows = await getXpandInvoiceRows(fromDate, toDate, companyId)
+    const invoiceDataRows = invoiceRows
+    //const invoiceDataRows = await excludeExportedInvoices(invoiceRows)
+
+    console.log(
+      'Read',
+      invoiceRows.length,
+      'rows, importing',
+      invoiceDataRows.length,
+      'for company',
+      companyId
+    )
+
+    let chunkNum = 0
+    const batchId = await createBatch()
+    logger.info(`Created new batch: ${batchId}`)
+
+    while (CHUNK_SIZE * chunkNum < invoiceDataRows.length) {
+      const startNum = chunkNum * CHUNK_SIZE
+      const endNum = Math.min(
+        (chunkNum + 1) * CHUNK_SIZE,
+        invoiceDataRows.length
+      )
+      const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
+      logger.info(
+        {
+          chunkStart: startNum,
+          chunkEnd: endNum,
+          totalRows: invoiceDataRows.length,
+        },
+        'Processing rows'
+      )
+      const contactCodes = await processInvoiceRows(
+        currentInvoiceDataRows,
+        batchId
+      )
+      const contacts = await getXpandContacts(contactCodes.contacts)
+      const result = await saveContacts(contacts, batchId)
+
+      /*if (contactCodes.errors && contactCodes.errors.length > 0) {
+        errors.push(contactCodes.err  ors)
+      }*/
+
+      chunkNum++
+    }
+
+    return {
+      batchId,
+      errors,
+    }
+  } catch (error: any) {
+    logger.error(error, 'Error importing invoices - batch could not be created')
+
+    throw error
+  }
 }
