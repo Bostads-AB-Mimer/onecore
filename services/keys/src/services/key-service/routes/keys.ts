@@ -1,9 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { schemas } from '@onecore/types'
+import { z } from 'zod'
 import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 const TABLE = 'keys'
-const ALLOWED_KEY_TYPES = new Set(['LGH', 'PB', 'FS', 'HN'])
+
+// Type definitions based on schemas
+type CreateKeyRequest = z.infer<typeof schemas.CreateKeyRequestSchema>
+type UpdateKeyRequest = z.infer<typeof schemas.UpdateKeyRequestSchema>
+type KeyResponse = z.infer<typeof schemas.KeySchema>
 
 /**
  * @swagger
@@ -135,7 +142,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { content: rows satisfies KeyResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing keys')
       ctx.status = 500
@@ -189,7 +196,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching key')
       ctx.status = 500
@@ -232,25 +239,14 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/keys', async (ctx) => {
+  router.post('/keys', parseRequestBody(schemas.CreateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      // Minimal normalization (no zod yet)
-      if (typeof payload.keyType === 'string') {
-        payload.keyType = payload.keyType.toUpperCase()
-      }
-      // Optional tiny guard to avoid obvious typos
-      if (payload.keyType && !ALLOWED_KEY_TYPES.has(payload.keyType)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid keyType', ...metadata }
-        return
-      }
+      const payload: CreateKeyRequest = ctx.request.body
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating key')
       ctx.status = 500
@@ -306,19 +302,10 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.patch('/keys/:id', async (ctx) => {
+  router.patch('/keys/:id', parseRequestBody(schemas.UpdateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      if (typeof payload.keyType === 'string') {
-        payload.keyType = payload.keyType.toUpperCase()
-      }
-      if (payload.keyType && !ALLOWED_KEY_TYPES.has(payload.keyType)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid keyType', ...metadata }
-        return
-      }
+      const payload: UpdateKeyRequest = ctx.request.body
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
@@ -332,7 +319,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating key')
       ctx.status = 500
