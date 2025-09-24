@@ -22,7 +22,7 @@ export const KeyLoanSchema = z.object({
   lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
-  pickedUp_at: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   createdBy: z.string().nullable().optional(),
@@ -31,11 +31,11 @@ export const KeyLoanSchema = z.object({
 
 export const KeySystemSchema = z.object({
   id: z.string().uuid(),
-  system_code: z.string(),
+  systemCode: z.string(),
   name: z.string(),
   manufacturer: z.string().optional(),
   type: KeySystemTypeSchema,
-  property_ids: z.string().optional(),
+  propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
   description: z.string().nullable().optional(),
@@ -49,7 +49,7 @@ export const LogSchema = z.object({
   id: z.string().uuid(),
   userName: z.string(),
   eventType: z.enum(['creation', 'update', 'delete']),
-  objectType: z.enum(['key', 'key_system', 'key_loan']),
+  objectType: z.enum(['key', 'keySystem', 'keyLoan']), 
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
 })
@@ -130,6 +130,6 @@ export const CreateLogRequestSchema = z.object({
 export const UpdateLogRequestSchema = z.object({
   userName: z.string().optional(),
   eventType: z.enum(['creation', 'update', 'delete']).optional(),
-  objectType: z.enum(['key', 'key_system', 'key_loan']).optional(),
+  objectType: z.enum(['key', 'keySystem', 'keyLoan']).optional(),
   description: z.string().nullable().optional(),
 })
