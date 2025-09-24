@@ -1,9 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { schemas } from '@onecore/types'
+import { z } from 'zod'
 import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 const TABLE = 'key_systems'
-const ALLOWED_TYPES = new Set(['MECHANICAL', 'ELECTRONIC', 'HYBRID'])
+
+// Type definitions based on schemas
+type CreateKeySystemRequest = z.infer<typeof schemas.CreateKeySystemRequestSchema>
+type UpdateKeySystemRequest = z.infer<typeof schemas.UpdateKeySystemRequestSchema>
+type KeySystemResponse = z.infer<typeof schemas.KeySystemSchema>
 
 /**
  * @swagger
@@ -40,7 +47,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { content: rows satisfies KeySystemResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing key systems')
       ctx.status = 500
@@ -88,7 +95,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching key system')
       ctx.status = 500
@@ -145,20 +152,10 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.post('/key-systems', async (ctx) => {
+  router.post('/key-systems', parseRequestBody(schemas.CreateKeySystemRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      // Validate type
-      if (typeof payload.type === 'string') {
-        payload.type = payload.type.toUpperCase()
-      }
-      if (payload.type && !ALLOWED_TYPES.has(payload.type)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid type', ...metadata }
-        return
-      }
+      const payload: CreateKeySystemRequest = ctx.request.body
 
       // Check for duplicate systemCode
       if (payload.systemCode) {
@@ -174,7 +171,7 @@ export const routes = (router: KoaRouter) => {
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating key system')
       ctx.status = 500
@@ -236,20 +233,10 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.patch('/key-systems/:id', async (ctx) => {
+  router.patch('/key-systems/:id', parseRequestBody(schemas.UpdateKeySystemRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
-
-      // Validate type
-      if (typeof payload.type === 'string') {
-        payload.type = payload.type.toUpperCase()
-      }
-      if (payload.type && !ALLOWED_TYPES.has(payload.type)) {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid type', ...metadata }
-        return
-      }
+      const payload: UpdateKeySystemRequest = ctx.request.body
 
       // Check for duplicate systemCode if being updated
       if (payload.systemCode) {
@@ -276,7 +263,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating key system')
       ctx.status = 500

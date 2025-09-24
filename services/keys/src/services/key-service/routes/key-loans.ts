@@ -1,8 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { schemas } from '@onecore/types'
+import { z } from 'zod'
 import { db } from '../adapters/db'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 const TABLE = 'key_loans'
+
+// Type definitions based on schemas
+type CreateKeyLoanRequest = z.infer<typeof schemas.CreateKeyLoanRequestSchema>
+type UpdateKeyLoanRequest = z.infer<typeof schemas.UpdateKeyLoanRequestSchema>
+type KeyLoanResponse = z.infer<typeof schemas.KeyLoanSchema>
 
 
 
@@ -87,7 +95,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { content: rows satisfies KeyLoanResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing key loans')
       ctx.status = 500
@@ -189,7 +197,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching key loan by id')
       ctx.status = 500
@@ -259,14 +267,14 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/key-loans', async (ctx) => {
+  router.post('/key-loans', parseRequestBody(schemas.CreateKeyLoanRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
+      const payload: CreateKeyLoanRequest = ctx.request.body
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating key loan')
       ctx.status = 500
@@ -356,10 +364,10 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/key-loans/:id', async (ctx) => {
+  router.patch('/key-loans/:id', parseRequestBody(schemas.UpdateKeyLoanRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const payload: any = ctx.request.body || {}
+      const payload: UpdateKeyLoanRequest = ctx.request.body
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
@@ -373,7 +381,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: row, ...metadata }
+      ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating key loan with id ' + ctx.params.id)
       ctx.status = 500
