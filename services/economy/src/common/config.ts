@@ -12,6 +12,7 @@ type SftpConfig = {
   arDirectory?: string
   useSshDss?: boolean
 }
+
 export interface Config {
   port: number
   xpandDatabase: {
@@ -31,17 +32,20 @@ export interface Config {
   xledger: {
     url: string
     apiToken: string
-    sftp: SftpConfig
+    sftp: {
+      host: string
+      username: string
+      password: string
+      glDirectory: string
+      arDirectory: string
+    }
   }
   procurementInvoices: {
-    importDirectory: string
-    exportDirectory: string
-    sftp: SftpConfig
+    directory: string
   }
   rentalInvoices: {
     importDirectory: string
     exportDirectory: string
-    sftp: SftpConfig
   }
   debtCollection: {
     xledger: {
@@ -60,6 +64,14 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    economyDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
   }
 }
 
@@ -70,12 +82,6 @@ const config = configPackage({
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
-      sftp: {
-        host: '',
-        username: '',
-        password: '',
-        directory: 'economy',
-      },
     },
     debtCollection: {
       xledger: {
@@ -105,14 +111,7 @@ const config = configPackage({
       port: 1438,
     },
     procurementInvoices: {
-      importDirectory: './procurement-invoices/invoices',
-      exportDirectory: './procurement-invoices/export',
-      sftp: {
-        host: '',
-        username: '',
-        password: '',
-        directory: 'economy',
-      },
+      directory: './procurement-invoices/invoices',
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -123,12 +122,19 @@ const config = configPackage({
         password: '',
         glDirectory: '/GL',
         arDirectory: '/AR',
-        useSshDss: true,
       },
     },
     health: {
       xledger: {
         systemName: 'xledger',
+        minimumMinutesBetweenRequests: 5,
+      },
+      economyDatabase: {
+        systemName: 'economy database',
+        minimumMinutesBetweenRequests: 5,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
         minimumMinutesBetweenRequests: 5,
       },
     },
