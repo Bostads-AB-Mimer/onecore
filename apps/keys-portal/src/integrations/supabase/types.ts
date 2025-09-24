@@ -60,65 +60,65 @@ export type Database = {
       }
       key_loans: {
         Row: {
-          contract_id: string
-          created_at: string
+          contractId: string
+          createdAt: string
           id: string
-          key_id: string
-          loaned_at: string
-          loaned_by: string | null
+          keyId: string
+          loanedAt: string
+          loanedBy: string | null
           notes: string | null
-          returned_at: string | null
-          returned_by: string | null
+          returnedAt: string | null
+          returnedBy: string | null
           status: string
-          tenant_id: string
-          updated_at: string
+          tenantId: string
+          updatedAt: string
         }
         Insert: {
-          contract_id: string
-          created_at?: string
+          contractId: string
+          createdAt?: string
           id?: string
-          key_id: string
-          loaned_at?: string
-          loaned_by?: string | null
+          keyId: string
+          loanedAt?: string
+          loanedBy?: string | null
           notes?: string | null
-          returned_at?: string | null
-          returned_by?: string | null
+          returnedAt?: string | null
+          returnedBy?: string | null
           status?: string
-          tenant_id: string
-          updated_at?: string
+          tenantId: string
+          updatedAt?: string
         }
         Update: {
-          contract_id?: string
-          created_at?: string
+          contractId?: string
+          createdAt?: string
           id?: string
-          key_id?: string
-          loaned_at?: string
-          loaned_by?: string | null
+          keyId?: string
+          loanedAt?: string
+          loanedBy?: string | null
           notes?: string | null
-          returned_at?: string | null
-          returned_by?: string | null
+          returnedAt?: string | null
+          returnedBy?: string | null
           status?: string
-          tenant_id?: string
-          updated_at?: string
+          tenantId?: string
+          updatedAt?: string
         }
         Relationships: [
           {
             foreignKeyName: "key_loans_contract_id_fkey"
-            columns: ["contract_id"]
+            columns: ["contractId"]
             isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "key_loans_key_id_fkey"
-            columns: ["key_id"]
+            columns: ["keyId"]
             isOneToOne: false
             referencedRelation: "keys"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "key_loans_tenant_id_fkey"
-            columns: ["tenant_id"]
+            columns: ["tenantId"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
@@ -127,40 +127,40 @@ export type Database = {
       }
       keys: {
         Row: {
-          created_at: string
-          flex_number: number | null
+          createdAt: string
+          flexNumber: number | null
           id: string
-          key_name: string
-          key_sequence_number: number | null
-          key_system_id: string | null
-          key_system_name: string | null
-          key_type: string
-          rental_object: string | null
-          updated_at: string
+          keyName: string
+          keySequenceNumber: number | null
+          keySystemId: string | null
+          keySystemName: string | null
+          keyType: string
+          rentalObjectCode: string | null
+          updatedAt: string
         }
         Insert: {
-          created_at?: string
-          flex_number?: number | null
+          createdAt?: string
+          flexNumber?: number | null
           id?: string
-          key_name: string
-          key_sequence_number?: number | null
-          key_system_id?: string | null
-          key_system_name?: string | null
-          key_type: string
-          rental_object?: string | null
-          updated_at?: string
+          keyName: string
+          keySequenceNumber?: number | null
+          keySystemId?: string | null
+          keySystemName?: string | null
+          keyType: string
+          rentalObjectCode?: string | null
+          updatedAt?: string
         }
         Update: {
-          created_at?: string
-          flex_number?: number | null
+          createdAt?: string
+          flexNumber?: number | null
           id?: string
-          key_name?: string
-          key_sequence_number?: number | null
-          key_system_id?: string | null
-          key_system_name?: string | null
-          key_type?: string
-          rental_object?: string | null
-          updated_at?: string
+          keyName?: string
+          keySequenceNumber?: number | null
+          keySystemId?: string | null
+          keySystemName?: string | null
+          keyType?: string
+          rentalObjectCode?: string | null
+          updatedAt?: string
         }
         Relationships: []
       }

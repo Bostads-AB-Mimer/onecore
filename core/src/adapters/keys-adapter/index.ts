@@ -37,14 +37,14 @@ function fail<E extends CommonErr>(err: E): AdapterResult<never, E> {
 
 export interface Key {
   id: string
-  key_name: string
-  key_sequence_number?: number
-  flex_number?: number
-  rental_object?: string
-  key_type: 'LGH' | 'PB' | 'FS' | 'HN'
-  key_system_id?: string | null
-  created_at: string
-  updated_at: string
+  keyName: string
+  keySequenceNumber?: number
+  flexNumber?: number
+  rentalObjectCode?: string
+  keyType: 'LGH' | 'PB' | 'FS' | 'HN'
+  keySystemId?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface KeyLoan {
@@ -52,37 +52,37 @@ export interface KeyLoan {
   keys: string                 // JSON string array per your DB (e.g. "[\"keyId1\",\"keyId2\"]")
   contact?: string
   lease?: string
-  returned_at?: string | null
-  available_to_next_tenant_from?: string | null
-  picked_up_at?: string | null
-  created_at: string
-  updated_at: string
-  created_by?: string | null
-  updated_by?: string | null
+  returnedAt?: string | null
+  availableToNextTenantFrom?: string | null
+  pickedUpAt?: string | null
+  createdAt: string
+  updatedAt: string
+  createdBy?: string | null
+  updatedBy?: string | null
 }
 
 export interface KeySystem {
   id: string
-  system_code: string
+  systemCode: string
   name: string
   manufacturer?: string
   type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
-  property_ids?: string         // JSON string array
-  installation_date?: string | null
-  is_active?: boolean
+  propertyIds?: string         // JSON string array
+  installationDate?: string | null
+  isActive?: boolean
   description?: string | null
-  created_at: string
-  updated_at: string
-  created_by?: string | null
-  updated_by?: string | null
+  createdAt: string
+  updatedAt: string
+  createdBy?: string | null
+  updatedBy?: string | null
 }
 
 export interface Log {
   id: string
-  user_name: string
-  event_type: 'creation' | 'update' | 'delete'
-  object_type: 'key' | 'key_system' | 'key_loan'
-  event_time: string
+  userName: string
+  eventType: 'creation' | 'update' | 'delete'
+  objectType: 'key' | 'key_system' | 'key_loan'
+  eventTime: string
   description?: string | null
 }
 
