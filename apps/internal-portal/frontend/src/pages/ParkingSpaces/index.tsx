@@ -113,16 +113,6 @@ const ParkingSpaces = () => {
               key="offered"
             />
           </TabPanel>
-          <TabPanel value="historical" sx={{ padding: 0 }}>
-            <Listings
-              columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
-              )}
-              rows={filterListings(parkingSpaces.data ?? [], searchString)}
-              loading={parkingSpaces.status === 'pending'}
-              key="historical"
-            />
-          </TabPanel>
         </Box>
       </TabContext>
     </>
