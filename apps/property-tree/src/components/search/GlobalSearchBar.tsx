@@ -9,6 +9,7 @@ import { SearchResultsList } from '../search/SearchResultsList'
 import { SearchFilters } from '../search/SearchFilters'
 import { SearchFavorites } from '../search/SearchFavorites'
 import { cn } from '@/lib/utils'
+import { useCommandPalette } from '../hooks/useCommandPalette'
 
 interface GlobalSearchBarProps {
   className?: string
@@ -19,6 +20,9 @@ export function GlobalSearchBar({
   className,
   placeholder = 'Sök efter kunder, lägenheter, ärenden...',
 }: GlobalSearchBarProps) {
+  // Open current search function in command palette for now
+  const { open } = useCommandPalette()
+
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [showFilters, setShowFilters] = useState(false)
@@ -159,6 +163,7 @@ export function GlobalSearchBar({
           className="w-full pl-9 pr-24 h-10 bg-background border-input focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onClick={() => open()}
           onFocus={handleInputFocus}
         />
 
