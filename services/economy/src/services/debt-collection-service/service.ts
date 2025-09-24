@@ -81,16 +81,16 @@ const importBalanceCorrectionsFromCsv = (
   })
 }
 
-type HandleDebtsResponse =
+export type EnrichResponse =
   | {
       ok: true
       file: string
     }
   | { ok: false; error: Error }
 
-export const enrichRentCases = async (
+export const enrichRentInvoices = async (
   csv: string
-): Promise<HandleDebtsResponse> => {
+): Promise<EnrichResponse> => {
   try {
     const rows = importInvoicesFromCsv(csv, ';')
 
@@ -168,9 +168,9 @@ export const enrichRentCases = async (
   }
 }
 
-export const enrichRandomInvoices = async (
+export const enrichOtherInvoices = async (
   csv: string
-): Promise<HandleDebtsResponse> => {
+): Promise<EnrichResponse> => {
   try {
     const rows = importInvoicesFromCsv(csv, ';')
 
@@ -212,16 +212,9 @@ export const enrichRandomInvoices = async (
   }
 }
 
-type HandleBalanceCorrectionsResponse =
-  | {
-      ok: true
-      file: string
-    }
-  | { ok: false; error: Error }
-
 export const enrichBalanceCorrections = async (
   csv: string
-): Promise<HandleBalanceCorrectionsResponse> => {
+): Promise<EnrichResponse> => {
   try {
     const rows = importBalanceCorrectionsFromCsv(csv, ';')
 
