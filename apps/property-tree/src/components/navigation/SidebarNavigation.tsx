@@ -4,44 +4,20 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   SidebarMenu,
 } from '@/components/ui/Sidebar'
-import { ChevronRight } from 'lucide-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/Collapsible'
-import { SearchForm } from '../SearchForm'
 
 export default function SidebarNavigation() {
   return (
     <Sidebar>
-      <SidebarHeader>
-        <SearchForm />
-      </SidebarHeader>
       <SidebarContent className="gap-0">
-        <Collapsible
-          key="companies"
-          title="Companies"
-          defaultOpen
-          className="group/collapsible"
-        >
-          <SidebarGroup>
-            <CollapsibleTrigger className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-              Companies
-              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <CompanyList />
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <CompanyList />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   )

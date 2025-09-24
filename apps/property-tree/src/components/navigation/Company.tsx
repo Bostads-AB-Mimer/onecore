@@ -1,9 +1,10 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { PropertyList } from './PropertyList'
+import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 
 interface CompanyNavigationProps {
   company: Company
@@ -11,7 +12,13 @@ interface CompanyNavigationProps {
 
 export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isExpanded, setIsExpanded] = React.useState(false)
+  const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
+
+  const isInHierarchy = isCompanyInHierarchy(company.id)
+  const isDirectlySelected = selectionState.selectedCompanyId === company.id &&
+                            location.pathname.startsWith('/companies/')
 
   return (
     <SidebarMenuItem>
@@ -21,6 +28,8 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
           navigate(`/companies/${company.id}`)
         }}
         tooltip={company.name}
+        isActive={isDirectlySelected}
+        isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Building2 />
         <span>{company.name.replace('** TEST **', '')}</span>

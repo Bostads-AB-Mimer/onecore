@@ -7,9 +7,10 @@ import { buildingService } from '@/services/api'
 
 interface BuildingListProps {
   property: Property
+  companyId?: string
 }
 
-export function BuildingList({ property }: BuildingListProps) {
+export function BuildingList({ property, companyId }: BuildingListProps) {
   const {
     data: buildings,
     isLoading,
@@ -47,6 +48,7 @@ export function BuildingList({ property }: BuildingListProps) {
           key={building.code}
           property={property}
           building={building}
+          companyId={companyId}
         />
       ))}
     </SidebarMenu>

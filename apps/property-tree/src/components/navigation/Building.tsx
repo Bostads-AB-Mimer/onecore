@@ -3,21 +3,42 @@ import { Building, Property } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
+import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 interface BuildingNavigationProps {
   building: Building
   property: Property
+  companyId?: string
 }
 
-export function BuildingNavigation({ building }: BuildingNavigationProps) {
+export function BuildingNavigation({ building, property, companyId }: BuildingNavigationProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [isExpanded, setIsExpanded] = React.useState(false)
+  const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
+
+  const isInHierarchy = isBuildingInHierarchy(building.code, property.id, building.id)
+  const isDirectlySelected = selectionState.selectedBuildingId === building.id &&
+                            location.pathname.startsWith('/buildings/')
 
   return (
     <SidebarMenuItem>
       <div className="flex items-center justify-between pr-2">
         <SidebarMenuButton
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => {
+            setIsExpanded(!isExpanded)
+            navigate(`/buildings/${building.id}`, {
+              state: {
+                propertyId: property.id,
+                buildingCode: building.code,
+                companyId: companyId,
+              },
+            })
+          }}
           tooltip={building.code}
+          isActive={isDirectlySelected}
+          isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
         >
           <Warehouse />
           <span>{building.code}</span>
@@ -25,7 +46,7 @@ export function BuildingNavigation({ building }: BuildingNavigationProps) {
       </div>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <ResidenceList building={building} />
+          <ResidenceList building={building} propertyId={property.id} companyId={companyId} />
         </div>
       )}
     </SidebarMenuItem>
