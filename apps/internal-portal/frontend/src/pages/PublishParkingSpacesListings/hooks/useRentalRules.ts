@@ -48,16 +48,6 @@ export const useRentalRules = (): UseRentalRulesResult => {
             '23003',
           ].includes(ps.propertyCode || '')
 
-          if (
-            hasPreviousListings ||
-            isSpecialResidentialArea ||
-            isSpecialProperty
-          ) {
-            console.log(
-              `Setting rental rule for ${ps.rentalObjectCode}: hasPreviousListings=${hasPreviousListings}, isSpecialResidentialArea=${isSpecialResidentialArea}, isSpecialProperty=${isSpecialProperty}`
-            )
-          }
-
           if (isSpecialResidentialArea || isSpecialProperty) {
             // Special areas/properties always default to SCORED, regardless of previous listings
             acc[ps.rentalObjectCode] = 'SCORED'
