@@ -73,3 +73,64 @@ export const UpdateKeyRequestSchema = z.object({
   key_type: KeyTypeSchema.optional(),
   key_system_id: z.string().uuid().nullable().optional(),
 })
+
+// Request schemas for key systems
+
+export const CreateKeySystemRequestSchema = z.object({
+  systemCode: z.string(),
+  name: z.string(),
+  manufacturer: z.string().optional(),
+  type: KeySystemTypeSchema,
+  propertyIds: z.string().optional(),
+  installationDate: z.coerce.date().nullable().optional(),
+  isActive: z.boolean().optional(),
+  description: z.string().nullable().optional(),
+})
+
+export const UpdateKeySystemRequestSchema = z.object({
+  systemCode: z.string().optional(),
+  name: z.string().optional(),
+  manufacturer: z.string().optional(),
+  type: KeySystemTypeSchema.optional(),
+  propertyIds: z.string().optional(),
+  installationDate: z.coerce.date().nullable().optional(),
+  isActive: z.boolean().optional(),
+  description: z.string().nullable().optional(),
+})
+
+// Request schemas for key loans
+
+export const CreateKeyLoanRequestSchema = z.object({
+  keys: z.string(),
+  contact: z.string().optional(),
+  lease: z.string().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
+  availableToNextTenantFrom: z.coerce.date().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+})
+
+export const UpdateKeyLoanRequestSchema = z.object({
+  keys: z.string().optional(),
+  contact: z.string().optional(),
+  lease: z.string().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  availableToNextTenantFrom: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+})
+
+// Request schemas for logs
+
+export const CreateLogRequestSchema = z.object({
+  userName: z.string(),
+  eventType: z.enum(['creation', 'update', 'delete']),
+  objectType: z.enum(['key', 'key_system', 'key_loan']),
+  description: z.string().nullable().optional(),
+})
+
+export const UpdateLogRequestSchema = z.object({
+  userName: z.string().optional(),
+  eventType: z.enum(['creation', 'update', 'delete']).optional(),
+  objectType: z.enum(['key', 'key_system', 'key_loan']).optional(),
+  description: z.string().nullable().optional(),
+})
