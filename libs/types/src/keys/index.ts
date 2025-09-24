@@ -6,14 +6,14 @@ export type KeySystemType = 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
 
 export interface Key {
   id: string
-  key_name: string
-  key_sequence_number?: number
-  flex_number?: number
-  rental_object?: string
-  key_type: KeyType
-  key_system_id?: string | null
-  created_at: string
-  updated_at: string
+  keyName: string
+  keySequenceNumber?: number
+  flexNumber?: number
+  rentalObjectCode?: string
+  keyType: KeyType
+  keySystemId?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface KeyLoan {
@@ -21,36 +21,36 @@ export interface KeyLoan {
   keys: string
   contact?: string
   lease?: string
-  returned_at?: string | null
-  available_to_next_tenant_from?: string | null
-  picked_up_at?: string | null
-  created_at: string
-  updated_at: string
-  created_by?: string | null
-  updated_by?: string | null
+  returnedAt?: string | null
+  availableToNextTenantFrom?: string | null
+  pickedUpAt?: string | null
+  createdAt: string
+  updatedAt: string
+  createdBy?: string | null
+  updatedBy?: string | null
 }
 
 export interface KeySystem {
   id: string
-  system_code: string
+  systemCode: string
   name: string
   manufacturer?: string
   type: KeySystemType
-  property_ids?: string
-  installation_date?: string | null
-  is_active?: boolean
+  propertyIds?: string
+  installationDate?: string | null
+  isActive?: boolean
   description?: string | null
-  created_at: string
-  updated_at: string
-  created_by?: string | null
-  updated_by?: string | null
+  createdAt: string
+  updatedAt: string
+  createdBy?: string | null
+  updatedBy?: string | null
 }
 
 export interface Log {
   id: string
-  user_name: string
-  event_type: 'creation' | 'update' | 'delete'
-  object_type: 'key' | 'key_system' | 'key_loan'
-  event_time: string
+  userName: string
+  eventType: 'creation' | 'update' | 'delete'
+  objectType: 'key' | 'keySystem' | 'keyLoan'
+  eventTime: string
   description?: string | null
 }
