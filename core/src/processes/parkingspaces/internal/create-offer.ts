@@ -119,7 +119,7 @@ export const createOfferForInternalParkingSpace = async (
           log,
           CreateOfferErrorCodes.UpdateListingStatusFailure,
           500,
-          `Error updating listing status to Closed for listing ${listing.id}`
+          `Error updating listing status to Closed.`
         )
       }
 

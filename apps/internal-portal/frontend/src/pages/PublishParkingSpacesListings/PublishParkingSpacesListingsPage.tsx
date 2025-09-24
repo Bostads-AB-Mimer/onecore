@@ -102,7 +102,6 @@ export const PublishParkingSpacesListingsPage = () => {
   useEffect(() => {
     if (parkingSpaces) {
       // Initialize rental rules with default values
-      console.log('parkingSpaces', parkingSpaces)
       initializeRentalRules(parkingSpaces)
     }
   }, [parkingSpaces, initializeRentalRules])
