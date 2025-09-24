@@ -10,7 +10,7 @@ const TABLE = 'logs'
 // Type definitions based on schemas
 type CreateLogRequest = z.infer<typeof schemas.CreateLogRequestSchema>
 type UpdateLogRequest = z.infer<typeof schemas.UpdateLogRequestSchema>
-type LogResponse = z.infer<typeof schemas.LogSchema)
+type LogResponse = z.infer<typeof schemas.LogSchema>
 
 /**
  * @swagger
