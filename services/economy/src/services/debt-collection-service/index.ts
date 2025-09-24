@@ -3,14 +3,14 @@ import { logger } from '@onecore/utilities'
 import {
   CsvError,
   enrichBalanceCorrections,
-  enrichRandomInvoices,
-  enrichRentCases,
+  enrichOtherInvoices,
+  enrichRentInvoices,
 } from './service'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/debt-collection/rent-cases', async (ctx) => {
     try {
-      const response = await enrichRentCases(ctx.request.body['csv'])
+      const response = await enrichRentInvoices(ctx.request.body['csv'])
       if (!response.ok) {
         logger.error(response.error)
         if (response.error instanceof CsvError) {
@@ -36,7 +36,7 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/debt-collection/random-invoices', async (ctx) => {
     try {
-      const response = await enrichRandomInvoices(ctx.request.body['csv'])
+      const response = await enrichOtherInvoices(ctx.request.body['csv'])
       if (!response.ok) {
         logger.error(response.error)
         if (response.error instanceof CsvError) {

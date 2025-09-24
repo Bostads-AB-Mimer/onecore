@@ -12,7 +12,6 @@ type SftpConfig = {
   arDirectory?: string
   useSshDss?: boolean
 }
-
 export interface Config {
   port: number
   xpandDatabase: {
@@ -45,8 +44,16 @@ export interface Config {
     sftp: SftpConfig
   }
   debtCollection: {
-    xledgerSftp: SftpConfig
-    sergelSftp: SftpConfig
+    xledger: {
+      sftp: SftpConfig
+      rentInvoicesDirectory: string
+      otherInvoicesDirectory: string
+      balanceCorrectionsDirectory: string
+    }
+    sergel: {
+      sftp: SftpConfig
+      directory: string
+    }
   }
   health: {
     xledger: {
@@ -71,17 +78,23 @@ const config = configPackage({
       },
     },
     debtCollection: {
-      xledgerSftp: {
-        host: '',
-        username: '',
-        password: '',
-        directory: '',
-        useSshDss: true,
+      xledger: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+          useSshDss: true,
+        },
+        rentInvoicesDirectory: '',
+        otherInvoicesDirectory: '',
+        balanceCorrectionsDirectory: '',
       },
-      sergelSftp: {
-        host: '',
-        username: '',
-        password: '',
+      sergel: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+        },
         directory: '',
       },
     },
