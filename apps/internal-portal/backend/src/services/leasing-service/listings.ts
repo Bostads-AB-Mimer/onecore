@@ -92,6 +92,24 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.delete('(.*)/listings/:listingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await coreAdapter.deleteListing(Number(ctx.params.listingId))
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+      }
+      return
+    } else {
+      ctx.status = result.err === 'conflict' ? 409 : 500
+      ctx.body = {
+        ...metadata,
+      }
+    }
+  })
+
   router.put('(.*)/listings/:listingId/close', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await coreAdapter.closeListing(Number(ctx.params.listingId))
@@ -122,7 +140,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
 
-      logger.error({ error: unpublish.err }, 'Failed to close listing')
+      logger.error('Failed to close listing', unpublish.err)
       return
     }
 
@@ -137,7 +155,7 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!addComment.ok) {
-      logger.error({ error: addComment.err }, 'Failed to add comment')
+      logger.error('Failed to add comment', addComment.err)
     }
 
     ctx.status = 200
