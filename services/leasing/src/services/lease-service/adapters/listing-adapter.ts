@@ -387,16 +387,10 @@ const getListingsWithApplicants = async (
         db.raw('WHERE l.Status = ?', [ListingStatus.Active])
       )
       .with({ type: 'historical' }, () =>
-        db.raw(
-          `WHERE l.Status = ?
-           OR (l.Status = ? AND EXISTS (
-              SELECT 1
-              FROM applicant a
-              WHERE a.ListingId = l.Id
-           ))
-          `,
-          [ListingStatus.Assigned, ListingStatus.Closed]
-        )
+        db.raw(`WHERE l.Status = ? OR l.Status = ?`, [
+          ListingStatus.Assigned,
+          ListingStatus.Closed,
+        ])
       )
       .with({ type: 'ready-for-offer' }, () =>
         db.raw(
