@@ -17,7 +17,6 @@ import {
 } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
-import { DeleteListing } from './components/DeleteListing'
 import { CloseListing } from './components/CloseListing'
 import { printVacantFrom } from '../../common/formattingUtils'
 import { UnpublishListing } from './components/UnpublishListing'
