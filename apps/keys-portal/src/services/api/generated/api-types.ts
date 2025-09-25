@@ -528,7 +528,9 @@ export interface paths {
         /** @description A list of keys. */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Key"][];
+            };
           };
         };
         /** @description An error occurred while listing keys. */
@@ -549,46 +551,16 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description The name of the key.
-             * @example Front door A
-             */
-            key_name: string;
-            /**
-             * @description The type of key.
-             * @example LGH
-             * @enum {string}
-             */
-            key_type: "LGH" | "PB" | "FS" | "HN";
-            /**
-             * @description The sequence number of the key.
-             * @example 101
-             */
-            key_sequence_number?: number;
-            /**
-             * @description The flex number of the key.
-             * @example 1
-             */
-            flex_number?: number;
-            /**
-             * @description The rental object associated with the key.
-             * @example APT-1001
-             */
-            rental_object?: string;
-            /**
-             * @description The key system ID.
-             * @example 123e4567-e89b-12d3-a456-426614174000
-             */
-            key_system_id?: string;
-          };
+          "application/json": components["schemas"]["CreateKeyRequest"];
         };
       };
       responses: {
         /** @description Key created successfully. */
         201: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
           };
         };
         /** @description Invalid request body. */
@@ -628,7 +600,9 @@ export interface paths {
         /** @description A key object. */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
           };
         };
         /** @description Key not found. */
@@ -702,46 +676,16 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description The name of the key.
-             * @example Front door A (updated)
-             */
-            key_name?: string;
-            /**
-             * @description The type of key.
-             * @example LGH
-             * @enum {string}
-             */
-            key_type?: "LGH" | "PB" | "FS" | "HN";
-            /**
-             * @description The sequence number of the key.
-             * @example 102
-             */
-            key_sequence_number?: number;
-            /**
-             * @description The flex number of the key.
-             * @example 2
-             */
-            flex_number?: number;
-            /**
-             * @description The rental object associated with the key.
-             * @example APT-1002
-             */
-            rental_object?: string;
-            /**
-             * @description The key system ID.
-             * @example 123e4567-e89b-12d3-a456-426614174000
-             */
-            key_system_id?: string;
-          };
+          "application/json": components["schemas"]["UpdateKeyRequest"];
         };
       };
       responses: {
         /** @description Key updated successfully. */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
           };
         };
         /** @description Invalid request body. */
@@ -933,59 +877,18 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    Log: {
-      /** Format: uuid */
-      id?: string;
-      /** @example seb */
-      userName?: string;
-      /**
-       * @example creation
-       * @enum {string}
-       */
-      eventType?: "creation" | "update" | "delete";
-      /**
-       * @example key
-       * @enum {string}
-       */
-      objectType?: "key" | "key_system" | "key_loan";
-      /** Format: date-time */
-      eventTime?: string;
-      /** @example Created key APT-1001 */
-      description?: string;
-    };
-    CreateLogRequest: {
-      /** @example seb */
-      userName: string;
-      /**
-       * @example creation
-       * @enum {string}
-       */
-      eventType: "creation" | "update" | "delete";
-      /**
-       * @example key
-       * @enum {string}
-       */
-      objectType: "key" | "key_system" | "key_loan";
-      /** @example Initial import */
-      description?: string;
-    };
-    /** @description Partial update; provide any subset of fields */
-    UpdateLogRequest: {
-      userName?: string;
-      /** @enum {string} */
-      eventType?: "creation" | "update" | "delete";
-      /** @enum {string} */
-      objectType?: "key" | "key_system" | "key_loan";
-      description?: string;
-    };
-    ErrorResponse: {
-      /** @example Internal server error */
-      error?: string;
-    };
-    NotFoundResponse: {
-      /** @example Log not found */
-      reason?: string;
-    };
+    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
+    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
+    KeyLoan: components["schemas"]["KeyLoan"];
+    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
+    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
+    KeySystem: components["schemas"]["KeySystem"];
+    CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
+    UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
+    Key: components["schemas"]["Key"];
+    CreateLogRequest: components["schemas"]["CreateLogRequest"];
+    UpdateLogRequest: components["schemas"]["UpdateLogRequest"];
+    Log: components["schemas"]["Log"];
   };
   responses: never;
   parameters: never;
