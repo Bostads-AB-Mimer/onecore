@@ -2781,40 +2781,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description JSON string array of key IDs.
-             * @example [1, 2, 3]
-             */
-            keys?: string;
-            /**
-             * @description Contact information (email, phone, etc.).
-             * @example john.doe@email.com
-             */
-            contact?: string;
-            /**
-             * @description Lease identifier or reference.
-             * @example LEASE-2025-001
-             */
-            lease?: string;
-            /**
-             * Format: date-time
-             * @description When keys were picked up.
-             * @example 2025-09-19T14:30:00.000Z
-             */
-            picked_up_at?: string;
-            /**
-             * Format: date-time
-             * @description When keys become available for next tenant.
-             * @example 2025-12-01T00:00:00.000Z
-             */
-            available_to_next_tenant_from?: string;
-            /**
-             * @description Who created this record.
-             * @example admin-user-123
-             */
-            created_by?: string;
-          };
+          "application/json": components["schemas"]["CreateKeyLoanRequest"];
         };
       };
       responses: {
@@ -2919,44 +2886,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description JSON string array of key IDs.
-             * @example [1, 2]
-             */
-            keys?: string;
-            /**
-             * @description Contact information.
-             * @example updated.email@email.com
-             */
-            contact?: string;
-            /**
-             * @description Lease identifier.
-             * @example LEASE-2025-002
-             */
-            lease?: string;
-            /**
-             * Format: date-time
-             * @description When keys were returned.
-             * @example 2025-09-19T16:00:00.000Z
-             */
-            returned_at?: string;
-            /**
-             * Format: date-time
-             * @description When keys become available for next tenant.
-             */
-            available_to_next_tenant_from?: string;
-            /**
-             * Format: date-time
-             * @description When keys were picked up.
-             */
-            picked_up_at?: string;
-            /**
-             * @description Who updated this record.
-             * @example admin-user-456
-             */
-            updated_by?: string;
-          };
+          "application/json": components["schemas"]["UpdateKeyLoanRequest"];
         };
       };
       responses: {
@@ -3016,26 +2946,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @example Front door A */
-            key_name: string;
-            /** @example 101 */
-            key_sequence_number?: number;
-            /** @example 1 */
-            flex_number?: number;
-            /** @example APT-1001 */
-            rental_object?: string;
-            /**
-             * @example LGH
-             * @enum {string}
-             */
-            key_type: "LGH" | "PB" | "FS" | "HN";
-            /**
-             * Format: uuid
-             * @example null
-             */
-            key_system_id?: string | null;
-          };
+          "application/json": components["schemas"]["CreateKeyRequest"];
         };
       };
       responses: {
@@ -4130,82 +4041,18 @@ export interface components {
         name: string | null;
       };
     });
-    Key: {
-      /** Format: uuid */
-      id?: string;
-      key_name?: string;
-      key_sequence_number?: number;
-      flex_number?: number;
-      rental_object?: string;
-      /** @enum {string} */
-      key_type?: "LGH" | "PB" | "FS" | "HN";
-      /** Format: uuid */
-      key_system_id?: string | null;
-      /** Format: date-time */
-      created_at?: string;
-      /** Format: date-time */
-      updated_at?: string;
-    };
-    KeyLoan: {
-      /** Format: uuid */
-      id?: string;
-      /** @description JSON string array of key IDs */
-      keys?: string;
-      contact?: string;
-      lease?: string;
-      /** Format: date-time */
-      returned_at?: string | null;
-      /** Format: date-time */
-      available_to_next_tenant_from?: string | null;
-      /** Format: date-time */
-      picked_up_at?: string | null;
-      /** Format: date-time */
-      created_at?: string;
-      /** Format: date-time */
-      updated_at?: string;
-      created_by?: string | null;
-      updated_by?: string | null;
-    };
-    KeySystem: {
-      /** Format: uuid */
-      id?: string;
-      system_code?: string;
-      name?: string;
-      manufacturer?: string;
-      /** @enum {string} */
-      type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      property_ids?: string;
-      /** Format: date-time */
-      installation_date?: string | null;
-      is_active?: boolean;
-      description?: string | null;
-      /** Format: date-time */
-      created_at?: string;
-      /** Format: date-time */
-      updated_at?: string;
-      created_by?: string | null;
-      updated_by?: string | null;
-    };
-    Log: {
-      /** Format: uuid */
-      id?: string;
-      /** @example seb */
-      user_name?: string;
-      /**
-       * @example creation
-       * @enum {string}
-       */
-      event_type?: "creation" | "update" | "delete";
-      /**
-       * @example key
-       * @enum {string}
-       */
-      object_type?: "key" | "key_system" | "key_loan";
-      /** Format: date-time */
-      event_time?: string;
-      /** @example Created key APT-1001 */
-      description?: string | null;
-    };
+    Key: components["schemas"]["Key"];
+    KeyLoan: components["schemas"]["KeyLoan"];
+    KeySystem: components["schemas"]["KeySystem"];
+    Log: components["schemas"]["Log"];
+    CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
+    UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
+    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
+    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
+    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
+    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
+    CreateLogRequest: components["schemas"]["CreateLogRequest"];
+    UpdateLogRequest: components["schemas"]["UpdateLogRequest"];
     ErrorResponse: {
       /** @example Internal server error */
       error?: string;
