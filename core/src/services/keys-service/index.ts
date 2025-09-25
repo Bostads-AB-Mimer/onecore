@@ -576,24 +576,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               key_name:
-   *                 type: string
-   *                 example: "Front door A (updated)"
-   *               key_sequence_number:
-   *                 type: integer
-   *               flex_number:
-   *                 type: integer
-   *               rental_object:
-   *                 type: string
-   *               key_type:
-   *                 type: string
-   *                 enum: [LGH, PB, FS, HN]
-   *               key_system_id:
-   *                 type: string
-   *                 format: uuid
-   *                 nullable: true
+   *             $ref: '#/components/schemas/UpdateKeyRequest'
    *     responses:
    *       200:
    *         description: Updated
@@ -826,25 +809,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               system_code:
-   *                 type: string
-   *                 description: Unique system code
-   *               name:
-   *                 type: string
-   *                 description: Name of the key system
-   *               type:
-   *                 type: string
-   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
-   *                 description: Type of key system
-   *               description:
-   *                 type: string
-   *                 description: Description of the key system
-   *             required:
-   *               - system_code
-   *               - name
-   *               - type
+   *             $ref: '#/components/schemas/CreateKeySystemRequest'
    *     responses:
    *       201:
    *         description: Key system created successfully
@@ -913,21 +878,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               system_code:
-   *                 type: string
-   *                 description: Unique system code
-   *               name:
-   *                 type: string
-   *                 description: Name of the key system
-   *               type:
-   *                 type: string
-   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
-   *                 description: Type of key system
-   *               description:
-   *                 type: string
-   *                 description: Description of the key system
+   *             $ref: '#/components/schemas/UpdateKeySystemRequest'
    *     responses:
    *       200:
    *         description: Key system updated successfully
@@ -1159,23 +1110,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required: [user_name, event_type, object_type]
-   *             properties:
-   *               user_name:
-   *                 type: string
-   *                 example: "seb"
-   *               event_type:
-   *                 type: string
-   *                 enum: [creation, update, delete]
-   *                 example: "creation"
-   *               object_type:
-   *                 type: string
-   *                 enum: [key, key_system, key_loan]
-   *                 example: "key"
-   *               description:
-   *                 type: string
-   *                 example: "Initial import"
+   *             $ref: '#/components/schemas/CreateLogRequest'
    *     responses:
    *       201:
    *         description: Created
@@ -1242,18 +1177,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               user_name:
-   *                 type: string
-   *               event_type:
-   *                 type: string
-   *                 enum: [creation, update, delete]
-   *               object_type:
-   *                 type: string
-   *                 enum: [key, key_system, key_loan]
-   *               description:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateLogRequest'
    *     responses:
    *       200:
    *         description: Updated
