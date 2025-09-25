@@ -127,25 +127,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               systemCode:
-   *                 type: string
-   *                 description: Unique system code
-   *               name:
-   *                 type: string
-   *                 description: Name of the key system
-   *               type:
-   *                 type: string
-   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
-   *                 description: Type of key system
-   *               description:
-   *                 type: string
-   *                 description: Description of the key system
-   *             required:
-   *               - systemCode
-   *               - name
-   *               - type
+   *             $ref: '#/components/schemas/CreateKeySystemRequest'
    *     responses:
    *       201:
    *         description: Key system created successfully
@@ -210,21 +192,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               systemCode:
-   *                 type: string
-   *                 description: Unique system code
-   *               name:
-   *                 type: string
-   *                 description: Name of the key system
-   *               type:
-   *                 type: string
-   *                 enum: [MECHANICAL, ELECTRONIC, HYBRID]
-   *                 description: Type of key system
-   *               description:
-   *                 type: string
-   *                 description: Description of the key system
+   *             $ref: '#/components/schemas/UpdateKeySystemRequest'
    *     responses:
    *       200:
    *         description: Key system updated successfully
