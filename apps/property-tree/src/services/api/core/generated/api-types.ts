@@ -1649,7 +1649,19 @@ export interface paths {
         /** @description Successfully retrieved rental property information */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": components["schemas"]["RentalPropertyResponse"];
+          };
+        };
+        /** @description Rental property not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
           };
         };
       };
@@ -3997,6 +4009,33 @@ export interface components {
     UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     UpdateLogRequest: components["schemas"]["UpdateLogRequest"];
+    RentalPropertyResponse: {
+      rentalTypeCode?: string;
+      rentalType?: string;
+      address?: string;
+      code?: string;
+      number?: string;
+      type?: string;
+      roomTypeCode?: string;
+      entrance?: string;
+      floor?: string;
+      hasElevator?: boolean;
+      washSpace?: string;
+      area?: number;
+      estateCode?: string;
+      estate?: string;
+      buildingCode?: string;
+      building?: string;
+      _links?: {
+        self?: {
+          href?: string;
+        };
+        link?: {
+          href?: string;
+          templated?: boolean;
+        };
+      };
+    };
     ErrorResponse: {
       /** @example Internal server error */
       error?: string;
