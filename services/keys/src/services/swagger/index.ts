@@ -5,7 +5,7 @@ import { swaggerSpec } from '../../swagger'
 const swaggerOptions = swaggerJsdoc(swaggerSpec)
 
 export const routes = (router: KoaRouter) => {
-  router.get('/swagger.json', async (ctx) => {
+  router.get('(.*)/swagger.json', async (ctx) => {
     ctx.set('Content-Type', 'application/json')
     ctx.body = swaggerOptions
   })
