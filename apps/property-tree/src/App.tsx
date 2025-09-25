@@ -15,7 +15,6 @@ import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
-import Page from './app/dashboard/Page'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 
@@ -44,7 +43,6 @@ export default function App() {
               }
             >
               <Route index element={<Navigate to="/companies" replace />} />
-              <Route path="page" element={<Page />} />
               <Route path="companies/:companyId" element={<CompanyView />} />
               <Route path="properties" element={<PropertyView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
