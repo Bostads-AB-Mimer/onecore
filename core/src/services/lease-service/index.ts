@@ -56,6 +56,21 @@ const getLeasesWithRelatedEntitiesForPnr = async (
   return leases
 }
 
+const getLeasesWithRelatedEntitiesForPnrIncludingAllLeases= async (
+  nationalRegistrationNumber: string
+) => {
+  const leases = await leasingAdapter.getLeasesForPnr(
+    nationalRegistrationNumber,
+    {
+      includeUpcomingLeases: true,
+      includeTerminatedLeases: true,   
+      includeContacts: true,
+    }
+  )
+
+  return leases
+}
+
 /**
  * @swagger
  * openapi: 3.0.0
@@ -203,6 +218,51 @@ export const routes = (router: KoaRouter) => {
       ctx.params.pnr
     )
 
+    ctx.body = {
+      content: responseData,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/by-pnr/{pnr}/includingAllLeases:
+   *   get:
+   *     summary: Get all leases (active, upcoming, and terminated) for a PNR
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves lease information along with related entities (tenants, properties, etc.) for the specified PNR. Includes **active**, **upcoming**, and **terminated** leases.
+   *     parameters:
+   *       - in: path
+   *         name: pnr
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Personal Number (PNR) of the individual to fetch leases for.
+   *     responses:
+   *       '200':
+   *         description: Successful response with leases and related entities.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *               additionalProperties: true  # accounts for generateRouteMetadata fields
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/by-pnr/:pnr/includingAllLeases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const responseData =
+      await getLeasesWithRelatedEntitiesForPnrIncludingAllLeases(ctx.params.pnr)
+
+    ctx.status = 200
     ctx.body = {
       content: responseData,
       ...metadata,
