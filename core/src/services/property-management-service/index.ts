@@ -25,6 +25,70 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
+ *   schemas:
+ *     RentalPropertyResponse:
+ *       type: object
+ *       properties:
+ *         content:
+ *           type: object
+ *           properties:
+ *             rentalTypeCode:
+ *               type: string
+ *             rentalType:
+ *               type: string
+ *             address:
+ *               type: string
+ *             code:
+ *               type: string
+ *             number:
+ *               type: string
+ *             type:
+ *               type: string
+ *             roomTypeCode:
+ *               type: string
+ *             entrance:
+ *               type: string
+ *             floor:
+ *               type: string
+ *             hasElevator:
+ *               type: boolean
+ *             washSpace:
+ *               type: string
+ *             area:
+ *               type: number
+ *             estateCode:
+ *               type: string
+ *             estate:
+ *               type: string
+ *             buildingCode:
+ *               type: string
+ *             building:
+ *               type: string
+ *         _links:
+ *           type: object
+ *           properties:
+ *             self:
+ *               type: object
+ *               properties:
+ *                 href:
+ *                   type: string
+ *             link:
+ *               type: object
+ *               properties:
+ *                 href:
+ *                   type: string
+ *                 templated:
+ *                   type: boolean
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         error:
+ *           type: string
+ *     NotFoundResponse:
+ *       type: object
+ *       properties:
+ *         reason:
+ *           type: string
  * security:
  *   - bearerAuth: []
  */
@@ -627,7 +691,19 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
+   *               $ref: '#/components/schemas/RentalPropertyResponse'
+   *       '404':
+   *         description: Rental property not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    *     security:
    *       - bearerAuth: []
    */
