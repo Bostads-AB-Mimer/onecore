@@ -4,8 +4,8 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Get Parking Space)
-B --> C{Is the Parking<br/>Space Non Scored?}
+A[Start] -->B(Get Listing)
+B --> C{Is the Listing Non Scored?}
 C --> |No| O[End]
 C --> |Yes| D[Get Applicant with Leases]
 D --> Q{Does Applicant have an Address?}
@@ -16,9 +16,10 @@ L --> I
 F --> |Yes| H[Perform Internal Credit Check]
 H --> I{Is Applicant Eligable for Lease?}
 I --> |Yes| J[Create Lease]
+J --> R[Update Listing Status]
+R --> M
 I --> |No| M[Send Notification to Applicant]
 M --> N[Send Notification to Customer Support]
-J --> M
 N --> O
 ```
 
@@ -34,20 +35,17 @@ sequenceDiagram
     participant Property Mgmt as Property Management
     participant Communication as Communication
     participant OneCore DB as OneCore Database
-    participant Mimer API as Mimer.nu API
     participant XPand SOAP as XPand SOAP Service
     participant XPand DB as XPand Database
 
     User ->> Core: Create Lease
 
-    Core ->> Property Mgmt: Get Publ. Parking Space
-    Property Mgmt ->> Mimer API: Get Publ. Parking
-    Mimer API ->> XPand SOAP: Get Publ. Parking Space
-    XPand SOAP -->> Mimer API:Publ. Parking Space
-    Mimer API -->> Property Mgmt:Publ. Parking Space
-    Property Mgmt -->> Core: Publ. Parking Space
+    Core ->> Leasing: Get Active Listing
+    Leasing ->> OneCore DB: Get Listing
+    OneCore DB -->> Leasing: Listing
+    Leasing -->> Core: Active Listing
 
-    break when Parking Space is not None Scored
+    break when Listing is not None Scored
         Core-->User: show error message
     end
 
@@ -73,9 +71,13 @@ sequenceDiagram
     alt Is Applicant Eligible for Lease
         Core ->> Leasing: Create Lease
         Leasing ->> XPand SOAP: Create Lease
-        Core -> Communication: Notify Applicant of Success
+        XPand SOAP -->> Leasing: Create Lease Result
+        Leasing -->> Core: Create Lease Result
+        Core ->> Leasing: Update Listing Status
+        Leasing ->> OneCore DB: Update Listing Status
+        Core ->> Communication: Notify Applicant of Success
         Communication -->> User: Success Notification
-        Core -> Communication: Notify Customer Support of Success
+        Core ->> Communication: Notify Customer Support of Success
         Communication -->> Customer Support: Success Notification
         Core -->> User: Lease Created
     else
