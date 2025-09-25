@@ -229,34 +229,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               keys:
-   *                 type: string
-   *                 description: JSON string array of key IDs.
-   *                 example: "[1, 2, 3]"
-   *               contact:
-   *                 type: string
-   *                 description: Contact information (email, phone, etc.).
-   *                 example: "john.doe@email.com"
-   *               lease:
-   *                 type: string
-   *                 description: Lease identifier or reference.
-   *                 example: "LEASE-2025-001"
-   *               pickedUpAt:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were picked up.
-   *                 example: "2025-09-19T14:30:00.000Z"
-   *               availableToNextTenantFrom:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys become available for next tenant.
-   *                 example: "2025-12-01T00:00:00.000Z"
-   *               createdBy:
-   *                 type: string
-   *                 description: Who created this record.
-   *                 example: "admin-user-123"
+   *             $ref: '#/components/schemas/CreateKeyLoanRequest'
    *     responses:
    *       201:
    *         description: Key loan created successfully.
@@ -313,37 +286,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               keys:
-   *                 type: string
-   *                 description: JSON string array of key IDs.
-   *                 example: "[1, 2]"
-   *               contact:
-   *                 type: string
-   *                 description: Contact information.
-   *                 example: "updated.email@email.com"
-   *               lease:
-   *                 type: string
-   *                 description: Lease identifier.
-   *                 example: "LEASE-2025-002"
-   *               returnedAt:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were returned.
-   *                 example: "2025-09-19T16:00:00.000Z"
-   *               availableToNextTenantFrom:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys become available for next tenant.
-   *               pickedUpAt:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were picked up.
-   *               updatedBy:
-   *                 type: string
-   *                 description: Who updated this record.
-   *                 example: "admin-user-456"
+   *             $ref: '#/components/schemas/UpdateKeyLoanRequest'
    *     responses:
    *       200:
    *         description: Key loan updated successfully.
