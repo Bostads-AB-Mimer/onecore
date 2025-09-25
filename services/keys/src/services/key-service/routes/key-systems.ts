@@ -1,24 +1,36 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { schemas } from '@onecore/types'
-import { z } from 'zod'
+import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'key_systems'
 
-// Type definitions based on schemas
-type CreateKeySystemRequest = z.infer<typeof schemas.CreateKeySystemRequestSchema>
-type UpdateKeySystemRequest = z.infer<typeof schemas.UpdateKeySystemRequestSchema>
-type KeySystemResponse = z.infer<typeof schemas.KeySystemSchema>
+const { KeySystemSchema, CreateKeySystemRequestSchema, UpdateKeySystemRequestSchema } = keys.v1
+type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
+type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
+type KeySystem = keys.v1.KeySystem
 
 /**
  * @swagger
  * tags:
  *   - name: Key Systems
  *     description: Endpoints for managing key systems
+ * components:
+ *   schemas:
+ *     CreateKeySystemRequest:
+ *       $ref: '#/components/schemas/CreateKeySystemRequest'
+ *     UpdateKeySystemRequest:
+ *       $ref: '#/components/schemas/UpdateKeySystemRequest'
+ *     KeySystem:
+ *       $ref: '#/components/schemas/KeySystem'
  */
 export const routes = (router: KoaRouter) => {
+  // Register schemas from @onecore/types
+  registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
+  registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
+  registerSchema('KeySystem', KeySystemSchema)
   /**
    * @swagger
    * /key-systems:
@@ -47,7 +59,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeySystemResponse[], ...metadata }
+      ctx.body = { content: rows satisfies KeySystem[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing key systems')
       ctx.status = 500
@@ -95,7 +107,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
+      ctx.body = { content: row satisfies KeySystem, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching key system')
       ctx.status = 500
@@ -152,7 +164,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.post('/key-systems', parseRequestBody(schemas.CreateKeySystemRequestSchema), async (ctx) => {
+  router.post('/key-systems', parseRequestBody(CreateKeySystemRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: CreateKeySystemRequest = ctx.request.body
@@ -171,7 +183,7 @@ export const routes = (router: KoaRouter) => {
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
+      ctx.body = { content: row satisfies KeySystem, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating key system')
       ctx.status = 500
@@ -233,7 +245,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.patch('/key-systems/:id', parseRequestBody(schemas.UpdateKeySystemRequestSchema), async (ctx) => {
+  router.patch('/key-systems/:id', parseRequestBody(UpdateKeySystemRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: UpdateKeySystemRequest = ctx.request.body
@@ -263,7 +275,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: row satisfies KeySystemResponse, ...metadata }
+      ctx.body = { content: row satisfies KeySystem, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating key system')
       ctx.status = 500
