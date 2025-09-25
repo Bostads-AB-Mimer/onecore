@@ -1,25 +1,21 @@
+import { logger } from '@onecore/utilities'
+import { getBatchContactsCsv } from './services/invoice-service/service'
+import fs from 'fs/promises'
 import config from './common/config'
-import SftpClient from 'ssh2-sftp-client'
+import path, { sep } from 'node:path'
+import { markInvoicesAsImported } from './services/invoice-service/adapters/invoice-data-db-adapter'
 
-export const uploadFile = async (filename: string, csvFile: string) => {
-  const sftpConfig: SftpClient.ConnectOptions = {
-    host: config.xledger.sftp.host,
-    username: config.xledger.sftp.username,
-    password: config.xledger.sftp.password,
-    algorithms: {
-      serverHostKey: ['ssh-dss'],
-    },
-    debug: console.log,
-  }
-  const sftp = new SftpClient()
-  try {
-    await sftp.connect(sftpConfig)
-    await sftp.put(Buffer.from(csvFile), '/AR/test.txt')
-  } catch (err) {
-    throw new Error('SFTP : ' + JSON.stringify(err))
-  } finally {
-    await sftp.end()
-  }
+const doStuff = async () => {
+  const batchId = 64
+  const companyId = '001'
+  logger.info({ batchId }, 'Creating contact file for batch')
+  /*const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
+  const contactsCsv = await getBatchContactsCsv(batchId)
+  await fs.writeFile(
+    `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
+    contactsCsv
+  )*/
+  await markInvoicesAsImported(batchId)
 }
 
-uploadFile('test.csv', 'DETTA ÄR ETT TEST')
+doStuff()

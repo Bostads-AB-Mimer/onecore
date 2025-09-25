@@ -153,6 +153,22 @@ export const saveContacts = async (
 
 export const getContacts = async (batchId: string) => {
   return await db('invoice_contact')
+    .select(
+      'ContactCode',
+      'FirstName',
+      'LastName',
+      'FullName',
+      'NationalRegistrationNumber',
+      'EmailAddress',
+      'Street',
+      'StreetNumber',
+      'PostalCode',
+      'City',
+      'CounterPart',
+      'CustomerGroup',
+      'InvoiceDeliveryMethod'
+    )
+    .distinct()
     .where('batchId', batchId)
     .whereNull('importStatus')
 }
@@ -381,4 +397,12 @@ export const excludeExportedInvoices = async (
   )
 
   return invoiceRowsToImport
+}
+
+export const getImportedInvoiceNumbers = async () => {
+  const invoiceNumbers = await db('invoice_import_status')
+    .select('InvoiceNumber')
+    .where('InvoiceType', 'invoice')
+
+  return invoiceNumbers.map((invoice) => invoice.InvoiceNumber)
 }

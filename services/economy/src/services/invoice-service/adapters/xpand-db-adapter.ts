@@ -283,10 +283,14 @@ export const enrichInvoiceRows = async (
     const invoice = invoices[row.invoiceNumber]
 
     if (invoice) {
-      row.invoiceDate = xledgerDateString(invoice.invdate as Date)
+      /*      row.invoiceDate = xledgerDateString(invoice.invdate as Date)
       row.invoiceFromDate = xledgerDateString(invoice.fromdate as Date)
       row.invoiceToDate = xledgerDateString(invoice.todate as Date)
-      row.invoiceDueDate = xledgerDateString(invoice.expdate as Date)
+      row.invoiceDueDate = xledgerDateString(invoice.expdate as Date)*/
+      row.invoiceDate = invoice.invdate as string
+      row.invoiceFromDate = invoice.fromdate as string
+      row.invoiceToDate = invoice.todate as string
+      row.invoiceDueDate = invoice.expdate as string
     } else {
       // Invoice is not found in Xpand. A common reason is that it's an
       // invoice of the wrong type, for instance reminder.
@@ -480,15 +484,18 @@ export const getContacts = async (
   return contacts
 }
 
-export const getRentalInvoices = async (fromDate: Date) => {
+export const getRentalInvoices = async (fromDate: Date, companyId: string) => {
   const rentalInvoiceNumbers = await db.raw(
-    'select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
-	inner join cmart on cmart.code = krfkr.code \
-	  inner join cmarg" on cmart.keycmarg = cmarg.keycmarg \
-      inner Join "repsk" on "cmart"."keycmart" = "repsk"."keycode" \
-      inner join "repsr" on "repsk"."keyrepsr" = "repsr"."keyrepsr" \
-      where ("repsr"."keycode" = \'FADBT_HYRA\' OR repsr.keycode = \'FADBT_INTHYRA\') \
-      and krfkh.fromdate >= \'2025-10-01\''
+    "select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
+  		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
+	    inner join cmart on cmart.code = krfkr.code \
+	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
+      inner Join repsk on cmart.keycmart = repsk.keycode \
+      inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
+      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
+      and cmcmp.code = ? \
+      and krfkh.fromdate >= ? AND krfkh.todate < ?",
+    [companyId, fromDate, new Date(2025, 10, 1)]
   )
 
   return rentalInvoiceNumbers
@@ -497,7 +504,8 @@ export const getRentalInvoices = async (fromDate: Date) => {
 export const getInvoiceRows = async (
   fromDate: Date,
   endDate: Date,
-  companyId: string
+  companyId: string,
+  invoiceNumbers: string[]
 ) => {
   /*invoiceRows = await db('krfkh')
     .innerJoin('krfkr', 'krfkr.keykrfkh', 'krfkh.keykrfkh')
@@ -510,11 +518,13 @@ export const getInvoiceRows = async (
       and repsk.year = '2025'
       and krfkh.fromdate >= '2025-10-01' --AND krfkh.todate <= '2025-10-31'*/
 
-  const invoiceRows = await db.raw(
-    "select top 5000 cmart.code as rentArticle, krfkr.reduction as rowReduction, \
-      krfkr.amount as rowAmount, krfkr.vat as rowVat, * \
+  const invoiceRowsQuery = db.raw(
+    "select cmart.code as rentArticle, krfkr.reduction as rowReduction, \
+      krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
+      krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, * \
       from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
       inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
+  		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
     	inner join cmart on cmart.code = krfkr.code \
 	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
       inner Join repsk on cmart.keycmart = repsk.keycode \
@@ -522,7 +532,24 @@ export const getInvoiceRows = async (
       where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
       and keyrektk = 'INTAKT' \
       and repsk.year = '2025' \
-      and krfkh.fromdate >= '2025-10-01' AND krfkh.todate <= '2025-10-31'"
+      and cmcmp.code = ? \
+      and invoice in (" +
+      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
+      ')',
+    [companyId]
+  )
+
+  const invoiceRows = await invoiceRowsQuery
+
+  logger.info(
+    {
+      includedRows: invoiceRows.length,
+      includedInvoices: new Set<string>(
+        invoiceRows.map((row: any) => row.invoice)
+      ).size,
+      requestedInvoices: invoiceNumbers.length,
+    },
+    'Retrieved invoices'
   )
 
   const sumColumns = (...args: any[]) => {
@@ -552,7 +579,7 @@ export const getInvoiceRows = async (
         amount: sumColumns(invoiceRow['rowAmount']),
         vat: sumColumns(invoiceRow['rowVat']),
         deduction: sumColumns(invoiceRow['rowReduction']),
-        company: '001',
+        company: trim(invoiceRow['company']),
         invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
         finalPaymentDate: xledgerDateString(invoiceRow['expdate'] as Date),
         invoiceNumber: trim(invoiceRow['invoice']),
@@ -562,6 +589,9 @@ export const getInvoiceRows = async (
         account: trim(invoiceRow['p1']),
         projectCode: trim(invoiceRow['p4']),
         freeCode: trim(invoiceRow['p5']),
+        roundoff: sumColumns(invoiceRow['roundoff']),
+        fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
+        toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
       }
     }
   )
