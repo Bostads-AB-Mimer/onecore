@@ -47,7 +47,7 @@ function useSidebarState({
 }: Pick<SidebarProviderProps, 'defaultOpen' | 'open' | 'onOpenChange'>) {
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
-  
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === 'function' ? value(open) : value
@@ -65,14 +65,34 @@ function useSidebarState({
   return { open, setOpen }
 }
 
-export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
-  ({ defaultOpen, open: openProp, onOpenChange, className, style, children, ...props }, ref) => {
+export const SidebarProvider = React.forwardRef<
+  HTMLDivElement,
+  SidebarProviderProps
+>(
+  (
+    {
+      defaultOpen,
+      open: openProp,
+      onOpenChange,
+      className,
+      style,
+      children,
+      ...props
+    },
+    ref
+  ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
-    const { open, setOpen } = useSidebarState({ defaultOpen, open: openProp, onOpenChange })
+    const { open, setOpen } = useSidebarState({
+      defaultOpen,
+      open: openProp,
+      onOpenChange,
+    })
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
+      return isMobile
+        ? setOpenMobile((open) => !open)
+        : setOpen((open) => !open)
     }, [isMobile, setOpen, setOpenMobile])
 
     useKeyboardShortcut(toggleSidebar)
@@ -96,11 +116,13 @@ export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderP
       <SidebarContextValue.Provider value={contextValue}>
         <TooltipProvider delayDuration={0}>
           <div
-            style={{
-              '--sidebar-width': SIDEBAR_WIDTH,
-              '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
-              ...style,
-            } as React.CSSProperties}
+            style={
+              {
+                '--sidebar-width': SIDEBAR_WIDTH,
+                '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
+                ...style,
+              } as React.CSSProperties
+            }
             className={cn(
               'group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar',
               className

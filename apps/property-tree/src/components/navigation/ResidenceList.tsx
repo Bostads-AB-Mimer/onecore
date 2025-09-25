@@ -11,7 +11,11 @@ interface ResidenceListProps {
   companyId?: string
 }
 
-export function ResidenceList({ building, propertyId, companyId }: ResidenceListProps) {
+export function ResidenceList({
+  building,
+  propertyId,
+  companyId,
+}: ResidenceListProps) {
   const {
     data: residences,
     isLoading,

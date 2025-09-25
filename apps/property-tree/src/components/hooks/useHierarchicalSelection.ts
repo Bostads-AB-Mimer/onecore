@@ -18,7 +18,8 @@ export function useHierarchicalSelection() {
   const { data: selectedResidence } = useQuery({
     queryKey: ['residence', params.residenceId],
     queryFn: () => residenceService.getById(params.residenceId!),
-    enabled: !!params.residenceId && location.pathname.startsWith('/residences/'),
+    enabled:
+      !!params.residenceId && location.pathname.startsWith('/residences/'),
   })
 
   const getSelectionState = (): SelectionState => {
@@ -31,8 +32,10 @@ export function useHierarchicalSelection() {
       return {
         selectedResidenceId: params.residenceId,
         selectedBuildingId: null,
-        selectedBuildingCode: state?.buildingCode || selectedResidence?.building?.code || null,
-        selectedPropertyId: state?.propertyId || selectedResidence?.property?.code || null,
+        selectedBuildingCode:
+          state?.buildingCode || selectedResidence?.building?.code || null,
+        selectedPropertyId:
+          state?.propertyId || selectedResidence?.property?.code || null,
         selectedCompanyId: state?.companyId || null,
       }
     }
@@ -87,12 +90,18 @@ export function useHierarchicalSelection() {
     // Property is in hierarchy if it's directly selected OR if a child (building/residence) is selected
     return (
       selectionState.selectedPropertyId === propertyId ||
-      (selectionState.selectedBuildingId !== null && selectionState.selectedPropertyId === propertyId) ||
-      (selectionState.selectedResidenceId !== null && selectionState.selectedPropertyId === propertyId)
+      (selectionState.selectedBuildingId !== null &&
+        selectionState.selectedPropertyId === propertyId) ||
+      (selectionState.selectedResidenceId !== null &&
+        selectionState.selectedPropertyId === propertyId)
     )
   }
 
-  const isBuildingInHierarchy = (buildingCode: string, propertyId: string, buildingId?: string): boolean => {
+  const isBuildingInHierarchy = (
+    buildingCode: string,
+    propertyId: string,
+    buildingId?: string
+  ): boolean => {
     // Building is in hierarchy if:
     // 1. It's directly selected (by ID or code)
     // 2. A residence in this building is selected AND the property matches
@@ -100,8 +109,8 @@ export function useHierarchicalSelection() {
       (buildingId && selectionState.selectedBuildingId === buildingId) ||
       selectionState.selectedBuildingCode === buildingCode ||
       (selectionState.selectedResidenceId !== null &&
-       selectionState.selectedBuildingCode === buildingCode &&
-       selectionState.selectedPropertyId === propertyId)
+        selectionState.selectedBuildingCode === buildingCode &&
+        selectionState.selectedPropertyId === propertyId)
     )
   }
 
@@ -113,9 +122,12 @@ export function useHierarchicalSelection() {
     // Company is in hierarchy if it's directly selected OR if any child is selected
     return (
       selectionState.selectedCompanyId === companyId ||
-      (selectionState.selectedPropertyId !== null && selectionState.selectedCompanyId === companyId) ||
-      (selectionState.selectedBuildingId !== null && selectionState.selectedCompanyId === companyId) ||
-      (selectionState.selectedResidenceId !== null && selectionState.selectedCompanyId === companyId)
+      (selectionState.selectedPropertyId !== null &&
+        selectionState.selectedCompanyId === companyId) ||
+      (selectionState.selectedBuildingId !== null &&
+        selectionState.selectedCompanyId === companyId) ||
+      (selectionState.selectedResidenceId !== null &&
+        selectionState.selectedCompanyId === companyId)
     )
   }
 

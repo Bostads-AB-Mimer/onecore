@@ -16,7 +16,8 @@ export function useScrollToSelected<T extends HTMLElement = HTMLElement>({
   const elementRef = useRef<T>(null)
 
   useEffect(() => {
-    const shouldScroll = isSelected &&
+    const shouldScroll =
+      isSelected &&
       elementRef.current &&
       itemType &&
       ['property', 'building', 'residence'].includes(itemType)

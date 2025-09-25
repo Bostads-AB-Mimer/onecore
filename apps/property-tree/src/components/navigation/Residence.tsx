@@ -27,7 +27,7 @@ export function ResidenceNavigation({
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
     isSelected: isSelected,
-    itemType: 'residence'
+    itemType: 'residence',
   })
 
   return (

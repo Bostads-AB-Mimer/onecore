@@ -1,20 +1,20 @@
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { X } from "lucide-react";
-import { SearchFilter, SearchResultType } from "@/types/search";
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { X } from 'lucide-react'
+import { SearchFilter, SearchResultType } from '@/types/search'
 
 interface SearchFiltersProps {
-  filters: SearchFilter[];
-  onToggleFilter: (type: SearchResultType) => void;
-  onClearFilters: () => void;
-  hasActiveFilters: boolean;
+  filters: SearchFilter[]
+  onToggleFilter: (type: SearchResultType) => void
+  onClearFilters: () => void
+  hasActiveFilters: boolean
 }
 
-export function SearchFilters({ 
-  filters, 
-  onToggleFilter, 
-  onClearFilters, 
-  hasActiveFilters 
+export function SearchFilters({
+  filters,
+  onToggleFilter,
+  onClearFilters,
+  hasActiveFilters,
 }: SearchFiltersProps) {
   return (
     <div className="space-y-3">
@@ -32,12 +32,12 @@ export function SearchFilters({
           </Button>
         )}
       </div>
-      
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {filters.map((filter) => (
           <Button
             key={filter.type}
-            variant={filter.active ? "default" : "outline"}
+            variant={filter.active ? 'default' : 'outline'}
             size="sm"
             onClick={() => onToggleFilter(filter.type)}
             className="justify-start h-8 text-xs"
@@ -52,10 +52,10 @@ export function SearchFilters({
           </Button>
         ))}
       </div>
-      
+
       <p className="text-xs text-muted-foreground">
         Välj kategorier för att begränsa sökningen. Utan filter söks alla typer.
       </p>
     </div>
-  );
+  )
 }

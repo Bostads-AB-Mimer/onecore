@@ -20,10 +20,14 @@ export function useIsMobile() {
 }
 
 export function useIsSmallMobile() {
-  const [isSmallMobile, setIsSmallMobile] = React.useState<boolean | undefined>(undefined)
+  const [isSmallMobile, setIsSmallMobile] = React.useState<boolean | undefined>(
+    undefined
+  )
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${SMALL_MOBILE_BREAKPOINT - 1}px)`)
+    const mql = window.matchMedia(
+      `(max-width: ${SMALL_MOBILE_BREAKPOINT - 1}px)`
+    )
     const onChange = () => {
       setIsSmallMobile(window.innerWidth < SMALL_MOBILE_BREAKPOINT)
     }

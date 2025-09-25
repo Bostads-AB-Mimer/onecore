@@ -13,14 +13,23 @@ interface BuildingNavigationProps {
   companyId?: string
 }
 
-export function BuildingNavigation({ building, property, companyId }: BuildingNavigationProps) {
+export function BuildingNavigation({
+  building,
+  property,
+  companyId,
+}: BuildingNavigationProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
 
-  const isInHierarchy = isBuildingInHierarchy(building.code, property.id, building.id)
-  const isDirectlySelected = selectionState.selectedBuildingId === building.id &&
-                            location.pathname.startsWith('/buildings/')
+  const isInHierarchy = isBuildingInHierarchy(
+    building.code,
+    property.id,
+    building.id
+  )
+  const isDirectlySelected =
+    selectionState.selectedBuildingId === building.id &&
+    location.pathname.startsWith('/buildings/')
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
@@ -34,7 +43,7 @@ export function BuildingNavigation({ building, property, companyId }: BuildingNa
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
     isSelected: isDirectlySelected,
-    itemType: 'building'
+    itemType: 'building',
   })
 
   return (
@@ -61,7 +70,11 @@ export function BuildingNavigation({ building, property, companyId }: BuildingNa
       </div>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <ResidenceList building={building} propertyId={property.id} companyId={companyId} />
+          <ResidenceList
+            building={building}
+            propertyId={property.id}
+            companyId={companyId}
+          />
         </div>
       )}
     </SidebarMenuItem>

@@ -17,8 +17,9 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
 
   const isInHierarchy = isCompanyInHierarchy(company.id)
-  const isDirectlySelected = selectionState.selectedCompanyId === company.id &&
-                            location.pathname.startsWith('/companies/')
+  const isDirectlySelected =
+    selectionState.selectedCompanyId === company.id &&
+    location.pathname.startsWith('/companies/')
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
@@ -32,7 +33,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
     isSelected: isDirectlySelected,
-    itemType: 'company'
+    itemType: 'company',
   })
 
   return (
