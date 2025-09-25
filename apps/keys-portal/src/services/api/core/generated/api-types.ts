@@ -2922,7 +2922,7 @@ export interface paths {
   "/keys": {
     /**
      * List keys
-     * @description Returns keys ordered by created_at (desc).
+     * @description Returns keys ordered by createAt (desc).
      */
     get: {
       responses: {
@@ -3277,7 +3277,7 @@ export interface paths {
   "/logs": {
     /**
      * List logs
-     * @description Returns logs ordered by event_time (desc).
+     * @description Returns logs ordered by eventTime (desc).
      */
     get: {
       responses: {
