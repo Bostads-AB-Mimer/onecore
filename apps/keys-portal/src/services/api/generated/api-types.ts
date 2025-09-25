@@ -76,40 +76,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description JSON string array of key IDs.
-             * @example [1, 2, 3]
-             */
-            keys?: string;
-            /**
-             * @description Contact information (email, phone, etc.).
-             * @example john.doe@email.com
-             */
-            contact?: string;
-            /**
-             * @description Lease identifier or reference.
-             * @example LEASE-2025-001
-             */
-            lease?: string;
-            /**
-             * Format: date-time
-             * @description When keys were picked up.
-             * @example 2025-09-19T14:30:00.000Z
-             */
-            pickedUpAt?: string;
-            /**
-             * Format: date-time
-             * @description When keys become available for next tenant.
-             * @example 2025-12-01T00:00:00.000Z
-             */
-            availableToNextTenantFrom?: string;
-            /**
-             * @description Who created this record.
-             * @example admin-user-123
-             */
-            createdBy?: string;
-          };
+          "application/json": components["schemas"]["CreateKeyLoanRequest"];
         };
       };
       responses: {
@@ -264,44 +231,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /**
-             * @description JSON string array of key IDs.
-             * @example [1, 2]
-             */
-            keys?: string;
-            /**
-             * @description Contact information.
-             * @example updated.email@email.com
-             */
-            contact?: string;
-            /**
-             * @description Lease identifier.
-             * @example LEASE-2025-002
-             */
-            lease?: string;
-            /**
-             * Format: date-time
-             * @description When keys were returned.
-             * @example 2025-09-19T16:00:00.000Z
-             */
-            returnedAt?: string;
-            /**
-             * Format: date-time
-             * @description When keys become available for next tenant.
-             */
-            availableToNextTenantFrom?: string;
-            /**
-             * Format: date-time
-             * @description When keys were picked up.
-             */
-            pickedUpAt?: string;
-            /**
-             * @description Who updated this record.
-             * @example admin-user-456
-             */
-            updatedBy?: string;
-          };
+          "application/json": components["schemas"]["UpdateKeyLoanRequest"];
         };
       };
       responses: {
@@ -363,19 +293,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @description Unique system code */
-            systemCode: string;
-            /** @description Name of the key system */
-            name: string;
-            /**
-             * @description Type of key system
-             * @enum {string}
-             */
-            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            /** @description Description of the key system */
-            description?: string;
-          };
+          "application/json": components["schemas"]["CreateKeySystemRequest"];
         };
       };
       responses: {
@@ -474,19 +392,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /** @description Unique system code */
-            systemCode?: string;
-            /** @description Name of the key system */
-            name?: string;
-            /**
-             * @description Type of key system
-             * @enum {string}
-             */
-            type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            /** @description Description of the key system */
-            description?: string;
-          };
+          "application/json": components["schemas"]["UpdateKeySystemRequest"];
         };
       };
       responses: {
