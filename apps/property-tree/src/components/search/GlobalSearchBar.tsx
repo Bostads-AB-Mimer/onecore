@@ -1,3 +1,14 @@
+/**
+ * Global search bar component for searching across the application.
+ * Includes input field, filter and favorite buttons, and a dropdown
+ * for displaying search results, suggestions, filters, and favorites.
+ *
+ * TODO:
+ * Integrate with actual search logic and data, currently it only triggers the old
+ * Command Palette search modal on click.
+ *
+ */
+
 import { useState, useRef, useEffect } from 'react'
 import { Search, X, Filter, Star, Clock, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
@@ -120,7 +131,10 @@ export function GlobalSearchBar({
   const closeSearch = () => console.log('closeSearch')
   const toggleFilter = (type: string) => console.log('toggleFilter:', type)
   const clearFilters = () => console.log('clearFilters')
-  const saveCurrentSearch = () => console.log('saveCurrentSearch')
+  const saveCurrentSearch = (name: string) => {
+    console.log('saveCurrentSearch:', name)
+    return null
+  }
   const useSavedSearch = (fav: any) => console.log('useSavedSearch:', fav)
   const deleteSavedSearch = (fav: any) => console.log('deleteSavedSearch:', fav)
   // Mock data for demonstration
