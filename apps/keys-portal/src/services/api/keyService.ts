@@ -1,5 +1,5 @@
-import { GET, POST, PUT, DELETE, PATCH } from './baseApi'
-import type { components } from './generated/api-types'
+import { GET, POST, PUT, DELETE, PATCH } from './core/base-api'
+import type { components } from './core/generated/api-types'
 
 type KeyLoan = components['schemas']['KeyLoan']
 type Key = components['schemas']['Key']
