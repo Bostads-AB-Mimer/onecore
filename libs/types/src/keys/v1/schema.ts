@@ -33,7 +33,7 @@ export const KeySystemSchema = z.object({
   id: z.string().uuid(),
   systemCode: z.string(),
   name: z.string(),
-  manufacturer: z.string().optional(),
+  manufacturer: z.string(),
   type: KeySystemTypeSchema,
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
@@ -78,7 +78,7 @@ export const UpdateKeyRequestSchema = z.object({
 export const CreateKeySystemRequestSchema = z.object({
   systemCode: z.string(),
   name: z.string(),
-  manufacturer: z.string().optional(),
+  manufacturer: z.string(),
   type: KeySystemTypeSchema,
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
