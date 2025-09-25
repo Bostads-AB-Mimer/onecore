@@ -397,7 +397,7 @@ export const routes = (router: KoaRouter) => {
    * /keys:
    *   get:
    *     summary: List keys
-   *     description: Returns keys ordered by created_at (desc).
+   *     description: Returns keys ordered by createAt (desc).
    *     tags: [Keys Service]
    *     responses:
    *       200:
@@ -1047,7 +1047,7 @@ export const routes = (router: KoaRouter) => {
    * /logs:
    *   get:
    *     summary: List logs
-   *     description: Returns logs ordered by event_time (desc).
+   *     description: Returns logs ordered by eventTime (desc).
    *     tags: [Keys Service]
    *     responses:
    *       200:
