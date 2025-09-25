@@ -47,7 +47,6 @@ export const createLeaseForExternalParkingSpace = async (
   ]
 
   try {
-    // const parkingSpace = await getParkingSpace(parkingSpaceId)
     const listingResponse =
       await getActiveListingByRentalObjectCode(parkingSpaceId)
 
