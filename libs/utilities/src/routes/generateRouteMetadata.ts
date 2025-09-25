@@ -42,3 +42,10 @@ export const generateRouteMetadata = (
     },
   }
 }
+
+export function makeSuccessResponseBody<T>(
+  data: T,
+  metadata: ReturnType<typeof generateRouteMetadata>
+): { content: T } & ReturnType<typeof generateRouteMetadata> {
+  return { content: data, ...metadata }
+}

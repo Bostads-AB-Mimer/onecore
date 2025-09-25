@@ -22,12 +22,14 @@
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^5.2.1",
     "@mui/icons-material": "^5.15.6",
     "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "^5.15.14",
     "@mui/styled-engine-sc": "^6.0.0-alpha.18",
     "@mui/x-data-grid": "^6.19.6",
     "@mui/x-date-pickers": "^7.23.6",
+    "@onecore/types": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-query-devtools": "^5.31.0",
     "axios": "^1.9.0",
@@ -42,8 +44,7 @@
     "react-toastify": "^10.0.5",
     "react-transition-group": "^4.4.5",
     "styled-components": "^6.1.8",
-    "zod": "^3.25.67",
-    "@onecore/types": "workspace:*"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.0",

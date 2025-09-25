@@ -32,6 +32,9 @@ export interface Config {
   propertyBaseService: {
     url: string
   }
+  economyService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -98,6 +101,9 @@ const config = configPackage({
     propertyBaseService: {
       url: 'http://localhost:5050',
     },
+    economyService: {
+      url: 'http://localhost:5080',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -134,6 +140,10 @@ const config = configPackage({
         systemName: 'work-order',
         minimumMinutesBetweenRequests: 1,
       },
+      economy: {
+        systemName: 'economy',
+        minimumMinutesBetweenRequests: 1,
+      },
     },
   },
 })
@@ -145,6 +155,7 @@ export default {
   documentsService: config.get('documentsService'),
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
+  economyService: config.get('economyService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),

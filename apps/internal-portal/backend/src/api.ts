@@ -11,7 +11,6 @@ commentsRoutes(router)
 contactsRoutes(router)
 offersRoutes(router)
 listingsRoutes(router)
-
 propertyInfoRoutes(router)
 
 export default router

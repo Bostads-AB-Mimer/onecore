@@ -1,3 +1,4 @@
+import { AxiosError, HttpStatusCode } from 'axios'
 import {
   Contact,
   CreateNoteOfInterestErrorCodes,
@@ -15,18 +16,16 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
+  Invoice,
 } from '@onecore/types'
-
-import { AxiosError, HttpStatusCode } from 'axios'
+import { logger } from '@onecore/utilities'
 import { z } from 'zod'
+
 import Config from '../../../common/config'
 import { getFromCore } from '../../common/adapters/core-adapter'
+import { AdapterResult } from '@/services/types'
 
 const coreBaseUrl = Config.core.url
-
-type AdapterResult<T, E> =
-  | { ok: false; err: E; statusCode: number }
-  | { ok: true; data: T }
 
 const getListingsWithApplicants = async (
   querystring: string
@@ -550,6 +549,26 @@ const removeComment = async (
   }
 }
 
+async function getInvoicesByContactCode(
+  contactCode: string
+): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+  const response = await getFromCore<{ content: { data: Invoice[] } }>({
+    method: 'get',
+    url: `${coreBaseUrl}/invoices/by-contact-code/${contactCode}`,
+  })
+
+  if (response.status === 404) {
+    return { ok: false, err: 'not-found', statusCode: 404 }
+  }
+
+  if (response.status !== 200) {
+    logger.error(response.data, 'core-adapter.getInvoicesByContactCode')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+
+  return { ok: true, data: response.data.content.data }
+}
+
 export {
   addComment,
   removeComment,
@@ -572,4 +591,5 @@ export {
   getActiveOfferByListingId,
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
+  getInvoicesByContactCode,
 }
