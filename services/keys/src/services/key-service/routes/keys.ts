@@ -1,23 +1,35 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { schemas } from '@onecore/types'
-import { z } from 'zod'
+import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'keys'
 
-// Type definitions based on schemas (like applicants does)
-type CreateKeyRequest = z.infer<typeof schemas.CreateKeyRequestSchema>
-type UpdateKeyRequest = z.infer<typeof schemas.UpdateKeyRequestSchema>
+const { KeySchema, CreateKeyRequestSchema, UpdateKeyRequestSchema, } = keys.v1
+  type CreateKeyRequest = keys.v1.CreateKeyRequest
+  type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 
 /**
  * @swagger
  * tags:
  *   - name: Keys
  *     description: CRUD operations for keys
+ * components:
+ *   schemas:
+ *     CreateKeyRequest:
+ *       $ref: '#/components/schemas/CreateKeyRequest'
+ *     UpdateKeyRequest:
+ *       $ref: '#/components/schemas/UpdateKeyRequest'
+ *     Key:
+ *       $ref: '#/components/schemas/Key'
  */
 export const routes = (router: KoaRouter) => {
+  // Register schemas from @onecore/types
+  registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
+  registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
+  registerSchema('Key', KeySchema)
   /**
    * @swagger
    * /keys:
@@ -32,6 +44,11 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Key'
    *       500:
    *         description: An error occurred while listing keys.
    *         content:
@@ -77,6 +94,9 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
    *       404:
    *         description: Key not found.
    *         content:
@@ -128,34 +148,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               key_name:
-   *                 type: string
-   *                 description: The name of the key.
-   *                 example: "Front door A"
-   *               key_type:
-   *                 type: string
-   *                 enum: [LGH, PB, FS, HN]
-   *                 description: The type of key.
-   *                 example: "LGH"
-   *               key_sequence_number:
-   *                 type: number
-   *                 description: The sequence number of the key.
-   *                 example: 101
-   *               flex_number:
-   *                 type: number
-   *                 description: The flex number of the key.
-   *                 example: 1
-   *               rental_object:
-   *                 type: string
-   *                 description: The rental object associated with the key.
-   *                 example: "APT-1001"
-   *               key_system_id:
-   *                 type: string
-   *                 description: The key system ID.
-   *                 example: "123e4567-e89b-12d3-a456-426614174000"
-   *             required: [key_name, key_type]
+   *             $ref: '#/components/schemas/CreateKeyRequest'
    *     responses:
    *       201:
    *         description: Key created successfully.
@@ -163,6 +156,9 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
    *       400:
    *         description: Invalid request body.
    *         content:
@@ -184,7 +180,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/keys', parseRequestBody(schemas.CreateKeyRequestSchema), async (ctx) => {
+  router.post('/keys', parseRequestBody(CreateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: CreateKeyRequest = ctx.request.body
@@ -218,33 +214,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               key_name:
-   *                 type: string
-   *                 description: The name of the key.
-   *                 example: "Front door A (updated)"
-   *               key_type:
-   *                 type: string
-   *                 enum: [LGH, PB, FS, HN]
-   *                 description: The type of key.
-   *                 example: "LGH"
-   *               key_sequence_number:
-   *                 type: number
-   *                 description: The sequence number of the key.
-   *                 example: 102
-   *               flex_number:
-   *                 type: number
-   *                 description: The flex number of the key.
-   *                 example: 2
-   *               rental_object:
-   *                 type: string
-   *                 description: The rental object associated with the key.
-   *                 example: "APT-1002"
-   *               key_system_id:
-   *                 type: string
-   *                 description: The key system ID.
-   *                 example: "123e4567-e89b-12d3-a456-426614174000"
+   *             $ref: '#/components/schemas/UpdateKeyRequest'
    *     responses:
    *       200:
    *         description: Key updated successfully.
@@ -252,6 +222,9 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Key'
    *       404:
    *         description: Key not found.
    *         content:
@@ -283,7 +256,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/keys/:id', parseRequestBody(schemas.UpdateKeyRequestSchema), async (ctx) => {
+  router.patch('/keys/:id', parseRequestBody(UpdateKeyRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: UpdateKeyRequest = ctx.request.body

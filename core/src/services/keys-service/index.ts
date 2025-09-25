@@ -1,6 +1,23 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeyLoansApi, KeysApi, KeySystemsApi, LogsApi } from '../../adapters/keys-adapter'
+import { keys } from '@onecore/types'
+import { registerSchema } from '../../utils/openapi'
+
+const {
+  KeySchema,
+  KeyLoanSchema,
+  KeySystemSchema,
+  LogSchema,
+  CreateKeyRequestSchema,
+  UpdateKeyRequestSchema,
+  CreateKeyLoanRequestSchema,
+  UpdateKeyLoanRequestSchema,
+  CreateKeySystemRequestSchema,
+  UpdateKeySystemRequestSchema,
+  CreateLogRequestSchema,
+  UpdateLogRequestSchema
+} = keys.v1
 
 /**
  * @swagger
@@ -16,131 +33,29 @@ import { KeyLoansApi, KeysApi, KeySystemsApi, LogsApi } from '../../adapters/key
  *       bearerFormat: JWT
  *   schemas:
  *     Key:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         key_name:
- *           type: string
- *         key_sequence_number:
- *           type: integer
- *         flex_number:
- *           type: integer
- *         rental_object:
- *           type: string
- *         key_type:
- *           type: string
- *           enum: [LGH, PB, FS, HN]
- *         key_system_id:
- *           type: string
- *           format: uuid
- *           nullable: true
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
+ *       $ref: '#/components/schemas/Key'
  *     KeyLoan:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         keys:
- *           type: string
- *           description: JSON string array of key IDs
- *         contact:
- *           type: string
- *         lease:
- *           type: string
- *         returned_at:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         available_to_next_tenant_from:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         picked_up_at:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
- *         created_by:
- *           type: string
- *           nullable: true
- *         updated_by:
- *           type: string
- *           nullable: true
+ *       $ref: '#/components/schemas/KeyLoan'
  *     KeySystem:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         system_code:
- *           type: string
- *         name:
- *           type: string
- *         manufacturer:
- *           type: string
- *         type:
- *           type: string
- *           enum: [MECHANICAL, ELECTRONIC, HYBRID]
- *         property_ids:
- *           type: string
- *         installation_date:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         is_active:
- *           type: boolean
- *         description:
- *           type: string
- *           nullable: true
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
- *         created_by:
- *           type: string
- *           nullable: true
- *         updated_by:
- *           type: string
- *           nullable: true
+ *       $ref: '#/components/schemas/KeySystem'
  *     Log:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         user_name:
- *           type: string
- *           example: "seb"
- *         event_type:
- *           type: string
- *           enum: [creation, update, delete]
- *           example: "creation"
- *         object_type:
- *           type: string
- *           enum: [key, key_system, key_loan]
- *           example: "key"
- *         event_time:
- *           type: string
- *           format: date-time
- *         description:
- *           type: string
- *           nullable: true
- *           example: "Created key APT-1001"
+ *       $ref: '#/components/schemas/Log'
+ *     CreateKeyRequest:
+ *       $ref: '#/components/schemas/CreateKeyRequest'
+ *     UpdateKeyRequest:
+ *       $ref: '#/components/schemas/UpdateKeyRequest'
+ *     CreateKeyLoanRequest:
+ *       $ref: '#/components/schemas/CreateKeyLoanRequest'
+ *     UpdateKeyLoanRequest:
+ *       $ref: '#/components/schemas/UpdateKeyLoanRequest'
+ *     CreateKeySystemRequest:
+ *       $ref: '#/components/schemas/CreateKeySystemRequest'
+ *     UpdateKeySystemRequest:
+ *       $ref: '#/components/schemas/UpdateKeySystemRequest'
+ *     CreateLogRequest:
+ *       $ref: '#/components/schemas/CreateLogRequest'
+ *     UpdateLogRequest:
+ *       $ref: '#/components/schemas/UpdateLogRequest'
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -157,6 +72,19 @@ import { KeyLoansApi, KeysApi, KeySystemsApi, LogsApi } from '../../adapters/key
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  // Register schemas from @onecore/types
+  registerSchema('Key', KeySchema)
+  registerSchema('KeyLoan', KeyLoanSchema)
+  registerSchema('KeySystem', KeySystemSchema)
+  registerSchema('Log', LogSchema)
+  registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
+  registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
+  registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
+  registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
+  registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
+  registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
+  registerSchema('CreateLogRequest', CreateLogRequestSchema)
+  registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
   
   // ==================== KEY LOANS ROUTES ====================
   
@@ -278,34 +206,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               keys:
-   *                 type: string
-   *                 description: JSON string array of key IDs.
-   *                 example: "[1, 2, 3]"
-   *               contact:
-   *                 type: string
-   *                 description: Contact information (email, phone, etc.).
-   *                 example: "john.doe@email.com"
-   *               lease:
-   *                 type: string
-   *                 description: Lease identifier or reference.
-   *                 example: "LEASE-2025-001"
-   *               picked_up_at:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were picked up.
-   *                 example: "2025-09-19T14:30:00.000Z"
-   *               available_to_next_tenant_from:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys become available for next tenant.
-   *                 example: "2025-12-01T00:00:00.000Z"
-   *               created_by:
-   *                 type: string
-   *                 description: Who created this record.
-   *                 example: "admin-user-123"
+   *             $ref: '#/components/schemas/CreateKeyLoanRequest'
    *     responses:
    *       201:
    *         description: Key loan created successfully.
@@ -374,37 +275,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               keys:
-   *                 type: string
-   *                 description: JSON string array of key IDs.
-   *                 example: "[1, 2]"
-   *               contact:
-   *                 type: string
-   *                 description: Contact information.
-   *                 example: "updated.email@email.com"
-   *               lease:
-   *                 type: string
-   *                 description: Lease identifier.
-   *                 example: "LEASE-2025-002"
-   *               returned_at:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were returned.
-   *                 example: "2025-09-19T16:00:00.000Z"
-   *               available_to_next_tenant_from:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys become available for next tenant.
-   *               picked_up_at:
-   *                 type: string
-   *                 format: date-time
-   *                 description: When keys were picked up.
-   *               updated_by:
-   *                 type: string
-   *                 description: Who updated this record.
-   *                 example: "admin-user-456"
+   *             $ref: '#/components/schemas/UpdateKeyLoanRequest'
    *     responses:
    *       200:
    *         description: Key loan updated successfully.
@@ -636,30 +507,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required: [key_name, key_type]
-   *             properties:
-   *               key_name:
-   *                 type: string
-   *                 example: "Front door A"
-   *               key_sequence_number:
-   *                 type: integer
-   *                 example: 101
-   *               flex_number:
-   *                 type: integer
-   *                 example: 1
-   *               rental_object:
-   *                 type: string
-   *                 example: "APT-1001"
-   *               key_type:
-   *                 type: string
-   *                 enum: [LGH, PB, FS, HN]
-   *                 example: "LGH"
-   *               key_system_id:
-   *                 type: string
-   *                 format: uuid
-   *                 nullable: true
-   *                 example: null
+   *             $ref: '#/components/schemas/CreateKeyRequest'
    *     responses:
    *       201:
    *         description: Created
