@@ -63,7 +63,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
+      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
@@ -263,7 +263,7 @@ export const routes = (router: KoaRouter) => {
 
       const [row] = await db(TABLE)
         .where({ id: ctx.params.id })
-        .update({ ...payload, updated_at: db.fn.now() })
+        .update({ ...payload, updatedAt: db.fn.now() })
         .returning('*')
 
       if (!row) {
