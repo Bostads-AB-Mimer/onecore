@@ -4,7 +4,7 @@ import type { paths } from './core/generated/api-types'
 export interface RentalObjectSearchResult {
   rentalId: string
   name: string
-  type: 'lägenhet' | 'bilplats' | 'lokal'
+  type: string            
   address: string
 }
 
@@ -32,12 +32,9 @@ interface RentalPropertyResponse {
 }
 
 export class RentalObjectSearchService {
-
   isValidRentalId(rentalId: string): boolean {
-    // Rental ID format: typically numbers and dashes, e.g., "811-039-05-0347"
-    // Adjust this pattern based on your actual rental ID format
-    const rentalIdPattern = /^[\d-]+$/;
-    return rentalIdPattern.test(rentalId) && rentalId.length >= 5; // Minimum length check
+    const rentalIdPattern = /^[\d-]+$/
+    return rentalIdPattern.test(rentalId) && rentalId.length >= 5
   }
 
   async searchByRentalId(rentalId: string): Promise<RentalObjectSearchResult[]> {
@@ -46,19 +43,22 @@ export class RentalObjectSearchService {
     }
 
     try {
-      // Search using the single core endpoint
       const response = await GET('/rental-properties/by-rental-object-code/{rentalObjectCode}', {
         params: { path: { rentalObjectCode: rentalId } }
       })
 
       if (response.data?.content) {
-        const rentalProperty = response.data.content
+        const rentalProperty: RentalPropertyResponse = response.data.content
 
-        // Map the response to our search result format
+        const typeFromApi =
+          rentalProperty.type ??
+          rentalProperty.property?.type ??
+          'unknown' 
+
         const result: RentalObjectSearchResult = {
           rentalId: rentalProperty.id || rentalId,
           name: this.getPropertyName(rentalProperty),
-          type: this.mapPropertyType(rentalProperty.type),
+          type: typeFromApi,
           address: this.getPropertyAddress(rentalProperty)
         }
 
@@ -72,12 +72,12 @@ export class RentalObjectSearchService {
   }
 
   private getPropertyName(rentalProperty: RentalPropertyResponse): string {
-    // Use the address as the name, or fallback to type
     const address = this.getPropertyAddress(rentalProperty)
     if (address && address !== 'Okänd adress') {
       return address
     }
-    return this.mapPropertyType(rentalProperty.type) || 'Okänd egenskap'
+    // Fallback to the raw API type if no address
+    return rentalProperty.type || rentalProperty.property?.type || 'Okänd typ'
   }
 
   private getPropertyAddress(rentalProperty: RentalPropertyResponse): string {
@@ -85,22 +85,6 @@ export class RentalObjectSearchService {
       return rentalProperty.property.address
     }
     return 'Okänd adress'
-  }
-
-  private mapPropertyType(type: string): 'lägenhet' | 'bilplats' | 'lokal' {
-    // Map the property type to our simplified types
-    const typeLower = type?.toLowerCase() || ''
-
-    if (typeLower.includes('apartment') || typeLower.includes('lägenhet')) {
-      return 'lägenhet'
-    } else if (typeLower.includes('parking') || typeLower.includes('bilplats')) {
-      return 'bilplats'
-    } else if (typeLower.includes('commercial') || typeLower.includes('lokal')) {
-      return 'lokal'
-    }
-
-    // Default to lägenhet if type is unknown
-    return 'lägenhet'
   }
 }
 
