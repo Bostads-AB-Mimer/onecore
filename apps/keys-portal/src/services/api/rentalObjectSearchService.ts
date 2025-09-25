@@ -1,34 +1,14 @@
 import { GET } from './core/base-api'
-import type { paths } from './core/generated/api-types'
+import type { paths, components } from './core/generated/api-types'
+
+type RentalPropertyResponse = components['schemas']['RentalPropertyResponse']
+
 
 export interface RentalObjectSearchResult {
   rentalId: string
   name: string
   type: string            
   address: string
-}
-
-interface RentalPropertyResponse {
-  id?: string
-  type?: string
-  property?: {
-    rentalTypeCode?: string
-    rentalType?: string
-    address?: string
-    code?: string
-    number?: string
-    type?: string
-    roomTypeCode?: string
-    entrance?: string
-    floor?: string
-    hasElevator?: boolean
-    washSpace?: string
-    area?: number
-    estateCode?: string
-    estate?: string
-    buildingCode?: string
-    building?: string
-  }
 }
 
 export class RentalObjectSearchService {
@@ -47,16 +27,13 @@ export class RentalObjectSearchService {
         params: { path: { rentalObjectCode: rentalId } }
       })
 
-      if (response.data?.content) {
-        const rentalProperty: RentalPropertyResponse = response.data.content
+      if (response.data) {
+        const rentalProperty: RentalPropertyResponse = response.data
 
-        const typeFromApi =
-          rentalProperty.type ??
-          rentalProperty.property?.type ??
-          'unknown' 
+        const typeFromApi = rentalProperty.type ?? 'unknown' 
 
         const result: RentalObjectSearchResult = {
-          rentalId: rentalProperty.id || rentalId,
+          rentalId: rentalProperty.code || rentalId,
           name: this.getPropertyName(rentalProperty),
           type: typeFromApi,
           address: this.getPropertyAddress(rentalProperty)
@@ -77,12 +54,12 @@ export class RentalObjectSearchService {
       return address
     }
     // Fallback to the raw API type if no address
-    return rentalProperty.type || rentalProperty.property?.type || 'Okänd typ'
+    return rentalProperty.type || 'Okänd typ'
   }
 
   private getPropertyAddress(rentalProperty: RentalPropertyResponse): string {
-    if (rentalProperty.property?.address) {
-      return rentalProperty.property.address
+    if (rentalProperty.address) {
+      return rentalProperty.address
     }
     return 'Okänd adress'
   }
