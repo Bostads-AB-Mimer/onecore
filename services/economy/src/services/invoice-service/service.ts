@@ -12,6 +12,7 @@ import {
   excludeExportedInvoices,
   closeDb as closeInvoiceDb,
   getInvoicesByChunks,
+  getImportedInvoiceNumbers,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
@@ -44,7 +45,7 @@ const createRoundOffRow = async (
   invoice: Invoice,
   counterPartCustomers: CounterPartCustomers
 ): Promise<InvoiceDataRow> => {
-  const fromDateString = xledgerDateString(invoice.fromdate as Date)
+  const fromDateString = invoice.fromdate as string //xledgerDateString(invoice.fromdate as Date)
   const year = fromDateString.substring(0, 4)
   const roundOffInformation = await getRoundOffInformation(year)
   let totalAccount = '2970'
@@ -66,11 +67,11 @@ const createRoundOffRow = async (
     costCode: roundOffInformation.costCode,
     amount: invoice.roundoff as number,
     totalAmount: invoice.roundoff as number,
-    invoiceDate: xledgerDateString(invoice.invdate as Date),
+    invoiceDate: invoice.invdate as string, //xledgerDateString(invoice.invdate as Date),
     invoiceNumber: (invoice.invoice as string).trimEnd(),
     invoiceRowText: 'Öresutjämning',
     fromDate: fromDateString,
-    toDate: xledgerDateString(invoice.todate as Date),
+    toDate: invoice.todate as string, //xledgerDateString(invoice.todate as Date),
     contractCode: (invoice.reference as string).trimEnd(),
     totalAccount,
     ledgerAccount,
@@ -97,26 +98,63 @@ export const processInvoiceRows = async (
   contacts: string[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
+  const startTime = Date.now()
   const addedContactCodes: Record<string, boolean> = {}
 
-  const invoices = await getXpandInvoices(invoiceDataRows)
+  console.log('---\nGetting xpand invoices', Date.now() - startTime)
+  //const invoices = await getXpandInvoices(invoiceDataRows)
+
+  const rowsByInvoiceNumber: Record<string, InvoiceDataRow[]> = {}
+  invoiceDataRows.forEach((invoiceDataRow) => {
+    if (rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] === undefined) {
+      rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] = []
+    }
+
+    rowsByInvoiceNumber[invoiceDataRow.invoiceNumber].push(invoiceDataRow)
+  })
+
+  const invoices = Object.keys(rowsByInvoiceNumber).map((invoiceNumber) => {
+    const invoiceRow = rowsByInvoiceNumber[invoiceNumber][0]
+
+    return {
+      fromdate: invoiceRow.fromDate,
+      cmctcben: invoiceRow.tenantName,
+      roundoff: invoiceRow.roundoff,
+      invdate: invoiceRow.invoiceDate,
+      todate: invoiceRow.toDate,
+      reference: invoiceRow.contractCode,
+      cmctckod: invoiceRow.contactCode,
+      invoice: invoiceRow.invoiceNumber,
+    }
+  })
+
+  console.log('Created invoices', invoices.length)
+
+  console.log('Getting counterpart invoices', Date.now() - startTime)
   const counterPartCustomers = await getCounterPartCustomers()
 
+  console.log('Creating roundoffs', Date.now() - startTime)
   for (const invoice of invoices) {
     if ((invoice.roundoff as number) !== 0) {
       const roundOffRow = await createRoundOffRow(invoice, counterPartCustomers)
       invoiceDataRows.push(roundOffRow)
     }
   }
+  console.log('Created roundoffs', Date.now() - startTime)
 
   const invoiceTable: Record<string, Invoice> = {}
   invoices.forEach((invoice) => {
     invoiceTable[(invoice.invoice as string).trimEnd()] = invoice
   })
 
+  console.log('Enriching rows', Date.now() - startTime)
   const enrichedInvoiceRows = await enrichInvoiceRows(
     invoiceDataRows,
     invoiceTable
+  )
+  console.log(
+    'Enriched rows, adding account information',
+    Date.now() - startTime
   )
 
   const enrichedInvoiceRowsWithAccounts = await addAccountInformation(
@@ -127,7 +165,12 @@ export const processInvoiceRows = async (
     addedContactCodes[row.contactCode] = true
   })
 
+  console.log('Saving invoice rows', Date.now() - startTime)
+
   await saveInvoiceRows(enrichedInvoiceRowsWithAccounts, batchId)
+
+  console.log('Saved invoice rows', Date.now() - startTime)
+  console.log('---')
 
   return {
     contacts: Object.keys(addedContactCodes),
@@ -567,7 +610,7 @@ export const missingInvoices = async (batchId: string) => {
     .filter((invoice) => invoice.invoiceFromDate.localeCompare('20251001') >= 0)
     .map((invoice) => invoice.invoiceNumber)
   const xpandInvoices: string[] = (
-    await getRentalInvoices(new Date(2025, 9, 1))
+    await getRentalInvoices(new Date(2025, 9, 1), '001')
   ).map((invoice: any): string => (invoice.invoice as string).trimEnd())
 
   const onlyInInvoiceDb = invoiceDbInvoices.filter((dbInvoice) => {
@@ -598,17 +641,46 @@ export const importInvoiceRows = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    const invoiceRows = await getXpandInvoiceRows(fromDate, toDate, companyId)
+    const importedInvoiceNumbers = await getImportedInvoiceNumbers()
+    const rentalInvoiceNumbers = (
+      await getRentalInvoices(fromDate, companyId)
+    ).map((invoice: any) => {
+      try {
+        const invoiceNumber = invoice.invoice.trimEnd()
+        return invoiceNumber
+      } catch (err) {
+        console.log('Error getting invoice number', invoice, err)
+      }
+    })
+
+    const invoicesToImport = rentalInvoiceNumbers.filter(
+      (rentalInvoiceNumber: string) =>
+        !importedInvoiceNumbers.includes(rentalInvoiceNumber)
+    )
+
+    console.log(
+      'All',
+      rentalInvoiceNumbers.length,
+      'Importing',
+      invoicesToImport.length
+    )
+
+    const invoiceRows = await getXpandInvoiceRows(
+      fromDate,
+      toDate,
+      companyId,
+      invoicesToImport
+    )
     const invoiceDataRows = invoiceRows
     //const invoiceDataRows = await excludeExportedInvoices(invoiceRows)
 
-    console.log(
-      'Read',
-      invoiceRows.length,
-      'rows, importing',
-      invoiceDataRows.length,
-      'for company',
-      companyId
+    logger.info(
+      {
+        readRows: invoiceRows.length,
+        rowsToProcess: invoiceDataRows.length,
+        companyId,
+      },
+      'Got invoice rows from xpand db'
     )
 
     let chunkNum = 0
@@ -621,25 +693,30 @@ export const importInvoiceRows = async (
         (chunkNum + 1) * CHUNK_SIZE,
         invoiceDataRows.length
       )
-      const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
+      const startTime = Date.now()
       logger.info(
         {
           chunkStart: startNum,
           chunkEnd: endNum,
           totalRows: invoiceDataRows.length,
+          elapsed: Date.now() - startTime,
         },
         'Processing rows'
       )
+      const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
+      console.log('Sliced rows', Date.now() - startTime)
       const contactCodes = await processInvoiceRows(
         currentInvoiceDataRows,
         batchId
       )
+      console.log('Processed rows', Date.now() - startTime)
       const contacts = await getXpandContacts(contactCodes.contacts)
+      console.log('Got xpand contacts', Date.now() - startTime)
       const result = await saveContacts(contacts, batchId)
-
       /*if (contactCodes.errors && contactCodes.errors.length > 0) {
         errors.push(contactCodes.err  ors)
       }*/
+      console.log('Saved contacts', Date.now() - startTime)
 
       chunkNum++
     }
