@@ -1,17 +1,20 @@
-import { GET, POST, PUT, DELETE, PATCH } from './baseApi'
-import type { components } from './generated/api-types'
+// apps/keys-portal/src/services/api/keyService.ts
+import { GET, POST, PATCH, DELETE } from './core/base-api'
+import type { paths, components } from './core/generated/api-types'
 
-type KeyLoan = components['schemas']['KeyLoan']
 type Key = components['schemas']['Key']
-type CreateKeyRequest = components['schemas']['CreateKeyRequest']
-type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
+type KeyLoan = components['schemas']['KeyLoan']
+
+type CreateKeyBody       = paths['/keys']['post']['requestBody']['content']['application/json']
+type UpdateKeyBody       = paths['/keys/{id}']['patch']['requestBody']['content']['application/json']
+type CreateKeyLoanBody   = paths['/key-loans']['post']['requestBody']['content']['application/json']
+type UpdateKeyLoanBody   = paths['/key-loans/{id}']['patch']['requestBody']['content']['application/json']
 
 export const keyService = {
-  // Key Loans
   async getAllKeyLoans(): Promise<KeyLoan[]> {
     const { data, error } = await GET('/key-loans')
     if (error) throw error
-    return data?.content || []
+    return data?.content ?? []
   },
 
   async getKeyLoan(id: string): Promise<KeyLoan> {
@@ -19,22 +22,35 @@ export const keyService = {
       params: { path: { id } },
     })
     if (error) throw error
-    return data?.content
+    return data?.content as KeyLoan
   },
 
-  async createKeyLoan(payload: Omit<KeyLoan, 'id' | 'created_at' | 'updated_at'>): Promise<KeyLoan> {
-    const { data, error } = await POST('/key-loans', {
+  async createKeyLoan(payload: CreateKeyLoanBody): Promise<KeyLoan> {
+    const { data, error } = await POST('/key-loans', { body: payload })
+    if (error) throw error
+    return data?.content as KeyLoan
+  },
+
+  async updateKeyLoan(id: string, payload: UpdateKeyLoanBody): Promise<KeyLoan> {
+    const { data, error } = await PATCH('/key-loans/{id}', {
+      params: { path: { id } },
       body: payload,
     })
     if (error) throw error
-    return data?.content
+    return data?.content as KeyLoan
   },
 
-  // Keys
+  async deleteKeyLoan(id: string): Promise<void> {
+    const { error } = await DELETE('/key-loans/{id}', {
+      params: { path: { id } },
+    })
+    if (error) throw error
+  },
+
   async getAllKeys(): Promise<Key[]> {
     const { data, error } = await GET('/keys')
     if (error) throw error
-    return data?.content || []
+    return data?.content ?? []
   },
 
   async getKey(id: string): Promise<Key> {
@@ -42,16 +58,16 @@ export const keyService = {
       params: { path: { id } },
     })
     if (error) throw error
-    return data?.content
+    return data?.content as Key
   },
 
-  async createKey(payload: CreateKeyRequest): Promise<Key> {
+  async createKey(payload: CreateKeyBody): Promise<Key> {
     const { data, error } = await POST('/keys', { body: payload })
     if (error) throw error
     return data?.content as Key
   },
 
-  async updateKey(id: string, payload: UpdateKeyRequest): Promise<Key> {
+  async updateKey(id: string, payload: UpdateKeyBody): Promise<Key> {
     const { data, error } = await PATCH('/keys/{id}', {
       params: { path: { id } },
       body: payload,
