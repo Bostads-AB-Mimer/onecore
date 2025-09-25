@@ -155,39 +155,6 @@ const saveMaterialChoice = async (
   return response.data.content
 }
 
-//todo: refactor the subsequent requests to use same data source (soap api)
-//todo: getParkingSpace uses the mimer.nu api
-//todo: getPublishedParkingSpace uses the soap service
-const getParkingSpace = async (
-  parkingSpaceId: string
-): Promise<ParkingSpace | undefined> => {
-  try {
-    const parkingSpaceResponse = await axios(
-      `${propertyManagementServiceUrl}/parkingspaces/${parkingSpaceId}`
-    )
-
-    return parkingSpaceResponse.data.content
-  } catch (error) {
-    logger.error(error, 'Error retrieving parking space')
-    return undefined
-  }
-}
-
-const getPublishedParkingSpace = async (
-  parkingSpaceId: string
-): Promise<Listing | undefined> => {
-  try {
-    const parkingSpaceResponse = await axios(
-      `${propertyManagementServiceUrl}/publishedParkingSpaces/${parkingSpaceId}`
-    )
-
-    return parkingSpaceResponse.data.content
-  } catch (error) {
-    logger.error(error, 'Error retrieving parking space')
-    return undefined
-  }
-}
-
 export {
   getRentalProperty,
   getRentalPropertyInfo,
@@ -198,8 +165,6 @@ export {
   getMaterialChoiceStatuses,
   saveMaterialChoice,
   getRoomsWithMaterialChoices,
-  getParkingSpace,
-  getPublishedParkingSpace,
   getRentalPropertyInfoFromXpand,
   getApartmentRentalPropertyInfo,
 }

@@ -2,10 +2,9 @@ import {
   sendNotificationToContact,
   sendNotificationToRole,
 } from '../../../adapters/communication-adapter'
-import { getParkingSpace } from '../../../adapters/property-management-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import {
-  ParkingSpaceApplicationCategory,
+  ListingStatus,
   parkingSpaceApplicationCategoryTranslation,
 } from '@onecore/types'
 import {
@@ -13,6 +12,8 @@ import {
   getContactByContactCode,
   getCreditInformation,
   getInternalCreditInformation,
+  getActiveListingByRentalObjectCode,
+  updateListingStatus,
 } from '../../../adapters/leasing-adapter'
 import { logger } from '@onecore/utilities'
 
@@ -46,9 +47,10 @@ export const createLeaseForExternalParkingSpace = async (
   ]
 
   try {
-    const parkingSpace = await getParkingSpace(parkingSpaceId)
+    const listingResponse =
+      await getActiveListingByRentalObjectCode(parkingSpaceId)
 
-    if (!parkingSpace) {
+    if (!listingResponse.ok || !listingResponse.data) {
       return {
         processStatus: ProcessStatus.failed,
         error: 'parking-space-not-found',
@@ -59,16 +61,15 @@ export const createLeaseForExternalParkingSpace = async (
       }
     }
 
-    if (
-      parkingSpace.applicationCategory !=
-      ParkingSpaceApplicationCategory.external
-    ) {
+    const listing = listingResponse.data
+
+    if (listing.rentalRule != 'NON_SCORED') {
       return {
         processStatus: ProcessStatus.failed,
         error: 'parkingspace-not-external',
         httpStatus: 404,
         response: {
-          message: `This process currently only handles external parking spaces. The parking space provided is not external (it is ${parkingSpace.applicationCategory}, ${parkingSpaceApplicationCategoryTranslation.external}).`,
+          message: `This process currently only handles NON-SCORED parking spaces. The listing provided is not NON-SCORED (it is ${listing.rentalRule}).`,
         },
       }
     }
@@ -135,7 +136,7 @@ export const createLeaseForExternalParkingSpace = async (
     if (creditCheck) {
       // Step 4A. Create lease
       const createLeaseResult = await createLease(
-        parkingSpace.parkingSpaceId,
+        listing.rentalObjectCode,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
         '001'
@@ -143,12 +144,12 @@ export const createLeaseForExternalParkingSpace = async (
 
       if (!createLeaseResult.ok) {
         log.push(
-          `Misslyckades med att skapa kontrakt för bilplats ${parkingSpace.parkingSpaceId}.`
+          `Misslyckades med att skapa kontrakt för bilplats ${listing.rentalObjectCode}.`
         )
         logger.error(
           {
             err: createLeaseResult.err,
-            rentalObjectCode: parkingSpace.parkingSpaceId,
+            rentalObjectCode: listing.rentalObjectCode,
             contactCode: applicantContact.contactCode,
           },
           'Lease could not be created'
@@ -170,6 +171,30 @@ export const createLeaseForExternalParkingSpace = async (
       log.push(
         'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
       )
+
+      //update listing status
+      const updateListingResult = await updateListingStatus(
+        listing.id,
+        ListingStatus.Assigned
+      )
+      if (!updateListingResult.ok) {
+        logger.error(
+          {
+            err: updateListingResult.err,
+            listingId: listing.id,
+            newStatus: ListingStatus.Assigned,
+          },
+          'Listing status could not be updated - must be done manually'
+        )
+        //not a process failure if listing status could not be updated, just log it and continue
+        log.push(
+          `Annons ${listing.id} kunde inte uppdateras till status ${ListingStatus.Assigned}. Detta måste göras manuellt.`
+        )
+      } else {
+        log.push(
+          `Annons ${listing.id} uppdaterad till status ${ListingStatus.Assigned}.`
+        )
+      }
 
       await sendNotificationToContact(
         applicantContact,
