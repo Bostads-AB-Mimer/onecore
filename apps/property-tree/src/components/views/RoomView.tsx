@@ -236,7 +236,6 @@ export function RoomView() {
               {Object.entries(room.features).map((feature, index) => (
                 <Badge
                   key={index}
-                  icon={AlertCircle}
                   variant="default"
                   onClick={() => console.log('Feature clicked:', feature)}
                 >
