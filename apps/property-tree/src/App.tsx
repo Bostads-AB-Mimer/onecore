@@ -18,7 +18,6 @@ import { RoomView } from './components/views/RoomView'
 import Page from './app/dashboard/Page'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
-import { Toaster } from './components/ui/Toaster'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,7 +32,6 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CommandPaletteProvider>
-        <Toaster />
         <Router>
           <Routes>
             <Route path="/callback" element={<AuthCallback />} />

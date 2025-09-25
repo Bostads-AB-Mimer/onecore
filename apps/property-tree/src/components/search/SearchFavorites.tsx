@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
-import { Trash2, Star, Plus, Clock } from "lucide-react";
-import { SavedSearch } from "@/types/search";
-import { toast } from "@/components/hooks/useToast";
+import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
+import { Trash2, Star, Plus, Clock } from 'lucide-react'
+import { SavedSearch } from '@/types/search'
+//import { toast } from '@/components/hooks/useToast'
 
 interface SearchFavoritesProps {
-  favorites: SavedSearch[];
-  onUseFavorite: (favorite: SavedSearch) => void;
-  onDeleteFavorite: (id: string) => void;
-  onSaveCurrentSearch: (name: string) => SavedSearch | null;
-  currentQuery: string;
-  hasActiveFilters: boolean;
+  favorites: SavedSearch[]
+  onUseFavorite: (favorite: SavedSearch) => void
+  onDeleteFavorite: (id: string) => void
+  onSaveCurrentSearch: (name: string) => SavedSearch | null
+  currentQuery: string
+  hasActiveFilters: boolean
 }
 
 export function SearchFavorites({
@@ -21,56 +21,66 @@ export function SearchFavorites({
   onDeleteFavorite,
   onSaveCurrentSearch,
   currentQuery,
-  hasActiveFilters
+  hasActiveFilters,
 }: SearchFavoritesProps) {
-  const [isCreating, setIsCreating] = useState(false);
-  const [newFavoriteName, setNewFavoriteName] = useState("");
+  const [isCreating, setIsCreating] = useState(false)
+  const [newFavoriteName, setNewFavoriteName] = useState('')
 
   const handleSaveFavorite = () => {
     if (!newFavoriteName.trim()) {
+      /*
       toast({
-        title: "Ange ett namn",
-        description: "Du måste ange ett namn för den sparade sökningen.",
-        variant: "destructive"
-      });
-      return;
+        title: 'Ange ett namn',
+        description: 'Du måste ange ett namn för den sparade sökningen.',
+        variant: 'destructive',
+      })
+        */
+      return
     }
 
-    const savedSearch = onSaveCurrentSearch(newFavoriteName.trim());
+    const savedSearch = onSaveCurrentSearch(newFavoriteName.trim())
     if (savedSearch) {
+      /*
       toast({
-        title: "Sökning sparad",
-        description: `"${newFavoriteName}" har lagts till i dina favoriter.`
-      });
-      setNewFavoriteName("");
-      setIsCreating(false);
+        title: 'Sökning sparad',
+        description: `"${newFavoriteName}" har lagts till i dina favoriter.`,
+      })
+        */
+      setNewFavoriteName('')
+      setIsCreating(false)
     } else {
+      /*
       toast({
-        title: "Kunde inte spara sökning",
-        description: "Det finns ingen aktiv sökning att spara.",
-        variant: "destructive"
-      });
+        title: 'Kunde inte spara sökning',
+        description: 'Det finns ingen aktiv sökning att spara.',
+        variant: 'destructive',
+      })
+      */
     }
-  };
+  }
 
   const handleDeleteFavorite = (id: string, name: string) => {
-    onDeleteFavorite(id);
+    onDeleteFavorite(id)
+    /*
     toast({
-      title: "Favorit borttagen",
-      description: `"${name}" har tagits bort från dina favoriter.`
-    });
-  };
+      title: 'Favorit borttagen',
+      description: `"${name}" har tagits bort från dina favoriter.`,
+    })
+      */
+  }
 
   const formatLastUsed = (date: Date) => {
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return "Idag";
-    if (diffDays === 1) return "Igår";
-    if (diffDays < 7) return `${diffDays} dagar sedan`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} veckor sedan`;
-    return `${Math.floor(diffDays / 30)} månader sedan`;
-  };
+    const now = new Date()
+    const diffDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (diffDays === 0) return 'Idag'
+    if (diffDays === 1) return 'Igår'
+    if (diffDays < 7) return `${diffDays} dagar sedan`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} veckor sedan`
+    return `${Math.floor(diffDays / 30)} månader sedan`
+  }
 
   return (
     <div className="space-y-4">
@@ -79,7 +89,7 @@ export function SearchFavorites({
           <Star className="h-4 w-4" />
           Sparade sökningar
         </h4>
-        
+
         {currentQuery && !isCreating && (
           <Button
             variant="outline"
@@ -106,20 +116,20 @@ export function SearchFavorites({
               placeholder="t.ex. 'Pågående ärenden område A'"
               className="h-8 mt-1"
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveFavorite();
-                if (e.key === "Escape") {
-                  setIsCreating(false);
-                  setNewFavoriteName("");
+                if (e.key === 'Enter') handleSaveFavorite()
+                if (e.key === 'Escape') {
+                  setIsCreating(false)
+                  setNewFavoriteName('')
                 }
               }}
             />
           </div>
-          
+
           <div className="text-xs text-muted-foreground">
             Sparar: "<strong>{currentQuery}</strong>"
-            {hasActiveFilters && " med aktiva filter"}
+            {hasActiveFilters && ' med aktiva filter'}
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -132,8 +142,8 @@ export function SearchFavorites({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setIsCreating(false);
-                setNewFavoriteName("");
+                setIsCreating(false)
+                setNewFavoriteName('')
               }}
               className="h-6 px-3 text-xs"
             >
@@ -177,13 +187,13 @@ export function SearchFavorites({
                     )}
                   </div>
                 </button>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteFavorite(favorite.id, favorite.name);
+                    e.stopPropagation()
+                    handleDeleteFavorite(favorite.id, favorite.name)
                   }}
                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
                 >
@@ -205,5 +215,5 @@ export function SearchFavorites({
         </div>
       )}
     </div>
-  );
+  )
 }
