@@ -877,15 +877,15 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
-    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
-    KeyLoan: components["schemas"]["KeyLoan"];
-    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
-    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
-    KeySystem: components["schemas"]["KeySystem"];
     CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
     UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
     Key: components["schemas"]["Key"];
+    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
+    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
+    KeySystem: components["schemas"]["KeySystem"];
+    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
+    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
+    KeyLoan: components["schemas"]["KeyLoan"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     UpdateLogRequest: components["schemas"]["UpdateLogRequest"];
     Log: components["schemas"]["Log"];
