@@ -1,16 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { schemas } from '@onecore/types'
-import { z } from 'zod'
+import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'key_loans'
 
-// Type definitions based on schemas
-type CreateKeyLoanRequest = z.infer<typeof schemas.CreateKeyLoanRequestSchema>
-type UpdateKeyLoanRequest = z.infer<typeof schemas.UpdateKeyLoanRequestSchema>
-type KeyLoanResponse = z.infer<typeof schemas.KeyLoanSchema>
+const { KeyLoanSchema, CreateKeyLoanRequestSchema, UpdateKeyLoanRequestSchema } = keys.v1
+type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
+type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
+type KeyLoanResponse = keys.v1.KeyLoan  
 
 
 
@@ -19,8 +19,20 @@ type KeyLoanResponse = z.infer<typeof schemas.KeyLoanSchema>
  * tags:
  *   - name: Key Loans
  *     description: Endpoints related to key loan operations
+ * components:
+ *   schemas:
+ *     CreateKeyLoanRequest:
+ *       $ref: '#/components/schemas/CreateKeyLoanRequest'
+ *     UpdateKeyLoanRequest:
+ *       $ref: '#/components/schemas/UpdateKeyLoanRequest'
+ *     KeyLoan:
+ *       $ref: '#/components/schemas/KeyLoan'
  */
 export const routes = (router: KoaRouter) => {
+  // Register schemas from @onecore/types
+  registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
+  registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
+  registerSchema('KeyLoan', KeyLoanSchema)
    /**
    * @swagger
    * /key-loans:
@@ -267,7 +279,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/key-loans', parseRequestBody(schemas.CreateKeyLoanRequestSchema), async (ctx) => {
+  router.post('/key-loans', parseRequestBody(CreateKeyLoanRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: CreateKeyLoanRequest = ctx.request.body
@@ -364,7 +376,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/key-loans/:id', parseRequestBody(schemas.UpdateKeyLoanRequestSchema), async (ctx) => {
+  router.patch('/key-loans/:id', parseRequestBody(UpdateKeyLoanRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: UpdateKeyLoanRequest = ctx.request.body

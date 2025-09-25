@@ -1,99 +1,36 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { schemas } from '@onecore/types'
-import { z } from 'zod'
+import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'logs'
 
-// Type definitions based on schemas
-type CreateLogRequest = z.infer<typeof schemas.CreateLogRequestSchema>
-type UpdateLogRequest = z.infer<typeof schemas.UpdateLogRequestSchema>
-type LogResponse = z.infer<typeof schemas.LogSchema>
+const { LogSchema, CreateLogRequestSchema, UpdateLogRequestSchema } = keys.v1
+type CreateLogRequest = keys.v1.CreateLogRequest
+type UpdateLogRequest = keys.v1.UpdateLogRequest
+type Log = keys.v1.Log
 
 /**
  * @swagger
  * tags:
  *   - name: Logs
  *     description: CRUD operations for audit logs
- *
  * components:
  *   schemas:
- *     Log:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         userName:
- *           type: string
- *           example: "seb"
- *         eventType:
- *           type: string
- *           enum: [creation, update, delete]
- *           example: "creation"
- *         objectType:
- *           type: string
- *           enum: [key, key_system, key_loan]
- *           example: "key"
- *         eventTime:
- *           type: string
- *           format: date-time
- *         description:
- *           type: string
- *           example: "Created key APT-1001"
- *
  *     CreateLogRequest:
- *       type: object
- *       required: [userName, eventType, objectType]
- *       properties:
- *         userName:
- *           type: string
- *           example: "seb"
- *         eventType:
- *           type: string
- *           enum: [creation, update, delete]
- *           example: "creation"
- *         objectType:
- *           type: string
- *           enum: [key, key_system, key_loan]
- *           example: "key"
- *         description:
- *           type: string
- *           example: "Initial import"
- *
+ *       $ref: '#/components/schemas/CreateLogRequest'
  *     UpdateLogRequest:
- *       type: object
- *       description: Partial update; provide any subset of fields
- *       properties:
- *         userName:
- *           type: string
- *         eventType:
- *           type: string
- *           enum: [creation, update, delete]
- *         objectType:
- *           type: string
- *           enum: [key, key_system, key_loan]
- *         description:
- *           type: string
- *
- *     ErrorResponse:
- *       type: object
- *       properties:
- *         error:
- *           type: string
- *           example: "Internal server error"
- *
- *     NotFoundResponse:
- *       type: object
- *       properties:
- *         reason:
- *           type: string
- *           example: "Log not found"
+ *       $ref: '#/components/schemas/UpdateLogRequest'
+ *     Log:
+ *       $ref: '#/components/schemas/Log'
  */
-
 export const routes = (router: KoaRouter) => {
+  // Register schemas from @onecore/types
+  registerSchema('CreateLogRequest', CreateLogRequestSchema)
+  registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
+  registerSchema('Log', LogSchema)
   /**
    * @swagger
    * /logs:
@@ -125,7 +62,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const rows = await db(TABLE).select('*').orderBy('eventTime', 'desc')
       ctx.status = 200
-      ctx.body = { content: rows satisfies LogResponse[], ...metadata }
+      ctx.body = { content: rows satisfies Log[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error listing logs')
       ctx.status = 500
@@ -179,7 +116,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row satisfies LogResponse, ...metadata }
+      ctx.body = { content: row satisfies Log, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching log')
       ctx.status = 500
@@ -222,14 +159,14 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/logs', parseRequestBody(schemas.CreateLogRequestSchema), async (ctx) => {
+  router.post('/logs', parseRequestBody(CreateLogRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: CreateLogRequest = ctx.request.body
 
       const [row] = await db(TABLE).insert(payload).returning('*')
       ctx.status = 201
-      ctx.body = { content: row satisfies LogResponse, ...metadata }
+      ctx.body = { content: row satisfies Log, ...metadata }
     } catch (err) {
       logger.error(err, 'Error creating log')
       ctx.status = 500
@@ -285,7 +222,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.patch('/logs/:id', parseRequestBody(schemas.UpdateLogRequestSchema), async (ctx) => {
+  router.patch('/logs/:id', parseRequestBody(UpdateLogRequestSchema), async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: UpdateLogRequest = ctx.request.body
@@ -297,7 +234,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
       ctx.status = 200
-      ctx.body = { content: row satisfies LogResponse, ...metadata }
+      ctx.body = { content: row satisfies Log, ...metadata }
     } catch (err) {
       logger.error(err, 'Error updating log')
       ctx.status = 500
