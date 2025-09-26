@@ -24,6 +24,22 @@
     "imageName": "onecore-leasing"
   },
   {
+    "name": "keys",
+    "label": "ONECore Keys Service",
+    "package": "@onecore/keys",
+    "path": "services/keys",
+    "docker": true,
+    "imageName": "onecore-keys"
+  },
+  {
+    "name": "keys-portal",
+    "label": "ONECore Keys Portal Application",
+    "package": "@onecore/keys-portal",
+    "path": "services/keys-portal",
+    "docker": true,
+    "imageName": "onecore-keys-portal"
+  },
+  {
     "name": "property-management",
     "label": "ONECore Property Management Service",
     "package": "@onecore/property-management",
