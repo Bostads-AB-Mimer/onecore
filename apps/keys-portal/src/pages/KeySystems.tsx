@@ -1,15 +1,14 @@
 import { useState, useMemo } from "react";
-import { LockSystemsHeader } from "@/components/lock-systems/LockSystemsHeader";
-import { LockSystemsToolbar } from "@/components/lock-systems/LockSystemsToolbar";
-import { LockSystemsTable } from "@/components/lock-systems/LockSystemsTable";
-import { AddLockSystemDialog } from "@/components/lock-systems/AddLockSystemDialog";
+import { KeySystemsHeader } from "@/components/key-systems/KeySystemsHeader";
+import { KeySystemsToolbar } from "@/components/key-systems/KeySystemsToolbar";
+import { KeySystemsTable } from "@/components/key-systems/KeySystemsTable";
+import { AddKeySystemDialog } from "@/components/key-systems/AddKeySystemDialog";
 
-import { LockSystem } from "@/types/lock-system";
-import { Key } from "@/types/key";
+import { KeySystem, Key } from "@/services/types";
 import { useToast } from "@/hooks/use-toast";
 
-// Sample data for lock systems
-const initialLockSystems: LockSystem[] = [
+// Sample data for key systems
+const initialKeySystems: KeySystem[] = [
   {
     id: "1",
     system_code: "ABC123",
@@ -58,7 +57,7 @@ const initialLockSystems: LockSystem[] = [
   },
 ];
 
-// Sample keys data to show in lock system exploration
+// Sample keys data to show in key system exploration
 const sampleKeys: Key[] = [
   {
     id: '1',
@@ -106,82 +105,82 @@ const sampleKeys: Key[] = [
   },
 ];
 
-export default function LockSystems() {
-  const [lockSystems, setLockSystems] = useState<LockSystem[]>(initialLockSystems);
+export default function KeySystems() {
+  const [KeySystems, setKeySystems] = useState<KeySystem[]>(initialKeySystems);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingLockSystem, setEditingLockSystem] = useState<LockSystem | null>(null);
+  const [editingKeySystem, setEditingKeySystem] = useState<KeySystem | null>(null);
   const { toast } = useToast();
 
-  const filteredLockSystems = useMemo(() => {
-    return lockSystems.filter((lockSystem) => {
+  const filteredKeySystems = useMemo(() => {
+    return KeySystems.filter((KeySystem) => {
       const matchesSearch = 
-        lockSystem.system_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lockSystem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (lockSystem.manufacturer && lockSystem.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()));
+        KeySystem.system_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        KeySystem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (KeySystem.manufacturer && KeySystem.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesType = selectedType === "all" || lockSystem.type === selectedType;
+      const matchesType = selectedType === "all" || KeySystem.type === selectedType;
       
       const matchesStatus = selectedStatus === "all" || 
-        (selectedStatus === "active" && lockSystem.is_active) ||
-        (selectedStatus === "inactive" && !lockSystem.is_active);
+        (selectedStatus === "active" && KeySystem.is_active) ||
+        (selectedStatus === "inactive" && !KeySystem.is_active);
       
       return matchesSearch && matchesType && matchesStatus;
     });
-  }, [lockSystems, searchQuery, selectedType, selectedStatus]);
+  }, [KeySystems, searchQuery, selectedType, selectedStatus]);
 
   const handleAddNew = () => {
-    setEditingLockSystem(null);
+    setEditingKeySystem(null);
     setDialogOpen(true);
   };
 
-  const handleEdit = (lockSystem: LockSystem) => {
-    setEditingLockSystem(lockSystem);
+  const handleEdit = (KeySystem: KeySystem) => {
+    setEditingKeySystem(KeySystem);
     setDialogOpen(true);
   };
 
 
-  const handleSave = (lockSystemData: Omit<LockSystem, 'id' | 'created_at' | 'updated_at'>) => {
-    if (editingLockSystem) {
-      // Update existing lock system
-      setLockSystems(prev => prev.map(ls => 
-        ls.id === editingLockSystem.id 
+  const handleSave = (KeySystemData: Omit<KeySystem, 'id' | 'created_at' | 'updated_at'>) => {
+    if (editingKeySystem) {
+      // Update existing key system
+      setKeySystems(prev => prev.map(ls => 
+        ls.id === editingKeySystem.id 
           ? { 
               ...ls, 
-              ...lockSystemData, 
+              ...KeySystemData, 
               updated_at: new Date().toISOString() 
             }
           : ls
       ));
       toast({
         title: "Låssystem uppdaterat",
-        description: `${lockSystemData.name} har uppdaterats framgångsrikt.`,
+        description: `${KeySystemData.name} har uppdaterats framgångsrikt.`,
       });
     } else {
-      // Add new lock system
-      const newLockSystem: LockSystem = {
-        ...lockSystemData,
+      // Add new key system
+      const newKeySystem: KeySystem = {
+        ...KeySystemData,
         id: Date.now().toString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setLockSystems(prev => [...prev, newLockSystem]);
+      setKeySystems(prev => [...prev, newKeySystem]);
       toast({
         title: "Låssystem skapat",
-        description: `${lockSystemData.name} har skapats framgångsrikt.`,
+        description: `${KeySystemData.name} har skapats framgångsrikt.`,
       });
     }
   };
 
   const handleDelete = (id: string) => {
-    const lockSystem = lockSystems.find(ls => ls.id === id);
-    if (lockSystem) {
-      setLockSystems(prev => prev.filter(ls => ls.id !== id));
+    const KeySystem = KeySystems.find(ls => ls.id === id);
+    if (KeySystem) {
+      setKeySystems(prev => prev.filter(ls => ls.id !== id));
       toast({
         title: "Låssystem borttaget",
-        description: `${lockSystem.name} har tagits bort.`,
+        description: `${KeySystem.name} har tagits bort.`,
         variant: "destructive",
       });
     }
@@ -189,12 +188,12 @@ export default function LockSystems() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <LockSystemsHeader 
-        totalLockSystems={lockSystems.length}
-        displayedLockSystems={filteredLockSystems.length}
+      <KeySystemsHeader 
+        totalKeySystems={KeySystems.length}
+        displayedKeySystems={filteredKeySystems.length}
       />
       
-      <LockSystemsToolbar
+      <KeySystemsToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         selectedType={selectedType}
@@ -204,18 +203,18 @@ export default function LockSystems() {
         onAddNew={handleAddNew}
       />
 
-      <LockSystemsTable
-        lockSystems={filteredLockSystems}
+      <KeySystemsTable
+        KeySystems={filteredKeySystems}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onExplore={() => {}} // No longer used, navigation handled in table
       />
 
-      <AddLockSystemDialog
+      <AddKeySystemDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
-        editingLockSystem={editingLockSystem}
+        editingKeySystem={editingKeySystem}
       />
 
     </div>

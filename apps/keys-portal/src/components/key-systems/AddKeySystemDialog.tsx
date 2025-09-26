@@ -17,29 +17,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { LockSystem, LockSystemType, LockSystemTypeLabels } from "@/types/lock-system";
-import { Property, sampleProperties } from "@/types/property";
+import { KeySystem, KeySystemType, KeySystemTypeLabels, Property } from "@/services/types";
+import { sampleProperties } from "@/mockdata/sampleProperties";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface AddLockSystemDialogProps {
+interface AddKeySystemDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (lockSystem: Omit<LockSystem, 'id' | 'created_at' | 'updated_at'>) => void;
-  editingLockSystem?: LockSystem | null;
+  onSave: (keySystem: Omit<KeySystem, 'id' | 'created_at' | 'updated_at'>) => void;
+  editingKeySystem?: KeySystem | null;
 }
 
-export function AddLockSystemDialog({ 
+export function AddKeySystemDialog({ 
   open, 
   onClose, 
   onSave, 
-  editingLockSystem 
-}: AddLockSystemDialogProps) {
+  editingKeySystem
+}: AddKeySystemDialogProps) {
   const [formData, setFormData] = useState({
     system_code: "",
     name: "",
     manufacturer: "",
     managing_supplier: "",
-    type: "MECHANICAL" as LockSystemType,
+    type: "MECHANICAL" as KeySystemType,
     installation_date: "",
     is_active: true,
     description: "",
@@ -47,19 +47,19 @@ export function AddLockSystemDialog({
   });
 
   useEffect(() => {
-    if (editingLockSystem) {
+    if (editingKeySystem) {
       setFormData({
-        system_code: editingLockSystem.system_code,
-        name: editingLockSystem.name,
-        manufacturer: editingLockSystem.manufacturer || "",
-        managing_supplier: editingLockSystem.managing_supplier || "",
-        type: editingLockSystem.type,
-        installation_date: editingLockSystem.installation_date 
-          ? new Date(editingLockSystem.installation_date).toISOString().split('T')[0]
+        system_code: editingKeySystem.system_code,
+        name: editingKeySystem.name,
+        manufacturer: editingKeySystem.manufacturer || "",
+        managing_supplier: editingKeySystem.managing_supplier || "",
+        type: editingKeySystem.type,
+        installation_date: editingKeySystem.installation_date
+          ? new Date(editingKeySystem.installation_date).toISOString().split('T')[0]
           : "",
-        is_active: editingLockSystem.is_active,
-        description: editingLockSystem.description || "",
-        property_ids: editingLockSystem.property_ids || [],
+        is_active: editingKeySystem.is_active,
+        description: editingKeySystem.description || "",
+        property_ids: editingKeySystem.property_ids || [],
       });
     } else {
       setFormData({
@@ -74,12 +74,12 @@ export function AddLockSystemDialog({
         property_ids: [],
       });
     }
-  }, [editingLockSystem, open]);
+  }, [editingKeySystem, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const lockSystemData = {
+    const KeySystemData = {
       ...formData,
       installation_date: formData.installation_date || undefined,
       manufacturer: formData.manufacturer || undefined,
@@ -90,7 +90,7 @@ export function AddLockSystemDialog({
       updated_by: undefined,
     };
 
-    onSave(lockSystemData);
+    onSave(KeySystemData);
     onClose();
   };
 
@@ -99,7 +99,7 @@ export function AddLockSystemDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {editingLockSystem ? "Redigera låssystem" : "Skapa nytt låssystem"}
+            {editingKeySystem ? "Redigera låssystem" : "Skapa nytt låssystem"}
           </DialogTitle>
         </DialogHeader>
         
@@ -153,14 +153,14 @@ export function AddLockSystemDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Typ *</Label>
-              <Select value={formData.type} onValueChange={(value: LockSystemType) => 
+              <Select value={formData.type} onValueChange={(value: KeySystemType) => 
                 setFormData(prev => ({ ...prev, type: value }))
               }>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(LockSystemTypeLabels).map(([key, label]) => (
+                  {Object.entries(KeySystemTypeLabels).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
                     </SelectItem>
@@ -235,7 +235,7 @@ export function AddLockSystemDialog({
               Avbryt
             </Button>
             <Button type="submit">
-              {editingLockSystem ? "Uppdatera" : "Skapa"}
+              {editingKeySystem ? "Uppdatera" : "Skapa"}
             </Button>
           </div>
         </form>

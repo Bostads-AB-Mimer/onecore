@@ -4,7 +4,7 @@ import { KeysToolbar } from "@/components/keys/KeysToolbar";
 import { KeysTable } from "@/components/keys/KeysTable";
 import { AddKeyForm } from "@/components/keys/AddKeyForm";
 import { useToast } from "@/hooks/use-toast";
-import { Key } from "@/types/key";
+import { Key } from "@/services/types";
 import { keyService } from "@/services/api/keyService";
 import type { components } from "@/services/api/generated/api-types";
 

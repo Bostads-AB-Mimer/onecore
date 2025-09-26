@@ -39,7 +39,7 @@ model PropertyObject {
   //orderRows OrderRow[] @relation("PropertyObjectToOrderRow")
   //apartmentInspections ApartmentInspection[] @relation("PropertyObjectToApartmentInspection")
   //lockCylinders LockCylinder[] @relation("PropertyObjectToLockCylinder")
-  //lockSystems LockSystem[] @relation("PropertyObjectToLockSystem")
+  //KeySystems KeySystem[] @relation("PropertyObjectToKeySystem")
   //vacancyDistributions VacancyDistribution[] @relation("PropertyObjectToVacancyDistribution")
   //subProjects SubProject[] @relation("PropertyObjectToSubProject")
   //maintenanceLogs MaintenanceLog[] @relation("PropertyObjectToMaintenanceLog")

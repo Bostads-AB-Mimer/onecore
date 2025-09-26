@@ -42,14 +42,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { LockSystem, LockSystemTypeLabels } from "@/types/lock-system";
-import { Key, KeyTypeLabels } from "@/types/key";
-import { Property, sampleProperties } from "@/types/property";
+import { KeySystem, KeySystemTypeLabels, Key, KeyTypeLabels, Property } from "@/services/types";
+import { sampleProperties } from "@/mockdata/sampleProperties";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 
 // Sample data - this would come from your data store/API
-const sampleLockSystems: LockSystem[] = [
+const sampleKeySystems: KeySystem[] = [
   {
     id: "1",
     system_code: "ABC123",
@@ -192,7 +191,7 @@ const KEYS_PER_PAGE = 50;
 
 type ViewMode = "list" | "grouped";
 
-export default function LockSystemDetail() {
+export default function KeySystemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
@@ -202,31 +201,31 @@ export default function LockSystemDetail() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem('lockSystemDetailViewMode');
+    const saved = localStorage.getItem('KeySystemDetailViewMode');
     return (saved as ViewMode) || "list";
   });
 
   // Save view mode preference
   useEffect(() => {
-    localStorage.setItem('lockSystemDetailViewMode', viewMode);
+    localStorage.setItem('KeySystemDetailViewMode', viewMode);
   }, [viewMode]);
 
   // Find the lock system
-  const lockSystem = sampleLockSystems.find(ls => ls.id === id);
+  const KeySystem = sampleKeySystems.find(ls => ls.id === id);
   
   // Generate keys for this system
   const allKeys = useMemo(() => {
-    if (!lockSystem) return [];
-    return generateSampleKeys(lockSystem.system_code);
-  }, [lockSystem]);
+    if (!KeySystem) return [];
+    return generateSampleKeys(KeySystem.system_code);
+  }, [KeySystem]);
 
   // Get associated properties
   const properties = useMemo(() => {
-    if (!lockSystem?.property_ids) return [];
+    if (!KeySystem?.property_ids) return [];
     return sampleProperties.filter(prop => 
-      lockSystem.property_ids?.includes(prop.id)
+      KeySystem.property_ids?.includes(prop.id)
     );
-  }, [lockSystem]);
+  }, [KeySystem]);
 
   // Filter and sort keys
   const filteredAndSortedKeys = useMemo(() => {
@@ -326,12 +325,12 @@ export default function LockSystemDetail() {
     }
   };
 
-  if (!lockSystem) {
+  if (!KeySystem) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Låssystem hittades inte</h1>
-          <Button onClick={() => navigate("/lock-systems")}>
+          <Button onClick={() => navigate("/key-systems")}>
             Tillbaka till låssystem
           </Button>
         </div>
@@ -346,7 +345,7 @@ export default function LockSystemDetail() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink 
-              onClick={() => navigate("/lock-systems")}
+              onClick={() => navigate("/key-systems")}
               className="cursor-pointer"
             >
               Låssystem
@@ -354,7 +353,7 @@ export default function LockSystemDetail() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{lockSystem.name}</BreadcrumbPage>
+            <BreadcrumbPage>{KeySystem.name}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -364,7 +363,7 @@ export default function LockSystemDetail() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/lock-systems")}
+          onClick={() => navigate("/key-systems")}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -372,8 +371,8 @@ export default function LockSystemDetail() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
-            {lockSystem.name}
-            <Badge variant="outline">{lockSystem.system_code}</Badge>
+            {KeySystem.name}
+            <Badge variant="outline">{KeySystem.system_code}</Badge>
           </h1>
           <p className="text-muted-foreground mt-1">
             {filteredAndSortedKeys.length} nycklar totalt
@@ -381,32 +380,32 @@ export default function LockSystemDetail() {
         </div>
       </div>
 
-      {/* Lock System Details */}
+      {/* Key System Details */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="p-6 border rounded-lg bg-muted/50">
           <h2 className="text-lg font-semibold mb-4">Systemdetaljer</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Typ:</span>
-              <Badge variant="secondary">{LockSystemTypeLabels[lockSystem.type]}</Badge>
+              <Badge variant="secondary">{KeySystemTypeLabels[KeySystem.type]}</Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tillverkare:</span>
-              <span>{lockSystem.manufacturer || '-'}</span>
+              <span>{KeySystem.manufacturer || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Leverantör:</span>
-              <span>{lockSystem.managing_supplier || '-'}</span>
+              <span>{KeySystem.managing_supplier || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
-              <Badge variant={lockSystem.is_active ? "default" : "secondary"}>
-                {lockSystem.is_active ? 'Aktiv' : 'Inaktiv'}
+              <Badge variant={KeySystem.is_active ? "default" : "secondary"}>
+                {KeySystem.is_active ? 'Aktiv' : 'Inaktiv'}
               </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Installation:</span>
-              <span>{lockSystem.installation_date ? formatDate(lockSystem.installation_date) : '-'}</span>
+              <span>{KeySystem.installation_date ? formatDate(KeySystem.installation_date) : '-'}</span>
             </div>
           </div>
         </div>

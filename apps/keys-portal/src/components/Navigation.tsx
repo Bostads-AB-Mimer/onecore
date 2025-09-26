@@ -20,11 +20,11 @@ export function Navigation() {
             </Link>
           </Button>
           <Button
-            variant={location.pathname === "/lock-systems" ? "default" : "ghost"}
+            variant={location.pathname === "/key-systems" ? "default" : "ghost"}
             asChild
             className="gap-2"
           >
-            <Link to="/lock-systems">
+            <Link to="/key-systems">
               <Lock className="h-4 w-4" />
               Låssystem
             </Link>
