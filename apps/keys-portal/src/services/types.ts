@@ -28,6 +28,7 @@ export type LeaseDto = CoreComponents['schemas']['Lease']
 export type Address = NonNullable<LeaseDto['address']>;
 export type ApiTenant = NonNullable<LeaseDto['tenants']>[number];
 
+
 // Key type definitions based on the existing codebase usage
 export const KeyTypeLabels = {
   'LGH': 'Lägenhet',
