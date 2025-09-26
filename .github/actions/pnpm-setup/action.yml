@@ -45,8 +45,14 @@ runs:
       id: pnpm-store
       uses: actions/cache@v4
       with:
-        path: ~/.local/share/pnpm/store
-        key: ${{ runner.os }}-node-20-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        path: |
+          ~/.local/share/pnpm/store
+          libs/**/dist
+        key: ${{ runner.os }}-node-20-pnpm-${{ hashFiles(
+            '**/pnpm-lock.yaml',
+            'libs/**/src/**',
+            '**/tsconfig*.json')
+          }}
         restore-keys: |
           ${{ runner.os }}-node-20-pnpm-
 
@@ -59,3 +65,9 @@ runs:
     - name: Generate static
       shell: bash
       run: pnpm generate:static
+
+    # Build shared libs once for downstreams jobs that need compiled deps
+    - name: Build libs
+      shell: bash
+      run: pnpm run build:libs
+
