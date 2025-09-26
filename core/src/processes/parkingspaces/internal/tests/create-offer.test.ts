@@ -140,7 +140,7 @@ describe('createOfferForInternalParkingSpace', () => {
       error: CreateOfferErrorCodes.UpdateListingStatusFailure,
       httpStatus: 500,
       response: {
-        message: 'Error updating listing status to NoApplicants',
+        message: 'Error updating listing status to Closed.',
         errorCode: CreateOfferErrorCodes.UpdateListingStatusFailure,
       },
     })

@@ -79,6 +79,13 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     monthlyRent = totalYearRent / 12
   }
 
+  // Determine if parking space is in special residential areas or properties
+  const isSpecialResidentialArea = ['CEN', 'OXB', 'GRY'].includes(
+    row.residentialareacode
+  )
+  const isSpecialProperty = ['24104', '23001', '23002', '23003'].includes(
+    row.estatecode || ''
+  )
   // Determine vacantFrom date
   const lastDebitDate = row.lastdebitdate
   const lastBlockStartDate = row.blockstartdate
@@ -117,6 +124,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     districtCaption: district,
     districtCode: districtCode,
     braArea: row.braarea,
+    isSpecialResidentialArea: isSpecialResidentialArea,
+    isSpecialProperty: isSpecialProperty,
   }
 }
 
@@ -382,6 +391,7 @@ const getAllVacantParkingSpaces = async (): Promise<
       parkingSpacesQuery,
       activeRentalBlocksQuery,
       activeContractsQuery,
+      contractsWithLastDebitDate,
     } = buildSubQueries()
 
     const results = await buildMainQuery({
@@ -389,6 +399,12 @@ const getAllVacantParkingSpaces = async (): Promise<
       activeRentalBlocksQuery,
       activeContractsQuery,
     })
+      .leftJoin(
+        contractsWithLastDebitDate.as('cldd'),
+        'cldd.keycmobj',
+        'ps.keycmobj'
+      )
+      .select('cldd.lastdebitdate')
       .where(function () {
         this.whereNull('rb.keycmobj').orWhere(
           'rb.blockenddate',
@@ -403,6 +419,7 @@ const getAllVacantParkingSpaces = async (): Promise<
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
+
     return { ok: true, data: listings }
   } catch (err) {
     logger.error(err, 'tenantLeaseAdapter.getAllAvailableParkingSpaces')

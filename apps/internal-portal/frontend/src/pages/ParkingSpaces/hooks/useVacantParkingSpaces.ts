@@ -1,11 +1,12 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import { RentalObject } from '@onecore/types'
+
+import { RentalObjectWithListingHistory } from '../../../types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export const useVacantParkingSpaces = () =>
-  useQuery<Array<RentalObject>, AxiosError>({
+  useQuery<Array<RentalObjectWithListingHistory>, AxiosError>({
     queryKey: ['vacantParkingSpaces'],
     queryFn: () =>
       axios

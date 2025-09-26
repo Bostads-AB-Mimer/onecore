@@ -111,7 +111,7 @@ export const createOfferForInternalParkingSpace = async (
     if (!eligibleApplicant) {
       const updateListingStatus = await leasingAdapter.updateListingStatus(
         listing.id,
-        ListingStatus.NoApplicants
+        ListingStatus.Closed
       )
 
       if (!updateListingStatus.ok) {
@@ -119,7 +119,7 @@ export const createOfferForInternalParkingSpace = async (
           log,
           CreateOfferErrorCodes.UpdateListingStatusFailure,
           500,
-          `Error updating listing status to NoApplicants`
+          `Error updating listing status to Closed.`
         )
       }
 
