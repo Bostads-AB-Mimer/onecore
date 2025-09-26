@@ -56,14 +56,14 @@ const getLeasesWithRelatedEntitiesForPnr = async (
   return leases
 }
 
-const getLeasesWithRelatedEntitiesForPnrIncludingAllLeases= async (
+const getLeasesWithRelatedEntitiesForPnrIncludingAllLeases = async (
   nationalRegistrationNumber: string
 ) => {
   const leases = await leasingAdapter.getLeasesForPnr(
     nationalRegistrationNumber,
     {
       includeUpcomingLeases: true,
-      includeTerminatedLeases: true,   
+      includeTerminatedLeases: true,
       includeContacts: true,
     }
   )
