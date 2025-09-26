@@ -1,10 +1,4 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,23 +11,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KeySystem, KeySystemType, KeySystemTypeLabels, Property } from "@/services/types";
 import { sampleProperties } from "@/mockdata/sampleProperties";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface AddKeySystemDialogProps {
-  open: boolean;
-  onClose: () => void;
+
+interface AddKeySystemFormProps {
   onSave: (keySystem: Omit<KeySystem, 'id' | 'created_at' | 'updated_at'>) => void;
+  onCancel: () => void;
   editingKeySystem?: KeySystem | null;
 }
 
-export function AddKeySystemDialog({ 
-  open, 
-  onClose, 
-  onSave, 
+export function AddKeySystemForm({
+  onSave,
+  onCancel,
   editingKeySystem
-}: AddKeySystemDialogProps) {
+}: AddKeySystemFormProps) {
   const [formData, setFormData] = useState({
     system_code: "",
     name: "",
@@ -74,11 +68,11 @@ export function AddKeySystemDialog({
         property_ids: [],
       });
     }
-  }, [editingKeySystem, open]);
+  }, [editingKeySystem]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const KeySystemData = {
       ...formData,
       installation_date: formData.installation_date || undefined,
@@ -91,18 +85,18 @@ export function AddKeySystemDialog({
     };
 
     onSave(KeySystemData);
-    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {editingKeySystem ? "Redigera låssystem" : "Skapa nytt låssystem"}
-          </DialogTitle>
-        </DialogHeader>
-        
+    <Card className="animate-fade-in mb-6">
+      <CardHeader className="flex flex-row items-center justify-between space-y-1 pb-2">
+        <CardTitle className="text-base">
+          {editingKeySystem ? "Redigera låssystem" : "Skapa nytt låssystem"}
+        </CardTitle>
+      
+      </CardHeader>
+
+      <CardContent className="space-y-4 p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -231,7 +225,7 @@ export function AddKeySystemDialog({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onCancel}>
               Avbryt
             </Button>
             <Button type="submit">
@@ -239,7 +233,7 @@ export function AddKeySystemDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }
