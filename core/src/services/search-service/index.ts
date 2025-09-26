@@ -71,7 +71,7 @@ export const routes = (router: KoaRouter) => {
 
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
+      ctx.body = { errors: queryParams.error.issues }
       return
     }
 
