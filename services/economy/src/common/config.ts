@@ -2,6 +2,17 @@ import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 dotenv.config()
 
+type SftpConfig = {
+  host: string
+  username: string
+  password: string
+  port?: number
+  directory?: string
+  glDirectory?: string
+  arDirectory?: string
+  useSshDss?: boolean
+}
+
 export interface Config {
   port: number
   xpandDatabase: {
@@ -36,6 +47,18 @@ export interface Config {
     importDirectory: string
     exportDirectory: string
   }
+  debtCollection: {
+    xledger: {
+      sftp: SftpConfig
+      rentInvoicesDirectory: string
+      otherInvoicesDirectory: string
+      balanceCorrectionsDirectory: string
+    }
+    sergel: {
+      sftp: SftpConfig
+      directory: string
+    }
+  }
   health: {
     xledger: {
       systemName: string
@@ -59,6 +82,27 @@ const config = configPackage({
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
+    },
+    debtCollection: {
+      xledger: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+          useSshDss: true,
+        },
+        rentInvoicesDirectory: '',
+        otherInvoicesDirectory: '',
+        balanceCorrectionsDirectory: '',
+      },
+      sergel: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+        },
+        directory: '',
+      },
     },
     xpandDatabase: {
       port: 1433,
@@ -104,5 +148,6 @@ export default {
   xledger: config.get('xledger'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
+  debtCollection: config.get('debtCollection'),
   health: config.get('health'),
 } as Config

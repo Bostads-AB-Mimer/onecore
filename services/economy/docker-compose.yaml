@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  economy-sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest # use this for intel and standard amd
+    # image: mcr.microsoft.com/azure-sql-edge # use this for M* Macs
+    container_name: economy-sql
+    platform: linux/amd64
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${ECONOMY_DATABASE__PASSWORD}
+    networks:
+      - economy
+    ports:
+      - '1438:1433'
+    volumes:
+      - sql:/var/opt/mssql
+
+networks:
+  economy:
+    driver: bridge
+
+volumes:
+  sql:
