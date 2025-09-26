@@ -2815,7 +2815,7 @@ export interface paths {
       }
     }
   }
-  '/key-loans': {
+  '/key_loans': {
     /**
      * List all key loans
      * @description Fetches a list of all key loans ordered by creation date.
@@ -2872,57 +2872,7 @@ export interface paths {
       }
     }
   }
-  '/key-loans/search': {
-    /**
-     * Search key loans
-     * @description Search key loans with flexible filtering.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any KeyLoan field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
-     */
-    get: {
-      parameters: {
-        query?: {
-          q?: string
-          /** @description Comma-separated list of fields for OR search. Defaults to lease. */
-          fields?: string
-          id?: string
-          keys?: string
-          contact?: string
-          lease?: string
-          returnedAt?: string
-          availableToNextTenantFrom?: string
-          pickedUpAt?: string
-          createdAt?: string
-          updatedAt?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved search results */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyLoan'][]
-            }
-          }
-        }
-        /** @description Bad request */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-loans/{id}': {
+  '/key_loans/{id}': {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.

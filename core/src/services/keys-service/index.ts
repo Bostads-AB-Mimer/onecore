@@ -162,7 +162,7 @@ export const routes = (router: KoaRouter) => {
   
   /**
    * @swagger
-   * /key_loans:
+   * /key-loans:
    *   get:
    *     summary: List all key loans
    *     description: Fetches a list of all key loans ordered by creation date.
@@ -188,7 +188,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/key_loans', async (ctx) => {
+  router.get('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     
     const result = await KeyLoansApi.list()
@@ -206,7 +206,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
    *     description: Fetch a specific key loan by its ID.
@@ -244,7 +244,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/key_loans/:id', async (ctx) => {
+  router.get('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     
     const result = await KeyLoansApi.get(ctx.params.id)
@@ -268,7 +268,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans:
+   * /key-loans:
    *   post:
    *     summary: Create a new key loan
    *     description: Create a new key loan record.
@@ -331,7 +331,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/key_loans', async (ctx) => {
+  router.post('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
     
@@ -356,7 +356,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   patch:
    *     summary: Update a key loan
    *     description: Partially update an existing key loan.
@@ -436,7 +436,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.patch('/key_loans/:id', async (ctx) => {
+  router.patch('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
     
@@ -466,7 +466,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   delete:
    *     summary: Delete a key loan
    *     description: Delete an existing key loan by ID.
@@ -497,7 +497,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('/key_loans/:id', async (ctx) => {
+  router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     
     const result = await KeyLoansApi.remove(ctx.params.id)

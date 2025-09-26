@@ -4,7 +4,11 @@
  */
 
 export interface paths {
+<<<<<<< HEAD
   '/key-loans': {
+=======
+  "/key-loans": {
+>>>>>>> 453c03ce (refactor: update key loan routes to use hyphenated naming convention)
     /**
      * List all key loans
      * @description Fetches a list of all key loans ordered by creation date.
@@ -95,6 +99,7 @@ export interface paths {
           content: {
             'application/json': {
               /** @example Internal server error */
+<<<<<<< HEAD
               error?: string
             }
           }
@@ -150,6 +155,16 @@ export interface paths {
     }
   }
   '/key-loans/{id}': {
+=======
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/{id}": {
+>>>>>>> 453c03ce (refactor: update key loan routes to use hyphenated naming convention)
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
