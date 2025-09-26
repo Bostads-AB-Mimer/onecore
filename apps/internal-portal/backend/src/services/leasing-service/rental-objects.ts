@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import * as coreAdapter from './adapters/core-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { Listing, RentalObject } from '@onecore/types'
+import { Listing, RentalObject, ListingStatus } from '@onecore/types'
 
 // Local extension of RentalObject for internal portal features
 interface RentalObjectWithListingHistory extends RentalObject {
@@ -10,59 +10,46 @@ interface RentalObjectWithListingHistory extends RentalObject {
 
 const calculatePreviousListingsCount = (
   parkingSpace: RentalObject,
-  closedListings: Listing[]
+  allListings: Listing[]
 ): number => {
-  const scoredListings = closedListings.filter(
-    (listing) =>
-      listing.rentalObjectCode === parkingSpace.rentalObjectCode &&
-      listing.rentalRule === 'SCORED'
+  const parkingSpaceListings = allListings.filter(
+    (listing) => listing.rentalObjectCode === parkingSpace.rentalObjectCode
   )
 
-  if (parkingSpace.vacantFrom) {
-    // Count SCORED listings published since the vacantFrom date
-    return scoredListings.filter(
-      (listing) =>
-        listing.publishedFrom &&
-        new Date(listing.publishedFrom) >= new Date(parkingSpace.vacantFrom!)
-    ).length
-  }
+  // Find the most recent assigned listing
+  const assignedListings = parkingSpaceListings
+    .filter((listing) => listing.status === ListingStatus.Assigned)
+    .sort((a, b) => {
+      const dateA = new Date(a.publishedFrom || 0)
+      const dateB = new Date(b.publishedFrom || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
 
-  // Fallback: count SCORED listings in the last 12 months
-  const twelveMonthsAgo = new Date()
-  twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
+  const lastAssignedListing = assignedListings[0]
 
-  return scoredListings.filter(
+  // Count all closed SCORED listings since the last assigned listing
+  const closedListings = parkingSpaceListings.filter(
     (listing) =>
-      listing.publishedFrom &&
-      new Date(listing.publishedFrom) >= twelveMonthsAgo
-  ).length
-}
+      listing.status === ListingStatus.Closed &&
+      listing.rentalRule === 'SCORED' &&
+      (!lastAssignedListing ||
+        (listing.publishedFrom &&
+          lastAssignedListing.publishedFrom &&
+          new Date(listing.publishedFrom) >
+            new Date(lastAssignedListing.publishedFrom)))
+  )
 
-const getExcludedRentalObjectCodes = (
-  publishedListings: Listing[],
-  readyForOfferListings: Listing[]
-): Set<string> => {
-  return new Set([
-    ...publishedListings.map((listing) => listing.rentalObjectCode),
-    ...readyForOfferListings.map((listing) => listing.rentalObjectCode),
-  ])
+  return closedListings.length
 }
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-objects/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    // Run all requests in parallel for better performance
-    const [
-      vacantParkingSpaces,
-      publishedListings,
-      readyForOfferListings,
-      closedListings,
-    ] = await Promise.all([
+    // Run requests in parallel for better performance
+    const [vacantParkingSpaces, allListings] = await Promise.all([
       coreAdapter.getVacantParkingSpaces(),
-      coreAdapter.getListingsWithApplicants('type=published'),
-      coreAdapter.getListingsWithApplicants('type=ready-for-offer'),
-      coreAdapter.getListingsWithApplicants('type=closed'),
+      coreAdapter.getListingsWithApplicants('type=all'),
     ])
 
     if (!vacantParkingSpaces.ok) {
@@ -71,11 +58,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const excludedRentalObjectCodes = getExcludedRentalObjectCodes(
-      publishedListings.ok ? publishedListings.data || [] : [],
-      readyForOfferListings.ok ? readyForOfferListings.data || [] : []
+    const allListingsData = allListings.ok ? allListings.data || [] : []
+
+    // Get rental object codes that have active or expired listings (should be excluded)
+    const excludedRentalObjectCodes = new Set(
+      allListingsData
+        .filter(
+          (listing) =>
+            listing.status === ListingStatus.Active ||
+            listing.status === ListingStatus.Expired
+        )
+        .map((listing) => listing.rentalObjectCode)
     )
 
+    // Filter out parking spaces that have active or expired listings
     const unpublishedVacantParkingSpaces = (
       vacantParkingSpaces.data || []
     ).filter(
@@ -83,14 +79,13 @@ export const routes = (router: KoaRouter) => {
         !excludedRentalObjectCodes.has(parkingSpace.rentalObjectCode)
     )
 
-    // Calculate previous listings count since vacant date based on closed listings
-    const allClosedListings = closedListings.ok ? closedListings.data || [] : []
+    // Calculate previous listings count since last assigned listing
     const parkingSpacesWithListingHistory: RentalObjectWithListingHistory[] =
       unpublishedVacantParkingSpaces.map((parkingSpace: RentalObject) => ({
         ...parkingSpace,
         previousListingsCount: calculatePreviousListingsCount(
           parkingSpace,
-          allClosedListings
+          allListingsData
         ),
       }))
 
