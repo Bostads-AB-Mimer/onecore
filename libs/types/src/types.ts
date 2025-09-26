@@ -353,6 +353,8 @@ interface RentalObject {
   braArea?: number
   btaArea?: number
   boaArea?: number
+  isSpecialResidentialArea?: boolean
+  isSpecialProperty?: boolean
 }
 
 interface MaintenanceUnitInfo {

@@ -35,20 +35,10 @@ export const useRentalRules = (): UseRentalRulesResult => {
           // If previous listings >= 1, default to NON_SCORED
           const hasPreviousListings = (ps.previousListingsCount ?? 0) >= 1
 
-          // If parking space is in specific residential areas (CEN, OXB, GRY), default to SCORED
-          const isSpecialResidentialArea = ['CEN', 'OXB', 'GRY'].includes(
-            ps.residentialAreaCode
-          )
-
-          // If parking space is in specific properties (24104,23001,23002,23003), default to SCORED
-          const isSpecialProperty = [
-            '24104',
-            '23001',
-            '23002',
-            '23003',
-          ].includes(ps.propertyCode || '')
-
-          if (isSpecialResidentialArea || isSpecialProperty) {
+          if (
+            ps.isSpecialResidentialArea === true ||
+            ps.isSpecialProperty === true
+          ) {
             // Special areas/properties always default to SCORED, regardless of previous listings
             acc[ps.rentalObjectCode] = 'SCORED'
           } else if (hasPreviousListings) {
