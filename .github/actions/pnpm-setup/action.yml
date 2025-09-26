@@ -63,6 +63,7 @@ runs:
 
     # Always run install, but use --frozen-lockfile for safety
     - name: Install dependencies
+      if: steps.pnpm-store.outputs.cache-hit != 'true'
       shell: bash
       run: pnpm install --frozen-lockfile --prefer-offline
 
