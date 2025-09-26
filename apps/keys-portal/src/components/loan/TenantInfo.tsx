@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, MapPin, ArrowLeft } from "lucide-react";
-import type { Tenant, Lease, Address } from "@/../../libs/types/src/types";
+import type { Tenant, Lease, Address } from "@/services/api/searchService";
 
 interface TenantInfoProps {
   tenant: Tenant;
@@ -57,21 +57,13 @@ function statusBadgeProps(s: DisplayStatus) {
 }
 
 export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract }: TenantInfoProps) {
-  const phone =
-    tenant.phoneNumbers?.find((p) => p.isMainNumber)?.phoneNumber ??
-    tenant.phoneNumbers?.[0]?.phoneNumber ??
-    undefined;
-
   const sortedContracts = [...contracts].sort((a, b) => {
-  const av = toMs(a.leaseStartDate);
-  const bv = toMs(b.leaseStartDate);
-  const aVal = av ?? Number.MAX_SAFE_INTEGER;
-  const bVal = bv ?? Number.MAX_SAFE_INTEGER;
-  return aVal - bVal; 
+    const av = toMs(a.leaseStartDate);
+    const bv = toMs(b.leaseStartDate);
+    const aVal = av ?? Number.MAX_SAFE_INTEGER;
+    const bVal = bv ?? Number.MAX_SAFE_INTEGER;
+    return aVal - bVal;
   });
-
-
-
 
   return (
     <div className="space-y-6">
@@ -96,7 +88,6 @@ export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract 
           {tenant.emailAddress && (
             <p className="text-sm text-muted-foreground">E-post: {tenant.emailAddress}</p>
           )}
-          {phone && <p className="text-sm text-muted-foreground">Telefon: {phone}</p>}
           {tenant.address && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <MapPin className="h-4 w-4" />
