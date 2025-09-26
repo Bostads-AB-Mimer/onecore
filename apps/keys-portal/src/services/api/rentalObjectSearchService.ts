@@ -1,10 +1,11 @@
+import type { RentalPropertyResponse } from '@/services/types'
+
 import { GET } from './core/base-api'
-import type { RentalPropertyResponse } from "@/services/types";
 
 export interface RentalObjectSearchResult {
   rentalId: string
   name: string
-  type: string            
+  type: string
   address: string
 }
 
@@ -14,15 +15,20 @@ export class RentalObjectSearchService {
     return rentalIdPattern.test(rentalId) && rentalId.length >= 5
   }
 
-  async searchByRentalId(rentalId: string): Promise<RentalObjectSearchResult[]> {
+  async searchByRentalId(
+    rentalId: string
+  ): Promise<RentalObjectSearchResult[]> {
     if (!rentalId.trim() || !this.isValidRentalId(rentalId)) {
       return []
     }
 
     try {
-      const response = await GET('/rental-properties/by-rental-object-code/{rentalObjectCode}', {
-        params: { path: { rentalObjectCode: rentalId } }
-      })
+      const response = await GET(
+        '/rental-properties/by-rental-object-code/{rentalObjectCode}',
+        {
+          params: { path: { rentalObjectCode: rentalId } },
+        }
+      )
 
       if (response.data) {
         const rentalProperty: RentalPropertyResponse = response.data
@@ -33,7 +39,7 @@ export class RentalObjectSearchService {
           rentalId: rentalProperty.content?.id || rentalId,
           name: this.getPropertyName(rentalProperty),
           type: typeFromApi,
-          address: this.getPropertyAddress(rentalProperty)
+          address: this.getPropertyAddress(rentalProperty),
         }
 
         return [result]

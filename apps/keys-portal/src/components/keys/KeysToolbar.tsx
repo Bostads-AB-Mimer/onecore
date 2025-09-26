@@ -1,22 +1,22 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Plus, Search, Filter } from "lucide-react";
-import { KeyType, KeyTypeLabels } from "@/services/types";
+} from '@/components/ui/select'
+import { Plus, Search, Filter } from 'lucide-react'
+import { KeyType, KeyTypeLabels } from '@/services/types'
 
 interface KeysToolbarProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  selectedType: string;
-  onTypeChange: (type: string) => void;
-  onAddNew: () => void;
+  searchQuery: string
+  onSearchChange: (query: string) => void
+  selectedType: string
+  onTypeChange: (type: string) => void
+  onAddNew: () => void
 }
 
 export function KeysToolbar({
@@ -37,7 +37,7 @@ export function KeysToolbar({
           className="pl-10"
         />
       </div>
-      
+
       <Select value={selectedType} onValueChange={onTypeChange}>
         <SelectTrigger className="w-40">
           <Filter className="h-4 w-4 mr-2" />
@@ -52,11 +52,11 @@ export function KeysToolbar({
           ))}
         </SelectContent>
       </Select>
-      
+
       <Button onClick={onAddNew} className="bg-primary hover:bg-primary/90">
         <Plus className="h-4 w-4 mr-2" />
         Ny nyckel
       </Button>
     </div>
-  );
+  )
 }

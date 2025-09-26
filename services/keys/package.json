@@ -19,8 +19,9 @@
     "migrate:seed": "pnpx knex seed:run --env dev",
     "migrate:up": "pnpx knex migrate:latest --env dev",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
+    "prettier": "prettier --check ./src",
     "start": "pnpm run migrate:up && node -r dotenv/config build/index",
-    "test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv-config ../../node_modules/.bin/jest --config jest.config.js",
+    "__test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv-config ../../node_modules/.bin/jest --config jest.config.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

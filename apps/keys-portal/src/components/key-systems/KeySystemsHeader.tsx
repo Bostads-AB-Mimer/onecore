@@ -1,11 +1,14 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge'
 
 interface KeySystemsHeaderProps {
-  totalKeySystems: number;
-  displayedKeySystems: number;
+  totalKeySystems: number
+  displayedKeySystems: number
 }
 
-export function KeySystemsHeader({ totalKeySystems, displayedKeySystems }: KeySystemsHeaderProps) {
+export function KeySystemsHeader({
+  totalKeySystems,
+  displayedKeySystems,
+}: KeySystemsHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
       <div>
@@ -20,5 +23,5 @@ export function KeySystemsHeader({ totalKeySystems, displayedKeySystems }: KeySy
         </Badge>
       </div>
     </div>
-  );
+  )
 }

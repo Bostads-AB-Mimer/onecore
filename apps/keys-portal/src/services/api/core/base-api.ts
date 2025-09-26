@@ -1,6 +1,8 @@
 import createClient from 'openapi-fetch'
-import type { paths } from './generated/api-types'
+
 import { authConfig } from '@/auth-config'
+
+import type { paths } from './generated/api-types'
 
 export const client = createClient<paths>({
   baseUrl: authConfig.apiUrl,
@@ -52,7 +54,10 @@ export async function GET_BLOB(
   }
 }
 
-export function POST_FORM_GENERATE_TOKEN(body: { username?: string; password?: string }) {
+export function POST_FORM_GENERATE_TOKEN(body: {
+  username?: string
+  password?: string
+}) {
   return client.POST('/auth/generatetoken', {
     body,
     headers: {
@@ -67,7 +72,10 @@ export function POST_FORM_GENERATE_TOKEN(body: { username?: string; password?: s
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string
+  ) {
     super(message)
     this.name = 'ApiError'
   }

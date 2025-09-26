@@ -1,16 +1,16 @@
-import { Button } from "@/components/ui/button";
-import { Key, Lock, KeyRound } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
+import { Button } from '@/components/ui/button'
+import { Key, Lock, KeyRound } from 'lucide-react'
+import { useLocation, Link } from 'react-router-dom'
 
 export function Navigation() {
-  const location = useLocation();
+  const location = useLocation()
 
   return (
     <nav className="bg-card border-b border-border mb-8">
       <div className="container mx-auto px-4">
         <div className="flex items-center space-x-1">
           <Button
-            variant={location.pathname === "/" ? "default" : "ghost"}
+            variant={location.pathname === '/' ? 'default' : 'ghost'}
             asChild
             className="gap-2"
           >
@@ -20,7 +20,7 @@ export function Navigation() {
             </Link>
           </Button>
           <Button
-            variant={location.pathname === "/key-systems" ? "default" : "ghost"}
+            variant={location.pathname === '/key-systems' ? 'default' : 'ghost'}
             asChild
             className="gap-2"
           >
@@ -30,7 +30,7 @@ export function Navigation() {
             </Link>
           </Button>
           <Button
-            variant={location.pathname === "/utlaning" ? "default" : "ghost"}
+            variant={location.pathname === '/utlaning' ? 'default' : 'ghost'}
             asChild
             className="gap-2"
           >
@@ -42,5 +42,5 @@ export function Navigation() {
         </div>
       </div>
     </nav>
-  );
+  )
 }
