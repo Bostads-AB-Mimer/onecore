@@ -25,51 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
-      cache-key: ${{ steps.cache.outputs.key }}
-      cache-path: ${{ steps.cache.outputs.path }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
-      # Node + caches + pnpm install (only on cache miss)
-      - name: Setup pnpm
+      # "Pre-warm" the cache to make sure that all following jobs get cache hits
+      - name: Setup
         uses: ./.github/actions/pnpm-setup
-
-      # Compute a cache key that changes when lib sources / tsconfig / lockfile change
-      - name: Compute cache key & path
-        id: cache
-        run: |
-          # Key (hash sources + tsconfigs + lockfile)
-          echo "key=${{ runner.os }}-node-20-dist-${{ hashFiles('libs/**/src/**','packages/**/src/**','**/tsconfig*.json','**/pnpm-lock.yaml') }}" >> $GITHUB_OUTPUT
-
-          # Path (things we want to reuse later)
-          {
-            echo 'path<<EOF'
-            echo 'libs/**/dist'
-            echo 'node_modules/.prisma'
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
-      # Try to restore dist; on cache miss, we'll build and generate here once, and store
-      # the results to cache upon completion
-      - name: Restore prepare cache
-        id: restore-prepare-cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.cache.outputs.path }}
-          key: ${{ steps.cache.outputs.key }}
-          
-      # Run generate:static once for downstreams jobs, unless cached
-      - name: Run generate:static
-        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
-        run: pnpm run generate:static
-
-      # Build shared libs once for downstreams jobs that need compiled deps
-      - name: Build libs
-        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
-        run: pnpm run build:libs
 
       # Read build matrix (later used to run jobs in parallel, per package)
       - name: Read build matrix
@@ -103,12 +67,6 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/pnpm-setup
-
-      - name: Restore Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ needs.prepare.outputs.cache-path }}
-          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run Lint
         run: pnpm run --filter ${{ matrix.package }} lint
@@ -146,15 +104,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
- 
+
       - name: Setup
         uses: ./.github/actions/pnpm-setup
-      
-      - name: Restore Cache
-        uses: actions/cache@v4
         with:
-          path: ${{ needs.prepare.outputs.cache-path }}
-          key: ${{ needs.prepare.outputs.cache-key }}
+          run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Run Typecheck
         run: pnpm run --filter ${{ matrix.package }} typecheck
@@ -172,15 +126,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
- 
+
       - name: Setup
         uses: ./.github/actions/pnpm-setup
-      
-      - name: Restore Cache
-        uses: actions/cache@v4
         with:
-          path: ${{ needs.prepare.outputs.cache-path }}
-          key: ${{ needs.prepare.outputs.cache-key }}
+          run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
         run: pnpm run --filter ${{ matrix.package }} build
@@ -199,15 +149,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
- 
+
       - name: Setup
         uses: ./.github/actions/pnpm-setup
-      
-      - name: Restore Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ needs.prepare.outputs.cache-path }}
-          key: ${{ needs.prepare.outputs.cache-key }}
 
       - name: Run tests
         run: pnpm run --filter "${{ matrix.package }}" test

@@ -9,7 +9,13 @@ const BASE = Config.keysService.url
  * ---- Shared helpers ---------------------------------------------------------
  */
 
-type CommonErr = 'bad-request' | 'not-found' | 'conflict' | 'unauthorized' | 'forbidden' | 'unknown'
+type CommonErr =
+  | 'bad-request'
+  | 'not-found'
+  | 'conflict'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'unknown'
 
 function mapAxiosError(e: unknown): CommonErr {
   const err = e as AxiosError
@@ -49,7 +55,7 @@ export interface Key {
 
 export interface KeyLoan {
   id: string
-  keys: string                 // JSON string array per your DB (e.g. "[\"keyId1\",\"keyId2\"]")
+  keys: string // JSON string array per your DB (e.g. "[\"keyId1\",\"keyId2\"]")
   contact?: string
   lease?: string
   returnedAt?: string | null
@@ -67,7 +73,7 @@ export interface KeySystem {
   name: string
   manufacturer?: string
   type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
-  propertyIds?: string         // JSON string array
+  propertyIds?: string // JSON string array
   installationDate?: string | null
   isActive?: boolean
   description?: string | null
@@ -91,7 +97,10 @@ export interface Log {
  * Axios throws on non-2xx; we catch and map to literal error codes.
  */
 
-async function getJSON<T>(url: string, headers?: Record<string, string>): Promise<AdapterResult<T, CommonErr>> {
+async function getJSON<T>(
+  url: string,
+  headers?: Record<string, string>
+): Promise<AdapterResult<T, CommonErr>> {
   try {
     const res = await axios.get<T>(url, { headers })
     return ok(res.data)
@@ -157,22 +166,31 @@ export const KeysApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  get: async (id: string): Promise<AdapterResult<Key, 'not-found' | CommonErr>> => {
+  get: async (
+    id: string
+  ): Promise<AdapterResult<Key, 'not-found' | CommonErr>> => {
     const r = await getJSON<{ content: Key }>(`${BASE}/keys/${id}`)
     return r.ok ? ok(r.data.content) : r
   },
 
-  create: async (payload: Partial<Key>): Promise<AdapterResult<Key, 'bad-request' | CommonErr>> => {
+  create: async (
+    payload: Partial<Key>
+  ): Promise<AdapterResult<Key, 'bad-request' | CommonErr>> => {
     const r = await postJSON<{ content: Key }>(`${BASE}/keys`, payload)
     return r.ok ? ok(r.data.content) : r
   },
 
-  update: async (id: string, payload: Partial<Key>): Promise<AdapterResult<Key, 'not-found' | 'bad-request' | CommonErr>> => {
+  update: async (
+    id: string,
+    payload: Partial<Key>
+  ): Promise<AdapterResult<Key, 'not-found' | 'bad-request' | CommonErr>> => {
     const r = await patchJSON<{ content: Key }>(`${BASE}/keys/${id}`, payload)
     return r.ok ? ok(r.data.content) : r
   },
 
-  remove: async (id: string): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     // your delete returns { ...metadata } (no content); that's fine
     return deleteJSON(`${BASE}/keys/${id}`)
   },
@@ -188,12 +206,16 @@ export const KeyLoansApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  get: async (id: string): Promise<AdapterResult<KeyLoan, 'not-found' | CommonErr>> => {
+  get: async (
+    id: string
+  ): Promise<AdapterResult<KeyLoan, 'not-found' | CommonErr>> => {
     const r = await getJSON<{ content: KeyLoan }>(`${BASE}/key-loans/${id}`)
     return r.ok ? ok(r.data.content) : r
   },
 
-  create: async (payload: Partial<KeyLoan>): Promise<AdapterResult<KeyLoan, 'bad-request' | CommonErr>> => {
+  create: async (
+    payload: Partial<KeyLoan>
+  ): Promise<AdapterResult<KeyLoan, 'bad-request' | CommonErr>> => {
     const r = await postJSON<{ content: KeyLoan }>(`${BASE}/key-loans`, payload)
     return r.ok ? ok(r.data.content) : r
   },
@@ -201,12 +223,19 @@ export const KeyLoansApi = {
   update: async (
     id: string,
     payload: Partial<KeyLoan>
-  ): Promise<AdapterResult<KeyLoan, 'not-found' | 'bad-request' | CommonErr>> => {
-    const r = await patchJSON<{ content: KeyLoan }>(`${BASE}/key-loans/${id}`, payload)
+  ): Promise<
+    AdapterResult<KeyLoan, 'not-found' | 'bad-request' | CommonErr>
+  > => {
+    const r = await patchJSON<{ content: KeyLoan }>(
+      `${BASE}/key-loans/${id}`,
+      payload
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
-  remove: async (id: string): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-loans/${id}`)
   },
 }
@@ -221,25 +250,44 @@ export const KeySystemsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  get: async (id: string): Promise<AdapterResult<KeySystem, 'not-found' | CommonErr>> => {
+  get: async (
+    id: string
+  ): Promise<AdapterResult<KeySystem, 'not-found' | CommonErr>> => {
     const r = await getJSON<{ content: KeySystem }>(`${BASE}/key-systems/${id}`)
     return r.ok ? ok(r.data.content) : r
   },
 
-  create: async (payload: Partial<KeySystem>): Promise<AdapterResult<KeySystem, 'bad-request' | 'conflict' | CommonErr>> => {
-    const r = await postJSON<{ content: KeySystem }>(`${BASE}/key-systems`, payload)
+  create: async (
+    payload: Partial<KeySystem>
+  ): Promise<
+    AdapterResult<KeySystem, 'bad-request' | 'conflict' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: KeySystem }>(
+      `${BASE}/key-systems`,
+      payload
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
   update: async (
     id: string,
     payload: Partial<KeySystem>
-  ): Promise<AdapterResult<KeySystem, 'not-found' | 'bad-request' | 'conflict' | CommonErr>> => {
-    const r = await patchJSON<{ content: KeySystem }>(`${BASE}/key-systems/${id}`, payload)
+  ): Promise<
+    AdapterResult<
+      KeySystem,
+      'not-found' | 'bad-request' | 'conflict' | CommonErr
+    >
+  > => {
+    const r = await patchJSON<{ content: KeySystem }>(
+      `${BASE}/key-systems/${id}`,
+      payload
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
-  remove: async (id: string): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-systems/${id}`)
   },
 }
@@ -254,12 +302,16 @@ export const LogsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  get: async (id: string): Promise<AdapterResult<Log, 'not-found' | CommonErr>> => {
+  get: async (
+    id: string
+  ): Promise<AdapterResult<Log, 'not-found' | CommonErr>> => {
     const r = await getJSON<{ content: Log }>(`${BASE}/logs/${id}`)
     return r.ok ? ok(r.data.content) : r
   },
 
-  create: async (payload: Partial<Log>): Promise<AdapterResult<Log, 'bad-request' | CommonErr>> => {
+  create: async (
+    payload: Partial<Log>
+  ): Promise<AdapterResult<Log, 'bad-request' | CommonErr>> => {
     const r = await postJSON<{ content: Log }>(`${BASE}/logs`, payload)
     return r.ok ? ok(r.data.content) : r
   },
@@ -272,7 +324,9 @@ export const LogsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  remove: async (id: string): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/logs/${id}`)
   },
 }

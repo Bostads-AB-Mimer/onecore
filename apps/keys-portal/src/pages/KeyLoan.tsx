@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { SearchTenant } from "@/components/loan/SearchTenant";
 import { TenantInfo } from "@/components/loan/TenantInfo";
-import type { Tenant, Lease } from "@/../../libs/types/src/types";
+import type { Tenant, Lease } from "@/services/api/leaseSearchService";
+
 
 export default function KeyLoan() {
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
