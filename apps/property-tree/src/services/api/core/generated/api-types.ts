@@ -4147,22 +4147,28 @@ export interface components {
       description?: string | null;
     };
     RentalPropertyResponse: {
-      rentalTypeCode?: string;
-      rentalType?: string;
-      address?: string;
-      code?: string;
-      number?: string;
-      type?: string;
-      roomTypeCode?: string;
-      entrance?: string;
-      floor?: string;
-      hasElevator?: boolean;
-      washSpace?: string;
-      area?: number;
-      estateCode?: string;
-      estate?: string;
-      buildingCode?: string;
-      building?: string;
+      content?: {
+        id?: string;
+        type?: string;
+        property?: {
+          rentalTypeCode?: string;
+          rentalType?: string;
+          address?: string;
+          code?: string;
+          number?: string;
+          type?: string;
+          roomTypeCode?: string;
+          entrance?: string;
+          floor?: string;
+          hasElevator?: boolean;
+          washSpace?: string;
+          area?: number;
+          estateCode?: string;
+          estate?: string;
+          buildingCode?: string;
+          building?: string;
+        };
+      };
       _links?: {
         self?: {
           href?: string;
