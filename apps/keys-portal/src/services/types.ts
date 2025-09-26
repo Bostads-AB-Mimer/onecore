@@ -1,12 +1,22 @@
+//TODO Consider if all imports should be from the core, rather than 2 sources here
+
 import type { components } from './api/generated/api-types'
 import type { components as CoreComponents } from './api/core/generated/api-types'
 
-// Extract types from the generated schemas
+
+// Tables/respopnse types from the generated schemas
 export type Key = components['schemas']['Key']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type Log = components['schemas']['Log']
+
+// Tables/respopnse types from core API generated schemas
 export type Property = CoreComponents['schemas']['Property']
+export type RentalPropertyResponse = CoreComponents['schemas']['RentalPropertyResponse']
+export type Lease = CoreComponents['schemas']['Lease']
+
+
+// Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
 export type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
 export type CreateKeySystemRequest = components['schemas']['CreateKeySystemRequest']
