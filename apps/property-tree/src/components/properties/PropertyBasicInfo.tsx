@@ -31,7 +31,7 @@ export const PropertyBasicInfo = ({
 
           <div>
             <p className="text-sm text-muted-foreground">Fastighetsnummer</p>
-            <p className="font-medium">{propertyDetail.propertyNumber}</p>
+            <p className="font-medium">{propertyDetail.code}</p>
           </div>
 
           <div>
@@ -41,19 +41,23 @@ export const PropertyBasicInfo = ({
 
           <div>
             <p className="text-sm text-muted-foreground">Distrikt</p>
-            <p className="font-medium">{propertyDetail.district || '-'}</p>
+            <p className="font-medium">
+              {propertyDetail.district.caption || '-'}
+            </p>
           </div>
 
           <div>
             <p className="text-sm text-muted-foreground">Församling</p>
-            <p className="font-medium">{propertyDetail.parish}</p>
+            <p className="font-medium">{propertyDetail.congregation}</p>
           </div>
 
           <div>
             <p className="text-sm text-muted-foreground">
               Stadsdel/Marknadsområde
             </p>
-            <p className="font-medium">{propertyDetail.marketArea || '-'}</p>
+            <p className="font-medium">
+              {propertyDetail.marketArea.name || '-'}
+            </p>
           </div>
 
           <div>
@@ -61,7 +65,9 @@ export const PropertyBasicInfo = ({
               Förvaltare/kvartersvärd
             </p>
             <p className="font-medium">
-              {propertyDetail.propertyManager || '-'}
+              {
+                '-' /* TODO: No such data in API yet, and where do we find it? */
+              }
             </p>
           </div>
 
@@ -80,11 +86,15 @@ export const PropertyBasicInfo = ({
             <p className="font-medium">{propertyDetail.buildings.length}</p>
           </div>
 
+          {/* 
+            Does a property really have a construction year? What if the buildings have different construction years or renovation years? 
+            Grabbing it from the first building does not feel right if there are multiple buildings.
+          */}
           <div>
             <p className="text-sm text-muted-foreground">Byggnadsår</p>
             <p className="font-medium">
               {propertyDetail.buildings.length > 0
-                ? propertyDetail.buildings[0].constructionYear
+                ? propertyDetail.buildings[0].construction.constructionYear
                 : '-'}
             </p>
           </div>
@@ -93,8 +103,8 @@ export const PropertyBasicInfo = ({
             <p className="text-sm text-muted-foreground">Ombyggnadsår</p>
             <p className="font-medium">
               {propertyDetail.buildings.length > 0 &&
-              propertyDetail.buildings[0].renovationYear
-                ? propertyDetail.buildings[0].renovationYear
+              propertyDetail.buildings[0].construction.renovationYear
+                ? propertyDetail.buildings[0].construction.renovationYear
                 : '-'}
             </p>
           </div>
@@ -123,7 +133,7 @@ export const PropertyBasicInfo = ({
             <div>
               <p className="text-sm text-muted-foreground">Församling:</p>
               <p className="font-medium">
-                {propertyDetail.parish || 'DOMKYRKOFÖRSAMLING'}
+                {propertyDetail.congregation || 'DOMKYRKOFÖRSAMLING'}
               </p>
             </div>
             <div>
@@ -152,7 +162,7 @@ export const PropertyBasicInfo = ({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Trakt:</p>
-              <p className="font-medium">{propertyDetail.parish || 'Lundby'}</p>
+              <p className="font-medium">{propertyDetail.tract || 'Lundby'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Hyresid:</p>

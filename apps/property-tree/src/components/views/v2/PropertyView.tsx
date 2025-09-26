@@ -31,7 +31,7 @@ const PropertyView = () => {
 
   useEffect(() => {
     if (error) {
-      console.log('Error loading property data:', error)
+      console.error('Error loading property data:', error)
       /*
       toast({
         title: 'Fel vid laddning',
