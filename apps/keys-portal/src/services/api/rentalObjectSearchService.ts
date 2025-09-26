@@ -30,7 +30,7 @@ export class RentalObjectSearchService {
         const typeFromApi = rentalProperty.content?.type ?? 'unknown'
 
         const result: RentalObjectSearchResult = {
-          rentalId: rentalProperty.content?.property?.code || rentalId,
+          rentalId: rentalProperty.content?.id || rentalId,
           name: this.getPropertyName(rentalProperty),
           type: typeFromApi,
           address: this.getPropertyAddress(rentalProperty)
