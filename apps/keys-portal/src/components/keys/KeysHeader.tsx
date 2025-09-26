@@ -1,8 +1,8 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge'
 
 interface KeysHeaderProps {
-  totalKeys: number;
-  displayedKeys: number;
+  totalKeys: number
+  displayedKeys: number
 }
 
 export function KeysHeader({ totalKeys, displayedKeys }: KeysHeaderProps) {
@@ -20,5 +20,5 @@ export function KeysHeader({ totalKeys, displayedKeys }: KeysHeaderProps) {
         </Badge>
       </div>
     </div>
-  );
+  )
 }

@@ -31,7 +31,7 @@ app.use(loggerMiddlewares.post)
 
 const publicRouter = new KoaRouter()
 swagggerRoutes(publicRouter)
- app.use(publicRouter.routes())
+app.use(publicRouter.routes())
 
 app.use(api.routes())
 app.use(api.allowedMethods())

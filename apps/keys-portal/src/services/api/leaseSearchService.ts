@@ -1,5 +1,10 @@
+import type {
+  Lease as ApiLease,
+  Tenant as ApiTenantArray,
+  TenantAddress as AddressAlias,
+} from '@/services/types'
+
 import { GET } from './core/base-api'
-import type { Lease as ApiLease, Tenant as ApiTenantArray, TenantAddress as AddressAlias } from '@/services/types'
 
 export type Address = AddressAlias
 type ApiTenant = ApiTenantArray[number]
@@ -59,7 +64,10 @@ export async function fetchTenantAndLeasesByPnr(
   for (const raw of apiLeases) {
     const ts = raw.tenants ?? []
     const hit = ts.find((t) => equalPnr(t?.nationalRegistrationNumber, target))
-    if (hit) { picked = hit; break }
+    if (hit) {
+      picked = hit
+      break
+    }
   }
   if (!picked) picked = (apiLeases[0].tenants ?? [])[0]
 
@@ -101,7 +109,8 @@ function toAddressFromApi(dto: any): Address | undefined {
 }
 
 function toLeaseFromApi(dto: ApiLease): Lease {
-  const rp = dto.rentalProperty ?? ({} as NonNullable<ApiLease['rentalProperty']>)
+  const rp =
+    dto.rentalProperty ?? ({} as NonNullable<ApiLease['rentalProperty']>)
   const addr = toAddressFromApi(dto) || toAddressFromApi(rp)
 
   return {
@@ -118,7 +127,9 @@ function toLeaseFromApi(dto: ApiLease): Lease {
       : undefined,
 
     address: addr,
-    rentInfo: { currentRent: { currentRent: dto.rentInfo?.currentRent?.currentRent ?? 0 } },
+    rentInfo: {
+      currentRent: { currentRent: dto.rentInfo?.currentRent?.currentRent ?? 0 },
+    },
 
     lastDebitDate: d(dto.lastDebitDate),
     noticeDate: d(dto.noticeDate),
@@ -129,14 +140,19 @@ function toLeaseFromApi(dto: ApiLease): Lease {
 function toContactFromApi(hit: ApiTenant | undefined, fallbackPnr: string) {
   const firstName = String(hit?.firstName ?? '')
   const lastName = String(hit?.lastName ?? '')
-  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || fallbackPnr
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(' ').trim() || fallbackPnr
 
   return {
     firstName,
     lastName,
     fullName,
-    nationalRegistrationNumber: String(hit?.nationalRegistrationNumber ?? fallbackPnr),
-    birthDate: hit?.birthDate ? new Date(hit.birthDate) : new Date('1900-01-01'),
+    nationalRegistrationNumber: String(
+      hit?.nationalRegistrationNumber ?? fallbackPnr
+    ),
+    birthDate: hit?.birthDate
+      ? new Date(hit.birthDate)
+      : new Date('1900-01-01'),
     address: toAddressFromApi(hit),
     emailAddress: hit?.emailAddress ? String(hit.emailAddress) : undefined,
     specialAttention: Boolean(hit?.specialAttention ?? false),
@@ -156,7 +172,9 @@ function pickCurrentAndUpcoming(leases: Lease[]) {
     if (start === undefined) continue
 
     if (start > now) {
-      const upStart = upcoming ? toMs(upcoming.leaseStartDate) ?? Infinity : Infinity
+      const upStart = upcoming
+        ? (toMs(upcoming.leaseStartDate) ?? Infinity)
+        : Infinity
       if (!upcoming || start < upStart) upcoming = l
     } else if (end === undefined || end >= now) {
       if (!current) current = l
