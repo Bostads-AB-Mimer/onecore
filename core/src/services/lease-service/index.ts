@@ -208,7 +208,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 type: object
+   *                 $ref: '#/components/schemas/Lease'
    *     security:
    *       - bearerAuth: []
    */
@@ -292,7 +292,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 type: object
+   *                 $ref: '#/components/schemas/Lease'
    *     security:
    *       - bearerAuth: []
    */
@@ -831,8 +831,8 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
-   *                   type: object
+   *                 content:
+   *                   $ref: '#/components/schemas/Lease'
    *     security:
    *       - bearerAuth: []
    */
