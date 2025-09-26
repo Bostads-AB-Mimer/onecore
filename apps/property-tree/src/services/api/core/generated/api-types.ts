@@ -3997,18 +3997,155 @@ export interface components {
         name: string | null;
       };
     });
-    Key: components["schemas"]["Key"];
-    KeyLoan: components["schemas"]["KeyLoan"];
-    KeySystem: components["schemas"]["KeySystem"];
-    Log: components["schemas"]["Log"];
-    CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
-    UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
-    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
-    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
-    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
-    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
-    CreateLogRequest: components["schemas"]["CreateLogRequest"];
-    UpdateLogRequest: components["schemas"]["UpdateLogRequest"];
+    Key: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "LGH" | "PB" | "FS" | "HN";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    KeyLoan: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      contact?: string;
+      lease?: string;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
+    KeySystem: {
+      /** Format: uuid */
+      id: string;
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
+    Log: {
+      /** Format: uuid */
+      id: string;
+      userName: string;
+      /** @enum {string} */
+      eventType: "creation" | "update" | "delete";
+      /** @enum {string} */
+      objectType: "key" | "keySystem" | "keyLoan";
+      /** Format: date-time */
+      eventTime: string;
+      description?: string | null;
+    };
+    CreateKeyRequest: {
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "LGH" | "PB" | "FS" | "HN";
+      /** Format: uuid */
+      keySystemId?: string | null;
+    };
+    UpdateKeyRequest: {
+      keyName?: string;
+      keySequenceNumber?: number;
+      flexNumber?: number;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType?: "LGH" | "PB" | "FS" | "HN";
+      /** Format: uuid */
+      keySystemId?: string | null;
+    };
+    CreateKeyLoanRequest: {
+      keys: string;
+      contact?: string;
+      lease?: string;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      createdBy?: string | null;
+    };
+    UpdateKeyLoanRequest: {
+      keys?: string;
+      contact?: string;
+      lease?: string;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      updatedBy?: string | null;
+    };
+    CreateKeySystemRequest: {
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+    };
+    UpdateKeySystemRequest: {
+      systemCode?: string;
+      name?: string;
+      manufacturer?: string;
+      /** @enum {string} */
+      type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+    };
+    CreateLogRequest: {
+      userName: string;
+      /** @enum {string} */
+      eventType: "creation" | "update" | "delete";
+      /** @enum {string} */
+      objectType: "key" | "key_system" | "key_loan";
+      description?: string | null;
+    };
+    UpdateLogRequest: {
+      userName?: string;
+      /** @enum {string} */
+      eventType?: "creation" | "update" | "delete";
+      /** @enum {string} */
+      objectType?: "key" | "keySystem" | "keyLoan";
+      description?: string | null;
+    };
     RentalPropertyResponse: {
       rentalTypeCode?: string;
       rentalType?: string;
