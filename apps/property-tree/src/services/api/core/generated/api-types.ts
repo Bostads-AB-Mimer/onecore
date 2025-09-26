@@ -2922,7 +2922,7 @@ export interface paths {
   "/keys": {
     /**
      * List keys
-     * @description Returns keys ordered by created_at (desc).
+     * @description Returns keys ordered by createAt (desc).
      */
     get: {
       responses: {
@@ -3039,17 +3039,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /** @example Front door A (updated) */
-            key_name?: string;
-            key_sequence_number?: number;
-            flex_number?: number;
-            rental_object?: string;
-            /** @enum {string} */
-            key_type?: "LGH" | "PB" | "FS" | "HN";
-            /** Format: uuid */
-            key_system_id?: string | null;
-          };
+          "application/json": components["schemas"]["UpdateKeyRequest"];
         };
       };
       responses: {
@@ -3112,19 +3102,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @description Unique system code */
-            system_code: string;
-            /** @description Name of the key system */
-            name: string;
-            /**
-             * @description Type of key system
-             * @enum {string}
-             */
-            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            /** @description Description of the key system */
-            description?: string;
-          };
+          "application/json": components["schemas"]["CreateKeySystemRequest"];
         };
       };
       responses: {
@@ -3229,19 +3207,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            /** @description Unique system code */
-            system_code?: string;
-            /** @description Name of the key system */
-            name?: string;
-            /**
-             * @description Type of key system
-             * @enum {string}
-             */
-            type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            /** @description Description of the key system */
-            description?: string;
-          };
+          "application/json": components["schemas"]["UpdateKeySystemRequest"];
         };
       };
       responses: {
@@ -3277,7 +3243,7 @@ export interface paths {
   "/logs": {
     /**
      * List logs
-     * @description Returns logs ordered by event_time (desc).
+     * @description Returns logs ordered by eventTime (desc).
      */
     get: {
       responses: {
@@ -3301,22 +3267,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @example seb */
-            user_name: string;
-            /**
-             * @example creation
-             * @enum {string}
-             */
-            event_type: "creation" | "update" | "delete";
-            /**
-             * @example key
-             * @enum {string}
-             */
-            object_type: "key" | "key_system" | "key_loan";
-            /** @example Initial import */
-            description?: string;
-          };
+          "application/json": components["schemas"]["CreateLogRequest"];
         };
       };
       responses: {
@@ -3409,14 +3360,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "application/json": {
-            user_name?: string;
-            /** @enum {string} */
-            event_type?: "creation" | "update" | "delete";
-            /** @enum {string} */
-            object_type?: "key" | "key_system" | "key_loan";
-            description?: string;
-          };
+          "application/json": components["schemas"]["UpdateLogRequest"];
         };
       };
       responses: {

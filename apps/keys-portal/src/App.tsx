@@ -10,6 +10,7 @@ import LockSystemDetail from './pages/LockSystemDetail'
 import NotFound from './pages/NotFound'
 import { AuthCallback } from './auth/AuthCallback'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import KeyLoan from './pages/KeyLoan'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ const AppContent = () => (
       <Route path="/" element={<Index />} />
       <Route path="/lock-systems" element={<LockSystems />} />
       <Route path="/lock-systems/:id" element={<LockSystemDetail />} />
+      <Route path="/utlaning" element={<KeyLoan />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
