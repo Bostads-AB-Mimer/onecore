@@ -1,6 +1,6 @@
 {
   "name": "onecore-monorepo",
-  "version": "1.4.30",
+  "version": "1.4.31",
   "private": true,
   "author": "Bostads AB Mimer",
   "packageManager": "pnpm@10.16.1",
