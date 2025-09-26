@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Key, KeyType, KeyTypeLabels } from "@/services/types";
-import { searchService as rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/searchService";
+import { rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/rentalObjectSearchService";
 import { X } from "lucide-react";
 
 interface AddKeyFormProps {
@@ -21,6 +21,7 @@ interface AddKeyFormProps {
 }
 
 export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
+  // Form state management with initial values from editingKey if provided
   const [formData, setFormData] = useState({
     keyName: editingKey?.keyName || '',
     keySequenceNumber: editingKey?.keySequenceNumber || '',
@@ -30,12 +31,15 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     keySystemName: editingKey?.keySystemName || '',
   });
 
+  // Search functionality state
   const [searchResults, setSearchResults] = useState<RentalObjectSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Effect hook that triggers rental object search when searchQuery changes
   useEffect(() => {
     const performSearch = async () => {
+      // Clear results if search query is empty
       if (searchQuery.trim().length === 0) {
         setSearchResults([]);
         setIsSearching(false);
@@ -49,6 +53,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
         return;
       }
 
+      // Perform the actual search
       setIsSearching(true);
       try {
         const results = await rentalObjectSearchService.searchByRentalId(searchQuery);
@@ -64,21 +69,26 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     performSearch();
   }, [searchQuery]);
 
+  // Handle rental object input changes and trigger search
   const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, rentalObject: value }));
     setSearchQuery(value);
   };
 
+  // Handle selection of a search result from the dropdown
   const handleSelectSearchResult = (result: RentalObjectSearchResult) => {
     setFormData(prev => ({ ...prev, rentalObject: result.rentalId }));
     setSearchResults([]);
     setSearchQuery('');
   };
 
+  // Handle form submission and validation
   const handleSave = () => {
+    // Validate required fields
     if (!formData.keyName || !formData.keyType) return;
 
+    // Prepare key data for saving, converting string numbers to actual numbers
     onSave({
       keyName: formData.keyName,
       keySequenceNumber: formData.keySequenceNumber ? Number(formData.keySequenceNumber) : undefined,
@@ -89,7 +99,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       keySystemId: undefined,
     });
 
-    // Reset form after save
+    // Reset form after successful save
     setFormData({
       keyName: '',
       keySequenceNumber: '',
@@ -103,8 +113,10 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setIsSearching(false);
   };
 
+  // Handle form cancellation and reset form state
   const handleCancel = () => {
     onCancel();
+    // Reset all form fields and search state
     setFormData({
       keyName: '',
       keySequenceNumber: '',

@@ -1,8 +1,5 @@
 import { GET } from './core/base-api'
-import type { paths, components } from './core/generated/api-types'
-
-type RentalPropertyResponse = components['schemas']['RentalPropertyResponse']
-
+import type { RentalPropertyResponse } from "@/services/types";
 
 export interface RentalObjectSearchResult {
   rentalId: string
@@ -30,10 +27,10 @@ export class RentalObjectSearchService {
       if (response.data) {
         const rentalProperty: RentalPropertyResponse = response.data
 
-        const typeFromApi = rentalProperty.type ?? 'unknown' 
+        const typeFromApi = rentalProperty.content?.type ?? 'unknown'
 
         const result: RentalObjectSearchResult = {
-          rentalId: rentalProperty.code || rentalId,
+          rentalId: rentalProperty.content?.property?.code || rentalId,
           name: this.getPropertyName(rentalProperty),
           type: typeFromApi,
           address: this.getPropertyAddress(rentalProperty)
@@ -54,12 +51,12 @@ export class RentalObjectSearchService {
       return address
     }
     // Fallback to the raw API type if no address
-    return rentalProperty.type || 'Okänd typ'
+    return rentalProperty.content?.type || 'Okänd typ'
   }
 
   private getPropertyAddress(rentalProperty: RentalPropertyResponse): string {
-    if (rentalProperty.address) {
-      return rentalProperty.address
+    if (rentalProperty.content?.property?.address) {
+      return rentalProperty.content.property.address
     }
     return 'Okänd adress'
   }
