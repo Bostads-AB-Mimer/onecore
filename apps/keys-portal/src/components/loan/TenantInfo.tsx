@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, MapPin, ArrowLeft } from "lucide-react";
-import type { Tenant, Lease, Address } from "@/services/api/searchService";
+import type { Tenant, Lease, Address } from "@/services/api/leaseSearchService";
 
 interface TenantInfoProps {
   tenant: Tenant;
