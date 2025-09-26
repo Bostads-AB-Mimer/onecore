@@ -15,6 +15,8 @@ export type Property = CoreComponents['schemas']['Property']
 export type RentalPropertyResponse = CoreComponents['schemas']['RentalPropertyResponse']
 export type Lease = CoreComponents['schemas']['Lease']
 export type Tenant = CoreComponents['schemas']['Lease']['tenants']
+export type TenantAddress = NonNullable<CoreComponents['schemas']['Lease']['tenants'][number]['address']>
+
 
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
@@ -24,9 +26,8 @@ export type UpdateKeySystemRequest = components['schemas']['UpdateKeySystemReque
 export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
 export type RentalPropertyResponse = CoreComponents['schemas']['RentalPropertyResponse'];
-export type LeaseDto = CoreComponents['schemas']['Lease']
-export type Address = NonNullable<LeaseDto['address']>;
-export type ApiTenant = NonNullable<LeaseDto['tenants']>[number];
+
+
 
 
 // Key type definitions based on the existing codebase usage
