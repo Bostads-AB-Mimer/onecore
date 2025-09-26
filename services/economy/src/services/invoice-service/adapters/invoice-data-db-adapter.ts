@@ -406,3 +406,11 @@ export const getImportedInvoiceNumbers = async () => {
 
   return invoiceNumbers.map((invoice) => invoice.InvoiceNumber)
 }
+
+export const getAllInvoiceRows = async (batchId: string) => {
+  return await db('invoice_data')
+    .where('batchId', batchId)
+    .orderBy('InvoiceDate', 'ASC')
+    .orderBy('LedgerAccount', 'ASC')
+    .orderBy('InvoiceNumber', 'ASC')
+}

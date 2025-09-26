@@ -324,12 +324,12 @@ const createAggregatedTransaction = async (
   }
 }
 
-export const createCustomerLedgerRow = async (
+export const createCustomerLedgerRow = (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,
   chunkNumber: number,
   counterPartCode: string
-): Promise<InvoiceDataRow> => {
+): InvoiceDataRow => {
   let customerInvoiceAmount = 0
 
   invoiceDataRows.forEach((row) => {

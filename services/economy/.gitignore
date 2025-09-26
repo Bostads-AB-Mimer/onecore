@@ -7,7 +7,7 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 procurement-invoices/
-rental-invoice-export/
+rental-invoice-export*
 rental-invoice-files/
 temp/
 
