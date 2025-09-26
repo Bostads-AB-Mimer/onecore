@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Key, KeyType, KeyTypeLabels } from "@/types/key";
+import { Key, KeyType, KeyTypeLabels } from "@/services/types";
 import { rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/rentalObjectSearchService";
 
 interface AddKeyDialogProps {

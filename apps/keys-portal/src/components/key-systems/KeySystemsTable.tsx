@@ -16,19 +16,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { LockSystem, LockSystemTypeLabels } from "@/types/lock-system";
-import { Property, sampleProperties } from "@/types/property";
+import { KeySystem, KeySystemTypeLabels, Property } from "@/services/types";
+import { sampleProperties } from "@/mockdata/sampleProperties";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 
-interface LockSystemsTableProps {
-  lockSystems: LockSystem[];
-  onEdit: (lockSystem: LockSystem) => void;
+interface KeySystemsTableProps {
+  KeySystems: KeySystem[];
+  onEdit: (KeySystem: KeySystem) => void;
   onDelete: (id: string) => void;
-  onExplore: (lockSystem: LockSystem) => void;
+  onExplore: (KeySystem: KeySystem) => void;
 }
 
-export function LockSystemsTable({ lockSystems, onEdit, onDelete, onExplore }: LockSystemsTableProps) {
+export function KeySystemsTable({ KeySystems, onEdit, onDelete, onExplore }: KeySystemsTableProps) {
   const navigate = useNavigate();
   const getTypeVariant = (type: string) => {
     switch (type) {
@@ -67,23 +67,23 @@ export function LockSystemsTable({ lockSystems, onEdit, onDelete, onExplore }: L
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lockSystems.length === 0 ? (
+          {KeySystems.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                 Inga låssystem hittades
               </TableCell>
             </TableRow>
           ) : (
-            lockSystems.map((lockSystem) => {
+            KeySystems.map((KeySystem) => {
               const properties = sampleProperties.filter(prop => 
-                lockSystem.property_ids?.includes(prop.id)
+                KeySystem.property_ids?.includes(prop.id)
               );
               
               return (
-              <TableRow key={lockSystem.id}>
-                <TableCell className="font-medium">{lockSystem.system_code}</TableCell>
-                <TableCell>{lockSystem.name}</TableCell>
-                <TableCell>{lockSystem.manufacturer || '-'}</TableCell>
+              <TableRow key={KeySystem.id}>
+                <TableCell className="font-medium">{KeySystem.system_code}</TableCell>
+                <TableCell>{KeySystem.name}</TableCell>
+                <TableCell>{KeySystem.manufacturer || '-'}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {properties.length > 0 ? (
@@ -98,17 +98,17 @@ export function LockSystemsTable({ lockSystems, onEdit, onDelete, onExplore }: L
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getTypeVariant(lockSystem.type)}>
-                    {LockSystemTypeLabels[lockSystem.type]}
+                  <Badge variant={getTypeVariant(KeySystem.type)}>
+                    {KeySystemTypeLabels[KeySystem.type]}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={lockSystem.is_active ? "default" : "secondary"}>
-                    {lockSystem.is_active ? 'Aktiv' : 'Inaktiv'}
+                  <Badge variant={KeySystem.is_active ? "default" : "secondary"}>
+                    {KeySystem.is_active ? 'Aktiv' : 'Inaktiv'}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {lockSystem.installation_date ? formatDate(lockSystem.installation_date) : '-'}
+                  {KeySystem.installation_date ? formatDate(KeySystem.installation_date) : '-'}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -118,16 +118,16 @@ export function LockSystemsTable({ lockSystems, onEdit, onDelete, onExplore }: L
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/lock-systems/${lockSystem.id}`)}>
+                      <DropdownMenuItem onClick={() => navigate(`/key-systems/${KeySystem.id}`)}>
                         <Search className="mr-2 h-4 w-4" />
                         Utforska
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(lockSystem)}>
+                      <DropdownMenuItem onClick={() => onEdit(KeySystem)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Redigera
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => onDelete(lockSystem.id)}
+                        onClick={() => onDelete(KeySystem.id)}
                         className="text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />

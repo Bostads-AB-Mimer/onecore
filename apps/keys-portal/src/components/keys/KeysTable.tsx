@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Key, KeyTypeLabels } from "@/types/key";
+import { Key, KeyTypeLabels } from "@/services/types";
 
 interface KeysTableProps {
   keys: Key[];
