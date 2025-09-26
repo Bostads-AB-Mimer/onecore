@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Key, KeyType, KeyTypeLabels } from "@/services/types";
-import { searchService as rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/searchService";
+import { rentalObjectSearchService, RentalObjectSearchResult } from "@/services/api/rentalObjectSearchService";
 import { X } from "lucide-react";
 
 interface AddKeyFormProps {
