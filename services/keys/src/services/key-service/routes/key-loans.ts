@@ -15,7 +15,7 @@ const TABLE = 'key_loans'
 export const routes = (router: KoaRouter) => {
    /**
    * @swagger
-   * /key_loans:
+   * /key-loans:
    *   get:
    *     summary: List all key loans
    *     description: Fetches a list of all key loans ordered by creation date.
@@ -82,7 +82,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.get('/key_loans', async (ctx) => {
+  router.get('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const rows = await db(TABLE).select('*').orderBy('created_at', 'desc')
@@ -97,7 +97,7 @@ export const routes = (router: KoaRouter) => {
 
  /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
    *     description: Fetch a specific key loan by its ID.
@@ -179,7 +179,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.get('/key_loans/:id', async (ctx) => {
+  router.get('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const row = await db(TABLE).where({ id: ctx.params.id }).first()
@@ -199,7 +199,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans:
+   * /key-loans:
    *   post:
    *     summary: Create a new key loan
    *     description: Create a new key loan record.
@@ -259,7 +259,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/key_loans', async (ctx) => {
+  router.post('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: any = ctx.request.body || {}
@@ -276,7 +276,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   patch:
    *     summary: Update a key loan
    *     description: Partially update an existing key loan.
@@ -356,7 +356,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/key_loans/:id', async (ctx) => {
+  router.patch('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const payload: any = ctx.request.body || {}
@@ -383,7 +383,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_loans/{id}:
+   * /key-loans/{id}:
    *   delete:
    *     summary: Delete a key loan
    *     description: Delete an existing key loan by ID.
@@ -423,7 +423,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.delete('/key_loans/:id', async (ctx) => {
+  router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const n = await db(TABLE).where({ id: ctx.params.id }).del()

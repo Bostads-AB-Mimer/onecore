@@ -2722,7 +2722,7 @@ export interface paths {
       };
     };
   };
-  "/key_loans": {
+  "/key-loans": {
     /**
      * List all key loans
      * @description Fetches a list of all key loans ordered by creation date.
@@ -2812,7 +2812,7 @@ export interface paths {
       };
     };
   };
-  "/key_loans/{id}": {
+  "/key-loans/{id}": {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
