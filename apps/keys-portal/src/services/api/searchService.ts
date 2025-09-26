@@ -1,6 +1,5 @@
 import { GET } from './core/base-api'
-import type { components } from './core/generated/api-types'
-
+import type { RentalPropertyResponse, LeaseDto } from '@/services/types'
 import type {
   Tenant as LibTenant,
   Lease as LibLease,
@@ -16,40 +15,12 @@ export interface RentalObjectSearchResult {
   address: string
 }
 
-interface RentalPropertyResponse {
-  id?: string
-  type?: string
-  property?: {
-    rentalTypeCode?: string
-    rentalType?: string
-    address?: string
-    code?: string
-    number?: string
-    type?: string
-    roomTypeCode?: string
-    entrance?: string
-    floor?: string
-    hasElevator?: boolean
-    washSpace?: string
-    area?: number
-    estateCode?: string
-    estate?: string
-    buildingCode?: string
-    building?: string
-  }
-}
-
-type LeaseDto = components['schemas']['Lease']
-
-const onlyDigits = (s?: string) => (s ?? '').replace(/[^\d]/g, '')
-
 export class SearchService {
   isValidRentalId(rentalId: string): boolean {
     const rentalIdPattern = /^[\d-]+$/
     return rentalIdPattern.test(rentalId) && rentalId.length >= 5
   }
 
-  /** 10–12 digits w/ optional hyphen */
   isValidPnr(pnr: string): boolean {
     return /^(?:\d{6}|\d{8})-?\d{4}$/.test((pnr ?? '').trim())
   }
@@ -215,21 +186,22 @@ function toContactFromApi(hit: any, fallbackPnr: string): LibContact {
 }
 
 function toLeaseFromDto(dto: any): LibLease {
-  const start = dto?.startDate ?? dto?.leaseStartDate
-  const end = dto?.endDate ?? dto?.leaseEndDate
-
-  const rentalProp = dto?.rentalProperty ?? dto?.property ?? {}
-
-  const addr = toAddressFromDto(dto) || toAddressFromDto(rentalProp)
+  const start = dto?.startDate ?? dto?.leaseStartDate;
+  const end   = dto?.endDate   ?? dto?.leaseEndDate;
+  const termination = dto?.terminationDate
+  const notice      = dto?.noticeDate
+  const lastDebit   = dto?.lastDebitDate
+  const rentalProp = dto?.rentalProperty ?? dto?.property ?? {};
+  const addr = toAddressFromDto(dto) || toAddressFromDto(rentalProp);
 
   return {
     leaseId: String(dto?.id ?? dto?.leaseId ?? ''),
     leaseNumber: String(dto?.number ?? dto?.leaseNumber ?? ''),
-    leaseStartDate: start ? new Date(start) : new Date(),         // fallback: now
-    leaseEndDate: end ? new Date(end) : undefined,
+    leaseStartDate: start ? new Date(start) : new Date(),
+    leaseEndDate:   end ? new Date(end) : undefined,
     status: (dto?.status ?? 'ACTIVE') as LibLease['status'],
     tenantContactIds: dto?.tenantContactIds ?? undefined,
-    tenants: undefined, // we don't need to stuff Contacts here for now
+    tenants: undefined,
     rentalPropertyId: String(dto?.rentalPropertyId ?? dto?.propertyId ?? ''),
     rentalProperty: rentalProp
       ? {
@@ -245,20 +217,23 @@ function toLeaseFromDto(dto: any): LibLease {
           lastUpdated: undefined,
         }
       : undefined,
+
     type: String(dto?.type ?? 'HOUSING'),
     rentInfo: undefined,
     address: addr,
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: undefined,
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
+
+    noticeGivenBy: dto?.noticeGivenBy ?? undefined,
+    noticeDate: dto?.noticeDate ? new Date(dto.noticeDate) : undefined,
+    noticeTimeTenant: dto?.noticeTimeTenant ?? undefined,
+    preferredMoveOutDate: dto?.preferredMoveOutDate ? new Date(dto.preferredMoveOutDate) : undefined,
+    terminationDate: dto?.terminationDate ? new Date(dto.terminationDate) : undefined,
     contractDate: dto?.contractDate ? new Date(dto.contractDate) : undefined,
-    lastDebitDate: undefined,
-    approvalDate: undefined,
+    lastDebitDate: dto?.lastDebitDate ? new Date(dto.lastDebitDate) : undefined,
+    approvalDate: dto?.approvalDate ? new Date(dto.approvalDate) : undefined,
     residentialArea: undefined,
-  }
+  };
 }
+
 
 function pickCurrentAndUpcoming(leases: LibLease[]): {
   current?: LibLease
@@ -301,7 +276,9 @@ function pickCurrentAndUpcoming(leases: LibLease[]): {
 
 
 
-const normalizePnr = (s: string) => (s ?? '').replace(/[^\d]/g, '')
+const normalizePnr = (s: string) => (s ?? '').replace(/[^\d]/g, '');
+const last10 = (s: string) => normalizePnr(s).slice(-10);
+const equalPnr = (a?: string, b?: string) => last10(a ?? '') === last10(b ?? '');
 
 export async function fetchTenantAndLeasesByPnr(
   pnr: string
@@ -325,12 +302,11 @@ export async function fetchTenantAndLeasesByPnr(
   let picked: any | null = null
 
   for (const raw of leaseDtos as any[]) {
-    const ts: any[] = raw?.tenants ?? raw?.leaseTenants ?? []
-    const hit = ts.find(
-      (t) => normalizePnr(t?.pnr ?? t?.personalNumber ?? t?.ssn) === target
-    )
-    if (hit) { picked = hit; break }
-  }
+    const ts: any[] = raw?.tenants ?? raw?.leaseTenants ?? [];
+    const hit = ts.find(t => equalPnr(t?.pnr ?? t?.personalNumber ?? t?.ssn, target));
+  if (hit) { picked = hit; break; }
+}
+
 
   if (!picked) {
     const firstLease = (leaseDtos as any[])[0]
