@@ -71,3 +71,9 @@ runs:
       if: inputs.run-generate-static == 'true'
       shell: bash
       run: pnpm generate:static
+
+    # Build shared libs once for downstreams jobs that need compiled deps
+    - name: Build libs
+      if: steps.pnpm-store.outputs.cache-hit != 'true'
+      shell: bash
+      run: pnpm run build:libs
