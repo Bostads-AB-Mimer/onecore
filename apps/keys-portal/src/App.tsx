@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Navigation } from '@/components/Navigation'
 import Index from './pages/Index'
-import LockSystems from './pages/LockSystems'
-import LockSystemDetail from './pages/LockSystemDetail'
+import KeySystems from './pages/KeySystems'
+import KeySystemDetail from './pages/KeySystemDetail'
 import NotFound from './pages/NotFound'
 import { AuthCallback } from './auth/AuthCallback'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -26,8 +26,8 @@ const AppContent = () => (
     <Navigation />
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/lock-systems" element={<LockSystems />} />
-      <Route path="/lock-systems/:id" element={<LockSystemDetail />} />
+      <Route path="/key-systems" element={<KeySystems />} />
+      <Route path="/key-systems/:id" element={<KeySystemDetail />} />
       <Route path="/utlaning" element={<KeyLoan />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
