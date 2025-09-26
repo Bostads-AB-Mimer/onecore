@@ -148,7 +148,7 @@ const config = configPackage({
       keys: {
         systemName: 'keys',
         minimumMinutesBetweenRequests: 1,
-      }
+      },
     },
   },
 })
