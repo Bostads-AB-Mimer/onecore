@@ -7,13 +7,13 @@ type Key = components['schemas']['Key']
 export const keyService = {
   // Key Loans
   async getAllKeyLoans(): Promise<KeyLoan[]> {
-    const { data, error } = await GET('/key_loans')
+    const { data, error } = await GET('/key-loans')
     if (error) throw error
     return data?.content || []
   },
 
   async getKeyLoan(id: string): Promise<KeyLoan> {
-    const { data, error } = await GET('/key_loans/{id}', {
+    const { data, error } = await GET('/key-loans/{id}', {
       params: { path: { id } },
     })
     if (error) throw error
@@ -21,7 +21,7 @@ export const keyService = {
   },
 
   async createKeyLoan(payload: Omit<KeyLoan, 'id' | 'created_at' | 'updated_at'>): Promise<KeyLoan> {
-    const { data, error } = await POST('/key_loans', {
+    const { data, error } = await POST('/key-loans', {
       body: payload,
     })
     if (error) throw error

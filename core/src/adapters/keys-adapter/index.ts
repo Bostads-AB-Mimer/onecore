@@ -184,17 +184,17 @@ export const KeysApi = {
 
 export const KeyLoansApi = {
   list: async (): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
-    const r = await getJSON<{ content: KeyLoan[] }>(`${BASE}/key_loans`)
+    const r = await getJSON<{ content: KeyLoan[] }>(`${BASE}/key-loans`)
     return r.ok ? ok(r.data.content) : r
   },
 
   get: async (id: string): Promise<AdapterResult<KeyLoan, 'not-found' | CommonErr>> => {
-    const r = await getJSON<{ content: KeyLoan }>(`${BASE}/key_loans/${id}`)
+    const r = await getJSON<{ content: KeyLoan }>(`${BASE}/key-loans/${id}`)
     return r.ok ? ok(r.data.content) : r
   },
 
   create: async (payload: Partial<KeyLoan>): Promise<AdapterResult<KeyLoan, 'bad-request' | CommonErr>> => {
-    const r = await postJSON<{ content: KeyLoan }>(`${BASE}/key_loans`, payload)
+    const r = await postJSON<{ content: KeyLoan }>(`${BASE}/key-loans`, payload)
     return r.ok ? ok(r.data.content) : r
   },
 
@@ -202,12 +202,12 @@ export const KeyLoansApi = {
     id: string,
     payload: Partial<KeyLoan>
   ): Promise<AdapterResult<KeyLoan, 'not-found' | 'bad-request' | CommonErr>> => {
-    const r = await patchJSON<{ content: KeyLoan }>(`${BASE}/key_loans/${id}`, payload)
+    const r = await patchJSON<{ content: KeyLoan }>(`${BASE}/key-loans/${id}`, payload)
     return r.ok ? ok(r.data.content) : r
   },
 
   remove: async (id: string): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
-    return deleteJSON(`${BASE}/key_loans/${id}`)
+    return deleteJSON(`${BASE}/key-loans/${id}`)
   },
 }
 
