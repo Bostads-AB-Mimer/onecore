@@ -17,12 +17,9 @@ export function AppLayout() {
           <CommandPalette />
           <SidebarNavigation />
           <SidebarInset>
-            {/* Main content */}
-            <main className="flex-1 p-4 sm:p-6 transition-all duration-300 overflow-y-auto w-full relative z-10">
-              <div className="w-full">
-                <Outlet />
-              </div>
-            </main>
+            <div className="w-full">
+              <Outlet />
+            </div>
           </SidebarInset>
         </SidebarProvider>
       </div>
