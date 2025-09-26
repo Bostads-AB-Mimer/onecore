@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { KeySystemsHeader } from "@/components/key-systems/KeySystemsHeader";
 import { KeySystemsToolbar } from "@/components/key-systems/KeySystemsToolbar";
 import { KeySystemsTable } from "@/components/key-systems/KeySystemsTable";
-import { AddKeySystemDialog } from "@/components/key-systems/AddKeySystemDialog";
+import { AddKeySystemForm } from "@/components/key-systems/AddKeySystemForm";
 
 import { KeySystem, Key } from "@/services/types";
 import { useToast } from "@/hooks/use-toast";
@@ -110,7 +110,7 @@ export default function KeySystems() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingKeySystem, setEditingKeySystem] = useState<KeySystem | null>(null);
   const { toast } = useToast();
 
@@ -133,24 +133,24 @@ export default function KeySystems() {
 
   const handleAddNew = () => {
     setEditingKeySystem(null);
-    setDialogOpen(true);
+    setShowAddForm(true);
   };
 
   const handleEdit = (KeySystem: KeySystem) => {
     setEditingKeySystem(KeySystem);
-    setDialogOpen(true);
+    setShowAddForm(true);
   };
 
 
   const handleSave = (KeySystemData: Omit<KeySystem, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingKeySystem) {
       // Update existing key system
-      setKeySystems(prev => prev.map(ls => 
-        ls.id === editingKeySystem.id 
-          ? { 
-              ...ls, 
-              ...KeySystemData, 
-              updated_at: new Date().toISOString() 
+      setKeySystems(prev => prev.map(ls =>
+        ls.id === editingKeySystem.id
+          ? {
+              ...ls,
+              ...KeySystemData,
+              updated_at: new Date().toISOString()
             }
           : ls
       ));
@@ -172,6 +172,12 @@ export default function KeySystems() {
         description: `${KeySystemData.name} har skapats framgångsrikt.`,
       });
     }
+    setShowAddForm(false);
+  };
+
+  const handleCancel = () => {
+    setShowAddForm(false);
+    setEditingKeySystem(null);
   };
 
   const handleDelete = (id: string) => {
@@ -210,12 +216,13 @@ export default function KeySystems() {
         onExplore={() => {}} // No longer used, navigation handled in table
       />
 
-      <AddKeySystemDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSave={handleSave}
-        editingKeySystem={editingKeySystem}
-      />
+      {showAddForm && (
+        <AddKeySystemForm
+          onSave={handleSave}
+          onCancel={handleCancel}
+          editingKeySystem={editingKeySystem}
+        />
+      )}
 
     </div>
   );
