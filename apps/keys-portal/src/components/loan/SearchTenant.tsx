@@ -5,35 +5,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Tenant, Lease } from "@/../../libs/types/src/types";
+import { fetchTenantAndLeasesByPnr } from "@/services/api/searchService";
 
 interface SearchTenantProps {
   onTenantFound: (tenant: Tenant, contracts: Lease[]) => void;
 }
 
+const isValidPnr = (pnr: string) => /^(?:\d{6}|\d{8})-?\d{4}$/.test(pnr.trim());
+
 export function SearchTenant({ onTenantFound }: SearchTenantProps) {
   const [personnummer, setPersonnummer] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = () => {
-    if (!personnummer.trim()) {
+  const handleSearch = async () => {
+    const pnr = personnummer.trim();
+    if (!isValidPnr(pnr)) {
       toast({
-        title: "Personnummer krävs",
-        description: "Ange ett giltigt personnummer för att söka",
+        title: "Ogiltigt personnummer",
+        description: "Ange format YYYYMMDD-XXXX",
         variant: "destructive",
       });
       return;
     }
 
-    // Frontend shell only — no search yet.
-    toast({
-      title: "Sökning kommer snart",
-      description: "Vi kopplar på vår söktjänst och återkommer hit.",
-    });
-
-    // When backend is ready:
-    // const tenant = ...;
-    // const leases: Lease[] = ...;
-    // onTenantFound(tenant, leases);
+    setLoading(true);
+    try {
+      const result = await fetchTenantAndLeasesByPnr(pnr);
+      if (!result) {
+        toast({
+          title: "Ingen träff",
+          description: "Hittade ingen hyresgäst för angivet personnummer.",
+        });
+        return;
+      }
+      onTenantFound(result.tenant as Tenant, result.contracts as Lease[]);
+    } catch (e: any) {
+      toast({
+        title: "Kunde inte söka",
+        description: e?.message ?? "Okänt fel",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -60,9 +75,9 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
             onKeyDown={handleKeyDown}
             className="flex-1"
           />
-          <Button onClick={handleSearch} className="gap-2">
+          <Button onClick={handleSearch} className="gap-2" disabled={loading}>
             <Search className="h-4 w-4" />
-            Sök
+            {loading ? "Söker…" : "Sök"}
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
