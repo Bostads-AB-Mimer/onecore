@@ -37,7 +37,8 @@
     "package": "@onecore/property",
     "path": "services/property",
     "docker": true,
-    "imageName": "property-base"
+    "imageName": "property-base",
+    "runGenerateStatic": true
   },
   {
     "name": "work-order",
