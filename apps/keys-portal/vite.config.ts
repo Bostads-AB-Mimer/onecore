@@ -10,10 +10,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react(), // Plugin 1: React support
-      ...(mode === 'development' ? [componentTagger()] : []), // Plugin 2: ComponentTagger (conditional)
+      react(),
+      ...(mode === 'development' ? [componentTagger()] : []),
       {
-        // Plugin 3: Custom HTML transform
         name: 'transform-html',
         transformIndexHtml: (html) => injectEnv(html, env),
       },
