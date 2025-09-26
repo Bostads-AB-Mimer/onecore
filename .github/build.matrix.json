@@ -35,7 +35,7 @@
     "name": "keys-portal",
     "label": "ONECore Keys Portal Application",
     "package": "@onecore/keys-portal",
-    "path": "services/keys-portal",
+    "path": "apps/keys-portal",
     "docker": true,
     "imageName": "onecore-keys-portal"
   },
