@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Tenant, Lease } from "@/services/api/searchService";
-import { fetchTenantAndLeasesByPnr } from "@/services/api/searchService";
+import type { Tenant, Lease } from "@/services/api/leaseSearchService";
+import { fetchTenantAndLeasesByPnr } from "@/services/api/leaseSearchService";
 
 interface SearchTenantProps {
   onTenantFound: (tenant: Tenant, contracts: Lease[]) => void;
