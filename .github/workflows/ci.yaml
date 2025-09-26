@@ -60,7 +60,7 @@ jobs:
         with:
           path: ${{ steps.cache.outputs.path }}
           key: ${{ steps.cache.outputs.key }}
-          
+
       # Run generate:static once for downstreams jobs, unless cached
       - name: Run generate:static
         if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
@@ -68,7 +68,7 @@ jobs:
 
       # Build shared libs once for downstreams jobs that need compiled deps
       - name: Build libs
-        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
+#        if: steps.restore-prepare-cache.outputs.cache-hit != 'true'
         run: pnpm run build:libs
 
       # Read build matrix (later used to run jobs in parallel, per package)
