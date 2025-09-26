@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { KeysHeader } from "@/components/keys/KeysHeader";
 import { KeysToolbar } from "@/components/keys/KeysToolbar";
 import { KeysTable } from "@/components/keys/KeysTable";
-import { AddKeyDialog } from "@/components/keys/AddKeyDialog";
+import { AddKeyForm } from "@/components/keys/AddKeyForm";
 import { useToast } from "@/hooks/use-toast";
 import { Key } from "@/types/key";
 import { keyService } from "@/services/api/keyService";
@@ -57,7 +57,7 @@ const Index = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingKey, setEditingKey] = useState<Key | null>(null);
   const { toast } = useToast();
 
@@ -100,12 +100,12 @@ const Index = () => {
 
   const handleAddNew = () => {
     setEditingKey(null);
-    setDialogOpen(true);
+    setShowAddForm(true);
   };
 
   const handleEdit = (key: Key) => {
     setEditingKey(key);
-    setDialogOpen(true);
+    setShowAddForm(true);
   };
 
   const handleSave = async (keyData: Omit<Key, "id" | "createdAt" | "updatedAt">) => {
@@ -113,7 +113,7 @@ const Index = () => {
       try {
         const payload = toUpdateReq(editingKey, keyData);
         if (Object.keys(payload).length === 0) {
-          setDialogOpen(false);
+          setShowAddForm(false);
           return;
         }
         const updated = await keyService.updateKey(editingKey.id, payload);
@@ -122,7 +122,7 @@ const Index = () => {
           title: "Nyckel uppdaterad",
           description: `${updated.keyName ?? keyData.keyName} har uppdaterats.`,
         });
-        setDialogOpen(false);
+        setShowAddForm(false);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Okänt fel vid uppdatering";
         toast({ title: "Kunde inte uppdatera nyckel", description: msg, variant: "destructive" });
@@ -136,7 +136,7 @@ const Index = () => {
       setKeys((prev) => [...prev, toUIKey(created)]);
       // or await fetchKeys() if you prefer server ordering immediately
       toast({ title: "Nyckel tillagd", description: `${keyData.keyName} har lagts till.` });
-      setDialogOpen(false);
+      setShowAddForm(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Okänt fel vid skapande";
       toast({ title: "Kunde inte skapa nyckel", description: msg, variant: "destructive" });
@@ -165,6 +165,11 @@ const Index = () => {
     }
   };
 
+  const handleCancel = () => {
+    setShowAddForm(false);
+    setEditingKey(null);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -178,6 +183,14 @@ const Index = () => {
           onAddNew={handleAddNew}
         />
 
+        {showAddForm && (
+          <AddKeyForm
+            onSave={handleSave}
+            onCancel={handleCancel}
+            editingKey={editingKey}
+          />
+        )}
+
         {loading && (
           <div className="text-sm text-muted-foreground py-4">Hämtar nycklar…</div>
         )}
@@ -186,13 +199,6 @@ const Index = () => {
         )}
 
         <KeysTable keys={filteredKeys} onEdit={handleEdit} onDelete={handleDelete} />
-
-        <AddKeyDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSave={handleSave}
-          editingKey={editingKey}
-        />
       </div>
     </div>
   );
