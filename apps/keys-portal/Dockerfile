@@ -15,7 +15,7 @@ COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy relevant packages
 COPY libs/types ./libs/types
-COPY apps/keys-portal ./apps/keys-portal/frontend
+COPY apps/keys-portal ./apps/keys-portal
 
 ARG BACKEND_URL
 ENV VITE_BACKEND_URL=${BACKEND_URL}
