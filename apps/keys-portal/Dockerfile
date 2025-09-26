@@ -23,7 +23,6 @@ ENV VITE_BACKEND_URL=${BACKEND_URL}
 RUN pnpm install
 RUN pnpm build:types
 RUN pnpm run --filter @onecore/keys-portal build
-RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/keys-portal --prod /out
 
 # ==========================

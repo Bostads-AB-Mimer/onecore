@@ -7,6 +7,10 @@
   "engines": {
     "node": ">=20"
   },
+  "files": [
+    "dist",
+    "nginx.conf"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "wait-on http://localhost:5080/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
