@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Key, KeyType, KeyTypeLabels } from "@/services/types";
-import { rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/rentalObjectSearchService";
+import { searchService as rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/searchService";
 
 interface AddKeyDialogProps {
   open: boolean;
