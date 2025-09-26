@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+#Generated api types, generated on build, need not be commited 
+*generated/*
