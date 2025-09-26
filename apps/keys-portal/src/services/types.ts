@@ -14,7 +14,7 @@ export type Log = components['schemas']['Log']
 export type Property = CoreComponents['schemas']['Property']
 export type RentalPropertyResponse = CoreComponents['schemas']['RentalPropertyResponse']
 export type Lease = CoreComponents['schemas']['Lease']
-
+export type Tenant = CoreComponents['schemas']['Lease']['tenants']
 
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
