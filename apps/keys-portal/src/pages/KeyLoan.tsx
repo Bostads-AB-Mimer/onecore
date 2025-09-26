@@ -1,36 +1,43 @@
-import { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
-import { SearchTenant } from "@/components/loan/SearchTenant";
-import { TenantInfo } from "@/components/loan/TenantInfo";
-import type { Tenant, Lease } from "@/services/api/leaseSearchService";
-
+import { useState, useRef } from 'react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Search } from 'lucide-react'
+import { SearchTenant } from '@/components/loan/SearchTenant'
+import { TenantInfo } from '@/components/loan/TenantInfo'
+import type { Tenant, Lease } from '@/services/api/leaseSearchService'
 
 export default function KeyLoan() {
-  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [tenantContracts, setTenantContracts] = useState<Lease[]>([]);
-  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
+  const [tenantContracts, setTenantContracts] = useState<Lease[]>([])
+  const resultsRef = useRef<HTMLDivElement | null>(null)
 
   const handleTenantFound = (tenant: Tenant, contracts: Lease[]) => {
-    setSelectedTenant(tenant);
-    setTenantContracts(contracts);
+    setSelectedTenant(tenant)
+    setTenantContracts(contracts)
 
     // Scroll to results
     setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  };
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+  }
 
   const handleClearSearch = () => {
-    setSelectedTenant(null);
-    setTenantContracts([]);
-  };
+    setSelectedTenant(null)
+    setTenantContracts([])
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Utlåning och återlämning</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Utlåning och återlämning
+        </h1>
         <p className="text-muted-foreground">Lämna ut och ta emot nycklar</p>
       </header>
 
@@ -39,7 +46,9 @@ export default function KeyLoan() {
         <Tabs defaultValue="personnummer" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="personnummer">Personnummer</TabsTrigger>
-            <TabsTrigger value="hyresobjekt" disabled>Hyresobjekt</TabsTrigger>
+            <TabsTrigger value="hyresobjekt" disabled>
+              Hyresobjekt
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="personnummer" className="space-y-4">
@@ -76,5 +85,5 @@ export default function KeyLoan() {
         </div>
       )}
     </div>
-  );
+  )
 }

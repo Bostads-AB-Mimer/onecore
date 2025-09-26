@@ -1014,9 +1014,9 @@ export interface paths {
         /** @description Invalid event_type or object_type */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Not found */
         404: {
           content: never

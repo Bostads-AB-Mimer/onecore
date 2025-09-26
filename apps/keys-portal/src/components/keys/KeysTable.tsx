@@ -5,43 +5,43 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { MoreHorizontal, Edit, Trash2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Key, KeyTypeLabels } from "@/services/types";
+} from '@/components/ui/dropdown-menu'
+import { Key, KeyTypeLabels } from '@/services/types'
 
 interface KeysTableProps {
-  keys: Key[];
-  onEdit: (key: Key) => void;
-  onDelete: (keyId: string) => void;
+  keys: Key[]
+  onEdit: (key: Key) => void
+  onDelete: (keyId: string) => void
 }
 
 export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('sv-SE');
-  };
+    return new Date(dateString).toLocaleDateString('sv-SE')
+  }
 
   const getTypeVariant = (type: string) => {
     switch (type) {
       case 'LGH':
-        return 'default';
+        return 'default'
       case 'PB':
-        return 'secondary';
+        return 'secondary'
       case 'FS':
-        return 'outline';
+        return 'outline'
       case 'HN':
-        return 'destructive';
+        return 'destructive'
       default:
-        return 'default';
+        return 'default'
     }
-  };
+  }
 
   return (
     <div className="rounded-md border bg-card">
@@ -61,7 +61,10 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
         <TableBody>
           {keys.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+              <TableCell
+                colSpan={8}
+                className="text-center py-8 text-muted-foreground"
+              >
                 Inga nycklar hittades
               </TableCell>
             </TableRow>
@@ -71,7 +74,10 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
                 <TableCell className="font-medium">{key.keyName}</TableCell>
                 <TableCell>{key.rentalObject || '-'}</TableCell>
                 <TableCell>
-                  <Badge variant={getTypeVariant(key.keyType)} className="text-xs">
+                  <Badge
+                    variant={getTypeVariant(key.keyType)}
+                    className="text-xs"
+                  >
                     {KeyTypeLabels[key.keyType]}
                   </Badge>
                 </TableCell>
@@ -93,7 +99,7 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
                         <Edit className="h-4 w-4 mr-2" />
                         Redigera
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => onDelete(key.id)}
                         className="text-destructive focus:text-destructive"
                       >
@@ -109,5 +115,5 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
         </TableBody>
       </Table>
     </div>
-  );
+  )
 }

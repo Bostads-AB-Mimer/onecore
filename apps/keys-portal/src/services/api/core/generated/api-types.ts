@@ -550,6 +550,13 @@ export interface paths {
       }
     }
   }
+  '/leases/{id}': {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
   '/leases': {
     /**
      * Get all leases with optional date filters
@@ -2815,6 +2822,12 @@ export interface paths {
       }
     }
   }
+  '/key-loans': {
+          content: never
+        }
+      }
+    }
+  }
   '/key_loans': {
     /**
      * List all key loans
@@ -2866,6 +2879,13 @@ export interface paths {
         /** @description An error occurred while creating the key loan. */
         500: {
           content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/{id}': {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
@@ -3001,6 +3021,11 @@ export interface paths {
         /** @description Paginated list of keys */
         200: {
           content: {
+            'application/json': {
+              content?: components['schemas']['Key'][]
+            }
+          }
+        }
             'application/json': components['schemas']['PaginatedKeysResponse']
           }
         }
@@ -3037,6 +3062,13 @@ export interface paths {
         /** @description Server error */
         500: {
           content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/{id}': {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
@@ -3192,6 +3224,13 @@ export interface paths {
       }
     }
   }
+  '/key_systems': {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/key-systems': {
     /**
      * List all key systems with pagination
@@ -3210,6 +3249,11 @@ export interface paths {
         /** @description Successfully retrieved paginated key systems */
         200: {
           content: {
+            'application/json': {
+              content?: components['schemas']['KeySystem'][]
+            }
+          }
+        }
             'application/json': components['schemas']['PaginatedKeySystemsResponse']
           }
         }
@@ -3249,6 +3293,13 @@ export interface paths {
         /** @description Internal server error */
         500: {
           content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key_systems/{id}': {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
@@ -3480,6 +3531,14 @@ export interface paths {
       }
     }
   }
+  '/logs/{id}': {
+    /** Get log by ID */
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/logs/search': {
     /**
      * Search logs
@@ -3491,6 +3550,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        path: {
+          id: string
+        }
+      }
         query?: {
           q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to resourceId. */
@@ -3510,6 +3573,13 @@ export interface paths {
         200: {
           content: {
             'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
+        /** @description Not found */
+        404: {
+            'application/json': {
               content?: components['schemas']['Log'][]
             }
           }
@@ -3517,12 +3587,23 @@ export interface paths {
         /** @description Bad request */
         400: {
           content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
             'application/json': components['schemas']['ErrorResponse']
           }
         }
         /** @description Internal server error */
         500: {
           content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Delete a log */
+    delete: {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
@@ -3540,7 +3621,49 @@ export interface paths {
       responses: {
         /** @description Log found */
         200: {
+          content: never
+        }
+        /** @description Not found */
+        404: {
           content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Update a log (partial) */
+    patch: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateLogRequest']
+        }
+      }
+      responses: {
+        /** @description Updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
+        /** @description Invalid event_type or object_type */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
             'application/json': {
               content?: components['schemas']['Log']
             }
@@ -4048,6 +4171,12 @@ export interface components {
       }
       areaSize: number | null
     }
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      areaSize: number | null
+    }
     Key: {
       /** Format: uuid */
       id: string
@@ -4327,6 +4456,207 @@ export interface components {
       }
     }
     /** @description A search result that can be either a property, building or residence */
+    SearchResult:
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a property result
+           * @enum {string}
+           */
+          type: 'property'
+          /** @description Name or designation of the property */
+          name: string
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a building result
+           * @enum {string}
+           */
+          type: 'building'
+          /** @description Name of the building */
+          name: string | null
+          property?: {
+            /** @description Property associated with the building */
+            name: string | null
+            id: string
+            code: string
+          } | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a residence result
+           * @enum {string}
+           */
+          type: 'residence'
+          /** @description Name of the residence */
+          name: string | null
+          /** @description Rental object ID of the residence */
+          rentalId: string | null
+          property: {
+            code: string | null
+            /** @description Name of property associated with the residence */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the residence */
+            name: string | null
+          }
+        }
+    Key: {
+      /** Format: uuid */
+      id: string
+      keyName: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
+      /** @enum {string} */
+      keyType: 'LGH' | 'PB' | 'FS' | 'HN'
+      /** Format: uuid */
+      keySystemId?: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    KeyLoan: {
+      /** Format: uuid */
+      id: string
+      keys: string
+      contact?: string
+      lease?: string
+      /** Format: date-time */
+      returnedAt?: string | null
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null
+      /** Format: date-time */
+      pickedUpAt?: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+    }
+    KeySystem: {
+      /** Format: uuid */
+      id: string
+      systemCode: string
+      name: string
+      manufacturer: string
+      /** @enum {string} */
+      type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
+      /** Format: date-time */
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+    }
+    Log: {
+      /** Format: uuid */
+      id: string
+      userName: string
+      /** @enum {string} */
+      eventType: 'creation' | 'update' | 'delete'
+      /** @enum {string} */
+      objectType: 'key' | 'keySystem' | 'keyLoan'
+      /** Format: date-time */
+      eventTime: string
+      description?: string | null
+    }
+    CreateKeyRequest: {
+      keyName: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
+      /** @enum {string} */
+      keyType: 'LGH' | 'PB' | 'FS' | 'HN'
+      /** Format: uuid */
+      keySystemId?: string | null
+    }
+    UpdateKeyRequest: {
+      keyName?: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
+      /** @enum {string} */
+      keyType?: 'LGH' | 'PB' | 'FS' | 'HN'
+      /** Format: uuid */
+      keySystemId?: string | null
+    }
+    CreateKeyLoanRequest: {
+      keys: string
+      contact?: string
+      lease?: string
+      /** Format: date-time */
+      pickedUpAt?: string | null
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null
+      createdBy?: string | null
+    }
+    UpdateKeyLoanRequest: {
+      keys?: string
+      contact?: string
+      lease?: string
+      /** Format: date-time */
+      returnedAt?: string | null
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null
+      /** Format: date-time */
+      pickedUpAt?: string | null
+      updatedBy?: string | null
+    }
+    CreateKeySystemRequest: {
+      systemCode: string
+      name: string
+      manufacturer: string
+      /** @enum {string} */
+      type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
+      /** Format: date-time */
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
+    }
+    UpdateKeySystemRequest: {
+      systemCode?: string
+      name?: string
+      manufacturer?: string
+      /** @enum {string} */
+      type?: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
+      /** Format: date-time */
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
+    }
+    CreateLogRequest: {
+      userName: string
+      /** @enum {string} */
+      eventType: 'creation' | 'update' | 'delete'
+      /** @enum {string} */
+      objectType: 'key' | 'key_system' | 'key_loan'
+      description?: string | null
+    }
+    UpdateLogRequest: {
+      userName?: string
+      /** @enum {string} */
+      eventType?: 'creation' | 'update' | 'delete'
+      /** @enum {string} */
+      objectType?: 'key' | 'keySystem' | 'keyLoan'
+      description?: string | null
+    }
     SearchResult:
       | {
           /** @description Unique identifier for the search result */
