@@ -1,14 +1,17 @@
-// apps/keys-portal/src/services/api/keyService.ts
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 import type { paths, components } from './core/generated/api-types'
 
 type Key = components['schemas']['Key']
 type KeyLoan = components['schemas']['KeyLoan']
 
-type CreateKeyBody       = paths['/keys']['post']['requestBody']['content']['application/json']
-type UpdateKeyBody       = paths['/keys/{id}']['patch']['requestBody']['content']['application/json']
-type CreateKeyLoanBody   = paths['/key-loans']['post']['requestBody']['content']['application/json']
-type UpdateKeyLoanBody   = paths['/key-loans/{id}']['patch']['requestBody']['content']['application/json']
+type CreateKeyBody =
+  paths['/keys']['post']['requestBody']['content']['application/json']
+type UpdateKeyBody =
+  paths['/keys/{id}']['patch']['requestBody']['content']['application/json']
+type CreateKeyLoanBody =
+  paths['/key-loans']['post']['requestBody']['content']['application/json']
+type UpdateKeyLoanBody =
+  paths['/key-loans/{id}']['patch']['requestBody']['content']['application/json']
 
 export const keyService = {
   async getAllKeyLoans(): Promise<KeyLoan[]> {
@@ -31,7 +34,10 @@ export const keyService = {
     return data?.content as KeyLoan
   },
 
-  async updateKeyLoan(id: string, payload: UpdateKeyLoanBody): Promise<KeyLoan> {
+  async updateKeyLoan(
+    id: string,
+    payload: UpdateKeyLoanBody
+  ): Promise<KeyLoan> {
     const { data, error } = await PATCH('/key-loans/{id}', {
       params: { path: { id } },
       body: payload,
