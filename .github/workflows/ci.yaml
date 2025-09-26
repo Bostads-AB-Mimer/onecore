@@ -31,6 +31,10 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
+      # "Pre-warm" the cache to make sure that all following jobs get cache hits
+      - name: Setup
+        uses: ./.github/actions/pnpm-setup
+
       # Read build matrix (later used to run jobs in parallel, per package)
       - name: Read build matrix
         id: read-matrix
