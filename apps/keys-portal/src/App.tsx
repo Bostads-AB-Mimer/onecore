@@ -8,8 +8,30 @@ import Index from './pages/Index'
 import LockSystems from './pages/LockSystems'
 import LockSystemDetail from './pages/LockSystemDetail'
 import NotFound from './pages/NotFound'
+import { AuthCallback } from './auth/AuthCallback'
+import { ProtectedRoute } from './auth/ProtectedRoute'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+})
+
+const AppContent = () => (
+  <>
+    <Navigation />
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/lock-systems" element={<LockSystems />} />
+      <Route path="/lock-systems/:id" element={<LockSystemDetail />} />
+      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </>
+)
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,13 +39,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Navigation />
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/lock-systems" element={<LockSystems />} />
-          <Route path="/lock-systems/:id" element={<LockSystemDetail />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="/callback" element={<AuthCallback />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AppContent />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
