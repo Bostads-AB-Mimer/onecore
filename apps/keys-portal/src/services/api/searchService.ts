@@ -1,5 +1,5 @@
 import { GET } from './core/base-api'
-import type { RentalPropertyResponse, LeaseDto } from '@/services/types'
+import type { RentalPropertyResponse, Lease } from '@/services/types'
 import type {
   Tenant as LibTenant,
   Lease as LibLease,
@@ -84,7 +84,7 @@ private getPropertyAddress(rp: RentalPropertyResponse | any): string {
     })
     if (error) return []
 
-    const leases = (data?.content ?? []) as LeaseDto[]
+    const leases = (data?.content ?? []) as Lease[]
     if (!Array.isArray(leases) || leases.length === 0) return []
 
     const results = leases
@@ -100,7 +100,7 @@ private getPropertyAddress(rp: RentalPropertyResponse | any): string {
     })
   }
 
-  private mapLeaseToSearchResult(l: LeaseDto): RentalObjectSearchResult | null {
+  private mapLeaseToSearchResult(l: Lease): RentalObjectSearchResult | null {
     const x = l as unknown as Record<string, any>
 
     const rentalId =
@@ -292,16 +292,16 @@ export async function fetchTenantAndLeasesByPnr(
   })
   if (error) return null
 
-  const leaseDtos = (data?.content ?? []) as LeaseDto[]
-  if (!Array.isArray(leaseDtos) || leaseDtos.length === 0) return null
+  const Leases = (data?.content ?? []) as Lease[]
+  if (!Array.isArray(Leases) || Leases.length === 0) return null
 
-  const contracts = leaseDtos.map((d) => toLeaseFromDto(d))
+  const contracts = Leases.map((d) => toLeaseFromDto(d))
   const housingContracts = contracts as [LibLease, ...LibLease[]]
 
   const target = normalized
   let picked: any | null = null
 
-  for (const raw of leaseDtos as any[]) {
+  for (const raw of Leases as any[]) {
     const ts: any[] = raw?.tenants ?? raw?.leaseTenants ?? [];
     const hit = ts.find(t => equalPnr(t?.pnr ?? t?.personalNumber ?? t?.ssn, target));
   if (hit) { picked = hit; break; }
@@ -309,7 +309,7 @@ export async function fetchTenantAndLeasesByPnr(
 
 
   if (!picked) {
-    const firstLease = (leaseDtos as any[])[0]
+    const firstLease = (Leases as any[])[0]
     picked = (firstLease?.tenants ?? firstLease?.leaseTenants ?? [])[0] ?? {}
   }
 

@@ -24,6 +24,7 @@ export type UpdateKeySystemRequest = components['schemas']['UpdateKeySystemReque
 export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
 
+
 // Key type definitions based on the existing codebase usage
 export const KeyTypeLabels = {
   'LGH': 'Lägenhet',
