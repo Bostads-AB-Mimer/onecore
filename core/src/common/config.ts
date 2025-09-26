@@ -151,6 +151,10 @@ const config = configPackage({
         systemName: 'work-order',
         minimumMinutesBetweenRequests: 1,
       },
+      keys: {
+        systemName: 'keys',
+        minimumMinutesBetweenRequests: 1,
+      },
     },
   },
 })
