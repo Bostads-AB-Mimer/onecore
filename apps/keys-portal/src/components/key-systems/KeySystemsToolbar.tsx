@@ -8,9 +8,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, Filter } from "lucide-react";
-import { LockSystemType, LockSystemTypeLabels } from "@/types/lock-system";
+import { KeySystemType, KeySystemTypeLabels } from "@/services/types";
 
-interface LockSystemsToolbarProps {
+interface KeySystemsToolbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedType: string;
@@ -20,7 +20,7 @@ interface LockSystemsToolbarProps {
   onAddNew: () => void;
 }
 
-export function LockSystemsToolbar({
+export function KeySystemsToolbar({
   searchQuery,
   onSearchChange,
   selectedType,
@@ -28,7 +28,7 @@ export function LockSystemsToolbar({
   selectedStatus,
   onStatusChange,
   onAddNew,
-}: LockSystemsToolbarProps) {
+}: KeySystemsToolbarProps) {
   return (
     <div className="flex items-center gap-4 mb-6">
       <div className="relative flex-1 max-w-sm">
@@ -48,7 +48,7 @@ export function LockSystemsToolbar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Alla typer</SelectItem>
-          {Object.entries(LockSystemTypeLabels).map(([key, label]) => (
+          {Object.entries(KeySystemTypeLabels).map(([key, label]) => (
             <SelectItem key={key} value={key}>
               {label}
             </SelectItem>

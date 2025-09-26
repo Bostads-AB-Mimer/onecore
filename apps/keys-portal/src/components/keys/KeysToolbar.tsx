@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Search, Filter } from "lucide-react";
-import { KeyType, KeyTypeLabels } from "@/types/key";
+import { KeyType, KeyTypeLabels } from "@/services/types";
 
 interface KeysToolbarProps {
   searchQuery: string;
