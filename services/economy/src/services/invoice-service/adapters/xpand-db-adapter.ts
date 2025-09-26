@@ -484,7 +484,11 @@ export const getContacts = async (
   return contacts
 }
 
-export const getRentalInvoices = async (fromDate: Date, companyId: string) => {
+export const getRentalInvoices = async (
+  fromDate: Date,
+  toDate: Date,
+  companyId: string
+) => {
   const rentalInvoiceNumbers = await db.raw(
     "select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
   		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
@@ -494,8 +498,8 @@ export const getRentalInvoices = async (fromDate: Date, companyId: string) => {
       inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
       where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
       and cmcmp.code = ? \
-      and krfkh.fromdate >= ? AND krfkh.todate < ?",
-    [companyId, fromDate, new Date(2025, 10, 1)]
+      and krfkh.fromdate >= ? AND krfkh.fromdate < ?",
+    [companyId, fromDate, toDate]
   )
 
   return rentalInvoiceNumbers
