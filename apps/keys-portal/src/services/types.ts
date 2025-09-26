@@ -13,6 +13,8 @@ export type CreateKeySystemRequest = components['schemas']['CreateKeySystemReque
 export type UpdateKeySystemRequest = components['schemas']['UpdateKeySystemRequest']
 export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
+export type RentalPropertyResponse = CoreComponents['schemas']['RentalPropertyResponse'];
+export type LeaseDto = CoreComponents['schemas']['Lease']
 
 // Key type definitions based on the existing codebase usage
 export const KeyTypeLabels = {
