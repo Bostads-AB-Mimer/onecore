@@ -2,22 +2,19 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Search, User, Calendar, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Tenant, Contract } from "@/types/tenant";
+import type { Tenant, Lease } from "@/../../libs/types/src/types";
 
 interface SearchTenantProps {
-  onTenantFound: (tenant: Tenant, contracts: Contract[]) => void;
+  onTenantFound: (tenant: Tenant, contracts: Lease[]) => void;
 }
 
 export function SearchTenant({ onTenantFound }: SearchTenantProps) {
   const [personnummer, setPersonnummer] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!personnummer.trim()) {
       toast({
         title: "Personnummer krävs",
@@ -27,58 +24,20 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
       return;
     }
 
-    setIsSearching(true);
-    try {
-      // Search for tenant by personnummer
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('personnummer', personnummer.trim())
-        .single();
+    // Frontend shell only — no search yet.
+    toast({
+      title: "Sökning kommer snart",
+      description: "Vi kopplar på vår söktjänst och återkommer hit.",
+    });
 
-      if (tenantError || !tenant) {
-        toast({
-          title: "Hyresgäst inte hittad",
-          description: "Ingen hyresgäst med detta personnummer hittades",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get contracts for this tenant
-      const { data: contracts, error: contractsError } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true)
-        .order('start_date', { ascending: false });
-
-      if (contractsError) {
-        toast({
-          title: "Fel vid hämtning av kontrakt",
-          description: "Kunde inte hämta kontrakt för hyresgästen",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      onTenantFound(tenant, contracts || []);
-    } catch (error) {
-      console.error('Search error:', error);
-      toast({
-        title: "Sökfel",
-        description: "Ett fel uppstod vid sökning",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSearching(false);
-    }
+    // When backend is ready:
+    // const tenant = ...;
+    // const leases: Lease[] = ...;
+    // onTenantFound(tenant, leases);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleSearch();
   };
 
   return (
@@ -98,16 +57,12 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
             placeholder="YYYYMMDD-XXXX"
             value={personnummer}
             onChange={(e) => setPersonnummer(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className="flex-1"
           />
-          <Button 
-            onClick={handleSearch} 
-            disabled={isSearching}
-            className="gap-2"
-          >
+          <Button onClick={handleSearch} className="gap-2">
             <Search className="h-4 w-4" />
-            {isSearching ? "Söker..." : "Sök"}
+            Sök
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
