@@ -231,7 +231,7 @@ export interface paths {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": Record<string, never>[];
+            "application/json": components["schemas"]["Lease"][];
           };
         };
       };
@@ -282,7 +282,7 @@ export interface paths {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": Record<string, never>[];
+            "application/json": components["schemas"]["Lease"][];
           };
         };
       };
@@ -570,7 +570,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              data?: Record<string, never>;
+              content?: components["schemas"]["Lease"];
             };
           };
         };

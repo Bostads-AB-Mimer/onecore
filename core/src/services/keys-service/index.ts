@@ -34,30 +34,6 @@ const {
  *       scheme: bearer
  *       bearerFormat: JWT
  *   schemas:
- *     Key:
- *       $ref: '#/components/schemas/Key'
- *     KeyLoan:
- *       $ref: '#/components/schemas/KeyLoan'
- *     KeySystem:
- *       $ref: '#/components/schemas/KeySystem'
- *     Log:
- *       $ref: '#/components/schemas/Log'
- *     CreateKeyRequest:
- *       $ref: '#/components/schemas/CreateKeyRequest'
- *     UpdateKeyRequest:
- *       $ref: '#/components/schemas/UpdateKeyRequest'
- *     CreateKeyLoanRequest:
- *       $ref: '#/components/schemas/CreateKeyLoanRequest'
- *     UpdateKeyLoanRequest:
- *       $ref: '#/components/schemas/UpdateKeyLoanRequest'
- *     CreateKeySystemRequest:
- *       $ref: '#/components/schemas/CreateKeySystemRequest'
- *     UpdateKeySystemRequest:
- *       $ref: '#/components/schemas/UpdateKeySystemRequest'
- *     CreateLogRequest:
- *       $ref: '#/components/schemas/CreateLogRequest'
- *     UpdateLogRequest:
- *       $ref: '#/components/schemas/UpdateLogRequest'
  *     ErrorResponse:
  *       type: object
  *       properties:
