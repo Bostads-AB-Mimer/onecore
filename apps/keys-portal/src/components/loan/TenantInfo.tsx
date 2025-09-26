@@ -37,6 +37,8 @@ function deriveLeaseStatus(lease: Lease): DisplayStatus {
   const end   = toMs(lease.leaseEndDate);
 
   if (!start) return "ended";
+  const terminatedAt = toMs(lease.terminationDate);
+  if (terminatedAt && terminatedAt < now) return "ended";
   if (start > now) return "upcoming";
   if (end && end < now) return "ended";
 
@@ -141,6 +143,12 @@ export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract 
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               Till: {end}
+                            </span>
+                          )}
+                          {lease.terminationDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Uppsagd: {fmtDate(lease.terminationDate)}
                             </span>
                           )}
                         </div>
