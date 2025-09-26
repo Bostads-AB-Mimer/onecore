@@ -7,12 +7,14 @@ import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'key_loans'
 
-const { KeyLoanSchema, CreateKeyLoanRequestSchema, UpdateKeyLoanRequestSchema } = keys.v1
+const {
+  KeyLoanSchema,
+  CreateKeyLoanRequestSchema,
+  UpdateKeyLoanRequestSchema,
+} = keys.v1
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
-type KeyLoanResponse = keys.v1.KeyLoan  
-
-
+type KeyLoanResponse = keys.v1.KeyLoan
 
 /**
  * @swagger
@@ -33,7 +35,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
   registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
-   /**
+  /**
    * @swagger
    * /key-loans:
    *   get:
@@ -115,7 +117,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
- /**
+  /**
    * @swagger
    * /key-loans/{id}:
    *   get:
@@ -205,7 +207,10 @@ export const routes = (router: KoaRouter) => {
       const row = await db(TABLE).where({ id: ctx.params.id }).first()
       if (!row) {
         ctx.status = 404
-        ctx.body = { reason: `Key loan with id ${ctx.params.id} not found`, ...metadata }
+        ctx.body = {
+          reason: `Key loan with id ${ctx.params.id} not found`,
+          ...metadata,
+        }
         return
       }
       ctx.status = 200
@@ -252,20 +257,24 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/key-loans', parseRequestBody(CreateKeyLoanRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: CreateKeyLoanRequest = ctx.request.body
+  router.post(
+    '/key-loans',
+    parseRequestBody(CreateKeyLoanRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: CreateKeyLoanRequest = ctx.request.body
 
-      const [row] = await db(TABLE).insert(payload).returning('*')
-      ctx.status = 201
-      ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error creating key loan')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
+        const [row] = await db(TABLE).insert(payload).returning('*')
+        ctx.status = 201
+        ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error creating key loan')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -319,30 +328,37 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/key-loans/:id', parseRequestBody(UpdateKeyLoanRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: UpdateKeyLoanRequest = ctx.request.body
+  router.patch(
+    '/key-loans/:id',
+    parseRequestBody(UpdateKeyLoanRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: UpdateKeyLoanRequest = ctx.request.body
 
-      const [row] = await db(TABLE)
-        .where({ id: ctx.params.id })
-        .update({ ...payload, updatedAt: db.fn.now() })
-        .returning('*')
+        const [row] = await db(TABLE)
+          .where({ id: ctx.params.id })
+          .update({ ...payload, updatedAt: db.fn.now() })
+          .returning('*')
 
-      if (!row) {
-        ctx.status = 404
-        ctx.body = { reason: 'Key loan with id ' + ctx.params.id + ' not found', ...metadata }
-        return
+        if (!row) {
+          ctx.status = 404
+          ctx.body = {
+            reason: 'Key loan with id ' + ctx.params.id + ' not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error updating key loan with id ' + ctx.params.id)
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
       }
-
-      ctx.status = 200
-      ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error updating key loan with id ' + ctx.params.id)
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -392,7 +408,10 @@ export const routes = (router: KoaRouter) => {
       const n = await db(TABLE).where({ id: ctx.params.id }).del()
       if (!n) {
         ctx.status = 404
-        ctx.body = { reason: `Key loan with id ${ctx.params.id} not found`, ...metadata }
+        ctx.body = {
+          reason: `Key loan with id ${ctx.params.id} not found`,
+          ...metadata,
+        }
         return
       }
       ctx.status = 200

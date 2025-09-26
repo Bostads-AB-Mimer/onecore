@@ -7,7 +7,11 @@ import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'key_systems'
 
-const { KeySystemSchema, CreateKeySystemRequestSchema, UpdateKeySystemRequestSchema } = keys.v1
+const {
+  KeySystemSchema,
+  CreateKeySystemRequestSchema,
+  UpdateKeySystemRequestSchema,
+} = keys.v1
 type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
 type KeySystem = keys.v1.KeySystem
@@ -146,32 +150,39 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.post('/key-systems', parseRequestBody(CreateKeySystemRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: CreateKeySystemRequest = ctx.request.body
+  router.post(
+    '/key-systems',
+    parseRequestBody(CreateKeySystemRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: CreateKeySystemRequest = ctx.request.body
 
-      // Check for duplicate systemCode
-      if (payload.systemCode) {
-        const existing = await db(TABLE)
-          .where({ systemCode: payload.systemCode })
-          .first()
-        if (existing) {
-          ctx.status = 409
-          ctx.body = { error: 'Key system with this system code already exists', ...metadata }
-          return
+        // Check for duplicate systemCode
+        if (payload.systemCode) {
+          const existing = await db(TABLE)
+            .where({ systemCode: payload.systemCode })
+            .first()
+          if (existing) {
+            ctx.status = 409
+            ctx.body = {
+              error: 'Key system with this system code already exists',
+              ...metadata,
+            }
+            return
+          }
         }
-      }
 
-      const [row] = await db(TABLE).insert(payload).returning('*')
-      ctx.status = 201
-      ctx.body = { content: row satisfies KeySystem, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error creating key system')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
+        const [row] = await db(TABLE).insert(payload).returning('*')
+        ctx.status = 201
+        ctx.body = { content: row satisfies KeySystem, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error creating key system')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -213,43 +224,50 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.patch('/key-systems/:id', parseRequestBody(UpdateKeySystemRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: UpdateKeySystemRequest = ctx.request.body
+  router.patch(
+    '/key-systems/:id',
+    parseRequestBody(UpdateKeySystemRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: UpdateKeySystemRequest = ctx.request.body
 
-      // Check for duplicate systemCode if being updated
-      if (payload.systemCode) {
-        const existing = await db(TABLE)
-          .where({ systemCode: payload.systemCode })
-          .whereNot({ id: ctx.params.id })
-          .first()
-        if (existing) {
-          ctx.status = 409
-          ctx.body = { error: 'Key system with this system code already exists', ...metadata }
+        // Check for duplicate systemCode if being updated
+        if (payload.systemCode) {
+          const existing = await db(TABLE)
+            .where({ systemCode: payload.systemCode })
+            .whereNot({ id: ctx.params.id })
+            .first()
+          if (existing) {
+            ctx.status = 409
+            ctx.body = {
+              error: 'Key system with this system code already exists',
+              ...metadata,
+            }
+            return
+          }
+        }
+
+        const [row] = await db(TABLE)
+          .where({ id: ctx.params.id })
+          .update({ ...payload, updatedAt: db.fn.now() })
+          .returning('*')
+
+        if (!row) {
+          ctx.status = 404
+          ctx.body = { reason: 'Key system not found', ...metadata }
           return
         }
+
+        ctx.status = 200
+        ctx.body = { content: row satisfies KeySystem, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error updating key system')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
       }
-
-      const [row] = await db(TABLE)
-        .where({ id: ctx.params.id })
-        .update({ ...payload, updatedAt: db.fn.now() })
-        .returning('*')
-
-      if (!row) {
-        ctx.status = 404
-        ctx.body = { reason: 'Key system not found', ...metadata }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = { content: row satisfies KeySystem, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error updating key system')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger

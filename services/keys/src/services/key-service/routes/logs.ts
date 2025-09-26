@@ -111,8 +111,8 @@ export const routes = (router: KoaRouter) => {
     try {
       const row = await db(TABLE).where({ id: ctx.params.id }).first()
       if (!row) {
-        ctx.status = 404;
-        ctx.body = { reason: 'Log not found', ...metadata };
+        ctx.status = 404
+        ctx.body = { reason: 'Log not found', ...metadata }
         return
       }
       ctx.status = 200
@@ -159,20 +159,24 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/logs', parseRequestBody(CreateLogRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: CreateLogRequest = ctx.request.body
+  router.post(
+    '/logs',
+    parseRequestBody(CreateLogRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: CreateLogRequest = ctx.request.body
 
-      const [row] = await db(TABLE).insert(payload).returning('*')
-      ctx.status = 201
-      ctx.body = { content: row satisfies Log, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error creating log')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
+        const [row] = await db(TABLE).insert(payload).returning('*')
+        ctx.status = 201
+        ctx.body = { content: row satisfies Log, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error creating log')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -222,25 +226,32 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.patch('/logs/:id', parseRequestBody(UpdateLogRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: UpdateLogRequest = ctx.request.body
+  router.patch(
+    '/logs/:id',
+    parseRequestBody(UpdateLogRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: UpdateLogRequest = ctx.request.body
 
-      const [row] = await db(TABLE).where({ id: ctx.params.id }).update(payload).returning('*')
-      if (!row) {
-        ctx.status = 404;
-        ctx.body = { reason: 'Log not found', ...metadata };
-        return
+        const [row] = await db(TABLE)
+          .where({ id: ctx.params.id })
+          .update(payload)
+          .returning('*')
+        if (!row) {
+          ctx.status = 404
+          ctx.body = { reason: 'Log not found', ...metadata }
+          return
+        }
+        ctx.status = 200
+        ctx.body = { content: row satisfies Log, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error updating log')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
       }
-      ctx.status = 200
-      ctx.body = { content: row satisfies Log, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error updating log')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -275,10 +286,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const n = await db(TABLE).where({ id: ctx.params.id }).del()
-      if (!n) { 
-        ctx.status = 404; 
-        ctx.body = { reason: 'Log not found', ...metadata }; 
-        return 
+      if (!n) {
+        ctx.status = 404
+        ctx.body = { reason: 'Log not found', ...metadata }
+        return
       }
       ctx.status = 200
       ctx.body = { ...metadata }

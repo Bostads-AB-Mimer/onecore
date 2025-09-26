@@ -13,9 +13,7 @@ export const swaggerSpec = {
       schemas: {},
     },
   },
-  apis: [
-    `${basePath}/services/key-service/routes/*.{ts,js}`,
-  ],
+  apis: [`${basePath}/services/key-service/routes/*.{ts,js}`],
 }
 
 export function updateSwaggerSchemas() {
