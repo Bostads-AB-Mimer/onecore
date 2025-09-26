@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Tenant, Lease } from "@/../../libs/types/src/types";
+import type { Tenant, Lease } from "@/services/api/searchService";
 import { fetchTenantAndLeasesByPnr } from "@/services/api/searchService";
 
 interface SearchTenantProps {
@@ -39,7 +39,7 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
         });
         return;
       }
-      onTenantFound(result.tenant as Tenant, result.contracts as Lease[]);
+      onTenantFound(result.tenant, result.contracts);
     } catch (e: any) {
       toast({
         title: "Kunde inte söka",
