@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Key, KeyType, KeyTypeLabels } from "@/types/key";
+import { rentalObjectSearchService, type RentalObjectSearchResult } from "@/services/api/rentalObjectSearchService";
 
 interface AddKeyDialogProps {
   open: boolean;
@@ -35,6 +36,52 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
     keyType: editingKey?.keyType || 'LGH' as KeyType,
     keySystemName: editingKey?.keySystemName || '',
   });
+
+  const [searchResults, setSearchResults] = useState<RentalObjectSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (searchQuery.trim().length === 0) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      // Only search if the rental ID looks complete (has minimum length and valid format)
+      if (!rentalObjectSearchService.isValidRentalId(searchQuery)) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await rentalObjectSearchService.searchByRentalId(searchQuery);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    performSearch();
+  }, [searchQuery]);
+
+  const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, rentalObject: value }));
+    setSearchQuery(value);
+  };
+
+  const handleSelectSearchResult = (result: RentalObjectSearchResult) => {
+    setFormData(prev => ({ ...prev, rentalObject: result.rentalId }));
+    setSearchResults([]);
+    setSearchQuery('');
+  };
 
   const handleSave = () => {
     if (!formData.keyName || !formData.keyType) return;
@@ -69,6 +116,9 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
       keyType: 'LGH',
       keySystemName: '',
     });
+    setSearchResults([]);
+    setSearchQuery('');
+    setIsSearching(false);
   };
 
   return (
@@ -91,14 +141,38 @@ export function AddKeyDialog({ open, onOpenChange, onSave, editingKey }: AddKeyD
             />
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-2 relative">
             <Label htmlFor="rentalObject">Objekt</Label>
-            <Input
-              id="rentalObject"
-              value={formData.rentalObject}
-              onChange={(e) => setFormData(prev => ({ ...prev, rentalObject: e.target.value }))}
-              placeholder="t.ex. 811-039-05-0347"
-            />
+            <div className="relative">
+              <Input
+                id="rentalObject"
+                value={formData.rentalObject}
+                onChange={handleRentalObjectChange}
+                placeholder="t.ex. 811-039-05-0347"
+              />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                </div>
+              )}
+            </div>
+
+            {searchResults.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {searchResults.map((result, index) => (
+                  <button
+                    key={`${result.rentalId}-${index}`}
+                    type="button"
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                    onClick={() => handleSelectSearchResult(result)}
+                  >
+                    <div className="font-medium">{result.rentalId}</div>
+                    <div className="text-sm text-gray-600">{result.address}</div>
+                    <div className="text-xs text-gray-500 capitalize">{result.type}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">
