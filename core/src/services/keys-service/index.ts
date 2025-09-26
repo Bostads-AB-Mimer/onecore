@@ -2,7 +2,12 @@
 
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { KeyLoansApi, KeysApi, KeySystemsApi, LogsApi } from '../../adapters/keys-adapter'
+import {
+  KeyLoansApi,
+  KeysApi,
+  KeySystemsApi,
+  LogsApi,
+} from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 
@@ -18,7 +23,7 @@ const {
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
   CreateLogRequestSchema,
-  UpdateLogRequestSchema
+  UpdateLogRequestSchema,
 } = keys.v1
 
 /**
@@ -63,9 +68,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
   registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
-  
+
   // ==================== KEY LOANS ROUTES ====================
-  
+
   /**
    * @swagger
    * /key-loans:
@@ -96,9 +101,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeyLoansApi.list()
-    
+
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key loans')
       ctx.status = 500
@@ -152,16 +157,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeyLoansApi.get(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key loan not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error fetching key loan')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -213,16 +218,16 @@ export const routes = (router: KoaRouter) => {
   router.post('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeyLoansApi.create(payload)
-    
+
     if (!result.ok) {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error creating key loan')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -288,9 +293,9 @@ export const routes = (router: KoaRouter) => {
   router.patch('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeyLoansApi.update(ctx.params.id, payload)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
@@ -302,7 +307,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error updating key loan')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -348,16 +353,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeyLoansApi.remove(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key loan not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error deleting key loan')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -400,9 +405,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeysApi.list()
-    
+
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching keys')
       ctx.status = 500
@@ -454,16 +459,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeysApi.get(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error fetching key')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -514,16 +519,16 @@ export const routes = (router: KoaRouter) => {
   router.post('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeysApi.create(payload)
-    
+
     if (!result.ok) {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error creating key')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -587,9 +592,9 @@ export const routes = (router: KoaRouter) => {
   router.patch('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeysApi.update(ctx.params.id, payload)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
@@ -601,7 +606,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error updating key')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -645,16 +650,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeysApi.remove(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error deleting key')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -697,9 +702,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key_systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeySystemsApi.list()
-    
+
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key systems')
       ctx.status = 500
@@ -753,16 +758,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key_systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeySystemsApi.get(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key system not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error fetching key system')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -814,16 +819,16 @@ export const routes = (router: KoaRouter) => {
   router.post('/key_systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeySystemsApi.create(payload)
-    
+
     if (!result.ok) {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error creating key system')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -889,9 +894,9 @@ export const routes = (router: KoaRouter) => {
   router.patch('/key_systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await KeySystemsApi.update(ctx.params.id, payload)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
@@ -903,7 +908,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error updating key system')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -949,16 +954,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/key_systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await KeySystemsApi.remove(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Key system not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error deleting key system')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1001,9 +1006,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await LogsApi.list()
-    
+
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching logs')
       ctx.status = 500
@@ -1055,16 +1060,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/logs/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await LogsApi.get(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Log not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error fetching log')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1115,16 +1120,16 @@ export const routes = (router: KoaRouter) => {
   router.post('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await LogsApi.create(payload)
-    
+
     if (!result.ok) {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error creating log')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1188,9 +1193,9 @@ export const routes = (router: KoaRouter) => {
   router.patch('/logs/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
-    
+
     const result = await LogsApi.update(ctx.params.id, payload)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
@@ -1202,7 +1207,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error updating log')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1246,16 +1251,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/logs/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    
+
     const result = await LogsApi.remove(ctx.params.id)
-    
+
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Log not found', ...metadata }
         return
       }
-      
+
       logger.error({ err: result.err, metadata }, 'Error deleting log')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
