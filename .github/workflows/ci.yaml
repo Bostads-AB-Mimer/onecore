@@ -107,6 +107,8 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/pnpm-setup
+        with:
+          run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Run Typecheck
         run: pnpm run --filter ${{ matrix.package }} typecheck
@@ -127,6 +129,8 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/pnpm-setup
+        with:
+          run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
         run: pnpm run --filter ${{ matrix.package }} build
