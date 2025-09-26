@@ -62,6 +62,17 @@ export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract 
     tenant.phoneNumbers?.[0]?.phoneNumber ??
     undefined;
 
+  const sortedContracts = [...contracts].sort((a, b) => {
+  const av = toMs(a.leaseStartDate);
+  const bv = toMs(b.leaseStartDate);
+  const aVal = av ?? Number.MAX_SAFE_INTEGER;
+  const bVal = bv ?? Number.MAX_SAFE_INTEGER;
+  return aVal - bVal; 
+  });
+
+
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -101,10 +112,10 @@ export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract 
           <CardDescription>Välj ett kontrakt för att se tillhörande nycklar</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {contracts.length === 0 ? (
+          {sortedContracts.length === 0 ? (
             <p className="text-muted-foreground">Inga kontrakt hittades</p>
           ) : (
-            contracts.map((lease) => {
+            sortedContracts.map((lease) => {
               const start = fmtDate(lease.leaseStartDate);
               const end = fmtDate(lease.leaseEndDate);
               const rentalLabel =
@@ -145,10 +156,10 @@ export function TenantInfo({ tenant, contracts, onClearSearch, onSelectContract 
                               Till: {end}
                             </span>
                           )}
-                          {lease.terminationDate && (
+                          {lease.lastDebitDate && (
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              Uppsagd: {fmtDate(lease.terminationDate)}
+                              Sista debiteringsdatum: {fmtDate(lease.lastDebitDate)}
                             </span>
                           )}
                         </div>
