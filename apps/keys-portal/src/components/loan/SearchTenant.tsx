@@ -1,59 +1,65 @@
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import type { Tenant, Lease } from "@/services/api/leaseSearchService";
-import { fetchTenantAndLeasesByPnr } from "@/services/api/leaseSearchService";
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Search } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import type { Tenant, Lease } from '@/services/api/leaseSearchService'
+import { fetchTenantAndLeasesByPnr } from '@/services/api/leaseSearchService'
 
 interface SearchTenantProps {
-  onTenantFound: (tenant: Tenant, contracts: Lease[]) => void;
+  onTenantFound: (tenant: Tenant, contracts: Lease[]) => void
 }
 
-const isValidPnr = (pnr: string) => /^(?:\d{6}|\d{8})-?\d{4}$/.test(pnr.trim());
+const isValidPnr = (pnr: string) => /^(?:\d{6}|\d{8})-?\d{4}$/.test(pnr.trim())
 
 export function SearchTenant({ onTenantFound }: SearchTenantProps) {
-  const [personnummer, setPersonnummer] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [personnummer, setPersonnummer] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
   const handleSearch = async () => {
-    const pnr = personnummer.trim();
+    const pnr = personnummer.trim()
     if (!isValidPnr(pnr)) {
       toast({
-        title: "Ogiltigt personnummer",
-        description: "Ange format YYYYMMDD-XXXX",
-        variant: "destructive",
-      });
-      return;
+        title: 'Ogiltigt personnummer',
+        description: 'Ange format YYYYMMDD-XXXX',
+        variant: 'destructive',
+      })
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const result = await fetchTenantAndLeasesByPnr(pnr);
+      const result = await fetchTenantAndLeasesByPnr(pnr)
       if (!result) {
         toast({
-          title: "Ingen träff",
-          description: "Hittade ingen hyresgäst för angivet personnummer.",
-        });
-        return;
+          title: 'Ingen träff',
+          description: 'Hittade ingen hyresgäst för angivet personnummer.',
+        })
+        return
       }
-      onTenantFound(result.tenant, result.contracts);
-    } catch (e: any) {
+      onTenantFound(result.tenant, result.contracts)
+    } catch (e: Error) {
       toast({
-        title: "Kunde inte söka",
-        description: e?.message ?? "Okänt fel",
-        variant: "destructive",
-      });
+        title: 'Kunde inte söka',
+        description: e.message ?? 'Okänt fel',
+        variant: 'destructive',
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSearch();
-  };
+    if (e.key === 'Enter') handleSearch()
+  }
 
   return (
     <Card>
@@ -77,7 +83,7 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
           />
           <Button onClick={handleSearch} className="gap-2" disabled={loading}>
             <Search className="h-4 w-4" />
-            {loading ? "Söker…" : "Sök"}
+            {loading ? 'Söker…' : 'Sök'}
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -85,5 +91,5 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
         </p>
       </CardContent>
     </Card>
-  );
+  )
 }

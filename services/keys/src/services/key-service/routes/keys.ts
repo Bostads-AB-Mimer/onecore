@@ -7,9 +7,9 @@ import { registerSchema } from '../../../utils/openapi'
 
 const TABLE = 'keys'
 
-const { KeySchema, CreateKeyRequestSchema, UpdateKeyRequestSchema, } = keys.v1
-  type CreateKeyRequest = keys.v1.CreateKeyRequest
-  type UpdateKeyRequest = keys.v1.UpdateKeyRequest
+const { KeySchema, CreateKeyRequestSchema, UpdateKeyRequestSchema } = keys.v1
+type CreateKeyRequest = keys.v1.CreateKeyRequest
+type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 
 /**
  * @swagger
@@ -180,20 +180,24 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.post('/keys', parseRequestBody(CreateKeyRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: CreateKeyRequest = ctx.request.body
+  router.post(
+    '/keys',
+    parseRequestBody(CreateKeyRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: CreateKeyRequest = ctx.request.body
 
-      const [row] = await db(TABLE).insert(payload).returning('*')
-      ctx.status = 201
-      ctx.body = { content: row, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error creating key')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
+        const [row] = await db(TABLE).insert(payload).returning('*')
+        ctx.status = 201
+        ctx.body = { content: row, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error creating key')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
     }
-  })
+  )
 
   /**
    * @swagger
@@ -256,30 +260,34 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch('/keys/:id', parseRequestBody(UpdateKeyRequestSchema), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const payload: UpdateKeyRequest = ctx.request.body
+  router.patch(
+    '/keys/:id',
+    parseRequestBody(UpdateKeyRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: UpdateKeyRequest = ctx.request.body
 
-      const [row] = await db(TABLE)
-        .where({ id: ctx.params.id })
-        .update({ ...payload, updatedAt: db.fn.now() })
-        .returning('*')
+        const [row] = await db(TABLE)
+          .where({ id: ctx.params.id })
+          .update({ ...payload, updatedAt: db.fn.now() })
+          .returning('*')
 
-      if (!row) {
-        ctx.status = 404
-        ctx.body = { reason: 'Key not found', ...metadata }
-        return
+        if (!row) {
+          ctx.status = 404
+          ctx.body = { reason: 'Key not found', ...metadata }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = { content: row, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error updating key')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
       }
-
-      ctx.status = 200
-      ctx.body = { content: row, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error updating key')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  })
+  )
 
   /**
    * @swagger
