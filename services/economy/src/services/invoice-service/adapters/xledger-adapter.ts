@@ -233,7 +233,7 @@ const invoiceNodeFragment = `
   subledger {
     code
     description
-  } 
+  }
   period {
     fromDate
     toDate
@@ -247,30 +247,25 @@ const invoiceNodeFragment = `
 `
 
 export const getInvoicesByContactCode = async (contactCode: string) => {
-  try {
-    const xledgerId = await getContactDbId(contactCode)
-    if (!xledgerId) {
-      return null
-    }
+  const xledgerId = await getContactDbId(contactCode)
+  if (!xledgerId) {
+    return null
+  }
 
-    const query = {
-      query: `{
-      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) { 
+  const query = {
+    query: `{
+      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) {
         edges {
           node {
             ${invoiceNodeFragment}
           }
-        } 
+        }
       }
      }`,
-    }
-
-    const result = await makeXledgerRequest(query)
-    return transformToInvoice(result.data.arTransactions.edges)
-  } catch (error) {
-    logger.error(error, 'Error getting invoices by contact code')
-    throw error
   }
+
+  const result = await makeXledgerRequest(query)
+  return transformToInvoice(result.data.arTransactions.edges ?? [])
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
@@ -287,7 +282,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
               ${invoiceNodeFragment}
             }
           }
-        } 
+        }
     }`,
   }
 
@@ -298,7 +293,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
       return null
     }
 
-    const [invoice] = transformToInvoice(result.data.arTransactions.edges)
+    const [invoice] = transformToInvoice(result.data.arTransactions.edges ?? [])
     return invoice
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
