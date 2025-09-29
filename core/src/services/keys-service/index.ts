@@ -674,7 +674,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_systems:
+   * /key-systems:
    *   get:
    *     summary: List all key systems
    *     description: Retrieve a list of all key systems
@@ -700,7 +700,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/key_systems', async (ctx) => {
+  router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const result = await KeySystemsApi.list()
@@ -718,7 +718,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_systems/{id}:
+   * /key-systems/{id}:
    *   get:
    *     summary: Get key system by ID
    *     description: Retrieve a specific key system by its ID
@@ -756,7 +756,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/key_systems/:id', async (ctx) => {
+  router.get('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const result = await KeySystemsApi.get(ctx.params.id)
@@ -780,7 +780,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_systems:
+   * /key-systems:
    *   post:
    *     summary: Create a new key system
    *     description: Create a new key system
@@ -816,7 +816,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/key_systems', async (ctx) => {
+  router.post('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
 
@@ -841,7 +841,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_systems/{id}:
+   * /key-systems/{id}:
    *   patch:
    *     summary: Update a key system
    *     description: Partially update a key system
@@ -891,7 +891,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.patch('/key_systems/:id', async (ctx) => {
+  router.patch('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
 
@@ -921,7 +921,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /key_systems/{id}:
+   * /key-systems/{id}:
    *   delete:
    *     summary: Delete a key system
    *     description: Delete a key system by ID
@@ -952,7 +952,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('/key_systems/:id', async (ctx) => {
+  router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const result = await KeySystemsApi.remove(ctx.params.id)
