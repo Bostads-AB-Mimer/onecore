@@ -5,6 +5,18 @@ import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
 
+const getAreasByPropertyObjectIds = async (
+  propertyObjectIds: string[]
+): Promise<Map<string, number>> => {
+  if (propertyObjectIds.length === 0) return new Map()
+
+  const areas = await prisma.quantityValue.findMany({
+    where: { code: { in: propertyObjectIds } },
+  })
+
+  return new Map(areas.map((area) => [area.code, area.value]))
+}
+
 export const getFacilityByRentalId = async (rentalId: string) => {
   try {
     const result = await prisma.propertyStructure.findFirst({
@@ -12,35 +24,15 @@ export const getFacilityByRentalId = async (rentalId: string) => {
         rentalId,
         propertyObject: { objectTypeId: 'balok' },
       },
-      select: {
-        buildingCode: true,
-        buildingName: true,
-        propertyCode: true,
-        propertyName: true,
-        propertyId: true,
-        buildingId: true,
-        rentalId: true,
+      include: {
         propertyObject: {
-          select: {
-            rentalInformation: {
-              select: {
-                apartmentNumber: true,
-                rentalInformationType: { select: { name: true, code: true } },
-              },
-            },
+          include: {
             facility: {
-              select: {
-                id: true,
-                location: true,
-                entrance: true,
-                usage: true,
-                name: true,
-                code: true,
-                propertyObjectId: true,
-                availableFrom: true,
-                availableTo: true,
-                deleteMark: true,
-                facilityType: { select: { code: true, name: true } },
+              include: { facilityType: true },
+            },
+            rentalInformation: {
+              include: {
+                rentalInformationType: true,
               },
             },
           },
@@ -56,21 +48,58 @@ export const getFacilityByRentalId = async (rentalId: string) => {
       'rentalinformation-not-found'
     )
 
-    const {
-      propertyObject: { facility, rentalInformation },
-    } = result
+    // Get area for this facility
+    const areaSizeMap = await getAreasByPropertyObjectIds([
+      result.propertyObject.facility.propertyObjectId,
+    ])
+    const areaSize =
+      areaSizeMap.get(result.propertyObject.facility.propertyObjectId) ?? null
 
-    return trimStrings({
-      ...result,
-      propertyObject: { facility, rentalInformation },
-    })
+    const facility = {
+      id: result.propertyObject.facility.id,
+      code: result.propertyObject.facility.code,
+      name: result.propertyObject.facility.name ?? null,
+      entrance: result.propertyObject.facility.entrance ?? null,
+      deleted: Boolean(result.propertyObject.facility.deleteMark),
+      type: {
+        code: result.propertyObject.facility.facilityType?.code || '',
+        name: result.propertyObject.facility.facilityType?.name || null,
+      },
+      areaSize,
+      building: {
+        id: result.buildingId,
+        code: result.buildingCode,
+        name: result.buildingName,
+      },
+      property: {
+        id: result.propertyId,
+        code: result.propertyCode,
+        name: result.propertyName,
+      },
+      rentalInformation: {
+        rentalId: result.rentalId,
+        apartmentNumber:
+          result.propertyObject.rentalInformation.apartmentNumber,
+        type: {
+          code:
+            result.propertyObject.rentalInformation.rentalInformationType
+              ?.code || '',
+          name:
+            result.propertyObject.rentalInformation.rentalInformationType
+              ?.name || null,
+        },
+      },
+    }
+
+    return trimStrings(facility)
   } catch (err) {
     if (
       err instanceof Error &&
       (err.message === 'property-structure-not-found' ||
         err.message === 'property-object-not-found' ||
         err.message === 'facility-not-found' ||
-        err.message === 'rentalinformation-not-found')
+        err.message === 'rentalinformation-not-found' ||
+        err.message.includes('rental-information-not-found'))
     ) {
       return null
     }
@@ -80,40 +109,216 @@ export const getFacilityByRentalId = async (rentalId: string) => {
   }
 }
 
-export const getFacilitySizeByRentalId = async (rentalId: string) => {
+export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
   try {
-    const propertyInfo = await prisma.propertyStructure.findFirst({
+    const result = await prisma.propertyStructure.findMany({
       where: {
-        rentalId,
+        propertyCode,
         propertyObject: { objectTypeId: 'balok' },
-        NOT: { propertyCode: null },
       },
-      select: {
-        name: true,
+      include: {
         propertyObject: {
-          select: {
-            id: true,
+          include: {
+            facility: {
+              include: { facilityType: true },
+            },
+            rentalInformation: {
+              include: {
+                rentalInformationType: true,
+              },
+            },
           },
         },
       },
     })
 
-    if (propertyInfo === null) {
-      logger.warn(
-        'residence-adapter.getFacilitySizeByRentalId: No property structure found for rentalId'
-      )
+    assert(result.length > 0, 'property-structure-not-found')
+
+    result.forEach((item, index) => {
+      assert(item.propertyObject, `property-object-not-found-at-index-${index}`)
+      if (item.propertyObject.facility) {
+        assert(
+          item.propertyObject.facility,
+          `facility-not-found-at-index-${index}`
+        )
+      }
+      if (item.propertyObject.rentalInformation) {
+        assert(
+          item.propertyObject.rentalInformation,
+          `rental-information-not-found-at-index-${index}`
+        )
+      }
+    })
+
+    // Get areas for all facilities
+    const propertyObjectIds = result
+      .filter((item) => item.propertyObject.facility)
+      .map((item) => item.propertyObject.facility!.propertyObjectId)
+
+    const areaSizeMap = await getAreasByPropertyObjectIds(propertyObjectIds)
+
+    const facilities = result
+      .filter((item) => item.propertyObject.facility)
+      .map((item) => ({
+        id: item.propertyObject.facility!.id,
+        code: item.propertyObject.facility!.code,
+        name: item.propertyObject.facility!.name ?? null,
+        entrance: item.propertyObject.facility!.entrance ?? null,
+        deleted: Boolean(item.propertyObject.facility!.deleteMark),
+        type: {
+          code: item.propertyObject.facility!.facilityType?.code,
+          name: item.propertyObject.facility!.facilityType?.name || null,
+        },
+        areaSize:
+          areaSizeMap.get(item.propertyObject.facility!.propertyObjectId) ??
+          null,
+        building: {
+          id: item.buildingId,
+          code: item.buildingCode,
+          name: item.buildingName,
+        },
+        property: {
+          id: item.propertyId,
+          code: item.propertyCode,
+          name: item.propertyName,
+        },
+        rentalInformation: item.propertyObject.rentalInformation
+          ? {
+              rentalId: item.rentalId,
+              apartmentNumber:
+                item.propertyObject.rentalInformation.apartmentNumber || null,
+              type: {
+                code:
+                  item.propertyObject.rentalInformation.rentalInformationType
+                    ?.code || '',
+                name:
+                  item.propertyObject.rentalInformation.rentalInformationType
+                    ?.name || null,
+              },
+            }
+          : null,
+      }))
+
+    return trimStrings(facilities)
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      (err.message === 'property-structure-not-found' ||
+        err.message.includes('property-object-not-found') ||
+        err.message.includes('facility-not-found') ||
+        err.message.includes('rental-information-not-found'))
+    ) {
       return null
     }
 
-    const areaSize = await prisma.quantityValue.findFirst({
+    logger.error({ err }, 'facility-adapter.getFacilitiesByPropertyCode')
+    throw err
+  }
+}
+
+export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
+  try {
+    const result = await prisma.propertyStructure.findMany({
       where: {
-        code: propertyInfo.propertyObject.id,
+        buildingCode,
+        propertyObject: { objectTypeId: 'balok' },
+      },
+      include: {
+        propertyObject: {
+          include: {
+            facility: {
+              include: { facilityType: true },
+            },
+            rentalInformation: {
+              include: {
+                rentalInformationType: true,
+              },
+            },
+          },
+        },
       },
     })
 
-    return areaSize
+    assert(result.length > 0, 'property-structure-not-found')
+
+    result.forEach((item, index) => {
+      assert(item.propertyObject, `property-object-not-found-at-index-${index}`)
+      if (item.propertyObject.facility) {
+        assert(
+          item.propertyObject.facility,
+          `facility-not-found-at-index-${index}`
+        )
+      }
+      if (item.propertyObject.rentalInformation) {
+        assert(
+          item.propertyObject.rentalInformation,
+          `rental-information-not-found-at-index-${index}`
+        )
+      }
+    })
+
+    // Get areas for all facilities
+    const propertyObjectIds = result
+      .filter((item) => item.propertyObject.facility)
+      .map((item) => item.propertyObject.facility!.propertyObjectId)
+
+    const areaSizeMap = await getAreasByPropertyObjectIds(propertyObjectIds)
+
+    const facilities = result
+      .filter((item) => item.propertyObject.facility)
+      .map((item) => ({
+        id: item.propertyObject.facility!.id,
+        code: item.propertyObject.facility!.code,
+        name: item.propertyObject.facility!.name ?? null,
+        entrance: item.propertyObject.facility!.entrance ?? null,
+        deleted: Boolean(item.propertyObject.facility!.deleteMark),
+        type: {
+          code: item.propertyObject.facility!.facilityType?.code,
+          name: item.propertyObject.facility!.facilityType?.name || null,
+        },
+        areaSize:
+          areaSizeMap.get(item.propertyObject.facility!.propertyObjectId) ??
+          null,
+        building: {
+          id: item.buildingId,
+          code: item.buildingCode,
+          name: item.buildingName,
+        },
+        property: {
+          id: item.propertyId,
+          code: item.propertyCode,
+          name: item.propertyName,
+        },
+        rentalInformation: item.propertyObject.rentalInformation
+          ? {
+              rentalId: item.rentalId,
+              apartmentNumber:
+                item.propertyObject.rentalInformation.apartmentNumber || null,
+              type: {
+                code:
+                  item.propertyObject.rentalInformation.rentalInformationType
+                    ?.code || '',
+                name:
+                  item.propertyObject.rentalInformation.rentalInformationType
+                    ?.name || null,
+              },
+            }
+          : null,
+      }))
+
+    return trimStrings(facilities)
   } catch (err) {
-    logger.error({ err }, 'facility-adapter.getFacilitySizeByRentalId')
+    if (
+      err instanceof Error &&
+      (err.message === 'property-structure-not-found' ||
+        err.message.includes('property-object-not-found') ||
+        err.message.includes('facility-not-found') ||
+        err.message.includes('rental-information-not-found'))
+    ) {
+      return null
+    }
+
+    logger.error({ err }, 'facility-adapter.getFacilitiesByBuildingCode')
     throw err
   }
 }
