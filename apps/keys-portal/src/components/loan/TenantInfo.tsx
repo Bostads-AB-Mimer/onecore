@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import {
   Card,
@@ -9,6 +10,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Lease, Tenant, TenantAddress as Address } from '@/services/types'
+import { leaseTypeLabels, mapLeaseTypeKeyFromRaw } from '@/services/types'
+import { EmbeddedKeysList } from '@/components/loan/EmbeddedKeysList'
 
 interface TenantInfoProps {
   tenant: Tenant
@@ -62,12 +65,21 @@ function statusBadgeProps(s: DisplayStatus) {
   return { text: 'Aktiv', variant: 'default' as const }
 }
 
+// prefer terminationDate; otherwise leaseEndDate
+const pickEndDate = (lease: Lease) =>
+  lease.terminationDate ?? lease.leaseEndDate
+
 export function TenantInfo({
   tenant,
   contracts,
   onClearSearch,
   onSelectContract,
 }: TenantInfoProps) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const toggleKeys = (leaseId: string) =>
+    setExpanded((prev) => ({ ...prev, [leaseId]: !prev[leaseId] }))
+
   const sortedContracts = [...contracts].sort((a, b) => {
     const av = toMs(a.leaseStartDate)
     const bv = toMs(b.leaseStartDate)
@@ -114,7 +126,7 @@ export function TenantInfo({
         <CardHeader>
           <CardTitle>Kontrakt</CardTitle>
           <CardDescription>
-            Välj ett kontrakt för att se tillhörande nycklar
+            Välj ett kontrakt för att visa och hantera nycklar
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -123,7 +135,8 @@ export function TenantInfo({
           ) : (
             sortedContracts.map((lease) => {
               const start = fmtDate(lease.leaseStartDate)
-              const end = fmtDate(lease.leaseEndDate)
+              const end = fmtDate(pickEndDate(lease))
+
               const rentalLabel =
                 lease.rentalPropertyId ||
                 lease.rentalProperty?.rentalPropertyId ||
@@ -140,21 +153,30 @@ export function TenantInfo({
               const status = deriveLeaseStatus(lease)
               const badge = statusBadgeProps(status)
 
+              const leaseTypeKey = mapLeaseTypeKeyFromRaw(lease.type)
+              const leaseTypeLabel = leaseTypeLabels[leaseTypeKey]
+
+              const isOpen = !!expanded[lease.leaseId]
+
               return (
-                <Card
-                  key={lease.leaseId}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => onSelectContract?.(lease)}
-                >
+                <Card key={lease.leaseId} className="transition-colors">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <h3 className="font-medium">{rentalLabel}</h3>
+
+                        {leaseTypeLabel && (
+                          <p className="text-xs text-muted-foreground">
+                            Typ: {leaseTypeLabel}
+                          </p>
+                        )}
+
                         {addr && (
                           <p className="text-sm text-muted-foreground">
                             {addr}
                           </p>
                         )}
+
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           {start && (
                             <span className="flex items-center gap-1">
@@ -168,27 +190,38 @@ export function TenantInfo({
                               Till: {end}
                             </span>
                           )}
-                          {lease.lastDebitDate && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Sista debiteringsdatum:{' '}
-                              {fmtDate(lease.lastDebitDate)}
-                            </span>
-                          )}
                         </div>
+
                         {typeof monthlyRent === 'number' && (
                           <p className="text-sm text-muted-foreground">
                             Hyra: {monthlyRent.toLocaleString('sv-SE')} kr/mån
                           </p>
                         )}
                       </div>
+
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant={badge.variant}>{badge.text}</Badge>
-                        <Button size="sm" variant="outline">
-                          Visa nycklar
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            onSelectContract?.(lease)
+                            toggleKeys(lease.leaseId)
+                          }}
+                          aria-expanded={isOpen}
+                          aria-controls={`keys-${lease.leaseId}`}
+                        >
+                          {isOpen ? 'Dölj nycklar' : 'Visa nycklar'}
                         </Button>
                       </div>
                     </div>
+
+                    {/* Inline keys list toggle */}
+                    {isOpen && (
+                      <div id={`keys-${lease.leaseId}`} className="pt-4">
+                        <EmbeddedKeysList lease={lease} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )

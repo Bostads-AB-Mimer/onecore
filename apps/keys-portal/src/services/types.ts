@@ -56,3 +56,31 @@ export type KeySystemType = keyof typeof KeySystemTypeLabels
 export interface KeyLoanWithDetails extends KeyLoan {
   // additional computed properties
 }
+
+// TODO: Needs to be added to api-types
+export const leaseTypeLabels = {
+  housingContract: 'Bostadskontrakt',
+  campusContract: 'Campuskontrakt',
+  garageContract: 'Garagekontrakt',
+  cooperativeTenancyContract: 'Kooperativ hyresrätt',
+  commercialTenantContract: 'Lokalkontrakt',
+  renegotiationContract: 'Omförhandlingskontrakt',
+  otherContract: 'Övrigt',
+  parkingspaceContract: 'P-Platskontrakt',
+  unknown: 'Okänd kontraktstyp',
+} as const
+
+export type LeaseType = keyof typeof leaseTypeLabels
+
+export function mapLeaseTypeKeyFromRaw(raw?: string): LeaseType {
+  const s = (raw ?? '').trim().toLowerCase()
+  if (s.startsWith('bostadskontrakt')) return 'housingContract'
+  if (s.startsWith('campuskontrakt')) return 'campusContract'
+  if (s.startsWith('garagekontrakt')) return 'garageContract'
+  if (s.startsWith('kooperativ')) return 'cooperativeTenancyContract'
+  if (s.startsWith('lokalkontrakt')) return 'commercialTenantContract'
+  if (s.startsWith('omförhandlingskontrakt')) return 'renegotiationContract'
+  if (s.startsWith('p-platskontrakt')) return 'parkingspaceContract'
+  if (s.startsWith('övrigt')) return 'otherContract'
+  return 'unknown'
+}
