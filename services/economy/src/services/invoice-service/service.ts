@@ -66,11 +66,11 @@ const createRoundOffRow = async (
     costCode: roundOffInformation.costCode,
     amount: invoice.roundoff as number,
     totalAmount: invoice.roundoff as number,
-    invoiceDate: invoice.invdate as string, //xledgerDateString(invoice.invdate as Date),
+    invoiceDate: invoice.invdate as string,
     invoiceNumber: (invoice.invoice as string).trimEnd(),
     invoiceRowText: 'Öresutjämning',
     fromDate: fromDateString,
-    toDate: invoice.todate as string, //xledgerDateString(invoice.todate as Date),
+    toDate: invoice.todate as string,
     contractCode: (invoice.reference as string).trimEnd(),
     totalAccount,
     ledgerAccount,
@@ -122,6 +122,7 @@ export const processInvoiceRows = async (
       reference: invoiceRow.contractCode,
       cmctckod: invoiceRow.contactCode,
       invoice: invoiceRow.invoiceNumber,
+      expdate: invoiceRow.invoiceDueDate,
     }
   })
 
@@ -783,9 +784,11 @@ export const importInvoiceRows = async (
       'Got invoice rows from xpand db'
     )
 
-    let chunkNum = 0
     const batchId = await createBatch()
     logger.info(`Created new batch: ${batchId}`)
+
+    let chunkNum = 0
+    let currentStart = 0
 
     while (CHUNK_SIZE * chunkNum < invoiceDataRows.length) {
       const startNum = chunkNum * CHUNK_SIZE

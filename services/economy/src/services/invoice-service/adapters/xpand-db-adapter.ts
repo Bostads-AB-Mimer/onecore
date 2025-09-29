@@ -615,7 +615,7 @@ export const getInvoiceRows = async (
   const invoiceRowsQuery = db.raw(
     "select cmart.code as rentArticle, cmart.utskrgrupp as printGroup, krfkr.reduction as rowReduction, \
       krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
-      krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, * \
+      krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, krfkh.expdate as expirationDate, * \
       from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
       inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
   		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
@@ -629,7 +629,8 @@ export const getInvoiceRows = async (
       and cmcmp.code = ? \
       and invoice in (" +
       invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
-      ')',
+      ') \
+      order by invoice asc',
     [companyId]
   )
 
@@ -677,7 +678,7 @@ export const getInvoiceRows = async (
         deduction: sumColumns(invoiceRow['rowReduction']),
         company: trim(invoiceRow['company']),
         invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
-        finalPaymentDate: xledgerDateString(invoiceRow['expdate'] as Date),
+        invoiceDueDate: xledgerDateString(invoiceRow['expirationDate'] as Date),
         invoiceNumber: trim(invoiceRow['invoice']),
         contactCode: trim(invoiceRow['cmctckod']),
         contractCode: trim(invoiceRow['reference']),
