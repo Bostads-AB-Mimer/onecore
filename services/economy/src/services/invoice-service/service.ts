@@ -711,7 +711,7 @@ export const missingInvoices = async (batchId: string) => {
     .filter((invoice) => invoice.invoiceFromDate.localeCompare('20251001') >= 0)
     .map((invoice) => invoice.invoiceNumber)
   const xpandInvoices: string[] = (
-    await getRentalInvoices(new Date(2025, 9, 1), '001')
+    await getRentalInvoices(new Date(2025, 9, 1), new Date(2025, 10, 1), '001')
   ).map((invoice: any): string => (invoice.invoice as string).trimEnd())
 
   const onlyInInvoiceDb = invoiceDbInvoices.filter((dbInvoice) => {
