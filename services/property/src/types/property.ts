@@ -84,6 +84,16 @@ export const PropertyDetailsSchema = z.object({
   fromDate: z.date(),
   toDate: z.date(),
   timestamp: z.string(),
+  marketArea: z.object({
+    id: z.string().trim(),
+    code: z.string().trim(),
+    name: z.string().trim(),
+  }),
+  district: z.object({
+    id: z.string().trim(),
+    code: z.string().trim(),
+    caption: z.string().trim(),
+  }),
   propertyObject: z.object({
     id: z.string().trim(),
     deleteMark: z.number().int(),

@@ -22,6 +22,20 @@ const getPropertyById = async (
         id: id,
       },
       include: {
+        district: {
+          select: {
+            id: true,
+            code: true,
+            caption: true,
+          },
+        },
+        marketArea: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         propertyObject: {
           select: {
             id: true,
