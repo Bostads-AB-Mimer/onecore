@@ -15,7 +15,7 @@ export type Log = CoreComponents['schemas']['Log']
 // Tables/respopnse types from core API generated schemas
 export type Property = CoreComponents['schemas']['Property']
 export type Lease = CoreComponents['schemas']['Lease']
-export type Tenant = CoreComponents['schemas']['Lease']['tenants']
+export type Tenant = CoreComponents['schemas']['Lease']['tenants'][number]
 export type TenantAddress = NonNullable<
   CoreComponents['schemas']['Lease']['tenants'][number]['address']
 >
