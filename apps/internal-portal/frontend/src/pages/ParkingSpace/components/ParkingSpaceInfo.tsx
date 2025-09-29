@@ -101,7 +101,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           </Box>
           {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
             <Box display="flex" justifyContent="space-between" flex="1">
-              <Typography>Hyra inkl. moms</Typography>
+              <Typography>Hyra inkl. moms *</Typography>
               <Box>
                 <Typography fontWeight="bold">{`${numberFormatter.format(
                   parkingSpaceListing.rentalObject.monthlyRent * 1.25
@@ -154,7 +154,19 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               </Typography>
             </Box>
           </Box>
+          {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
+            <>
+              <Box height="50px" />
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography fontStyle={'italic'}>
+                  * moms på bilplatser betalas för hyresgäster som saknar bostad
+                  i området
+                </Typography>
+              </Box>
+            </>
+          )}
         </Box>
+
         <Box
           flex="1"
           sx={{
