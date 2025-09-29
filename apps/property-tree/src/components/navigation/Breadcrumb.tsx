@@ -13,7 +13,9 @@ interface PropertyBreadcrumbProps {
   propertyDetail?: any
 }
 
-export const PropertyBreadcrumb = ({ propertyDetail }: PropertyBreadcrumbProps) => {
+export const PropertyBreadcrumb = ({
+  propertyDetail,
+}: PropertyBreadcrumbProps) => {
   const location = useLocation()
   const breadcrumbs = generateBreadcrumbs(location.pathname, propertyDetail)
 

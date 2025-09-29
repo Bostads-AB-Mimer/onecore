@@ -52,7 +52,10 @@ export const getBreadcrumbLabel = (
   return mappings[segment] || segment
 }
 
-export const generateBreadcrumbs = (pathname: string, propertyDetail?: any): BreadcrumbItem[] => {
+export const generateBreadcrumbs = (
+  pathname: string,
+  propertyDetail?: any
+): BreadcrumbItem[] => {
   const segments = pathname.split('/').filter(Boolean)
   const breadcrumbs: BreadcrumbItem[] = []
 
@@ -72,7 +75,9 @@ export const generateBreadcrumbs = (pathname: string, propertyDetail?: any): Bre
   if (propertySegment) {
     // Add property breadcrumb
     const propertyPath = `/properties/${propertySegment}`
-    const propertyLabel = propertyDetail?.designation || getBreadcrumbLabel(propertySegment, 'property')
+    const propertyLabel =
+      propertyDetail?.designation ||
+      getBreadcrumbLabel(propertySegment, 'property')
     breadcrumbs.push({
       label: propertyLabel,
       path: propertyPath,
