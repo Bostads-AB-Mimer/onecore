@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,10 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Search } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import type { Tenant, Lease } from '@/services/api/leaseSearchService'
 import { fetchTenantAndLeasesByPnr } from '@/services/api/leaseSearchService'
+import type { Lease, Tenant } from '@/services/types'
 
 interface SearchTenantProps {
   onTenantFound: (tenant: Tenant, contracts: Lease[]) => void
@@ -46,10 +46,14 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
         return
       }
       onTenantFound(result.tenant, result.contracts)
-    } catch (e: Error) {
+    } catch (e: unknown) {
+      const message =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as any).message)
+          : 'Okänt fel'
       toast({
         title: 'Kunde inte söka',
-        description: e.message ?? 'Okänt fel',
+        description: message,
         variant: 'destructive',
       })
     } finally {
