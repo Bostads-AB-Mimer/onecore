@@ -8,7 +8,9 @@ export const routes = (router: KoaRouter) => {
       const invoiceRows = await importNewFiles()
       ctx.status = 200
       ctx.contentType = 'text/plain'
-      ctx.body = invoiceRows.join('\n')
+      if (invoiceRows) {
+        ctx.body = invoiceRows.join('\n')
+      }
     } catch (error: any) {
       logger.error(error, 'Error importing excel files')
       ctx.status = 500
