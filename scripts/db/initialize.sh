@@ -7,6 +7,7 @@ docker exec -i onecore-sql bash -c "/opt/mssql-tools/bin/sqlcmd -S localhost -U 
     CREATE DATABASE [tenants-leases-test];
     CREATE DATABASE [property-info];
     CREATE DATABASE [economy];
+    CREATE DATABASE [keys-management];
 EOSQL
 
 echo "Database initialization completed!"
