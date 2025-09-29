@@ -23,15 +23,11 @@ exports.up = function (knex) {
   })
 }
 
+/**
+ * Migration for dropping 'key_systems' table.
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
 exports.down = function (knex) {
-  return knex.schema.dropTable('key_systems')
+  return knex.schema.dropTableIfExists('key_systems')
 }
-
-  /**
-   * Migration for dropping 'keysystem' table.
-   * @param { import("knex").Knex } knex
-   * @returns { Promise<void> }
-   */
-  exports.down = function(knex) {
-    return knex.schema.dropTableIfExists('key_systems');
-  };
