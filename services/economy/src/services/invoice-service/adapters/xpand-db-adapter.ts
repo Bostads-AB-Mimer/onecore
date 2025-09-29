@@ -572,7 +572,9 @@ export const getInvoiceRows = async (
 
   const convertedInvoiceRows = invoiceRows.map(
     (invoiceRow: any): InvoiceDataRow => {
-      return {
+      const type = invoiceRow['type'] as number
+
+      const invoice = {
         rentArticle: trim(invoiceRow['rentArticle']),
         invoiceRowText: trim(invoiceRow['text']),
         totalAmount: sumColumns(
@@ -598,6 +600,17 @@ export const getInvoiceRows = async (
         toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
         printGroup: trim(invoiceRow['printGroup']),
       }
+
+      if (type === 2) {
+        // credit invoice, reverse signs
+        invoice.totalAmount = -invoice.totalAmount
+        invoice.amount = -invoice.amount
+        invoice.vat = -invoice.vat
+        invoice.deduction = -invoice.deduction
+        invoice.roundoff = -invoice.roundoff
+      }
+
+      return invoice
     }
   )
 
