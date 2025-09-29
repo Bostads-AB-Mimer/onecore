@@ -34,17 +34,17 @@ export class KeySystemSearchService {
 
         const matchingSystem = keySystems.find(
           (system) =>
-            system.system_code?.toLowerCase() === systemCode.toLowerCase()
+            system.systemCode?.toLowerCase() === systemCode.toLowerCase()
         )
 
         if (matchingSystem) {
           const result: KeySystemSearchResult = {
             id: matchingSystem.id || '',
             name: matchingSystem.name || 'Unknown',
-            systemCode: matchingSystem.system_code || systemCode,
+            systemCode: matchingSystem.systemCode || systemCode,
             type: matchingSystem.type || 'unknown',
             manufacturer: matchingSystem.manufacturer,
-            isActive: matchingSystem.is_active ?? true,
+            isActive: matchingSystem.isActive ?? true,
           }
 
           return [result]
@@ -75,10 +75,10 @@ export class KeySystemSearchService {
         return matchingSystems.map((system) => ({
           id: system.id || '',
           name: system.name || 'Unknown',
-          systemCode: system.system_code || '',
+          systemCode: system.systemCode || '',
           type: system.type || 'unknown',
           manufacturer: system.manufacturer,
-          isActive: system.is_active ?? true,
+          isActive: system.isActive ?? true,
         }))
       }
     } catch (error) {
@@ -110,10 +110,10 @@ export class KeySystemSearchService {
         return matchingSystems.map((system) => ({
           id: system.id || '',
           name: system.name || 'Unknown',
-          systemCode: system.system_code || '',
+          systemCode: system.systemCode || '',
           type: system.type || 'unknown',
           manufacturer: system.manufacturer,
-          isActive: system.is_active ?? true,
+          isActive: system.isActive ?? true,
         }))
       }
     } catch (error) {
