@@ -15,6 +15,10 @@ import {
   rentalObjectSearchService,
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
+import {
+  keySystemSearchService,
+  type KeySystemSearchResult,
+} from '@/services/api/keySystemSearchService'
 import { X } from 'lucide-react'
 
 interface AddKeyFormProps {
@@ -40,6 +44,13 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   >([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Key system search functionality state
+  const [keySystemSearchResults, setKeySystemSearchResults] = useState<
+    KeySystemSearchResult[]
+  >([])
+  const [isKeySystemSearching, setIsKeySystemSearching] = useState(false)
+  const [keySystemSearchQuery, setKeySystemSearchQuery] = useState('')
 
   // Effect hook that triggers rental object search when searchQuery changes
   useEffect(() => {
@@ -75,6 +86,40 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     performSearch()
   }, [searchQuery])
 
+  // Effect hook that triggers key system search when keySystemSearchQuery changes
+  useEffect(() => {
+    const performKeySystemSearch = async () => {
+      // Clear results if search query is empty
+      if (keySystemSearchQuery.trim().length === 0) {
+        setKeySystemSearchResults([])
+        setIsKeySystemSearching(false)
+        return
+      }
+
+      // Only search if the system code looks valid (minimum length of 3)
+      if (keySystemSearchQuery.trim().length < 3) {
+        setKeySystemSearchResults([])
+        setIsKeySystemSearching(false)
+        return
+      }
+
+      // Perform the actual search
+      setIsKeySystemSearching(true)
+      try {
+        const results =
+          await keySystemSearchService.searchBySystemCode(keySystemSearchQuery)
+        setKeySystemSearchResults(results)
+      } catch (error) {
+        console.error('Key system search error:', error)
+        setKeySystemSearchResults([])
+      } finally {
+        setIsKeySystemSearching(false)
+      }
+    }
+
+    performKeySystemSearch()
+  }, [keySystemSearchQuery])
+
   // Handle rental object input changes and trigger search
   const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -87,6 +132,20 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setFormData((prev) => ({ ...prev, rentalObject: result.rentalId }))
     setSearchResults([])
     setSearchQuery('')
+  }
+
+  // Handle key system input changes and trigger search
+  const handleKeySystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setFormData((prev) => ({ ...prev, keySystemName: value }))
+    setKeySystemSearchQuery(value)
+  }
+
+  // Handle selection of a key system search result from the dropdown
+  const handleSelectKeySystemResult = (result: KeySystemSearchResult) => {
+    setFormData((prev) => ({ ...prev, keySystemName: result.systemCode }))
+    setKeySystemSearchResults([])
+    setKeySystemSearchQuery('')
   }
 
   // Handle form submission and validation
@@ -119,6 +178,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setSearchResults([])
     setSearchQuery('')
     setIsSearching(false)
+    setKeySystemSearchResults([])
+    setKeySystemSearchQuery('')
+    setIsKeySystemSearching(false)
   }
 
   // Handle form cancellation and reset form state
@@ -136,6 +198,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setSearchResults([])
     setSearchQuery('')
     setIsSearching(false)
+    setKeySystemSearchResults([])
+    setKeySystemSearchQuery('')
+    setIsKeySystemSearching(false)
   }
 
   return (
@@ -255,22 +320,44 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
               )}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
               <Label htmlFor="keySystemName" className="text-xs">
                 Låssystem
               </Label>
-              <Input
-                id="keySystemName"
-                className="h-8"
-                value={formData.keySystemName}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    keySystemName: e.target.value,
-                  }))
-                }
-                placeholder="t.ex. ABC123"
-              />
+              <div className="relative">
+                <Input
+                  id="keySystemName"
+                  className="h-8"
+                  value={formData.keySystemName}
+                  onChange={handleKeySystemChange}
+                  placeholder="t.ex. ABC123"
+                />
+                {isKeySystemSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
+              </div>
+
+              {keySystemSearchResults.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {keySystemSearchResults.map((result, index) => (
+                    <button
+                      key={`${result.id}-${index}`}
+                      type="button"
+                      className="w-full text-left px-3 py-1 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-xs"
+                      onClick={() => handleSelectKeySystemResult(result)}
+                    >
+                      <div className="font-medium">{result.systemCode}</div>
+                      <div className="text-xs text-gray-600">{result.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {result.manufacturer && `${result.manufacturer} • `}
+                        {result.type}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
