@@ -64,6 +64,44 @@ const getPropertyById = async (
   }
 }
 
+const getPropertyValuesByPropertyObjectId = async (
+  propertyObjectId: string
+) => {
+  try {
+    const result = await prisma.quantityValue
+      .findMany({
+        select: {
+          value: true,
+          quantityType: {
+            select: {
+              name: true,
+              unitId: true,
+            },
+          },
+        },
+        where: {
+          code: propertyObjectId,
+        },
+      })
+      .then(trimStrings)
+      .then((values) =>
+        values.map((item) => ({
+          value: item.value,
+          unitId: item.quantityType.unitId,
+          name: item.quantityType.name,
+        }))
+      )
+
+    return result
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-adapter.getPropertyValuesByPropertyObjectId'
+    )
+    throw err
+  }
+}
+
 export type Property = Prisma.PropertyStructureGetPayload<{
   select: {
     id: true
@@ -128,4 +166,9 @@ const searchProperties = (
   }
 }
 
-export { getPropertyById, getProperties, searchProperties }
+export {
+  getPropertyById,
+  getProperties,
+  getPropertyValuesByPropertyObjectId,
+  searchProperties,
+}

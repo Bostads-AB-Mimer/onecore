@@ -4,9 +4,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-//import type { PropertyDetail } from "@/types/api";
+import type { PropertyDetail } from '@/types/api'
 interface PropertyBasicInfoProps {
-  propertyDetail: any //PropertyDetail;
+  propertyDetail: PropertyDetail
   showBasicInfoOnly?: boolean
   showDetailedInfo?: boolean
 }
@@ -76,9 +76,10 @@ export const PropertyBasicInfo = ({
             </p>
           </div>
 
+          {/* TODO: A property has multiple adresses right, not one? */}
           <div>
             <p className="text-sm text-muted-foreground">Adress</p>
-            <p className="font-medium">{propertyDetail.address || '-'}</p>
+            <p className="font-medium">{'-'}</p>
           </div>
 
           <div>
@@ -92,9 +93,11 @@ export const PropertyBasicInfo = ({
           </div>
 
           {/* 
+            TODO: 
             Does a property really have a construction year? What if the buildings have different construction years or renovation years? 
             Grabbing it from the first building does not feel right if there are multiple buildings.
-          */}
+          
+
           <div>
             <p className="text-sm text-muted-foreground">Byggnadsår</p>
             <p className="font-medium">
@@ -113,6 +116,7 @@ export const PropertyBasicInfo = ({
                 : '-'}
             </p>
           </div>
+        */}
         </div>
       </CardContent>
     </Card>
@@ -196,7 +200,9 @@ export const PropertyBasicInfo = ({
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Block:</p>
-              <p className="font-medium">{propertyDetail.parish || 'Lundby'}</p>
+              <p className="font-medium">
+                {propertyDetail.municipality || 'Lundby'}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Hyresobjekttyp:</p>
