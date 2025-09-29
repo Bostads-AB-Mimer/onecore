@@ -17,10 +17,10 @@ const toUIKey = (k: KeyDto): Key => ({
   keyName: k.keyName ?? '',
   keySequenceNumber: k.keySequenceNumber,
   flexNumber: k.flexNumber,
-  rentalObject: k.rentalObjectCode,
+  rentalObjectCode: k.rentalObjectCode,
   keyType: k.keyType as Key['keyType'],
   // API gives key_system_id; your UI type has keySystemName (optional).
-  keySystemName: undefined,
+  keySystemId: undefined,
   createdAt: k.createdAt,
   updatedAt: k.updatedAt,
 })
@@ -31,7 +31,7 @@ const toCreateReq = (
   keyName: k.keyName,
   keySequenceNumber: k.keySequenceNumber,
   flexNumber: k.flexNumber,
-  rentalObjectCode: k.rentalObject,
+  rentalObjectCode: k.rentalObjectCode,
   keyType: k.keyType,
   // key_system_id: someUuidOrNull, // add when you wire key systems
 })
@@ -46,8 +46,8 @@ const toUpdateReq = (
     payload.keySequenceNumber = after.keySequenceNumber
   if (before.flexNumber !== after.flexNumber)
     payload.flexNumber = after.flexNumber
-  if (before.rentalObject !== after.rentalObject)
-    payload.rentalObjectCode = after.rentalObject
+  if (before.rentalObjectCode !== after.rentalObjectCode)
+    payload.rentalObjectCode = after.rentalObjectCode
   if (before.keyType !== after.keyType) payload.keyType = after.keyType
   // if (before.key_system_id !== mappedId) payload.key_system_id = mappedId ?? null;
   return payload
@@ -92,8 +92,8 @@ const Index = () => {
       const q = searchQuery.toLowerCase()
       const matchesSearch =
         key.keyName.toLowerCase().includes(q) ||
-        key.rentalObject?.toLowerCase().includes(q) ||
-        key.keySystemName?.toLowerCase().includes(q)
+        key.rentalObjectCode?.toLowerCase().includes(q) ||
+        key.keySystemId?.toLowerCase().includes(q)
 
       const matchesType = selectedType === 'all' || key.keyType === selectedType
 
