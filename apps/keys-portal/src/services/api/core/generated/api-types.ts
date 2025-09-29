@@ -231,10 +231,7 @@ export interface paths {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-              [key: string]: unknown;
-            };
+            "application/json": components["schemas"]["Lease"][];
           };
         };
       };
