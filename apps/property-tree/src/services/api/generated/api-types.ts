@@ -1020,6 +1020,16 @@ export interface components {
       /** Format: date-time */
       toDate: string;
       timestamp: string;
+      marketArea: {
+        id: string;
+        code: string;
+        name: string;
+      };
+      district: {
+        id: string;
+        code: string;
+        caption: string;
+      };
       propertyObject: {
         id: string;
         deleteMark: number;

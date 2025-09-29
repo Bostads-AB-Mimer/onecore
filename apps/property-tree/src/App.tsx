@@ -9,7 +9,7 @@ import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
 import { AuthCallback } from './auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
-import { PropertyView } from './components/views/PropertyView'
+import PropertyView from './components/views/v2/PropertyView'
 import { BuildingView } from './components/views/BuildingView'
 import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'

@@ -13,8 +13,8 @@ export function PropertyList({ properties }: PropertyListProps) {
   const navigate = useNavigate()
 
   return (
-    <Card title="Fastigheter" icon={Building2}>
-      <Grid cols={2}>
+    <Card title="Fastigheter">
+      <Grid cols={2} className="p-4">
         {properties?.map((property) => (
           <motion.div
             key={property.id}
