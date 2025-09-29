@@ -338,5 +338,40 @@ describe(listingAdapter.getListingsWithApplicants, () => {
           expect.objectContaining({ id: closedListing.data.id }),
         ])
       }))
+
+    it('only gets closed listings', () =>
+      withContext(async (ctx) => {
+        const activeListing = await listingAdapter.createListing(
+          factory.listing.build({
+            rentalObjectCode: '1',
+            status: ListingStatus.Active,
+          }),
+          ctx.db
+        )
+
+        assert(activeListing.ok)
+        const closedListing = await listingAdapter.createListing(
+          factory.listing.build({
+            rentalObjectCode: '2',
+            status: ListingStatus.Closed,
+          }),
+          ctx.db
+        )
+
+        assert(closedListing.ok)
+
+        const listings = await listingAdapter.getListingsWithApplicants(
+          ctx.db,
+          {
+            by: { type: 'closed' },
+          }
+        )
+
+        assert(listings.ok)
+
+        expect(listings.data).toEqual([
+          expect.objectContaining({ id: closedListing.data.id }),
+        ])
+      }))
   })
 })
