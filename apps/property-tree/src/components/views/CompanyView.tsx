@@ -112,7 +112,7 @@ export function CompanyView() {
         </div>
 
         <div className="space-y-6">
-          <Card title="Karta" icon={MapPin}>
+          <Card title="Karta">
             <PropertyMap
               properties={propertiesQuery.data || []}
               companyName={company.name}

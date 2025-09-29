@@ -231,7 +231,7 @@ export function RoomView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2 space-y-6">
-          <Card title="Funktioner" icon={Settings}>
+          <Card title="Funktioner">
             <div className="flex flex-wrap gap-2">
               {Object.entries(room.features).map((feature, index) => (
                 <Badge
@@ -263,7 +263,7 @@ export function RoomView() {
         </div>
 
         <div className="space-y-6">
-          <Card title="Åtgärder" icon={Wrench}>
+          <Card title="Åtgärder">
             <div className="space-y-3">
               <Button
                 variant="link"
@@ -289,7 +289,7 @@ export function RoomView() {
             </div>
           </Card>
 
-          <Card title="Status" icon={AlertCircle}>
+          <Card title="Status">
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
