@@ -11,7 +11,7 @@ import {
 
 import { StatCard } from '../shared/StatCard'
 import { ViewHeader } from '../shared/ViewHeader'
-import { Card } from '@/components/ui/Card'
+import { Card, CardTitle } from '@/components/ui/Card'
 import { Grid } from '@/components/ui/Grid'
 
 export function BuildingView() {
@@ -136,8 +136,8 @@ export function BuildingView() {
       >
         <div className="lg:col-span-2">
           <div className="space-y-6">
-            <Card title="Uppgångar" icon={DoorClosed}>
-              <Grid cols={2}>
+            <Card title="Uppgångar">
+              <Grid cols={2} className="p-4">
                 {staircasesQuery.data?.map((staircase) => (
                   <motion.div
                     key={staircase.id}
@@ -166,7 +166,7 @@ export function BuildingView() {
               </Grid>
             </Card>
 
-            <Card title="Lägenheter" icon={Home}>
+            <Card title="Lägenheter" className="p-4">
               <Grid cols={2}>
                 {residencesQuery.data?.map((residence) => (
                   <motion.div
