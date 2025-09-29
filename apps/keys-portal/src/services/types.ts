@@ -3,11 +3,14 @@
 import type { components } from './api/generated/api-types'
 import type { components as CoreComponents } from './api/core/generated/api-types'
 
+// TODO kika varför denna är fel
+export type Log1 = components['schemas']['Log']
+
 // Tables/respopnse types from the generated schemas
-export type Key = components['schemas']['Key']
-export type KeySystem = components['schemas']['KeySystem']
-export type KeyLoan = components['schemas']['KeyLoan']
-export type Log = components['schemas']['Log']
+export type Key = CoreComponents['schemas']['Key']
+export type KeySystem = CoreComponents['schemas']['KeySystem']
+export type KeyLoan = CoreComponents['schemas']['KeyLoan']
+export type Log = CoreComponents['schemas']['Log']
 
 // Tables/respopnse types from core API generated schemas
 export type Property = CoreComponents['schemas']['Property']
