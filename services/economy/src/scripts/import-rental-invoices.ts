@@ -33,12 +33,6 @@ if (!config.rentalInvoices.sftp.directory) {
 const directory = config.rentalInvoices.sftp.directory
 
 const getExcelFilenames = async () => {
-  /*const files = await fs.readdir(config.rentalInvoices.importDirectory)
-
-  const excelFileNames = files.filter((file) => {
-    return file.endsWith('.xlsx')
-  })*/
-
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
