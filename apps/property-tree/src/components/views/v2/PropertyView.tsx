@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePropertyDetail } from '@/components/hooks/usePropertyDetail'
 //import { useToast } from '@/hooks/use-toast'
-//import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
+import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { PropertyHeader } from '@/components/properties/PropertyHeader'
 import { PropertyBasicInfo } from '@/components/properties/PropertyBasicInfo'
@@ -71,7 +71,7 @@ const PropertyView = () => {
 
     return (
       <div className="py-4 space-y-6">
-        <PropertyBreadcrumb />
+        <PropertyBreadcrumb propertyDetail={propertyDetail} />
         <PropertyHeader propertyDetail={propertyDetail} />
 
         {/* Grundläggande information always visible above tabs */}

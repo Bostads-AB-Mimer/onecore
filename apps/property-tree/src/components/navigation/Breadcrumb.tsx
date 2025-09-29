@@ -9,9 +9,13 @@ import {
 } from '@/components/ui/Breadcrumb'
 import { generateBreadcrumbs } from '@/utils/breadcrumbUtils'
 
-export const PropertyBreadcrumb = () => {
+interface PropertyBreadcrumbProps {
+  propertyDetail?: any
+}
+
+export const PropertyBreadcrumb = ({ propertyDetail }: PropertyBreadcrumbProps) => {
   const location = useLocation()
-  const breadcrumbs = generateBreadcrumbs(location.pathname)
+  const breadcrumbs = generateBreadcrumbs(location.pathname, propertyDetail)
 
   return (
     <Breadcrumb className="mb-4">
