@@ -94,7 +94,8 @@ export const PropertyBasicInfo = ({
           {/* 
             Does a property really have a construction year? What if the buildings have different construction years or renovation years? 
             Grabbing it from the first building does not feel right if there are multiple buildings.
-          */}
+          
+
           <div>
             <p className="text-sm text-muted-foreground">Byggnadsår</p>
             <p className="font-medium">
@@ -113,6 +114,7 @@ export const PropertyBasicInfo = ({
                 : '-'}
             </p>
           </div>
+        */}
         </div>
       </CardContent>
     </Card>
