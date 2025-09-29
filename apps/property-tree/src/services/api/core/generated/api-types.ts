@@ -3084,7 +3084,7 @@ export interface paths {
       };
     };
   };
-  "/key_systems": {
+  "/key-systems": {
     /**
      * List all key systems
      * @description Retrieve a list of all key systems
@@ -3141,7 +3141,7 @@ export interface paths {
       };
     };
   };
-  "/key_systems/{id}": {
+  "/key-systems/{id}": {
     /**
      * Get key system by ID
      * @description Retrieve a specific key system by its ID
@@ -4135,7 +4135,7 @@ export interface components {
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
       /** @enum {string} */
-      objectType: "key" | "key_system" | "key_loan";
+      objectType: "key" | "keySystem" | "keyLoan";
       description?: string | null;
     };
     UpdateLogRequest: {
