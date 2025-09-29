@@ -1,0 +1,242 @@
+import { type GridColDef } from '@mui/x-data-grid'
+import { ListingWithOffer } from '../hooks/useParkingSpaceListings'
+import { printVacantFrom } from '../../../common/formattingUtils'
+import { UnpublishListing } from '../components/UnpublishListing'
+import { CreateApplicantForListing } from '../components/create-applicant-for-listing/CreateApplicantForListing'
+import {
+  GetListingWithApplicantFilterByType,
+  ListingStatus,
+} from '@onecore/types'
+import { Link } from 'react-router-dom'
+import { IconButton } from '@mui/material'
+import Chevron from '@mui/icons-material/ChevronRight'
+import { CloseListing } from '../components/CloseListing'
+
+export const sharedColumnProps = {
+  editable: false,
+  flex: 1,
+}
+
+export const getColumns = (
+  dateFormatter: Intl.DateTimeFormat,
+  numberFormatter: Intl.NumberFormat
+): Array<GridColDef<ListingWithOffer>> => {
+  return [
+    {
+      field: 'address',
+      headerName: 'Bilplats',
+      ...sharedColumnProps,
+      flex: 1.25,
+      valueGetter: (params) => params.row.rentalObject?.address ?? 0,
+      renderCell: (v) => (
+        <span>
+          <span style={{ display: 'block' }}>{v.row.rentalObject.address}</span>
+          {v.row.rentalObjectCode}
+        </span>
+      ),
+    },
+    {
+      field: 'districtCaption',
+      headerName: 'Distrikt',
+      ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.districtCaption ?? '',
+      flex: 0.6,
+    },
+    {
+      field: 'residentialAreaCaption',
+      headerName: 'Område',
+      ...sharedColumnProps,
+      valueGetter: (params) =>
+        params.row.rentalObject?.residentialAreaCaption ?? '',
+    },
+    {
+      field: 'objectTypeCaption',
+      headerName: 'Bilplatstyp',
+      ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.objectTypeCaption ?? '',
+    },
+    {
+      field: 'rentalRule',
+      headerName: 'Uthyrningsmetod',
+      ...sharedColumnProps,
+      valueGetter: (params) => {
+        if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
+        if (params.row.rentalRule === 'SCORED') return 'Intern'
+        return ''
+      },
+      flex: 0.7,
+    },
+    {
+      field: 'monthlyRent',
+      headerName: 'Hyra',
+      ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
+      // valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
+      renderCell: (v) => {
+        const rent = v.row.rentalObject?.monthlyRent ?? 0
+        const showInclVat = v.row.rentalRule === 'NON_SCORED'
+        return (
+          <span>
+            <span style={{ display: 'block' }}>
+              {`${numberFormatter.format(rent)}/mån`}
+            </span>
+            {showInclVat && (
+              <span>
+                {`${numberFormatter.format(rent * 1.25)}/mån inkl. moms`}
+              </span>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      field: 'applicants',
+      headerName: 'Sökande',
+      ...sharedColumnProps,
+      flex: 0.5,
+      valueGetter: (v) => (v.row.rentalRule == 'SCORED' ? v.value.length : '-'),
+    },
+    {
+      field: 'publishedTo',
+      headerName: 'Publicerad T.O.M',
+      ...sharedColumnProps,
+      valueFormatter: (v) =>
+        v.value ? dateFormatter.format(new Date(v.value)) : '-',
+      flex: 0.6,
+    },
+    {
+      field: 'vacantFrom',
+      headerName: 'Ledig FR.O.M',
+      ...sharedColumnProps,
+      valueGetter: (params) => params.row.rentalObject?.vacantFrom ?? '',
+      valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
+      flex: 0.6,
+    },
+  ]
+}
+
+export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
+  return [
+    {
+      field: 'actions',
+      type: 'actions',
+      flex: 1,
+      minWidth: 250,
+      cellClassName: 'actions',
+      getActions: ({ row }) => [
+        <UnpublishListing key={1} listingId={row.id} />,
+        <CreateApplicantForListing
+          key={1}
+          disabled={
+            row.status !== ListingStatus.Active ||
+            row.rentalRule === 'NON_SCORED'
+          }
+          listing={row}
+        />,
+      ],
+    },
+    {
+      field: 'action-link',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      flex: 0.5,
+      disableColumnMenu: true,
+      renderCell: (v) => (
+        <Link to={`/bilplatser/${v.id}`}>
+          <IconButton sx={{ color: 'black' }}>
+            <Chevron />
+          </IconButton>
+        </Link>
+      ),
+    },
+  ]
+}
+
+export const getHistoricalActionColumns = (): Array<
+  GridColDef<ListingWithOffer>
+> => [
+  {
+    field: 'action-link',
+    headerName: '',
+    sortable: false,
+    filterable: false,
+    flex: 0.5,
+    disableColumnMenu: true,
+    renderCell: (v) => (
+      <Link to={`/bilplatser/${v.id}`}>
+        <IconButton sx={{ color: 'black' }}>
+          <Chevron />
+        </IconButton>
+      </Link>
+    ),
+  },
+]
+
+export const getRepublishActionColumns = (): Array<
+  GridColDef<ListingWithOffer>
+> => {
+  return [
+    {
+      field: 'actions',
+      type: 'actions',
+      flex: 1,
+      minWidth: 250,
+      cellClassName: 'actions',
+      getActions: ({ row }) => [<CloseListing key={0} listingId={row.id} />],
+    },
+    {
+      field: 'action-link',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      flex: 0.5,
+      disableColumnMenu: true,
+      renderCell: (v) => (
+        <Link to={`/bilplatser/${v.id}`}>
+          <IconButton sx={{ color: 'black' }}>
+            <Chevron />
+          </IconButton>
+        </Link>
+      ),
+    },
+  ]
+}
+
+export const getOfferedColumns = (
+  dateFormatter: Intl.DateTimeFormat,
+  numberFormatter: Intl.NumberFormat
+) =>
+  getColumns(dateFormatter, numberFormatter).concat([
+    {
+      field: 'offer.expiresAt',
+      headerName: 'Sista svarsdatum',
+      ...sharedColumnProps,
+      valueGetter: (v) => v.row.offer?.expiresAt,
+      valueFormatter: (v) =>
+        v.value ? dateFormatter.format(new Date(v.value)) : 'N/A',
+    },
+  ])
+
+const tabMap: Record<
+  GetListingWithApplicantFilterByType,
+  GetListingWithApplicantFilterByType
+> = {
+  'ready-for-offer': 'ready-for-offer',
+  published: 'published',
+  offered: 'offered',
+  historical: 'historical',
+  'needs-republish': 'needs-republish',
+  all: 'all',
+}
+
+export const getTab = (
+  v: string | null
+): GetListingWithApplicantFilterByType => {
+  if (!v) return 'published'
+  if (v in tabMap) {
+    return v as GetListingWithApplicantFilterByType
+  } else {
+    return 'published'
+  }
+}
