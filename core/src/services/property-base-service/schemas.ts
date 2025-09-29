@@ -119,6 +119,15 @@ export const PropertyDetailsSchema = z.object({
     energyIndex: z.string().nullable(),
     heatingNature: z.number(),
   }),
+  propertyValues: z
+    .array(
+      z.object({
+        value: z.number().nullable(),
+        name: z.string(),
+        unitId: z.string(),
+      })
+    )
+    .optional(),
 })
 
 export const ResidenceSchema = z.object({

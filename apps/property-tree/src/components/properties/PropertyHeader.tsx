@@ -1,7 +1,7 @@
-//import type { PropertyDetail } from "@/types/api";
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyHeaderProps {
-  propertyDetail: any //PropertyDetail;
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyHeader = ({ propertyDetail }: PropertyHeaderProps) => {
