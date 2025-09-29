@@ -7,7 +7,7 @@ model District {
   // TODO: Verify relations if needed
   // Commented out relations to potentially missing or incorrectly configured models.
   Building   Building[] @relation("fkbabygkeybabyb")
-  properties Property[] // @relation("fkbafstkeybabyb") 
+  properties Property[] @relation(map: "fkbafstkeybabyb") 
   //Area Area[] // @relation("fkbaytakeybabyb")
 
   @@map("babyb")

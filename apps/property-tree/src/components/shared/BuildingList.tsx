@@ -18,7 +18,7 @@ export function BuildingList({
   const navigate = useNavigate()
 
   return (
-    <Card title={title} icon={icon}>
+    <Card title={title}>
       <div className="space-y-4">
         {buildings.map((building) => (
           <motion.div
