@@ -1,6 +1,7 @@
 import { buildingService } from '@/services/api'
 import { propertyService } from '@/services/api/core'
 import { useQuery } from '@tanstack/react-query'
+import type { PropertyDetail } from '@/types/api'
 
 export function usePropertyDetail(propertyId: string | undefined) {
   const propertyQuery = useQuery({
@@ -18,13 +19,11 @@ export function usePropertyDetail(propertyId: string | undefined) {
   const isLoading = propertyQuery.isLoading || buildingsQuery.isLoading
   const error = propertyQuery.error || buildingsQuery.error
 
-  console.log(propertyQuery.data, buildingsQuery.data)
-
   return {
     data: {
       ...propertyQuery.data,
       buildings: buildingsQuery.data || [],
-    },
+    } as PropertyDetail | undefined,
     isLoading,
     error,
   }

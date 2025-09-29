@@ -1046,6 +1046,11 @@ export interface components {
         energyIndex: string | null;
         heatingNature: number;
       };
+      propertyValues: ({
+          value: number | null;
+          name: string;
+          unitId: string;
+        })[];
     };
     Staircase: {
       id: string;
