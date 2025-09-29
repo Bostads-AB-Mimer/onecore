@@ -1,3 +1,5 @@
+//TODO Replace client side logic and sorting, very inneficcient.
+
 import type { KeySystem } from '@/services/types'
 
 import { GET } from './core/base-api'
@@ -32,9 +34,8 @@ export class KeySystemSearchService {
       if (response.data) {
         const keySystems: KeySystem[] = response.data.content || []
 
-        const matchingSystems = keySystems.filter(
-          (system) =>
-            system.systemCode?.toLowerCase().startsWith(systemCode.toLowerCase())
+        const matchingSystems = keySystems.filter((system) =>
+          system.systemCode?.toLowerCase().startsWith(systemCode.toLowerCase())
         )
 
         return matchingSystems.map((system) => ({
