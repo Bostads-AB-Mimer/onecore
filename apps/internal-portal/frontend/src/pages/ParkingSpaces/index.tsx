@@ -363,7 +363,7 @@ const getColumns = (
       headerName: 'Sökande',
       ...sharedColumnProps,
       flex: 0.5,
-      valueFormatter: (v) => v.value.length,
+      valueGetter: (v) => (v.row.rentalRule == 'SCORED' ? v.value.length : '-'),
     },
     {
       field: 'publishedTo',
