@@ -9,16 +9,12 @@ import {
   TableCell,
   TableHead,
   CircularProgress,
+  Collapse,
 } from '@mui/material'
-import {
-  Contact,
-  Invoice,
-  Lease,
-  LeaseStatus,
-  PaymentStatus,
-} from '@onecore/types'
+import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
 
-import { useContact } from '../hooks/useContact'
+import { InvoiceWithRows, useContact } from '../hooks/useContact'
+import { useState } from 'react'
 
 export function ContactCard(props: { contactCode: string }) {
   const query = useContact(props.contactCode)
@@ -59,9 +55,7 @@ export function ContactCard(props: { contactCode: string }) {
       {!contact.invoices.length ? (
         <Typography fontStyle="italic">Inga fakturor hittades</Typography>
       ) : (
-        <>
-          <Invoices invoices={contact.invoices} />
-        </>
+        <Invoices invoices={contact.invoices} />
       )}
       <Divider />
     </Box>
@@ -138,7 +132,7 @@ function Leases(props: { leases: Lease[] }) {
   ))
 }
 
-function Invoices(props: { invoices: Invoice[] }) {
+function Invoices(props: { invoices: InvoiceWithRows[] }) {
   return (
     <Table>
       <TableHead>
@@ -156,21 +150,10 @@ function Invoices(props: { invoices: Invoice[] }) {
             return invoice1.invoiceDate < invoice2.invoiceDate ? 1 : -1
           })
           .map((invoice) => (
-            <TableRow key={`${invoice.invoiceId}-${invoice.invoiceDate}`}>
-              <TableCell>
-                {new Date(invoice.invoiceDate).toString().substring(0, 10)}
-              </TableCell>
-              <TableCell>
-                {new Date(invoice.expirationDate).toString().substring(0, 10)}
-              </TableCell>
-              <TableCell>{invoice.invoiceId}</TableCell>
-              <TableCell>{invoice.amount}</TableCell>
-              <TableCell>
-                {invoice.paymentStatus == PaymentStatus.Paid
-                  ? 'Betald'
-                  : 'Obetald'}
-              </TableCell>
-            </TableRow>
+            <InvoiceTableRow
+              key={`${invoice.invoiceId}-${invoice.invoiceDate}`}
+              invoice={invoice}
+            />
           ))}
       </TableBody>
     </Table>
@@ -190,4 +173,78 @@ function getStatusName(status: LeaseStatus) {
     default:
       return 'Okänt'
   }
+}
+
+function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
+  const { invoice } = props
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <TableRow
+        hover
+        onClick={() => setOpen((prev) => !prev)}
+        sx={{ cursor: 'pointer', userSelect: 'none' }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setOpen((prev) => !prev)
+          }
+        }}
+        aria-expanded={open}
+      >
+        <TableCell>
+          {new Date(invoice.invoiceDate).toString().substring(0, 10)}
+        </TableCell>
+        <TableCell>
+          {new Date(invoice.expirationDate).toString().substring(0, 10)}
+        </TableCell>
+        <TableCell>{invoice.invoiceId}</TableCell>
+        <TableCell>{invoice.amount}</TableCell>
+        <TableCell>
+          {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
+          <Collapse in={open} timeout={0} unmountOnExit>
+            <Box margin={1}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>
+                      Hyresartikel
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>
+                      Beskrivning
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>
+                      Utskriftsgrupp
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {invoice.invoiceRows?.map((row, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{row.amount}</TableCell>
+                      <TableCell>{row.vat}</TableCell>
+                      <TableCell>{row.totalAmount}</TableCell>
+                      <TableCell>{row.rentArticle}</TableCell>
+                      <TableCell>{row.invoiceRowText}</TableCell>
+                      <TableCell>{row.printGroup}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+    </>
+  )
 }

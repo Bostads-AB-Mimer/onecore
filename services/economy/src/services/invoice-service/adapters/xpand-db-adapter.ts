@@ -103,7 +103,7 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
   return invoices
 }
 
-const getRentArticleDetails = async (
+const _getRentArticleDetails = async (
   year: string,
   includeInternal: boolean
 ): Promise<RentArticleDetails> => {
@@ -523,7 +523,7 @@ export const getInvoiceRows = async (
       and krfkh.fromdate >= '2025-10-01' --AND krfkh.todate <= '2025-10-31'*/
 
   const invoiceRowsQuery = db.raw(
-    "select cmart.code as rentArticle, krfkr.reduction as rowReduction, \
+    "select cmart.code as rentArticle, cmart.utskrgrupp as printGroup, krfkr.reduction as rowReduction, \
       krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
       krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, * \
       from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
@@ -596,6 +596,7 @@ export const getInvoiceRows = async (
         roundoff: sumColumns(invoiceRow['roundoff']),
         fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
         toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+        printGroup: trim(invoiceRow['printGroup']),
       }
     }
   )

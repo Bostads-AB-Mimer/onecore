@@ -8,7 +8,10 @@ import {
   createBatch,
   getContacts as getInvoiceContacts,
 } from './adapters/invoice-data-db-adapter'
-import { getContacts as getXpandContacts } from './adapters/xpand-db-adapter'
+import {
+  getInvoiceRows,
+  getContacts as getXpandContacts,
+} from './adapters/xpand-db-adapter'
 import { syncContact, transformContact } from './adapters/xledger-adapter'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
@@ -22,15 +25,33 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const contactCode = ctx.params.contactCode
     try {
-      const result = await getInvoicesByContactCode(contactCode)
-      if (!result) {
+      const invoices = await getInvoicesByContactCode(contactCode)
+
+      if (!invoices) {
         ctx.status = 404
         return
       }
 
+      const invoiceRows = await getInvoiceRows(
+        new Date(),
+        new Date(),
+        '001',
+        invoices.map((v) => v.invoiceId)
+      )
+
+      const invoicesWithRows = invoices.map((invoice) => {
+        const rows = invoiceRows.filter(
+          (row: { invoiceNumber: string }) =>
+            row.invoiceNumber === invoice.invoiceId
+        )
+
+        return { ...invoice, invoiceRows: rows }
+      })
+
       ctx.status = 200
-      ctx.body = result
+      ctx.body = invoicesWithRows
     } catch (error: any) {
+      console.log('error: ', error)
       ctx.status = 500
       ctx.body = {
         message: error.message,

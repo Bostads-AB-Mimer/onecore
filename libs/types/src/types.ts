@@ -18,6 +18,7 @@ import {
   CommentSchema,
   CommentThreadSchema,
 } from './schemas/v1'
+import { InvoiceRowSchema } from './schemas/v1/invoice'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -374,6 +375,7 @@ type CommentThreadId = z.infer<typeof CommentThreadIdSchema>
 type CommentType = z.infer<typeof CommentTypeSchema>
 type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
+type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 
 export type {
   Contact,
@@ -390,6 +392,7 @@ export type {
   ConsumerReportError,
   Invoices,
   Invoice,
+  InvoiceRow,
   RentalObject,
   ParkingSpace,
   Email,

@@ -17,7 +17,6 @@ import {
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
-  getInvoices as getXpandInvoices,
   getRoundOffInformation,
   getContacts as getXpandContacts,
   closeDb as closeXpandDb,
@@ -30,7 +29,6 @@ import {
   InvoiceContract,
   InvoiceDataRow,
   Invoice,
-  xledgerDateString,
 } from '../../common/types'
 import {
   createCustomerLedgerRow,
