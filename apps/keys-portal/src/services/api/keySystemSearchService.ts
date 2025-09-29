@@ -14,7 +14,7 @@ export interface KeySystemSearchResult {
 export class KeySystemSearchService {
   isValidSystemCode(systemCode: string): boolean {
     const systemCodePattern = /^[A-Za-z0-9-]+$/
-    return systemCodePattern.test(systemCode) && systemCode.length >= 2
+    return systemCodePattern.test(systemCode) && systemCode.length >= 3
   }
 
   async searchBySystemCode(
@@ -32,23 +32,19 @@ export class KeySystemSearchService {
       if (response.data) {
         const keySystems: KeySystem[] = response.data.content || []
 
-        const matchingSystem = keySystems.find(
+        const matchingSystems = keySystems.filter(
           (system) =>
-            system.systemCode?.toLowerCase() === systemCode.toLowerCase()
+            system.systemCode?.toLowerCase().startsWith(systemCode.toLowerCase())
         )
 
-        if (matchingSystem) {
-          const result: KeySystemSearchResult = {
-            id: matchingSystem.id || '',
-            name: matchingSystem.name || 'Unknown',
-            systemCode: matchingSystem.systemCode || systemCode,
-            type: matchingSystem.type || 'unknown',
-            manufacturer: matchingSystem.manufacturer,
-            isActive: matchingSystem.isActive ?? true,
-          }
-
-          return [result]
-        }
+        return matchingSystems.map((system) => ({
+          id: system.id || '',
+          name: system.name || 'Unknown',
+          systemCode: system.systemCode || systemCode,
+          type: system.type || 'unknown',
+          manufacturer: system.manufacturer,
+          isActive: system.isActive ?? true,
+        }))
       }
     } catch (error) {
       console.warn('Error searching key systems by code:', error)
