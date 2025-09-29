@@ -296,6 +296,7 @@ const getColumns = (
       headerName: 'Bilplats',
       ...sharedColumnProps,
       flex: 1.25,
+      valueGetter: (params) => params.row.rentalObject?.address ?? 0,
       renderCell: (v) => (
         <span>
           <span style={{ display: 'block' }}>{v.row.rentalObject.address}</span>
@@ -308,6 +309,7 @@ const getColumns = (
       headerName: 'Distrikt',
       ...sharedColumnProps,
       valueGetter: (params) => params.row.rentalObject?.districtCaption ?? '',
+      flex: 0.6,
     },
     {
       field: 'residentialAreaCaption',
@@ -331,19 +333,36 @@ const getColumns = (
         if (params.row.rentalRule === 'SCORED') return 'Intern'
         return ''
       },
+      flex: 0.7,
     },
     {
       field: 'monthlyRent',
       headerName: 'Hyra',
       ...sharedColumnProps,
       valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
-      valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
+      // valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
+      renderCell: (v) => {
+        const rent = v.row.rentalObject?.monthlyRent ?? 0
+        const showInclVat = v.row.rentalRule === 'NON_SCORED'
+        return (
+          <span>
+            <span style={{ display: 'block' }}>
+              {`${numberFormatter.format(rent)}/mån`}
+            </span>
+            {showInclVat && (
+              <span>
+                {`${numberFormatter.format(rent * 1.25)}/mån inkl. moms`}
+              </span>
+            )}
+          </span>
+        )
+      },
     },
     {
       field: 'applicants',
       headerName: 'Sökande',
       ...sharedColumnProps,
-      flex: 0.75,
+      flex: 0.5,
       valueFormatter: (v) => v.value.length,
     },
     {
@@ -352,6 +371,7 @@ const getColumns = (
       ...sharedColumnProps,
       valueFormatter: (v) =>
         v.value ? dateFormatter.format(new Date(v.value)) : '-',
+      flex: 0.6,
     },
     {
       field: 'vacantFrom',
@@ -359,6 +379,7 @@ const getColumns = (
       ...sharedColumnProps,
       valueGetter: (params) => params.row.rentalObject?.vacantFrom ?? '',
       valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
+      flex: 0.6,
     },
   ]
 }

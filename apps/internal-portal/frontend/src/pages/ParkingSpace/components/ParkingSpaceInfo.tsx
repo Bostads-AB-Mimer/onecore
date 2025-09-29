@@ -99,26 +99,50 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               )}/mån`}</Typography>
             </Box>
           </Box>
+          {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
+            <Box display="flex" justifyContent="space-between" flex="1">
+              <Typography>Hyra inkl. moms</Typography>
+              <Box>
+                <Typography fontWeight="bold">{`${numberFormatter.format(
+                  parkingSpaceListing.rentalObject.monthlyRent * 1.25
+                )}/mån`}</Typography>
+              </Box>
+            </Box>
+          )}
           <Box display="flex" justifyContent="space-between" flex="1">
-            <Typography>Sökande</Typography>
+            <Typography>Uthyrningsmetod</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.applicants?.length ?? 0}
+                {parkingSpaceListing.rentalRule === 'NON_SCORED'
+                  ? 'Poängfri'
+                  : 'Intern'}
               </Typography>
             </Box>
           </Box>
-          <Box display="flex" justifyContent="space-between" flex="1">
-            <Typography>Datum tilldelas</Typography>
-            <Box>
-              <Typography fontWeight="bold">
-                {parkingSpaceListing.publishedTo
-                  ? dateFormatter.format(
-                      new Date(parkingSpaceListing.publishedTo)
-                    )
-                  : '-'}
-              </Typography>
-            </Box>
-          </Box>
+          {parkingSpaceListing.rentalRule === 'SCORED' && (
+            <>
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography>Sökande</Typography>
+                <Box>
+                  <Typography fontWeight="bold">
+                    {parkingSpaceListing.applicants?.length ?? 0}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography>Datum tilldelas</Typography>
+                <Box>
+                  <Typography fontWeight="bold">
+                    {parkingSpaceListing.publishedTo
+                      ? dateFormatter.format(
+                          new Date(parkingSpaceListing.publishedTo)
+                        )
+                      : '-'}
+                  </Typography>
+                </Box>
+              </Box>
+            </>
+          )}
           <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Ledig från och med</Typography>
             <Box>
