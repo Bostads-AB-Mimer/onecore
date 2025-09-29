@@ -1,76 +1,45 @@
-import * as React from 'react'
+import React from 'react'
+import { motion } from 'framer-motion'
+import { LucideIcon } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+interface CardProps {
+  title?: string
+  icon?: LucideIcon
+  children: React.ReactNode
+  className?: string
+  onClick?: () => void
+  hover?: boolean
+}
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      'rounded-lg border border-slate-200 bg-white text-card-foreground shadow-sm',
-      className
-    )}
-    {...props}
-  />
-))
-Card.displayName = 'Card'
+export function Card({
+  title,
+  icon: Icon,
+  children,
+  className = '',
+  onClick,
+  hover = false,
+}: CardProps) {
+  const CardComponent = hover ? motion.div : 'div'
+  const cardProps = hover
+    ? {
+        whileHover: { scale: 1.02 },
+        whileTap: { scale: 0.98 },
+      }
+    : {}
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex flex-col space-y-1.5 p-6', className)}
-    {...props}
-  />
-))
-CardHeader.displayName = 'CardHeader'
-
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn('text-lg font-semibold flex items-center gap-2', className)}
-    {...props}
-  />
-))
-CardTitle.displayName = 'CardTitle'
-
-const CardDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
-    {...props}
-  />
-))
-CardDescription.displayName = 'CardDescription'
-
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
-))
-CardContent.displayName = 'CardContent'
-
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex items-center p-6 pt-0', className)}
-    {...props}
-  />
-))
-CardFooter.displayName = 'CardFooter'
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+  return (
+    <CardComponent
+      {...cardProps}
+      onClick={onClick}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+    >
+      {(title || Icon) && (
+        <div className="flex items-center justify-between mb-4">
+          {title && <h2 className="text-lg font-semibold">{title}</h2>}
+          {Icon && <Icon className="h-5 w-5 text-gray-400" />}
+        </div>
+      )}
+      {children}
+    </CardComponent>
+  )
+}

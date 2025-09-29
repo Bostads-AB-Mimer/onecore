@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/v2/Card'
 //import type { PropertyDetail } from "@/types/api";
 interface PropertyBasicInfoProps {
   propertyDetail: any //PropertyDetail;
