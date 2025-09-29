@@ -1,7 +1,14 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { AxiosError } from 'axios'
+import { keys } from '@onecore/types'
 import Config from '../../common/config'
 import { AdapterResult } from '../types' // keep this import path as in your repo
+
+// Import types from @onecore/types
+type Key = keys.v1.Key
+type KeyLoan = keys.v1.KeyLoan
+type KeySystem = keys.v1.KeySystem
+type Log = keys.v1.Log
 
 const BASE = Config.keysService.url
 
@@ -35,61 +42,6 @@ function ok<T>(data: T): AdapterResult<T, never> {
 function fail<E extends CommonErr>(err: E): AdapterResult<never, E> {
   // important: return a LITERAL, not `unknown`
   return { ok: false, err }
-}
-
-/**
- * ---- Types (you can move these to @onecore/types later) ---------------------
- */
-
-export interface Key {
-  id: string
-  keyName: string
-  keySequenceNumber?: number
-  flexNumber?: number
-  rentalObjectCode?: string
-  keyType: 'LGH' | 'PB' | 'FS' | 'HN'
-  keySystemId?: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface KeyLoan {
-  id: string
-  keys: string // JSON string array per your DB (e.g. "[\"keyId1\",\"keyId2\"]")
-  contact?: string
-  lease?: string
-  returnedAt?: string | null
-  availableToNextTenantFrom?: string | null
-  pickedUpAt?: string | null
-  createdAt: string
-  updatedAt: string
-  createdBy?: string | null
-  updatedBy?: string | null
-}
-
-export interface KeySystem {
-  id: string
-  systemCode: string
-  name: string
-  manufacturer?: string
-  type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
-  propertyIds?: string // JSON string array
-  installationDate?: string | null
-  isActive?: boolean
-  description?: string | null
-  createdAt: string
-  updatedAt: string
-  createdBy?: string | null
-  updatedBy?: string | null
-}
-
-export interface Log {
-  id: string
-  userName: string
-  eventType: 'creation' | 'update' | 'delete'
-  objectType: 'key' | 'key_system' | 'key_loan'
-  eventTime: string
-  description?: string | null
 }
 
 /**
