@@ -269,6 +269,17 @@ const getFile = async (filename: string) => {
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
+    await sftp.fastGet(
+      path.join(directory, filename),
+      path.join(config.procurementInvoices.importDirectory, filename)
+    )
+  } catch (err) {
+    throw new Error('SFTP : ' + JSON.stringify(err))
+  } finally {
+    await sftp.end()
+  }
+  /*  try {
+    await sftp.connect(sftpConfig)
     logger.info({ filename }, 'Connected to sftp to read file')
     // TODO: replace with memory stream/Buffer and read directly into it.
     await sftp.get(
@@ -285,7 +296,7 @@ const getFile = async (filename: string) => {
   } finally {
     await sftp.end()
     logger.info('Terminated sftp connection')
-  }
+  }*/
 }
 
 const markAsImportedSftp = async (filename: string) => {

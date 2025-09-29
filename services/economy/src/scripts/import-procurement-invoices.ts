@@ -12,17 +12,27 @@ import { markProcurementFilesAsImported } from '../services/procurement-invoice-
 const importProcurementInvoicesScript = async () => {
   logger.info('Checking for new procurement invoice files')
 
-  const csvContent = (await importNewFiles()).join('\n')
-  await fs.writeFile(
-    path.join(config.procurementInvoices.exportDirectory, 'mälarenergi.csv'),
-    csvContent
-  )
-  await uploadInvoiceFile('malarenergi-${Date.now()}.gl.csv', csvContent)
-  logger.info('Uploaded file')
+  const invoiceLines = await importNewFiles()
+  if (invoiceLines && invoiceLines.length > 0) {
+    const csvContent = invoiceLines.join('\n')
+    const dateString = new Date()
+      .toISOString()
+      .substring(0, 10)
+      .replaceAll('-', '')
+    const exportedFilename = `${Date.now()}-${dateString}-malarenergi-.gl.csv`
+    await fs.writeFile(
+      path.join(config.procurementInvoices.exportDirectory, exportedFilename),
+      csvContent
+    )
+    await uploadInvoiceFile(exportedFilename, csvContent)
+    logger.info('Uploaded file')
 
-  markProcurementFilesAsImported()
+    markProcurementFilesAsImported()
 
-  logger.info('All files processed.')
+    logger.info('All files processed.')
+  } else {
+    logger.info('No files to process')
+  }
   closeDatabases()
 }
 
