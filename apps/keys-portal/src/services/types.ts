@@ -39,6 +39,8 @@ export const KeyTypeLabels = {
   TP: 'Trapphus',
   HUS: 'Hus',
   GEM: 'Gemensamt',
+  FS: 'Fastighet',
+  HN: 'Huvudnyckel',
 } as const
 
 export type KeyType = keyof typeof KeyTypeLabels

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Lease, KeyType } from '@/services/types'
+import type { Key, Lease, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,18 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
 
-interface EmbeddedKeysListProps {
-  lease: Lease
-}
-
-type UIKey = {
-  id: string
-  keyName: string
-  keyType: KeyType
-  keySequenceNumber?: number
-  flexNumber?: number
-}
-
+/** Seeded number in [min,max], stable per (leaseId, suffix) */
 function seededRange(
   leaseId: string,
   suffix: string,
@@ -33,36 +22,42 @@ function seededRange(
   return (hash % (max - min + 1)) + min
 }
 
+/** One fixed object number (1..999) per type on a lease (e.g., Lägenhet 945) */
 function objectNumberForType(leaseId: string, type: KeyType): number {
   return seededRange(leaseId, `${type}-obj`, 1, 999)
 }
 
-function generateMockKeys(leaseId: string): UIKey[] {
-  const keys: UIKey[] = []
+/** Generate mock keys with the exact requested ranges */
+function generateMockKeys(leaseId: string): Key[] {
+  const keys: Key[] = []
   let counter = 1
 
-  const spec: Record<KeyType, [number, number]> = {
-    LGH: [2, 5],
-    PB: [1, 3],
-    TP: [1, 3],
-    GEM: [1, 3],
-    HUS: [0, 0], // not used now
+  // Only mock these four types; others 0 so they won't render.
+  const spec: Partial<Record<KeyType, [number, number]>> = {
+    LGH: [2, 5], // Lägenhet: 2–5 keys to the same apartment number
+    PB: [1, 3], // Postbox: 1–3 keys to the same postbox number
+    TP: [1, 3], // Trapphus: 1–3 keys to the same trapphus number
+    GEM: [1, 3], // Gemensamt: 1–3 keys to the same shared-area number
+    // HUS, FS, HN: intentionally omitted (0)
   }
 
   ;(Object.keys(spec) as KeyType[]).forEach((type) => {
-    const [min, max] = spec[type]
-    if (max === 0) return
-
-    const objNo = objectNumberForType(leaseId, type)
+    const [min, max] = spec[type]!
+    const objNo = objectNumberForType(leaseId, type) // 1..999, fixed per lease+type
     const count = seededRange(leaseId, `${type}-count`, min, max)
 
     for (let i = 1; i <= count; i++) {
       keys.push({
         id: `${type}-${counter}`,
-        keyName: `${KeyTypeLabels[type]} ${objNo}`,
-        keyType: type,
-        keySequenceNumber: i,
-        flexNumber: seededRange(leaseId, `${type}-flex-${i}`, 1, 3),
+        keyName: `${KeyTypeLabels[type]} ${objNo}`, // same object; LÖP differentiates keys
+        keyType: type as Key['keyType'] & KeyType, // ensure compatible with API's union
+        keySequenceNumber: i, // LÖP: 1..count
+        flexNumber: seededRange(leaseId, `${type}-flex-${i}`, 1, 3), // 1..3 placeholder
+        // optional fields from API type — safe placeholders
+        rentalObjectCode: String(objNo),
+        keySystemId: undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       counter++
     }
@@ -73,8 +68,8 @@ function generateMockKeys(leaseId: string): UIKey[] {
 
 type LoanStatus = 'never_loaned' | 'loaned' | 'returned'
 
-export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
-  const [keys, setKeys] = useState<UIKey[]>([])
+export function EmbeddedKeysList({ lease }: { lease: Lease }) {
+  const [keys, setKeys] = useState<Key[]>([])
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [loanedKeyIds, setLoanedKeyIds] = useState<Set<string>>(new Set())
   const [returnedKeyIds, setReturnedKeyIds] = useState<Set<string>>(new Set())
@@ -87,7 +82,6 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
   )
 
   useEffect(() => {
-    // Reset all local state on lease change
     const mock = generateMockKeys(lease.leaseId)
     setKeys(mock)
     setSelectedKeys([])
@@ -104,13 +98,6 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
     return 'never_loaned'
   }
 
-  const getStatusLabel = (id: string) => {
-    const s = getStatus(id)
-    if (s === 'loaned') return 'Utlånad'
-    if (s === 'returned') return 'Återlämnad (kan lånas ut igen)'
-    return 'Aldrig utlånad'
-  }
-
   const availableKeys = useMemo(
     () => keys.filter((k) => getStatus(k.id) !== 'loaned'),
     [keys, loanedKeyIds, returnedKeyIds]
@@ -123,7 +110,9 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
   const countsByType = useMemo(() => {
     const acc: Record<KeyType, number> = {} as any
     ;(Object.keys(KeyTypeLabels) as KeyType[]).forEach((t) => (acc[t] = 0))
-    keys.forEach((k) => (acc[k.keyType] = (acc[k.keyType] ?? 0) + 1))
+    keys.forEach(
+      (k) => (acc[k.keyType as KeyType] = (acc[k.keyType as KeyType] ?? 0) + 1)
+    )
     return acc
   }, [keys])
 
@@ -184,7 +173,7 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
     const nextReturned = new Set(returnedKeyIds)
     const returningIds = loanedKeys.map((k) => k.id)
     returningIds.forEach((id) => nextReturned.add(id))
-    setLoanedKeyIds(new Set()) // all returned
+    setLoanedKeyIds(new Set())
     setReturnedKeyIds(nextReturned)
     setSelectedKeys([])
     setLastTransactionType('return')
@@ -234,9 +223,9 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
         {/* Keys List */}
         <div className="space-y-1">
           {keys.map((key, index) => {
-            const status = getStatus(key.id)
-            const isLoaned = status === 'loaned'
-            const canBeLoaned = !isLoaned // never_loaned or returned
+            const isLoaned = loanedKeyIds.has(key.id)
+            const isReturned = returnedKeyIds.has(key.id)
+            const canBeLoaned = !isLoaned
 
             return (
               <div
@@ -254,12 +243,11 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
                       }
                     />
                   )}
-
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-sm">{key.keyName}</span>
                       <span className="text-xs text-muted-foreground">
-                        {KeyTypeLabels[key.keyType]}
+                        {KeyTypeLabels[key.keyType as KeyType] ?? key.keyType}
                       </span>
                       {key.keySequenceNumber && (
                         <span className="text-xs text-muted-foreground">
@@ -293,13 +281,9 @@ export function EmbeddedKeysList({ lease }: EmbeddedKeysListProps) {
                     </>
                   ) : (
                     <span
-                      className={`text-xs font-medium ${
-                        status === 'returned'
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-green-600 dark:text-green-400'
-                      }`}
+                      className={`text-xs font-medium ${isReturned ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
                     >
-                      {status === 'returned'
+                      {isReturned
                         ? 'Återlämnad (kan lånas ut igen)'
                         : 'Aldrig utlånad'}
                     </span>
