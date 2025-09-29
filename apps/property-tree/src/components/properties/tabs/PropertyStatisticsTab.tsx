@@ -1,10 +1,9 @@
 import { PropertyStatisticsSummary } from '@/components/properties/PropertyStatisticsSummary'
 import { TabLayout } from '@/components/ui/TabLayout'
-import { BarChart3 } from 'lucide-react'
-//import type { PropertyDetail } from '@/types/api'
+import { PropertyDetail } from '@/types/api'
 
 interface PropertyStatisticsTabProps {
-  property: any //PropertyDetail
+  property: PropertyDetail
 }
 
 export const PropertyStatisticsTab = ({

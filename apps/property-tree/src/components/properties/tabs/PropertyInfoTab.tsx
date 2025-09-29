@@ -1,10 +1,10 @@
 import { PropertyBasicInfo } from '@/components/properties/PropertyBasicInfo'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Info } from 'lucide-react'
-//import type { PropertyDetail } from '@/types/api'
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyInfoTabProps {
-  property: any //  PropertyDetail
+  property: PropertyDetail
 }
 
 export const PropertyInfoTab = ({ property }: PropertyInfoTabProps) => {

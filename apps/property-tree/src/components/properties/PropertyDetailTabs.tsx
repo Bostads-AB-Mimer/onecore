@@ -12,10 +12,10 @@ import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
 import { useIsMobile } from '@/components/hooks/useMobile'
 //import { useFeatureToggles } from "@/contexts/FeatureTogglesContext";
 import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
-//import type { PropertyDetail } from "@/types/api";
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyDetailTabsProps {
-  propertyDetail: any //PropertyDetail; // Replace 'any' with the actual type if available
+  propertyDetail: PropertyDetail // Replace 'any' with the actual type if available
 }
 
 export const PropertyDetailTabs = ({

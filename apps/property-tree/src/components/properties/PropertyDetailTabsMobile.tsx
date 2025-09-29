@@ -23,10 +23,10 @@ import {
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 //import { useFeatureToggles } from "@/contexts/FeatureTogglesContext";
-//import type { PropertyDetail } from '@/types/api'
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyDetailTabsMobileProps {
-  propertyDetail: any //PropertyDetail
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyDetailTabsMobile = ({

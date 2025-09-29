@@ -1,8 +1,8 @@
-//import type { Building } from "@/types/api";
+import type { Building } from '@/types/api'
 import { PropertyBuildingCard } from './PropertyBuildingCard'
 
 interface PropertyBuildingsListProps {
-  buildings: any[] //Building[];
+  buildings: Building[]
 }
 
 export const PropertyBuildingsList = ({

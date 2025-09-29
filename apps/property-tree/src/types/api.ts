@@ -105,7 +105,6 @@ export interface Property {
   purpose: string | null
   buildingType: string | null
   buildingCount?: number
-  district: string
   propertyManagerArea: string
   propertyValues: { name: string; value: number; unitId: string }[]
 }
@@ -183,6 +182,7 @@ export interface BuildingSpace {
   components: SpaceComponent[]
 }
 
+/*
 export interface Building {
   id: string
   name: string
@@ -197,15 +197,113 @@ export interface Building {
   entrances?: Entrance[]
   spaces?: BuildingSpace[]
 }
+*/
 
-export interface PropertyDetail extends Property {
-  parish: string
-  propertyNumber: string
-  direction: string
-  address?: string
-  marketArea?: string // Stadsdel/Marknadsområde
-  propertyManager?: string // Förvaltare/kvartersvärd
-  propertyMap?: PropertyMap
+export interface PropertyValue {
+  value: number
+  name: string
+  unitId: string
+}
+
+export interface PropertyDetail {
+  id: string
+  propertyObjectId: string
+  marketAreaId: string
+  districtId: string
+  propertyDesignationId: string
+  valueAreaId: string | null
+  code: string
+  designation: string
+  municipality: string
+  tract: string
+  block: string
+  sector: string | null
+  propertyIndexNumber: string | null
+  congregation: string
+  builtStatus: number
+  separateAssessmentUnit: number
+  consolidationNumber: string
+  ownershipType: string
+  registrationDate: string | null
+  acquisitionDate: string | null
+  isLeasehold: number
+  leaseholdTerminationDate: string | null
+  area: number | null
+  purpose: string | null
+  buildingType: string | null
+  propertyTaxNumber: string | null
+  mainPartAssessedValue: number
+  includeInAssessedValue: number
+  grading: number
+  deleteMark: number
+  fromDate: string
+  toDate: string
+  timestamp: string
+  marketArea: {
+    id: string
+    code: string
+    name: string
+  }
+  district: {
+    id: string
+    code: string
+    caption: string
+  }
   buildings: Building[]
-  maintenanceUnits?: MaintenanceUnit[]
+  propertyObject: {
+    id: string
+    deleteMark: number
+    timestamp: string
+    objectTypeId: string
+    barcode: string | null
+    barcodeType: number
+    condition: number
+    conditionInspectionDate: string | null
+    vatAdjustmentPrinciple: number
+    energyClass: number
+    energyRegistered: string | null
+    energyReceived: string | null
+    energyIndex: number | null
+    heatingNature: number
+  }
+  propertyValues?: PropertyValue[]
+}
+
+export interface BuildingType {
+  id: string
+  code: string
+  name: string
+}
+
+export interface BuildingConstruction {
+  constructionYear: number
+  renovationYear: number | null
+  valueYear: number | null
+}
+
+export interface BuildingFeatures {
+  heating: string | null
+  fireRating: string | null
+}
+
+export interface BuildingInsurance {
+  class: string | null
+  value: number | null
+}
+
+export interface Building {
+  id: string
+  code: string
+  name: string
+  buildingType: BuildingType
+  construction: BuildingConstruction
+  features: BuildingFeatures
+  insurance: BuildingInsurance
+  // These are just to make the lovable code happy
+  entrances: Entrance[]
+  apartments: Residence[]
+  type: string | null
+  area: number | null
+  //
+  deleted: boolean
 }

@@ -8,9 +8,10 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb'
 import { generateBreadcrumbs } from '@/utils/breadcrumbUtils'
+import { PropertyDetail } from '@/types/api'
 
 interface PropertyBreadcrumbProps {
-  propertyDetail?: any
+  propertyDetail?: PropertyDetail
 }
 
 export const PropertyBreadcrumb = ({

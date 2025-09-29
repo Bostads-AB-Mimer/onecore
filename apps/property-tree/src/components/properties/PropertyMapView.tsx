@@ -1,9 +1,9 @@
-//import type { PropertyDetail } from "@/types/api";
+import type { PropertyDetail } from '@/types/api'
 import { CardContent } from '@/components/ui/v2/Card'
 import { PropertyMap } from './PropertyMap'
 
 interface PropertyMapViewProps {
-  propertyDetail: any //PropertyDetail
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyMapView = ({ propertyDetail }: PropertyMapViewProps) => {
@@ -14,12 +14,14 @@ export const PropertyMapView = ({ propertyDetail }: PropertyMapViewProps) => {
         byggnaderna för detaljer.
       </p>
 
+      {/*
       {propertyDetail.propertyMap && (
         <PropertyMap
           propertyMap={propertyDetail.propertyMap}
           buildings={propertyDetail.buildings}
         />
       )}
+        */}
     </>
   )
 }

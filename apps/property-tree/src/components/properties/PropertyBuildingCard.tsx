@@ -1,4 +1,4 @@
-//import type { Building } from "@/types/api";
+import type { Building } from '@/types/api'
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { useNavigate, useParams } from 'react-router-dom'
 
 interface PropertyBuildingCardProps {
-  building: any //Building;
+  building: Building
 }
 
 export const PropertyBuildingCard = ({

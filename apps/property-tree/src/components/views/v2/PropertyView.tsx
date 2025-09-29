@@ -67,8 +67,6 @@ const PropertyView = () => {
       )
     }
 
-    console.log('Rendering PropertyView for:', propertyDetail)
-
     return (
       <div className="py-4 space-y-6">
         <PropertyBreadcrumb propertyDetail={propertyDetail} />

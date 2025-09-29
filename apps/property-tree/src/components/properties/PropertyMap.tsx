@@ -1,12 +1,12 @@
-//import type { BuildingLocation, Building } from "@/types/api";
+import type { BuildingLocation, Building } from '@/types/api'
 import { Map } from 'lucide-react'
 
 interface PropertyMapProps {
   propertyMap: {
     image: string
-    buildings: any[] //BuildingLocation[];
+    buildings: BuildingLocation[]
   }
-  buildings: any[] //Building[];
+  buildings: Building[]
 }
 
 export const PropertyMap = ({ propertyMap, buildings }: PropertyMapProps) => {

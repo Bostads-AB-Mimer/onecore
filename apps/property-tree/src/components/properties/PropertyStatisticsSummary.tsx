@@ -1,7 +1,7 @@
-//import { PropertyDetail } from "@/types/api";
+import { PropertyDetail } from '@/types/api'
 
 interface PropertyStatisticsSummaryProps {
-  property: any //PropertyDetail;
+  property: PropertyDetail
 }
 
 export const PropertyStatisticsSummary = ({
@@ -16,24 +16,34 @@ export const PropertyStatisticsSummary = ({
       </div>
 
       <div className="divide-y">
-        {property.propertyValues.map(({ name, value, unitId }: any) => {
-          const convertUnitId = (unitId: string) => {
-            if (unitId == 'm2') return 'm²'
-            if (unitId == 'pcs') return 'st'
-            return unitId
-          }
+        {property.propertyValues?.map(
+          ({
+            name,
+            value,
+            unitId,
+          }: {
+            name: string
+            value: number
+            unitId: string
+          }) => {
+            const convertUnitId = (unitId: string) => {
+              if (unitId == 'm2') return 'm²'
+              if (unitId == 'pcs') return 'st'
+              return unitId
+            }
 
-          return (
-            <div
-              key={name}
-              className="grid grid-cols-3 px-4 py-2 hover:bg-muted/30 transition-colors"
-            >
-              <div>{name}</div>
-              <div className="text-right">{value}</div>
-              <div className="text-right">{convertUnitId(unitId)}</div>
-            </div>
-          )
-        })}
+            return (
+              <div
+                key={name}
+                className="grid grid-cols-3 px-4 py-2 hover:bg-muted/30 transition-colors"
+              >
+                <div>{name}</div>
+                <div className="text-right">{value}</div>
+                <div className="text-right">{convertUnitId(unitId)}</div>
+              </div>
+            )
+          }
+        )}
       </div>
     </div>
   )

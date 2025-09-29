@@ -7,10 +7,10 @@ import { PropertyApartmentsTab } from './PropertyApartmentsTab'
 import { PropertyStatisticsTab } from './PropertyStatisticsTab'
 import { PropertyMapTab } from './PropertyMapTab'
 //import { PropertyMaintenanceUnitsTab } from './PropertyMaintenanceUnitsTab'
-//import type { PropertyDetail } from '@/types/api'
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyDetailTabsProps {
-  propertyDetail: any //PropertyDetail
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyDetailTabs = ({
