@@ -100,10 +100,10 @@ function ContactInfo(props: { contact: Contact }) {
 
 function Leases(props: { leases: Lease[] }) {
   return props.leases.map((lease) => (
-    <Grid container sx={{ marginLeft: 1, marginTop: 1 }} key={lease.leaseId}>
+    <Grid container sx={{ marginTop: 1 }} key={lease.leaseId}>
       <Grid item xs={12} key={lease.leaseId}>
         {
-          <Typography variant="h3">
+          <Typography variant="h3" marginBottom="1rem">
             {lease.leaseId} ({getStatusName(lease.status)})
           </Typography>
         }
@@ -118,13 +118,7 @@ function Leases(props: { leases: Lease[] }) {
         <b>Startdatum</b>
       </Grid>
       <Grid item xs={12} md={8} lg={4}>
-        {lease.leaseStartDate.toString().substring(0, 10)}
-      </Grid>
-      <Grid item xs={12} md={4} lg={2}>
-        <b>Slutdatum</b>
-      </Grid>
-      <Grid item xs={12} md={8} lg={4}>
-        {lease.leaseEndDate?.toString()}
+        {new Date(lease.leaseStartDate).toISOString() ?? '-'}
       </Grid>
       <Grid item xs={12} md={4} lg={2}>
         <b>Adress</b>
@@ -133,10 +127,12 @@ function Leases(props: { leases: Lease[] }) {
         {lease.address?.street}
       </Grid>
       <Grid item xs={12} md={4} lg={2}>
-        <b>Startdatum</b>
+        <b>Slutdatum</b>
       </Grid>
       <Grid item xs={12} md={8} lg={4}>
-        {lease.rentalProperty?.address?.street.toString()}
+        {lease.leaseEndDate
+          ? new Date(lease.leaseStartDate).toISOString()
+          : '-'}
       </Grid>
     </Grid>
   ))
