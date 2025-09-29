@@ -29,9 +29,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     keyName: editingKey?.keyName || '',
     keySequenceNumber: editingKey?.keySequenceNumber || '',
     flexNumber: editingKey?.flexNumber || '',
-    rentalObject: editingKey?.rentalObject || '',
+    rentalObject: editingKey?.rentalObjectCode || '',
     keyType: editingKey?.keyType || ('LGH' as KeyType),
-    keySystemName: editingKey?.keySystemName || '',
+    keySystemName: editingKey?.keySystemId || '',
   })
 
   // Search functionality state
