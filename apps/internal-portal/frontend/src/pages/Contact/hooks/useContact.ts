@@ -1,10 +1,15 @@
 import { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import { Contact, Invoice } from '@onecore/types'
+import { Contact, Invoice, InvoiceRow, Lease } from '@onecore/types'
 
 import apiClient from '../../../utils/api-client'
 
-export type ContactResponse = Contact & { invoices: Invoice[] }
+export type InvoiceWithRows = Invoice & { invoiceRows: InvoiceRow[] }
+
+export type ContactResponse = Contact & {
+  invoices: InvoiceWithRows[]
+  leases: Lease[]
+}
 
 export const useContact = (contactCode: string | null) => {
   return useQuery<ContactResponse, AxiosError>({
