@@ -25,7 +25,7 @@
     "build:types": "pnpm run --filter @onecore/types build",
     "build:utilities": "pnpm run --filter @onecore/utilities build",
     "build:work-order": "pnpm run --filter @onecore/work-order build",
-    "db:init": "./scripts/db/initialize.sh",
+    "db:init": "sh ./scripts/db/initialize.sh",
     "dev:init": "pnpm run git:configure && pnpm run db:init && pnpm -r dev:init",
     "dev": "turbo run dev",
     "dev:pick": "pnpx launch-goblin",
