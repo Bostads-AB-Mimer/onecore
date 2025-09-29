@@ -391,7 +391,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       parkingSpacesQuery,
       activeRentalBlocksQuery,
       activeContractsQuery,
-      contractsWithLastDebitDate,
     } = buildSubQueries()
 
     const results = await buildMainQuery({
@@ -399,12 +398,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       activeRentalBlocksQuery,
       activeContractsQuery,
     })
-      .leftJoin(
-        contractsWithLastDebitDate.as('cldd'),
-        'cldd.keycmobj',
-        'ps.keycmobj'
-      )
-      .select('cldd.lastdebitdate')
       .where(function () {
         this.whereNull('rb.keycmobj').orWhere(
           'rb.blockenddate',
