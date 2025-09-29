@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePropertyDetail } from '@/components/hooks/usePropertyDetail'
 //import { useToast } from '@/hooks/use-toast'
-//import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
+import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { PropertyHeader } from '@/components/properties/PropertyHeader'
 import { PropertyBasicInfo } from '@/components/properties/PropertyBasicInfo'
@@ -67,8 +67,6 @@ const PropertyView = () => {
       )
     }
 
-    console.log('Rendering PropertyView for:', propertyDetail)
-
     return (
       <div className="py-4 space-y-6">
         <PropertyBreadcrumb propertyDetail={propertyDetail} />
@@ -81,7 +79,7 @@ const PropertyView = () => {
         />
 
         {/* Tabs with detailed info only in PropertyInfoTab */}
-        {/*<PropertyDetailTabs propertyDetail={propertyDetail} /> */}
+        <PropertyDetailTabs propertyDetail={propertyDetail} />
       </div>
     )
   }
