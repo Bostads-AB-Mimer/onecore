@@ -1,3 +1,4 @@
+import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -7,8 +8,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react'
-import type { Tenant, Lease, Address } from '@/services/api/leaseSearchService'
+import type { Lease, Tenant, TenantAddress as Address } from '@/services/types'
 
 interface TenantInfoProps {
   tenant: Tenant
@@ -25,17 +25,14 @@ function formatAddress(addr?: Address): string {
   return s || 'Okänd adress'
 }
 
-const fmtDate = (d?: Date) =>
-  d
-    ? (d instanceof Date ? d : new Date(d as any)).toLocaleDateString('sv-SE')
-    : undefined
+const fmtDate = (d?: string) =>
+  d ? new Date(d).toLocaleDateString('sv-SE') : undefined
 
 type DisplayStatus = 'active' | 'upcoming' | 'ended'
 
-function toMs(x?: Date): number | undefined {
+function toMs(x?: string): number | undefined {
   if (!x) return undefined
-  if (x instanceof Date) return x.getTime()
-  const t = new Date(x as any).getTime()
+  const t = new Date(x).getTime()
   return Number.isNaN(t) ? undefined : t
 }
 
@@ -107,7 +104,7 @@ export function TenantInfo({
           {tenant.address && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              {formatAddress(tenant.address)}
+              {formatAddress(tenant.address as Address)}
             </p>
           )}
         </CardContent>
@@ -132,8 +129,10 @@ export function TenantInfo({
                 lease.rentalProperty?.rentalPropertyId ||
                 'Okänt objekt'
 
-              const addr1 = formatAddress(lease.address)
-              const addr2 = formatAddress(lease.rentalProperty?.address)
+              const addr1 = formatAddress(lease.address as Address | undefined)
+              const addr2 = formatAddress(
+                lease.rentalProperty?.address as Address | undefined
+              )
               const addr = addr1 === 'Okänd adress' ? addr2 : addr1
 
               const monthlyRent = lease.rentInfo?.currentRent?.currentRent

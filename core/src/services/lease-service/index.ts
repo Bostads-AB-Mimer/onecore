@@ -206,9 +206,13 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/Lease'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *               additionalProperties: true
    *     security:
    *       - bearerAuth: []
    */
@@ -219,7 +223,7 @@ export const routes = (router: KoaRouter) => {
     )
 
     ctx.body = {
-      content: responseData,
+      content: responseData.map(mapLease),
       ...metadata,
     }
   })
@@ -264,7 +268,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: responseData,
+      content: responseData.map(mapLease),
       ...metadata,
     }
   })
