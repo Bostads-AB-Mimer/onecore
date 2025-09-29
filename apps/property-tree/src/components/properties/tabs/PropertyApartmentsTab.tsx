@@ -1,4 +1,4 @@
-//import type { Building } from '@/types/api'
+import type { Building } from '@/types/api'
 import { Button } from '@/components/ui/v2/Button'
 import {
   Card,
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Home } from 'lucide-react'
 
 interface PropertyApartmentsTabProps {
-  buildings: any //Building[]
+  buildings: Building[]
 }
 
 export const PropertyApartmentsTab = ({

@@ -2,10 +2,10 @@ import { Card, CardContent } from '@/components/ui/v2/Card'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DoorOpen } from 'lucide-react'
-//import type { Building } from '@/types/api'
+import type { Building } from '@/types/api'
 
 interface PropertyResidenceTabProps {
-  buildings: any //Building[]
+  buildings: Building[]
 }
 
 export const PropertyResidenceTab = ({
