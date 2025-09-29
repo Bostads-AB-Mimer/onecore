@@ -72,7 +72,7 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
             keys.map((key) => (
               <TableRow key={key.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{key.keyName}</TableCell>
-                <TableCell>{key.rentalObject || '-'}</TableCell>
+                <TableCell>{key.rentalObjectCode || '-'}</TableCell>
                 <TableCell>
                   <Badge
                     variant={getTypeVariant(key.keyType)}
@@ -81,7 +81,7 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
                     {KeyTypeLabels[key.keyType]}
                   </Badge>
                 </TableCell>
-                <TableCell>{key.keySystemName || '-'}</TableCell>
+                <TableCell>{key.keySystemId || '-'}</TableCell>
                 <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                 <TableCell>{key.flexNumber || '-'}</TableCell>
                 <TableCell className="text-muted-foreground">
