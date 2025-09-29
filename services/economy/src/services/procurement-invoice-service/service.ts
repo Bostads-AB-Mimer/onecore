@@ -84,6 +84,11 @@ export const importNewFiles = async () => {
     { rows: importedInvoiceRows.length },
     'Read invoice rows from files'
   )
+
+  if (importedInvoiceRows.length === 0) {
+    return null
+  }
+
   const enrichedInvoiceRows =
     await enrichProcurementInvoiceRows(importedInvoiceRows)
 
