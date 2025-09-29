@@ -17,6 +17,7 @@ import {
   CommentThread,
   CommentThreadId,
   Invoice,
+  Lease,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { z } from 'zod'
@@ -569,6 +570,24 @@ async function getInvoicesByContactCode(
   return { ok: true, data: response.data.content.data }
 }
 
+async function getLeasesByContactCode(contactCode: string) {
+  const response = await getFromCore<{ content: Lease[] }>({
+    method: 'get',
+    url: `${coreBaseUrl}/leases/by-contact-code/${contactCode}`,
+  })
+
+  if (response.status === 404) {
+    return { ok: false, err: 'not-found', statusCode: 404 }
+  }
+
+  if (response.status !== 200) {
+    logger.error(response.data, 'core-adapter.getLeasesByContactCode')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+
+  return { ok: true, data: response.data.content }
+}
+
 export {
   addComment,
   removeComment,
@@ -592,4 +611,5 @@ export {
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
   getInvoicesByContactCode,
+  getLeasesByContactCode,
 }

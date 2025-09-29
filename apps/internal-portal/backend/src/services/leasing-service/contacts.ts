@@ -242,9 +242,22 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const getLeases = await coreAdapter.getLeasesByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!getLeases.ok) {
+      ctx.status = getLeases.statusCode ?? 500
+      return
+    }
+
     ctx.status = 200
     ctx.body = makeSuccessResponseBody(
-      { ...getContact.data, invoices: getInvoices.data },
+      {
+        ...getContact.data,
+        invoices: getInvoices.data,
+        leases: getLeases.data,
+      },
       metadata
     )
   })
