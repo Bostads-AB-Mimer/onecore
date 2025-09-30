@@ -66,23 +66,6 @@ export const PropertyBasicInfo = ({
           </div>
 
           <div>
-            <p className="text-sm text-muted-foreground">
-              Förvaltare/kvartersvärd
-            </p>
-            <p className="font-medium">
-              {
-                '-' /* TODO: No such data in API yet, and where do we find it? */
-              }
-            </p>
-          </div>
-
-          {/* TODO: A property has multiple adresses right, not one? */}
-          <div>
-            <p className="text-sm text-muted-foreground">Adress</p>
-            <p className="font-medium">{'-'}</p>
-          </div>
-
-          <div>
             <p className="text-sm text-muted-foreground">Fastighetsstatus</p>
             <p className="font-medium">Aktiv</p>
           </div>
