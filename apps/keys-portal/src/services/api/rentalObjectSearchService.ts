@@ -51,6 +51,23 @@ export class RentalObjectSearchService {
     return []
   }
 
+  async getAddressByRentalId(rentalId: string): Promise<string> {
+    const results = await this.searchByRentalId(rentalId)
+    return results[0]?.address ?? 'Okänd adress'
+  }
+
+  async getAddressesByRentalIds(
+    rentalIds: string[]
+  ): Promise<Record<string, string>> {
+    const unique = Array.from(new Set(rentalIds.filter(Boolean)))
+    const entries = await Promise.all(
+      unique.map(
+        async (id) => [id, await this.getAddressByRentalId(id)] as const
+      )
+    )
+    return Object.fromEntries(entries)
+  }
+
   private getPropertyName(rentalProperty: RentalPropertyResponse): string {
     const address = this.getPropertyAddress(rentalProperty)
     if (address && address !== 'Okänd adress') {
