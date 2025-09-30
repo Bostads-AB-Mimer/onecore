@@ -497,6 +497,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
       'krfkh.amount',
       'krfkh.reduction',
       'krfkh.vat',
+      'krfkh.roundoff',
       'krfkh.fromdate as fromDate',
       'krfkh.todate as toDate',
       'krfkh.invdate as invoiceDate',
@@ -510,7 +511,12 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
     return {
       invoiceId: invoice.invoiceId.trim(),
       leaseId: 'missing',
-      amount: invoice.amount,
+      amount: [
+        invoice.amount,
+        invoice.reduction,
+        invoice.vat,
+        invoice.roundoff,
+      ].reduce((sum, value) => sum + value, 0),
       fromDate: invoice.fromDate,
       toDate: invoice.toDate,
       invoiceDate: invoice.invoiceDate,
