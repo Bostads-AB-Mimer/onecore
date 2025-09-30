@@ -237,11 +237,5 @@ export const PropertyBasicInfo = ({
     return renderDetailedInfoCard()
   }
 
-  // Default: show both cards (for backwards compatibility)
-  return (
-    <div className="space-y-6">
-      {renderBasicInfoCard()}
-      {renderDetailedInfoCard()}
-    </div>
-  )
+  return renderBasicInfoCard()
 }
