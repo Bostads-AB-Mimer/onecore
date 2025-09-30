@@ -24,8 +24,6 @@ export class KeySystemSearchService {
     }
 
     try {
-      console.log('🔍 Frontend calling search with query:', query)
-      // Use server-side search endpoint
       const response = await GET('/key-systems/search', {
         params: {
           query: {
@@ -33,8 +31,6 @@ export class KeySystemSearchService {
           },
         },
       })
-
-      console.log('🔍 Frontend search response:', response)
 
       if (response.data?.content) {
         return response.data.content.map((system: KeySystem) => ({
