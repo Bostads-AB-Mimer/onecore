@@ -203,13 +203,22 @@ export const KeySystemsApi = {
   },
 
   search: async (
-    query: string,
-    field?: string
+    searchParams: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeySystem[], 'bad-request' | CommonErr>> => {
-    const params = new URLSearchParams({ q: query })
-    if (field) {
-      params.append('field', field)
+    const params = new URLSearchParams()
+
+    // Add all search parameters to query string
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          // Handle array values (e.g., fields array)
+          params.append(key, value.join(','))
+        } else if (typeof value === 'string') {
+          params.append(key, value)
+        }
+      }
     }
+
     const r = await getJSON<{ content: KeySystem[] }>(
       `${BASE}/key-systems/search?${params.toString()}`
     )

@@ -721,23 +721,56 @@ export const routes = (router: KoaRouter) => {
    * /key-systems/search:
    *   get:
    *     summary: Search key systems
-   *     description: Search key systems based on a query string matching a specified field
+   *     description: |
+   *       Search key systems with flexible filtering:
+   *       - OR search: Use `q` with `fields` to search across multiple fields
+   *       - AND search: Use individual field parameters (systemCode, manufacturer, etc.)
+   *       - Combined: Use both OR and AND conditions together
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
    *         name: q
-   *         required: true
-   *         schema:
-   *           type: string
-   *           minLength: 3
-   *         description: The search query string (minimum 3 characters)
-   *       - in: query
-   *         name: field
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [systemCode, manufacturer, managingSupplier, description, propertyIds]
-   *         description: The field to search on (defaults to systemCode)
+   *           minLength: 3
+   *         description: Search query for OR search across fields specified in 'fields' parameter
+   *       - in: query
+   *         name: fields
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode if not specified.
+   *       - in: query
+   *         name: systemCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by systemCode (AND condition)
+   *       - in: query
+   *         name: manufacturer
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by manufacturer (AND condition)
+   *       - in: query
+   *         name: managingSupplier
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by managingSupplier (AND condition)
+   *       - in: query
+   *         name: description
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by description (AND condition)
+   *       - in: query
+   *         name: propertyIds
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by propertyIds (AND condition)
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -751,7 +784,7 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     $ref: '#/components/schemas/KeySystem'
    *       400:
-   *         description: Bad request. Query parameter must be at least 3 characters or invalid field
+   *         description: Bad request. Invalid parameters or field names
    *         content:
    *           application/json:
    *             schema:
@@ -766,28 +799,14 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'field'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds'])
 
-    if (typeof ctx.query.q !== 'string') {
-      ctx.status = 400
-      ctx.body = { reason: 'Invalid query parameter', ...metadata }
-      return
-    }
-
-    if (ctx.query.q.trim().length < 3) {
-      ctx.status = 400
-      ctx.body = { reason: 'Query must be at least 3 characters', ...metadata }
-      return
-    }
-
-    const searchField = typeof ctx.query.field === 'string' ? ctx.query.field : undefined
-
-    const result = await KeySystemsApi.search(ctx.query.q.trim(), searchField)
+    const result = await KeySystemsApi.search(ctx.query)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
         ctx.status = 400
-        ctx.body = { reason: 'Query must be at least 3 characters', ...metadata }
+        ctx.body = { reason: 'Invalid search parameters', ...metadata }
         return
       }
       logger.error({ err: result.err, metadata }, 'Error searching key systems')

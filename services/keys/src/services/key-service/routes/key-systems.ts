@@ -76,23 +76,56 @@ export const routes = (router: KoaRouter) => {
    * /key-systems/search:
    *   get:
    *     summary: Search key systems
-   *     description: Search key systems based on a query string matching a specified field
+   *     description: |
+   *       Search key systems with flexible filtering:
+   *       - OR search: Use `q` with `fields` to search across multiple fields
+   *       - AND search: Use individual field parameters (systemCode, manufacturer, etc.)
+   *       - Combined: Use both OR and AND conditions together
    *     tags: [Key Systems]
    *     parameters:
    *       - in: query
    *         name: q
-   *         required: true
-   *         schema:
-   *           type: string
-   *           minLength: 3
-   *         description: The search query string (minimum 3 characters)
-   *       - in: query
-   *         name: field
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [systemCode, manufacturer, managingSupplier, description, propertyIds]
-   *         description: The field to search on (defaults to systemCode)
+   *           minLength: 3
+   *         description: Search query for OR search across fields specified in 'fields' parameter
+   *       - in: query
+   *         name: fields
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode if not specified.
+   *       - in: query
+   *         name: systemCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by systemCode (AND condition)
+   *       - in: query
+   *         name: manufacturer
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by manufacturer (AND condition)
+   *       - in: query
+   *         name: managingSupplier
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by managingSupplier (AND condition)
+   *       - in: query
+   *         name: description
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by description (AND condition)
+   *       - in: query
+   *         name: propertyIds
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Filter by propertyIds (AND condition)
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -106,41 +139,76 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     $ref: '#/components/schemas/KeySystem'
    *       400:
-   *         description: Bad request. Query parameter must be at least 3 characters or invalid field
+   *         description: Bad request. Invalid parameters or field names
    *       500:
    *         description: Internal server error
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'field'])
-
-    if (typeof ctx.query.q !== 'string') {
-      ctx.status = 400
-      ctx.body = { reason: 'Invalid query parameter', ...metadata }
-      return
-    }
-
-    if (ctx.query.q.trim().length < 3) {
-      ctx.status = 400
-      ctx.body = { reason: 'Query must be at least 3 characters', ...metadata }
-      return
-    }
-
-    const searchField = typeof ctx.query.field === 'string' ? ctx.query.field : 'systemCode'
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds'])
     const allowedFields = ['systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds']
 
-    if (!allowedFields.includes(searchField)) {
-      ctx.status = 400
-      ctx.body = { reason: `Invalid field. Allowed: ${allowedFields.join(', ')}`, ...metadata }
-      return
-    }
-
     try {
-      const rows = await db(TABLE)
-        .select('*')
-        .where(searchField, 'like', `%${ctx.query.q.trim()}%`)
-        .where('isActive', true)
-        .orderBy(searchField, 'asc')
-        .limit(5)
+      let query = db(TABLE).select('*').where('isActive', true)
+
+      // Handle OR search (q with fields)
+      if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3) {
+        const searchTerm = ctx.query.q.trim()
+
+        // Get fields to search across (OR condition)
+        let fieldsToSearch: string[] = []
+
+        if (typeof ctx.query.fields === 'string') {
+          // Multiple fields (comma-separated)
+          fieldsToSearch = ctx.query.fields.split(',').map(f => f.trim())
+        } else {
+          // Default to systemCode
+          fieldsToSearch = ['systemCode']
+        }
+
+        // Validate all fields
+        for (const field of fieldsToSearch) {
+          if (!allowedFields.includes(field)) {
+            ctx.status = 400
+            ctx.body = { reason: `Invalid field: ${field}. Allowed: ${allowedFields.join(', ')}`, ...metadata }
+            return
+          }
+        }
+
+        // Add OR conditions
+        query = query.where((builder) => {
+          fieldsToSearch.forEach((field, index) => {
+            if (index === 0) {
+              builder.where(field, 'like', `%${searchTerm}%`)
+            } else {
+              builder.orWhere(field, 'like', `%${searchTerm}%`)
+            }
+          })
+        })
+      }
+
+      // Handle AND search (individual field parameters)
+      for (const field of allowedFields) {
+        const value = ctx.query[field]
+        if (typeof value === 'string' && value.trim().length > 0) {
+          query = query.where(field, 'like', `%${value.trim()}%`)
+        }
+      }
+
+      // Check if at least one search criteria was provided
+      const hasQParam = typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
+      const hasFieldParams = allowedFields.some(field =>
+        typeof ctx.query[field] === 'string' && ctx.query[field].trim().length > 0
+      )
+
+      if (!hasQParam && !hasFieldParams) {
+        ctx.status = 400
+        ctx.body = { reason: 'At least one search parameter is required', ...metadata }
+        return
+      }
+
+      const rows = await query
+        .orderBy('systemCode', 'asc')
+        .limit(10)
 
       ctx.status = 200
       ctx.body = { content: rows satisfies KeySystem[], ...metadata }
