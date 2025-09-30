@@ -129,7 +129,7 @@ export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       getActions: ({ row }) => {
         if (
           row.status === ListingStatus.Active ||
-          row.status === ListingStatus.Closed
+          row.status === ListingStatus.Expired
         ) {
           return [
             <UnpublishListing key={1} listingId={row.id} />,
