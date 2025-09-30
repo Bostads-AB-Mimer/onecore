@@ -13,12 +13,22 @@ export interface KeySystemSearchResult {
   isActive: boolean
 }
 
+export type KeySystemSearchField =
+  | 'systemCode'
+  | 'manufacturer'
+  | 'managingSupplier'
+  | 'description'
+  | 'propertyIds'
+
 export class KeySystemSearchService {
   isValidSearchQuery(query: string): boolean {
     return query.trim().length >= 3
   }
 
-  async searchBySystemCode(query: string): Promise<KeySystemSearchResult[]> {
+  async search(
+    query: string,
+    field: KeySystemSearchField = 'systemCode'
+  ): Promise<KeySystemSearchResult[]> {
     if (!query.trim() || !this.isValidSearchQuery(query)) {
       return []
     }
@@ -28,6 +38,7 @@ export class KeySystemSearchService {
         params: {
           query: {
             q: query.trim(),
+            field,
           },
         },
       })
@@ -43,7 +54,7 @@ export class KeySystemSearchService {
         }))
       }
     } catch (error) {
-      console.error('Error searching key systems by system code:', error)
+      console.error('Error searching key systems:', error)
     }
 
     return []
