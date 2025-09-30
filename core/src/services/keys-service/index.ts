@@ -722,10 +722,15 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search key systems
    *     description: |
-   *       Search key systems with flexible filtering:
-   *       - OR search: Use `q` with `fields` to search across multiple fields
-   *       - AND search: Use individual field parameters (systemCode, manufacturer, etc.)
-   *       - Combined: Use both OR and AND conditions together
+   *       Search key systems with flexible filtering.
+   *       - **OR search**: Use `q` with `fields` for multiple field search
+   *       - **AND search**: Use any KeySystem field parameter for filtering
+   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - Only one OR group is supported, but you can combine it with multiple AND filters
+   *
+   *       Examples:
+   *       - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+   *       - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
@@ -740,37 +745,63 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode if not specified.
+   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode.
+   *       - in: query
+   *         name: id
+   *         schema:
+   *           type: string
    *       - in: query
    *         name: systemCode
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by systemCode (AND condition)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
    *       - in: query
    *         name: manufacturer
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by manufacturer (AND condition)
    *       - in: query
    *         name: managingSupplier
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by managingSupplier (AND condition)
    *       - in: query
-   *         name: description
-   *         required: false
+   *         name: type
    *         schema:
    *           type: string
-   *         description: Filter by description (AND condition)
    *       - in: query
    *         name: propertyIds
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by propertyIds (AND condition)
+   *       - in: query
+   *         name: installationDate
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: isActive
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: description
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdBy
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedBy
+   *         schema:
+   *           type: string
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -799,7 +830,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     const result = await KeySystemsApi.search(ctx.query)
 
