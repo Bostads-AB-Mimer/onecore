@@ -1,3 +1,4 @@
+// components/loan/EmbeddedKeysList.tsx
 import { useEffect, useMemo, useState } from 'react'
 import type { Key, Lease, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
@@ -6,60 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
-
-function seededRange(
-  leaseId: string,
-  suffix: string,
-  min: number,
-  max: number
-) {
-  const seed = `${leaseId}:${suffix}`
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  }
-  return (hash % (max - min + 1)) + min
-}
-
-function objectNumberForType(leaseId: string, type: KeyType): number {
-  return seededRange(leaseId, `${type}-obj`, 1, 999)
-}
-
-function generateMockKeys(leaseId: string): Key[] {
-  const keys: Key[] = []
-  let counter = 1
-
-  const spec: Partial<Record<KeyType, [number, number]>> = {
-    LGH: [2, 5],
-    PB: [1, 3],
-    TP: [1, 3],
-    GEM: [1, 3],
-    // HUS, FS, HN: intentionally omitted (0)
-  }
-
-  ;(Object.keys(spec) as KeyType[]).forEach((type) => {
-    const [min, max] = spec[type]!
-    const objNo = objectNumberForType(leaseId, type)
-    const count = seededRange(leaseId, `${type}-count`, min, max)
-
-    for (let i = 1; i <= count; i++) {
-      keys.push({
-        id: `${type}-${counter}`,
-        keyName: `${KeyTypeLabels[type]} ${objNo}`,
-        keyType: type as Key['keyType'] & KeyType,
-        keySequenceNumber: i,
-        flexNumber: seededRange(leaseId, `${type}-flex-${i}`, 1, 3),
-        rentalObjectCode: String(objNo),
-        keySystemId: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-      counter++
-    }
-  })
-
-  return keys
-}
+import { generateMockKeys, countKeysByType } from '@/mockdata/mock-keys'
 
 type LoanStatus = 'never_loaned' | 'loaned' | 'returned'
 
@@ -77,8 +25,7 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
   )
 
   useEffect(() => {
-    const mock = generateMockKeys(lease.leaseId)
-    setKeys(mock)
+    setKeys(generateMockKeys(lease.leaseId))
     setSelectedKeys([])
     setLoanedKeyIds(new Set())
     setReturnedKeyIds(new Set())
@@ -102,14 +49,7 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
     [keys, loanedKeyIds, returnedKeyIds]
   )
 
-  const countsByType = useMemo(() => {
-    const acc: Record<KeyType, number> = {} as any
-    ;(Object.keys(KeyTypeLabels) as KeyType[]).forEach((t) => (acc[t] = 0))
-    keys.forEach(
-      (k) => (acc[k.keyType as KeyType] = (acc[k.keyType as KeyType] ?? 0) + 1)
-    )
-    return acc
-  }, [keys])
+  const countsByType = useMemo(() => countKeysByType(keys), [keys])
 
   const toggleSelection = (keyId: string, checked: boolean) => {
     setSelectedKeys((prev) =>
@@ -179,7 +119,7 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
   return (
     <Card className="mt-2">
       <CardContent className="space-y-4 p-3">
-        {/* Summary */}
+        {/* Summary badges (same data ContractCard will show) */}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(KeyTypeLabels) as KeyType[]).map((t) => (
             <Badge key={t} variant="secondary" className="text-xs">
@@ -188,7 +128,7 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
           ))}
         </div>
 
-        {/* Bulk Action Buttons (placeholders) */}
+        {/* Bulk action (placeholder) */}
         <div className="flex flex-wrap items-center gap-2">
           {availableKeys.length > 0 && (
             <Button
@@ -215,19 +155,16 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
           )}
         </div>
 
-        {/* Keys List */}
+        {/* Keys list */}
         <div className="space-y-1">
           {keys.map((key, index) => {
             const isLoaned = loanedKeyIds.has(key.id)
             const isReturned = returnedKeyIds.has(key.id)
             const canBeLoaned = !isLoaned
-
             return (
               <div
                 key={key.id}
-                className={`flex items-center justify-between py-2 px-1 ${
-                  index > 0 ? 'border-t border-border/50' : ''
-                }`}
+                className={`flex items-center justify-between py-2 px-1 ${index > 0 ? 'border-t border-border/50' : ''}`}
               >
                 <div className="flex items-center space-x-3 flex-1">
                   {canBeLoaned && (
@@ -289,7 +226,6 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
           })}
         </div>
 
-        {/* Individual Loan Action (placeholder) */}
         {selectedKeys.length > 0 && (
           <div className="flex justify-end items-center pt-2 border-t">
             <Button
@@ -305,7 +241,6 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
           </div>
         )}
 
-        {/* Placeholder “receipt” + history */}
         {lastTransactionType && lastTransactionKeyIds.length > 0 && (
           <div className="pt-3 border-t">
             <p className="text-sm font-medium mb-1">Kvitto (placeholder)</p>
