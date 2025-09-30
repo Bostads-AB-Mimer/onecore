@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react'
+import { X, User, MapPin } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -7,93 +7,53 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import type { Lease, Tenant, TenantAddress as Address } from '@/services/types'
-import { leaseTypeLabels, mapLeaseTypeKeyFromRaw } from '@/services/types'
-import { EmbeddedKeysList } from '@/components/loan/EmbeddedKeysList'
-
-interface TenantInfoProps {
-  tenant: Tenant
-  contracts: Lease[]
-  onClearSearch: () => void
-  onSelectContract?: (lease: Lease) => void
-}
+import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
+import { useMemo } from 'react'
+import { ContractCard } from './ContractCard'
+import { deriveDisplayStatus } from '@/lib/lease-status'
 
 function formatAddress(addr?: Address): string {
   if (!addr) return 'Okänd adress'
   const line1 = [addr.street, addr.number].filter(Boolean).join(' ').trim()
   const line2 = [addr.postalCode, addr.city].filter(Boolean).join(' ').trim()
-  const s = [line1, line2].filter(Boolean).join(', ')
-  return s || 'Okänd adress'
+  return [line1, line2].filter(Boolean).join(', ') || 'Okänd adress'
 }
-
-const fmtDate = (d?: string) =>
-  d ? new Date(d).toLocaleDateString('sv-SE') : undefined
-
-type DisplayStatus = 'active' | 'upcoming' | 'ended'
-
-function toMs(x?: string): number | undefined {
-  if (!x) return undefined
-  const t = new Date(x).getTime()
-  return Number.isNaN(t) ? undefined : t
-}
-
-function deriveLeaseStatus(lease: Lease): DisplayStatus {
-  const now = Date.now()
-  const start = toMs(lease.leaseStartDate)
-  const end = toMs(lease.leaseEndDate)
-
-  if (!start) return 'ended'
-  const terminatedAt = toMs(lease.terminationDate)
-  if (terminatedAt && terminatedAt < now) return 'ended'
-  if (start > now) return 'upcoming'
-  if (end && end < now) return 'ended'
-
-  const lastDebit = toMs(lease.lastDebitDate)
-  const notice = toMs(lease.noticeDate)
-  const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000
-  if (lastDebit && notice && now - lastDebit > NINETY_DAYS) return 'ended'
-
-  return 'active'
-}
-
-function statusBadgeProps(s: DisplayStatus) {
-  if (s === 'upcoming')
-    return { text: 'Kommande', variant: 'secondary' as const }
-  if (s === 'ended') return { text: 'Avslutat', variant: 'outline' as const }
-  return { text: 'Aktiv', variant: 'default' as const }
-}
-
-// prefer terminationDate; otherwise leaseEndDate
-const pickEndDate = (lease: Lease) =>
-  lease.terminationDate ?? lease.leaseEndDate
 
 export function TenantInfo({
   tenant,
   contracts,
   onClearSearch,
-  onSelectContract,
-}: TenantInfoProps) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+}: {
+  tenant: Tenant
+  contracts: Lease[]
+  onClearSearch: () => void
+}) {
+  const { activeContracts, upcomingContracts, endedContracts } = useMemo(() => {
+    const active: Lease[] = []
+    const upcoming: Lease[] = []
+    const ended: Lease[] = []
 
-  const toggleKeys = (leaseId: string) =>
-    setExpanded((prev) => ({ ...prev, [leaseId]: !prev[leaseId] }))
+    contracts.forEach((c) => {
+      const s = deriveDisplayStatus(c)
+      if (s === 'active') active.push(c)
+      else if (s === 'upcoming') upcoming.push(c)
+      else ended.push(c)
+    })
 
-  const sortedContracts = [...contracts].sort((a, b) => {
-    const av = toMs(a.leaseStartDate)
-    const bv = toMs(b.leaseStartDate)
-    const aVal = av ?? Number.MAX_SAFE_INTEGER
-    const bVal = bv ?? Number.MAX_SAFE_INTEGER
-    return aVal - bVal
-  })
+    return {
+      activeContracts: active,
+      upcomingContracts: upcoming,
+      endedContracts: ended,
+    }
+  }, [contracts])
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onClearSearch}>
-          <ArrowLeft className="h-4 w-4" />
-          Tillbaka
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Sökresultat</h2>
+        <Button variant="outline" size="sm" onClick={onClearSearch}>
+          <X className="h-4 w-4 mr-2" />
+          Rensa sökning
         </Button>
       </div>
 
@@ -113,122 +73,78 @@ export function TenantInfo({
               E-post: {tenant.emailAddress}
             </p>
           )}
+          {tenant.phoneNumbers?.[0]?.phoneNumber && (
+            <p className="text-sm text-muted-foreground">
+              Telefon: {tenant.phoneNumbers[0].phoneNumber}
+            </p>
+          )}
           {tenant.address && (
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
               {formatAddress(tenant.address as Address)}
             </p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kontrakt</CardTitle>
-          <CardDescription>
-            Välj ett kontrakt för att visa och hantera nycklar
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {sortedContracts.length === 0 ? (
-            <p className="text-muted-foreground">Inga kontrakt hittades</p>
-          ) : (
-            sortedContracts.map((lease) => {
-              const start = fmtDate(lease.leaseStartDate)
-              const end = fmtDate(pickEndDate(lease))
+      <div className="space-y-4">
+        {activeContracts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-green-600">
+                Aktiva kontrakt ({activeContracts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {activeContracts.map((lease) => (
+                <ContractCard key={lease.leaseId} lease={lease} />
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-              const rentalLabel =
-                lease.rentalPropertyId ||
-                lease.rentalProperty?.rentalPropertyId ||
-                'Okänt objekt'
+        {upcomingContracts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-blue-600">
+                Kommande kontrakt ({upcomingContracts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {upcomingContracts.map((lease) => (
+                <ContractCard key={lease.leaseId} lease={lease} />
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-              const addr1 = formatAddress(lease.address as Address | undefined)
-              const addr2 = formatAddress(
-                lease.rentalProperty?.address as Address | undefined
-              )
-              const addr = addr1 === 'Okänd adress' ? addr2 : addr1
+        {endedContracts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground">
+                Avslutade kontrakt ({endedContracts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {endedContracts.map((lease) => (
+                <ContractCard key={lease.leaseId} lease={lease} />
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-              const monthlyRent = lease.rentInfo?.currentRent?.currentRent
-
-              const status = deriveLeaseStatus(lease)
-              const badge = statusBadgeProps(status)
-
-              const leaseTypeKey = mapLeaseTypeKeyFromRaw(lease.type)
-              const leaseTypeLabel = leaseTypeLabels[leaseTypeKey]
-
-              const isOpen = !!expanded[lease.leaseId]
-
-              return (
-                <Card key={lease.leaseId} className="transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-medium">{rentalLabel}</h3>
-
-                        {leaseTypeLabel && (
-                          <p className="text-xs text-muted-foreground">
-                            Typ: {leaseTypeLabel}
-                          </p>
-                        )}
-
-                        {addr && (
-                          <p className="text-sm text-muted-foreground">
-                            {addr}
-                          </p>
-                        )}
-
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          {start && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Från: {start}
-                            </span>
-                          )}
-                          {end && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Till: {end}
-                            </span>
-                          )}
-                        </div>
-
-                        {typeof monthlyRent === 'number' && (
-                          <p className="text-sm text-muted-foreground">
-                            Hyra: {monthlyRent.toLocaleString('sv-SE')} kr/mån
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant={badge.variant}>{badge.text}</Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            onSelectContract?.(lease)
-                            toggleKeys(lease.leaseId)
-                          }}
-                          aria-expanded={isOpen}
-                          aria-controls={`keys-${lease.leaseId}`}
-                        >
-                          {isOpen ? 'Dölj nycklar' : 'Visa nycklar'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Inline keys list toggle */}
-                    {isOpen && (
-                      <div id={`keys-${lease.leaseId}`} className="pt-4">
-                        <EmbeddedKeysList lease={lease} />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })
+        {activeContracts.length === 0 &&
+          upcomingContracts.length === 0 &&
+          endedContracts.length === 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">
+                  Inga kontrakt att visa.
+                </p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }
