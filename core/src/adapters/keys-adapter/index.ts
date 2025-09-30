@@ -118,6 +118,27 @@ export const KeysApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  search: async (
+    searchParams: Record<string, string | string[] | undefined>
+  ): Promise<AdapterResult<Key[], 'bad-request' | CommonErr>> => {
+    const params = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          params.append(key, value.join(','))
+        } else if (typeof value === 'string') {
+          params.append(key, value)
+        }
+      }
+    }
+
+    const r = await getJSON<{ content: Key[] }>(
+      `${BASE}/keys/search?${params.toString()}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   get: async (
     id: string
   ): Promise<AdapterResult<Key, 'not-found' | CommonErr>> => {
@@ -155,6 +176,27 @@ export const KeysApi = {
 export const KeyLoansApi = {
   list: async (): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
     const r = await getJSON<{ content: KeyLoan[] }>(`${BASE}/key-loans`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  search: async (
+    searchParams: Record<string, string | string[] | undefined>
+  ): Promise<AdapterResult<KeyLoan[], 'bad-request' | CommonErr>> => {
+    const params = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          params.append(key, value.join(','))
+        } else if (typeof value === 'string') {
+          params.append(key, value)
+        }
+      }
+    }
+
+    const r = await getJSON<{ content: KeyLoan[] }>(
+      `${BASE}/key-loans/search?${params.toString()}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
@@ -274,6 +316,27 @@ export const KeySystemsApi = {
 export const LogsApi = {
   list: async (): Promise<AdapterResult<Log[], CommonErr>> => {
     const r = await getJSON<{ content: Log[] }>(`${BASE}/logs`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  search: async (
+    searchParams: Record<string, string | string[] | undefined>
+  ): Promise<AdapterResult<Log[], 'bad-request' | CommonErr>> => {
+    const params = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          params.append(key, value.join(','))
+        } else if (typeof value === 'string') {
+          params.append(key, value)
+        }
+      }
+    }
+
+    const r = await getJSON<{ content: Log[] }>(
+      `${BASE}/logs/search?${params.toString()}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
