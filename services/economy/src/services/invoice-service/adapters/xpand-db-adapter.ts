@@ -9,7 +9,9 @@ import {
   Address,
   Invoice,
   InvoiceTransactionType,
+  invoiceTransactionTypeTranslation,
   PaymentStatus,
+  paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { xledgerDateString, XpandContact } from '../../../common/types'
@@ -489,46 +491,74 @@ export const getContacts = async (
   return contacts
 }
 
-export const getInvoicesByContactCode = async (contactCode: string) => {
-  const invoices = await db
+function transformFromDbInvoice(row: any): Invoice {
+  return {
+    invoiceId: row.invoiceId.trim(),
+    leaseId: row.leaseId?.trim(),
+    amount: row.amount,
+    fromDate: row.fromDate,
+    toDate: row.toDate,
+    invoiceDate: row.invoiceDate,
+    expirationDate: row.expirationDate,
+    debitStatus: row.debitStatus,
+    paymentStatus: getPaymentStatus(row.paymentStatus),
+    transactionType: getTransactionType(row.transactionType),
+    transactionTypeName: row.transactionTypeName.trim(),
+    type: 'Regular',
+  }
+}
+
+export const getInvoicesByContactCode = async (
+  contactKey: string
+): Promise<Invoice[] | undefined> => {
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB'
+  )
+
+  const rows = await db
     .select(
       'krfkh.invoice as invoiceId',
-      'krfkh.paystatus', // ?
-      'krfkh.amount',
-      'krfkh.reduction',
-      'krfkh.vat',
-      'krfkh.roundoff',
+      'krfkh.reference as leaseId',
+      'krfkh.amount as amount',
       'krfkh.fromdate as fromDate',
       'krfkh.todate as toDate',
       'krfkh.invdate as invoiceDate',
-      'krfkh.expdate as expirationDate'
+      'krfkh.expdate as expirationDate',
+      'krfkh.debstatus as debitStatus',
+      'krfkh.paystatus as paymentStatus',
+      'krfkh.keyrevrt as transactionType',
+      'revrt.name as transactionTypeName'
     )
     .from('krfkh')
-    .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
-    .where('cmctc.cmctckod', contactCode)
-    .andWhere('krfkh.type', 'in', [1, 2])
+    .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
+    .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
+    .where({ 'cmctc.cmctckod': contactKey })
+    .orderBy('krfkh.fromdate', 'desc')
+  if (rows && rows.length > 0) {
+    const invoices: Invoice[] = rows
+      .filter((row) => {
+        // Only include invoices with invoiceIds
+        // that have not been deleted (debitStatus 6 = makulerad)
+        if (row.invoiceId && row.debitStatus !== 6) {
+          return true
+        } else {
+          return false
+        }
+      })
+      .map(transformFromDbInvoice)
+    logger.info(
+      { contactCode: contactKey },
+      'Getting invoices by contact code from Xpand DB completed'
+    )
+    return invoices
+  }
 
-  return invoices.map((invoice): Invoice => {
-    return {
-      invoiceId: invoice.invoiceId.trim(),
-      leaseId: 'missing',
-      amount: [
-        invoice.amount,
-        invoice.reduction,
-        invoice.vat,
-        invoice.roundoff,
-      ].reduce((sum, value) => sum + value, 0),
-      fromDate: invoice.fromDate,
-      toDate: invoice.toDate,
-      invoiceDate: invoice.invoiceDate,
-      expirationDate: invoice.expirationDate,
-      debitStatus: 0,
-      paymentStatus: PaymentStatus.Unpaid, // TODO get from paystatus?
-      transactionType: InvoiceTransactionType.Rent, // ?
-      transactionTypeName: '', // ?
-      type: 'Regular',
-    }
-  })
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB completed - no invoices found'
+  )
+  return undefined
 }
 
 export const getRentalInvoices = async (
@@ -665,4 +695,25 @@ export const getInvoiceRows = async (
   )
 
   return convertedInvoiceRows
+}
+
+function getTransactionType(transactionTypeString: any) {
+  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
+    return InvoiceTransactionType.Other
+  }
+
+  let transactionType =
+    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
+
+  if (!transactionType) {
+    transactionType = InvoiceTransactionType.Other
+  }
+
+  return transactionType
+}
+
+function getPaymentStatus(paymentStatusNumber: number) {
+  const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
+
+  return paymentStatus
 }
