@@ -8,6 +8,7 @@ const sixMonthsMs = 182 * 24 * 60 * 60 * 1000
 export const mockedInvoices: Invoice[] = [
   {
     amount: 123,
+    reference: 'foo',
     debitStatus: 1,
     paymentStatus: PaymentStatus.Paid,
     fromDate: new Date(),
@@ -22,6 +23,7 @@ export const mockedInvoices: Invoice[] = [
   },
   {
     amount: 456,
+    reference: 'foo',
     debitStatus: 1,
     paymentStatus: PaymentStatus.Paid,
     fromDate: new Date(Date.now() - thirtyDaysMs),
@@ -36,6 +38,7 @@ export const mockedInvoices: Invoice[] = [
   },
   {
     amount: 789,
+    reference: 'foo',
     debitStatus: 1,
     paymentStatus: PaymentStatus.Unpaid,
     fromDate: new Date(Date.now() - 395 * oneDayMs),
@@ -50,6 +53,7 @@ export const mockedInvoices: Invoice[] = [
   },
   {
     amount: 456,
+    reference: 'foo',
     debitStatus: 1,
     paymentStatus: PaymentStatus.Unpaid,
     fromDate: new Date(Date.now() - thirtyDaysMs),
