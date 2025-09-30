@@ -2,10 +2,15 @@ import knex from 'knex'
 import config from '../../../common/config'
 import {
   InvoiceDataRow,
-  Invoice,
+  Invoice as InvoiceRecord,
   InvoiceDeliveryMethod,
 } from '../../../common/types'
-import { Address } from '@onecore/types'
+import {
+  Address,
+  Invoice,
+  InvoiceTransactionType,
+  PaymentStatus,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { xledgerDateString, XpandContact } from '../../../common/types'
 
@@ -264,7 +269,7 @@ const getAdditionalColumns = async (
 
 export const enrichInvoiceRows = async (
   invoiceDataRows: InvoiceDataRow[],
-  invoices: Record<string, Invoice>
+  invoices: Record<string, InvoiceRecord>
 ): Promise<{
   rows: InvoiceDataRow[]
   errors: { invoiceNumber: string; error: string }[]
@@ -484,6 +489,41 @@ export const getContacts = async (
   return contacts
 }
 
+export const getInvoicesByContactCode = async (contactCode: string) => {
+  const invoices = await db
+    .select(
+      'krfkh.invoice as invoiceId',
+      'krfkh.paystatus', // ?
+      'krfkh.amount',
+      'krfkh.reduction',
+      'krfkh.vat',
+      'krfkh.fromdate as fromDate',
+      'krfkh.todate as toDate',
+      'krfkh.invdate as invoiceDate',
+      'krfkh.expdate as expirationDate'
+    )
+    .from('krfkh')
+    .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
+    .where('cmctc.cmctckod', contactCode)
+
+  return invoices.map((invoice): Invoice => {
+    return {
+      invoiceId: invoice.invoiceId.trim(),
+      leaseId: 'missing',
+      amount: invoice.amount,
+      fromDate: invoice.fromDate,
+      toDate: invoice.toDate,
+      invoiceDate: invoice.invoiceDate,
+      expirationDate: invoice.expirationDate,
+      debitStatus: 0,
+      paymentStatus: PaymentStatus.Unpaid, // TODO get from paystatus?
+      transactionType: InvoiceTransactionType.Rent, // ?
+      transactionTypeName: '', // ?
+      type: 'Regular',
+    }
+  })
+}
+
 export const getRentalInvoices = async (
   fromDate: Date,
   toDate: Date,
@@ -511,6 +551,9 @@ export const getInvoiceRows = async (
   companyId: string,
   invoiceNumbers: string[]
 ) => {
+  if (invoiceNumbers.length === 0) {
+    return []
+  }
   /*invoiceRows = await db('krfkh')
     .innerJoin('krfkr', 'krfkr.keykrfkh', 'krfkh.keykrfkh')
     .innerJoin('cmart', 'cmart.code', 'krfkr.code')

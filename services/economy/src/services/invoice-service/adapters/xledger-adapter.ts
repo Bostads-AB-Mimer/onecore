@@ -92,6 +92,11 @@ const dateFromXledgerDateString = (xledgerDateString: string): Date => {
 }
 
 const transformToInvoice = (invoiceData: any[]): Invoice[] => {
+  const InvoiceTypeMap: Record<number, Invoice['type']> = {
+    600: 'Other',
+    797: 'Regular',
+  }
+
   const invoices = invoiceData.map((invoiceData) => {
     const invoice = {
       invoiceId: invoiceData.node.invoiceNumber,
@@ -108,6 +113,8 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
+      type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
+      description: invoiceData.node.text,
     }
 
     if (invoice.paidAmount === invoice.amount) {
@@ -230,6 +237,7 @@ const invoiceNodeFragment = `
   amount
   invoiceDate
   text
+  headerTransactionSourceDbId
   subledger {
     code
     description
