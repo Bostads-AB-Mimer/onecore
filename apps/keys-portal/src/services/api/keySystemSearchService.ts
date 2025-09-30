@@ -4,60 +4,43 @@ import type { KeySystem } from '@/services/types'
 
 import { GET } from './core/base-api'
 
-export interface KeySystemSearchResult {
-  id: string
-  name: string
-  systemCode: string
-  type: string
-  manufacturer?: string
-  isActive: boolean
+export interface KeySystemSearchParams {
+  q?: string
+  fields?: (keyof KeySystem)[] | string
+  [key: string]: string | string[] | undefined
 }
-
-export type KeySystemSearchField =
-  | 'systemCode'
-  | 'manufacturer'
-  | 'managingSupplier'
-  | 'description'
-  | 'propertyIds'
 
 export class KeySystemSearchService {
   isValidSearchQuery(query: string): boolean {
     return query.trim().length >= 3
   }
 
-  async search(
-    query: string,
-    field: KeySystemSearchField = 'systemCode'
-  ): Promise<KeySystemSearchResult[]> {
-    if (!query.trim() || !this.isValidSearchQuery(query)) {
-      return []
-    }
-
+  async search(params: KeySystemSearchParams): Promise<KeySystem[]> {
     try {
+      const queryParams: Record<string, string> = {}
+
+      // Add all params to query string
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) {
+          if (Array.isArray(value)) {
+            queryParams[key] = value.join(',')
+          } else {
+            queryParams[key] = value
+          }
+        }
+      }
+
       const response = await GET('/key-systems/search', {
         params: {
-          query: {
-            q: query.trim(),
-            field,
-          },
+          query: queryParams,
         },
       })
 
-      if (response.data?.content) {
-        return response.data.content.map((system: KeySystem) => ({
-          id: system.id || '',
-          name: system.name || 'Unknown',
-          systemCode: system.systemCode || '',
-          type: system.type || 'unknown',
-          manufacturer: system.manufacturer,
-          isActive: system.isActive ?? true,
-        }))
-      }
+      return response.data?.content || []
     } catch (error) {
       console.error('Error searching key systems:', error)
+      return []
     }
-
-    return []
   }
 }
 
