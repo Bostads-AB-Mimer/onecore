@@ -38,6 +38,7 @@ export const KeySystemSchema = z.object({
   systemCode: z.string(),
   name: z.string(),
   manufacturer: z.string(),
+  managingSupplier: z.string().nullable().optional(),
   type: KeySystemTypeSchema,
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
