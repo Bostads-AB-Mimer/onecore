@@ -9,7 +9,6 @@ import {
   saveContacts,
   getContacts as getInvoiceContacts,
   markInvoicesAsImported,
-  excludeExportedInvoices,
   closeDb as closeInvoiceDb,
   getInvoicesByChunks,
   getImportedInvoiceNumbers,
@@ -37,7 +36,6 @@ import {
   uploadFile as uploadFileToXledger,
 } from './adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
-import { excelFileToInvoiceDataRows } from './adapters/excel-adapter'
 import { logger } from '@onecore/utilities'
 
 const createRoundOffRow = async (
@@ -99,8 +97,6 @@ export const processInvoiceRows = async (
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   const addedContactCodes: Record<string, boolean> = {}
-
-  //const invoices = await getXpandInvoices(invoiceDataRows)
 
   const rowsByInvoiceNumber: Record<string, InvoiceDataRow[]> = {}
   invoiceDataRows.forEach((invoiceDataRow) => {
@@ -672,6 +668,34 @@ export const missingInvoices = async (batchId: string) => {
   console.log('Only in xpand db', onlyInXpandDb)
 }
 
+const getContractCode = (invoiceRow: InvoiceDataRow) => {
+  if ((invoiceRow.rowType as number) !== 3) {
+    logger.error(
+      { invoiceRow },
+      'Wrong type of invoice row for getting contract code'
+    )
+    throw new Error('Wrong type of invoice row for getting contract code')
+  }
+
+  return (invoiceRow.invoiceRowText as string).split(',')[0]
+}
+
+const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
+  const cleanedInvoiceRows: InvoiceDataRow[] = []
+  let currentContractCode = getContractCode(invoiceRows[0])
+
+  invoiceRows.forEach((invoiceRow) => {
+    if ((invoiceRow.rowType as number) === 3) {
+      currentContractCode = getContractCode(invoiceRow)
+    } else {
+      invoiceRow.contractCode = currentContractCode
+      cleanedInvoiceRows.push(invoiceRow)
+    }
+  })
+
+  return cleanedInvoiceRows
+}
+
 export const importInvoiceRows = async (
   fromDate: Date,
   toDate: Date,
@@ -707,12 +731,11 @@ export const importInvoiceRows = async (
     )
 
     const invoiceRows = await getXpandInvoiceRows(
-      fromDate,
-      toDate,
+      fromDate.getFullYear().toString(),
       companyId,
       invoicesToImport
     )
-    const invoiceDataRows = invoiceRows
+    const invoiceDataRows = cleanInvoiceRows(invoiceRows)
 
     logger.info(
       {
@@ -742,7 +765,6 @@ export const importInvoiceRows = async (
         chunkStart + CHUNK_SIZE,
         invoiceDataRows.length - 1
       )
-      logger.info({ chunkStart, chunkEnd }, 'New chunk')
 
       let endInvoiceNumber = invoiceDataRows[chunkEnd].invoiceNumber
 
