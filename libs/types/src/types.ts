@@ -211,6 +211,8 @@ interface Invoice {
   transactionTypeName: string
   paidAmount?: number
   daysSinceLastDebitDate?: number
+  description?: string
+  type: 'Regular' | 'Other'
 }
 
 interface WaitingList {
