@@ -75,6 +75,165 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /keys/search:
+   *   get:
+   *     summary: Search keys
+   *     description: |
+   *       Search keys with flexible filtering.
+   *       - **OR search**: Use `q` with `fields` for multiple field search
+   *       - **AND search**: Use any Key field parameter for filtering
+   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - Only one OR group is supported, but you can combine it with multiple AND filters
+   *
+   *       Examples:
+   *       - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+   *       - `?keyName=master&createdAt=<2024-12-31` - Key name contains "master" AND created before Dec 31, 2024
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: false
+   *         schema:
+   *           type: string
+   *           minLength: 3
+   *         description: Search query for OR search across fields specified in 'fields' parameter
+   *       - in: query
+   *         name: fields
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName.
+   *       - in: query
+   *         name: id
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: keyName
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: keySequenceNumber
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: flexNumber
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: rentalObjectCode
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: keyType
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: keySystemId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedAt
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved search results
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Key'
+   *       400:
+   *         description: Bad request. Invalid parameters or field names
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/keys/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+
+    try {
+      let query = db(TABLE).select('*')
+
+      // Handle OR search (q with fields)
+      if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3) {
+        const searchTerm = ctx.query.q.trim()
+
+        // Get fields to search across (OR condition)
+        let fieldsToSearch: string[] = []
+
+        if (typeof ctx.query.fields === 'string') {
+          fieldsToSearch = ctx.query.fields.split(',').map(f => f.trim())
+        } else {
+          fieldsToSearch = ['keyName']
+        }
+
+        // Add OR conditions
+        query = query.where((builder) => {
+          fieldsToSearch.forEach((field, index) => {
+            if (index === 0) {
+              builder.where(field, 'like', `%${searchTerm}%`)
+            } else {
+              builder.orWhere(field, 'like', `%${searchTerm}%`)
+            }
+          })
+        })
+      }
+
+      // Handle AND search (individual field parameters) - search any param that's not q or fields
+      const reservedParams = ['q', 'fields']
+      for (const [field, value] of Object.entries(ctx.query)) {
+        if (!reservedParams.includes(field) && typeof value === 'string' && value.trim().length > 0) {
+          const trimmedValue = value.trim()
+
+          // Check if value starts with a comparison operator (>=, <=, >, <)
+          const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
+
+          if (operatorMatch) {
+            const operator = operatorMatch[1]
+            const compareValue = operatorMatch[2].trim()
+            query = query.where(field, operator, compareValue)
+          } else {
+            // No operator, use LIKE for partial matching
+            query = query.where(field, 'like', `%${trimmedValue}%`)
+          }
+        }
+      }
+
+      // Check if at least one search criteria was provided
+      const hasQParam = typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
+      const hasFieldParams = Object.entries(ctx.query).some(([key, value]) =>
+        !reservedParams.includes(key) && typeof value === 'string' && value.trim().length > 0
+      )
+
+      if (!hasQParam && !hasFieldParams) {
+        ctx.status = 400
+        ctx.body = { reason: 'At least one search parameter is required', ...metadata }
+        return
+      }
+
+      const rows = await query
+        .orderBy('keyName', 'asc')
+        .limit(10)
+
+      ctx.status = 200
+      ctx.body = { content: rows, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error searching keys')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /keys/{id}:
    *   get:
    *     summary: Get key by ID
