@@ -142,6 +142,7 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturanummer</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -184,7 +185,10 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
       <TableRow
         hover
         onClick={() => setOpen((prev) => !prev)}
-        sx={{ cursor: 'pointer', userSelect: 'none' }}
+        sx={{
+          cursor: 'pointer',
+          backgroundColor: invoice.type === 'Other' ? '#f5f5f5' : 'inherit',
+        }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -206,41 +210,48 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         <TableCell>
           {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
         </TableCell>
+        <TableCell>
+          {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
+        </TableCell>
       </TableRow>
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
           <Collapse in={open} timeout={0} unmountOnExit>
             <Box margin={1}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>
-                      Hyresartikel
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>
-                      Beskrivning
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>
-                      Utskriftsgrupp
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {invoice.invoiceRows?.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{row.amount}</TableCell>
-                      <TableCell>{row.vat}</TableCell>
-                      <TableCell>{row.totalAmount}</TableCell>
-                      <TableCell>{row.rentArticle}</TableCell>
-                      <TableCell>{row.invoiceRowText}</TableCell>
-                      <TableCell>{row.printGroup}</TableCell>
+              {invoice.type === 'Other' ? (
+                <p>Text: {invoice.description}</p>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>
+                        Hyresartikel
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>
+                        Beskrivning
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>
+                        Utskriftsgrupp
+                      </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {invoice.invoiceRows?.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{row.amount}</TableCell>
+                        <TableCell>{row.vat}</TableCell>
+                        <TableCell>{row.totalAmount}</TableCell>
+                        <TableCell>{row.rentArticle}</TableCell>
+                        <TableCell>{row.invoiceRowText}</TableCell>
+                        <TableCell>{row.printGroup}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </Box>
           </Collapse>
         </TableCell>
