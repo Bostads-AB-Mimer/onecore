@@ -44,7 +44,7 @@ const createRoundOffRow = async (
   invoice: Invoice,
   counterPartCustomers: CounterPartCustomers
 ): Promise<InvoiceDataRow> => {
-  const fromDateString = invoice.fromdate as string //xledgerDateString(invoice.fromdate as Date)
+  const fromDateString = invoice.fromdate as string
   const year = fromDateString.substring(0, 4)
   const roundOffInformation = await getRoundOffInformation(year)
   let totalAccount = '2970'
@@ -76,6 +76,7 @@ const createRoundOffRow = async (
     ledgerAccount,
     contactCode: (invoice.cmctckod as string).trimEnd(),
     tenantName,
+    invoiceTotalAmount: invoice.invoicetotal as number,
   }
 }
 
@@ -123,6 +124,7 @@ export const processInvoiceRows = async (
       cmctckod: invoiceRow.contactCode,
       invoice: invoiceRow.invoiceNumber,
       expdate: invoiceRow.invoiceDueDate,
+      invoicetotal: invoiceRow.invoiceTotalAmount,
     }
   })
 
@@ -283,6 +285,17 @@ export const createLedgerRowsNew = async (
         counterPart ? counterPart.counterPartCode : ''
       )
 
+      if (
+        (customerLedgerRow.amount as number) -
+          (invoiceRows[0].InvoiceTotalAmount as number) >
+        0.01
+      ) {
+        logger.error(
+          { customerLedgerRow, invoiceRow: invoiceRows[0] },
+          'Invoice total does not match ledger total'
+        )
+        throw new Error('Invoice total does not match ledger total')
+      }
       chunkInvoiceRows.push(customerLedgerRow)
     }
 
@@ -773,7 +786,6 @@ export const importInvoiceRows = async (
       invoicesToImport
     )
     const invoiceDataRows = invoiceRows
-    //const invoiceDataRows = await excludeExportedInvoices(invoiceRows)
 
     logger.info(
       {
@@ -784,29 +796,49 @@ export const importInvoiceRows = async (
       'Got invoice rows from xpand db'
     )
 
+    if (invoiceRows.length === 0) {
+      return {
+        batchId: -1,
+        errors: null,
+      }
+    }
+
     const batchId = await createBatch()
     logger.info(`Created new batch: ${batchId}`)
 
     let chunkNum = 0
-    let currentStart = 0
+    let chunkStart = 0
 
-    while (CHUNK_SIZE * chunkNum < invoiceDataRows.length) {
-      const startNum = chunkNum * CHUNK_SIZE
-      const endNum = Math.min(
-        (chunkNum + 1) * CHUNK_SIZE,
-        invoiceDataRows.length
+    while (chunkStart < invoiceDataRows.length) {
+      // Find first row with a new invoice number past the max chunk size
+      let chunkEnd = Math.min(
+        chunkStart + CHUNK_SIZE,
+        invoiceDataRows.length - 1
       )
+      logger.info({ chunkStart, chunkEnd }, 'New chunk')
+
+      let endInvoiceNumber = invoiceDataRows[chunkEnd].invoiceNumber
+
+      while (
+        chunkEnd < invoiceDataRows.length &&
+        invoiceDataRows[chunkEnd].invoiceNumber === endInvoiceNumber
+      ) {
+        chunkEnd++
+      }
+
       logger.info(
         {
-          chunkStart: startNum,
-          chunkEnd: endNum,
+          chunkStart: chunkStart,
+          chunkEnd: chunkEnd - 1,
           totalRows: invoiceDataRows.length,
         },
         'Processing rows'
       )
-      const currentInvoiceDataRows = invoiceDataRows.slice(startNum, endNum)
+      const chunkInvoiceDataRows = invoiceDataRows.slice(chunkStart, chunkEnd)
+      chunkStart = chunkEnd
+
       const contactCodes = await processInvoiceRows(
-        currentInvoiceDataRows,
+        chunkInvoiceDataRows,
         batchId
       )
       const contacts = await getXpandContacts(contactCodes.contacts)
