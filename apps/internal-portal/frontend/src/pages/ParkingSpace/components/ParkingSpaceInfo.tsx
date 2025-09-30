@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import currency from 'currency.js'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { printVacantFrom } from '../../../common/formattingUtils'
@@ -104,7 +105,9 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               <Typography>Hyra inkl. moms *</Typography>
               <Box>
                 <Typography fontWeight="bold">{`${numberFormatter.format(
-                  parkingSpaceListing.rentalObject.monthlyRent * 1.25
+                  currency(
+                    parkingSpaceListing.rentalObject.monthlyRent
+                  ).multiply(1.25).value
                 )}/mån`}</Typography>
               </Box>
             </Box>

@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom'
 import { IconButton } from '@mui/material'
 import Chevron from '@mui/icons-material/ChevronRight'
 import { CloseListing } from '../components/CloseListing'
+import currency from 'currency.js'
 
 export const sharedColumnProps = {
   editable: false,
@@ -74,7 +75,6 @@ export const getColumns = (
       headerName: 'Hyra',
       ...sharedColumnProps,
       valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
-      // valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
       renderCell: (v) => {
         const rent = v.row.rentalObject?.monthlyRent ?? 0
         const showInclVat = v.row.rentalRule === 'NON_SCORED'
@@ -85,7 +85,7 @@ export const getColumns = (
             </span>
             {showInclVat && (
               <span>
-                {`${numberFormatter.format(rent * 1.25)}/mån inkl. moms`}
+                {`${numberFormatter.format(currency(rent).multiply(1.25).value)}/mån inkl. moms`}
               </span>
             )}
           </span>

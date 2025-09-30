@@ -28,9 +28,11 @@
     "@mui/styled-engine-sc": "^6.0.0-alpha.18",
     "@mui/x-data-grid": "^6.19.6",
     "@mui/x-date-pickers": "^7.23.6",
+    "@onecore/types": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-query-devtools": "^5.31.0",
     "axios": "^1.9.0",
+    "currency.js": "^2.0.4",
     "dayjs": "^1.11.13",
     "material-ui-popup-state": "^5.0.10",
     "react": "^18.3.1",
@@ -42,8 +44,7 @@
     "react-toastify": "^10.0.5",
     "react-transition-group": "^4.4.5",
     "styled-components": "^6.1.8",
-    "zod": "^3.25.67",
-    "@onecore/types": "workspace:*"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.0",
