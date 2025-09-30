@@ -7,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
 
-/** Seeded number in [min,max], stable per (leaseId, suffix) */
 function seededRange(
   leaseId: string,
   suffix: string,
@@ -22,38 +21,34 @@ function seededRange(
   return (hash % (max - min + 1)) + min
 }
 
-/** One fixed object number (1..999) per type on a lease (e.g., Lägenhet 945) */
 function objectNumberForType(leaseId: string, type: KeyType): number {
   return seededRange(leaseId, `${type}-obj`, 1, 999)
 }
 
-/** Generate mock keys with the exact requested ranges */
 function generateMockKeys(leaseId: string): Key[] {
   const keys: Key[] = []
   let counter = 1
 
-  // Only mock these four types; others 0 so they won't render.
   const spec: Partial<Record<KeyType, [number, number]>> = {
-    LGH: [2, 5], // Lägenhet: 2–5 keys to the same apartment number
-    PB: [1, 3], // Postbox: 1–3 keys to the same postbox number
-    TP: [1, 3], // Trapphus: 1–3 keys to the same trapphus number
-    GEM: [1, 3], // Gemensamt: 1–3 keys to the same shared-area number
+    LGH: [2, 5],
+    PB: [1, 3],
+    TP: [1, 3],
+    GEM: [1, 3],
     // HUS, FS, HN: intentionally omitted (0)
   }
 
   ;(Object.keys(spec) as KeyType[]).forEach((type) => {
     const [min, max] = spec[type]!
-    const objNo = objectNumberForType(leaseId, type) // 1..999, fixed per lease+type
+    const objNo = objectNumberForType(leaseId, type)
     const count = seededRange(leaseId, `${type}-count`, min, max)
 
     for (let i = 1; i <= count; i++) {
       keys.push({
         id: `${type}-${counter}`,
-        keyName: `${KeyTypeLabels[type]} ${objNo}`, // same object; LÖP differentiates keys
-        keyType: type as Key['keyType'] & KeyType, // ensure compatible with API's union
-        keySequenceNumber: i, // LÖP: 1..count
-        flexNumber: seededRange(leaseId, `${type}-flex-${i}`, 1, 3), // 1..3 placeholder
-        // optional fields from API type — safe placeholders
+        keyName: `${KeyTypeLabels[type]} ${objNo}`,
+        keyType: type as Key['keyType'] & KeyType,
+        keySequenceNumber: i,
+        flexNumber: seededRange(leaseId, `${type}-flex-${i}`, 1, 3),
         rentalObjectCode: String(objNo),
         keySystemId: undefined,
         createdAt: new Date().toISOString(),
