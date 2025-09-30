@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import {
   getInvoiceByInvoiceNumber,
-  getInvoicesByContactCode,
+  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
 } from './adapters/xledger-adapter'
 import {
   saveContacts,
@@ -10,6 +10,7 @@ import {
 } from './adapters/invoice-data-db-adapter'
 import {
   getInvoiceRows,
+  getInvoicesByContactCode as getXpandInvoicesByContactCode,
   getContacts as getXpandContacts,
 } from './adapters/xpand-db-adapter'
 import { syncContact, transformContact } from './adapters/xledger-adapter'
@@ -25,12 +26,20 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const contactCode = ctx.params.contactCode
     try {
-      const invoices = await getInvoicesByContactCode(contactCode)
+      const xledgerInvoices =
+        (await getXledgerInvoicesByContactCode(contactCode)) ?? []
+      const xpandInvoices = await getXpandInvoicesByContactCode(contactCode)
 
-      if (!invoices) {
-        ctx.status = 404
-        return
-      }
+      const xledgerInvoiceIds = xledgerInvoices.map(
+        (invoice) => invoice.invoiceId
+      )
+
+      const invoices = [
+        ...xledgerInvoices,
+        ...xpandInvoices.filter(
+          (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
+        ),
+      ]
 
       const invoiceRows = await getInvoiceRows(
         new Date(),
