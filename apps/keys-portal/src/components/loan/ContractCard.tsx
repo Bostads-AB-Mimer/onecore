@@ -1,13 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, Home, Car, Package, Building } from 'lucide-react'
-import type { Lease } from '@/services/types'
+import {
+  Calendar,
+  Home,
+  Car,
+  Package,
+  Building,
+  KeyRound,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
+import type { Lease, KeyType } from '@/services/types'
+import { KeyTypeLabels } from '@/services/types'
 import { EmbeddedKeysList } from './EmbeddedKeysList'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
+import { generateMockKeys, countKeysByType } from '@/mockdata/mock-keys'
+import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
 const getLeaseTypeIcon = (type: string) => {
   const normalizedType = (type ?? '').toLowerCase()
@@ -36,17 +48,44 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
   return { label: 'Aktivt', variant: 'default' as const }
 }
 
+type Props = {
+  lease: Lease
+  defaultOpen?: boolean
+  rentalAddress?: string
+}
+
 export function ContractCard({
   lease,
   defaultOpen = false,
-}: {
-  lease: Lease
-  defaultOpen?: boolean
-}) {
+  rentalAddress,
+}: Props) {
   const [open, setOpen] = useState(defaultOpen)
+  const [addressStr, setAddressStr] = useState<string | null>(
+    rentalAddress ?? null
+  )
+  const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (rentalAddress) return
+      setAddrLoading(true)
+      const addr = await rentalObjectSearchService.getAddressByRentalId(
+        lease.rentalPropertyId
+      )
+      if (!cancelled) {
+        setAddressStr(addr)
+        setAddrLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [lease.rentalPropertyId, rentalAddress])
+
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
-  const address = lease.address || lease.rentalProperty?.address
 
   const startStr = format(new Date(lease.leaseStartDate), 'dd MMM yyyy', {
     locale: sv,
@@ -55,6 +94,16 @@ export function ContractCard({
   const endStr = endIso
     ? format(new Date(endIso), 'dd MMM yyyy', { locale: sv })
     : undefined
+
+  const mockKeys = useMemo(
+    () => generateMockKeys(lease.leaseId),
+    [lease.leaseId]
+  )
+  const keyCounts = useMemo(() => countKeysByType(mockKeys), [mockKeys])
+  const totalKeys = mockKeys.length
+  const hasAnyKeys = totalKeys > 0
+  const order: KeyType[] = ['LGH', 'PB', 'TP', 'GEM', 'FS', 'HN', 'HUS']
+
   const keysRegionId = `keys-${lease.leaseId}`
 
   return (
@@ -76,8 +125,19 @@ export function ContractCard({
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
               aria-controls={keysRegionId}
+              className="flex items-center gap-1"
             >
-              {open ? 'Dölj nycklar' : 'Visa nycklar'}
+              {open ? (
+                <>
+                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                  Dölj nycklar
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  Visa nycklar
+                </>
+              )}
             </Button>
             <Badge variant={variant}>{label}</Badge>
           </div>
@@ -85,12 +145,9 @@ export function ContractCard({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {address && (
-          <div className="text-sm text-muted-foreground">
-            {address.street} {address.number}, {address.postalCode}{' '}
-            {address.city}
-          </div>
-        )}
+        <div className="text-sm text-muted-foreground min-h-[1rem]">
+          {addrLoading ? 'Hämtar adress…' : (addressStr ?? 'Okänd adress')}
+        </div>
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
@@ -101,6 +158,40 @@ export function ContractCard({
           </div>
           <div className="text-xs">Objekt-ID: {lease.rentalPropertyId}</div>
         </div>
+
+        {hasAnyKeys && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <KeyRound className="h-4 w-4 opacity-80" aria-hidden="true" />
+                <span>Nycklar</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {order.map((t) => {
+                  const count = keyCounts[t] ?? 0
+                  if (!count) return null
+                  return (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded-full border px-2 h-6 text-xs text-foreground/80"
+                      aria-label={`${KeyTypeLabels[t]}: ${count}`}
+                      title={`${KeyTypeLabels[t]}: ${count}`}
+                    >
+                      {KeyTypeLabels[t]}
+                      <span className="inline-flex items-center justify-center rounded-full bg-muted px-1 min-w-[1.25rem] h-4 text-[11px] font-medium">
+                        {count}
+                      </span>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Antal Nycklar:{' '}
+              <span className="font-medium text-foreground">{totalKeys}</span>
+            </span>
+          </div>
+        )}
 
         {lease.tenants && lease.tenants.length > 0 && (
           <div className="text-sm text-muted-foreground">
