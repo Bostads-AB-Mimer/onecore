@@ -132,7 +132,7 @@ function Leases(props: { leases: Lease[] }) {
 
 function Invoices(props: { invoices: InvoiceWithRows[] }) {
   return (
-    <Table>
+    <Table stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
         <TableRow>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturadatum</TableCell>
@@ -209,7 +209,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
           <Collapse in={open} timeout={0} unmountOnExit>
             <Box margin={1}>
               {invoice.type === 'Other' ? (
