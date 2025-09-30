@@ -15,7 +15,7 @@ export const InvoiceRowSchema = z.object({
   invoiceRowText: z.string(),
   projectCode: z.string(),
   rentArticle: z.string(),
-  roundOff: z.string(),
+  roundoff: z.number(),
   tenantName: z.string(),
   toDate: z.coerce.date(),
   totalAmount: z.number(),

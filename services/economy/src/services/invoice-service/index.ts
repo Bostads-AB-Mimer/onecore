@@ -62,8 +62,7 @@ export const routes = (router: KoaRouter) => {
 
       const invoicesWithRows = invoices.map((invoice) => {
         const rows = invoiceRows.filter(
-          (row: { invoiceNumber: string }) =>
-            row.invoiceNumber === invoice.invoiceId
+          (row) => row.invoiceNumber === invoice.invoiceId
         )
 
         return { ...invoice, invoiceRows: rows }
