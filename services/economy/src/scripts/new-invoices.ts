@@ -20,13 +20,19 @@ const getInvoices = async () => {
 
 const importRentalInvoicesScript = async () => {
   const companyId = '001'
-  for (let month = 9; month >= 0; month--) {
+  for (let month = 8; month >= 8; month--) {
     logger.info({ month }, 'Processing month')
     const result = await importInvoiceRows(
+      new Date('2025-09-01T00:00:00.000Z'),
+      new Date('2025-10-01T00:00:00.000Z'),
+      companyId
+    )
+
+    /*    const result = await importInvoiceRows(
       new Date(2025, month, 1),
       new Date(2025, month + 1, 1),
       companyId
-    )
+    )*/
     const batchId = result.batchId
 
     logger.info({ batchId }, 'Creating contact file for batch')

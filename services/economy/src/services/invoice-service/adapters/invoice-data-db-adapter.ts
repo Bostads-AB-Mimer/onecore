@@ -60,6 +60,7 @@ const convertToDbRow = (row: InvoiceDataRow, batchId: string) => {
     oCR: row.invoiceNumber,
     ledgerAccount: row.ledgerAccount,
     totalAccount: row.totalAccount,
+    invoiceTotalAmount: row.invoiceTotalAmount,
   }
 }
 

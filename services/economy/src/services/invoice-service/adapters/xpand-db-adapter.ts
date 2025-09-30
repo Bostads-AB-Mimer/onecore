@@ -48,7 +48,7 @@ const db = knex({
     password: config.xpandDatabase.password,
     port: config.xpandDatabase.port,
     database: config.xpandDatabase.database,
-    requestTimeout: 15000,
+    requestTimeout: 60000,
   },
   pool: { min: 0, max: 10 },
   client: 'mssql',
@@ -149,13 +149,17 @@ const _getRentArticleDetails = async (
 
 const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
   const specificRules: RentalSpecificRules = {}
-  const specificRulesBuildings = await db('repsk')
+  const specificRulesBuildingsQuery = db('repsk')
     .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
     .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
     .where('year', year)
     .andWhereLike('keyrektk', 'INTAKT%')
     .whereIn('hyresid', rentalIds)
     .distinct()
+
+  console.log('building rules', specificRulesBuildingsQuery.toSQL().toNative())
+
+  const specificRulesBuildings = await specificRulesBuildingsQuery
 
   specificRulesBuildings.forEach((row) => {
     specificRules[row['hyresid'].toString().trimEnd()] = {
@@ -164,13 +168,17 @@ const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
     }
   })
 
-  const specificRulesAreas = await db('repsk')
+  const specificRulesAreasQuery = db('repsk')
     .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
     .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
     .where('year', year)
     .andWhereLike('keyrektk', 'INTAKT%')
     .whereIn('hyresid', rentalIds)
     .distinct()
+
+  console.log('area rules', specificRulesAreasQuery.toSQL().toNative())
+
+  const specificRulesAreas = await specificRulesAreasQuery
 
   specificRulesAreas.forEach((row) => {
     specificRules[row['hyresid'].toString().trimEnd()] = {
@@ -196,6 +204,10 @@ const getRentalRowSpecificRule = async (
     .andWhere('repst.name', 'Hyresrad')
     .andWhere('hyobj.hyobjben', row.contractCode)
     .andWhere('cmart.code', row.rentArticle)
+
+  if (rowSpecificRuleResult.length > 1) {
+    console.log('multiple results', rowSpecificRuleResult)
+  }
 
   if (rowSpecificRuleResult && rowSpecificRuleResult.length > 0) {
     return {
@@ -277,20 +289,9 @@ export const enrichInvoiceRows = async (
   const errors: { invoiceNumber: string; error: string }[] = []
 
   invoiceDataRows.forEach((row) => {
-    /*const invoice = invoices.find((invoice) => {
-      return (
-        (row.invoiceNumber as string).localeCompare(
-          (invoice.invoice as string).trimEnd()
-        ) === 0
-      )
-    })*/
     const invoice = invoices[row.invoiceNumber]
 
     if (invoice) {
-      /*      row.invoiceDate = xledgerDateString(invoice.invdate as Date)
-      row.invoiceFromDate = xledgerDateString(invoice.fromdate as Date)
-      row.invoiceToDate = xledgerDateString(invoice.todate as Date)
-      row.invoiceDueDate = xledgerDateString(invoice.expdate as Date)*/
       row.invoiceDate = invoice.invdate as string
       row.invoiceFromDate = invoice.fromdate as string
       row.invoiceToDate = invoice.todate as string
@@ -322,10 +323,6 @@ export const enrichInvoiceRows = async (
 
   const rentalIds = Object.keys(rentalIdMap)
   const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
-  /*const rentArticleDetails = await getRentArticleDetails(
-    '2025',
-    invoiceDataRows[0].company === '006'
-  )*/
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
@@ -576,20 +573,25 @@ export const getRentalInvoices = async (
   toDate: Date,
   companyId: string
 ) => {
+  return [{ invoice: '552509353156153' }]
+  /*const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
+
+  console.log(keycode, companyId, fromDate, toDate)
+
   const rentalInvoiceNumbers = await db.raw(
-    "select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
+    'select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
   		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
 	    inner join cmart on cmart.code = krfkr.code \
 	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
       inner Join repsk on cmart.keycmart = repsk.keycode \
       inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
+      where (repsr.keycode = ?) \
       and cmcmp.code = ? \
-      and krfkh.fromdate >= ? AND krfkh.fromdate < ?",
-    [companyId, fromDate, toDate]
+      and krfkh.fromdate >= ? AND krfkh.fromdate < ?',
+    [keycode, companyId, fromDate, toDate]
   )
 
-  return rentalInvoiceNumbers
+  return rentalInvoiceNumbers*/
 }
 
 export const getInvoiceRows = async (
@@ -601,37 +603,28 @@ export const getInvoiceRows = async (
   if (invoiceNumbers.length === 0) {
     return []
   }
-  /*invoiceRows = await db('krfkh')
-    .innerJoin('krfkr', 'krfkr.keykrfkh', 'krfkh.keykrfkh')
-    .innerJoin('cmart', 'cmart.code', 'krfkr.code')
-	  .innerJoin('cmarg',' cmart.keycmarg','cmarg.keycmarg')
-      .innerJoin('repsk',' cmart.keycmart','repsk.keycode')
-      .innerJoin repsr','repsk.keyrepsr',' repsr.keyrepsr
-      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA')
-      and keyrektk = 'INTAKT'
-      and repsk.year = '2025'
-      and krfkh.fromdate >= '2025-10-01' --AND krfkh.todate <= '2025-10-31'*/
 
+  const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
   const invoiceRowsQuery = db.raw(
     "select cmart.code as rentArticle, cmart.utskrgrupp as printGroup, krfkr.reduction as rowReduction, \
-      krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
-      krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, krfkh.expdate as expirationDate, * \
-      from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
-      inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
-  		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
-    	inner join cmart on cmart.code = krfkr.code \
-	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
-      inner Join repsk on cmart.keycmart = repsk.keycode \
-      inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where (repsr.keycode = 'FADBT_HYRA' OR repsr.keycode = 'FADBT_INTHYRA') \
-      and keyrektk = 'INTAKT' \
-      and repsk.year = '2025' \
-      and cmcmp.code = ? \
-      and invoice in (" +
+        krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
+        krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, krfkh.expdate as expirationDate, \
+        krfkh.amount + krfkh.vat + roundoff + krfkh.reduction as invoiceTotal, * \
+      from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \
+        inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
+        inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
+        left join cmart on cmart.keycmart = krfkr.keycmart \
+        left join cmarg on cmart.keycmarg = cmarg.keycmarg \
+        left join repsk on cmart.keycmart = repsk.keycode \
+        left join repsr on repsk.keyrepsr = repsr.keyrepsr \
+      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = '2025') or \
+        (repsr.keycode is null and keyrektk is null and repsk.year is null)) and \
+        cmcmp.code = ? \
+        and invoice in (" +
       invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
       ') \
-      order by invoice asc',
-    [companyId]
+      order by invoice asc, krfkr.printsort asc',
+    [keycode, companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery
@@ -690,6 +683,7 @@ export const getInvoiceRows = async (
         fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
         toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
         printGroup: trim(invoiceRow['printGroup']),
+        invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
       }
 
       if (type === 2) {
