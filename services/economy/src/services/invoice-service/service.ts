@@ -735,7 +735,7 @@ export const importInvoiceRows = async (
       companyId,
       invoicesToImport
     )
-    const invoiceDataRows = cleanInvoiceRows(invoiceRows)
+    const invoiceDataRows = cleanInvoiceRows(invoiceRows as any)
 
     logger.info(
       {

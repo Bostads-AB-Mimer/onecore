@@ -4,16 +4,18 @@ import {
   InvoiceDataRow,
   Invoice as InvoiceRecord,
   InvoiceDeliveryMethod,
+  xledgerDateString,
 } from '../../../common/types'
 import {
   Address,
   Invoice,
+  InvoiceRow,
   InvoiceTransactionType,
   invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
-import { xledgerDateString, XpandContact } from '../../../common/types'
+import { XpandContact } from '../../../common/types'
 
 type RentArticleDetails = Record<
   string,
@@ -563,7 +565,7 @@ export const getInvoiceRows = async (
   year: string,
   companyId: string,
   invoiceNumbers: string[]
-) => {
+): Promise<InvoiceRow[]> => {
   if (invoiceNumbers.length === 0) {
     return []
   }
