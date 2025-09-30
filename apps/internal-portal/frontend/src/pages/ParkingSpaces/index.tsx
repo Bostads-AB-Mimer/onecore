@@ -1,26 +1,20 @@
-import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
+import { Box, Button, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
-import { type GridColDef } from '@mui/x-data-grid'
-import Chevron from '@mui/icons-material/ChevronRight'
-import {
-  GetListingWithApplicantFilterByType,
-  Listing,
-  ListingStatus,
-} from '@onecore/types'
+import { GetListingWithApplicantFilterByType, Listing } from '@onecore/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { TabContext, TabPanel } from '@mui/lab'
 
-import { DataGridTable, SearchBar, Tab, Tabs } from '../../components'
-import {
-  ListingWithOffer,
-  useParkingSpaceListings,
-} from './hooks/useParkingSpaceListings'
+import { SearchBar, Tab, Tabs } from '../../components'
+import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
-import { CreateApplicantForListing } from './components/create-applicant-for-listing/CreateApplicantForListing'
-import { DeleteListing } from './components/DeleteListing'
-import { CloseListing } from './components/CloseListing'
-import { printVacantFrom } from '../../common/formattingUtils'
-import { UnpublishListing } from './components/UnpublishListing'
+import {
+  getActionColumns,
+  getColumns,
+  getOfferedColumns,
+  getTab,
+} from './helpers/columnsHelper'
+import { Listings } from './components/Listings'
+import { filterListings } from './helpers/listingsHelper'
 
 const ParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
@@ -127,7 +121,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getHistoricalActionColumns()
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -137,7 +131,7 @@ const ParkingSpaces = () => {
           <TabPanel value="needs-republish" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getRepublishActionColumns()
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -148,269 +142,6 @@ const ParkingSpaces = () => {
       </TabContext>
     </>
   )
-}
-
-const Listings = (props: {
-  columns: Array<GridColDef>
-  rows: Array<Listing>
-  loading: boolean
-}) => (
-  <DataGridTable
-    initialState={{
-      sorting: {
-        sortModel: [{ field: 'queuePoints', sort: 'desc' }],
-      },
-      pagination: { paginationModel: { pageSize: 30 } },
-    }}
-    pageSizeOptions={[10, 30, 60, 100]}
-    slots={{
-      noRowsOverlay: () => (
-        <Stack paddingTop="1rem" alignItems="center" justifyContent="center">
-          <Typography fontSize="14px">
-            Det finns inga annonser att visa.
-          </Typography>
-        </Stack>
-      ),
-    }}
-    columns={props.columns}
-    rows={props.rows}
-    getRowId={(row) => row.id}
-    loading={props.loading}
-    rowHeight={72}
-    disableRowSelectionOnClick
-    autoHeight
-  />
-)
-
-const sharedColumnProps = {
-  editable: false,
-  flex: 1,
-}
-
-const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
-  return [
-    {
-      field: 'actions',
-      type: 'actions',
-      flex: 1,
-      minWidth: 250,
-      cellClassName: 'actions',
-      getActions: ({ row }) => [
-        <UnpublishListing key={1} listingId={row.id} />,
-        <CreateApplicantForListing
-          key={1}
-          disabled={
-            row.status !== ListingStatus.Active ||
-            row.rentalRule === 'NON_SCORED'
-          }
-          listing={row}
-        />,
-      ],
-    },
-    {
-      field: 'action-link',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      flex: 0.5,
-      disableColumnMenu: true,
-      renderCell: (v) => (
-        <Link to={`/bilplatser/${v.id}`}>
-          <IconButton sx={{ color: 'black' }}>
-            <Chevron />
-          </IconButton>
-        </Link>
-      ),
-    },
-  ]
-}
-
-const getHistoricalActionColumns = (): Array<GridColDef<ListingWithOffer>> => [
-  {
-    field: 'action-link',
-    headerName: '',
-    sortable: false,
-    filterable: false,
-    flex: 0.5,
-    disableColumnMenu: true,
-    renderCell: (v) => (
-      <Link to={`/bilplatser/${v.id}`}>
-        <IconButton sx={{ color: 'black' }}>
-          <Chevron />
-        </IconButton>
-      </Link>
-    ),
-  },
-]
-
-const getRepublishActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
-  return [
-    {
-      field: 'actions',
-      type: 'actions',
-      flex: 1,
-      minWidth: 250,
-      cellClassName: 'actions',
-      getActions: ({ row }) => [<CloseListing key={0} listingId={row.id} />],
-    },
-    {
-      field: 'action-link',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      flex: 0.5,
-      disableColumnMenu: true,
-      renderCell: (v) => (
-        <Link to={`/bilplatser/${v.id}`}>
-          <IconButton sx={{ color: 'black' }}>
-            <Chevron />
-          </IconButton>
-        </Link>
-      ),
-    },
-  ]
-}
-
-const getOfferedColumns = (
-  dateFormatter: Intl.DateTimeFormat,
-  numberFormatter: Intl.NumberFormat
-) =>
-  getColumns(dateFormatter, numberFormatter).concat([
-    {
-      field: 'offer.expiresAt',
-      headerName: 'Sista svarsdatum',
-      ...sharedColumnProps,
-      valueGetter: (v) => v.row.offer?.expiresAt,
-      valueFormatter: (v) =>
-        v.value ? dateFormatter.format(new Date(v.value)) : 'N/A',
-    },
-  ])
-
-const getColumns = (
-  dateFormatter: Intl.DateTimeFormat,
-  numberFormatter: Intl.NumberFormat
-): Array<GridColDef<ListingWithOffer>> => {
-  return [
-    {
-      field: 'address',
-      headerName: 'Bilplats',
-      ...sharedColumnProps,
-      flex: 1.25,
-      renderCell: (v) => (
-        <span>
-          <span style={{ display: 'block' }}>{v.row.rentalObject.address}</span>
-          {v.row.rentalObjectCode}
-        </span>
-      ),
-    },
-    {
-      field: 'districtCaption',
-      headerName: 'Distrikt',
-      ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.districtCaption ?? '',
-    },
-    {
-      field: 'residentialAreaCaption',
-      headerName: 'Område',
-      ...sharedColumnProps,
-      valueGetter: (params) =>
-        params.row.rentalObject?.residentialAreaCaption ?? '',
-    },
-    {
-      field: 'objectTypeCaption',
-      headerName: 'Bilplatstyp',
-      ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.objectTypeCaption ?? '',
-    },
-    {
-      field: 'rentalRule',
-      headerName: 'Uthyrningsmetod',
-      ...sharedColumnProps,
-      valueGetter: (params) => {
-        if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
-        if (params.row.rentalRule === 'SCORED') return 'Intern'
-        return ''
-      },
-    },
-    {
-      field: 'monthlyRent',
-      headerName: 'Hyra',
-      ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
-      valueFormatter: (v) => `${numberFormatter.format(v.value)}/mån`,
-    },
-    {
-      field: 'applicants',
-      headerName: 'Sökande',
-      ...sharedColumnProps,
-      flex: 0.75,
-      valueFormatter: (v) => v.value.length,
-    },
-    {
-      field: 'publishedTo',
-      headerName: 'Publicerad T.O.M',
-      ...sharedColumnProps,
-      valueFormatter: (v) =>
-        v.value ? dateFormatter.format(new Date(v.value)) : '-',
-    },
-    {
-      field: 'vacantFrom',
-      headerName: 'Ledig FR.O.M',
-      ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.vacantFrom ?? '',
-      valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
-    },
-  ]
-}
-
-const filterListings = (
-  listings: Array<Listing>,
-  q?: string
-): Array<Listing> => {
-  if (!q) return listings
-
-  return listings.filter((l) => {
-    const containsRentalObjectCode = l.rentalObjectCode
-      .toLowerCase()
-      .includes(q.toLowerCase())
-
-    if (!l.applicants) return containsRentalObjectCode
-
-    const containsContactCode = l.applicants.some((a) =>
-      a.contactCode.toLowerCase().includes(q.toLowerCase())
-    )
-
-    const containsNationalRegistrationNumber = l.applicants.some((a) =>
-      a.nationalRegistrationNumber?.includes(q)
-    )
-
-    return (
-      containsContactCode ||
-      containsNationalRegistrationNumber ||
-      containsRentalObjectCode
-    )
-  })
-}
-
-const tabMap: Record<
-  GetListingWithApplicantFilterByType,
-  GetListingWithApplicantFilterByType
-> = {
-  'ready-for-offer': 'ready-for-offer',
-  published: 'published',
-  offered: 'offered',
-  historical: 'historical',
-  'needs-republish': 'needs-republish',
-  all: 'all',
-}
-
-const getTab = (v: string | null): GetListingWithApplicantFilterByType => {
-  if (!v) return 'published'
-  if (v in tabMap) {
-    return v as GetListingWithApplicantFilterByType
-  } else {
-    return 'published'
-  }
 }
 
 export default ParkingSpaces
