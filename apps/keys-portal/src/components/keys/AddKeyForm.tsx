@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useSearch } from '@/hooks/useSearch'
+import { useDebounce } from '@/utils/debounce'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,12 +47,22 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   const [isSearching, setIsSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Key system search functionality state
-  const [keySystemSearchResults, setKeySystemSearchResults] = useState<
-    KeySystemSearchResult[]
-  >([])
-  const [isKeySystemSearching, setIsKeySystemSearching] = useState(false)
+  // Key system search functionality state with debouncing
   const [keySystemSearchQuery, setKeySystemSearchQuery] = useState('')
+  const [debouncedKeySystemQuery, setDebouncedKeySystemQuery] = useState('')
+
+  // Debounce key system search query (500ms delay like internal portal)
+  const updateDebouncedQuery = useDebounce((query: string) => {
+    setDebouncedKeySystemQuery(query)
+  }, 500)
+
+  // Use the reusable search hook
+  console.log('🔍 Debounced query:', debouncedKeySystemQuery, 'Length:', debouncedKeySystemQuery.length)
+  const keySystemsQuery = useSearch(
+    (query: string) => keySystemSearchService.searchBySystemCode(query),
+    'search-key-systems',
+    debouncedKeySystemQuery
+  )
 
   // Effect hook that triggers rental object search when searchQuery changes
   useEffect(() => {
@@ -86,39 +98,10 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     performSearch()
   }, [searchQuery])
 
-  // Effect hook that triggers key system search when keySystemSearchQuery changes
+  // Trigger debounced search when query changes
   useEffect(() => {
-    const performKeySystemSearch = async () => {
-      // Clear results if search query is empty
-      if (keySystemSearchQuery.trim().length === 0) {
-        setKeySystemSearchResults([])
-        setIsKeySystemSearching(false)
-        return
-      }
-
-      // Only search if the system code looks valid (minimum length of 3)
-      if (keySystemSearchQuery.trim().length < 3) {
-        setKeySystemSearchResults([])
-        setIsKeySystemSearching(false)
-        return
-      }
-
-      // Perform the actual search
-      setIsKeySystemSearching(true)
-      try {
-        const results =
-          await keySystemSearchService.searchBySystemCode(keySystemSearchQuery)
-        setKeySystemSearchResults(results)
-      } catch (error) {
-        console.error('Key system search error:', error)
-        setKeySystemSearchResults([])
-      } finally {
-        setIsKeySystemSearching(false)
-      }
-    }
-
-    performKeySystemSearch()
-  }, [keySystemSearchQuery])
+    updateDebouncedQuery(keySystemSearchQuery)
+  }, [keySystemSearchQuery, updateDebouncedQuery])
 
   // Handle rental object input changes and trigger search
   const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,8 +127,8 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   // Handle selection of a key system search result from the dropdown
   const handleSelectKeySystemResult = (result: KeySystemSearchResult) => {
     setFormData((prev) => ({ ...prev, keySystemName: result.systemCode }))
-    setKeySystemSearchResults([])
     setKeySystemSearchQuery('')
+    setDebouncedKeySystemQuery('')
   }
 
   // Handle form submission and validation
@@ -178,9 +161,8 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setSearchResults([])
     setSearchQuery('')
     setIsSearching(false)
-    setKeySystemSearchResults([])
     setKeySystemSearchQuery('')
-    setIsKeySystemSearching(false)
+    setDebouncedKeySystemQuery('')
   }
 
   // Handle form cancellation and reset form state
@@ -198,9 +180,8 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setSearchResults([])
     setSearchQuery('')
     setIsSearching(false)
-    setKeySystemSearchResults([])
     setKeySystemSearchQuery('')
-    setIsKeySystemSearching(false)
+    setDebouncedKeySystemQuery('')
   }
 
   return (
@@ -332,16 +313,16 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                   onChange={handleKeySystemChange}
                   placeholder="t.ex. ABC123"
                 />
-                {isKeySystemSearching && (
+                {keySystemsQuery.isFetching && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
                   </div>
                 )}
               </div>
 
-              {keySystemSearchResults.length > 0 && (
+              {!keySystemsQuery.isFetching && keySystemsQuery.data && keySystemsQuery.data.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {keySystemSearchResults.map((result, index) => (
+                  {keySystemsQuery.data.map((result, index) => (
                     <button
                       key={`${result.id}-${index}`}
                       type="button"

@@ -718,6 +718,81 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-systems/search:
+   *   get:
+   *     summary: Search key systems by system code
+   *     description: Search key systems based on a query string matching the systemCode field
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *           minLength: 3
+   *         description: The search query string (minimum 3 characters)
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved search results
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeySystem'
+   *       400:
+   *         description: Bad request. Query parameter must be at least 3 characters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-systems/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q'])
+
+    if (typeof ctx.query.q !== 'string') {
+      ctx.status = 400
+      ctx.body = { reason: 'Invalid query parameter', ...metadata }
+      return
+    }
+
+    if (ctx.query.q.trim().length < 3) {
+      ctx.status = 400
+      ctx.body = { reason: 'Query must be at least 3 characters', ...metadata }
+      return
+    }
+
+    const result = await KeySystemsApi.search(ctx.query.q.trim())
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { reason: 'Query must be at least 3 characters', ...metadata }
+        return
+      }
+      logger.error({ err: result.err, metadata }, 'Error searching key systems')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /key-systems/{id}:
    *   get:
    *     summary: Get key system by ID
