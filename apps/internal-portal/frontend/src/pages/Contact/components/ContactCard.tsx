@@ -135,12 +135,12 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
     <Table stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
         <TableRow>
+          <TableCell sx={{ fontWeight: 'bold' }}>Fakturanummer</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturadatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Förfallodatum</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Fakturanummer</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -197,15 +197,15 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         }}
         aria-expanded={open}
       >
+        <TableCell>{invoice.invoiceId}</TableCell>
         <TableCell>{yyyymmdd(new Date(invoice.invoiceDate))}</TableCell>
         <TableCell>{yyyymmdd(new Date(invoice.expirationDate))}</TableCell>
-        <TableCell>{invoice.invoiceId}</TableCell>
         <TableCell>{invoice.amount}</TableCell>
         <TableCell>
-          {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
+          {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
         </TableCell>
         <TableCell>
-          {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
+          {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
         </TableCell>
       </TableRow>
       <TableRow>
