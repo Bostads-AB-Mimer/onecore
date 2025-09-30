@@ -32,20 +32,17 @@ export interface Config {
   xledger: {
     url: string
     apiToken: string
-    sftp: {
-      host: string
-      username: string
-      password: string
-      glDirectory: string
-      arDirectory: string
-    }
+    sftp: SftpConfig
   }
   procurementInvoices: {
-    directory: string
+    importDirectory: string
+    exportDirectory: string
+    sftp: SftpConfig
   }
   rentalInvoices: {
     importDirectory: string
     exportDirectory: string
+    sftp: SftpConfig
   }
   debtCollection: {
     xledger: {
@@ -82,6 +79,12 @@ const config = configPackage({
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
     },
     debtCollection: {
       xledger: {
@@ -111,7 +114,14 @@ const config = configPackage({
       port: 1438,
     },
     procurementInvoices: {
-      directory: './procurement-invoices/invoices',
+      importDirectory: './procurement-invoices/invoices',
+      exportDirectory: './procurement-invoices/export',
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        directory: 'economy',
+      },
     },
     xledger: {
       url: 'https://www.xledger.net/graphql',
@@ -122,6 +132,7 @@ const config = configPackage({
         password: '',
         glDirectory: '/GL',
         arDirectory: '/AR',
+        useSshDss: true,
       },
     },
     health: {
