@@ -112,7 +112,7 @@ function Leases(props: { leases: Lease[] }) {
         <b>Startdatum</b>
       </Grid>
       <Grid item xs={12} md={8} lg={4}>
-        {new Date(lease.leaseStartDate).toISOString() ?? '-'}
+        {yyyymmdd(new Date(lease.leaseStartDate))}
       </Grid>
       <Grid item xs={12} md={4} lg={2}>
         <b>Adress</b>
@@ -124,9 +124,7 @@ function Leases(props: { leases: Lease[] }) {
         <b>Slutdatum</b>
       </Grid>
       <Grid item xs={12} md={8} lg={4}>
-        {lease.leaseEndDate
-          ? new Date(lease.leaseStartDate).toISOString()
-          : '-'}
+        {lease.leaseEndDate ? yyyymmdd(new Date(lease.leaseEndDate)) : '-'}
       </Grid>
     </Grid>
   ))
@@ -146,10 +144,10 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
         </TableRow>
       </TableHead>
       <TableBody>
-        {props.invoices
-          .sort((invoice1, invoice2) => {
-            return invoice1.invoiceDate < invoice2.invoiceDate ? 1 : -1
-          })
+        {Array.from(props.invoices)
+          .sort((invoice1, invoice2) =>
+            invoice1.invoiceDate < invoice2.invoiceDate ? 1 : -1
+          )
           .map((invoice) => (
             <InvoiceTableRow
               key={`${invoice.invoiceId}-${invoice.invoiceDate}`}
@@ -199,12 +197,8 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         }}
         aria-expanded={open}
       >
-        <TableCell>
-          {new Date(invoice.invoiceDate).toString().substring(0, 10)}
-        </TableCell>
-        <TableCell>
-          {new Date(invoice.expirationDate).toString().substring(0, 10)}
-        </TableCell>
+        <TableCell>{yyyymmdd(new Date(invoice.invoiceDate))}</TableCell>
+        <TableCell>{yyyymmdd(new Date(invoice.expirationDate))}</TableCell>
         <TableCell>{invoice.invoiceId}</TableCell>
         <TableCell>{invoice.amount}</TableCell>
         <TableCell>
@@ -258,4 +252,8 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
       </TableRow>
     </>
   )
+}
+
+function yyyymmdd(d: Date) {
+  return d.toISOString().split('T')[0]
 }
