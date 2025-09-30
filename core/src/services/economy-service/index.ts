@@ -5,6 +5,8 @@ import {
 } from '@onecore/utilities'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
+import { parseRequestBody } from '@/middlewares/parse-request-body'
+import { economy } from '@onecore/types'
 
 /**
  * @swagger
@@ -38,9 +40,19 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('/invoices/by-contact-code/:contactCode', async (ctx) => {
+    const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoicesByContactCode(
-      ctx.params.contactCode
+      ctx.params.contactCode,
+      queryParams.data
     )
 
     if (!result.ok) {

@@ -1,9 +1,10 @@
-import config from '../../../common/config'
-import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
-import { logger, loggedAxios as axios } from '@onecore/utilities'
-import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
+import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
+import { logger, loggedAxios as axios } from '@onecore/utilities'
+
+import config from '../../../common/config'
+import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -356,7 +357,7 @@ const getAccountDbId = async (account: string) => {
   }
 }
 
-const createAggregatedTransaction = async (
+const _createAggregatedTransaction = async (
   account: string,
   postedDate: string,
   amount: number,
@@ -394,7 +395,7 @@ const createAggregatedTransaction = async (
   try {
     const result = await makeXledgerRequest(transactionQuery)
     return result.data.addGLImportItems.edges
-  } catch (error) {
+  } catch (_error) {
     return
   }
 }

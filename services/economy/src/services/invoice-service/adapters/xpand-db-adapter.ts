@@ -10,7 +10,6 @@ import {
   Invoice,
   InvoiceTransactionType,
   invoiceTransactionTypeTranslation,
-  PaymentStatus,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
@@ -215,7 +214,6 @@ const getAdditionalColumns = async (
   /*rentArticleDetails: RentArticleDetails,*/
   rentalSpecificRules: RentalSpecificRules
 ): Promise<InvoiceDataRow | null> => {
-  const rentArticleName = row.rentArticle
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
 
@@ -276,7 +274,6 @@ export const enrichInvoiceRows = async (
   rows: InvoiceDataRow[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
-  let i = 1
   const errors: { invoiceNumber: string; error: string }[] = []
 
   invoiceDataRows.forEach((row) => {
@@ -514,14 +511,15 @@ function transformFromDbInvoice(row: any): Invoice {
 }
 
 export const getInvoicesByContactCode = async (
-  contactKey: string
+  contactKey: string,
+  filters?: { from?: Date }
 ): Promise<Invoice[] | undefined> => {
   logger.info(
     { contactCode: contactKey },
     'Getting invoices by contact code from Xpand DB'
   )
 
-  const rows = await db
+  let query = db
     .select(
       'krfkh.invoice as invoiceId',
       'krfkh.reference as leaseId',
@@ -544,6 +542,13 @@ export const getInvoicesByContactCode = async (
     .where({ 'cmctc.cmctckod': contactKey })
     .andWhere('krfkh.type', 'in', [1, 2])
     .orderBy('krfkh.fromdate', 'desc')
+
+  if (filters?.from) {
+    query = query.andWhere('krfkh.fromdate', '>=', filters.from)
+  }
+
+  const rows = await query
+
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows
       .filter((row) => {
@@ -563,10 +568,6 @@ export const getInvoicesByContactCode = async (
     return invoices
   }
 
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB completed - no invoices found'
-  )
   return undefined
 }
 
