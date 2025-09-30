@@ -720,8 +720,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-systems/search:
    *   get:
-   *     summary: Search key systems by system code
-   *     description: Search key systems based on a query string matching the systemCode field
+   *     summary: Search key systems
+   *     description: Search key systems based on a query string matching a specified field
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
@@ -731,6 +731,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           minLength: 3
    *         description: The search query string (minimum 3 characters)
+   *       - in: query
+   *         name: field
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [systemCode, manufacturer, managingSupplier, description, propertyIds]
+   *         description: The field to search on (defaults to systemCode)
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -744,7 +751,7 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     $ref: '#/components/schemas/KeySystem'
    *       400:
-   *         description: Bad request. Query parameter must be at least 3 characters
+   *         description: Bad request. Query parameter must be at least 3 characters or invalid field
    *         content:
    *           application/json:
    *             schema:
@@ -759,7 +766,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'field'])
 
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
@@ -773,7 +780,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await KeySystemsApi.search(ctx.query.q.trim())
+    const searchField = typeof ctx.query.field === 'string' ? ctx.query.field : undefined
+
+    const result = await KeySystemsApi.search(ctx.query.q.trim(), searchField)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {

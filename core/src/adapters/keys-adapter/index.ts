@@ -203,10 +203,15 @@ export const KeySystemsApi = {
   },
 
   search: async (
-    query: string
+    query: string,
+    field?: string
   ): Promise<AdapterResult<KeySystem[], 'bad-request' | CommonErr>> => {
+    const params = new URLSearchParams({ q: query })
+    if (field) {
+      params.append('field', field)
+    }
     const r = await getJSON<{ content: KeySystem[] }>(
-      `${BASE}/key-systems/search?q=${encodeURIComponent(query)}`
+      `${BASE}/key-systems/search?${params.toString()}`
     )
     return r.ok ? ok(r.data.content) : r
   },
