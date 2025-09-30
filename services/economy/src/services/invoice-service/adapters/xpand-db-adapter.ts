@@ -157,8 +157,6 @@ const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
     .whereIn('hyresid', rentalIds)
     .distinct()
 
-  console.log('building rules', specificRulesBuildingsQuery.toSQL().toNative())
-
   const specificRulesBuildings = await specificRulesBuildingsQuery
 
   specificRulesBuildings.forEach((row) => {
@@ -175,8 +173,6 @@ const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
     .andWhereLike('keyrektk', 'INTAKT%')
     .whereIn('hyresid', rentalIds)
     .distinct()
-
-  console.log('area rules', specificRulesAreasQuery.toSQL().toNative())
 
   const specificRulesAreas = await specificRulesAreasQuery
 
@@ -223,7 +219,6 @@ const getRentalRowSpecificRule = async (
 
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
-  /*rentArticleDetails: RentArticleDetails,*/
   rentalSpecificRules: RentalSpecificRules
 ): Promise<InvoiceDataRow | null> => {
   const contractCode = row.contractCode as string
@@ -232,21 +227,6 @@ const getAdditionalColumns = async (
   if ('Öresutjämning' == row.invoiceRowText) {
     return {}
   }
-
-  /*  const rentArticle = rentArticleDetails[rentArticleName]
-
-  if (!rentArticle) {
-    logger.error({ rentArticleName }, 'Rent article details not found')
-    throw new Error(`Rent article details for ${rentArticleName} not found`)
-  }
-  additionalColumns['account'] = rentArticle['account']?.toString().trimEnd()
-  additionalColumns['costCode'] = rentArticle['costCode']?.toString().trimEnd()
-  additionalColumns['property'] = rentArticle['property']?.toString().trimEnd()
-  additionalColumns['projectCode'] = rentArticle['projectCode']
-    ?.toString()
-    .trimEnd()
-  additionalColumns['freeCode'] = rentArticle['freeCode']?.toString().trimEnd()
-  additionalColumns['SumRow'] = rentArticle['sumRowText']?.toString().trimEnd()*/
 
   let specificRule: RentalSpecificRule | null = null
 
@@ -329,7 +309,6 @@ export const enrichInvoiceRows = async (
       async (row: InvoiceDataRow): Promise<InvoiceDataRow | null> => {
         const additionalColumns = await getAdditionalColumns(
           row,
-          /*rentArticleDetails,*/
           rentalSpecificRules
         )
 
@@ -351,20 +330,6 @@ export const enrichInvoiceRows = async (
 
   return { rows: rows as InvoiceDataRow[], errors }
 }
-
-/*const getContactEmail = async (contactCode: string): Promise<string> => {
-  const mailresult = await db('cmeml')
-    .select('cmlelben')
-    .innerJoin('cmctc', 'cmeml.keycmobj', 'cmctc.keycmobj')
-    .where('cmctckod', contactCode)
-    .orderBy('main', 'desc')
-
-  if (mailresult) {
-    return mailresult[0].cmlelben?.trimEnd()
-  } else {
-    return ''
-  }
-}*/
 
 export const getContacts = async (
   contactCodes: string[]
@@ -573,8 +538,8 @@ export const getRentalInvoices = async (
   toDate: Date,
   companyId: string
 ) => {
-  return [{ invoice: '552509353156153' }]
-  /*const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
+  //return [{ invoice: '552501342641254' }]
+  const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
 
   console.log(keycode, companyId, fromDate, toDate)
 
@@ -591,12 +556,11 @@ export const getRentalInvoices = async (
     [keycode, companyId, fromDate, toDate]
   )
 
-  return rentalInvoiceNumbers*/
+  return rentalInvoiceNumbers
 }
 
 export const getInvoiceRows = async (
-  fromDate: Date,
-  endDate: Date,
+  year: string,
   companyId: string,
   invoiceNumbers: string[]
 ) => {
@@ -617,14 +581,15 @@ export const getInvoiceRows = async (
         left join cmarg on cmart.keycmarg = cmarg.keycmarg \
         left join repsk on cmart.keycmart = repsk.keycode \
         left join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = '2025') or \
+      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = '?') or \
         (repsr.keycode is null and keyrektk is null and repsk.year is null)) and \
         cmcmp.code = ? \
+        and (krfkh.type = 1 or krfkh.type = 2) \
         and invoice in (" +
       invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
       ') \
       order by invoice asc, krfkr.printsort asc',
-    [keycode, companyId]
+    [keycode, year, companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery
@@ -651,51 +616,58 @@ export const getInvoiceRows = async (
   }
 
   const trim = (column: any): string => {
-    return (column as string).trimEnd()
+    return column ? (column as string).trimEnd() : column
   }
 
   const convertedInvoiceRows = invoiceRows.map(
     (invoiceRow: any): InvoiceDataRow => {
-      const type = invoiceRow['type'] as number
+      try {
+        const type = invoiceRow['type'] as number
 
-      const invoice = {
-        rentArticle: trim(invoiceRow['rentArticle']),
-        invoiceRowText: trim(invoiceRow['text']),
-        totalAmount: sumColumns(
-          invoiceRow['rowAmount'],
-          invoiceRow['rowReduction'],
-          invoiceRow['rowVat']
-        ),
-        amount: sumColumns(invoiceRow['rowAmount']),
-        vat: sumColumns(invoiceRow['rowVat']),
-        deduction: sumColumns(invoiceRow['rowReduction']),
-        company: trim(invoiceRow['company']),
-        invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
-        invoiceDueDate: xledgerDateString(invoiceRow['expirationDate'] as Date),
-        invoiceNumber: trim(invoiceRow['invoice']),
-        contactCode: trim(invoiceRow['cmctckod']),
-        contractCode: trim(invoiceRow['reference']),
-        tenantName: trim(invoiceRow['cmctcben']),
-        account: trim(invoiceRow['p1']),
-        projectCode: trim(invoiceRow['p4']),
-        freeCode: trim(invoiceRow['p5']),
-        roundoff: sumColumns(invoiceRow['roundoff']),
-        fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
-        toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
-        printGroup: trim(invoiceRow['printGroup']),
-        invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
+        const invoice = {
+          rentArticle: trim(invoiceRow['rentArticle']),
+          invoiceRowText: trim(invoiceRow['text']),
+          totalAmount: sumColumns(
+            invoiceRow['rowAmount'],
+            invoiceRow['rowReduction'],
+            invoiceRow['rowVat']
+          ),
+          amount: sumColumns(invoiceRow['rowAmount']),
+          vat: sumColumns(invoiceRow['rowVat']),
+          deduction: sumColumns(invoiceRow['rowReduction']),
+          company: trim(invoiceRow['company']),
+          invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
+          invoiceDueDate: xledgerDateString(
+            invoiceRow['expirationDate'] as Date
+          ),
+          invoiceNumber: trim(invoiceRow['invoice']),
+          contactCode: trim(invoiceRow['cmctckod']),
+          tenantName: trim(invoiceRow['cmctcben']),
+          account: trim(invoiceRow['p1']),
+          projectCode: trim(invoiceRow['p4']),
+          freeCode: trim(invoiceRow['p5']),
+          roundoff: sumColumns(invoiceRow['roundoff']),
+          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
+          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          printGroup: trim(invoiceRow['printGroup']),
+          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
+          rowType: sumColumns(invoiceRow['rowtype']),
+        }
+
+        if (type === 2) {
+          // credit invoice, reverse signs
+          invoice.totalAmount = -invoice.totalAmount
+          invoice.amount = -invoice.amount
+          invoice.vat = -invoice.vat
+          invoice.deduction = -invoice.deduction
+          invoice.roundoff = -invoice.roundoff
+        }
+
+        return invoice
+      } catch (err) {
+        logger.error({ invoiceRow, err }, 'Error converting row')
+        throw new Error('Error converting row')
       }
-
-      if (type === 2) {
-        // credit invoice, reverse signs
-        invoice.totalAmount = -invoice.totalAmount
-        invoice.amount = -invoice.amount
-        invoice.vat = -invoice.vat
-        invoice.deduction = -invoice.deduction
-        invoice.roundoff = -invoice.roundoff
-      }
-
-      return invoice
     }
   )
 
