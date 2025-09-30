@@ -77,10 +77,15 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search key systems
    *     description: |
-   *       Search key systems with flexible filtering:
-   *       - OR search: Use `q` with `fields` to search across multiple fields
-   *       - AND search: Use individual field parameters (systemCode, manufacturer, etc.)
-   *       - Combined: Use both OR and AND conditions together
+   *       Search key systems with flexible filtering.
+   *       - **OR search**: Use `q` with `fields` for multiple field search
+   *       - **AND search**: Use any KeySystem field parameter for filtering
+   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - Only one OR group is supported, but you can combine it with multiple AND filters
+   *
+   *       Examples:
+   *       - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+   *       - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
    *     tags: [Key Systems]
    *     parameters:
    *       - in: query
@@ -95,37 +100,63 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode if not specified.
+   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode.
+   *       - in: query
+   *         name: id
+   *         schema:
+   *           type: string
    *       - in: query
    *         name: systemCode
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by systemCode (AND condition)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
    *       - in: query
    *         name: manufacturer
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by manufacturer (AND condition)
    *       - in: query
    *         name: managingSupplier
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by managingSupplier (AND condition)
    *       - in: query
-   *         name: description
-   *         required: false
+   *         name: type
    *         schema:
    *           type: string
-   *         description: Filter by description (AND condition)
    *       - in: query
    *         name: propertyIds
-   *         required: false
    *         schema:
    *           type: string
-   *         description: Filter by propertyIds (AND condition)
+   *       - in: query
+   *         name: installationDate
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: isActive
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: description
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdBy
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedBy
+   *         schema:
+   *           type: string
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -144,8 +175,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds'])
-    const allowedFields = ['systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds']
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
       let query = db(TABLE).select('*').where('isActive', true)
@@ -158,20 +188,9 @@ export const routes = (router: KoaRouter) => {
         let fieldsToSearch: string[] = []
 
         if (typeof ctx.query.fields === 'string') {
-          // Multiple fields (comma-separated)
           fieldsToSearch = ctx.query.fields.split(',').map(f => f.trim())
         } else {
-          // Default to systemCode
           fieldsToSearch = ['systemCode']
-        }
-
-        // Validate all fields
-        for (const field of fieldsToSearch) {
-          if (!allowedFields.includes(field)) {
-            ctx.status = 400
-            ctx.body = { reason: `Invalid field: ${field}. Allowed: ${allowedFields.join(', ')}`, ...metadata }
-            return
-          }
         }
 
         // Add OR conditions
@@ -186,18 +205,30 @@ export const routes = (router: KoaRouter) => {
         })
       }
 
-      // Handle AND search (individual field parameters)
-      for (const field of allowedFields) {
-        const value = ctx.query[field]
-        if (typeof value === 'string' && value.trim().length > 0) {
-          query = query.where(field, 'like', `%${value.trim()}%`)
+      // Handle AND search (individual field parameters) - search any param that's not q or fields
+      const reservedParams = ['q', 'fields']
+      for (const [field, value] of Object.entries(ctx.query)) {
+        if (!reservedParams.includes(field) && typeof value === 'string' && value.trim().length > 0) {
+          const trimmedValue = value.trim()
+
+          // Check if value starts with a comparison operator (>=, <=, >, <)
+          const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
+
+          if (operatorMatch) {
+            const operator = operatorMatch[1]
+            const compareValue = operatorMatch[2].trim()
+            query = query.where(field, operator, compareValue)
+          } else {
+            // No operator, use LIKE for partial matching
+            query = query.where(field, 'like', `%${trimmedValue}%`)
+          }
         }
       }
 
       // Check if at least one search criteria was provided
       const hasQParam = typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
-      const hasFieldParams = allowedFields.some(field =>
-        typeof ctx.query[field] === 'string' && ctx.query[field].trim().length > 0
+      const hasFieldParams = Object.entries(ctx.query).some(([key, value]) =>
+        !reservedParams.includes(key) && typeof value === 'string' && value.trim().length > 0
       )
 
       if (!hasQParam && !hasFieldParams) {
