@@ -139,6 +139,7 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturadatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Förfallodatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
         </TableRow>
@@ -201,6 +202,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         <TableCell>{yyyymmdd(new Date(invoice.invoiceDate))}</TableCell>
         <TableCell>{yyyymmdd(new Date(invoice.expirationDate))}</TableCell>
         <TableCell>{invoice.amount}</TableCell>
+        <TableCell>{invoice.reference}</TableCell>
         <TableCell>
           {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
         </TableCell>
