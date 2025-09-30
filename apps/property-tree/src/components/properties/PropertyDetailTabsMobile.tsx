@@ -37,13 +37,13 @@ export const PropertyDetailTabsMobile = ({
   const features = {
     showPropertyInfo: true,
     showPropertyStatistics: true,
-    showPropertyDocuments: true,
-    showPropertyPlanning: true,
+    showPropertyDocuments: false,
+    showPropertyPlanning: false,
     showPropertyBuildings: true,
-    showPropertyMaintenance: true,
-    showPropertyOrders: true,
-    showPropertyAccess: true,
-    showPropertyMap: true,
+    showPropertyMaintenance: false,
+    showPropertyOrders: false,
+    showPropertyAccess: false,
+    showPropertyMap: false,
   }
 
   const accordionItems: MobileAccordionItem[] = [
@@ -76,7 +76,7 @@ export const PropertyDetailTabsMobile = ({
         />
       ),
     },
-    */
+
     features.showPropertyDocuments && {
       id: 'documents',
       icon: FileText,
@@ -89,7 +89,7 @@ export const PropertyDetailTabsMobile = ({
       title: 'Planerat underhåll',
       content: <PropertyPlanningTab />,
     },
-    /*
+   
     features.showPropertyOrders && {
       id: 'orders',
       icon: Home,
