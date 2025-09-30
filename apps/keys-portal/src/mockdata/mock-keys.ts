@@ -1,46 +1,79 @@
 import type { Key, KeyType } from '@/services/types'
-import { KeyTypeLabels } from '@/services/types'
+
+function seededHash(seedBase: string): number {
+  let hash = 0
+  for (let i = 0; i < seedBase.length; i++) {
+    hash = (hash * 31 + seedBase.charCodeAt(i)) >>> 0
+  }
+  return hash >>> 0
+}
 
 function seededRange(seedBase: string, min: number, max: number) {
-  let hash = 0
-  for (let i = 0; i < seedBase.length; i++)
-    hash = (hash * 31 + seedBase.charCodeAt(i)) >>> 0
+  const hash = seededHash(seedBase)
   return (hash % (max - min + 1)) + min
 }
 
-function objectNumberForType(leaseId: string, type: KeyType): number {
-  return seededRange(`${leaseId}:${type}-obj`, 1, 999)
+function letters(seedBase: string, len: number): string {
+  let h = seededHash(seedBase)
+  let out = ''
+  for (let i = 0; i < len; i++) {
+    const ch = 65 + (h % 26) // A-Z
+    out += String.fromCharCode(ch)
+    h = (h * 1103515245 + 12345) >>> 0
+  }
+  return out
 }
 
-// How many to mock per type
+function baseCode(leaseId: string): string {
+  const num = seededRange(`${leaseId}:base`, 10, 99)
+  return `2L${num}`
+}
+
+function systemCode(leaseId: string): string {
+  const prefix = letters(`${leaseId}:sys`, 3)
+  const digits = seededRange(`${leaseId}:sysn`, 100, 999)
+  return `${prefix}${digits}`
+}
+
 const SPEC: Partial<Record<KeyType, [number, number]>> = {
   LGH: [2, 5],
   PB: [1, 3],
   TP: [1, 3],
   GEM: [1, 3],
-  // HUS, FS, HN intentionally 0 for now
+  // HUS, FS, HN left at 0 for now
+}
+
+const TYPE_SUFFIX: Partial<Record<KeyType, string>> = {
+  PB: 'PB',
+  TP: 'TP',
+  GEM: 'GEM',
 }
 
 export function generateMockKeys(leaseId: string): Key[] {
   const keys: Key[] = []
   let counter = 1
 
+  const base = baseCode(leaseId)
+  const sys = systemCode(leaseId)
+
   ;(Object.keys(SPEC) as KeyType[]).forEach((type) => {
     const [min, max] = SPEC[type]!
-    const objNo = objectNumberForType(leaseId, type)
-    const count = seededRange(`${leaseId}:${type}-count`, min, max)
+    const count = seededRange(`${leaseId}:${type}:count`, min, max)
+
+    const flexForType = seededRange(`${leaseId}:${type}:flex`, 1, 3)
 
     for (let i = 1; i <= count; i++) {
+      const suffix = TYPE_SUFFIX[type] ?? ''
+      const keyName = `${base}${suffix ? suffix : ''}-${i}`
+
       keys.push({
         id: `${type}-${counter}`,
-        keyName: `${KeyTypeLabels[type]} ${objNo}`,
-        // NOTE: your generated Key['keyType'] only includes "LGH" | "PB" | "FS" | "HN"
-        // We cast here so we can still mock TP/GEM for UI.
+        keyName,
         keyType: type as unknown as Key['keyType'],
         keySequenceNumber: i,
-        flexNumber: seededRange(`${leaseId}:${type}-flex-${i}`, 1, 3),
-        rentalObjectCode: String(objNo),
-        keySystemId: undefined,
+        flexNumber: flexForType,
+        rentalObjectCode: base,
+        keySystemId: sys as unknown as Key['keySystemId'],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
@@ -51,8 +84,6 @@ export function generateMockKeys(leaseId: string): Key[] {
   return keys
 }
 
-// Accept a single key or an array, and return counts only for present types.
-// Using Partial avoids forcing all KeyType members (e.g., TP/HUS/GEM) to exist.
 type Keyish = Pick<Key, 'keyType'>
 
 export function countKeysByType(
