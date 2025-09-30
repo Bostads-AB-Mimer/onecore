@@ -86,3 +86,68 @@ export function mapLeaseTypeKeyFromRaw(raw?: string): LeaseType {
   if (s.startsWith('övrigt')) return 'otherContract'
   return 'unknown'
 }
+
+// ----- Receipts MOCK-UI (UI/domain) -----
+export type ReceiptType = 'loan' | 'return'
+
+export interface Receipt {
+  id: string
+  receiptNumber: string
+  receiptType: ReceiptType
+  leaseId: string
+  tenantId: string
+  keyLoanIds: string[]
+  createdAt: string
+}
+
+export interface ReceiptTenant {
+  id: string
+  personnummer: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  address?: string
+}
+
+export interface ReceiptData {
+  lease: Lease
+  tenant: ReceiptTenant
+  keys: Key[]
+  receiptType: ReceiptType
+  operationDate?: Date
+}
+
+export function toReceiptTenant(t: Tenant): ReceiptTenant {
+  return {
+    id: t.contactKey,
+    personnummer: t.nationalRegistrationNumber,
+    firstName: t.firstName,
+    lastName: t.lastName,
+    email: t.emailAddress,
+    phone: t.phoneNumbers?.[0]?.phoneNumber,
+    address: t.address
+      ? `${t.address.street} ${t.address.number}, ${t.address.postalCode} ${t.address.city}`
+      : undefined,
+  }
+}
+
+// ----- Mock-only (optional to centralize) -----
+export type KeyLoanStatus = 'loaned' | 'returned'
+export interface MockKeyLoan {
+  id: string
+  keyId: string
+  leaseId: string
+  tenantId: string
+  status: KeyLoanStatus
+  createdAt: string
+  returnedAt?: string
+}
+
+export interface LoanTransaction {
+  id: string
+  type: ReceiptType
+  date: string
+  keyLoanIds: string[]
+  keys: Array<{ id: string; key_name: string; key_type: string }>
+}
