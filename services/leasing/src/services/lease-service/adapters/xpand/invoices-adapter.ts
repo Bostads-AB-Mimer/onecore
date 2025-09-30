@@ -42,6 +42,7 @@ function transformFromDbInvoice(row: any): Invoice {
     paymentStatus: getPaymentStatus(row.paymentStatus),
     transactionType: getTransactionType(row.transactionType),
     transactionTypeName: row.transactionTypeName.trim(),
+    type: 'Regular',
   }
 }
 

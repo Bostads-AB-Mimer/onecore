@@ -18,6 +18,7 @@ export const mockedInvoices: Invoice[] = [
     leaseId: '123-456-789/01',
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: 'HYRA',
+    type: 'Regular',
   },
   {
     amount: 456,
@@ -31,6 +32,7 @@ export const mockedInvoices: Invoice[] = [
     leaseId: '123-456-789/01',
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: 'HYRA',
+    type: 'Regular',
   },
   {
     amount: 789,
@@ -44,6 +46,7 @@ export const mockedInvoices: Invoice[] = [
     leaseId: '123-456-789/01',
     transactionType: InvoiceTransactionType.DebtCollection,
     transactionTypeName: 'INKASSOBYRÅ',
+    type: 'Regular',
   },
   {
     amount: 456,
@@ -57,6 +60,7 @@ export const mockedInvoices: Invoice[] = [
     leaseId: '123-456-789/01',
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: 'HYRA',
+    type: 'Regular',
   },
 ]
 
