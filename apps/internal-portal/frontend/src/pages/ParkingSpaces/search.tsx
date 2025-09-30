@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { SearchBar } from '../../components'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
-import { getActionColumns, getColumns } from './helpers/columnsHelper'
+import { getActionColumns, getSearchColumns } from './helpers/columnsHelper'
 import { filterListings } from './helpers/listingsHelper'
 import { Listings } from './components/Listings'
 
@@ -49,7 +49,7 @@ const SearchParkingSpaces = () => {
 
       <Box paddingTop="1rem">
         <Listings
-          columns={getColumns(dateFormatter, numberFormatter).concat(
+          columns={getSearchColumns(dateFormatter, numberFormatter).concat(
             getActionColumns()
           )}
           rows={filterListings(parkingSpaces.data ?? [], searchString)}

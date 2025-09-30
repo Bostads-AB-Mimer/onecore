@@ -10,9 +10,7 @@ import * as utils from '../../utils'
 import {
   getActionColumns,
   getColumns,
-  getHistoricalActionColumns,
   getOfferedColumns,
-  getRepublishActionColumns,
   getTab,
 } from './helpers/columnsHelper'
 import { Listings } from './components/Listings'
@@ -123,7 +121,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getHistoricalActionColumns()
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -133,7 +131,7 @@ const ParkingSpaces = () => {
           <TabPanel value="needs-republish" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getRepublishActionColumns()
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}

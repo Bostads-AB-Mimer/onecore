@@ -1,6 +1,9 @@
 import { type GridColDef } from '@mui/x-data-grid'
 import { ListingWithOffer } from '../hooks/useParkingSpaceListings'
-import { printVacantFrom } from '../../../common/formattingUtils'
+import {
+  printListingStatus,
+  printVacantFrom,
+} from '../../../common/formattingUtils'
 import { UnpublishListing } from '../components/UnpublishListing'
 import { CreateApplicantForListing } from '../components/create-applicant-for-listing/CreateApplicantForListing'
 import {
@@ -123,67 +126,28 @@ export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
       flex: 1,
       minWidth: 250,
       cellClassName: 'actions',
-      getActions: ({ row }) => [
-        <UnpublishListing key={1} listingId={row.id} />,
-        <CreateApplicantForListing
-          key={1}
-          disabled={
-            row.status !== ListingStatus.Active ||
-            row.rentalRule === 'NON_SCORED'
-          }
-          listing={row}
-        />,
-      ],
-    },
-    {
-      field: 'action-link',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      flex: 0.5,
-      disableColumnMenu: true,
-      renderCell: (v) => (
-        <Link to={`/bilplatser/${v.id}`}>
-          <IconButton sx={{ color: 'black' }}>
-            <Chevron />
-          </IconButton>
-        </Link>
-      ),
-    },
-  ]
-}
-
-export const getHistoricalActionColumns = (): Array<
-  GridColDef<ListingWithOffer>
-> => [
-  {
-    field: 'action-link',
-    headerName: '',
-    sortable: false,
-    filterable: false,
-    flex: 0.5,
-    disableColumnMenu: true,
-    renderCell: (v) => (
-      <Link to={`/bilplatser/${v.id}`}>
-        <IconButton sx={{ color: 'black' }}>
-          <Chevron />
-        </IconButton>
-      </Link>
-    ),
-  },
-]
-
-export const getRepublishActionColumns = (): Array<
-  GridColDef<ListingWithOffer>
-> => {
-  return [
-    {
-      field: 'actions',
-      type: 'actions',
-      flex: 1,
-      minWidth: 250,
-      cellClassName: 'actions',
-      getActions: ({ row }) => [<CloseListing key={0} listingId={row.id} />],
+      getActions: ({ row }) => {
+        if (
+          row.status === ListingStatus.Active ||
+          row.status === ListingStatus.Closed
+        ) {
+          return [
+            <UnpublishListing key={1} listingId={row.id} />,
+            <CreateApplicantForListing
+              key={1}
+              disabled={
+                row.status !== ListingStatus.Active ||
+                row.rentalRule === 'NON_SCORED'
+              }
+              listing={row}
+            />,
+          ]
+        } else if (row.status === ListingStatus.NoApplicants) {
+          return [<CloseListing key={0} listingId={row.id} />]
+        } else {
+          return []
+        }
+      },
     },
     {
       field: 'action-link',
@@ -217,6 +181,24 @@ export const getOfferedColumns = (
         v.value ? dateFormatter.format(new Date(v.value)) : 'N/A',
     },
   ])
+
+export const getSearchColumns = (
+  dateFormatter: Intl.DateTimeFormat,
+  numberFormatter: Intl.NumberFormat
+): Array<GridColDef<ListingWithOffer>> => {
+  const columns = getColumns(dateFormatter, numberFormatter)
+  const statusColumn: GridColDef<ListingWithOffer> = {
+    field: 'status',
+    headerName: 'Status',
+    ...sharedColumnProps,
+    valueGetter: (params) => params.row.status ?? '',
+    valueFormatter: (v) => printListingStatus(v.value as ListingStatus),
+    flex: 0.6,
+  }
+
+  columns.splice(5, 0, statusColumn)
+  return columns
+}
 
 const tabMap: Record<
   GetListingWithApplicantFilterByType,
