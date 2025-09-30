@@ -506,6 +506,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
     .from('krfkh')
     .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
     .where('cmctc.cmctckod', contactCode)
+    .andWhere('krfkh.type', 'in', [1, 2])
 
   return invoices.map((invoice): Invoice => {
     return {
