@@ -203,12 +203,12 @@ const buildMainQuery = (queries: {
     .leftJoin(
       xpandDb.raw(`
           (
-            SELECT 
-              rentalpropertyid, 
+            SELECT
+              rentalpropertyid,
               (
                 SELECT yearrent
-                FROM hy_debitrowrentalproperty_xpand_api x2 
-                WHERE x2.rentalpropertyid = x1.rentalpropertyid 
+                FROM hy_debitrowrentalproperty_xpand_api x2
+                WHERE x2.rentalpropertyid = x1.rentalpropertyid
                 FOR JSON PATH
               ) as yearrentrows
             FROM hy_debitrowrentalproperty_xpand_api x1
@@ -390,11 +390,7 @@ const getAllVacantParkingSpaces = async (): Promise<
       activeContractsQuery,
     })
       .where(function () {
-        this.whereNull('rb.keycmobj').orWhere(
-          'rb.blockenddate',
-          '<=',
-          xpandDb.fn.now()
-        )
+        this.whereNull('rb.keycmobj').orWhereNotNull('rb.blockenddate')
       })
       //exclude parking spaces with active contracts
       .whereNull('ac.keycmobj')
