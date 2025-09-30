@@ -59,7 +59,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   // Use the reusable search hook
   console.log('🔍 Debounced query:', debouncedKeySystemQuery, 'Length:', debouncedKeySystemQuery.length)
   const keySystemsQuery = useSearch(
-    (query: string) => keySystemSearchService.search(query, 'systemCode'),
+    (query: string) => keySystemSearchService.search({ q: query, fields: ['systemCode'] }),
     'search-key-systems',
     debouncedKeySystemQuery
   )
