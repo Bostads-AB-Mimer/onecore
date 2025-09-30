@@ -75,8 +75,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-systems/search:
    *   get:
-   *     summary: Search key systems by system code
-   *     description: Search key systems based on a query string matching the systemCode field
+   *     summary: Search key systems
+   *     description: Search key systems based on a query string matching a specified field
    *     tags: [Key Systems]
    *     parameters:
    *       - in: query
@@ -86,6 +86,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           minLength: 3
    *         description: The search query string (minimum 3 characters)
+   *       - in: query
+   *         name: field
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [systemCode, manufacturer, managingSupplier, description, propertyIds]
+   *         description: The field to search on (defaults to systemCode)
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -99,12 +106,12 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     $ref: '#/components/schemas/KeySystem'
    *       400:
-   *         description: Bad request. Query parameter must be at least 3 characters
+   *         description: Bad request. Query parameter must be at least 3 characters or invalid field
    *       500:
    *         description: Internal server error
    */
   router.get('/key-systems/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'field'])
 
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
@@ -118,12 +125,21 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const searchField = typeof ctx.query.field === 'string' ? ctx.query.field : 'systemCode'
+    const allowedFields = ['systemCode', 'manufacturer', 'managingSupplier', 'description', 'propertyIds']
+
+    if (!allowedFields.includes(searchField)) {
+      ctx.status = 400
+      ctx.body = { reason: `Invalid field. Allowed: ${allowedFields.join(', ')}`, ...metadata }
+      return
+    }
+
     try {
       const rows = await db(TABLE)
         .select('*')
-        .where('systemCode', 'like', `%${ctx.query.q.trim()}%`)
+        .where(searchField, 'like', `%${ctx.query.q.trim()}%`)
         .where('isActive', true)
-        .orderBy('systemCode', 'asc')
+        .orderBy(searchField, 'asc')
         .limit(5)
 
       ctx.status = 200
