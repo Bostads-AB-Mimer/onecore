@@ -18,8 +18,13 @@ import {
   KeySystemTypeLabels,
   Property,
 } from '@/services/types'
-import { sampleProperties } from '@/mockdata/sampleProperties'
-import { Checkbox } from '@/components/ui/checkbox'
+import { useSearch } from '@/hooks/useSearch'
+import { useDebounce } from '@/utils/debounce'
+import {
+  propertySearchService,
+  type PropertySearchResult,
+} from '@/services/api/propertySearchService'
+import { X } from 'lucide-react'
 
 interface AddKeySystemFormProps {
   onSave: (
@@ -45,6 +50,32 @@ export function AddKeySystemForm({
     description: '',
     property_ids: [] as string[],
   })
+
+  // Property search functionality state with debouncing
+  const [propertySearchQuery, setPropertySearchQuery] = useState('')
+  const [debouncedPropertyQuery, setDebouncedPropertyQuery] = useState('')
+  const [selectedProperties, setSelectedProperties] = useState<Property[]>([])
+
+  // Debounce property search query (500ms delay)
+  const updateDebouncedQuery = useDebounce((query: string) => {
+    setDebouncedPropertyQuery(query)
+  }, 500)
+
+  // Use the reusable search hook
+  const propertiesQuery = useSearch(
+    (query: string) =>
+      propertySearchService.search({
+        q: query,
+        fields: ['designation', 'code', 'municipality'],
+      }),
+    'search-properties',
+    debouncedPropertyQuery
+  )
+
+  // Trigger debounced search when query changes
+  useEffect(() => {
+    updateDebouncedQuery(propertySearchQuery)
+  }, [propertySearchQuery, updateDebouncedQuery])
 
   useEffect(() => {
     if (editingKeySystem) {
@@ -75,8 +106,41 @@ export function AddKeySystemForm({
         description: '',
         property_ids: [],
       })
+      setSelectedProperties([])
     }
   }, [editingKeySystem])
+
+  // Handle property input changes and trigger search
+  const handlePropertySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setPropertySearchQuery(value)
+  }
+
+  // Handle selection of a property search result from the dropdown
+  const handleSelectPropertyResult = (property: PropertySearchResult) => {
+    if (!selectedProperties.find((p) => p.id === property.id)) {
+      const newSelectedProperties = [...selectedProperties, property]
+      setSelectedProperties(newSelectedProperties)
+      setFormData((prev) => ({
+        ...prev,
+        property_ids: newSelectedProperties.map((p) => p.id),
+      }))
+    }
+    setPropertySearchQuery('')
+    setDebouncedPropertyQuery('')
+  }
+
+  // Handle removal of a selected property
+  const handleRemoveProperty = (propertyId: string) => {
+    const newSelectedProperties = selectedProperties.filter(
+      (p) => p.id !== propertyId
+    )
+    setSelectedProperties(newSelectedProperties)
+    setFormData((prev) => ({
+      ...prev,
+      property_ids: newSelectedProperties.map((p) => p.id),
+    }))
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -220,39 +284,70 @@ export function AddKeySystemForm({
 
           <div className="space-y-2">
             <Label htmlFor="properties">Fastigheter</Label>
-            <div className="border rounded-lg p-3 max-h-32 overflow-y-auto">
-              {sampleProperties.map((property) => (
-                <div
-                  key={property.id}
-                  className="flex items-center space-x-2 mb-2 last:mb-0"
-                >
-                  <Checkbox
-                    id={`property-${property.id}`}
-                    checked={formData.property_ids.includes(property.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          property_ids: [...prev.property_ids, property.id],
-                        }))
-                      } else {
-                        setFormData((prev) => ({
-                          ...prev,
-                          property_ids: prev.property_ids.filter(
-                            (id) => id !== property.id
-                          ),
-                        }))
-                      }
-                    }}
-                  />
-                  <Label
-                    htmlFor={`property-${property.id}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {property.name} - {property.address}
-                  </Label>
+            <div className="space-y-2">
+              {/* Search input for properties */}
+              <div className="relative">
+                <Input
+                  id="properties"
+                  value={propertySearchQuery}
+                  onChange={handlePropertySearchChange}
+                  placeholder="Sök fastighet..."
+                />
+                {propertiesQuery.isFetching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
+
+                {/* Search results dropdown */}
+                {!propertiesQuery.isFetching &&
+                  propertiesQuery.data &&
+                  propertiesQuery.data.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {propertiesQuery.data.map((result) => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
+                          onClick={() => handleSelectPropertyResult(result)}
+                        >
+                          <div className="font-medium">
+                            {result.designation || result.code}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {result.tract}, {result.municipality}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+
+              {/* Selected properties list */}
+              {selectedProperties.length > 0 && (
+                <div className="border rounded-lg p-2 space-y-1">
+                  {selectedProperties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-sm"
+                    >
+                      <span>
+                        {property.designation || property.code} - {property.tract},{' '}
+                        {property.municipality}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleRemoveProperty(property.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
