@@ -202,6 +202,15 @@ export const KeySystemsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  search: async (
+    query: string
+  ): Promise<AdapterResult<KeySystem[], 'bad-request' | CommonErr>> => {
+    const r = await getJSON<{ content: KeySystem[] }>(
+      `${BASE}/key-systems/search?q=${encodeURIComponent(query)}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   get: async (
     id: string
   ): Promise<AdapterResult<KeySystem, 'not-found' | CommonErr>> => {
