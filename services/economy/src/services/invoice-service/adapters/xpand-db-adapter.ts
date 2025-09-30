@@ -495,7 +495,10 @@ function transformFromDbInvoice(row: any): Invoice {
   return {
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
-    amount: row.amount,
+    amount: [row.amount, row.reduction, row.vat, row.roundoff].reduce(
+      (sum, value) => sum + value,
+      0
+    ),
     fromDate: row.fromDate,
     toDate: row.toDate,
     invoiceDate: row.invoiceDate,
@@ -523,6 +526,9 @@ export const getInvoicesByContactCode = async (
       'krfkh.amount as amount',
       'krfkh.fromdate as fromDate',
       'krfkh.todate as toDate',
+      'krfkh.reduction',
+      'krfkh.vat',
+      'krfkh.roundoff',
       'krfkh.invdate as invoiceDate',
       'krfkh.expdate as expirationDate',
       'krfkh.debstatus as debitStatus',
@@ -534,6 +540,7 @@ export const getInvoicesByContactCode = async (
     .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
     .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
     .where({ 'cmctc.cmctckod': contactKey })
+    .andWhere('krfkh.type', 'in', [1, 2])
     .orderBy('krfkh.fromdate', 'desc')
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows
