@@ -452,13 +452,14 @@ export const getContacts = async (
   return contacts
 }
 
-function transformFromDbInvoice(row: any): Invoice {
+function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
     (sum, value) => sum + value,
     0
   )
 
   return {
+    reference: contactCode,
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
@@ -524,7 +525,7 @@ export const getInvoicesByContactCode = async (
           return false
         }
       })
-      .map(transformFromDbInvoice)
+      .map((row) => transformFromDbInvoice(row, contactKey))
     logger.info(
       { contactCode: contactKey },
       'Getting invoices by contact code from Xpand DB completed'
@@ -562,7 +563,7 @@ export const getRentalInvoices = async (
 }
 
 export const getInvoiceRows = async (
-  year: string,
+  year: number,
   companyId: string,
   invoiceNumbers: string[]
 ): Promise<InvoiceRow[]> => {
@@ -583,7 +584,7 @@ export const getInvoiceRows = async (
         left join cmarg on cmart.keycmarg = cmarg.keycmarg \
         left join repsk on cmart.keycmart = repsk.keycode \
         left join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = '?') or \
+      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = ?) or \
         (repsr.keycode is null and keyrektk is null and repsk.year is null)) and \
         cmcmp.code = ? \
         and (krfkh.type = 1 or krfkh.type = 2) \

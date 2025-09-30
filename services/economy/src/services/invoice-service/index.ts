@@ -55,7 +55,7 @@ export const routes = (router: KoaRouter) => {
       ]
 
       const invoiceRows = await getInvoiceRows(
-        new Date().getFullYear().toString(),
+        new Date().getFullYear(),
         '001',
         invoices.map((v) => v.invoiceId)
       )
