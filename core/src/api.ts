@@ -14,8 +14,8 @@ leaseRoutes(router)
 rentalPropertyRoutes(router)
 workOrderRoutes(router)
 propertyBaseRoutes(router)
-searchRoutes(router)
 keyRoutes(router)
+searchRoutes(router)
 updateSwaggerSchemas()
 
 export default router

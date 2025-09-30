@@ -321,6 +321,38 @@ export interface paths {
       };
     };
   };
+  "/key-systems/search": {
+    /**
+     * Search key systems by system code
+     * @description Search key systems based on a query string matching the systemCode field
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query string (minimum 3 characters) */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved search results */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeySystem"][];
+            };
+          };
+        };
+        /** @description Bad request. Query parameter must be at least 3 characters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-systems/{id}": {
     /**
      * Get key system by ID
