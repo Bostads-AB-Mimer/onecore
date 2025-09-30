@@ -99,9 +99,10 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
   }
 
   const invoices = invoiceData.map((invoiceData) => {
-    const invoice = {
+    const invoice: Invoice = {
       invoiceId: invoiceData.node.invoiceNumber,
       leaseId: 'missing',
+      reference: invoiceData.node.subledger.code,
       amount: parseFloat(invoiceData.node.amount),
       invoiceDate: dateFromString(invoiceData.node.invoiceDate),
       fromDate: dateFromString(invoiceData.node.period.fromDate),

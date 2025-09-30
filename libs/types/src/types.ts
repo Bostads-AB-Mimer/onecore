@@ -201,6 +201,7 @@ interface Invoice {
   invoiceId: string
   leaseId: string
   amount: number
+  reference: string
   fromDate: Date
   toDate: Date
   invoiceDate: Date

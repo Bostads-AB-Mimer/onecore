@@ -731,7 +731,7 @@ export const importInvoiceRows = async (
     )
 
     const invoiceRows = await getXpandInvoiceRows(
-      fromDate.getFullYear().toString(),
+      fromDate.getFullYear(),
       companyId,
       invoicesToImport
     )
