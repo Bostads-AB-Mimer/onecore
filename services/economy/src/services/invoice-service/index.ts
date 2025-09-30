@@ -1,4 +1,7 @@
 import KoaRouter from '@koa/router'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { economy } from '@onecore/types'
+
 import {
   getInvoiceByInvoiceNumber,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
@@ -14,7 +17,6 @@ import {
   getContacts as getXpandContacts,
 } from './adapters/xpand-db-adapter'
 import { syncContact, transformContact } from './adapters/xledger-adapter'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
   createAggregateRows,
   createLedgerRows,
@@ -24,12 +26,22 @@ import {
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
+    const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
+      ctx.query
+    )
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const from = queryParams.data?.from
+
     const contactCode = ctx.params.contactCode
     try {
       const xledgerInvoices =
         (await getXledgerInvoicesByContactCode(contactCode)) ?? []
       const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode)) ?? []
+        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
 
       const xledgerInvoiceIds = xledgerInvoices.map(
         (invoice) => invoice.invoiceId

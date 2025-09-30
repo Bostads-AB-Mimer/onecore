@@ -24,11 +24,12 @@ export async function getInvoiceByInvoiceId(
 }
 
 export async function getInvoicesByContactCode(
-  contactCode: string
+  contactCode: string,
+  filters?: { from?: Date }
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
-  const response = await axios.get(
-    `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
-  )
+  const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
+  const params = filters ? { params: filters } : {}
+  const response = await axios.get(url, params)
 
   if (response.status === 404) {
     return { ok: false, err: 'not-found' }
