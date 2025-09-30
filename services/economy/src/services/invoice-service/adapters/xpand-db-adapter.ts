@@ -492,13 +492,15 @@ export const getContacts = async (
 }
 
 function transformFromDbInvoice(row: any): Invoice {
+  const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
+    (sum, value) => sum + value,
+    0
+  )
+
   return {
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
-    amount: [row.amount, row.reduction, row.vat, row.roundoff].reduce(
-      (sum, value) => sum + value,
-      0
-    ),
+    amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,
     invoiceDate: row.invoiceDate,
