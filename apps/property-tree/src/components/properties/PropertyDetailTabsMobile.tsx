@@ -35,7 +35,7 @@ export const PropertyDetailTabsMobile = ({
   //const { features } = useFeatureToggles();
 
   const features = {
-    showPropertyInfo: true,
+    showPropertyInfo: false,
     showPropertyStatistics: true,
     showPropertyDocuments: false,
     showPropertyPlanning: false,
