@@ -12,8 +12,8 @@ import {
   DialogActions,
 } from '@mui/material'
 import { type GridRowId, type GridColDef } from '@mui/x-data-grid'
-import { RentalObject } from '@onecore/types'
 
+import { RentalObjectWithListingHistory } from '../../types'
 import { DataGridTable } from '../../components'
 import { useVacantParkingSpaces } from '../ParkingSpaces/hooks/useVacantParkingSpaces'
 import { usePublishParkingSpaces } from './hooks/usePublishParkingSpaces'
@@ -32,7 +32,7 @@ const ParkingSpaces = memo(
     onRowSelectionModelChange,
   }: {
     columns: Array<GridColDef>
-    rows?: Array<RentalObject>
+    rows?: Array<RentalObjectWithListingHistory>
     loading: boolean
     selectedIds: Array<GridRowId>
     onRowSelectionModelChange: (model: Array<GridRowId>) => void

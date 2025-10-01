@@ -1,7 +1,8 @@
 import { GridColDef } from '@mui/x-data-grid'
 import { MenuItem, Select } from '@mui/material'
 import { memo, useCallback } from 'react'
-import { RentalObject } from '@onecore/types'
+
+import { RentalObjectWithListingHistory } from '../../../types'
 
 // Memoized Select component to prevent unnecessary re-renders
 const RentalRuleSelect = memo(
@@ -42,7 +43,9 @@ const numberFormatter = new Intl.NumberFormat('sv-SE', {
   currency: 'SEK',
 })
 
-export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
+export const getParkingSpaceColumns = (): Array<
+  GridColDef<RentalObjectWithListingHistory>
+> => {
   return [
     {
       field: 'address',
@@ -77,9 +80,10 @@ export const getParkingSpaceColumns = (): Array<GridColDef<RentalObject>> => {
       valueFormatter: ({ value }) => `${numberFormatter.format(value)}/mån`,
     },
     {
-      field: 'numTimesPublishedInInternalQueue',
+      field: 'previousListingsCount',
       flex: 1,
       headerName: 'Antal publiceringar som Intern',
+      valueFormatter: ({ value }) => (value ?? 0).toString(),
     },
   ]
 }
@@ -90,7 +94,7 @@ export const getRentalRuleActionColumn = (
     rentalObjectCode: string,
     value: 'SCORED' | 'NON_SCORED'
   ) => void
-): GridColDef<RentalObject> => {
+): GridColDef<RentalObjectWithListingHistory> => {
   return {
     field: 'actions',
     type: 'actions',
