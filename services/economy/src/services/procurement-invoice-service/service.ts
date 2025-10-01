@@ -1,7 +1,4 @@
-import {
-  getNewProcurementInvoiceRows,
-  markProcurementFilesAsImported,
-} from './adapters/procurement-file-adapter'
+import { getNewProcurementInvoiceRows } from './adapters/procurement-file-adapter'
 import {
   enrichProcurementInvoiceRows,
   closeDb as closeXpandDb,

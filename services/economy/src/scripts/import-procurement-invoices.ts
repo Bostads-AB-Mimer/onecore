@@ -19,20 +19,21 @@ const importProcurementInvoicesScript = async () => {
       .toISOString()
       .substring(0, 10)
       .replaceAll('-', '')
-    const exportedFilename = `${Date.now()}-${dateString}-malarenergi-.gl.csv`
+    const exportedFilename = `${Date.now()}-001-${dateString}-malarenergi.gl.csv`
     await fs.writeFile(
       path.join(config.procurementInvoices.exportDirectory, exportedFilename),
       csvContent
     )
     await uploadInvoiceFile(exportedFilename, csvContent)
-    logger.info('Uploaded file')
+    logger.info({ filename: exportedFilename }, 'Uploaded file to Xledger')
 
     markProcurementFilesAsImported()
 
-    logger.info('All files processed.')
+    logger.info('Marked all files as processed.')
   } else {
     logger.info('No files to process')
   }
+
   closeDatabases()
 }
 

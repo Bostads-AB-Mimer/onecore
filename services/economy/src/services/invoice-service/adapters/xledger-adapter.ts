@@ -560,17 +560,11 @@ export const uploadFile = async (filename: string, csvFile: string) => {
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
-    logger.info({ file: remoteDir + '/' + filename }, 'Uploading file to sftp')
     await sftp.put(stream, remoteDir + '/' + filename)
-    logger.info(
-      { file: remoteDir + '/' + filename },
-      'File uploaded successfully'
-    )
   } catch (err) {
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()
-    logger.info('Terminated sftp connection')
   }
 }
 

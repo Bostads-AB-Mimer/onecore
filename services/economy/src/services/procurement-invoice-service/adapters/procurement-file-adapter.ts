@@ -243,19 +243,15 @@ const getXmlFilenames = async () => {
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
-    logger.info('Connected to sftp')
     const files = await sftp.list(directory, (fileInfo) => {
       return fileInfo.name.toLowerCase().endsWith('.xml')
     })
-    logger.info('Got .xml files')
 
     return files.map((fileInfo) => fileInfo.name)
   } catch (err) {
-    logger.error(err, 'SFTP error')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()
-    logger.info('Terminated sftp connection')
   }
 }
 
@@ -278,60 +274,33 @@ const getFile = async (filename: string) => {
   } finally {
     await sftp.end()
   }
-  /*  try {
-    await sftp.connect(sftpConfig)
-    logger.info({ filename }, 'Connected to sftp to read file')
-    // TODO: replace with memory stream/Buffer and read directly into it.
-    await sftp.get(
-      path.join(directory, filename),
-      path.join(config.procurementInvoices.importDirectory, filename)
-    )
-    logger.info(
-      { filename, destination: config.procurementInvoices.importDirectory },
-      'Copied file'
-    )
-    return filename
-  } catch (err) {
-    throw new Error('SFTP : ' + JSON.stringify(err))
-  } finally {
-    await sftp.end()
-    logger.info('Terminated sftp connection')
-  }*/
 }
 
 const markAsImportedSftp = async (filename: string) => {
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
-    logger.info({ filename }, 'Connected to sftp to rename file')
     await sftp.rename(
       path.join(directory, filename),
       path.join(directory, filename.replace('.xml', '.xml-imported'))
     )
-    logger.info({ filename }, 'Renamed file')
   } catch (err) {
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()
-    logger.info('Terminated sftp connection')
   }
 }
 
 export const getNewProcurementInvoiceRows = async () => {
-  /*
-  const files = await fs.readdir(config.procurementInvoices.importDirectory)
-
-  const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.xml')
-  })
-
-  const xmlFiles = await readXmlFiles(xmlFileNames)
-  */
-
   const xmlFilenames = await getXmlFilenames()
+  logger.info(
+    { numberOfFiles: xmlFilenames.length },
+    'Got xml filenames, copying files from sftp'
+  )
   for (const xmlFilename of xmlFilenames) {
     await getFile(xmlFilename)
   }
+  logger.info({ numberOfFiles: xmlFilenames.length }, 'Processing xml files')
 
   const xmlFiles = await readXmlFiles(xmlFilenames)
 
