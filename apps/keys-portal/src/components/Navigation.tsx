@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Key, Lock, KeyRound } from 'lucide-react'
+import { Key, Lock, KeyRound, TruckIcon } from 'lucide-react'
 import { useLocation, Link } from 'react-router-dom'
 
 export function Navigation() {
@@ -37,6 +37,18 @@ export function Navigation() {
             <Link to="/key-systems">
               <Lock className="h-4 w-4" />
               Låssystem
+            </Link>
+          </Button>
+          <Button
+            variant={
+              location.pathname === '/move-management' ? 'default' : 'ghost'
+            }
+            asChild
+            className="gap-2"
+          >
+            <Link to="/move-management">
+              <TruckIcon className="h-4 w-4" />
+              Flytthantering
             </Link>
           </Button>
         </div>

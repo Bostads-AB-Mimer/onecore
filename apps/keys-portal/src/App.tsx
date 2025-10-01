@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound'
 import { AuthCallback } from './auth/AuthCallback'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import KeyLoan from './pages/KeyLoan'
+import MoveManagement from './pages/MoveManagement'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ const AppContent = () => (
       <Route path="/key-systems" element={<KeySystems />} />
       <Route path="/key-systems/:id" element={<KeySystemDetail />} />
       <Route path="/KeyLoan" element={<KeyLoan />} />
+      <Route path="/move-management" element={<MoveManagement />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

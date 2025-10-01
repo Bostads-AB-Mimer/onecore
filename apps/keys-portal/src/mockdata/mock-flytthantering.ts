@@ -1,0 +1,331 @@
+import type { Lease, KeyLoan } from '@/services/types'
+
+// Mock leases for tenants moving out (status: AboutToEnd or Ended)
+export const mockMoveOutLeases: Lease[] = [
+  {
+    leaseId: 'lease-moveout-1',
+    leaseNumber: 'LN-2024-001',
+    leaseStartDate: '2023-01-15T00:00:00Z',
+    leaseEndDate: '2025-10-31T23:59:59Z',
+    status: 'AboutToEnd',
+    tenantContactIds: ['tenant-001'],
+    rentalPropertyId: 'prop-001',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Storgatan',
+      number: '12',
+      postalCode: '41301',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-001',
+      apartmentNumber: 1201,
+      size: 65,
+      type: 'Lägenhet',
+      rentalPropertyType: '3 rok',
+      additionsIncludedInRent: 'Värme, vatten',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-001',
+        contactKey: 'tenant-001',
+        firstName: 'Anna',
+        lastName: 'Andersson',
+        fullName: 'Anna Andersson',
+        nationalRegistrationNumber: '198501151234',
+        birthDate: '1985-01-15T00:00:00Z',
+        emailAddress: 'anna.andersson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0701234567',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Storgatan',
+          number: '12',
+          postalCode: '41301',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+  {
+    leaseId: 'lease-moveout-2',
+    leaseNumber: 'LN-2024-002',
+    leaseStartDate: '2022-06-01T00:00:00Z',
+    leaseEndDate: '2025-10-15T23:59:59Z',
+    status: 'AboutToEnd',
+    tenantContactIds: ['tenant-002'],
+    rentalPropertyId: 'prop-002',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Vasagatan',
+      number: '5B',
+      postalCode: '41124',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-002',
+      apartmentNumber: 304,
+      size: 42,
+      type: 'Lägenhet',
+      rentalPropertyType: '2 rok',
+      additionsIncludedInRent: 'Värme, vatten',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-002',
+        contactKey: 'tenant-002',
+        firstName: 'Erik',
+        lastName: 'Eriksson',
+        fullName: 'Erik Eriksson',
+        nationalRegistrationNumber: '199203105678',
+        birthDate: '1992-03-10T00:00:00Z',
+        emailAddress: 'erik.eriksson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0709876543',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Vasagatan',
+          number: '5B',
+          postalCode: '41124',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+  {
+    leaseId: 'lease-moveout-3',
+    leaseNumber: 'LN-2024-003',
+    leaseStartDate: '2021-10-01T00:00:00Z',
+    leaseEndDate: '2025-10-20T23:59:59Z',
+    status: 'AboutToEnd',
+    tenantContactIds: ['tenant-003'],
+    rentalPropertyId: 'prop-003',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Lindgatan',
+      number: '8',
+      postalCode: '41304',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-003',
+      apartmentNumber: 502,
+      size: 78,
+      type: 'Lägenhet',
+      rentalPropertyType: '4 rok',
+      additionsIncludedInRent: 'Värme, vatten, parkering',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-003',
+        contactKey: 'tenant-003',
+        firstName: 'Maria',
+        lastName: 'Svensson',
+        fullName: 'Maria Svensson',
+        nationalRegistrationNumber: '198808201234',
+        birthDate: '1988-08-20T00:00:00Z',
+        emailAddress: 'maria.svensson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0731122334',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Lindgatan',
+          number: '8',
+          postalCode: '41304',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+]
+
+// Mock leases for tenants moving in (status: Upcoming)
+export const mockMoveInLeases: Lease[] = [
+  {
+    leaseId: 'lease-movein-1',
+    leaseNumber: 'LN-2025-101',
+    leaseStartDate: '2025-10-01T00:00:00Z',
+    leaseEndDate: '2026-09-30T23:59:59Z',
+    status: 'Upcoming',
+    tenantContactIds: ['tenant-101'],
+    rentalPropertyId: 'prop-101',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Kungsgatan',
+      number: '22A',
+      postalCode: '41136',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-101',
+      apartmentNumber: 701,
+      size: 55,
+      type: 'Lägenhet',
+      rentalPropertyType: '2 rok',
+      additionsIncludedInRent: 'Värme, vatten',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-101',
+        contactKey: 'tenant-101',
+        firstName: 'Johan',
+        lastName: 'Johansson',
+        fullName: 'Johan Johansson',
+        nationalRegistrationNumber: '199505251234',
+        birthDate: '1995-05-25T00:00:00Z',
+        emailAddress: 'johan.johansson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0765432109',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Kungsgatan',
+          number: '22A',
+          postalCode: '41136',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+  {
+    leaseId: 'lease-movein-2',
+    leaseNumber: 'LN-2025-102',
+    leaseStartDate: '2025-10-15T00:00:00Z',
+    leaseEndDate: '2026-10-14T23:59:59Z',
+    status: 'Upcoming',
+    tenantContactIds: ['tenant-102'],
+    rentalPropertyId: 'prop-102',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Avenyn',
+      number: '45',
+      postalCode: '41138',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-102',
+      apartmentNumber: 1502,
+      size: 92,
+      type: 'Lägenhet',
+      rentalPropertyType: '5 rok',
+      additionsIncludedInRent: 'Värme, vatten, parkering, förråd',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-102',
+        contactKey: 'tenant-102',
+        firstName: 'Sara',
+        lastName: 'Karlsson',
+        fullName: 'Sara Karlsson',
+        nationalRegistrationNumber: '199012305678',
+        birthDate: '1990-12-30T00:00:00Z',
+        emailAddress: 'sara.karlsson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0708765432',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Avenyn',
+          number: '45',
+          postalCode: '41138',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+  {
+    leaseId: 'lease-movein-3',
+    leaseNumber: 'LN-2025-103',
+    leaseStartDate: '2025-10-10T00:00:00Z',
+    status: 'Upcoming',
+    tenantContactIds: ['tenant-103'],
+    rentalPropertyId: 'prop-103',
+    type: 'Bostadskontrakt',
+    address: {
+      street: 'Parkgatan',
+      number: '7',
+      postalCode: '41255',
+      city: 'Göteborg',
+    },
+    rentalProperty: {
+      rentalPropertyId: 'prop-103',
+      apartmentNumber: 203,
+      size: 48,
+      type: 'Lägenhet',
+      rentalPropertyType: '2 rok',
+      additionsIncludedInRent: 'Värme, vatten',
+    },
+    tenants: [
+      {
+        contactCode: 'TC-103',
+        contactKey: 'tenant-103',
+        firstName: 'Lisa',
+        lastName: 'Nilsson',
+        fullName: 'Lisa Nilsson',
+        nationalRegistrationNumber: '199807151111',
+        birthDate: '1998-07-15T00:00:00Z',
+        emailAddress: 'lisa.nilsson@email.com',
+        phoneNumbers: [
+          {
+            phoneNumber: '0723456789',
+            type: 'Mobile',
+            isMainNumber: true,
+          },
+        ],
+        isTenant: true,
+        address: {
+          street: 'Parkgatan',
+          number: '7',
+          postalCode: '41255',
+          city: 'Göteborg',
+        },
+      },
+    ],
+  },
+]
+
+// Mock key loans - showing which tenants have returned/picked up keys
+export const mockFlytthanteringKeyLoans: KeyLoan[] = [
+  {
+    id: 'kl-moveout-2',
+    lease: 'lease-moveout-2',
+    contact: 'tenant-002',
+    keys: JSON.stringify(['key-1', 'key-2']),
+    pickedUpAt: '2022-06-01T10:00:00Z',
+    returnedAt: '2025-10-05T14:30:00Z', // Keys returned
+    createdAt: '2022-06-01T10:00:00Z',
+    updatedAt: '2025-10-05T14:30:00Z',
+  },
+  {
+    id: 'kl-movein-2',
+    lease: 'lease-movein-2',
+    contact: 'tenant-102',
+    keys: JSON.stringify(['key-5', 'key-6']),
+    pickedUpAt: '2025-10-01T09:00:00Z', // Keys picked up
+    createdAt: '2025-10-01T09:00:00Z',
+    updatedAt: '2025-10-01T09:00:00Z',
+  },
+]
