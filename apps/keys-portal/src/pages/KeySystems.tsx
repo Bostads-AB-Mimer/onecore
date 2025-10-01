@@ -202,14 +202,6 @@ export default function KeySystems() {
         onAddNew={handleAddNew}
       />
 
-      <KeySystemsTable
-        KeySystems={filteredKeySystems}
-        propertyMap={propertyMap}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onExplore={() => {}} // No longer used, navigation handled in table
-      />
-
       {showAddForm && (
         <AddKeySystemForm
           onSave={handleSave}
@@ -217,6 +209,14 @@ export default function KeySystems() {
           editingKeySystem={editingKeySystem}
         />
       )}
+
+      <KeySystemsTable
+        KeySystems={filteredKeySystems}
+        propertyMap={propertyMap}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onExplore={() => {}} // No longer used, navigation handled in table
+      />
     </div>
   )
 }
