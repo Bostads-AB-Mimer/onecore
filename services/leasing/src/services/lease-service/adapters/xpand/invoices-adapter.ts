@@ -31,6 +31,7 @@ const getPaymentStatus = (paymentStatusNumber: number) => {
 
 function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   return {
+    reference: row.reference?.trim(),
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
     reference: contactCode,
