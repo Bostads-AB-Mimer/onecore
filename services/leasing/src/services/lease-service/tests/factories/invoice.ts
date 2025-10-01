@@ -4,6 +4,7 @@ import { Invoice, InvoiceTransactionType } from '@onecore/types'
 export const InvoiceFactory = Factory.define<Invoice>(() => ({
   invoiceId: '552303315030452',
   leaseId: '705-025-03-0205/01',
+  reference: 'P123456',
   amount: 7687.77,
   fromDate: new Date('2023-03-01T00:00:00.000Z'),
   toDate: new Date('2023-03-31T00:00:00.000Z'),
