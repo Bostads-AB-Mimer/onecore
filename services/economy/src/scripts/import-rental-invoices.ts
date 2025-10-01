@@ -7,6 +7,7 @@ import {
   importInvoiceRows,
   markBatchAsProcessed,
   missingInvoices,
+  uploadInvoiceFile,
 } from '../services/invoice-service/service'
 import fs from 'fs/promises'
 import config from '../common/config'
@@ -55,12 +56,12 @@ const importRentalInvoicesScript = async () => {
       ledgerCsv
     )
 
-    /*      await uploadInvoiceFile(contactsFilename, contactsCsv)
-      logger.info({ contactsFilename }, 'Uploaded file')
-      await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-      logger.info({ aggregatedFilename }, 'Uploaded file')
-      await uploadInvoiceFile(ledgerFilename, ledgerCsv)
-      logger.info({ ledgerFilename }, 'Uploaded file')*/
+    await uploadInvoiceFile(contactsFilename, contactsCsv)
+    logger.info({ contactsFilename }, 'Uploaded file')
+    await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+    logger.info({ aggregatedFilename }, 'Uploaded file')
+    await uploadInvoiceFile(ledgerFilename, ledgerCsv)
+    logger.info({ ledgerFilename }, 'Uploaded file')
 
     await markBatchAsProcessed(parseInt(batchId))
   }
