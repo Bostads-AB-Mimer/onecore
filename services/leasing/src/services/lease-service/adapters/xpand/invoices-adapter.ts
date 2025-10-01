@@ -29,10 +29,11 @@ const getPaymentStatus = (paymentStatusNumber: number) => {
   return paymentStatus
 }
 
-function transformFromDbInvoice(row: any): Invoice {
+function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   return {
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
+    reference: contactCode,
     amount: row.amount,
     fromDate: row.fromDate,
     toDate: row.toDate,
@@ -47,12 +48,9 @@ function transformFromDbInvoice(row: any): Invoice {
 }
 
 const getInvoicesByContactCode = async (
-  contactKey: string
+  contactCode: string
 ): Promise<Invoice[] | undefined> => {
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB'
-  )
+  logger.info({ contactCode }, 'Getting invoices by contact code from Xpand DB')
   const rows = await xpandDb
     .select(
       'krfkh.invoice as invoiceId',
@@ -70,7 +68,7 @@ const getInvoicesByContactCode = async (
     .from('krfkh')
     .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
     .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
-    .where({ 'cmctc.cmctckod': contactKey })
+    .where({ 'cmctc.cmctckod': contactCode })
     .orderBy('krfkh.fromdate', 'desc')
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows
@@ -83,16 +81,16 @@ const getInvoicesByContactCode = async (
           return false
         }
       })
-      .map(transformFromDbInvoice)
+      .map((row) => transformFromDbInvoice(row, contactCode))
     logger.info(
-      { contactCode: contactKey },
+      { contactCode },
       'Getting invoices by contact code from Xpand DB completed'
     )
     return invoices
   }
 
   logger.info(
-    { contactCode: contactKey },
+    { contactCode },
     'Getting invoices by contact code from Xpand DB completed - no invoices found'
   )
   return undefined
