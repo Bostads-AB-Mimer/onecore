@@ -117,7 +117,7 @@ export const enrichProcurementInvoiceRows = async (
       facilityDistributions &&
       Object.keys(facilityDistributions).length > 0
     ) {
-      if ((invoiceDataRow.account as string).startsWith('4')) {
+      if (!(invoiceDataRow.account as string).startsWith('2')) {
         Object.keys(facilityDistributions).forEach((propertyId: string) => {
           const distribution = facilityDistributions[propertyId]
           const distributionDataRow: InvoiceDataRow = { ...invoiceDataRow }
