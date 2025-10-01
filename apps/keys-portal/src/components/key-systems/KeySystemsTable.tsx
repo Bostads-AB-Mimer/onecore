@@ -87,9 +87,10 @@ export function KeySystemsTable({
               let propertyIdArray: string[] = []
               if (KeySystem.propertyIds) {
                 try {
-                  propertyIdArray = typeof KeySystem.propertyIds === 'string'
-                    ? JSON.parse(KeySystem.propertyIds)
-                    : KeySystem.propertyIds
+                  propertyIdArray =
+                    typeof KeySystem.propertyIds === 'string'
+                      ? JSON.parse(KeySystem.propertyIds)
+                      : KeySystem.propertyIds
                 } catch (e) {
                   console.error('Failed to parse propertyIds:', e)
                 }

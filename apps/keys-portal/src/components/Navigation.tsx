@@ -10,11 +10,21 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center space-x-1">
           <Button
+            variant={location.pathname === '/KeyLoan' ? 'default' : 'ghost'}
+            asChild
+            className="gap-2"
+          >
+            <Link to="/KeyLoan">
+              <KeyRound className="h-4 w-4" />
+              Utlåning
+            </Link>
+          </Button>
+          <Button
             variant={location.pathname === '/' ? 'default' : 'ghost'}
             asChild
             className="gap-2"
           >
-            <Link to="/">
+            <Link to="/Keys">
               <Key className="h-4 w-4" />
               Nycklar
             </Link>
@@ -27,16 +37,6 @@ export function Navigation() {
             <Link to="/key-systems">
               <Lock className="h-4 w-4" />
               Låssystem
-            </Link>
-          </Button>
-          <Button
-            variant={location.pathname === '/utlaning' ? 'default' : 'ghost'}
-            asChild
-            className="gap-2"
-          >
-            <Link to="/utlaning">
-              <KeyRound className="h-4 w-4" />
-              Utlåning
             </Link>
           </Button>
         </div>
