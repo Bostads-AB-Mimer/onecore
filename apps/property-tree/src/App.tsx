@@ -10,7 +10,7 @@ import { AuthCallback } from './auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
 import PropertyView from './components/views/v2/PropertyView'
-import { BuildingView } from './components/views/BuildingView'
+import BuildingView from './components/views/v2/BuildingView'
 import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'

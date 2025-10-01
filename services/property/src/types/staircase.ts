@@ -8,6 +8,7 @@ export const staircasesQueryParamsSchema = z.object({
 
 export const StaircaseSchema = z.object({
   id: z.string(),
+  buildingCode: z.string(),
   code: z.string(),
   name: z.string().nullable(),
   features: z.object({
