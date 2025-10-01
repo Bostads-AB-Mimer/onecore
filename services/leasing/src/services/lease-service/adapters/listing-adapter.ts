@@ -423,8 +423,8 @@ const getListingsWithApplicants = async (
           [ListingStatus.Expired, OfferStatus.Active]
         )
       )
-      .with({ type: 'needs-republish' }, () =>
-        db.raw(`WHERE l.Status = ?`, [ListingStatus.NoApplicants])
+      .with({ type: 'closed' }, () =>
+        db.raw(`WHERE l.Status = ?`, [ListingStatus.Closed])
       )
       .otherwise(() => db.raw('WHERE 1=1'))
 

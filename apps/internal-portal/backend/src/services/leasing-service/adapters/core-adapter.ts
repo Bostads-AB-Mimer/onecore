@@ -336,9 +336,7 @@ const deleteListing = async (
   listingId: number
 ): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
   try {
-    await getFromCore<{
-      content: null
-    }>({
+    await getFromCore({
       method: 'delete',
       url: `${coreBaseUrl}/listings/${listingId}`,
     })
