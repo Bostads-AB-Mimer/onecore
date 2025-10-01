@@ -17,12 +17,12 @@ import {
 import { MoreHorizontal, Edit, Trash2, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { KeySystem, KeySystemTypeLabels, Property } from '@/services/types'
-import { sampleProperties } from '@/mockdata/sampleProperties'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
 interface KeySystemsTableProps {
   KeySystems: KeySystem[]
+  propertyMap: Map<string, Property>
   onEdit: (KeySystem: KeySystem) => void
   onDelete: (id: string) => void
   onExplore: (KeySystem: KeySystem) => void
@@ -30,6 +30,7 @@ interface KeySystemsTableProps {
 
 export function KeySystemsTable({
   KeySystems,
+  propertyMap,
   onEdit,
   onDelete,
   onExplore,
@@ -87,18 +88,19 @@ export function KeySystemsTable({
               let propertyIdArray: string[] = []
               if (KeySystem.propertyIds) {
                 try {
-                  propertyIdArray =
+                  const parsed =
                     typeof KeySystem.propertyIds === 'string'
                       ? JSON.parse(KeySystem.propertyIds)
                       : KeySystem.propertyIds
+                  propertyIdArray = Array.isArray(parsed) ? parsed : []
                 } catch (e) {
                   console.error('Failed to parse propertyIds:', e)
                 }
               }
 
-              const properties = sampleProperties.filter((prop) =>
-                propertyIdArray?.includes(prop.id)
-              )
+              const properties = propertyIdArray
+                .map((id) => propertyMap.get(id))
+                .filter((prop): prop is Property => prop !== undefined)
 
               return (
                 <TableRow key={KeySystem.id}>

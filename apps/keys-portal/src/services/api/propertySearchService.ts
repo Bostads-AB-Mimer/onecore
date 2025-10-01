@@ -42,6 +42,33 @@ export class PropertySearchService {
       return []
     }
   }
+
+  async getById(id: string): Promise<Property | null> {
+    try {
+      const response = await GET('/properties/{propertyId}', {
+        params: {
+          path: { propertyId: id },
+        },
+      })
+
+      return response.data?.content || null
+    } catch (error) {
+      console.error(`Error fetching property ${id}:`, error)
+      return null
+    }
+  }
+
+  async getByIds(ids: string[]): Promise<Property[]> {
+    if (!ids || ids.length === 0) return []
+
+    try {
+      const results = await Promise.all(ids.map((id) => this.getById(id)))
+      return results.filter((prop): prop is Property => prop !== null)
+    } catch (error) {
+      console.error('Error fetching properties by IDs:', error)
+      return []
+    }
+  }
 }
 
 export const propertySearchService = new PropertySearchService()
