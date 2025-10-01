@@ -1180,6 +1180,14 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error: 'A key system with this code already exists',
+          ...metadata,
+        }
+        return
+      }
 
       logger.error({ err: result.err, metadata }, 'Error creating key system')
       ctx.status = 500
@@ -1258,6 +1266,14 @@ export const routes = (router: KoaRouter) => {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error: 'A key system with this code already exists',
+          ...metadata,
+        }
         return
       }
 
