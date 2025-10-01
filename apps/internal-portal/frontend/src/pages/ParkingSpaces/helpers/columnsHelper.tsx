@@ -142,8 +142,6 @@ export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
               listing={row}
             />,
           ]
-        } else if (row.status === ListingStatus.NoApplicants) {
-          return [<CloseListing key={0} listingId={row.id} />]
         } else {
           return []
         }
