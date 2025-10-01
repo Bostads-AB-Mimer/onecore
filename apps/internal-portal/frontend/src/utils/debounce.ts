@@ -2,7 +2,7 @@ export function debounce<F extends (...args: any[]) => void>(
   callback: F,
   delay: number
 ): (...args: Parameters<F>) => void {
-  let timer: number | null = null
+  let timer: NodeJS.Timeout | null = null
 
   return (...args: Parameters<F>) => {
     if (timer) {
