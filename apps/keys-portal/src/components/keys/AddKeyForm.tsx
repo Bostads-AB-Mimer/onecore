@@ -57,9 +57,15 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   }, 500)
 
   // Use the reusable search hook
-  console.log('🔍 Debounced query:', debouncedKeySystemQuery, 'Length:', debouncedKeySystemQuery.length)
+  console.log(
+    '🔍 Debounced query:',
+    debouncedKeySystemQuery,
+    'Length:',
+    debouncedKeySystemQuery.length
+  )
   const keySystemsQuery = useSearch(
-    (query: string) => keySystemSearchService.search({ q: query, fields: ['systemCode'] }),
+    (query: string) =>
+      keySystemSearchService.search({ q: query, fields: ['systemCode'] }),
     'search-key-systems',
     debouncedKeySystemQuery
   )
@@ -320,25 +326,29 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                 )}
               </div>
 
-              {!keySystemsQuery.isFetching && keySystemsQuery.data && keySystemsQuery.data.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {keySystemsQuery.data.map((result, index) => (
-                    <button
-                      key={`${result.id}-${index}`}
-                      type="button"
-                      className="w-full text-left px-3 py-1 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-xs"
-                      onClick={() => handleSelectKeySystemResult(result)}
-                    >
-                      <div className="font-medium">{result.systemCode}</div>
-                      <div className="text-xs text-gray-600">{result.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {result.manufacturer && `${result.manufacturer} • `}
-                        {result.type}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {!keySystemsQuery.isFetching &&
+                keySystemsQuery.data &&
+                keySystemsQuery.data.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {keySystemsQuery.data.map((result, index) => (
+                      <button
+                        key={`${result.id}-${index}`}
+                        type="button"
+                        className="w-full text-left px-3 py-1 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-xs"
+                        onClick={() => handleSelectKeySystemResult(result)}
+                      >
+                        <div className="font-medium">{result.systemCode}</div>
+                        <div className="text-xs text-gray-600">
+                          {result.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {result.manufacturer && `${result.manufacturer} • `}
+                          {result.type}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
             </div>
 
             <div className="space-y-1">
