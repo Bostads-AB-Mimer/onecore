@@ -53,9 +53,9 @@ export const PropertySchema = z.object({
 export const PropertyDetailsSchema = z.object({
   id: z.string().trim(),
   propertyObjectId: z.string().trim(),
-  marketAreaId: z.string().trim(),
-  districtId: z.string().trim(),
-  propertyDesignationId: z.string().trim(),
+  marketAreaId: z.string().trim().nullable(),
+  districtId: z.string().trim().nullable(),
+  propertyDesignationId: z.string().trim().nullable(),
   valueAreaId: z.string().nullable(),
   code: z.string(),
   designation: z.string(),
@@ -84,22 +84,24 @@ export const PropertyDetailsSchema = z.object({
   fromDate: z.date(),
   toDate: z.date(),
   timestamp: z.string(),
-  propertyObject: z.object({
-    id: z.string().trim(),
-    deleteMark: z.number().int(),
-    timestamp: z.string(),
-    objectTypeId: z.string().trim(),
-    barcode: z.string().nullable(),
-    barcodeType: z.number().int(),
-    condition: z.number().int(),
-    conditionInspectionDate: z.string().nullable(),
-    vatAdjustmentPrinciple: z.number().int(),
-    energyClass: z.number().int(),
-    energyRegistered: z.string().nullable(),
-    energyReceived: z.string().nullable(),
-    energyIndex: z.string().nullable(),
-    heatingNature: z.number().int(),
-  }),
+  propertyObject: z
+    .object({
+      id: z.string().trim(),
+      deleteMark: z.number().int(),
+      timestamp: z.string(),
+      objectTypeId: z.string().trim(),
+      barcode: z.string().nullable(),
+      barcodeType: z.number().int(),
+      condition: z.number().int(),
+      conditionInspectionDate: z.string().nullable(),
+      vatAdjustmentPrinciple: z.number().int(),
+      energyClass: z.number().int(),
+      energyRegistered: z.string().nullable(),
+      energyReceived: z.string().nullable(),
+      energyIndex: z.string().nullable(),
+      heatingNature: z.number().int(),
+    })
+    .optional(),
 })
 
 export type PropertyDesignation = z.infer<typeof PropertyDesignationSchema>
