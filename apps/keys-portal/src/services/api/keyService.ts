@@ -104,12 +104,20 @@ export const keyService = {
   },
 
   async createKeySystem(payload: CreateKeySystemRequest): Promise<KeySystem> {
-    const { data, error, response } = await POST('/key-systems', { body: payload })
+    const { data, error, response } = await POST('/key-systems', {
+      body: payload,
+    })
 
-    console.log('createKeySystem response:', { data, error, status: response.status, ok: response.ok })
+    console.log('createKeySystem response:', {
+      data,
+      error,
+      status: response.status,
+      ok: response.ok,
+    })
 
     if (error || !response.ok) {
-      const errorMessage = (error as any)?.error || 'Failed to create key system'
+      const errorMessage =
+        (error as any)?.error || 'Failed to create key system'
       const err = new Error(errorMessage)
       ;(err as any).status = response.status
       console.log('Throwing error:', err)
@@ -127,7 +135,8 @@ export const keyService = {
       body: payload,
     })
     if (error || !response.ok) {
-      const errorMessage = (error as any)?.error || 'Failed to update key system'
+      const errorMessage =
+        (error as any)?.error || 'Failed to update key system'
       const err = new Error(errorMessage)
       ;(err as any).status = response.status
       throw err

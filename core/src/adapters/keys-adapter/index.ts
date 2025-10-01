@@ -73,7 +73,10 @@ async function postJSON<T>(
     // Check if response is an error status even if axios didn't throw
     if (res.status >= 400) {
       const err = mapAxiosError({ response: res } as AxiosError)
-      logger.error({ status: res.status, body }, `POST ${url} returned error -> ${err}`)
+      logger.error(
+        { status: res.status, body },
+        `POST ${url} returned error -> ${err}`
+      )
       return fail(err)
     }
     return ok(res.data)
@@ -94,7 +97,10 @@ async function patchJSON<T>(
     // Check if response is an error status even if axios didn't throw
     if (res.status >= 400) {
       const err = mapAxiosError({ response: res } as AxiosError)
-      logger.error({ status: res.status, body }, `PATCH ${url} returned error -> ${err}`)
+      logger.error(
+        { status: res.status, body },
+        `PATCH ${url} returned error -> ${err}`
+      )
       return fail(err)
     }
     return ok(res.data)
