@@ -83,14 +83,26 @@ export function KeySystemsTable({
             </TableRow>
           ) : (
             KeySystems.map((KeySystem) => {
+              // Parse propertyIds if it's a JSON string
+              let propertyIdArray: string[] = []
+              if (KeySystem.propertyIds) {
+                try {
+                  propertyIdArray = typeof KeySystem.propertyIds === 'string'
+                    ? JSON.parse(KeySystem.propertyIds)
+                    : KeySystem.propertyIds
+                } catch (e) {
+                  console.error('Failed to parse propertyIds:', e)
+                }
+              }
+
               const properties = sampleProperties.filter((prop) =>
-                KeySystem.property_ids?.includes(prop.id)
+                propertyIdArray?.includes(prop.id)
               )
 
               return (
                 <TableRow key={KeySystem.id}>
                   <TableCell className="font-medium">
-                    {KeySystem.system_code}
+                    {KeySystem.systemCode}
                   </TableCell>
                   <TableCell>{KeySystem.name}</TableCell>
                   <TableCell>{KeySystem.manufacturer || '-'}</TableCell>
@@ -103,7 +115,7 @@ export function KeySystemsTable({
                             variant="outline"
                             className="text-xs"
                           >
-                            {property.name}
+                            {property.designation}
                           </Badge>
                         ))
                       ) : (
@@ -118,14 +130,14 @@ export function KeySystemsTable({
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={KeySystem.is_active ? 'default' : 'secondary'}
+                      variant={KeySystem.isActive ? 'default' : 'secondary'}
                     >
-                      {KeySystem.is_active ? 'Aktiv' : 'Inaktiv'}
+                      {KeySystem.isActive ? 'Aktiv' : 'Inaktiv'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {KeySystem.installation_date
-                      ? formatDate(KeySystem.installation_date)
+                    {KeySystem.installationDate
+                      ? formatDate(KeySystem.installationDate.toString())
                       : '-'}
                   </TableCell>
                   <TableCell>

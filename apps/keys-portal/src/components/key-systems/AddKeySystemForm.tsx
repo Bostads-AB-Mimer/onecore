@@ -26,12 +26,24 @@ import {
 } from '@/services/api/propertySearchService'
 import { X } from 'lucide-react'
 
+type KeySystemFormData = Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>
+
 interface AddKeySystemFormProps {
-  onSave: (
-    keySystem: Omit<KeySystem, 'id' | 'created_at' | 'updated_at'>
-  ) => void
+  onSave: (keySystem: KeySystemFormData) => void
   onCancel: () => void
   editingKeySystem?: KeySystem | null
+}
+
+const emptyFormData: KeySystemFormData = {
+  systemCode: '',
+  name: '',
+  manufacturer: '',
+  managingSupplier: '',
+  type: 'MECHANICAL',
+  installationDate: '',
+  isActive: true,
+  description: '',
+  propertyIds: '',
 }
 
 export function AddKeySystemForm({
@@ -39,17 +51,7 @@ export function AddKeySystemForm({
   onCancel,
   editingKeySystem,
 }: AddKeySystemFormProps) {
-  const [formData, setFormData] = useState({
-    system_code: '',
-    name: '',
-    manufacturer: '',
-    managing_supplier: '',
-    type: 'MECHANICAL' as KeySystemType,
-    installation_date: '',
-    is_active: true,
-    description: '',
-    property_ids: [] as string[],
-  })
+  const [formData, setFormData] = useState<KeySystemFormData>(emptyFormData)
 
   // Property search functionality state with debouncing
   const [propertySearchQuery, setPropertySearchQuery] = useState('')
@@ -80,32 +82,26 @@ export function AddKeySystemForm({
   useEffect(() => {
     if (editingKeySystem) {
       setFormData({
-        system_code: editingKeySystem.system_code,
+        systemCode: editingKeySystem.systemCode,
         name: editingKeySystem.name,
         manufacturer: editingKeySystem.manufacturer || '',
-        managing_supplier: editingKeySystem.managing_supplier || '',
+        managingSupplier: editingKeySystem.managingSupplier || '',
         type: editingKeySystem.type,
-        installation_date: editingKeySystem.installation_date
-          ? new Date(editingKeySystem.installation_date)
+        installationDate: editingKeySystem.installationDate
+          ? new Date(editingKeySystem.installationDate)
               .toISOString()
               .split('T')[0]
           : '',
-        is_active: editingKeySystem.is_active,
+        isActive: editingKeySystem.isActive || false,
         description: editingKeySystem.description || '',
-        property_ids: editingKeySystem.property_ids || [],
+        propertyIds: editingKeySystem.propertyIds
+          ? typeof editingKeySystem.propertyIds === 'string'
+            ? JSON.parse(editingKeySystem.propertyIds)
+            : editingKeySystem.propertyIds
+          : [],
       })
     } else {
-      setFormData({
-        system_code: '',
-        name: '',
-        manufacturer: '',
-        managing_supplier: '',
-        type: 'MECHANICAL',
-        installation_date: '',
-        is_active: true,
-        description: '',
-        property_ids: [],
-      })
+      setFormData(emptyFormData)
       setSelectedProperties([])
     }
   }, [editingKeySystem])
@@ -125,7 +121,7 @@ export function AddKeySystemForm({
       setSelectedProperties(newSelectedProperties)
       setFormData((prev) => ({
         ...prev,
-        property_ids: newSelectedProperties.map((p) => p.id),
+        propertyIds: JSON.stringify(newSelectedProperties.map((p) => p.id)),
       }))
     }
     setPropertySearchQuery('')
@@ -140,7 +136,7 @@ export function AddKeySystemForm({
     setSelectedProperties(newSelectedProperties)
     setFormData((prev) => ({
       ...prev,
-      property_ids: newSelectedProperties.map((p) => p.id),
+      propertyIds: JSON.stringify(newSelectedProperties.map((p) => p.id)),
     }))
   }
 
@@ -149,14 +145,11 @@ export function AddKeySystemForm({
 
     const KeySystemData = {
       ...formData,
-      installation_date: formData.installation_date || undefined,
+      installationDate: formData.installationDate || undefined,
       manufacturer: formData.manufacturer || undefined,
-      managing_supplier: formData.managing_supplier || undefined,
+      managingSupplier: formData.managingSupplier || undefined,
       description: formData.description || undefined,
-      property_ids:
-        formData.property_ids.length > 0 ? formData.property_ids : undefined,
-      created_by: undefined,
-      updated_by: undefined,
+      propertyIds: formData.propertyIds || undefined,
     }
 
     onSave(KeySystemData)
@@ -177,11 +170,11 @@ export function AddKeySystemForm({
               <Label htmlFor="system_code">Systemkod *</Label>
               <Input
                 id="system_code"
-                value={formData.system_code}
+                value={formData.systemCode}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    system_code: e.target.value,
+                    systemCode: e.target.value,
                   }))
                 }
                 placeholder="t.ex. ABC123"
@@ -223,11 +216,11 @@ export function AddKeySystemForm({
               <Label htmlFor="managing_supplier">Förvaltande leverantör</Label>
               <Input
                 id="managing_supplier"
-                value={formData.managing_supplier}
+                value={formData.managingSupplier}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    managing_supplier: e.target.value,
+                    managingSupplier: e.target.value,
                   }))
                 }
                 placeholder="Leverantör"
@@ -262,11 +255,11 @@ export function AddKeySystemForm({
               <Input
                 id="installation_date"
                 type="date"
-                value={formData.installation_date}
+                value={formData.installationDate}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    installation_date: e.target.value,
+                    installationDate: e.target.value,
                   }))
                 }
               />
@@ -276,9 +269,9 @@ export function AddKeySystemForm({
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
-              checked={formData.is_active}
+              checked={formData.isActive}
               onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, is_active: checked }))
+                setFormData((prev) => ({ ...prev, isActive: checked }))
               }
             />
             <Label htmlFor="is_active">Aktivt system</Label>
