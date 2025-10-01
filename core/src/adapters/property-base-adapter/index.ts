@@ -228,7 +228,7 @@ export async function getResidences(
 ): Promise<AdapterResult<GetResidencesResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/residences', {
-      params: { query: { buildingCode, floorCode: staircaseCode } },
+      params: { query: { buildingCode, staircaseCode } },
     })
 
     if (fetchResponse.data?.content) {
