@@ -13,6 +13,17 @@ export const residenceService = {
     return data.content || []
   },
 
+  async getByBuildingCodeAndStaircaseCode(
+    buildingCode: string,
+    staircaseCode: string
+  ): Promise<Residence[]> {
+    const { data, error } = await GET('/residences', {
+      params: { query: { buildingCode, staircaseCode } },
+    })
+    if (error) throw error
+    return data.content || []
+  },
+
   async getById(residenceId: string): Promise<ResidenceDetails> {
     const { data, error } = await GET(`/residences/{residenceId}`, {
       params: { path: { residenceId } },
