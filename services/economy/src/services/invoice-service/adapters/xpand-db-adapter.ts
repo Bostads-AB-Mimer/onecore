@@ -541,7 +541,7 @@ export const getRentalInvoices = async (
   toDate: Date,
   companyId: string
 ) => {
-  //return [{ invoice: '552501342641254' }]
+  //return [{ invoice: '552509353956750' }]
   const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
 
   console.log(keycode, companyId, fromDate, toDate)
