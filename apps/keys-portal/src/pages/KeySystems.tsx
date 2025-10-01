@@ -4,12 +4,16 @@ import { KeySystemsToolbar } from '@/components/key-systems/KeySystemsToolbar'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
 import { AddKeySystemForm } from '@/components/key-systems/AddKeySystemForm'
 
-import { KeySystem } from '@/services/types'
+import { KeySystem, Property } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyService } from '@/services/api/keyService'
+import { propertySearchService } from '@/services/api/propertySearchService'
 
 export default function KeySystems() {
   const [KeySystems, setKeySystems] = useState<KeySystem[]>([])
+  const [propertyMap, setPropertyMap] = useState<Map<string, Property>>(
+    new Map()
+  )
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
@@ -20,13 +24,41 @@ export default function KeySystems() {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  // Load key systems from API on mount
+  // Load key systems and their properties from API on mount
   useEffect(() => {
     const loadKeySystems = async () => {
       try {
         setIsLoading(true)
         const systems = await keyService.getAllKeySystems()
         setKeySystems(systems)
+
+        // Collect all unique property IDs from all key systems
+        const allPropertyIds = new Set<string>()
+        systems.forEach((system) => {
+          if (system.propertyIds) {
+            try {
+              const ids =
+                typeof system.propertyIds === 'string'
+                  ? JSON.parse(system.propertyIds)
+                  : system.propertyIds
+              if (Array.isArray(ids)) {
+                ids.forEach((id: string) => allPropertyIds.add(id))
+              }
+            } catch (e) {
+              console.error('Failed to parse propertyIds:', e)
+            }
+          }
+        })
+
+        // Fetch all properties at once
+        if (allPropertyIds.size > 0) {
+          const properties = await propertySearchService.getByIds(
+            Array.from(allPropertyIds)
+          )
+          const newPropertyMap = new Map<string, Property>()
+          properties.forEach((prop) => newPropertyMap.set(prop.id, prop))
+          setPropertyMap(newPropertyMap)
+        }
       } catch (error) {
         console.error('Failed to load key systems:', error)
         toast({
@@ -111,9 +143,10 @@ export default function KeySystems() {
       console.error('Failed to save key system:', error)
 
       // Check if it's a conflict error (409)
-      const isConflict = error?.status === 409 ||
-                         error?.message?.includes('409') ||
-                         error?.message?.includes('already exists')
+      const isConflict =
+        error?.status === 409 ||
+        error?.message?.includes('409') ||
+        error?.message?.includes('already exists')
 
       toast({
         title: 'Fel',
@@ -171,6 +204,7 @@ export default function KeySystems() {
 
       <KeySystemsTable
         KeySystems={filteredKeySystems}
+        propertyMap={propertyMap}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onExplore={() => {}} // No longer used, navigation handled in table
