@@ -23,10 +23,13 @@ export function TenantInfo({
   tenant,
   contracts,
   onClearSearch,
+  showTenantCard = true,
 }: {
-  tenant: Tenant
+  tenant?: Tenant | null
   contracts: Lease[]
   onClearSearch: () => void
+  /* hiding the tenant card for hyresobjekt flow */
+  showTenantCard?: boolean
 }) {
   const { activeContracts, upcomingContracts, endedContracts } = useMemo(() => {
     const active: Lease[] = []
@@ -57,35 +60,37 @@ export function TenantInfo({
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            {tenant.firstName} {tenant.lastName}
-          </CardTitle>
-          <CardDescription>
-            Personnummer: {tenant.nationalRegistrationNumber}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {tenant.emailAddress && (
-            <p className="text-sm text-muted-foreground">
-              E-post: {tenant.emailAddress}
-            </p>
-          )}
-          {tenant.phoneNumbers?.[0]?.phoneNumber && (
-            <p className="text-sm text-muted-foreground">
-              Telefon: {tenant.phoneNumbers[0].phoneNumber}
-            </p>
-          )}
-          {tenant.address && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              {formatAddress(tenant.address as Address)}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {showTenantCard && tenant && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              {tenant.firstName} {tenant.lastName}
+            </CardTitle>
+            <CardDescription>
+              Personnummer: {tenant.nationalRegistrationNumber}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {tenant.emailAddress && (
+              <p className="text-sm text-muted-foreground">
+                E-post: {tenant.emailAddress}
+              </p>
+            )}
+            {tenant.phoneNumbers?.[0]?.phoneNumber && (
+              <p className="text-sm text-muted-foreground">
+                Telefon: {tenant.phoneNumbers[0].phoneNumber}
+              </p>
+            )}
+            {tenant.address && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {formatAddress(tenant.address as Address)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
         {activeContracts.length > 0 && (
