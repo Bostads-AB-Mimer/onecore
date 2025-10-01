@@ -70,6 +70,12 @@ async function postJSON<T>(
 ): Promise<AdapterResult<T, CommonErr>> {
   try {
     const res = await axios.post<T>(url, body, { headers })
+    // Check if response is an error status even if axios didn't throw
+    if (res.status >= 400) {
+      const err = mapAxiosError({ response: res } as AxiosError)
+      logger.error({ status: res.status, body }, `POST ${url} returned error -> ${err}`)
+      return fail(err)
+    }
     return ok(res.data)
   } catch (e) {
     const err = mapAxiosError(e)
@@ -85,6 +91,12 @@ async function patchJSON<T>(
 ): Promise<AdapterResult<T, CommonErr>> {
   try {
     const res = await axios.patch<T>(url, body, { headers })
+    // Check if response is an error status even if axios didn't throw
+    if (res.status >= 400) {
+      const err = mapAxiosError({ response: res } as AxiosError)
+      logger.error({ status: res.status, body }, `PATCH ${url} returned error -> ${err}`)
+      return fail(err)
+    }
     return ok(res.data)
   } catch (e) {
     const err = mapAxiosError(e)
