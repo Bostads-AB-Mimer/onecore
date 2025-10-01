@@ -339,7 +339,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         ])
       }))
 
-    it('only gets needs-republish listings', () =>
+    it('only gets closed listings', () =>
       withContext(async (ctx) => {
         const activeListing = await listingAdapter.createListing(
           factory.listing.build({
@@ -350,62 +350,27 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         )
 
         assert(activeListing.ok)
-        const needsRepublishListing = await listingAdapter.createListing(
+        const closedListing = await listingAdapter.createListing(
           factory.listing.build({
             rentalObjectCode: '2',
-            status: ListingStatus.NoApplicants,
+            status: ListingStatus.Closed,
           }),
           ctx.db
         )
 
-        assert(needsRepublishListing.ok)
+        assert(closedListing.ok)
 
         const listings = await listingAdapter.getListingsWithApplicants(
           ctx.db,
           {
-            by: { type: 'needs-republish' },
+            by: { type: 'closed' },
           }
         )
 
         assert(listings.ok)
 
         expect(listings.data).toEqual([
-          expect.objectContaining({ id: needsRepublishListing.data.id }),
-        ])
-      }))
-
-    it('needs-republish should return listings whos applicants were removed', () =>
-      withContext(async (ctx) => {
-        const listing = await listingAdapter.createListing(
-          factory.listing.build({
-            rentalObjectCode: '1',
-            status: ListingStatus.NoApplicants,
-          }),
-          ctx.db
-        )
-
-        assert(listing.ok)
-        const applicant = await listingAdapter.createApplication(
-          factory.applicant.build({ listingId: listing.data.id }),
-          ctx.db
-        )
-
-        assert(applicant)
-        await listingAdapter.updateApplicantStatus(ctx.db, {
-          applicantId: applicant.id,
-          status: ApplicantStatus.WithdrawnByUser,
-        })
-
-        const listings = await listingAdapter.getListingsWithApplicants(
-          ctx.db,
-          {
-            by: { type: 'needs-republish' },
-          }
-        )
-
-        assert(listings.ok)
-        expect(listings.data).toEqual([
-          expect.objectContaining({ id: listing.data.id }),
+          expect.objectContaining({ id: closedListing.data.id }),
         ])
       }))
   })

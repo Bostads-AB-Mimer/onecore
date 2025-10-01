@@ -272,6 +272,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const { listings } = parseResult.data
+
       const result = await listingAdapter.createMultipleListings(listings)
 
       if (!result.ok) {
@@ -602,7 +603,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [published, ready-for-offer, offered, historical, needs-republish]
+   *           enum: [published, ready-for-offer, offered, historical, closed]
    *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
@@ -651,7 +652,7 @@ export const routes = (router: KoaRouter) => {
           'ready-for-offer',
           'offered',
           'historical',
-          'needs-republish'
+          'closed'
         ),
         (type) => ({ by: { type } })
       )
