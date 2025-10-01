@@ -810,6 +810,126 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases:
+   *   get:
+   *     summary: Get all leases with optional date filters
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years.
+   *     parameters:
+   *       - in: query
+   *         name: fromDateStart
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with fromDate greater than or equal to this date.
+   *       - in: query
+   *         name: fromDateEnd
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with fromDate less than or equal to this date.
+   *       - in: query
+   *         name: lastDebitDateStart
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with lastDebitDate greater than or equal to this date.
+   *       - in: query
+   *         name: lastDebitDateEnd
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with lastDebitDate less than or equal to this date.
+   *     responses:
+   *       '200':
+   *         description: Successful response with leases matching the filter criteria
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       leaseId:
+   *                         type: string
+   *                       rentalPropertyId:
+   *                         type: string
+   *                       fromDate:
+   *                         type: string
+   *                         format: date
+   *                       lastDebitDate:
+   *                         type: string
+   *                         format: date
+   *                       noticeDate:
+   *                         type: string
+   *                         format: date
+   *                       preferredMoveOutDate:
+   *                         type: string
+   *                         format: date
+   *                       leaseType:
+   *                         type: string
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  const GetAllLeasesByDateFilterQueryParams = z.object({
+    fromDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    fromDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    lastDebitDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    lastDebitDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+  })
+
+  router.get('/leases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'fromDateStart',
+      'fromDateEnd',
+      'lastDebitDateStart',
+      'lastDebitDateEnd',
+    ])
+
+    const queryParams = GetAllLeasesByDateFilterQueryParams.safeParse(ctx.query)
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await leasingAdapter.getAllLeasesByDateFilter({
+      fromDateStart: queryParams.data.fromDateStart,
+      fromDateEnd: queryParams.data.fromDateEnd,
+      lastDebitDateStart: queryParams.data.lastDebitDateStart,
+      lastDebitDateEnd: queryParams.data.lastDebitDateEnd,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/{id}:
    *   get:
    *     summary: Get lease by ID
