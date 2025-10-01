@@ -111,7 +111,9 @@ export function AddKeySystemForm({
   }, [editingKeySystem])
 
   // Handle property input changes and trigger search
-  const handlePropertySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePropertySearchChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = e.target.value
     setPropertySearchQuery(value)
   }
@@ -332,8 +334,8 @@ export function AddKeySystemForm({
                       className="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-sm"
                     >
                       <span>
-                        {property.designation || property.code} - {property.tract},{' '}
-                        {property.municipality}
+                        {property.designation || property.code} -{' '}
+                        {property.tract}, {property.municipality}
                       </span>
                       <Button
                         type="button"

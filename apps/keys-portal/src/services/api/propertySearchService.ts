@@ -1,4 +1,5 @@
 import type { Property } from '@/services/types'
+
 import { GET } from './core/base-api'
 
 export interface PropertySearchParams {
