@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+// components/loan/EmbeddedKeysList.tsx
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import type {
   Key,
   Lease,
   KeyType,
-  MockKeyLoan,
   ReceiptData,
+  KeyLoan,
 } from '@/services/types'
 import { KeyTypeLabels, toReceiptTenant } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,18 +13,27 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
-
-import { generateMockKeys, countKeysByType } from '@/mockdata/mock-keys'
-import { mockKeyLoans } from '@/mockdata/mock-keyloans'
 import { ReceiptDialog } from './ReceiptDialog'
 import { ReceiptHistory } from './ReceiptHistory'
+import { keyLoanService } from '@/services/api/keyLoanService'
+import { keyService } from '@/services/api/keyService'
 
 type LoanStatus = 'never_loaned' | 'loaned' | 'returned'
 
-export function EmbeddedKeysList({ lease }: { lease: Lease }) {
-  const [keys, setKeys] = useState<Key[]>([])
-  const [activeLoans, setActiveLoans] = useState<MockKeyLoan[]>([])
-  const [returnedLoans, setReturnedLoans] = useState<MockKeyLoan[]>([])
+export function EmbeddedKeysList({
+  lease,
+  initialKeys = [],
+}: {
+  lease: Lease
+  initialKeys?: Key[]
+}) {
+  // ------- State -------
+  const [keys, setKeys] = useState<Key[]>(initialKeys)
+  const [loadingKeys, setLoadingKeys] = useState(false)
+
+  // use the server type directly; no local redefinition needed
+  const [loans, setLoans] = useState<KeyLoan[]>([])
+  const [loadingLoans, setLoadingLoans] = useState(false)
 
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -34,44 +44,83 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
     string[]
   >([])
 
+  // Keep local keys in sync if parent re-renders with fresh ones
   useEffect(() => {
-    setKeys(generateMockKeys(lease.leaseId))
-    refreshLoans()
-    setSelectedKeys([])
-    setIsProcessing(false)
-    setShowReceiptDialog(false)
-    setReceiptData(null)
-    setLastTransactionKeyLoanIds([])
+    setKeys(initialKeys)
+  }, [initialKeys])
+
+  // If parent didn't pass keys, fetch by rentalObjectCode
+  useEffect(() => {
+    if (initialKeys.length > 0) return
+    let cancelled = false
+    ;(async () => {
+      setLoadingKeys(true)
+      try {
+        const list = await keyService.searchKeys({
+          rentalObjectCode: lease.rentalPropertyId,
+        })
+        if (!cancelled) setKeys(list)
+      } finally {
+        if (!cancelled) setLoadingKeys(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [lease.rentalPropertyId, initialKeys.length])
+
+  // Load loans for this lease
+  const refreshLoans = useCallback(async () => {
+    setLoadingLoans(true)
+    try {
+      const list = await keyLoanService.search({ lease: lease.leaseId })
+      setLoans(list)
+    } finally {
+      setLoadingLoans(false)
+    }
   }, [lease.leaseId])
 
-  const refreshLoans = () => {
-    const { active, returned } = mockKeyLoans.listByLease(lease.leaseId)
-    setActiveLoans(active)
-    setReturnedLoans(returned)
-  }
+  useEffect(() => {
+    refreshLoans()
+  }, [refreshLoans])
 
+  // --- Helpers ---
   const activeLoanByKeyId = useMemo(() => {
-    const m = new Map<string, MockKeyLoan>()
-    activeLoans.forEach((l) => m.set(l.keyId, l))
+    const m = new Map<string, KeyLoan>()
+    for (const l of loans) {
+      if (!l.returnedAt) {
+        try {
+          const keyIds = JSON.parse(l.keys ?? '[]') as string[]
+          keyIds.forEach((id) => m.set(id, l))
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     return m
-  }, [activeLoans])
+  }, [loans])
 
   const getStatus = (keyId: string): LoanStatus => {
     if (activeLoanByKeyId.has(keyId)) return 'loaned'
-    if (returnedLoans.some((l) => l.keyId === keyId)) return 'returned'
-    return 'never_loaned'
+    const ever = loans.some((l) => {
+      try {
+        const ids = JSON.parse(l.keys ?? '[]') as string[]
+        return ids.includes(keyId)
+      } catch {
+        return false
+      }
+    })
+    return ever ? 'returned' : 'never_loaned'
   }
 
   const availableKeys = useMemo(
     () => keys.filter((k) => getStatus(k.id) !== 'loaned'),
-    [keys, activeLoanByKeyId, returnedLoans]
+    [keys, activeLoanByKeyId, loans]
   )
   const loanedKeys = useMemo(
     () => keys.filter((k) => getStatus(k.id) === 'loaned'),
     [keys, activeLoanByKeyId]
   )
-
-  const countsByType = useMemo(() => countKeysByType(keys), [keys])
 
   const toggleSelection = (keyId: string, checked: boolean) => {
     setSelectedKeys((prev) =>
@@ -104,87 +153,123 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
   }
 
   // ---- Actions: Loan / Return ----
-  const handleLoanSelected = () => {
+  const handleLoanSelected = async () => {
     if (selectedKeys.length === 0) return
     setIsProcessing(true)
+    try {
+      const t = lease.tenants?.[0]
+      const contact = t
+        ? `contact-${(t.firstName ?? '').toLowerCase()}-${(t.lastName ?? '').toLowerCase()}`
+        : undefined
 
-    const t = lease.tenants?.[0]
-    const tenantId = t?.contactKey ?? ''
-    const created = mockKeyLoans.loanMany({
-      lease,
-      tenantId,
-      keyIds: selectedKeys,
-    })
-    refreshLoans()
-    setSelectedKeys([])
+      const createdIds: string[] = []
+      for (const keyId of selectedKeys) {
+        const created = await keyLoanService.create({
+          keys: JSON.stringify([keyId]),
+          lease: lease.leaseId,
+          contact,
+          pickedUpAt: new Date().toISOString(),
+          createdBy: 'ui',
+        })
+        if (created.id) createdIds.push(created.id)
+      }
 
-    // Open receipt dialog for this transaction
-    openReceiptDialog(
-      'loan',
-      created.map((c) => c.keyId),
-      created.map((c) => c.id),
-      created[0]?.createdAt
-    )
-
-    setIsProcessing(false)
+      await refreshLoans()
+      openReceiptDialog('loan', selectedKeys, createdIds)
+      setSelectedKeys([])
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleLoanAll = () => {
+  const handleLoanAll = async () => {
     const ids = availableKeys.map((k) => k.id)
     if (ids.length === 0) return
     setIsProcessing(true)
+    try {
+      const t = lease.tenants?.[0]
+      const contact = t
+        ? `contact-${(t.firstName ?? '').toLowerCase()}-${(t.lastName ?? '').toLowerCase()}`
+        : undefined
 
-    const t = lease.tenants?.[0]
-    const tenantId = t?.contactKey ?? ''
-    const created = mockKeyLoans.loanMany({ lease, tenantId, keyIds: ids })
-    refreshLoans()
-    setSelectedKeys([])
+      const createdIds: string[] = []
+      for (const keyId of ids) {
+        const created = await keyLoanService.create({
+          keys: JSON.stringify([keyId]),
+          lease: lease.leaseId,
+          contact,
+          pickedUpAt: new Date().toISOString(),
+          createdBy: 'ui',
+        })
+        if (created.id) createdIds.push(created.id)
+      }
 
-    openReceiptDialog(
-      'loan',
-      created.map((c) => c.keyId),
-      created.map((c) => c.id),
-      created[0]?.createdAt
-    )
-
-    setIsProcessing(false)
+      await refreshLoans()
+      openReceiptDialog('loan', ids, createdIds)
+      setSelectedKeys([])
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleReturnKey = (keyId: string) => {
+  const handleReturnKey = async (keyId: string) => {
     const loan = activeLoanByKeyId.get(keyId)
-    if (!loan) return
+    if (!loan?.id) return
     setIsProcessing(true)
-
-    const updated = mockKeyLoans.returnMany([loan.id])
-    refreshLoans()
-
-    openReceiptDialog(
-      'return',
-      [loan.keyId],
-      updated.map((u) => u.id),
-      updated[0]?.returnedAt ?? updated[0]?.createdAt
-    )
-
-    setIsProcessing(false)
+    try {
+      const updated = await keyLoanService.update(loan.id, {
+        returnedAt: new Date().toISOString(),
+        availableToNextTenantFrom: new Date().toISOString(),
+        updatedBy: 'ui',
+      })
+      await refreshLoans()
+      openReceiptDialog(
+        'return',
+        [keyId],
+        [updated.id!],
+        updated.returnedAt ?? updated.updatedAt
+      )
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleReturnAll = () => {
-    if (activeLoans.length === 0) return
+  const handleReturnAll = async () => {
+    const active = keys.filter((k) => activeLoanByKeyId.has(k.id))
+    if (active.length === 0) return
     setIsProcessing(true)
+    try {
+      const updatedIds: string[] = []
+      for (const k of active) {
+        const l = activeLoanByKeyId.get(k.id)!
+        const u = await keyLoanService.update(l.id!, {
+          returnedAt: new Date().toISOString(),
+          availableToNextTenantFrom: new Date().toISOString(),
+          updatedBy: 'ui',
+        })
+        updatedIds.push(u.id!)
+      }
+      await refreshLoans()
+      openReceiptDialog(
+        'return',
+        active.map((k) => k.id),
+        updatedIds
+      )
+      setSelectedKeys([])
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
-    const ids = activeLoans.map((l) => l.id)
-    const updated = mockKeyLoans.returnMany(ids)
-    refreshLoans()
-    setSelectedKeys([])
+  // ----- Derived for header chips -----
+  const countsByType = useMemo(() => {
+    const m = new Map<string, number>()
+    keys.forEach((k) => m.set(k.keyType, (m.get(k.keyType) ?? 0) + 1))
+    return m
+  }, [keys])
 
-    openReceiptDialog(
-      'return',
-      updated.map((u) => u.keyId),
-      updated.map((u) => u.id),
-      updated[0]?.returnedAt ?? updated[0]?.createdAt
-    )
-
-    setIsProcessing(false)
+  if (loadingKeys) {
+    return <div className="text-xs text-muted-foreground">Hämtar nycklar…</div>
   }
 
   return (
@@ -193,11 +278,15 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
         <CardContent className="space-y-4 p-3">
           {/* Summary badges */}
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(KeyTypeLabels) as KeyType[]).map((t) => (
-              <Badge key={t} variant="secondary" className="text-xs">
-                {KeyTypeLabels[t]}: {countsByType[t] ?? 0}
-              </Badge>
-            ))}
+            {(Object.keys(KeyTypeLabels) as KeyType[]).map((t) => {
+              const n = countsByType.get(t) ?? 0
+              if (!n) return null
+              return (
+                <Badge key={t} variant="secondary" className="text-xs">
+                  {KeyTypeLabels[t]}: {n}
+                </Badge>
+              )
+            })}
           </div>
 
           {/* Bulk actions */}
@@ -255,8 +344,7 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
                           {key.keyName}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {KeyTypeLabels[key.keyType as KeyType] ??
-                            (key.keyType as unknown as string)}
+                          {KeyTypeLabels[key.keyType as KeyType]}
                         </span>
                         {key.keySequenceNumber && (
                           <span className="text-xs text-muted-foreground">
@@ -266,11 +354,6 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
                         {key.flexNumber && (
                           <span className="text-xs text-muted-foreground">
                             Flex: {key.flexNumber}
-                          </span>
-                        )}
-                        {key.keySystemId && (
-                          <span className="text-xs text-muted-foreground">
-                            Lås: {key.keySystemId}
                           </span>
                         )}
                       </div>
@@ -312,7 +395,6 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
             })}
           </div>
 
-          {/* Individual loan action */}
           {selectedKeys.length > 0 && (
             <div className="flex justify-end items-center pt-2 border-t">
               <Button
@@ -330,12 +412,6 @@ export function EmbeddedKeysList({ lease }: { lease: Lease }) {
         </CardContent>
       </Card>
 
-      {/* Receipt history (mock) */}
-      <div className="mt-4">
-        <ReceiptHistory lease={lease} />
-      </div>
-
-      {/* Receipt dialog (mock save + PDF) */}
       <ReceiptDialog
         isOpen={showReceiptDialog}
         onClose={() => {
