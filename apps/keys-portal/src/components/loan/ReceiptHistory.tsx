@@ -10,18 +10,19 @@ import { FileText, Printer, Calendar, ChevronDown, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type {
-  Lease,
-  Receipt,
-  LoanTransaction,
-  MockKeyLoan,
-  Key,
-} from '@/services/types'
+import type { Lease, Receipt, KeyLoan, Key } from '@/services/types'
 import { toReceiptTenant } from '@/services/types'
-
-import { mockReceipts } from '@/mockdata/mock-receipts'
-import { mockKeyLoans } from '@/mockdata/mock-keyloans'
 import { generateLoanReceipt, generateReturnReceipt } from '@/lib/pdf-receipts'
+import { receiptService } from '@/services/api/receiptService'
+import { keyLoanService } from '@/services/api/keyLoanService'
+
+type LoanTransaction = {
+  id: string
+  type: 'loan' | 'return'
+  date: string // ISO
+  keyLoanIds: string[]
+  keys: Array<{ id: string; key_name: string; key_type: string }>
+}
 
 export function ReceiptHistory({ lease }: { lease: Lease }) {
   const [receipts, setReceipts] = useState<Receipt[]>([])
@@ -29,52 +30,86 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
-    const r = mockReceipts.listByLease(lease.leaseId)
-    const { active, returned } = mockKeyLoans.listByLease(lease.leaseId)
-    setReceipts(r)
-    setTransactions(buildTransactions(active, returned))
-    setLoading(false)
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const [r, keyLoans] = await Promise.all([
+          receiptService.listByLease(lease.leaseId),
+          keyLoanService.listByLease(lease.leaseId), // returns { loaned, returned }
+        ])
+        if (cancelled) return
+        setReceipts(r)
+        setTransactions(
+          buildTransactions(
+            keyLoans.loaned,
+            keyLoans.returned,
+            r,
+            lease.leaseId
+          )
+        )
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
   }, [lease.leaseId])
 
-  const buildTransactions = (
-    active: MockKeyLoan[],
-    returned: MockKeyLoan[]
-  ): LoanTransaction[] => {
-    const existingIds = new Set(
-      mockReceipts.listByLease(lease.leaseId).flatMap((r) => r.keyLoanIds)
-    )
+  function buildTransactions(
+    loaned: KeyLoan[],
+    returned: KeyLoan[],
+    existingReceipts: Receipt[],
+    leaseId: string
+  ): LoanTransaction[] {
+    const existingIds = new Set(existingReceipts.flatMap((r) => r.keyLoanIds))
 
-    const make = (
-      type: 'loan' | 'return',
-      items: MockKeyLoan[]
+    const parseKeysCsv = (csv?: string): string[] =>
+      String(csv ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+    const groupByDay = (
+      items: KeyLoan[],
+      kind: 'loan' | 'return'
     ): LoanTransaction[] => {
+      // exclude loans already included in receipts
       const usable = items.filter((l) => !existingIds.has(l.id))
-      if (usable.length === 0) return []
+      if (!usable.length) return []
 
-      const byDay = new Map<string, MockKeyLoan[]>()
-      usable.forEach((l) => {
-        const t = type === 'loan' ? l.createdAt : (l.returnedAt ?? l.createdAt)
-        const day = t.slice(0, 10)
+      // group by YYYY-MM-DD based on createdAt / returnedAt
+      const byDay = new Map<string, KeyLoan[]>()
+      for (const l of usable) {
+        const dateIso =
+          kind === 'loan' ? l.createdAt : (l.returnedAt ?? l.createdAt)
+        const day = (dateIso ?? '').slice(0, 10)
         const arr = byDay.get(day) ?? []
         arr.push(l)
         byDay.set(day, arr)
-      })
+      }
 
       const tx: LoanTransaction[] = []
       byDay.forEach((arr) => {
-        const date =
-          type === 'loan'
+        const dateIso =
+          kind === 'loan'
             ? arr[0].createdAt
             : (arr[0].returnedAt ?? arr[0].createdAt)
+
+        // Flatten all key ids from CSV across the loans in this day-group
+        const keyIds = arr.flatMap((kl) => parseKeysCsv((kl as any).keys))
+
         tx.push({
-          id: `${type}-${arr[0].id}`,
-          type,
-          date,
+          id: `${kind}-${leaseId}-${arr[0].id}`,
+          type: kind,
+          date: dateIso!,
           keyLoanIds: arr.map((x) => x.id),
-          keys: arr.map((x) => ({
-            id: x.keyId,
-            key_name: `Nyckel ${x.keyId.slice(0, 4)}`,
+          // simple display labels; replace when you have richer key metadata
+          keys: keyIds.map((id) => ({
+            id,
+            key_name: `Nyckel ${id.slice(0, 4)}`,
             key_type: 'Okänd',
           })),
         })
@@ -82,9 +117,10 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
       return tx
     }
 
-    return [...make('loan', active), ...make('return', returned)].sort((a, b) =>
-      b.date.localeCompare(a.date)
-    )
+    return [
+      ...groupByDay(loaned, 'loan'),
+      ...groupByDay(returned, 'return'),
+    ].sort((a, b) => b.date.localeCompare(a.date))
   }
 
   const currentReceiptTenant = () => {
@@ -96,7 +132,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
 
   const handleReprint = (receipt: Receipt) => {
     const tenant = currentReceiptTenant()
-    const keys: Key[] = [] // mock: not tracking actual keys yet
+    const keys: Key[] = [] // If you want actual key rows on the PDF, fetch them by receipt/keyLoanIds
     if (receipt.receiptType === 'loan') {
       generateLoanReceipt({ lease, tenant, keys, receiptType: 'loan' })
     } else {
@@ -104,14 +140,15 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     }
   }
 
-  const handleGenerateFromTx = (tx: LoanTransaction) => {
+  const handleGenerateFromTx = async (tx: LoanTransaction) => {
     const tenant = currentReceiptTenant()
     const receiptNumber = `${tx.type === 'loan' ? 'NYL' : 'NYÅ'}-${format(
       new Date(),
       'yyyyMMdd-HHmmss'
     )}`
 
-    mockReceipts.create({
+    // Persist receipt
+    await receiptService.create({
       receiptType: tx.type,
       leaseId: lease.leaseId,
       tenantId: tenant.id,
@@ -119,7 +156,8 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
       receiptNumber,
     })
 
-    const keys: never[] = []
+    // Print (optional: supply real key rows)
+    const keys: Key[] = []
     if (tx.type === 'loan') {
       generateLoanReceipt({
         lease,
@@ -138,11 +176,15 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
       })
     }
 
-    // refresh
-    const r = mockReceipts.listByLease(lease.leaseId)
-    const { active, returned } = mockKeyLoans.listByLease(lease.leaseId)
+    // Refresh
+    const [r, keyLoans] = await Promise.all([
+      receiptService.listByLease(lease.leaseId),
+      keyLoanService.listByLease(lease.leaseId),
+    ])
     setReceipts(r)
-    setTransactions(buildTransactions(active, returned))
+    setTransactions(
+      buildTransactions(keyLoans.loaned, keyLoans.returned, r, lease.leaseId)
+    )
   }
 
   if (loading)
@@ -230,8 +272,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
                       })}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {tx.keyLoanIds.length} nyckel
-                      {tx.keyLoanIds.length !== 1 ? 'ar' : ''}
+                      {tx.keys.length} nyckel{tx.keys.length !== 1 ? 'ar' : ''}
                     </p>
                   </div>
                   <Badge

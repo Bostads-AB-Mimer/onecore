@@ -1,3 +1,4 @@
+// components/loan/ContractCard.tsx
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -14,28 +15,23 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import type { Lease, KeyType } from '@/services/types'
+import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { EmbeddedKeysList } from './EmbeddedKeysList'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
-import { generateMockKeys, countKeysByType } from '@/mockdata/mock-keys'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
+import { keyService } from '@/services/api/keyService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 
 const getLeaseTypeIcon = (type: string) => {
-  const normalizedType = (type ?? '').toLowerCase()
-  if (
-    normalizedType.includes('apartment') ||
-    normalizedType.includes('lägenhet')
-  )
+  const t = (type ?? '').toLowerCase()
+  if (t.includes('apartment') || t.includes('lägenhet'))
     return <Home className="w-3.5 h-3.5" />
-  if (
-    normalizedType.includes('parking') ||
-    normalizedType.includes('parkering')
-  )
+  if (t.includes('parking') || t.includes('parkering'))
     return <Car className="w-3.5 h-3.5" />
-  if (normalizedType.includes('storage') || normalizedType.includes('förråd'))
+  if (t.includes('storage') || t.includes('förråd'))
     return <Package className="w-3.5 h-3.5" />
-  if (normalizedType.includes('commercial') || normalizedType.includes('lokal'))
+  if (t.includes('commercial') || t.includes('lokal'))
     return <Building className="w-3.5 h-3.5" />
   return <Home className="w-3.5 h-3.5" />
 }
@@ -65,9 +61,13 @@ export function ContractCard({
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
+  // 🔹 Real keys for this rental property:
+  const [keys, setKeys] = useState<Key[]>([])
+  const [keysLoading, setKeysLoading] = useState(false)
+
   useEffect(() => {
     let cancelled = false
-    async function load() {
+    async function loadAddr() {
       if (rentalAddress) return
       setAddrLoading(true)
       const addr = await rentalObjectSearchService.getAddressByRentalId(
@@ -78,11 +78,30 @@ export function ContractCard({
         setAddrLoading(false)
       }
     }
-    load()
+    loadAddr()
     return () => {
       cancelled = true
     }
   }, [lease.rentalPropertyId, rentalAddress])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadKeys() {
+      setKeysLoading(true)
+      try {
+        const list = await keyService.searchKeys({
+          rentalObjectCode: lease.rentalPropertyId,
+        })
+        if (!cancelled) setKeys(list)
+      } finally {
+        if (!cancelled) setKeysLoading(false)
+      }
+    }
+    loadKeys()
+    return () => {
+      cancelled = true
+    }
+  }, [lease.rentalPropertyId])
 
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
@@ -95,15 +114,19 @@ export function ContractCard({
     ? format(new Date(endIso), 'dd MMM yyyy', { locale: sv })
     : undefined
 
-  const mockKeys = useMemo(
-    () => generateMockKeys(lease.leaseId),
-    [lease.leaseId]
-  )
-  const keyCounts = useMemo(() => countKeysByType(mockKeys), [mockKeys])
-  const totalKeys = mockKeys.length
+  // 🔹 Count by type using *real* keys
+  const keyCounts = useMemo(() => {
+    const counts: Partial<Record<KeyType, number>> = {}
+    keys.forEach((k) => {
+      const t = (k.keyType ?? 'LGH') as KeyType
+      counts[t] = (counts[t] ?? 0) + 1
+    })
+    return counts
+  }, [keys])
+
+  const totalKeys = keys.length
   const hasAnyKeys = totalKeys > 0
   const order: KeyType[] = ['LGH', 'PB', 'TP', 'GEM', 'FS', 'HN', 'HUS']
-
   const keysRegionId = `keys-${lease.leaseId}`
 
   return (
@@ -133,12 +156,12 @@ export function ContractCard({
               >
                 {open ? (
                   <>
-                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ChevronUp className="h-3.5 w-3.5" />
                     Dölj nycklar
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ChevronDown className="h-3.5 w-3.5" />
                     Visa nycklar
                   </>
                 )}
@@ -182,10 +205,7 @@ export function ContractCard({
           {hasAnyKeys && (
             <div className="md:col-span-9 flex flex-wrap items-start gap-1.5 mt-1">
               <div className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                <KeyRound
-                  className="h-3.5 w-3.5 opacity-80"
-                  aria-hidden="true"
-                />
+                <KeyRound className="h-3.5 w-3.5 opacity-80" />
                 <span>Nycklar</span>
               </div>
               <div className="flex flex-wrap gap-1">
@@ -213,7 +233,9 @@ export function ContractCard({
             <div className="md:col-span-3 flex items-start md:justify-end mt-1">
               <span className="text-xs text-muted-foreground">
                 Antal Nycklar:{' '}
-                <span className="font-medium text-foreground">{totalKeys}</span>
+                <span className="font-medium text-foreground">
+                  {keysLoading ? '…' : totalKeys}
+                </span>
               </span>
             </div>
           )}
@@ -221,7 +243,8 @@ export function ContractCard({
 
         {open && (
           <div id={keysRegionId} className="pt-2">
-            <EmbeddedKeysList lease={lease} />
+            {/* 🔹 pass the real keys */}
+            <EmbeddedKeysList lease={lease} initialKeys={keys} />
           </div>
         )}
       </CardContent>
