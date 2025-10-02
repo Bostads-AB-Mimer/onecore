@@ -17,10 +17,8 @@ import {
   rentalObjectSearchService,
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
-import {
-  keySystemSearchService,
-  type KeySystemSearchResult,
-} from '@/services/api/keySystemSearchService'
+import { keySystemSearchService } from '@/services/api/keySystemSearchService'
+import type { KeySystem } from '@/services/types'
 import { X } from 'lucide-react'
 
 interface AddKeyFormProps {
@@ -37,7 +35,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     flexNumber: editingKey?.flexNumber || '',
     rentalObject: editingKey?.rentalObjectCode || '',
     keyType: editingKey?.keyType || ('LGH' as KeyType),
-    keySystemName: editingKey?.keySystemId || '',
+    keySystemId: editingKey?.keySystemId || '',
   })
 
   // Search functionality state
@@ -50,6 +48,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   // Key system search functionality state with debouncing
   const [keySystemSearchQuery, setKeySystemSearchQuery] = useState('')
   const [debouncedKeySystemQuery, setDebouncedKeySystemQuery] = useState('')
+  const [keySystemSelected, setKeySystemSelected] = useState(false)
 
   // Debounce key system search query (500ms delay like internal portal)
   const updateDebouncedQuery = useDebounce((query: string) => {
@@ -126,15 +125,17 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   // Handle key system input changes and trigger search
   const handleKeySystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setFormData((prev) => ({ ...prev, keySystemName: value }))
+    setFormData((prev) => ({ ...prev, keySystemId: value }))
     setKeySystemSearchQuery(value)
+    setKeySystemSelected(false) // Clear selection when user types
   }
 
   // Handle selection of a key system search result from the dropdown
-  const handleSelectKeySystemResult = (result: KeySystemSearchResult) => {
-    setFormData((prev) => ({ ...prev, keySystemName: result.systemCode }))
-    setKeySystemSearchQuery('')
+  const handleSelectKeySystemResult = (result: KeySystem) => {
+    setFormData((prev) => ({ ...prev, keySystemId: result.id }))
+    setKeySystemSearchQuery(result.systemCode)
     setDebouncedKeySystemQuery('')
+    setKeySystemSelected(true) // Mark that user selected from dropdown
   }
 
   // Handle form submission and validation
@@ -149,10 +150,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
         ? Number(formData.keySequenceNumber)
         : undefined,
       flexNumber: formData.flexNumber ? Number(formData.flexNumber) : undefined,
-      rentalObject: formData.rentalObject || undefined,
+      rentalObjectCode: formData.rentalObject || undefined,
       keyType: formData.keyType,
-      keySystemName: formData.keySystemName || undefined,
-      keySystemId: undefined,
+      keySystemId: formData.keySystemId || undefined,
     })
 
     // Reset form after successful save
@@ -162,7 +162,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       flexNumber: '',
       rentalObject: '',
       keyType: 'LGH',
-      keySystemName: '',
+      keySystemId: '',
     })
     setSearchResults([])
     setSearchQuery('')
@@ -181,7 +181,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       flexNumber: '',
       rentalObject: '',
       keyType: 'LGH',
-      keySystemName: '',
+      keySystemId: '',
     })
     setSearchResults([])
     setSearchQuery('')
@@ -308,14 +308,14 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
             </div>
 
             <div className="space-y-1 relative">
-              <Label htmlFor="keySystemName" className="text-xs">
+              <Label htmlFor="keySystemId" className="text-xs">
                 Låssystem
               </Label>
               <div className="relative">
                 <Input
-                  id="keySystemName"
-                  className="h-8"
-                  value={formData.keySystemName}
+                  id="keySystemId"
+                  className={`h-8 ${keySystemSelected ? 'bg-blue-50' : ''}`}
+                  value={keySystemSearchQuery}
                   onChange={handleKeySystemChange}
                   placeholder="t.ex. ABC123"
                 />
@@ -327,6 +327,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
               </div>
 
               {!keySystemsQuery.isFetching &&
+                !keySystemSelected &&
                 keySystemsQuery.data &&
                 keySystemsQuery.data.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
