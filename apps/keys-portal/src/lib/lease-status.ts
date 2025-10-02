@@ -1,15 +1,10 @@
+// lease-status.ts
 import type { Lease } from '@/services/types'
 
 const toMs = (d?: string) => (d ? new Date(d).getTime() : undefined)
 
-/**
- * Effective end date for display/comparison:
- *   1) terminationDate (PNR payloads)
- *   2) lastDebitDate   (often present in property-id payloads)
- *   3) leaseEndDate    (legacy/fallback)
- */
-export const pickEndDate = (lease: Lease) =>
-  lease.terminationDate ?? lease.lastDebitDate ?? lease.leaseEndDate
+// ——— CHANGED: only use lastDebitDate ———
+export const pickEndDate = (lease: Lease) => lease.lastDebitDate ?? undefined
 
 function normalizeBackendStatus(
   s?: string
@@ -29,7 +24,7 @@ export function deriveDisplayStatus(
 ): 'active' | 'upcoming' | 'ended' {
   const now = Date.now()
   const start = toMs(lease.leaseStartDate)
-  const end = toMs(pickEndDate(lease))
+  const end = toMs(pickEndDate(lease)) // ← lastDebitDate-only
 
   if (end && end < now) return 'ended'
   if (start && start > now) return 'upcoming'
