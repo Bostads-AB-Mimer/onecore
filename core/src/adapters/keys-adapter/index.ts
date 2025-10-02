@@ -227,7 +227,7 @@ export const KeyLoansApi = {
 
   create: async (
     payload: Partial<KeyLoan>
-  ): Promise<AdapterResult<KeyLoan, 'bad-request' | CommonErr>> => {
+  ): Promise<AdapterResult<KeyLoan, 'bad-request' | 'conflict' | CommonErr>> => {
     const r = await postJSON<{ content: KeyLoan }>(`${BASE}/key-loans`, payload)
     return r.ok ? ok(r.data.content) : r
   },
@@ -236,7 +236,7 @@ export const KeyLoansApi = {
     id: string,
     payload: Partial<KeyLoan>
   ): Promise<
-    AdapterResult<KeyLoan, 'not-found' | 'bad-request' | CommonErr>
+    AdapterResult<KeyLoan, 'not-found' | 'bad-request' | 'conflict' | CommonErr>
   > => {
     const r = await patchJSON<{ content: KeyLoan }>(
       `${BASE}/key-loans/${id}`,
