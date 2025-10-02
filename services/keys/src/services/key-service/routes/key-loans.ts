@@ -1,3 +1,5 @@
+//TODO: disallow POSTs where fields are not validated to be real resources (e.g. keys must exist in keys table to create a key loan at that Id)
+
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
@@ -15,6 +17,47 @@ const {
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 type KeyLoanResponse = keys.v1.KeyLoan
+
+/**
+ * Check if any of the provided keys have active loans (not returned yet)
+ * @param keyIds - Array of key IDs to check
+ * @param excludeLoanId - Optional loan ID to exclude from the check (for updates)
+ * @returns Object with hasConflict flag and array of conflicting key IDs
+ */
+async function checkActiveKeyLoans(
+  keyIds: string[],
+  excludeLoanId?: string
+): Promise<{ hasConflict: boolean; conflictingKeys: string[] }> {
+  if (keyIds.length === 0) {
+    return { hasConflict: false, conflictingKeys: [] }
+  }
+
+  const conflictingKeys: string[] = []
+
+  // Check each key ID for active loans
+  for (const keyId of keyIds) {
+    let query = db(TABLE)
+      .select('id')
+      .whereNull('returnedAt')
+      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+
+    // Exclude specific loan ID if provided (for update scenarios)
+    if (excludeLoanId) {
+      query = query.whereNot('id', excludeLoanId)
+    }
+
+    const activeLoan = await query.first()
+
+    if (activeLoan) {
+      conflictingKeys.push(keyId)
+    }
+  }
+
+  return {
+    hasConflict: conflictingKeys.length > 0,
+    conflictingKeys,
+  }
+}
 
 /**
  * @swagger
@@ -431,6 +474,42 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyLoanRequest = ctx.request.body
 
+        // Parse and validate the keys array
+        let keyIds: string[] = []
+        try {
+          keyIds = JSON.parse(payload.keys)
+          if (!Array.isArray(keyIds)) {
+            ctx.status = 400
+            ctx.body = {
+              reason: 'Keys must be a JSON array',
+              ...metadata,
+            }
+            return
+          }
+        } catch (_err) {
+          ctx.status = 400
+          ctx.body = {
+            reason: 'Invalid keys format. Must be a valid JSON array.',
+            ...metadata,
+          }
+          return
+        }
+
+        // Check for conflicting active loans
+        const { hasConflict, conflictingKeys } =
+          await checkActiveKeyLoans(keyIds)
+
+        if (hasConflict) {
+          ctx.status = 409
+          ctx.body = {
+            reason:
+              'Cannot create loan. One or more keys already have active loans.',
+            conflictingKeys,
+            ...metadata,
+          }
+          return
+        }
+
         const [row] = await db(TABLE).insert(payload).returning('*')
         ctx.status = 201
         ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
@@ -501,6 +580,46 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: UpdateKeyLoanRequest = ctx.request.body
+
+        // If updating keys, check for conflicts
+        if (payload.keys) {
+          let keyIds: string[] = []
+          try {
+            keyIds = JSON.parse(payload.keys)
+            if (!Array.isArray(keyIds)) {
+              ctx.status = 400
+              ctx.body = {
+                reason: 'Keys must be a JSON array',
+                ...metadata,
+              }
+              return
+            }
+          } catch (_err) {
+            ctx.status = 400
+            ctx.body = {
+              reason: 'Invalid keys format. Must be a valid JSON array.',
+              ...metadata,
+            }
+            return
+          }
+
+          // Check for conflicting active loans, excluding the current loan
+          const { hasConflict, conflictingKeys } = await checkActiveKeyLoans(
+            keyIds,
+            ctx.params.id
+          )
+
+          if (hasConflict) {
+            ctx.status = 409
+            ctx.body = {
+              reason:
+                'Cannot update loan. One or more keys already have active loans.',
+              conflictingKeys,
+              ...metadata,
+            }
+            return
+          }
+        }
 
         const [row] = await db(TABLE)
           .where({ id: ctx.params.id })

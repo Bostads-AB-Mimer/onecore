@@ -336,6 +336,14 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: 'Invalid request data', ...metadata }
         return
       }
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error: 'One or more keys already have active loans',
+          ...metadata,
+        }
+        return
+      }
 
       logger.error({ err: result.err, metadata }, 'Error creating key loan')
       ctx.status = 500
@@ -414,6 +422,14 @@ export const routes = (router: KoaRouter) => {
       if (result.err === 'bad-request') {
         ctx.status = 400
         ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error: 'One or more keys already have active loans',
+          ...metadata,
+        }
         return
       }
 
