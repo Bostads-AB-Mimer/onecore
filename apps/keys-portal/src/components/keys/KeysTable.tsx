@@ -19,11 +19,12 @@ import { Key, KeyTypeLabels } from '@/services/types'
 
 interface KeysTableProps {
   keys: Key[]
+  keySystemMap: Record<string, string>
   onEdit: (key: Key) => void
   onDelete: (keyId: string) => void
 }
 
-export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
+export function KeysTable({ keys, keySystemMap, onEdit, onDelete }: KeysTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE')
   }
@@ -81,7 +82,11 @@ export function KeysTable({ keys, onEdit, onDelete }: KeysTableProps) {
                     {KeyTypeLabels[key.keyType]}
                   </Badge>
                 </TableCell>
-                <TableCell>{key.keySystemId || '-'}</TableCell>
+                <TableCell>
+                  {key.keySystemId && keySystemMap[key.keySystemId]
+                    ? keySystemMap[key.keySystemId]
+                    : key.keySystemId || '-'}
+                </TableCell>
                 <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                 <TableCell>{key.flexNumber || '-'}</TableCell>
                 <TableCell className="text-muted-foreground">
