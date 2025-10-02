@@ -986,9 +986,9 @@ export interface components {
     PropertyDetails: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -1020,7 +1020,7 @@ export interface components {
       /** Format: date-time */
       toDate: string;
       timestamp: string;
-      propertyObject: {
+      propertyObject?: {
         id: string;
         deleteMark: number;
         timestamp: string;
