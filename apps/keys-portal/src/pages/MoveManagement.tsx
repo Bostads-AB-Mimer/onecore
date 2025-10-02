@@ -1,80 +1,117 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { MoveManagementHeader } from '@/components/move-management/MoveManagementHeader'
 import { MoveManagementToolbar } from '@/components/move-management/MoveManagementToolbar'
 import { MoveOutsTable } from '@/components/move-management/MoveOutsTable'
 import { MoveInsTable } from '@/components/move-management/MoveInsTable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  mockMoveOutLeases,
-  mockMoveInLeases,
-  mockFlytthanteringKeyLoans,
-} from '@/mockdata/mock-flytthantering'
 import { Lease, KeyLoan } from '@/services/types'
+import {
+  fetchLeasesByMoveInDateRange,
+  fetchLeasesByMoveOutDateRange,
+} from '@/services/api/leaseService'
+import { keyService } from '@/services/api/keyService'
 
 export default function MoveManagement() {
-  const [moveOutLeases] = useState<Lease[]>(mockMoveOutLeases)
-  const [moveInLeases] = useState<Lease[]>(mockMoveInLeases)
-  const [keyLoans] = useState<KeyLoan[]>(mockFlytthanteringKeyLoans)
+  const [moveOutLeases, setMoveOutLeases] = useState<Lease[]>([])
+  const [moveInLeases, setMoveInLeases] = useState<Lease[]>([])
+  const [keyLoans, setKeyLoans] = useState<KeyLoan[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Default to current month
+  // Default: current month for move-outs, next month for move-ins
   const now = new Date()
-  const [dateFrom, setDateFrom] = useState(
-    new Date(now.getFullYear(), now.getMonth(), 1)
-  )
-  const [dateTo, setDateTo] = useState(
-    new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const [moveOutMonth, setMoveOutMonth] = useState(now.getMonth())
+  const [moveOutYear, setMoveOutYear] = useState(now.getFullYear())
+  const [moveInMonth, setMoveInMonth] = useState((now.getMonth() + 1) % 12)
+  const [moveInYear, setMoveInYear] = useState(
+    now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear()
   )
 
-  const filterLeases = (leases: Lease[], isMovingOut: boolean) => {
+  // Fetch data when month/year changes
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true)
+      try {
+        // Calculate date ranges for the selected months
+        const moveOutFrom = new Date(moveOutYear, moveOutMonth, 1)
+        const moveOutTo = new Date(moveOutYear, moveOutMonth + 1, 0)
+        const moveInFrom = new Date(moveInYear, moveInMonth, 1)
+        const moveInTo = new Date(moveInYear, moveInMonth + 1, 0)
+
+        // Format dates as ISO strings (YYYY-MM-DD)
+        const moveOutFromStr = moveOutFrom.toISOString().split('T')[0]
+        const moveOutToStr = moveOutTo.toISOString().split('T')[0]
+        const moveInFromStr = moveInFrom.toISOString().split('T')[0]
+        const moveInToStr = moveInTo.toISOString().split('T')[0]
+
+        // Fetch move-ins and move-outs in parallel
+        const [moveIns, moveOuts, allKeyLoans] = await Promise.all([
+          fetchLeasesByMoveInDateRange(moveInFromStr, moveInToStr),
+          fetchLeasesByMoveOutDateRange(moveOutFromStr, moveOutToStr),
+          keyService.getAllKeyLoans(),
+        ])
+
+        setMoveInLeases(moveIns)
+        setMoveOutLeases(moveOuts)
+        setKeyLoans(allKeyLoans)
+      } catch (error) {
+        console.error('Error fetching move management data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [moveOutMonth, moveOutYear, moveInMonth, moveInYear])
+
+  const filterLeases = (leases: Lease[]) => {
     return leases.filter((lease) => {
-      const tenant = lease.tenants?.[0]
+      const tenants = lease.tenants || []
       const matchesSearch =
         searchQuery === '' ||
-        tenant?.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tenant?.emailAddress?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lease.rentalProperty?.apartmentNumber
-          ?.toString()
-          .includes(searchQuery) ||
+        tenants.some(t => t.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        tenants.some(t => t.emailAddress?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        tenants.some(t => t.contactCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        lease.rentalPropertyId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lease.address?.street.toLowerCase().includes(searchQuery.toLowerCase())
-
-      // Filter by date range
-      const dateToCheck = isMovingOut
-        ? lease.leaseEndDate
-        : lease.leaseStartDate
-      const matchesDateRange =
-        dateToCheck &&
-        new Date(dateToCheck) >= dateFrom &&
-        new Date(dateToCheck) <= dateTo
 
       // Filter by status
       let matchesStatus = true
       if (statusFilter !== 'all') {
         const keyLoan = keyLoans.find((kl) => kl.lease === lease.leaseId)
-        const isCompleted = isMovingOut
-          ? !!keyLoan?.returnedAt
-          : !!keyLoan?.pickedUpAt
 
-        matchesStatus =
-          (statusFilter === 'completed' && isCompleted) ||
-          (statusFilter === 'pending' && !isCompleted)
+        if (statusFilter === 'completed') {
+          const isCompleted = !!keyLoan?.returnedAt || !!keyLoan?.pickedUpAt
+          matchesStatus = isCompleted
+        } else if (statusFilter === 'pending') {
+          const isCompleted = !!keyLoan?.returnedAt || !!keyLoan?.pickedUpAt
+          matchesStatus = !isCompleted
+        }
       }
 
-      return matchesSearch && matchesDateRange && matchesStatus
+      return matchesSearch && matchesStatus
     })
   }
 
   const filteredMoveOuts = useMemo(
-    () => filterLeases(moveOutLeases, true),
-    [moveOutLeases, searchQuery, dateFrom, dateTo, statusFilter, keyLoans]
+    () => filterLeases(moveOutLeases),
+    [moveOutLeases, searchQuery, statusFilter, keyLoans]
   )
 
   const filteredMoveIns = useMemo(
-    () => filterLeases(moveInLeases, false),
-    [moveInLeases, searchQuery, dateFrom, dateTo, statusFilter, keyLoans]
+    () => filterLeases(moveInLeases),
+    [moveInLeases, searchQuery, statusFilter, keyLoans]
   )
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Laddar flytthantering...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,10 +124,14 @@ export default function MoveManagement() {
         <MoveManagementToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onDateFromChange={(date) => date && setDateFrom(date)}
-          onDateToChange={(date) => date && setDateTo(date)}
+          moveOutMonth={moveOutMonth}
+          moveOutYear={moveOutYear}
+          moveInMonth={moveInMonth}
+          moveInYear={moveInYear}
+          onMoveOutMonthChange={setMoveOutMonth}
+          onMoveOutYearChange={setMoveOutYear}
+          onMoveInMonthChange={setMoveInMonth}
+          onMoveInYearChange={setMoveInYear}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
         />

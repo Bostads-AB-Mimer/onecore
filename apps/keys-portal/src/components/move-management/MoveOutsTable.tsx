@@ -44,7 +44,9 @@ export function MoveOutsTable({
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border">
             <TableHead className="font-medium">Hyresgäst</TableHead>
-            <TableHead className="font-medium">Lägenhet</TableHead>
+            <TableHead className="font-medium">Kontakt ID</TableHead>
+            <TableHead className="font-medium">Hyresobjekt</TableHead>
+            <TableHead className="font-medium">Typ</TableHead>
             <TableHead className="font-medium">Adress</TableHead>
             <TableHead className="font-medium">Utflyttningsdatum</TableHead>
             <TableHead className="font-medium">Kontakt</TableHead>
@@ -56,7 +58,7 @@ export function MoveOutsTable({
           {leases.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={9}
                 className="text-center py-8 text-muted-foreground"
               >
                 Inga utflyttningar hittades
@@ -65,57 +67,65 @@ export function MoveOutsTable({
           ) : (
             leases.map((lease) => {
               const keyStatus = getKeyStatus(lease.leaseId)
-              const tenant = lease.tenants?.[0]
-              const apartmentNumber =
-                lease.rentalProperty?.apartmentNumber?.toString() || '-'
-              const address = lease.address
-                ? `${lease.address.street} ${lease.address.number}, ${lease.address.city}`
-                : '-'
+              const tenants = lease.tenants || []
+              const tenantNames = tenants.map(t => t.fullName).join(', ') || '-'
+              const tenantContactIds = tenants.map(t => t.contactCode).filter(Boolean).join(', ') || '-'
+              const rentalPropertyId = lease.rentalPropertyId || '-'
+              const rentalPropertyType = lease.rentalProperty?.rentalPropertyType || lease.type?.trim() || '-'
+              const address = lease.address?.street || tenants[0]?.address?.street || '-'
 
               return (
                 <TableRow key={lease.leaseId} className="hover:bg-muted/50">
                   <TableCell className="font-medium">
-                    {tenant?.fullName || '-'}
+                    {tenantNames}
                   </TableCell>
-                  <TableCell>{apartmentNumber}</TableCell>
+                  <TableCell>{tenantContactIds}</TableCell>
+                  <TableCell>{rentalPropertyId}</TableCell>
+                  <TableCell>{rentalPropertyType}</TableCell>
                   <TableCell>{address}</TableCell>
                   <TableCell>
-                    {lease.leaseEndDate
-                      ? formatDate(lease.leaseEndDate)
+                    {lease.lastDebitDate
+                      ? formatDate(lease.lastDebitDate)
                       : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div>{tenant?.emailAddress || '-'}</div>
+                      <div>{tenants[0]?.emailAddress || '-'}</div>
                       <div className="text-muted-foreground">
-                        {tenant?.phoneNumbers?.[0]?.phoneNumber || '-'}
+                        {tenants[0]?.phoneNumbers?.[0]?.phoneNumber || '-'}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {keyStatus.returned ? (
-                      <div className="flex items-center gap-2">
+                    {keyLoans.find((kl) => kl.lease === lease.leaseId) ? (
+                      keyStatus.returned ? (
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="default"
+                            className="bg-green-100 text-green-800 hover:bg-green-100"
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Återlämnade
+                          </Badge>
+                          {keyStatus.returnedAt && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(keyStatus.returnedAt)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
                         <Badge
-                          variant="default"
-                          className="bg-green-100 text-green-800 hover:bg-green-100"
+                          variant="destructive"
+                          className="bg-red-100 text-red-800"
                         >
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Återlämnade
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Ej återlämnade
                         </Badge>
-                        {keyStatus.returnedAt && (
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(keyStatus.returnedAt)}
-                          </span>
-                        )}
-                      </div>
+                      )
                     ) : (
-                      <Badge
-                        variant="destructive"
-                        className="bg-red-100 text-red-800"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Ej återlämnade
-                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Inga nyckellån registrerade
+                      </span>
                     )}
                   </TableCell>
                   <TableCell>
