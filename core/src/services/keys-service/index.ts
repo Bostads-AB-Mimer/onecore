@@ -23,6 +23,10 @@ const {
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
   CreateLogRequestSchema,
+  UpdateLogRequestSchema,
+  PaginationMetaSchema,
+  PaginationLinksSchema,
+  createPaginatedResponseSchema,
 } = keys.v1
 
 /**
@@ -88,6 +92,19 @@ export const routes = (router: KoaRouter) => {
       )
     }
   }
+  registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
+
+  // Register pagination schemas
+  registerSchema('PaginationMeta', PaginationMetaSchema)
+  registerSchema('PaginationLinks', PaginationLinksSchema)
+  registerSchema(
+    'PaginatedKeysResponse',
+    createPaginatedResponseSchema(KeySchema)
+  )
+  registerSchema(
+    'PaginatedKeySystemsResponse',
+    createPaginatedResponseSchema(KeySystemSchema)
+  )
 
   // ==================== KEY LOANS ROUTES ====================
 
@@ -467,7 +484,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful update
-    await createLogEntry('update', 'keyLoan', `Updated key loan: ${ctx.params.id}`)
+    await createLogEntry(
+      'update',
+      'keyLoan',
+      `Updated key loan: ${ctx.params.id}`
+    )
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
@@ -525,7 +546,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
-    await createLogEntry('delete', 'keyLoan', `Deleted key loan: ${ctx.params.id}`)
+    await createLogEntry(
+      'delete',
+      'keyLoan',
+      `Deleted key loan: ${ctx.params.id}`
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -537,21 +562,31 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /keys:
    *   get:
-   *     summary: List keys
-   *     description: Returns keys ordered by createAt (desc).
+   *     summary: List keys with pagination
+   *     description: Returns paginated keys ordered by createdAt (desc).
    *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: List of keys
+   *         description: Paginated list of keys
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Key'
+   *               $ref: '#/components/schemas/PaginatedKeysResponse'
    *       500:
    *         description: Server error
    *         content:
@@ -564,7 +599,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await KeysApi.list()
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await KeysApi.list(page, limit)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching keys')
@@ -574,7 +614,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
@@ -952,21 +992,31 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-systems:
    *   get:
-   *     summary: List all key systems
-   *     description: Retrieve a list of all key systems
+   *     summary: List all key systems with pagination
+   *     description: Retrieve a paginated list of all key systems
    *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: Successfully retrieved key systems
+   *         description: Successfully retrieved paginated key systems
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeySystem'
+   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
    *       500:
    *         description: Internal server error
    *         content:
@@ -979,7 +1029,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await KeySystemsApi.list()
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await KeySystemsApi.list(page, limit)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key systems')
@@ -989,7 +1044,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
