@@ -38,7 +38,12 @@ async function checkActiveKeyLoans(
   for (const keyId of keyIds) {
     let query = db(TABLE)
       .select('id')
-      .whereNull('returnedAt')
+      .where((builder) => {
+        // Active if: not returned yet OR not yet available to next tenant
+        builder
+          .whereNull('returnedAt')
+          .orWhere('availableToNextTenantFrom', '>', db.fn.now())
+      })
       .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
 
     // Exclude specific loan ID if provided (for update scenarios)
