@@ -329,6 +329,7 @@ export const KeySystemsApi = {
 
 /**
  * ---- LOGS -------------------------------------------------------------------
+ * Read-only audit logs - no update or delete operations allowed
  */
 
 export const LogsApi = {
@@ -370,19 +371,5 @@ export const LogsApi = {
   ): Promise<AdapterResult<Log, 'bad-request' | CommonErr>> => {
     const r = await postJSON<{ content: Log }>(`${BASE}/logs`, payload)
     return r.ok ? ok(r.data.content) : r
-  },
-
-  update: async (
-    id: string,
-    payload: Partial<Log>
-  ): Promise<AdapterResult<Log, 'not-found' | 'bad-request' | CommonErr>> => {
-    const r = await patchJSON<{ content: Log }>(`${BASE}/logs/${id}`, payload)
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  remove: async (
-    id: string
-  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
-    return deleteJSON(`${BASE}/logs/${id}`)
   },
 }
