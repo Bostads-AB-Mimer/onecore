@@ -4,10 +4,18 @@ import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
+import { paginate } from '../../../utils/pagination'
 
 const TABLE = 'keys'
 
-const { KeySchema, CreateKeyRequestSchema, UpdateKeyRequestSchema } = keys.v1
+const {
+  KeySchema,
+  CreateKeyRequestSchema,
+  UpdateKeyRequestSchema,
+  PaginationMetaSchema,
+  PaginationLinksSchema,
+  createPaginatedResponseSchema,
+} = keys.v1
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 
@@ -30,25 +38,41 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('Key', KeySchema)
+  registerSchema('PaginationMeta', PaginationMetaSchema)
+  registerSchema('PaginationLinks', PaginationLinksSchema)
+  registerSchema(
+    'PaginatedKeysResponse',
+    createPaginatedResponseSchema(KeySchema)
+  )
   /**
    * @swagger
    * /keys:
    *   get:
-   *     summary: List keys
-   *     description: Returns keys ordered by createdAt (desc).
+   *     summary: List keys with pagination
+   *     description: Returns paginated keys ordered by createdAt (desc).
    *     tags: [Keys]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: A list of keys.
+   *         description: A paginated list of keys.
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Key'
+   *               $ref: '#/components/schemas/PaginatedKeysResponse'
    *       500:
    *         description: An error occurred while listing keys.
    *         content:
@@ -63,9 +87,11 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const query = db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const paginatedResult = await paginate(query, ctx)
+
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error listing keys')
       ctx.status = 500

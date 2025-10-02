@@ -1,5 +1,27 @@
 import { z } from 'zod'
 
+// Pagination schemas (reusable across all endpoints)
+export const PaginationMetaSchema = z.object({
+  totalRecords: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  count: z.number(),
+})
+
+export const PaginationLinksSchema = z.object({
+  href: z.string(),
+  rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
+})
+
+export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
+  contentSchema: T
+) =>
+  z.object({
+    content: z.array(contentSchema),
+    _meta: PaginationMetaSchema,
+    _links: z.array(PaginationLinksSchema),
+  })
+
 export const KeyTypeSchema = z.enum(['LGH', 'PB', 'FS', 'HN'])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
