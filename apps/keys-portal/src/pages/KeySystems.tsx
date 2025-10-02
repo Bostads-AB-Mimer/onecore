@@ -4,7 +4,7 @@ import { KeySystemsToolbar } from '@/components/key-systems/KeySystemsToolbar'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
 import { AddKeySystemForm } from '@/components/key-systems/AddKeySystemForm'
 
-import { KeySystem, Property } from '@/services/types'
+import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyService } from '@/services/api/keyService'
 import { propertySearchService } from '@/services/api/propertySearchService'
@@ -22,6 +22,9 @@ export default function KeySystems() {
     null
   )
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
+  const [keysForExpandedSystem, setKeysForExpandedSystem] = useState<Key[]>([])
+  const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const { toast } = useToast()
 
   // Load key systems and their properties from API on mount
@@ -185,6 +188,34 @@ export default function KeySystems() {
     }
   }
 
+  const handleToggleExpand = async (systemId: string) => {
+    if (expandedSystemId === systemId) {
+      // Collapse if already expanded
+      setExpandedSystemId(null)
+      setKeysForExpandedSystem([])
+    } else {
+      // Expand and load keys
+      setExpandedSystemId(systemId)
+      setIsLoadingKeys(true)
+      try {
+        const allKeys = await keyService.getAllKeys()
+        // Filter keys that belong to this key system
+        const filteredKeys = allKeys.filter((key) => key.keySystemId === systemId)
+        setKeysForExpandedSystem(filteredKeys)
+      } catch (error) {
+        console.error('Failed to load keys:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte ladda nycklar för detta låssystem.',
+          variant: 'destructive',
+        })
+        setKeysForExpandedSystem([])
+      } finally {
+        setIsLoadingKeys(false)
+      }
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <KeySystemsHeader
@@ -216,6 +247,10 @@ export default function KeySystems() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onExplore={() => {}} // No longer used, navigation handled in table
+        expandedSystemId={expandedSystemId}
+        onToggleExpand={handleToggleExpand}
+        keysForExpandedSystem={keysForExpandedSystem}
+        isLoadingKeys={isLoadingKeys}
       />
     </div>
   )
