@@ -23,6 +23,7 @@ export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   keys: z.string(),
   contact: z.string().optional(),
+  contact2: z.string().optional(),
   lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
@@ -107,6 +108,7 @@ export const UpdateKeySystemRequestSchema = z.object({
 export const CreateKeyLoanRequestSchema = z.object({
   keys: z.string(),
   contact: z.string().optional(),
+  contact2: z.string().optional(),
   lease: z.string().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
@@ -116,6 +118,7 @@ export const CreateKeyLoanRequestSchema = z.object({
 export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.string().optional(),
   contact: z.string().optional(),
+  contact2: z.string().optional(),
   lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
