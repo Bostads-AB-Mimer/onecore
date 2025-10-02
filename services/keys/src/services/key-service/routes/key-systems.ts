@@ -4,6 +4,7 @@ import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
+import { paginate } from '../../../utils/pagination'
 
 const TABLE = 'key_systems'
 
@@ -11,6 +12,9 @@ const {
   KeySystemSchema,
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
+  PaginationMetaSchema,
+  PaginationLinksSchema,
+  createPaginatedResponseSchema,
 } = keys.v1
 type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
@@ -35,35 +39,52 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
   registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
   registerSchema('KeySystem', KeySystemSchema)
+  registerSchema('PaginationMeta', PaginationMetaSchema)
+  registerSchema('PaginationLinks', PaginationLinksSchema)
+  registerSchema(
+    'PaginatedKeySystemsResponse',
+    createPaginatedResponseSchema(KeySystemSchema)
+  )
   /**
    * @swagger
    * /key-systems:
    *   get:
-   *     summary: List all key systems
-   *     description: Retrieve a list of all key systems
+   *     summary: List all key systems with pagination
+   *     description: Retrieve a paginated list of all key systems
    *     tags: [Key Systems]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
    *         description: Successfully retrieved key systems
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     description: Key system details
+   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
    *       500:
    *         description: Internal server error
    */
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const query = db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const paginatedResult = await paginate<KeySystem>(query, ctx)
+
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeySystem[], ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error listing key systems')
       ctx.status = 500

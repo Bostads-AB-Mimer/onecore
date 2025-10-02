@@ -9,6 +9,7 @@ type Key = keys.v1.Key
 type KeyLoan = keys.v1.KeyLoan
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
+type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 
 const BASE = Config.keysService.url
 
@@ -131,9 +132,19 @@ async function deleteJSON<T = unknown>(
  */
 
 export const KeysApi = {
-  list: async (): Promise<AdapterResult<Key[], CommonErr>> => {
-    const r = await getJSON<{ content: Key[] }>(`${BASE}/keys`)
-    return r.ok ? ok(r.data.content) : r
+  list: async (
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<Key>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString ? `${BASE}/keys?${queryString}` : `${BASE}/keys`
+
+    const r = await getJSON<PaginatedResponse<Key>>(url)
+    return r.ok ? ok(r.data) : r
   },
 
   search: async (
@@ -227,7 +238,9 @@ export const KeyLoansApi = {
 
   create: async (
     payload: Partial<KeyLoan>
-  ): Promise<AdapterResult<KeyLoan, 'bad-request' | 'conflict' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<KeyLoan, 'bad-request' | 'conflict' | CommonErr>
+  > => {
     const r = await postJSON<{ content: KeyLoan }>(`${BASE}/key-loans`, payload)
     return r.ok ? ok(r.data.content) : r
   },
@@ -257,9 +270,21 @@ export const KeyLoansApi = {
  */
 
 export const KeySystemsApi = {
-  list: async (): Promise<AdapterResult<KeySystem[], CommonErr>> => {
-    const r = await getJSON<{ content: KeySystem[] }>(`${BASE}/key-systems`)
-    return r.ok ? ok(r.data.content) : r
+  list: async (
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<KeySystem>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-systems?${queryString}`
+      : `${BASE}/key-systems`
+
+    const r = await getJSON<PaginatedResponse<KeySystem>>(url)
+    return r.ok ? ok(r.data) : r
   },
 
   search: async (

@@ -7,7 +7,7 @@ import {
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
-    // Request schemas
+  // Request schemas
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   CreateKeySystemRequestSchema,
@@ -15,6 +15,10 @@ import {
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateLogRequestSchema,
+  UpdateLogRequestSchema,
+  // Pagination schemas
+  PaginationMetaSchema,
+  PaginationLinksSchema,
 } from './schema'
 
 // Enum types
@@ -32,8 +36,12 @@ export type CreateKeyRequest = z.infer<typeof CreateKeyRequestSchema>
 export type UpdateKeyRequest = z.infer<typeof UpdateKeyRequestSchema>
 
 // Request types for key systems
-export type CreateKeySystemRequest = z.infer<typeof CreateKeySystemRequestSchema>
-export type UpdateKeySystemRequest = z.infer<typeof UpdateKeySystemRequestSchema>
+export type CreateKeySystemRequest = z.infer<
+  typeof CreateKeySystemRequestSchema
+>
+export type UpdateKeySystemRequest = z.infer<
+  typeof UpdateKeySystemRequestSchema
+>
 
 // Request types for key loans
 export type CreateKeyLoanRequest = z.infer<typeof CreateKeyLoanRequestSchema>
@@ -41,3 +49,13 @@ export type UpdateKeyLoanRequest = z.infer<typeof UpdateKeyLoanRequestSchema>
 
 // Request types for logs
 export type CreateLogRequest = z.infer<typeof CreateLogRequestSchema>
+export type UpdateLogRequest = z.infer<typeof UpdateLogRequestSchema>
+
+// Pagination types
+export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
+export type PaginationLinks = z.infer<typeof PaginationLinksSchema>
+export type PaginatedResponse<T> = {
+  content: T[]
+  _meta: PaginationMeta
+  _links: PaginationLinks[]
+}
