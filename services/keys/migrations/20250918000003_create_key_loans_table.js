@@ -9,6 +9,7 @@ exports.up = function (knex) {
     table.uuid('id').primary().defaultTo(knex.raw('NEWID()'))
     table.text('keys').defaultTo('[]')
     table.string('contact')
+    table.string('contact2')
     table.string('lease')
     table.timestamp('returnedAt')
     table.timestamp('availableToNextTenantFrom')
