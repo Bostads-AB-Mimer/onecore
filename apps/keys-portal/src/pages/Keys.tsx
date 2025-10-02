@@ -33,7 +33,7 @@ const toCreateReq = (
   flexNumber: k.flexNumber,
   rentalObjectCode: k.rentalObjectCode,
   keyType: k.keyType,
-  // key_system_id: someUuidOrNull, // add when you wire key systems
+  keySystemId: k.keySystemId,
 })
 
 const toUpdateReq = (
