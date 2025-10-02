@@ -15,7 +15,6 @@ import {
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateLogRequestSchema,
-  UpdateLogRequestSchema,
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
@@ -49,7 +48,6 @@ export type UpdateKeyLoanRequest = z.infer<typeof UpdateKeyLoanRequestSchema>
 
 // Request types for logs
 export type CreateLogRequest = z.infer<typeof CreateLogRequestSchema>
-export type UpdateLogRequest = z.infer<typeof UpdateLogRequestSchema>
 
 // Pagination types
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
