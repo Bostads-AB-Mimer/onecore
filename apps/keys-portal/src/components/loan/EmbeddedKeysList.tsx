@@ -7,6 +7,7 @@ import type {
   ReceiptData,
   KeyLoan,
 } from '@/services/types'
+import { useToast } from '@/hooks/use-toast'
 import { KeyTypeLabels, toReceiptTenant } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,11 +15,41 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Minus } from 'lucide-react'
 import { ReceiptDialog } from './ReceiptDialog'
-import { ReceiptHistory } from './ReceiptHistory'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 
 type LoanStatus = 'never_loaned' | 'loaned' | 'returned'
+
+// --- normalize error shapes (axios/fetch/custom) ---
+const httpStatus = (e: any) =>
+  e?.status ?? e?.statusCode ?? e?.response?.status ?? e?.cause?.status
+const httpData = (e: any) => e?.data ?? e?.response?.data ?? e?.body
+
+const isConflict = (e: any) => {
+  const s = httpStatus(e)
+  if (s === 409) return true
+  const msg = String(e?.message ?? '').toLowerCase()
+  const dataStr = JSON.stringify(httpData(e) ?? {}).toLowerCase()
+  return (
+    msg.includes('409') ||
+    msg.includes('conflict') ||
+    dataStr.includes('"status":409') ||
+    dataStr.includes('conflict')
+  )
+}
+
+// small helper to derive two contacts from lease.tenants
+function deriveContacts(lease: Lease): { contact?: string; contact2?: string } {
+  const names = (lease.tenants ?? [])
+    .slice(0, 2)
+    .map((t) => [t.firstName, t.lastName].filter(Boolean).join(' ').trim())
+    .filter(Boolean)
+
+  return {
+    contact: names[0] || undefined,
+    contact2: names[1] || undefined,
+  }
+}
 
 export function EmbeddedKeysList({
   lease,
@@ -27,11 +58,10 @@ export function EmbeddedKeysList({
   lease: Lease
   initialKeys?: Key[]
 }) {
-  // ------- State -------
+  const { toast } = useToast()
+
   const [keys, setKeys] = useState<Key[]>(initialKeys)
   const [loadingKeys, setLoadingKeys] = useState(false)
-
-  // use the server type directly; no local redefinition needed
   const [loans, setLoans] = useState<KeyLoan[]>([])
   const [loadingLoans, setLoadingLoans] = useState(false)
 
@@ -44,12 +74,10 @@ export function EmbeddedKeysList({
     string[]
   >([])
 
-  // Keep local keys in sync if parent re-renders with fresh ones
   useEffect(() => {
     setKeys(initialKeys)
   }, [initialKeys])
 
-  // If parent didn't pass keys, fetch by rentalObjectCode
   useEffect(() => {
     if (initialKeys.length > 0) return
     let cancelled = false
@@ -157,26 +185,45 @@ export function EmbeddedKeysList({
     if (selectedKeys.length === 0) return
     setIsProcessing(true)
     try {
-      const t = lease.tenants?.[0]
-      const contact = t
-        ? `contact-${(t.firstName ?? '').toLowerCase()}-${(t.lastName ?? '').toLowerCase()}`
-        : undefined
-
+      const { contact, contact2 } = deriveContacts(lease)
       const createdIds: string[] = []
+
       for (const keyId of selectedKeys) {
-        const created = await keyLoanService.create({
-          keys: JSON.stringify([keyId]),
-          lease: lease.leaseId,
-          contact,
-          pickedUpAt: new Date().toISOString(),
-          createdBy: 'ui',
-        })
-        if (created.id) createdIds.push(created.id)
+        try {
+          const created = await keyLoanService.create({
+            keys: JSON.stringify([keyId]),
+            lease: lease.leaseId,
+            contact,
+            contact2,
+            pickedUpAt: new Date().toISOString(),
+            createdBy: 'ui',
+          })
+          if (created.id) createdIds.push(created.id)
+        } catch (err: any) {
+          if (isConflict(err)) {
+            const k = keys.find((k) => k.id === keyId)
+            toast({
+              title: 'Kan inte låna ut',
+              description: `Nyckeln ${k?.keyName ?? keyId} är redan utlånad.`,
+              variant: 'destructive',
+            })
+            continue
+          }
+
+          const msg =
+            httpData(err)?.message ||
+            httpData(err)?.error ||
+            err?.message ||
+            'Kunde inte skapa nyckellån.'
+          toast({ title: 'Fel', description: msg, variant: 'destructive' })
+        }
       }
 
-      await refreshLoans()
-      openReceiptDialog('loan', selectedKeys, createdIds)
-      setSelectedKeys([])
+      if (createdIds.length > 0) {
+        await refreshLoans()
+        openReceiptDialog('loan', selectedKeys, createdIds)
+        setSelectedKeys([])
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -187,26 +234,50 @@ export function EmbeddedKeysList({
     if (ids.length === 0) return
     setIsProcessing(true)
     try {
-      const t = lease.tenants?.[0]
-      const contact = t
-        ? `contact-${(t.firstName ?? '').toLowerCase()}-${(t.lastName ?? '').toLowerCase()}`
-        : undefined
-
+      const { contact, contact2 } = deriveContacts(lease)
       const createdIds: string[] = []
       for (const keyId of ids) {
-        const created = await keyLoanService.create({
-          keys: JSON.stringify([keyId]),
-          lease: lease.leaseId,
-          contact,
-          pickedUpAt: new Date().toISOString(),
-          createdBy: 'ui',
-        })
-        if (created.id) createdIds.push(created.id)
+        try {
+          const created = await keyLoanService.create({
+            keys: JSON.stringify([keyId]),
+            lease: lease.leaseId,
+            contact,
+            contact2,
+            pickedUpAt: new Date().toISOString(),
+            createdBy: 'ui',
+          })
+          if (created.id) createdIds.push(created.id)
+        } catch (err: any) {
+          if (isConflict(err)) {
+            const data = httpData(err)
+            const k = keys.find((k) => k.id === keyId)
+            const reason =
+              (typeof data?.reason === 'string' && data.reason) ||
+              (typeof data?.error === 'string' && data.error) ||
+              `Nyckeln ${k?.keyName ?? keyId} är redan utlånad.`
+
+            toast({
+              title: 'Kan inte låna ut',
+              description: reason,
+              variant: 'destructive',
+            })
+            continue
+          }
+
+          const msg =
+            httpData(err)?.message ||
+            httpData(err)?.error ||
+            err?.message ||
+            'Kunde inte skapa nyckellån.'
+          toast({ title: 'Fel', description: msg, variant: 'destructive' })
+        }
       }
 
-      await refreshLoans()
-      openReceiptDialog('loan', ids, createdIds)
-      setSelectedKeys([])
+      if (createdIds.length > 0) {
+        await refreshLoans()
+        openReceiptDialog('loan', ids, createdIds)
+        setSelectedKeys([])
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -302,6 +373,7 @@ export function EmbeddedKeysList({
                 Låna ut alla nycklar ({availableKeys.length})
               </Button>
             )}
+
             {loanedKeys.length > 0 && (
               <Button
                 size="sm"
