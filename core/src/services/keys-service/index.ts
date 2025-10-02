@@ -23,7 +23,6 @@ const {
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
   CreateLogRequestSchema,
-  UpdateLogRequestSchema,
 } = keys.v1
 
 /**
@@ -67,7 +66,28 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
   registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
-  registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
+
+  // Helper function to create log entries
+  const createLogEntry = async (
+    eventType: 'creation' | 'update' | 'delete',
+    objectType: 'key' | 'keySystem' | 'keyLoan',
+    description?: string
+  ) => {
+    try {
+      await LogsApi.create({
+        userName: 'system', // TODO: Replace with actual user from auth context
+        eventType,
+        objectType,
+        description,
+      })
+    } catch (error) {
+      // Log the error but don't fail the main operation
+      logger.error(
+        { error, eventType, objectType },
+        'Failed to create log entry'
+      )
+    }
+  }
 
   // ==================== KEY LOANS ROUTES ====================
 
@@ -351,6 +371,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful creation
+    await createLogEntry(
+      'creation',
+      'keyLoan',
+      `Created key loan: ${result.data.id}`
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -439,6 +466,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful update
+    await createLogEntry('update', 'keyLoan', `Updated key loan: ${ctx.params.id}`)
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -493,6 +523,9 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Create log entry after successful deletion
+    await createLogEntry('delete', 'keyLoan', `Deleted key loan: ${ctx.params.id}`)
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -769,6 +802,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful creation
+    await createLogEntry('creation', 'key', `Created key: ${result.data.id}`)
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -847,6 +883,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful update
+    await createLogEntry('update', 'key', `Updated key: ${ctx.params.id}`)
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -899,6 +938,9 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Create log entry after successful deletion
+    await createLogEntry('delete', 'key', `Deleted key: ${ctx.params.id}`)
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -1211,6 +1253,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful creation
+    await createLogEntry(
+      'creation',
+      'keySystem',
+      `Created key system: ${result.data.id}`
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -1299,6 +1348,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Create log entry after successful update
+    await createLogEntry(
+      'update',
+      'keySystem',
+      `Updated key system: ${ctx.params.id}`
+    )
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -1353,6 +1409,13 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Create log entry after successful deletion
+    await createLogEntry(
+      'delete',
+      'keySystem',
+      `Deleted key system: ${ctx.params.id}`
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -1627,136 +1690,5 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /logs/{id}:
-   *   patch:
-   *     summary: Update a log (partial)
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UpdateLogRequest'
-   *     responses:
-   *       200:
-   *         description: Updated
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/Log'
-   *       400:
-   *         description: Invalid event_type or object_type
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       404:
-   *         description: Not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/NotFoundResponse'
-   *       500:
-   *         description: Server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.patch('/logs/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const payload = ctx.request.body
-
-    const result = await LogsApi.update(ctx.params.id, payload)
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Log not found', ...metadata }
-        return
-      }
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid request data', ...metadata }
-        return
-      }
-
-      logger.error({ err: result.err, metadata }, 'Error updating log')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /logs/{id}:
-   *   delete:
-   *     summary: Delete a log
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *     responses:
-   *       200:
-   *         description: Deleted
-   *       404:
-   *         description: Not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/NotFoundResponse'
-   *       500:
-   *         description: Server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.delete('/logs/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await LogsApi.remove(ctx.params.id)
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Log not found', ...metadata }
-        return
-      }
-
-      logger.error({ err: result.err, metadata }, 'Error deleting log')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { ...metadata }
   })
 }
