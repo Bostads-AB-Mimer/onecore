@@ -134,10 +134,3 @@ export const CreateLogRequestSchema = z.object({
   objectType: z.enum(['key', 'keySystem', 'keyLoan']),
   description: z.string().nullable().optional(),
 })
-
-export const UpdateLogRequestSchema = z.object({
-  userName: z.string().optional(),
-  eventType: z.enum(['creation', 'update', 'delete']).optional(),
-  objectType: z.enum(['key', 'keySystem', 'keyLoan']).optional(),
-  description: z.string().nullable().optional(),
-})

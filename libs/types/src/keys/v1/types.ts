@@ -15,7 +15,6 @@ import {
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateLogRequestSchema,
-  UpdateLogRequestSchema,
 } from './schema'
 
 // Enum types
@@ -42,4 +41,3 @@ export type UpdateKeyLoanRequest = z.infer<typeof UpdateKeyLoanRequestSchema>
 
 // Request types for logs
 export type CreateLogRequest = z.infer<typeof CreateLogRequestSchema>
-export type UpdateLogRequest = z.infer<typeof UpdateLogRequestSchema>
