@@ -7,10 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
 import { useMemo } from 'react'
 import { ContractCard } from './ContractCard'
-import { deriveDisplayStatus } from '@/lib/lease-status'
+import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 
 function formatAddress(addr?: Address): string {
   if (!addr) return 'Okänd adress'
@@ -18,6 +24,8 @@ function formatAddress(addr?: Address): string {
   const line2 = [addr.postalCode, addr.city].filter(Boolean).join(' ').trim()
   return [line1, line2].filter(Boolean).join(', ') || 'Okänd adress'
 }
+
+const toMs = (d?: string) => (d ? new Date(d).getTime() : 0)
 
 export function TenantInfo({
   tenant,
@@ -31,7 +39,12 @@ export function TenantInfo({
   /* hiding the tenant card for hyresobjekt flow */
   showTenantCard?: boolean
 }) {
-  const { activeContracts, upcomingContracts, endedContracts } = useMemo(() => {
+  const {
+    activeContracts,
+    upcomingContracts,
+    endedRecentContracts,
+    endedOlderContracts,
+  } = useMemo(() => {
     const active: Lease[] = []
     const upcoming: Lease[] = []
     const ended: Lease[] = []
@@ -43,12 +56,32 @@ export function TenantInfo({
       else ended.push(c)
     })
 
+    ended.sort((a, b) => toMs(pickEndDate(b)) - toMs(pickEndDate(a)))
+
+    const cutoff = (() => {
+      const d = new Date()
+      d.setMonth(d.getMonth() - 2)
+      return d.getTime()
+    })()
+
+    const endedRecent: Lease[] = []
+    const endedOlder: Lease[] = []
+
+    ended.forEach((lease) => {
+      const endMs = toMs(pickEndDate(lease))
+      if (endMs && endMs >= cutoff) endedRecent.push(lease)
+      else endedOlder.push(lease)
+    })
+
     return {
       activeContracts: active,
       upcomingContracts: upcoming,
-      endedContracts: ended,
+      endedRecentContracts: endedRecent,
+      endedOlderContracts: endedOlder,
     }
   }, [contracts])
+
+  const totalEnded = endedRecentContracts.length + endedOlderContracts.length
 
   return (
     <div className="space-y-6">
@@ -123,24 +156,58 @@ export function TenantInfo({
           </Card>
         )}
 
-        {endedContracts.length > 0 && (
+        {totalEnded > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-muted-foreground">
-                Avslutade kontrakt ({endedContracts.length})
+                Avslutade kontrakt ({totalEnded})
               </CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-4">
-              {endedContracts.map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
-              ))}
+              {endedRecentContracts.length > 0 && (
+                <div className="space-y-4">
+                  {endedRecentContracts.map((lease) => (
+                    <ContractCard key={lease.leaseId} lease={lease} />
+                  ))}
+                </div>
+              )}
+
+              {endedOlderContracts.length > 0 && (
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="older-ended">
+                    <AccordionTrigger
+                      className="
+                        w-full h-14 px-6 text-lg font-semibold
+                        rounded-lg border shadow-sm justify-between
+                        hover:bg-muted transition-colors
+                        data-[state=open]:bg-muted
+                        [&>svg]:h-6 [&>svg]:w-6
+                      "
+                    >
+                      <span>Äldre avslutade kontrakt</span>
+                      <span className="inline-flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center rounded-full bg-muted px-2.5 py-0.5 text-sm"></span>
+                      </span>
+                    </AccordionTrigger>
+
+                    <AccordionContent>
+                      <div className="space-y-4 pt-3">
+                        {endedOlderContracts.map((lease) => (
+                          <ContractCard key={lease.leaseId} lease={lease} />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
             </CardContent>
-          </Card>
+          </Card> // ← and this Card was never closed
         )}
 
         {activeContracts.length === 0 &&
           upcomingContracts.length === 0 &&
-          endedContracts.length === 0 && (
+          totalEnded === 0 && (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center">
