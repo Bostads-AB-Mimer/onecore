@@ -7,6 +7,12 @@ import type {
 
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 
+type ApiError = {
+  status?: number
+  message?: string
+  data?: any
+}
+
 export const keyLoanService = {
   async list(): Promise<KeyLoan[]> {
     const { data, error } = await GET('/key-loans')
@@ -54,7 +60,18 @@ export const keyLoanService = {
 
   async create(payload: CreateKeyLoanRequest): Promise<KeyLoan> {
     const { data, error } = await POST('/key-loans', { body: payload })
-    if (error) throw error
+    if (error) {
+      // Normalize error shape so callers can check error.status and error.data
+      const apiError: ApiError =
+        typeof error === 'object' && error
+          ? {
+              status: (error as any).status ?? (error as any).code,
+              message: (error as any).message,
+              data: (error as any).data ?? (error as any).response?.data,
+            }
+          : { message: String(error) }
+      throw apiError
+    }
     return data?.content as KeyLoan
   },
 
@@ -74,33 +91,14 @@ export const keyLoanService = {
     if (error) throw error
   },
 
-  // NEW: used by ReceiptHistory
+  // Optional helper your UI was calling:
   async listByLease(
     leaseId: string
   ): Promise<{ loaned: KeyLoan[]; returned: KeyLoan[] }> {
-    // Ask the backend for only the fields we need (if supported)
-    const fields = [
-      'id',
-      'keys',
-      'lease',
-      'contact',
-      'createdAt',
-      'returnedAt',
-      'updatedAt',
-    ]
-    const all = await this.search({ lease: leaseId, fields })
-
-    const loaned: KeyLoan[] = []
-    const returned: KeyLoan[] = []
-    for (const k of all) {
-      ;(k.returnedAt ? returned : loaned).push(k)
-    }
-
-    // Optional: sort
-    const toMs = (s?: string) => (s ? new Date(s).getTime() : 0)
-    loaned.sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
-    returned.sort((a, b) => toMs(b.returnedAt) - toMs(a.returnedAt))
-
+    // If you don’t have a backend route for this, do a search instead:
+    const rows = await this.search({ lease: leaseId })
+    const loaned = rows.filter((r) => !r.returnedAt)
+    const returned = rows.filter((r) => !!r.returnedAt)
     return { loaned, returned }
   },
 }

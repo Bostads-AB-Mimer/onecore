@@ -1,4 +1,3 @@
-// components/loan/ContractCard.tsx
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -21,7 +20,6 @@ import { EmbeddedKeysList } from './EmbeddedKeysList'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { keyService } from '@/services/api/keyService'
-import { keyLoanService } from '@/services/api/keyLoanService'
 
 const getLeaseTypeIcon = (type: string) => {
   const t = (type ?? '').toLowerCase()
@@ -61,7 +59,6 @@ export function ContractCard({
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
-  // 🔹 Real keys for this rental property:
   const [keys, setKeys] = useState<Key[]>([])
   const [keysLoading, setKeysLoading] = useState(false)
 
@@ -129,13 +126,22 @@ export function ContractCard({
   const order: KeyType[] = ['LGH', 'PB', 'TP', 'GEM', 'FS', 'HN', 'HUS']
   const keysRegionId = `keys-${lease.leaseId}`
 
+  const tenantNames = useMemo(
+    () =>
+      (lease.tenants ?? [])
+        .map((t) => [t.firstName, t.lastName].filter(Boolean).join(' '))
+        .filter(Boolean)
+        .join(' & '),
+    [lease.tenants]
+  )
+
   return (
     <Card className="relative border rounded-xl">
       <CardHeader className="py-3">
         <CardTitle className="flex items-center justify-between text-[13px] font-medium">
           <div className="flex items-center gap-2">
             {getLeaseTypeIcon(lease.type)}
-            <span className="tabular-nums">{lease.leaseNumber}</span>
+            <span className="tabular-nums">{lease.leaseId}</span>
             <Badge
               variant="outline"
               className="text-[10px] leading-none py-0.5"
@@ -180,10 +186,16 @@ export function ContractCard({
             <div className="text-muted-foreground">
               {addrLoading ? 'Hämtar adress…' : (addressStr ?? 'Okänd adress')}
             </div>
+
             {lease.tenants?.length ? (
               <div className="text-muted-foreground mt-1">
-                Hyresgäst: {lease.tenants[0].firstName}{' '}
-                {lease.tenants[0].lastName}
+                Hyresgäst{lease.tenants.length > 1 ? 'er' : ''}:{' '}
+                {lease.tenants
+                  .map((t) =>
+                    [t.firstName, t.lastName].filter(Boolean).join(' ')
+                  )
+                  .filter(Boolean)
+                  .join(' & ')}
               </div>
             ) : null}
           </div>
@@ -243,7 +255,6 @@ export function ContractCard({
 
         {open && (
           <div id={keysRegionId} className="pt-2">
-            {/* 🔹 pass the real keys */}
             <EmbeddedKeysList lease={lease} initialKeys={keys} />
           </div>
         )}
