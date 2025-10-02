@@ -1,11 +1,9 @@
+// services/api/keyService.ts
 import type {
   Key,
-  KeyLoan,
   KeySystem,
   CreateKeyRequest,
   UpdateKeyRequest,
-  CreateKeyLoanRequest,
-  UpdateKeyLoanRequest,
   CreateKeySystemRequest,
   UpdateKeySystemRequest,
 } from '@/services/types'
@@ -13,45 +11,7 @@ import type {
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 
 export const keyService = {
-  async getAllKeyLoans(): Promise<KeyLoan[]> {
-    const { data, error } = await GET('/key-loans')
-    if (error) throw error
-    return data?.content ?? []
-  },
-
-  async getKeyLoan(id: string): Promise<KeyLoan> {
-    const { data, error } = await GET('/key-loans/{id}', {
-      params: { path: { id } },
-    })
-    if (error) throw error
-    return data?.content as KeyLoan
-  },
-
-  async createKeyLoan(payload: CreateKeyLoanRequest): Promise<KeyLoan> {
-    const { data, error } = await POST('/key-loans', { body: payload })
-    if (error) throw error
-    return data?.content as KeyLoan
-  },
-
-  async updateKeyLoan(
-    id: string,
-    payload: UpdateKeyLoanRequest
-  ): Promise<KeyLoan> {
-    const { data, error } = await PATCH('/key-loans/{id}', {
-      params: { path: { id } },
-      body: payload,
-    })
-    if (error) throw error
-    return data?.content as KeyLoan
-  },
-
-  async deleteKeyLoan(id: string): Promise<void> {
-    const { error } = await DELETE('/key-loans/{id}', {
-      params: { path: { id } },
-    })
-    if (error) throw error
-  },
-
+  // ------- KEYS -------
   async getAllKeys(): Promise<Key[]> {
     const { data, error } = await GET('/keys')
     if (error) throw error
@@ -82,13 +42,31 @@ export const keyService = {
   },
 
   async deleteKey(id: string): Promise<void> {
-    const { error } = await DELETE('/keys/{id}', {
-      params: { path: { id } },
-    })
+    const { error } = await DELETE('/keys/{id}', { params: { path: { id } } })
     if (error) throw error
   },
 
-  // Key Systems
+  async searchKeys(params: {
+    q?: string
+    fields?: string
+    id?: string
+    keyName?: string
+    keySequenceNumber?: string
+    flexNumber?: string
+    rentalObjectCode?: string
+    keyType?: string
+    keySystemId?: string
+    createdAt?: string
+    updatedAt?: string
+  }): Promise<Key[]> {
+    const { data, error } = await GET('/keys/search', {
+      params: { query: params },
+    })
+    if (error) throw error
+    return data?.content ?? []
+  },
+
+  // ------- KEY SYSTEMS -------
   async getAllKeySystems(): Promise<KeySystem[]> {
     const { data, error } = await GET('/key-systems')
     if (error) throw error
@@ -107,20 +85,10 @@ export const keyService = {
     const { data, error, response } = await POST('/key-systems', {
       body: payload,
     })
-
-    console.log('createKeySystem response:', {
-      data,
-      error,
-      status: response.status,
-      ok: response.ok,
-    })
-
     if (error || !response.ok) {
-      const errorMessage =
-        (error as any)?.error || 'Failed to create key system'
-      const err = new Error(errorMessage)
+      const msg = (error as any)?.error ?? 'Failed to create key system'
+      const err = new Error(msg)
       ;(err as any).status = response.status
-      console.log('Throwing error:', err)
       throw err
     }
     return data?.content as KeySystem
@@ -135,9 +103,8 @@ export const keyService = {
       body: payload,
     })
     if (error || !response.ok) {
-      const errorMessage =
-        (error as any)?.error || 'Failed to update key system'
-      const err = new Error(errorMessage)
+      const msg = (error as any)?.error ?? 'Failed to update key system'
+      const err = new Error(msg)
       ;(err as any).status = response.status
       throw err
     }

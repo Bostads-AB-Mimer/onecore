@@ -10,10 +10,8 @@ import { Button } from '@/components/ui/button'
 import { FileText, Printer } from 'lucide-react'
 
 import type { ReceiptData } from '@/services/types'
-
 import { generateLoanReceipt, generateReturnReceipt } from '@/lib/pdf-receipts'
-
-import { mockReceipts } from '@/mockdata/mock-receipts'
+import { receiptService } from '@/services/api/receiptService'
 
 interface ReceiptDialogProps {
   isOpen: boolean
@@ -39,16 +37,24 @@ export function ReceiptDialog({
     if (!receiptData || keyLoanIds.length === 0) return
     setIsCreating(true)
     try {
-      const num = generateReceiptNumber(receiptData.receiptType)
-      mockReceipts.create({
+      const receiptNumber = generateReceiptNumber(receiptData.receiptType)
+
+      // persist on backend
+      await receiptService.create({
         receiptType: receiptData.receiptType,
         leaseId: receiptData.lease.leaseId,
         tenantId: receiptData.tenant.id,
         keyLoanIds,
-        receiptNumber: num,
+        receiptNumber,
       })
-      if (receiptData.receiptType === 'loan') generateLoanReceipt(receiptData)
-      else generateReturnReceipt(receiptData)
+
+      // generate PDF
+      if (receiptData.receiptType === 'loan') {
+        generateLoanReceipt(receiptData)
+      } else {
+        generateReturnReceipt(receiptData)
+      }
+
       onClose()
     } finally {
       setIsCreating(false)
