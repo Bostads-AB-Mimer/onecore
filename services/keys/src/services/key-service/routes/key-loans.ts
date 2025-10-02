@@ -64,6 +64,9 @@ export const routes = (router: KoaRouter) => {
    *                       contact:
    *                         type: string
    *                         description: Contact information.
+   *                       contact2:
+   *                         type: string
+   *                         description: Second contact information.
    *                       lease:
    *                         type: string
    *                         description: Lease identifier.
@@ -152,6 +155,10 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *       - in: query
    *         name: contact
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: contact2
    *         schema:
    *           type: string
    *       - in: query
@@ -307,6 +314,9 @@ export const routes = (router: KoaRouter) => {
    *                     contact:
    *                       type: string
    *                       description: Contact information.
+   *                     contact2:
+   *                       type: string
+   *                       description: Second contact information.
    *                     lease:
    *                       type: string
    *                       description: Lease identifier.
