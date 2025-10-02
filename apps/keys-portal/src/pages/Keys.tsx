@@ -19,8 +19,7 @@ const toUIKey = (k: KeyDto): Key => ({
   flexNumber: k.flexNumber,
   rentalObjectCode: k.rentalObjectCode,
   keyType: k.keyType as Key['keyType'],
-  // API gives key_system_id; your UI type has keySystemName (optional).
-  keySystemId: undefined,
+  keySystemId: k.keySystemId ?? undefined,
   createdAt: k.createdAt,
   updatedAt: k.updatedAt,
 })
@@ -57,6 +56,7 @@ const Index = () => {
   const [keys, setKeys] = useState<Key[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
@@ -69,7 +69,32 @@ const Index = () => {
     setError('')
     try {
       const list = await keyService.getAllKeys()
-      setKeys(list.map(toUIKey))
+      const mappedKeys = list.map(toUIKey)
+      setKeys(mappedKeys)
+
+      // Fetch key systems for keys that have a keySystemId
+      const uniqueKeySystemIds = [
+        ...new Set(
+          mappedKeys
+            .map((k) => k.keySystemId)
+            .filter((id): id is string => id != null && id !== '')
+        ),
+      ]
+
+      if (uniqueKeySystemIds.length > 0) {
+        const systemMap: Record<string, string> = {}
+        await Promise.all(
+          uniqueKeySystemIds.map(async (id) => {
+            try {
+              const keySystem = await keyService.getKeySystem(id)
+              systemMap[id] = keySystem.systemCode
+            } catch (error) {
+              console.error(`Failed to fetch key system ${id}:`, error)
+            }
+          })
+        )
+        setKeySystemMap(systemMap)
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Okänt fel'
       setError(msg)
@@ -221,6 +246,7 @@ const Index = () => {
 
         <KeysTable
           keys={filteredKeys}
+          keySystemMap={keySystemMap}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
