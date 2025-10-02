@@ -1,9 +1,7 @@
-// leaseSearchService.ts
 import type { Lease, Tenant } from '@/services/types'
 
 import { GET } from './core/base-api'
 
-// ---------- helpers ----------
 function isMaculated(lease: Lease): boolean {
   const n = (lease.leaseNumber ?? '').trim()
   if (n && /[Mm]$/.test(n)) return true

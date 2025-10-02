@@ -27,17 +27,17 @@ const getLeaseTypeIcon = (type: string) => {
     normalizedType.includes('apartment') ||
     normalizedType.includes('lägenhet')
   )
-    return <Home className="w-4 h-4" />
+    return <Home className="w-3.5 h-3.5" />
   if (
     normalizedType.includes('parking') ||
     normalizedType.includes('parkering')
   )
-    return <Car className="w-4 h-4" />
+    return <Car className="w-3.5 h-3.5" />
   if (normalizedType.includes('storage') || normalizedType.includes('förråd'))
-    return <Package className="w-4 h-4" />
+    return <Package className="w-3.5 h-3.5" />
   if (normalizedType.includes('commercial') || normalizedType.includes('lokal'))
-    return <Building className="w-4 h-4" />
-  return <Home className="w-4 h-4" />
+    return <Building className="w-3.5 h-3.5" />
+  return <Home className="w-3.5 h-3.5" />
 }
 
 function statusBadge(status: 'active' | 'upcoming' | 'ended') {
@@ -107,78 +107,99 @@ export function ContractCard({
   const keysRegionId = `keys-${lease.leaseId}`
 
   return (
-    <Card className="relative border-0">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-sm">
+    <Card className="relative border rounded-xl">
+      <CardHeader className="py-3">
+        <CardTitle className="flex items-center justify-between text-[13px] font-medium">
           <div className="flex items-center gap-2">
             {getLeaseTypeIcon(lease.type)}
-            <span>{lease.leaseNumber}</span>
-            <Badge variant="outline" className="text-xs">
+            <span className="tabular-nums">{lease.leaseNumber}</span>
+            <Badge
+              variant="outline"
+              className="text-[10px] leading-none py-0.5"
+            >
               {(lease.type || 'Okänd').trim()}
             </Badge>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              aria-controls={keysRegionId}
-              className="flex items-center gap-1"
-            >
-              {open ? (
-                <>
-                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
-                  Dölj nycklar
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                  Visa nycklar
-                </>
-              )}
-            </Button>
-            <Badge variant={variant}>{label}</Badge>
+            {hasAnyKeys && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                aria-controls={keysRegionId}
+                className="h-7 px-2 text-xs gap-1"
+              >
+                {open ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    Dölj nycklar
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    Visa nycklar
+                  </>
+                )}
+              </Button>
+            )}
+            <Badge variant={variant} className="text-[11px] py-0.5">
+              {label}
+            </Badge>
           </div>
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        <div className="text-sm text-muted-foreground min-h-[1rem]">
-          {addrLoading ? 'Hämtar adress…' : (addressStr ?? 'Okänd adress')}
-        </div>
+      <CardContent className="pt-0 pb-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 text-[13px]">
+          <div className="md:col-span-6 min-h-[1rem]">
+            <div className="text-muted-foreground">
+              {addrLoading ? 'Hämtar adress…' : (addressStr ?? 'Okänd adress')}
+            </div>
+            {lease.tenants?.length ? (
+              <div className="text-muted-foreground mt-1">
+                Hyresgäst: {lease.tenants[0].firstName}{' '}
+                {lease.tenants[0].lastName}
+              </div>
+            ) : null}
+          </div>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>
+          <div className="md:col-span-3 flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
               {startStr} – {endStr ?? 'Tillsvidare'}
             </span>
           </div>
-          <div className="text-xs">Objekt-ID: {lease.rentalPropertyId}</div>
-        </div>
 
-        {hasAnyKeys && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                <KeyRound className="h-4 w-4 opacity-80" aria-hidden="true" />
+          <div className="md:col-span-3 flex items-center md:justify-end">
+            <div className="text-xs text-muted-foreground">
+              Objekt-ID:{' '}
+              <span className="tabular-nums">{lease.rentalPropertyId}</span>
+            </div>
+          </div>
+
+          {hasAnyKeys && (
+            <div className="md:col-span-9 flex flex-wrap items-start gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+                <KeyRound
+                  className="h-3.5 w-3.5 opacity-80"
+                  aria-hidden="true"
+                />
                 <span>Nycklar</span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {order.map((t) => {
                   const count = keyCounts[t] ?? 0
                   if (!count) return null
                   return (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1 rounded-full border px-2 h-6 text-xs text-foreground/80"
-                      aria-label={`${KeyTypeLabels[t]}: ${count}`}
+                      className="inline-flex items-center gap-1 rounded-full border px-1.5 h-5 text-[11px] text-foreground/80"
                       title={`${KeyTypeLabels[t]}: ${count}`}
                     >
                       {KeyTypeLabels[t]}
-                      <span className="inline-flex items-center justify-center rounded-full bg-muted px-1 min-w-[1.25rem] h-4 text-[11px] font-medium">
+                      <span className="inline-flex items-center justify-center rounded-full bg-muted px-1 min-w-[1rem] h-4 text-[10px] font-medium">
                         {count}
                       </span>
                     </span>
@@ -186,21 +207,20 @@ export function ContractCard({
                 })}
               </div>
             </div>
-            <span className="text-xs text-muted-foreground">
-              Antal Nycklar:{' '}
-              <span className="font-medium text-foreground">{totalKeys}</span>
-            </span>
-          </div>
-        )}
+          )}
 
-        {lease.tenants && lease.tenants.length > 0 && (
-          <div className="text-sm text-muted-foreground">
-            Hyresgäst: {lease.tenants[0].firstName} {lease.tenants[0].lastName}
-          </div>
-        )}
+          {hasAnyKeys && (
+            <div className="md:col-span-3 flex items-start md:justify-end mt-1">
+              <span className="text-xs text-muted-foreground">
+                Antal Nycklar:{' '}
+                <span className="font-medium text-foreground">{totalKeys}</span>
+              </span>
+            </div>
+          )}
+        </div>
 
         {open && (
-          <div id={keysRegionId} className="pt-3">
+          <div id={keysRegionId} className="pt-2">
             <EmbeddedKeysList lease={lease} />
           </div>
         )}
