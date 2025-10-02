@@ -83,7 +83,7 @@ export function mapLeaseTypeKeyFromRaw(raw?: string): LeaseType {
   return 'unknown'
 }
 
-// ----- Receipts MOCK-UI (UI/domain) -----
+// ----- Receipts (UI/domain) -----
 export type ReceiptType = 'loan' | 'return'
 
 export interface Receipt {
@@ -126,24 +126,4 @@ export function toReceiptTenant(t: Tenant): ReceiptTenant {
       ? `${t.address.street} ${t.address.number}, ${t.address.postalCode} ${t.address.city}`
       : undefined,
   }
-}
-
-// ----- Mock-only (optional to centralize) -----
-export type KeyLoanStatus = 'loaned' | 'returned'
-export interface MockKeyLoan {
-  id: string
-  keyId: string
-  leaseId: string
-  tenantId: string
-  status: KeyLoanStatus
-  createdAt: string
-  returnedAt?: string
-}
-
-export interface LoanTransaction {
-  id: string
-  type: ReceiptType
-  date: string
-  keyLoanIds: string[]
-  keys: Array<{ id: string; key_name: string; key_type: string }>
 }
