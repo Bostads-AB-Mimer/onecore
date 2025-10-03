@@ -1,9 +1,9 @@
-import { Building, Property, PropertyDetail } from '@/types/api'
+import { Property, Building } from '@/services/types'
 import { CollapsibleInfoCard } from '@/components/ui/CollapsibleInfoCard'
 
 interface BuildingBasicInfoProps {
   building: Building
-  property: PropertyDetail
+  property: Property
   residenceCount?: number
   address?: string
   objectNumber?: string
@@ -17,7 +17,7 @@ export const BuildingBasicInfo = ({
   objectNumber,
 }: BuildingBasicInfoProps) => {
   // Calculate total number of spaces/premises (lokaler)
-  const totalSpaces = building.spaces?.length || 0
+  const buildingArea = '- m²'
 
   // Preview content for mobile
   const previewContent = (
@@ -80,7 +80,7 @@ export const BuildingBasicInfo = ({
 
       <div>
         <p className="text-sm text-muted-foreground">Allmän yta</p>
-        <p className="font-medium">{building.area} m²</p>
+        <p className="font-medium">{buildingArea}</p>
       </div>
 
       {/* Grupp 3 - Innehåll/Kapacitet */}
@@ -91,7 +91,7 @@ export const BuildingBasicInfo = ({
 
       <div>
         <p className="text-sm text-muted-foreground">Antal lokaler</p>
-        <p className="font-medium">{totalSpaces}</p>
+        <p className="font-medium">{'-'}</p>
       </div>
     </div>
   )

@@ -1,10 +1,4 @@
-import { Staircase, Residence } from '@/services/types'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import { Staircase } from '@/services/types'
 import { Button } from '@/components/ui/v2/Button'
 import { Badge } from '@/components/ui/v2/Badge'
 import {
@@ -13,14 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/Accordion'
-import {
-  ChevronRight,
-  Home,
-  Monitor,
-  Mail,
-  Package,
-  Wrench,
-} from 'lucide-react'
+import { ChevronRight, Home } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
 import { residenceService } from '@/services/api/core'
@@ -50,6 +37,7 @@ const getStatusBadge = (status?: string) => {
 }
 
 // Helper function to get apartment type styling
+/*
 const getApartmentTypeStyle = (type?: ApartmentType) => {
   switch (type) {
     case 'Övernattning':
@@ -60,13 +48,12 @@ const getApartmentTypeStyle = (type?: ApartmentType) => {
       return ''
   }
 }
+*/
 
 export const BuildingEntranceHierarchy = ({
   staircases,
   basePath,
 }: BuildingEntranceHierarchyProps) => {
-  console.log('Staircases in Hierarchy', staircases)
-
   const residenceQueriesArray = useQueries({
     queries: staircases.map((staircase) => {
       return {
@@ -96,8 +83,6 @@ export const BuildingEntranceHierarchy = ({
       ),
     [residenceQueriesArray, staircases]
   )
-
-  console.log('Residence Queries:', residenceQueries)
 
   // Return early if no entrances
   if (!staircases || staircases.length === 0) {
