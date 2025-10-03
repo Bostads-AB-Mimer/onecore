@@ -32,7 +32,7 @@ export const keyService = {
   // ------- KEYS -------
   async getAllKeys(page: number = 1, limit: number = 60): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys', {
-      params: { query: { page: page.toString(), limit: limit.toString() } },
+      params: { query: { page, limit } },
     })
     if (error) throw error
 
@@ -103,7 +103,7 @@ export const keyService = {
     limit: number = 60
   ): Promise<PaginatedResponse<KeySystem>> {
     const { data, error } = await GET('/key-systems', {
-      params: { query: { page: page.toString(), limit: limit.toString() } },
+      params: { query: { page, limit } },
     })
     if (error) throw error
 
