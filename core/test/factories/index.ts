@@ -38,6 +38,7 @@ export {
   ResidenceDetailsFactory as residenceDetails,
   ResidenceByRentalIdDetailsFactory as residenceByRentalIdDetails,
 } from './residence-details'
+export { ResidenceSummaryFactory as residenceSummary } from './residence-summary'
 export { PropertyFactory as property } from './property'
 export { PropertyDetailsFactory as propertyDetails } from './property-details'
 export { StaircaseFactory as staircase } from './staircase'
