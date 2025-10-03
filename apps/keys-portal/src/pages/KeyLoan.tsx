@@ -26,10 +26,10 @@ export default function KeyLoan() {
   }
 
   // Property flow
-  const handlePropertyFound = (_tenant: Tenant | null, contracts: Lease[]) => {
-    setSelectedTenant(null) // no tenant header
+  const handlePropertyFound = (tenant: Tenant | null, contracts: Lease[]) => {
+    setSelectedTenant(tenant)
     setTenantContracts(contracts)
-    setShowTenantCard(false)
+    setShowTenantCard(true)
     scrollToResults()
   }
 
@@ -40,8 +40,6 @@ export default function KeyLoan() {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      {/* … header omitted for brevity … */}
-
       <div className="max-w-2xl mx-auto">
         <Tabs defaultValue="personnummer" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">

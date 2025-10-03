@@ -39,6 +39,19 @@ export function TenantInfo({
   /* hiding the tenant card for hyresobjekt flow */
   showTenantCard?: boolean
 }) {
+  // Get all tenants from the active lease for display
+  const activeLease = useMemo(() => {
+    return contracts.find((c) => deriveDisplayStatus(c) === 'active')
+  }, [contracts])
+
+  const tenantsToDisplay = useMemo(() => {
+    // If we have an active lease, show all its tenants
+    if (activeLease?.tenants?.length) {
+      return activeLease.tenants
+    }
+    // Fallback to single tenant if provided
+    return tenant ? [tenant] : []
+  }, [activeLease, tenant])
   const {
     activeContracts,
     upcomingContracts,
@@ -93,34 +106,56 @@ export function TenantInfo({
         </Button>
       </div>
 
-      {showTenantCard && tenant && (
+      {showTenantCard && tenantsToDisplay.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              {tenant.firstName} {tenant.lastName}
+              Hyresgäst{tenantsToDisplay.length > 1 ? 'er' : ''}
             </CardTitle>
-            <CardDescription>
-              Personnummer: {tenant.nationalRegistrationNumber}
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {tenant.emailAddress && (
-              <p className="text-sm text-muted-foreground">
-                E-post: {tenant.emailAddress}
-              </p>
-            )}
-            {tenant.phoneNumbers?.[0]?.phoneNumber && (
-              <p className="text-sm text-muted-foreground">
-                Telefon: {tenant.phoneNumbers[0].phoneNumber}
-              </p>
-            )}
-            {tenant.address && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {formatAddress(tenant.address as Address)}
-              </p>
-            )}
+          <CardContent>
+            <div
+              className={
+                tenantsToDisplay.length > 1
+                  ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
+                  : ''
+              }
+            >
+              {tenantsToDisplay.map((t, idx) => (
+                <div key={t.contactKey || idx} className="space-y-2">
+                  {tenantsToDisplay.length > 1 && (
+                    <h3 className="font-semibold text-sm">
+                      Kontakt {idx + 1}: {t.firstName} {t.lastName}
+                    </h3>
+                  )}
+                  {tenantsToDisplay.length === 1 && (
+                    <h3 className="font-semibold">
+                      {t.firstName} {t.lastName}
+                    </h3>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Personnummer: {t.nationalRegistrationNumber}
+                  </p>
+                  {t.emailAddress && (
+                    <p className="text-sm text-muted-foreground">
+                      E-post: {t.emailAddress}
+                    </p>
+                  )}
+                  {t.phoneNumbers?.[0]?.phoneNumber && (
+                    <p className="text-sm text-muted-foreground">
+                      Telefon: {t.phoneNumbers[0].phoneNumber}
+                    </p>
+                  )}
+                  {t.address && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {formatAddress(t.address as Address)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
