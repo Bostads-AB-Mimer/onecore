@@ -18,6 +18,7 @@ import {
   MaintenanceUnitSchema,
   ResidenceByRentalIdSchema,
   FacilityDetailsSchema,
+  ResidenceSummarySchema,
 } from '../schemas'
 import { LeaseStatus } from '@onecore/types'
 
@@ -527,6 +528,61 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(500)
       expect(getMaintenanceUnitsSpy).toHaveBeenCalledWith('1234')
+    })
+  })
+
+  describe('GET /property/residences/summary/by-building-code/:buildingCode', () => {
+    it('returns 200 and a list of residence summaries', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(3)
+      const getResidenceSummariesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceSummariesByBuildingCode')
+        .mockResolvedValueOnce({ ok: true, data: residenceSummariesMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/summary/by-building-code/202-002'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getResidenceSummariesSpy).toHaveBeenCalledWith('202-002', undefined)
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(residenceSummariesMock)
+      )
+      expect(() =>
+        z.array(ResidenceSummarySchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 200 and a list of residence summaries filtered by staircase code', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(2)
+      const getResidenceSummariesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceSummariesByBuildingCode')
+        .mockResolvedValueOnce({ ok: true, data: residenceSummariesMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/summary/by-building-code/202-002?staircaseCode=A1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getResidenceSummariesSpy).toHaveBeenCalledWith('202-002', 'A1')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(residenceSummariesMock)
+      )
+      expect(() =>
+        z.array(ResidenceSummarySchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getResidenceSummariesSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceSummariesByBuildingCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/summary/by-building-code/202-002'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getResidenceSummariesSpy).toHaveBeenCalledWith('202-002', undefined)
     })
   })
 })
