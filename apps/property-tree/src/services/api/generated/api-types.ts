@@ -1232,6 +1232,41 @@ export interface components {
       };
       areaSize: number | null;
     };
+    ResidenceSummary: {
+      id: string;
+      code: string;
+      name: string | null;
+      deleted: boolean;
+      rentalId: string;
+      buildingCode: string;
+      buildingName: string;
+      staircaseCode: string;
+      staircaseName: string;
+      elevator: number | null;
+      floor: string;
+      hygieneFacility: string | null;
+      wheelchairAccessible: number;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string | null;
+        /** Format: date-time */
+        toDate: string | null;
+      };
+      residenceType: {
+        code: string;
+        name: string;
+        roomCount: number;
+        kitchen: number;
+      };
+      quantityValues: ({
+          value: number;
+          quantityTypeId: string;
+          quantityType: {
+            name: string;
+            unitId: string | null;
+          };
+        })[];
+    };
     GetResidenceByRentalIdResponse: {
       content: {
         id: string;
