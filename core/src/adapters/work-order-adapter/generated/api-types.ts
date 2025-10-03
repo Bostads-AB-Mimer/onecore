@@ -45,6 +45,30 @@ export interface paths {
       };
     };
   };
+  "/health/db": {
+    /** Database connection pool metrics */
+    get: {
+      responses: {
+        /** @description Connection pool stats per configured DB connection. */
+        200: {
+          content: {
+            "application/json": {
+              connectionPools?: number;
+              metrics?: {
+                  name?: string;
+                  pool?: {
+                    used?: number;
+                    free?: number;
+                    pendingCreates?: number;
+                    pendingAcquires?: number;
+                  };
+                }[];
+            };
+          };
+        };
+      };
+    };
+  };
   "security": {
   };
   "/workOrders/contactCode/{contactCode}": {

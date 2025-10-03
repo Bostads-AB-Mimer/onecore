@@ -30,6 +30,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
+  registerSchema('ResidenceSummary', schemas.ResidenceSummarySchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
@@ -710,6 +711,92 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /residences/summary/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get residences by building code, optionally filtered by staircase code.
+   *     description: Returns all residences belonging to a specific building, optionally filtered by staircase code.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building code of the building.
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the residences.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ResidenceSummary'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/residences/summary/by-building-code/:buildingCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { buildingCode } = ctx.params
+      const params = schemas.ResidenceSummaryQueryParamsSchema.safeParse(
+        ctx.query
+      )
+
+      if (!params.success) {
+        ctx.status = 400
+        ctx.body = { error: params.error.errors, ...metadata }
+        return
+      }
+
+      const { staircaseCode } = params.data
+
+      try {
+        const result =
+          await propertyBaseAdapter.getResidenceSummariesByBuildingCode(
+            buildingCode,
+            staircaseCode
+          )
+
+        if (!result.ok) {
+          logger.error(
+            { err: result.err, metadata },
+            'Error getting residence summaries from property-base'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: result.data satisfies schemas.ResidenceSummary[],
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error({ error, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger

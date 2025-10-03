@@ -653,4 +653,74 @@ describe('@onecore/property-adapter', () => {
       if (!result.ok) expect(result.err).toBe('unknown')
     })
   })
+
+  describe('getResidenceSummariesByBuildingCode', () => {
+    it('returns residence summaries for a building', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(3)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () =>
+            HttpResponse.json(
+              {
+                content: residenceSummariesMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode('202-002')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residenceSummariesMock,
+      })
+    })
+
+    it('returns residence summaries filtered by staircase code', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(2)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () =>
+            HttpResponse.json(
+              {
+                content: residenceSummariesMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode(
+          '202-002',
+          'A1'
+        )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residenceSummariesMock,
+      })
+    })
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode('202-002')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+  })
 })
