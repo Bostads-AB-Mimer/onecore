@@ -22,15 +22,17 @@ import {
 } from '@/components/ui/MobileAccordion'
 import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
 //import { useFeatureToggles } from "@/contexts/FeatureTogglesContext";
-import type { Building as BuildingType } from '@/types/api'
+import { Building as BuildingType, Staircase } from '@/services/types'
 
 interface BuildingDetailTabsMobileProps {
   building: BuildingType
+  staircases: Staircase[]
   basePath: string
 }
 
 export const BuildingDetailTabsMobile = ({
   building,
+  staircases,
   basePath,
 }: BuildingDetailTabsMobileProps) => {
   //const { features } = useFeatureToggles();
@@ -50,7 +52,7 @@ export const BuildingDetailTabsMobile = ({
       icon: Building,
       title: 'Uppgångar',
       content: features.showBuildingEntrances ? (
-        <BuildingEntrances building={building} basePath={basePath} />
+        <BuildingEntrances staircases={staircases} basePath={basePath} />
       ) : (
         <FeatureGatedContent
           isEnabled={false}

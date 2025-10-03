@@ -1,4 +1,4 @@
-import { Residence, Staircase } from '@/services/types'
+import { Staircase } from '@/services/types'
 import { BuildingEntranceHierarchy } from './BuildingEntranceHierarchy'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Users } from 'lucide-react'

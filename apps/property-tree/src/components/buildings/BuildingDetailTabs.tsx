@@ -14,7 +14,7 @@ import { MessageSquare } from 'lucide-react'
 
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { useIsMobile } from '@/components/hooks/useMobile'
-import type { Building } from '@/types/api'
+import type { Building } from '@/services/types'
 import { useEffect } from 'react'
 import { Residence, Staircase } from '@/services/types'
 
@@ -34,11 +34,14 @@ export const BuildingDetailTabs = ({
   const { features } = useFeatureToggles()
   const isMobile = useIsMobile()
 
-  console.log('Building entrances:')
-  console.log(staircases)
-
   if (isMobile) {
-    return <BuildingDetailTabsMobile building={building} basePath={basePath} />
+    return (
+      <BuildingDetailTabsMobile
+        building={building}
+        staircases={staircases}
+        basePath={basePath}
+      />
+    )
   }
 
   return (
@@ -46,21 +49,21 @@ export const BuildingDetailTabs = ({
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
 
-        <TabsTrigger value="parts">Byggnadsdelar</TabsTrigger>
+        <TabsTrigger disabled={true} value="parts">
+          Byggnadsdelar
+        </TabsTrigger>
 
-        {/*
-        <TabsTrigger value="spaces">Utrymmen</TabsTrigger>
+        <TabsTrigger disabled={true} value="spaces">
+          Utrymmen
+        </TabsTrigger>
 
-        <TabsTrigger value="installations">Installationer</TabsTrigger>
-        
-        <TabsTrigger value="parking">Parkering</TabsTrigger>
+        <TabsTrigger disabled={true} value="documents">
+          Dokument
+        </TabsTrigger>
 
-        <TabsTrigger value="documents">Dokument</TabsTrigger>
-
-        <TabsTrigger value="orders">Ärenden</TabsTrigger>
-
-        <TabsTrigger value="notes">Noteringar</TabsTrigger>
-        */}
+        <TabsTrigger disabled={true} value="orders">
+          Ärenden
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="entrances">
@@ -81,33 +84,6 @@ export const BuildingDetailTabs = ({
         </FeatureGatedContent>
       </TabsContent>
 
-      <TabsContent value="spaces">
-        <FeatureGatedContent
-          isEnabled={features.showBuildingSpaces}
-          fallbackMessage="Utrymmenfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingSpacesTab building={building} />
-        </FeatureGatedContent>
-      </TabsContent>
-
-      <TabsContent value="installations">
-        <FeatureGatedContent
-          isEnabled={features.showBuildingInstallations}
-          fallbackMessage="Installationerfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingInstallationsTab building={building} />
-        </FeatureGatedContent>
-      </TabsContent>
-
-      <TabsContent value="parking">
-        <FeatureGatedContent
-          isEnabled={features.showBuildingParking}
-          fallbackMessage="Parkeringfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingParkingTab building={building} />
-        </FeatureGatedContent>
-      </TabsContent>
-
       <TabsContent value="documents">
         <FeatureGatedContent
           isEnabled={features.showBuildingDocuments}
@@ -123,25 +99,6 @@ export const BuildingDetailTabs = ({
           fallbackMessage="Ärendefunktionen är inte aktiverad."
         >
           <BuildingOrdersTab building={building} />
-        </FeatureGatedContent>
-      </TabsContent>
-
-      <TabsContent value="notes">
-        <FeatureGatedContent
-          isEnabled={true}
-          fallbackMessage="Noteringsfunktionen är inte aktiverad."
-        >
-          <TabLayout title="Noteringar" showCard={true}>
-            <></>
-            {/*
-            <Notes
-              entityType="building"
-              entityId={building.id}
-              placeholder="Skriv din notering här..."
-              emptyMessage="Inga noteringar har lagts till för denna byggnad ännu."
-            />
-            */}
-          </TabLayout>
         </FeatureGatedContent>
       </TabsContent>
     </Tabs>

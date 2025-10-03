@@ -1,5 +1,5 @@
-import { useQuery, useQueries } from '@tanstack/react-query'
-import { Building, PropertyDetail } from '@/types/api'
+import { useQuery } from '@tanstack/react-query'
+import { Building, Property } from '@/services/types'
 import { buildingService } from '@/services/api'
 import {
   propertyService,
@@ -52,7 +52,7 @@ export const useBuildingDetail = (propertyId: string, buildingId?: string) => {
   return {
     data: {
       building: building as Building,
-      property: property as PropertyDetail,
+      property: property as Property,
       staircases: staircases as Staircase[],
       residences: residences as Residence[],
     },
