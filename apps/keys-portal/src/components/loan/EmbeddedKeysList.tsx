@@ -1,4 +1,3 @@
-// components/loan/EmbeddedKeysList.tsx
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import type {
   Key,
@@ -13,12 +12,22 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Plus, Minus } from 'lucide-react'
 import { ReceiptDialog } from './ReceiptDialog'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 
-type LoanStatus = 'never_loaned' | 'loaned' | 'returned'
+type LoanStatus =
+  | 'never_loaned'
+  | 'loaned_to_customer'
+  | 'loaned_to_other'
+  | 'returned'
 
 // --- normalize error shapes (axios/fetch/custom) ---
 const httpStatus = (e: any) =>
@@ -97,16 +106,32 @@ export function EmbeddedKeysList({
     }
   }, [lease.rentalPropertyId, initialKeys.length])
 
-  // Load loans for this lease
+  // Load ALL loans for keys in this property (to detect loans to other leases)
   const refreshLoans = useCallback(async () => {
     setLoadingLoans(true)
     try {
-      const list = await keyLoanService.search({ lease: lease.leaseId })
-      setLoans(list)
+      // Get ALL active loans (we'll filter to relevant ones)
+      const allLoans = await keyLoanService.list()
+
+      // Get current key IDs
+      const keyIds = keys.map((k) => k.id)
+
+      // Filter to loans that involve any of our keys
+      const relevantLoans = allLoans.filter((loan) => {
+        try {
+          const loanKeyIds = JSON.parse(loan.keys ?? '[]') as string[]
+          // Include this loan if it contains ANY of our keys
+          return loanKeyIds.some((id) => keyIds.includes(id))
+        } catch {
+          return false
+        }
+      })
+
+      setLoans(relevantLoans)
     } finally {
       setLoadingLoans(false)
     }
-  }, [lease.leaseId])
+  }, [lease.leaseId, keys])
 
   useEffect(() => {
     refreshLoans()
@@ -129,7 +154,19 @@ export function EmbeddedKeysList({
   }, [loans])
 
   const getStatus = (keyId: string): LoanStatus => {
-    if (activeLoanByKeyId.has(keyId)) return 'loaned'
+    // Check if there's an active loan for this key
+    const activeLoan = activeLoanByKeyId.get(keyId)
+
+    if (activeLoan) {
+      // Compare the loan's lease ID with current lease ID
+      if (activeLoan.lease === lease.leaseId) {
+        return 'loaned_to_customer'
+      } else {
+        return 'loaned_to_other'
+      }
+    }
+
+    // Check if ever loaned (existing logic)
     const ever = loans.some((l) => {
       try {
         const ids = JSON.parse(l.keys ?? '[]') as string[]
@@ -142,12 +179,20 @@ export function EmbeddedKeysList({
   }
 
   const availableKeys = useMemo(
-    () => keys.filter((k) => getStatus(k.id) !== 'loaned'),
-    [keys, activeLoanByKeyId, loans]
+    () =>
+      keys.filter((k) => {
+        const status = getStatus(k.id)
+        return status !== 'loaned_to_customer' && status !== 'loaned_to_other'
+      }),
+    [keys, activeLoanByKeyId, loans, lease.leaseId]
   )
   const loanedKeys = useMemo(
-    () => keys.filter((k) => getStatus(k.id) === 'loaned'),
-    [keys, activeLoanByKeyId]
+    () =>
+      keys.filter((k) => {
+        const status = getStatus(k.id)
+        return status === 'loaned_to_customer' || status === 'loaned_to_other'
+      }),
+    [keys, activeLoanByKeyId, loans, lease.leaseId]
   )
 
   const toggleSelection = (keyId: string, checked: boolean) => {
@@ -392,9 +437,10 @@ export function EmbeddedKeysList({
           <div className="space-y-1">
             {keys.map((key, index) => {
               const status = getStatus(key.id)
-              const isLoaned = status === 'loaned'
+              const isLoanedToCustomer = status === 'loaned_to_customer'
+              const isLoanedToOther = status === 'loaned_to_other'
               const isReturned = status === 'returned'
-              const canBeLoaned = !isLoaned
+              const canBeLoaned = !isLoanedToCustomer && !isLoanedToOther
 
               return (
                 <div
@@ -433,10 +479,10 @@ export function EmbeddedKeysList({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isLoaned ? (
+                    {isLoanedToCustomer ? (
                       <>
                         <span className="text-xs text-destructive font-medium">
-                          Utlånad
+                          Utlånad till kund
                         </span>
                         <Button
                           size="sm"
@@ -448,6 +494,22 @@ export function EmbeddedKeysList({
                           Återlämna
                         </Button>
                       </>
+                    ) : isLoanedToOther ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium cursor-help">
+                              Utlånad till annan hyresgäst
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Utlånad till kontrakt:{' '}
+                              {activeLoanByKeyId.get(key.id)?.lease || 'Okänt'}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ) : (
                       <span
                         className={`text-xs font-medium ${
@@ -458,7 +520,7 @@ export function EmbeddedKeysList({
                       >
                         {isReturned
                           ? 'Återlämnad (kan lånas ut igen)'
-                          : 'Aldrig utlånad'}
+                          : 'Ej utlånad'}
                       </span>
                     )}
                   </div>
