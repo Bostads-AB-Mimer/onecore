@@ -23,7 +23,6 @@ const {
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
   CreateLogRequestSchema,
-  UpdateLogRequestSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   createPaginatedResponseSchema,
@@ -92,7 +91,6 @@ export const routes = (router: KoaRouter) => {
       )
     }
   }
-  registerSchema('UpdateLogRequest', UpdateLogRequestSchema)
 
   // Register pagination schemas
   registerSchema('PaginationMeta', PaginationMetaSchema)
