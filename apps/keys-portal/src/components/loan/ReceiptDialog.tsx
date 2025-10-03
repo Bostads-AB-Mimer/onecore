@@ -43,7 +43,7 @@ export function ReceiptDialog({
       await receiptService.create({
         receiptType: receiptData.receiptType,
         leaseId: receiptData.lease.leaseId,
-        tenantId: receiptData.tenant.id,
+        tenantId: receiptData.tenants[0].id,
         keyLoanIds,
         receiptNumber,
       })
