@@ -103,12 +103,11 @@ export interface ReceiptTenant {
   lastName: string
   email?: string
   phone?: string
-  address?: string
 }
 
 export interface ReceiptData {
   lease: Lease
-  tenant: ReceiptTenant
+  tenants: ReceiptTenant[]
   keys: Key[]
   receiptType: ReceiptType
   operationDate?: Date
@@ -122,8 +121,5 @@ export function toReceiptTenant(t: Tenant): ReceiptTenant {
     lastName: t.lastName,
     email: t.emailAddress,
     phone: t.phoneNumbers?.[0]?.phoneNumber,
-    address: t.address
-      ? `${t.address.street} ${t.address.number}, ${t.address.postalCode} ${t.address.city}`
-      : undefined,
   }
 }

@@ -208,15 +208,22 @@ export function EmbeddedKeysList({
     keyLoanIds: string[],
     when?: string
   ) => {
-    const t = lease.tenants?.[0]
-    const tenant = t
-      ? toReceiptTenant(t)
-      : { id: '', personnummer: '', firstName: 'Okänd', lastName: 'Hyresgäst' }
+    const tenants =
+      lease.tenants && lease.tenants.length > 0
+        ? lease.tenants.map(toReceiptTenant)
+        : [
+            {
+              id: '',
+              personnummer: '',
+              firstName: 'Okänd',
+              lastName: 'Hyresgäst',
+            },
+          ]
     const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
 
     setReceiptData({
       lease,
-      tenant,
+      tenants,
       keys: relevantKeys,
       receiptType: type,
       operationDate: when ? new Date(when) : new Date(),
