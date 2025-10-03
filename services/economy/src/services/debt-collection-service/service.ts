@@ -325,9 +325,6 @@ const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
   }))
 }
 
-const roundedValue = (value: number) =>
-  Math.round((value + Number.EPSILON) * 100) / 100
-
 const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
   return {
     invoiceNumber: invoice.invoiceNumber,
