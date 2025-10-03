@@ -7,52 +7,7 @@ import { PaginationControls } from '@/components/common/PaginationControls'
 import { useToast } from '@/hooks/use-toast'
 import { Key } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
-import type { components } from '@/services/api/generated/api-types'
 import { usePagination } from '@/hooks/usePagination'
-
-type KeyDto = components['schemas']['Key']
-type CreateKeyRequest = components['schemas']['CreateKeyRequest']
-type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
-
-const toUIKey = (k: KeyDto): Key => ({
-  id: k.id ?? '',
-  keyName: k.keyName ?? '',
-  keySequenceNumber: k.keySequenceNumber,
-  flexNumber: k.flexNumber,
-  rentalObjectCode: k.rentalObjectCode,
-  keyType: k.keyType as Key['keyType'],
-  keySystemId: k.keySystemId ?? undefined,
-  createdAt: k.createdAt,
-  updatedAt: k.updatedAt,
-})
-
-const toCreateReq = (
-  k: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>
-): CreateKeyRequest => ({
-  keyName: k.keyName,
-  keySequenceNumber: k.keySequenceNumber,
-  flexNumber: k.flexNumber,
-  rentalObjectCode: k.rentalObjectCode,
-  keyType: k.keyType,
-  keySystemId: k.keySystemId,
-})
-
-const toUpdateReq = (
-  before: Key,
-  after: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>
-): UpdateKeyRequest => {
-  const payload: UpdateKeyRequest = {}
-  if (before.keyName !== after.keyName) payload.keyName = after.keyName
-  if (before.keySequenceNumber !== after.keySequenceNumber)
-    payload.keySequenceNumber = after.keySequenceNumber
-  if (before.flexNumber !== after.flexNumber)
-    payload.flexNumber = after.flexNumber
-  if (before.rentalObjectCode !== after.rentalObjectCode)
-    payload.rentalObjectCode = after.rentalObjectCode
-  if (before.keyType !== after.keyType) payload.keyType = after.keyType
-  // if (before.key_system_id !== mappedId) payload.key_system_id = mappedId ?? null;
-  return payload
-}
 
 const Index = () => {
   const [keys, setKeys] = useState<Key[]>([])
@@ -77,14 +32,13 @@ const Index = () => {
       setError('')
       try {
         const response = await keyService.getAllKeys(page, limit)
-        const mappedKeys = response.content.map(toUIKey)
-        setKeys(mappedKeys)
+        setKeys(response.content)
         pagination.setPaginationMeta(response._meta)
 
         // Fetch key systems for keys that have a keySystemId
         const uniqueKeySystemIds = [
           ...new Set(
-            mappedKeys
+            response.content
               .map((k) => k.keySystemId)
               .filter((id): id is string => id != null && id !== '')
           ),
@@ -152,14 +106,9 @@ const Index = () => {
   ) => {
     if (editingKey) {
       try {
-        const payload = toUpdateReq(editingKey, keyData)
-        if (Object.keys(payload).length === 0) {
-          setShowAddForm(false)
-          return
-        }
-        const updated = await keyService.updateKey(editingKey.id, payload)
+        const updated = await keyService.updateKey(editingKey.id, keyData)
         setKeys((prev) =>
-          prev.map((k) => (k.id === editingKey.id ? toUIKey(updated) : k))
+          prev.map((k) => (k.id === editingKey.id ? updated : k))
         )
         toast({
           title: 'Nyckel uppdaterad',
@@ -179,8 +128,8 @@ const Index = () => {
 
     // Create
     try {
-      const created = await keyService.createKey(toCreateReq(keyData))
-      setKeys((prev) => [...prev, toUIKey(created)])
+      const created = await keyService.createKey(keyData)
+      setKeys((prev) => [...prev, created])
       // or await fetchKeys() if you prefer server ordering immediately
       toast({
         title: 'Nyckel tillagd',
