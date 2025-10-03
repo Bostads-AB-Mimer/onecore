@@ -123,25 +123,31 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     ].sort((a, b) => b.date.localeCompare(a.date))
   }
 
-  const currentReceiptTenant = () => {
-    const t = lease.tenants?.[0]
-    return t
-      ? toReceiptTenant(t)
-      : { id: '', personnummer: '', firstName: 'Okänd', lastName: 'Hyresgäst' }
+  const currentReceiptTenants = () => {
+    return lease.tenants && lease.tenants.length > 0
+      ? lease.tenants.map(toReceiptTenant)
+      : [
+          {
+            id: '',
+            personnummer: '',
+            firstName: 'Okänd',
+            lastName: 'Hyresgäst',
+          },
+        ]
   }
 
   const handleReprint = (receipt: Receipt) => {
-    const tenant = currentReceiptTenant()
+    const tenants = currentReceiptTenants()
     const keys: Key[] = [] // If you want actual key rows on the PDF, fetch them by receipt/keyLoanIds
     if (receipt.receiptType === 'loan') {
-      generateLoanReceipt({ lease, tenant, keys, receiptType: 'loan' })
+      generateLoanReceipt({ lease, tenants, keys, receiptType: 'loan' })
     } else {
-      generateReturnReceipt({ lease, tenant, keys, receiptType: 'return' })
+      generateReturnReceipt({ lease, tenants, keys, receiptType: 'return' })
     }
   }
 
   const handleGenerateFromTx = async (tx: LoanTransaction) => {
-    const tenant = currentReceiptTenant()
+    const tenants = currentReceiptTenants()
     const receiptNumber = `${tx.type === 'loan' ? 'NYL' : 'NYÅ'}-${format(
       new Date(),
       'yyyyMMdd-HHmmss'
@@ -151,7 +157,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     await receiptService.create({
       receiptType: tx.type,
       leaseId: lease.leaseId,
-      tenantId: tenant.id,
+      tenantId: tenants[0].id,
       keyLoanIds: tx.keyLoanIds,
       receiptNumber,
     })
@@ -161,7 +167,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     if (tx.type === 'loan') {
       generateLoanReceipt({
         lease,
-        tenant,
+        tenants,
         keys,
         receiptType: 'loan',
         operationDate: new Date(tx.date),
@@ -169,7 +175,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     } else {
       generateReturnReceipt({
         lease,
-        tenant,
+        tenants,
         keys,
         receiptType: 'return',
         operationDate: new Date(tx.date),
