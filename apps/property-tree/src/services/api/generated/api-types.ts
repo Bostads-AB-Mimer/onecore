@@ -83,6 +83,42 @@ export interface paths {
       };
     };
   };
+  "/residences/summary/by-building-code/{buildingCode}": {
+    /**
+     * Get residences by building code, optionally filtered by staircase code.
+     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
+        };
+        path: {
+          /** @description The building code of the building. */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the residences. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences
@@ -1195,6 +1231,41 @@ export interface components {
         code: string | null;
       };
       areaSize: number | null;
+    };
+    ResidenceSummary: {
+      id: string;
+      code: string;
+      name: string | null;
+      deleted: boolean;
+      rentalId: string;
+      buildingCode: string;
+      buildingName: string;
+      staircaseCode: string;
+      staircaseName: string;
+      elevator: number | null;
+      floor: string;
+      hygieneFacility: string | null;
+      wheelchairAccessible: number;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string | null;
+        /** Format: date-time */
+        toDate: string | null;
+      };
+      residenceType: {
+        code: string;
+        name: string;
+        roomCount: number;
+        kitchen: number;
+      };
+      quantityValues: ({
+          value: number;
+          quantityTypeId: string;
+          quantityType: {
+            name: string;
+            unitId: string | null;
+          };
+        })[];
     };
     GetResidenceByRentalIdResponse: {
       content: {
