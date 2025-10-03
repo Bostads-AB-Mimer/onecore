@@ -83,6 +83,42 @@ export interface paths {
       };
     };
   };
+  "/residences/summary/by-building-code/{buildingCode}": {
+    /**
+     * Get residences by building code, optionally filtered by staircase code.
+     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
+        };
+        path: {
+          /** @description The building code of the building. */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the residences. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences
