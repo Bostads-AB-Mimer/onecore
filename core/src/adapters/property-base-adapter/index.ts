@@ -451,3 +451,34 @@ export async function getMaintenanceUnitsByPropertyCode(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetResidenceSummariesResponse = components['schemas']['ResidenceSummary'][]
+
+export async function getResidenceSummariesByBuildingCode(
+  buildingCode: string,
+  staircaseCode?: string
+): Promise<AdapterResult<GetResidenceSummariesResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/residences/summary/by-building-code/{buildingCode}',
+      {
+        params: {
+          path: { buildingCode },
+          query: staircaseCode ? { staircaseCode } : {},
+        },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.getResidenceSummariesByBuildingCode'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
