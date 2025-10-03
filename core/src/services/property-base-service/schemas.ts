@@ -418,6 +418,46 @@ export const StaircasesQueryParamsSchema = z.object({
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
 })
 
+export const ResidenceSummaryQueryParamsSchema = z.object({
+  staircaseCode: z.string().optional(),
+})
+
+export const ResidenceSummarySchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  deleted: z.boolean(),
+  rentalId: z.string(),
+  buildingCode: z.string(),
+  buildingName: z.string(),
+  staircaseCode: z.string(),
+  staircaseName: z.string(),
+  elevator: z.number().nullable(),
+  floor: z.string(),
+  hygieneFacility: z.string().nullable(),
+  wheelchairAccessible: z.number(),
+  validityPeriod: z.object({
+    fromDate: z.string().datetime().nullable(),
+    toDate: z.string().datetime().nullable(),
+  }),
+  residenceType: z.object({
+    code: z.string(),
+    name: z.string(),
+    roomCount: z.number(),
+    kitchen: z.number(),
+  }),
+  quantityValues: z.array(
+    z.object({
+      value: z.number(),
+      quantityTypeId: z.string(),
+      quantityType: z.object({
+        name: z.string(),
+        unitId: z.string().nullable(),
+      }),
+    })
+  ),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
@@ -427,6 +467,7 @@ export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
 export type ResidenceByRentalIdDetails = z.infer<
   typeof ResidenceByRentalIdSchema
 >
+export type ResidenceSummary = z.infer<typeof ResidenceSummarySchema>
 export type Staircase = z.infer<typeof StaircaseSchema>
 export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>
