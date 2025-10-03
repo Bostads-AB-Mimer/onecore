@@ -10,12 +10,43 @@ import type {
 
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 
+export interface PaginationMeta {
+  totalRecords: number
+  page: number
+  limit: number
+  count: number
+}
+
+export interface PaginationLinks {
+  href: string
+  rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+}
+
+export interface PaginatedResponse<T> {
+  content: T[]
+  _meta: PaginationMeta
+  _links: PaginationLinks[]
+}
+
 export const keyService = {
   // ------- KEYS -------
-  async getAllKeys(): Promise<Key[]> {
-    const { data, error } = await GET('/keys')
+  async getAllKeys(page: number = 1, limit: number = 60): Promise<PaginatedResponse<Key>> {
+    const { data, error } = await GET('/keys', {
+      params: { query: { page: page.toString(), limit: limit.toString() } },
+    })
     if (error) throw error
-    return data?.content ?? []
+
+    const paginatedData = data as any
+    return {
+      content: paginatedData?.content ?? [],
+      _meta: paginatedData?._meta ?? {
+        totalRecords: 0,
+        page: 1,
+        limit: 60,
+        count: 0,
+      },
+      _links: paginatedData?._links ?? [],
+    }
   },
 
   async getKey(id: string): Promise<Key> {
@@ -67,10 +98,26 @@ export const keyService = {
   },
 
   // ------- KEY SYSTEMS -------
-  async getAllKeySystems(): Promise<KeySystem[]> {
-    const { data, error } = await GET('/key-systems')
+  async getAllKeySystems(
+    page: number = 1,
+    limit: number = 60
+  ): Promise<PaginatedResponse<KeySystem>> {
+    const { data, error } = await GET('/key-systems', {
+      params: { query: { page: page.toString(), limit: limit.toString() } },
+    })
     if (error) throw error
-    return data?.content ?? []
+
+    const paginatedData = data as any
+    return {
+      content: paginatedData?.content ?? [],
+      _meta: paginatedData?._meta ?? {
+        totalRecords: 0,
+        page: 1,
+        limit: 60,
+        count: 0,
+      },
+      _links: paginatedData?._links ?? [],
+    }
   },
 
   async getKeySystem(id: string): Promise<KeySystem> {

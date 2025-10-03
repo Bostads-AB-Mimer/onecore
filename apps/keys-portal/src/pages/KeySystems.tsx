@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { KeySystemsHeader } from '@/components/key-systems/KeySystemsHeader'
 import { KeySystemsToolbar } from '@/components/key-systems/KeySystemsToolbar'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
@@ -6,14 +6,31 @@ import { AddKeySystemForm } from '@/components/key-systems/AddKeySystemForm'
 
 import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
-import { keyService } from '@/services/api/keyService'
+import { keyService, type PaginationMeta } from '@/services/api/keyService'
 import { propertySearchService } from '@/services/api/propertySearchService'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 export default function KeySystems() {
   const [KeySystems, setKeySystems] = useState<KeySystem[]>([])
   const [propertyMap, setPropertyMap] = useState<Map<string, Property>>(
     new Map()
   )
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
+    totalRecords: 0,
+    page: 1,
+    limit: 60,
+    count: 0,
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
@@ -25,19 +42,23 @@ export default function KeySystems() {
   const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
   const [keysForExpandedSystem, setKeysForExpandedSystem] = useState<Key[]>([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
+  const [pageLimit, setPageLimit] = useState<number>(60)
+  const [customLimit, setCustomLimit] = useState<string>('')
+  const [isFocused, setIsFocused] = useState(false)
   const { toast } = useToast()
 
-  // Load key systems and their properties from API on mount
-  useEffect(() => {
-    const loadKeySystems = async () => {
+  // Load key systems and their properties from API
+  const loadKeySystems = useCallback(
+    async (page: number = 1, limit: number = pageLimit) => {
       try {
         setIsLoading(true)
-        const systems = await keyService.getAllKeySystems()
-        setKeySystems(systems)
+        const response = await keyService.getAllKeySystems(page, limit)
+        setKeySystems(response.content)
+        setPaginationMeta(response._meta)
 
         // Collect all unique property IDs from all key systems
         const allPropertyIds = new Set<string>()
-        systems.forEach((system) => {
+        response.content.forEach((system) => {
           if (system.propertyIds) {
             try {
               const ids =
@@ -72,9 +93,13 @@ export default function KeySystems() {
       } finally {
         setIsLoading(false)
       }
-    }
+    },
+    [toast, pageLimit]
+  )
+
+  useEffect(() => {
     loadKeySystems()
-  }, [])
+  }, [loadKeySystems])
 
   const filteredKeySystems = useMemo(() => {
     return KeySystems.filter((KeySystem) => {
@@ -104,6 +129,31 @@ export default function KeySystems() {
       return matchesSearch && matchesType && matchesStatus
     })
   }, [KeySystems, searchQuery, selectedType, selectedStatus])
+
+  const handlePageChange = (newPage: number) => {
+    loadKeySystems(newPage, pageLimit)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleLimitChange = (newLimit: number) => {
+    setPageLimit(newLimit)
+    loadKeySystems(1, newLimit)
+  }
+
+  const handleCustomLimitSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const parsed = parseInt(customLimit)
+      if (parsed > 0) {
+        setPageLimit(parsed)
+        setCustomLimit('')
+        loadKeySystems(1, parsed)
+        e.currentTarget.blur()
+      }
+    }
+  }
+
+  const totalPages = Math.ceil(paginationMeta.totalRecords / paginationMeta.limit)
+  const currentPage = paginationMeta.page
 
   const handleAddNew = () => {
     setEditingKeySystem(null)
@@ -198,9 +248,9 @@ export default function KeySystems() {
       setExpandedSystemId(systemId)
       setIsLoadingKeys(true)
       try {
-        const allKeys = await keyService.getAllKeys()
+        const response = await keyService.getAllKeys(1, 1000) // Get up to 1000 keys for this system
         // Filter keys that belong to this key system
-        const filteredKeys = allKeys.filter((key) => key.keySystemId === systemId)
+        const filteredKeys = response.content.filter((key) => key.keySystemId === systemId)
         setKeysForExpandedSystem(filteredKeys)
       } catch (error) {
         console.error('Failed to load keys:', error)
@@ -219,7 +269,7 @@ export default function KeySystems() {
   return (
     <div className="container mx-auto py-8 px-4">
       <KeySystemsHeader
-        totalKeySystems={KeySystems.length}
+        totalKeySystems={paginationMeta.totalRecords}
         displayedKeySystems={filteredKeySystems.length}
       />
 
@@ -252,6 +302,120 @@ export default function KeySystems() {
         keysForExpandedSystem={keysForExpandedSystem}
         isLoadingKeys={isLoadingKeys}
       />
+
+      <div className="mt-8 space-y-4">
+        <div className="relative flex items-center justify-center">
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={
+                      currentPage <= 1
+                        ? 'pointer-events-none opacity-50'
+                        : 'cursor-pointer'
+                    }
+                  />
+                </PaginationItem>
+
+              {[...Array(totalPages)].map((_, i) => {
+                const pageNum = i + 1
+                // Show first page, last page, current page, and pages around current
+                const showPage =
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  Math.abs(pageNum - currentPage) <= 1
+
+                if (!showPage) {
+                  // Show ellipsis for gaps
+                  if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )
+                  }
+                  return null
+                }
+
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(pageNum)}
+                      isActive={pageNum === currentPage}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={
+                      currentPage >= totalPages
+                        ? 'pointer-events-none opacity-50'
+                        : 'cursor-pointer'
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+
+          <div className="absolute right-0 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Items per page:</span>
+            <Button
+              variant={pageLimit === 60 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleLimitChange(60)}
+            >
+              60
+            </Button>
+            <Button
+              variant={pageLimit === 100 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleLimitChange(100)}
+            >
+              100
+            </Button>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={!isFocused && pageLimit !== 60 && pageLimit !== 100 && customLimit === '' ? pageLimit.toString() : customLimit}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '')
+                setCustomLimit(val)
+              }}
+              onFocus={(e) => {
+                setIsFocused(true)
+                if (pageLimit !== 60 && pageLimit !== 100 && customLimit === '') {
+                  setCustomLimit(pageLimit.toString())
+                }
+              }}
+              onBlur={() => {
+                setIsFocused(false)
+              }}
+              onKeyDown={handleCustomLimitSubmit}
+              placeholder="Antal"
+              className={`w-24 h-8 px-3 text-xs font-medium text-center rounded-md ${pageLimit !== 60 && pageLimit !== 100 ? 'bg-primary text-primary-foreground placeholder:text-primary-foreground/70 border-primary shadow focus-visible:ring-0 focus-visible:ring-offset-0' : ''}`}
+            />
+          </div>
+        </div>
+
+        {paginationMeta.totalRecords > 0 && (
+          <div className="flex justify-center">
+            <span className="text-sm text-muted-foreground">
+              {((paginationMeta.page - 1) * paginationMeta.limit) + 1}-
+              {Math.min(paginationMeta.page * paginationMeta.limit, paginationMeta.totalRecords)} of {paginationMeta.totalRecords}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
