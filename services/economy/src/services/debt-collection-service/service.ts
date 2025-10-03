@@ -135,6 +135,10 @@ export const enrichRentInvoices = async (
       }
 
       const aggregatedRows = aggregateRows(invoiceRows)
+      const aggregatedRowsWithRoundoff = addRoundoffToFirstRow(
+        aggregatedRows,
+        invoice.roundoff
+      )
 
       return {
         ...row,
@@ -143,6 +147,7 @@ export const enrichRentInvoices = async (
           {
             invoiceNumber: invoice.invoiceNumber,
             reference: invoice.reference,
+            roundoff: invoice.roundoff,
             fromDate: new Date(invoice.fromDate),
             toDate: new Date(invoice.toDate),
             invoiceDate: new Date(invoice.invoiceDate),
@@ -153,7 +158,7 @@ export const enrichRentInvoices = async (
             careOf: invoice.careOf ?? undefined,
           },
           rentalProperty,
-          aggregatedRows,
+          aggregatedRowsWithRoundoff,
           row.totalAmount - row.remainingAmount
         ),
       }
@@ -266,6 +271,20 @@ export const enrichBalanceCorrections = async (
   } catch (err: unknown) {
     return { ok: false, error: err as Error }
   }
+}
+
+const addRoundoffToFirstRow = (rows: RentInvoiceRow[], roundoff: number) => {
+  if (rows.length === 0) {
+    return rows
+  }
+
+  return [
+    {
+      ...rows[0],
+      amount: rows[0].amount + roundoff,
+    },
+    ...rows.slice(1),
+  ]
 }
 
 const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
