@@ -60,7 +60,7 @@ export function SearchPropertyId({ onTenantFound }: Props) {
         return
       }
 
-      onTenantFound(null, contracts)
+      onTenantFound(tenant, contracts)
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
