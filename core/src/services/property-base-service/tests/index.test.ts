@@ -131,7 +131,7 @@ describe('@onecore/property-service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getPropertyDetailsSpy).toHaveBeenCalled()
+      expect(getPropertyDetailsSpy).toHaveBeenCalledWith(propertyDetails.id)
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(propertyDetails)
       )
