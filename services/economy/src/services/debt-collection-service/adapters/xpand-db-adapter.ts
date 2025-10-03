@@ -26,6 +26,7 @@ type XpandInvoice = {
   keycmctc2: string | null
   invoiceNumber: string
   reference: string
+  roundoff: number
   fromDate: Date
   toDate: Date
   invoiceDate: Date
@@ -167,6 +168,7 @@ export const getInvoices = async (
       'krfkh.keycmctc2',
       'krfkh.invoice AS invoiceNumber',
       'krfkh.reference',
+      'krfkh.roundoff',
       'krfkh.fromdate AS fromDate',
       'krfkh.todate AS toDate',
       'krfkh.invdate AS invoiceDate',
@@ -185,6 +187,7 @@ export const getInvoices = async (
   return invoices.map((invoice) => ({
     invoiceNumber: invoice.invoiceNumber,
     reference: invoice.reference,
+    roundoff: invoice.roundoff,
     fromDate: new Date(invoice.fromDate),
     toDate: new Date(invoice.toDate),
     invoiceDate: new Date(invoice.invoiceDate),

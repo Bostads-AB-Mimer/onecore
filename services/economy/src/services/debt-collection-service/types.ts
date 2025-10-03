@@ -77,6 +77,7 @@ export type RentalProperty = {
 export type RentInvoice = {
   invoiceNumber: string
   reference: string
+  roundoff: number
   fromDate: Date
   toDate: Date
   invoiceDate: Date
