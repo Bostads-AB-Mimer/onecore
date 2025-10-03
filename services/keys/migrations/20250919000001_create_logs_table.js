@@ -20,6 +20,9 @@ exports.up = async function up(knex) {
       .enum('objectType', ['key_system', 'key', 'key_loan'])
       .notNullable()
 
+    // ID of the object that was changed
+    table.uuid('objectId').nullable()
+
     table.timestamp('eventTime').defaultTo(knex.fn.now())
 
     table.string('description', 1000)
