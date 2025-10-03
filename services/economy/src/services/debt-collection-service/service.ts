@@ -329,9 +329,9 @@ const createInvoiceFromRentInvoiceWithRentalProperty = (
 ): Invoice => {
   const removePaidRows = (
     rows: RentInvoiceRow[],
-    amountPaid: number
+    paid: number
   ): RentInvoiceRow[] => {
-    if (amountPaid === 0 || rows.length === 0) {
+    if (paid === 0 || rows.length === 0) {
       return rows
     }
 
@@ -381,17 +381,17 @@ const createInvoiceFromRentInvoiceWithRentalProperty = (
     while (i < sorted.length) {
       const invoiceRow = sorted[i]
 
-      if (amountPaid === 0) {
+      if (paid === 0) {
         remainingRows.push(invoiceRow)
-      } else if (invoiceRow.amount <= amountPaid) {
-        amountPaid -= invoiceRow.amount
-      } else if (invoiceRow.amount > amountPaid) {
+      } else if (invoiceRow.amount <= paid) {
+        paid -= invoiceRow.amount
+      } else if (invoiceRow.amount > paid) {
         remainingRows.push({
           ...invoiceRow,
-          amount: invoiceRow.amount - amountPaid,
+          amount: invoiceRow.amount - paid,
         })
 
-        amountPaid = 0
+        paid = 0
       }
 
       i++
