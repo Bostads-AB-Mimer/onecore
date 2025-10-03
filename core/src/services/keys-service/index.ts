@@ -74,6 +74,7 @@ export const routes = (router: KoaRouter) => {
   const createLogEntry = async (
     eventType: 'creation' | 'update' | 'delete',
     objectType: 'key' | 'keySystem' | 'keyLoan',
+    objectId: string,
     description?: string
   ) => {
     try {
@@ -81,15 +82,66 @@ export const routes = (router: KoaRouter) => {
         userName: 'system', // TODO: Replace with actual user from auth context
         eventType,
         objectType,
+        objectId,
         description,
       })
     } catch (error) {
       // Log the error but don't fail the main operation
       logger.error(
-        { error, eventType, objectType },
+        { error, eventType, objectType, objectId },
         'Failed to create log entry'
       )
     }
+  }
+
+  // Helper function to build key loan description
+  const buildKeyLoanDescription = async (
+    keyLoan: {
+      contact?: string
+      keys: string
+      lease?: string
+    },
+    action: 'Skapad' | 'Uppdaterad' | 'Raderad'
+  ): Promise<string> => {
+    const parts: string[] = [`${action} nyckellån`]
+
+    if (keyLoan.contact) {
+      parts.push(`för kontakt ${keyLoan.contact}`)
+    }
+
+    // Fetch key names from key IDs
+    let keyNames: string[] = []
+    try {
+      const keyIds = JSON.parse(keyLoan.keys) as string[]
+      if (Array.isArray(keyIds) && keyIds.length > 0) {
+        const keyPromises = keyIds.map((id) => KeysApi.get(id))
+        const keyResults = await Promise.all(keyPromises)
+        keyNames = keyResults
+          .filter((r) => r.ok)
+          .map((r) => {
+            if (!r.ok) return ''
+            const key = r.data
+            return key.keySequenceNumber
+              ? `${key.keyName} ${key.keySequenceNumber}`
+              : key.keyName
+          })
+          .filter((name) => name !== '')
+      }
+    } catch (error) {
+      // If parsing fails or keys not found, fall back to the raw keys string
+      logger.warn({ error, keys: keyLoan.keys }, 'Failed to parse key IDs')
+      keyNames = [keyLoan.keys]
+    }
+
+    if (keyNames.length > 0) {
+      parts.push(`nycklar: ${keyNames.join(', ')}`)
+    }
+
+    if (keyLoan.lease) {
+      parts.push(`avtal: ${keyLoan.lease}`)
+    }
+
+    return parts.join(', ')
   }
 
   // Register pagination schemas
@@ -387,11 +439,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful creation
-    await createLogEntry(
-      'creation',
-      'keyLoan',
-      `Created key loan: ${result.data.id}`
-    )
+    const description = await buildKeyLoanDescription(result.data, 'Skapad')
+    await createLogEntry('creation', 'keyLoan', result.data.id, description)
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -482,11 +531,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful update
-    await createLogEntry(
-      'update',
-      'keyLoan',
-      `Updated key loan: ${ctx.params.id}`
-    )
+    const description = await buildKeyLoanDescription(result.data, 'Uppdaterad')
+    await createLogEntry('update', 'keyLoan', result.data.id, description)
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
@@ -528,6 +574,25 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    // Fetch the key loan first to get details for the log
+    const getResult = await KeyLoansApi.get(ctx.params.id)
+    if (!getResult.ok) {
+      if (getResult.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key loan not found', ...metadata }
+        return
+      }
+      logger.error(
+        { err: getResult.err, metadata },
+        'Error fetching key loan before deletion'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    const description = await buildKeyLoanDescription(getResult.data, 'Raderad')
+
     const result = await KeyLoansApi.remove(ctx.params.id)
 
     if (!result.ok) {
@@ -544,11 +609,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
-    await createLogEntry(
-      'delete',
-      'keyLoan',
-      `Deleted key loan: ${ctx.params.id}`
-    )
+    await createLogEntry('delete', 'keyLoan', ctx.params.id, description)
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -841,7 +902,15 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful creation
-    await createLogEntry('creation', 'key', `Created key: ${result.data.id}`)
+    const keyDescription = result.data.keySequenceNumber
+      ? `${result.data.keyName} ${result.data.keySequenceNumber}`
+      : result.data.keyName
+    await createLogEntry(
+      'creation',
+      'key',
+      result.data.id,
+      `Skapad nyckel ${keyDescription}`
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -922,7 +991,15 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful update
-    await createLogEntry('update', 'key', `Updated key: ${ctx.params.id}`)
+    const keyDescription = result.data.keySequenceNumber
+      ? `${result.data.keyName} ${result.data.keySequenceNumber}`
+      : result.data.keyName
+    await createLogEntry(
+      'update',
+      'key',
+      result.data.id,
+      `Uppdaterad nyckel ${keyDescription}`
+    )
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
@@ -962,6 +1039,27 @@ export const routes = (router: KoaRouter) => {
   router.delete('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    // Fetch the key first to get keyName and keySequenceNumber for the log
+    const getResult = await KeysApi.get(ctx.params.id)
+    if (!getResult.ok) {
+      if (getResult.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key not found', ...metadata }
+        return
+      }
+      logger.error(
+        { err: getResult.err, metadata },
+        'Error fetching key before deletion'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    const keyDescription = getResult.data.keySequenceNumber
+      ? `${getResult.data.keyName} ${getResult.data.keySequenceNumber}`
+      : getResult.data.keyName
+
     const result = await KeysApi.remove(ctx.params.id)
 
     if (!result.ok) {
@@ -978,7 +1076,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
-    await createLogEntry('delete', 'key', `Deleted key: ${ctx.params.id}`)
+    await createLogEntry(
+      'delete',
+      'key',
+      ctx.params.id,
+      `Raderad nyckel ${keyDescription}`
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -1310,7 +1413,8 @@ export const routes = (router: KoaRouter) => {
     await createLogEntry(
       'creation',
       'keySystem',
-      `Created key system: ${result.data.id}`
+      result.data.id,
+      `Skapat nyckelsystem ${result.data.systemCode}`
     )
 
     ctx.status = 201
@@ -1405,7 +1509,8 @@ export const routes = (router: KoaRouter) => {
     await createLogEntry(
       'update',
       'keySystem',
-      `Updated key system: ${ctx.params.id}`
+      result.data.id,
+      `Uppdaterat nyckelsystem ${result.data.systemCode}`
     )
 
     ctx.status = 200
@@ -1448,6 +1553,25 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    // Fetch the key system first to get systemCode for the log
+    const getResult = await KeySystemsApi.get(ctx.params.id)
+    if (!getResult.ok) {
+      if (getResult.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+      logger.error(
+        { err: getResult.err, metadata },
+        'Error fetching key system before deletion'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    const systemCode = getResult.data.systemCode
+
     const result = await KeySystemsApi.remove(ctx.params.id)
 
     if (!result.ok) {
@@ -1467,7 +1591,8 @@ export const routes = (router: KoaRouter) => {
     await createLogEntry(
       'delete',
       'keySystem',
-      `Deleted key system: ${ctx.params.id}`
+      ctx.params.id,
+      `Raderat nyckelsystem ${systemCode}`
     )
 
     ctx.status = 200
