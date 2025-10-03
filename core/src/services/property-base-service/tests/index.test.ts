@@ -543,7 +543,10 @@ describe('@onecore/property-service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getResidenceSummariesSpy).toHaveBeenCalledWith('202-002', undefined)
+      expect(getResidenceSummariesSpy).toHaveBeenCalledWith(
+        '202-002',
+        undefined
+      )
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(residenceSummariesMock)
       )
@@ -582,7 +585,10 @@ describe('@onecore/property-service', () => {
       )
 
       expect(res.status).toBe(500)
-      expect(getResidenceSummariesSpy).toHaveBeenCalledWith('202-002', undefined)
+      expect(getResidenceSummariesSpy).toHaveBeenCalledWith(
+        '202-002',
+        undefined
+      )
     })
   })
 })
