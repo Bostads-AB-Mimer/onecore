@@ -112,11 +112,11 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
 
 const addTenantInfo = (
   doc: jsPDF,
-  tenant: ReceiptData['tenant'],
+  tenants: ReceiptData['tenants'],
   lease: ReceiptData['lease'],
   y: number
 ) => {
-  // ~60mm block height (but we won’t add a page automatically)
+  // ~60mm block height (but we won't add a page automatically)
   y = ensureSpaceNoPage(doc, y, 60)
 
   doc.setFont('helvetica', 'bold')
@@ -125,26 +125,36 @@ const addTenantInfo = (
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  const nextY = y + 8
-  doc.text(
-    `Namn: ${tenant.firstName} ${tenant.lastName}`.trim(),
-    MARGIN_X,
-    nextY
-  )
-  doc.text(`Personnummer: ${tenant.personnummer}`, MARGIN_X, nextY + 7)
-  if (tenant.address)
-    doc.text(`Adress: ${tenant.address}`, MARGIN_X, nextY + 14)
+  let nextY = y + 8
+
+  // Display all tenants
+  tenants.forEach((tenant, index) => {
+    const fullName = `${tenant.firstName} ${tenant.lastName}`.trim()
+    if (index === 0) {
+      doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
+      doc.text(`Personnummer: ${tenant.personnummer}`, MARGIN_X, nextY + 7)
+      nextY += 14
+    } else {
+      doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
+      doc.text(`Personnummer: ${tenant.personnummer}`, MARGIN_X, nextY + 7)
+      nextY += 14
+    }
+  })
+
+  // Display rental property address
+  doc.text(`Adress: ${lease.rentalPropertyId}`, MARGIN_X, nextY)
+  nextY += 7
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.text('AVTAL', MARGIN_X, nextY + 28)
+  doc.text('AVTAL', MARGIN_X, nextY + 7)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, MARGIN_X, nextY + 36)
+  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, MARGIN_X, nextY + 15)
 
   // Wrap long leaseId (no truncation)
-  const leaseIdY = nextY + 43
+  const leaseIdY = nextY + 22
   const leaseIdLines = doc.splitTextToSize(`Avtal ID: ${lease.leaseId}`, 170)
   doc.text(leaseIdLines, MARGIN_X, leaseIdY)
   const leaseIdBlockHeight = Array.isArray(leaseIdLines)
@@ -314,11 +324,11 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return') => {
 export const generateLoanReceipt = async (data: ReceiptData): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
-  y = addTenantInfo(doc, data.tenant, data.lease, y)
+  y = addTenantInfo(doc, data.tenants, data.lease, y)
   y = addKeysTable(doc, data.keys, y, 42)
   addSignatureSection(doc, y)
   addFooter(doc, 'loan')
-  const file = `nyckelutlaning_${data.tenant.personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelutlaning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
 
@@ -327,7 +337,7 @@ export const generateReturnReceipt = async (
 ): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return')
-  y = addTenantInfo(doc, data.tenant, data.lease, y)
+  y = addTenantInfo(doc, data.tenants, data.lease, y)
   // keep ~22mm for confirmation text
   y = addKeysTable(doc, data.keys, y, 22)
 
@@ -353,6 +363,6 @@ export const generateReturnReceipt = async (
   }
 
   addFooter(doc, 'return')
-  const file = `nyckelaterlamning_${data.tenant.personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelaterlamning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
