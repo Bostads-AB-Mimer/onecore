@@ -1,7 +1,7 @@
 //import { OrdersManagement } from '@/components/residence/OrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { MessageSquare } from 'lucide-react'
-import type { Building } from '@/types/api'
+import type { Building } from '@/services/types'
 
 interface BuildingOrdersTabProps {
   building: Building

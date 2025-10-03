@@ -1,7 +1,7 @@
 //import { MaintenanceUnitCard } from "@/components/design-system/showcase/maintenance/MaintenanceUnitCard";
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Building2 } from 'lucide-react'
-import type { Building } from '@/types/api'
+import type { Building } from '@/services/types'
 
 interface BuildingPartsTabProps {
   building: Building

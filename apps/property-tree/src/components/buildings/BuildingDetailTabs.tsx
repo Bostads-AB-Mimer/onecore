@@ -14,9 +14,8 @@ import { MessageSquare } from 'lucide-react'
 
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { useIsMobile } from '@/components/hooks/useMobile'
-import type { Building } from '@/services/types'
 import { useEffect } from 'react'
-import { Residence, Staircase } from '@/services/types'
+import { Building, Residence, Staircase } from '@/services/types'
 
 interface BuildingDetailTabsProps {
   building: Building
