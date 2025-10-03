@@ -13,6 +13,8 @@ import {
   KeyRound,
   ChevronDown,
   ChevronUp,
+  Copy,
+  Check,
 } from 'lucide-react'
 import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
@@ -61,6 +63,17 @@ export function ContractCard({
 
   const [keys, setKeys] = useState<Key[]>([])
   const [keysLoading, setKeysLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyObjectId = async () => {
+    try {
+      await navigator.clipboard.writeText(lease.rentalPropertyId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -208,10 +221,19 @@ export function ContractCard({
           </div>
 
           <div className="md:col-span-3 flex items-center md:justify-end">
-            <div className="text-xs text-muted-foreground">
-              Objekt-ID:{' '}
+            <button
+              onClick={handleCopyObjectId}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 cursor-pointer group"
+              title="Klicka för att kopiera"
+            >
+              <span>Objekt-ID:</span>
               <span className="tabular-nums">{lease.rentalPropertyId}</span>
-            </div>
+              {copied ? (
+                <Check className="h-3 w-3 text-green-600" />
+              ) : (
+                <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
+            </button>
           </div>
 
           {hasAnyKeys && (
