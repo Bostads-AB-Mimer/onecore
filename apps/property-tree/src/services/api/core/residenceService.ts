@@ -3,6 +3,7 @@ import { components } from './generated/api-types'
 
 type Residence = components['schemas']['Residence']
 type ResidenceDetails = components['schemas']['ResidenceDetails']
+type ResidenceSummary = components['schemas']['ResidenceSummary']
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
@@ -16,10 +17,13 @@ export const residenceService = {
   async getByBuildingCodeAndStaircaseCode(
     buildingCode: string,
     staircaseCode: string
-  ): Promise<Residence[]> {
-    const { data, error } = await GET('/residences', {
-      params: { query: { buildingCode, staircaseCode } },
-    })
+  ): Promise<ResidenceSummary[]> {
+    const { data, error } = await GET(
+      '/residences/summary/by-building-code/{buildingCode}',
+      {
+        params: { path: { buildingCode }, query: { staircaseCode } },
+      }
+    )
     if (error) throw error
     return data.content || []
   },
