@@ -69,7 +69,7 @@ export function DashboardView() {
       description: 'Nyckelhantering',
       path: resolve('VITE_KEYS_URL', ''),
       isExternal: true,
-      isDisabled: false,
+      isDisabled: true,
     },
     {
       id: 'xledger',
