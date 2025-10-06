@@ -3,8 +3,6 @@ node_modules
 **/prisma/schema/generated
 **/package-lock.json
 !services/leasing/xpand-sync/package-lock.json
-**/api/core/generated/api-types.ts
-**/api/generated/api-types.ts
 
 # ---- Build files ----
 build
