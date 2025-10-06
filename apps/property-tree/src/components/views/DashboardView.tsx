@@ -40,7 +40,7 @@ export function DashboardView() {
       title: 'Fastighetsdata',
       icon: Building,
       description: 'Hantera fastighetsbestånd och byggnader',
-      path: '/companies',
+      path: resolve('VITE_PROPERTYTREE', ''),
       isExternal: false,
       isDisabled: false,
     },
@@ -180,7 +180,8 @@ export function DashboardView() {
     <div className="p-8 space-y-6 animate-in">
       <header className="text-center space-y-3">
         <h1 className="text-3xl font-bold">
-          Hej {userState.tag === 'success' ? userState.user.name : ''} välkommen till ONECore
+          Hej {userState.tag === 'success' ? userState.user.name : ''} välkommen
+          till ONECore
         </h1>
       </header>
 
@@ -228,8 +229,12 @@ export function DashboardView() {
                 onClick={() => handleCardClick(config)}
               >
                 <CardHeader className="pb-3 relative">
-                  <CardTitle className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}>
-                    <IconComponent className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`} />
+                  <CardTitle
+                    className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
+                  >
+                    <IconComponent
+                      className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`}
+                    />
                     {config.title}
                   </CardTitle>
                   {config.isExternal && !config.isDisabled && (
@@ -237,7 +242,9 @@ export function DashboardView() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <p className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}>
+                  <p
+                    className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}
+                  >
                     {config.description}
                   </p>
                 </CardContent>
