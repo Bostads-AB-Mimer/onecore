@@ -43,6 +43,168 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /buildings:
+   *   get:
+   *     summary: Get all buildings for a specific property
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Retrieves all buildings associated with a given property code.
+   *       Returns detailed information about each building including its code, name,
+   *       construction details, and associated property information.
+   *     parameters:
+   *       - in: query
+   *         name: propertyCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the property.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the buildings.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Building'
+   *       '400':
+   *         description: Invalid query parameters.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/buildings', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.GetBuildingsQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors }
+      return
+    }
+    const { propertyCode } = params.data
+
+    try {
+      const result = await propertyBaseAdapter.getBuildings(propertyCode)
+
+      if (!result.ok) {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Building[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /buildings/{id}:
+   *   get:
+   *     summary: Get detailed information about a specific building
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Retrieves comprehensive information about a building using its unique building id.
+   *       Returns details including construction year, renovation history, insurance information,
+   *       and associated property data.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique id of the building
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved building information
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Building'
+   *       '404':
+   *         description: Building not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Building not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/buildings/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    try {
+      const result = await propertyBaseAdapter.getBuildingById(id)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Building not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Building,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /buildings/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get building by building code
@@ -116,7 +278,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data as schemas.Building,
+        content: result.data satisfies schemas.Building,
         ...metadata,
       }
     } catch (error) {
