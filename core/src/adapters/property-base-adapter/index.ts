@@ -77,7 +77,51 @@ export async function searchResidences(
   }
 }
 
+type GetBuildingsResponse = components['schemas']['Building'][]
+
+export async function getBuildings(
+  propertyCode: string
+): Promise<AdapterResult<GetBuildingsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/buildings', {
+      params: { query: { propertyCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getBuildings')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetBuildingResponse = components['schemas']['Building']
+
+export async function getBuildingById(
+  buildingId: string
+): Promise<AdapterResult<GetBuildingResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/buildings/{id}', {
+      params: { path: { id: buildingId } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getBuildingById')
+    return { ok: false, err: 'unknown' }
+  }
+}
 
 export async function getBuildingByCode(
   buildingCode: string
