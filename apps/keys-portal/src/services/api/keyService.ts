@@ -78,6 +78,17 @@ export const keyService = {
     return ensurePaginatedResponse<Key>(data)
   },
 
+  async getKeysByRentalObjectCode(rentalObjectCode: string): Promise<Key[]> {
+    const { data, error } = await GET(
+      '/keys/by-rental-object/{rentalObjectCode}',
+      {
+        params: { path: { rentalObjectCode } },
+      }
+    )
+    if (error) throw error
+    return (data?.content ?? []) as Key[]
+  },
+
   // ------- KEY SYSTEMS -------
   async getAllKeySystems(
     page: number = 1,
