@@ -52,7 +52,7 @@ const SearchView = () => {
             <Collapsible
               open={isFiltersOpen}
               onOpenChange={setIsFiltersOpen}
-              className="border rounded-lg"
+              className="border rounded-lg bg-muted/30 opacity-60"
             >
               <div className="flex items-center justify-between px-4 py-3">
                 <CollapsibleTrigger asChild>
@@ -75,8 +75,8 @@ const SearchView = () => {
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent className="px-4 pb-4">
-                <div className="text-sm text-muted-foreground">
-                  Ytterligare filter kan läggas till här...
+                <div className="text-sm text-muted-foreground italic">
+                  Kommer snart
                 </div>
               </CollapsibleContent>
             </Collapsible>
