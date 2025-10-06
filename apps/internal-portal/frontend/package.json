@@ -1,6 +1,6 @@
 {
   "name": "@onecore/internal-portal",
-  "version": "1.4.22",
+  "version": "1.5.0",
   "type": "module",
   "private": true,
   "engines": {

@@ -1,6 +1,6 @@
 {
   "name": "@onecore/property-tree",
-  "version": "1.4.22",
+  "version": "1.5.0",
   "type": "module",
   "private": true,
   "packageManager": "pnpm@10.6.1",
