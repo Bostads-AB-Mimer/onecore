@@ -103,9 +103,9 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /keys/search:
    *   get:
-   *     summary: Search keys
+   *     summary: Search keys with pagination
    *     description: |
-   *       Search keys with flexible filtering.
+   *       Search keys with flexible filtering and pagination support.
    *       - **OR search**: Use `q` with `fields` for multiple field search
    *       - **AND search**: Use any Key field parameter for filtering
    *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
@@ -116,6 +116,20 @@ export const routes = (router: KoaRouter) => {
    *       - `?keyName=master&createdAt=<2024-12-31` - Key name contains "master" AND created before Dec 31, 2024
    *     tags: [Keys]
    *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *       - in: query
    *         name: q
    *         required: false
@@ -214,7 +228,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       // Handle AND search (individual field parameters) - search any param that's not q or fields
-      const reservedParams = ['q', 'fields']
+      const reservedParams = ['q', 'fields', 'page', 'limit']
       for (const [field, value] of Object.entries(ctx.query)) {
         if (
           !reservedParams.includes(field) &&
@@ -256,10 +270,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rows = await query.orderBy('keyName', 'asc').limit(10)
+      const paginatedResult = await paginate(query.orderBy('keyName', 'asc'), ctx)
 
       ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error searching keys')
       ctx.status = 500

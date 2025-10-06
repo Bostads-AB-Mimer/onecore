@@ -39,7 +39,34 @@ export default function KeySystems() {
     async (page: number = 1, limit: number = 60) => {
       try {
         setIsLoading(true)
-        const response = await keyService.getAllKeySystems(page, limit)
+
+        // Build search parameters based on current filters
+        const searchParams: Record<string, string> = {}
+
+        // Add search query if present
+        if (searchQuery.trim().length >= 3) {
+          searchParams.q = searchQuery.trim()
+          searchParams.fields = 'systemCode,name,manufacturer'
+        }
+
+        // Add type filter if not 'all'
+        if (selectedType !== 'all') {
+          searchParams.type = selectedType
+        }
+
+        // Add status filter if not 'all'
+        if (selectedStatus === 'active') {
+          searchParams.isActive = 'true'
+        } else if (selectedStatus === 'inactive') {
+          searchParams.isActive = 'false'
+        }
+
+        // Use search endpoint if filtering/searching, otherwise use getAllKeySystems
+        const hasFilters = Object.keys(searchParams).length > 0
+        const response = hasFilters
+          ? await keyService.searchKeySystems(searchParams, page, limit)
+          : await keyService.getAllKeySystems(page, limit)
+
         setKeySystems(response.content)
         pagination.setPaginationMeta(response._meta)
 
@@ -81,41 +108,13 @@ export default function KeySystems() {
         setIsLoading(false)
       }
     },
-    [toast, pagination]
+    [toast, pagination, searchQuery, selectedType, selectedStatus]
   )
 
   useEffect(() => {
-    loadKeySystems()
-  }, [])
-
-  const filteredKeySystems = useMemo(() => {
-    return KeySystems.filter((KeySystem) => {
-      // Skip undefined/null entries that may have been added from failed API calls
-      if (!KeySystem) return false
-
-      const matchesSearch =
-        (KeySystem.systemCode || '')
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (KeySystem.name || '')
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (KeySystem.manufacturer &&
-          KeySystem.manufacturer
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()))
-
-      const matchesType =
-        selectedType === 'all' || KeySystem.type === selectedType
-
-      const matchesStatus =
-        selectedStatus === 'all' ||
-        (selectedStatus === 'active' && KeySystem.isActive) ||
-        (selectedStatus === 'inactive' && !KeySystem.isActive)
-
-      return matchesSearch && matchesType && matchesStatus
-    })
-  }, [KeySystems, searchQuery, selectedType, selectedStatus])
+    // Reset to page 1 and fetch when search/filter changes
+    pagination.handlePageChange(1)
+  }, [searchQuery, selectedType, selectedStatus])
 
   const handleAddNew = () => {
     setEditingKeySystem(null)
@@ -234,7 +233,7 @@ export default function KeySystems() {
     <div className="container mx-auto py-8 px-4">
       <KeySystemsHeader
         totalKeySystems={pagination.paginationMeta.totalRecords}
-        displayedKeySystems={filteredKeySystems.length}
+        displayedKeySystems={KeySystems.length}
       />
 
       <KeySystemsToolbar
@@ -256,7 +255,7 @@ export default function KeySystems() {
       )}
 
       <KeySystemsTable
-        KeySystems={filteredKeySystems}
+        KeySystems={KeySystems}
         propertyMap={propertyMap}
         onEdit={handleEdit}
         onDelete={handleDelete}
