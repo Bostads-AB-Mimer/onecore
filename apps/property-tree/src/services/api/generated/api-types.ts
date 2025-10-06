@@ -944,6 +944,12 @@ export interface components {
         class: string | null;
         value: number | null;
       };
+      quantityValues?: ({
+          id: string;
+          value: number;
+          name: string;
+          unitId: string | null;
+        })[];
       deleted: boolean;
       property?: ({
         name: string | null;
