@@ -275,7 +275,11 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
   }
 
   const result = await makeXledgerRequest(query)
+<<<<<<< HEAD
   return transformToInvoice(result.data?.arTransactions?.edges ?? [])
+=======
+  return transformToInvoice(result.data.arTransactions?.edges ?? [])
+>>>>>>> b12ae5f1 (Update contact card)
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
