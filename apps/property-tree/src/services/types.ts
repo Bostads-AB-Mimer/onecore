@@ -39,3 +39,13 @@ export interface NavigationItem {
     }
   }
 }
+
+export interface DashboardCard {
+  id: string
+  title: string
+  icon: any // LucideIcon type from lucide-react
+  description: string
+  path: string
+  isExternal: boolean
+  isDisabled: boolean
+}

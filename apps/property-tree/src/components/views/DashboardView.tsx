@@ -15,6 +15,8 @@ import {
   Eye,
   ExternalLink,
   TrendingUp,
+  Home,
+  Calendar,
 } from 'lucide-react'
 import {
   Card,
@@ -23,13 +25,16 @@ import {
   CardTitle,
 } from '@/components/ui/v2/Card'
 import { useUser } from '@/auth/useUser'
+import type { DashboardCard } from '@/services/types'
+import { resolve } from '@/utils/env'
 
 export function DashboardView() {
   const navigate = useNavigate()
   const userState = useUser()
 
   // Define card configurations
-  const cardConfigs = [
+  const cardConfigs: DashboardCard[] = [
+    // Active cards
     {
       id: 'properties',
       title: 'Fastighetsdata',
@@ -37,7 +42,81 @@ export function DashboardView() {
       description: 'Hantera fastighetsbestånd och byggnader',
       path: '/companies',
       isExternal: false,
+      isDisabled: false,
     },
+    {
+      id: 'rental',
+      title: 'Uthyrning',
+      icon: Home,
+      description: 'Hantera uthyrning av lägenheter',
+      path: resolve('VITE_INTERNAL_PORTAL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'viewings',
+      title: 'Visningar',
+      icon: Calendar,
+      description: 'Planera och hantera visningar',
+      path: resolve('VITE_VIEWINGS', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'keys',
+      title: 'Nycklar',
+      icon: Key,
+      description: 'Nyckelhantering',
+      path: resolve('VITE_KEYS_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'xledger',
+      title: 'Ekonomi',
+      icon: DollarSign,
+      description: 'Ekonomi och redovisning',
+      path: resolve('VITE_XLEDGER_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'passage',
+      title: 'Passage',
+      icon: Lock,
+      description: 'Låssystem och passagekontroll',
+      path: resolve('VITE_PASSAGE_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'odoo',
+      title: 'Ärendehantering (Odoo)',
+      icon: MessageSquare,
+      description: 'Hantera ärenden och support',
+      path: resolve('VITE_ODOO_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'greenview',
+      title: 'Greenview',
+      icon: Eye,
+      description: 'Översikt och rapportering',
+      path: resolve('VITE_GREENVIEW_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'curves',
+      title: 'Curves',
+      icon: TrendingUp,
+      description: 'IMD',
+      path: resolve('VITE_CURVES_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+    // Disabled cards (not yet implemented)
     {
       id: 'tenants',
       title: 'Kunder',
@@ -45,14 +124,7 @@ export function DashboardView() {
       description: 'Kundregister och hyresgästinformation',
       path: '/tenants/all',
       isExternal: false,
-    },
-    {
-      id: 'rentals',
-      title: 'Uthyrning',
-      icon: Key,
-      description: 'Hantera uthyrning av lägenheter',
-      path: '/rentals',
-      isExternal: false,
+      isDisabled: true,
     },
     {
       id: 'barriers',
@@ -61,6 +133,7 @@ export function DashboardView() {
       description: 'Hantera spärrar och begränsningar',
       path: '/barriers',
       isExternal: false,
+      isDisabled: true,
     },
     {
       id: 'turnover',
@@ -69,6 +142,7 @@ export function DashboardView() {
       description: 'Hantera in- och utflyttningsprocesser',
       path: '/turnover',
       isExternal: false,
+      isDisabled: true,
     },
     {
       id: 'inspections',
@@ -77,58 +151,24 @@ export function DashboardView() {
       description: 'Genomför och hantera besiktningar',
       path: '/inspections',
       isExternal: false,
-    },
-    {
-      id: 'xledger',
-      title: 'Ekonomi',
-      icon: DollarSign,
-      description: 'Ekonomi och redovisning',
-      path: '/',
-      isExternal: false,
+      isDisabled: true,
     },
     {
       id: 'tenfast',
       title: 'Hyresadministration & avtal',
       icon: FileText,
       description: 'Hyreshantering och administration',
-      path: '/',
-      isExternal: false,
-    },
-    {
-      id: 'alliera',
-      title: 'Lås & passage',
-      icon: Lock,
-      description: 'Låssystem och passagekontroll',
-      path: 'http://srvmimhk21/Alliera/Account/LogOn?ReturnUrl=%2falliera',
+      path: resolve('VITE_TENFAST_URL', ''),
       isExternal: true,
-    },
-    {
-      id: 'odoo',
-      title: 'Ärendehantering (Odoo)',
-      icon: MessageSquare,
-      description: 'Hantera ärenden och support',
-      path: 'https://odoo.mimer.nu/',
-      isExternal: true,
-    },
-    {
-      id: 'greenview',
-      title: 'Greenview',
-      icon: Eye,
-      description: 'Översikt och rapportering',
-      path: 'https://mimer.greenview.se/',
-      isExternal: true,
-    },
-    {
-      id: 'curves',
-      title: 'Curves',
-      icon: TrendingUp,
-      description: 'IMD',
-      path: 'https://curves.com',
-      isExternal: true,
+      isDisabled: true,
     },
   ]
 
-  const handleCardClick = (config: (typeof cardConfigs)[0]) => {
+  const handleCardClick = (config: DashboardCard) => {
+    if (config.isDisabled) {
+      return
+    }
+
     if (config.isExternal) {
       window.open(config.path, '_blank')
     } else {
@@ -180,35 +220,26 @@ export function DashboardView() {
               transition={{ delay: 0.1 + index * 0.05 }}
             >
               <Card
-                className={`hover:scale-105 transition-all duration-200 cursor-pointer ${
-                  config.isExternal
-                    ? 'bg-gradient-to-br from-background to-muted/20 border-muted-foreground/20'
-                    : ''
+                className={`transition-all duration-200 ${
+                  config.isDisabled
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+                    : 'hover:scale-105 cursor-pointer'
                 }`}
                 onClick={() => handleCardClick(config)}
               >
                 <CardHeader className="pb-3 relative">
-                  <CardTitle
-                    className={`flex items-center gap-3 text-lg ${
-                      config.isExternal ? 'text-accent-foreground' : ''
-                    }`}
-                  >
-                    <IconComponent className="h-5 w-5 text-primary" />
+                  <CardTitle className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}>
+                    <IconComponent className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`} />
                     {config.title}
                   </CardTitle>
-                  {config.isExternal && (
+                  {config.isExternal && !config.isDisabled && (
                     <ExternalLink className="h-4 w-4 text-muted-foreground absolute top-4 right-4" />
                   )}
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}>
                     {config.description}
                   </p>
-                  {config.isExternal && (
-                    <p className="text-xs text-muted-foreground/70 mt-2 italic">
-                      Extern tjänst
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
