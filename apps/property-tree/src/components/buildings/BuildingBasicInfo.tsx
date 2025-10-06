@@ -4,7 +4,6 @@ import { CollapsibleInfoCard } from '@/components/ui/CollapsibleInfoCard'
 interface BuildingBasicInfoProps {
   building: Building
   property: Property
-  residenceCount?: number
   address?: string
   objectNumber?: string
 }
@@ -13,11 +12,19 @@ export const BuildingBasicInfo = ({
   building,
   property,
   address,
-  residenceCount,
   objectNumber,
 }: BuildingBasicInfoProps) => {
-  // Calculate total number of spaces/premises (lokaler)
-  const buildingArea = '- m²'
+  const { quantityValues } = building
+
+  // Extract specific quantity values
+  const buildingArea =
+    quantityValues?.find((x) => x.id === 'AREATEMP')?.value + ' m²' || '- m²'
+
+  const residenceCount =
+    quantityValues?.find((x) => x.id === 'ANTALLGH')?.value ?? 0
+
+  const facilitiesCount =
+    quantityValues?.find((x) => x.id === 'ANTALLOK')?.value ?? 0
 
   // Preview content for mobile
   const previewContent = (
@@ -91,7 +98,7 @@ export const BuildingBasicInfo = ({
 
       <div>
         <p className="text-sm text-muted-foreground">Antal lokaler</p>
-        <p className="font-medium">{'-'}</p>
+        <p className="font-medium">{facilitiesCount}</p>
       </div>
     </div>
   )
