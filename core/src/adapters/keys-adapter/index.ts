@@ -149,7 +149,7 @@ export const KeysApi = {
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<Key[], 'bad-request' | CommonErr>> => {
+  ): Promise<AdapterResult<PaginatedResponse<Key>, 'bad-request' | CommonErr>> => {
     const params = new URLSearchParams()
 
     for (const [key, value] of Object.entries(searchParams)) {
@@ -162,10 +162,10 @@ export const KeysApi = {
       }
     }
 
-    const r = await getJSON<{ content: Key[] }>(
+    const r = await getJSON<PaginatedResponse<Key>>(
       `${BASE}/keys/search?${params.toString()}`
     )
-    return r.ok ? ok(r.data.content) : r
+    return r.ok ? ok(r.data) : r
   },
 
   get: async (
@@ -289,7 +289,7 @@ export const KeySystemsApi = {
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<KeySystem[], 'bad-request' | CommonErr>> => {
+  ): Promise<AdapterResult<PaginatedResponse<KeySystem>, 'bad-request' | CommonErr>> => {
     const params = new URLSearchParams()
 
     // Add all search parameters to query string
@@ -304,10 +304,10 @@ export const KeySystemsApi = {
       }
     }
 
-    const r = await getJSON<{ content: KeySystem[] }>(
+    const r = await getJSON<PaginatedResponse<KeySystem>>(
       `${BASE}/key-systems/search?${params.toString()}`
     )
-    return r.ok ? ok(r.data.content) : r
+    return r.ok ? ok(r.data) : r
   },
 
   get: async (

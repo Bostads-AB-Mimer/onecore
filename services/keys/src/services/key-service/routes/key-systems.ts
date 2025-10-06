@@ -110,6 +110,20 @@ export const routes = (router: KoaRouter) => {
    *     tags: [Key Systems]
    *     parameters:
    *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *       - in: query
    *         name: q
    *         required: false
    *         schema:
@@ -180,16 +194,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *     responses:
    *       200:
-   *         description: Successfully retrieved search results
+   *         description: Successfully retrieved paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeySystem'
+   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
    *       400:
    *         description: Bad request. Invalid parameters or field names
    *       500:
@@ -227,7 +236,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       // Handle AND search (individual field parameters) - search any param that's not q or fields
-      const reservedParams = ['q', 'fields']
+      const reservedParams = ['q', 'fields', 'page', 'limit']
       for (const [field, value] of Object.entries(ctx.query)) {
         if (
           !reservedParams.includes(field) &&
@@ -269,10 +278,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rows = await query.orderBy('systemCode', 'asc').limit(10)
+      const paginatedResult = await paginate(query.orderBy('systemCode', 'asc'), ctx)
 
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeySystem[], ...metadata }
+      ctx.body = { ...paginatedResult, ...metadata }
     } catch (err) {
       logger.error(err, 'Error searching key systems')
       ctx.status = 500

@@ -1,8 +1,14 @@
-//TODO Consider if all imports should be from the core, rather than 2 sources here
+// Import directly from types, only for generics like pagination, all specific response types come from generated api-types
+import { keys } from '@onecore/types'
 
 import type { components } from './api/core/generated/api-types'
 
-// Tables/respopnse types from the generated schemas
+// Re-export pagination types from @onecore/types
+export type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
+export type PaginationMeta = keys.v1.PaginationMeta
+export type PaginationLinks = keys.v1.PaginationLinks
+
+// Tables/response types from the generated schemas
 export type Key = components['schemas']['Key']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
