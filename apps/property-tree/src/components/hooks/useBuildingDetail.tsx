@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Building, Property } from '@/services/types'
-import { buildingService } from '@/services/api'
 import {
+  buildingService,
   propertyService,
   residenceService,
   staircaseService,
