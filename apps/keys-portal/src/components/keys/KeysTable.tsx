@@ -24,7 +24,12 @@ interface KeysTableProps {
   onDelete: (keyId: string) => void
 }
 
-export function KeysTable({ keys, keySystemMap, onEdit, onDelete }: KeysTableProps) {
+export function KeysTable({
+  keys,
+  keySystemMap,
+  onEdit,
+  onDelete,
+}: KeysTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE')
   }

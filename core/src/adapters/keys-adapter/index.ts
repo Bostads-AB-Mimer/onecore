@@ -149,7 +149,9 @@ export const KeysApi = {
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<PaginatedResponse<Key>, 'bad-request' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<PaginatedResponse<Key>, 'bad-request' | CommonErr>
+  > => {
     const params = new URLSearchParams()
 
     for (const [key, value] of Object.entries(searchParams)) {
@@ -289,7 +291,9 @@ export const KeySystemsApi = {
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<PaginatedResponse<KeySystem>, 'bad-request' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<PaginatedResponse<KeySystem>, 'bad-request' | CommonErr>
+  > => {
     const params = new URLSearchParams()
 
     // Add all search parameters to query string

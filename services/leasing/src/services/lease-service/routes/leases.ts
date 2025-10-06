@@ -488,10 +488,22 @@ export const routes = (router: KoaRouter) => {
    */
 
   const getAllLeasesByDateFilterQueryParamSchema = z.object({
-    fromDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    fromDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    lastDebitDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    lastDebitDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    fromDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    fromDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
   })
 
   router.get('(.*)/leases', async (ctx) => {
@@ -502,7 +514,9 @@ export const routes = (router: KoaRouter) => {
       'lastDebitDateEnd',
     ])
 
-    const queryParams = getAllLeasesByDateFilterQueryParamSchema.safeParse(ctx.query)
+    const queryParams = getAllLeasesByDateFilterQueryParamSchema.safeParse(
+      ctx.query
+    )
     if (!queryParams.success) {
       ctx.status = 400
       ctx.body = {

@@ -270,7 +270,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const paginatedResult = await paginate(query.orderBy('keyName', 'asc'), ctx)
+      const paginatedResult = await paginate(
+        query.orderBy('keyName', 'asc'),
+        ctx
+      )
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }

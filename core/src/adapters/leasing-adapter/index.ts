@@ -124,16 +124,28 @@ const getAllLeasesByDateFilter = async (
     const queryParams = new URLSearchParams()
 
     if (filters?.fromDateStart) {
-      queryParams.append('fromDateStart', filters.fromDateStart.toISOString().split('T')[0])
+      queryParams.append(
+        'fromDateStart',
+        filters.fromDateStart.toISOString().split('T')[0]
+      )
     }
     if (filters?.fromDateEnd) {
-      queryParams.append('fromDateEnd', filters.fromDateEnd.toISOString().split('T')[0])
+      queryParams.append(
+        'fromDateEnd',
+        filters.fromDateEnd.toISOString().split('T')[0]
+      )
     }
     if (filters?.lastDebitDateStart) {
-      queryParams.append('lastDebitDateStart', filters.lastDebitDateStart.toISOString().split('T')[0])
+      queryParams.append(
+        'lastDebitDateStart',
+        filters.lastDebitDateStart.toISOString().split('T')[0]
+      )
     }
     if (filters?.lastDebitDateEnd) {
-      queryParams.append('lastDebitDateEnd', filters.lastDebitDateEnd.toISOString().split('T')[0])
+      queryParams.append(
+        'lastDebitDateEnd',
+        filters.lastDebitDateEnd.toISOString().split('T')[0]
+      )
     }
 
     const queryString = queryParams.toString()
