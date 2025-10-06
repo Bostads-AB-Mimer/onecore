@@ -231,6 +231,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
                     {invoice.invoiceRows.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell>{row.invoiceRowText}</TableCell>
+<<<<<<< HEAD
                         <TableCell>
                           {row.rowType === 3 ? null : row.amount}
                         </TableCell>
@@ -240,6 +241,11 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
                         <TableCell>
                           {row.rowType === 3 ? null : row.totalAmount}
                         </TableCell>
+=======
+                        <TableCell>{row.amount}</TableCell>
+                        <TableCell>{row.vat}</TableCell>
+                        <TableCell>{row.totalAmount}</TableCell>
+>>>>>>> daadae81 (internal-portal: rearrange invoice row columns)
                       </TableRow>
                     ))}
                   </TableBody>
