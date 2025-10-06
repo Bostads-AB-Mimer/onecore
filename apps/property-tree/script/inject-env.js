@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync} from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
 /**
@@ -12,7 +12,18 @@ const ENV_VARS = [
   'VITE_KEYCLOAK_URL',
   'VITE_KEYCLOAK_REALM',
   'VITE_KEYCLOAK_CLIENT_ID',
-  'VITE_KEYCLOAK_REDIRECT_URI'
+  'VITE_KEYCLOAK_REDIRECT_URI',
+  'VITE_ODOO_URL',
+  'VITE_LEASING_URL',
+  'VITE_XLEDGER_URL',
+  'VITE_TENFAST_URL',
+  'VITE_CURVES_URL',
+  'VITE_GREENVIEW_URL',
+  'VITE_PASSAGE_URL',
+  'VITE_KEYS_URL',
+  'VITE_INTERNAL_PORTAL',
+  'VITE_VIEWINGS',
+  'VITE_PROPERTYTREE',
 ]
 
 /**
@@ -26,10 +37,12 @@ const ENV_VARS = [
 export const injectEnv = (html, env) =>
   ENV_VARS.reduce(
     (html, vbl) =>
-       env[vbl] !== undefined ? html.replace(
-        new RegExp(`(${vbl}\\s*:\\s*')([^']*)(')`),
-        `$1${env[vbl]}$3`
-       ): html,
+      env[vbl] !== undefined
+        ? html.replace(
+            new RegExp(`(${vbl}\\s*:\\s*')([^']*)(')`),
+            `$1${env[vbl]}$3`
+          )
+        : html,
     html
   )
 
