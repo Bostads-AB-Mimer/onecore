@@ -186,12 +186,6 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         onClick={() => setOpen((prev) => !prev)}
         sx={{
           cursor: 'pointer',
-<<<<<<< HEAD
-=======
-          ':focus': {
-            backgroundColor: '#f5f5f5',
-          },
->>>>>>> daadae81 (internal-portal: rearrange invoice row columns)
         }}
         role="button"
         tabIndex={0}
