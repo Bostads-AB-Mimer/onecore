@@ -186,9 +186,6 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         onClick={() => setOpen((prev) => !prev)}
         sx={{
           cursor: 'pointer',
-          ':focus': {
-            backgroundColor: '#f5f5f5',
-          },
         }}
         role="button"
         tabIndex={0}
@@ -231,12 +228,18 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {invoice.invoiceRows?.map((row, index) => (
+                    {invoice.invoiceRows.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell>{row.invoiceRowText}</TableCell>
-                        <TableCell>{row.amount}</TableCell>
-                        <TableCell>{row.vat}</TableCell>
-                        <TableCell>{row.totalAmount}</TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.amount}
+                        </TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.vat}
+                        </TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.totalAmount}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
