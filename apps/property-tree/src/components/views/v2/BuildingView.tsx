@@ -70,7 +70,6 @@ const BuildingDetailPage = () => {
           building={data.building}
           property={data?.property}
           address={data?.building?.name ?? '-'}
-          objectNumber={data.building?.id}
         />
         <BuildingDetailTabs
           building={data.building}

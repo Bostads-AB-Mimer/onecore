@@ -12,13 +12,12 @@ export const BuildingBasicInfo = ({
   building,
   property,
   address,
-  objectNumber,
 }: BuildingBasicInfoProps) => {
   const { quantityValues } = building
 
   // Extract specific quantity values
   const buildingArea =
-    quantityValues?.find((x) => x.id === 'AREATEMP')?.value + ' m²' || '- m²'
+    (quantityValues?.find((x) => x.id === 'AREATEMP')?.value || '-') + ' m²'
 
   const residenceCount =
     quantityValues?.find((x) => x.id === 'ANTALLGH')?.value ?? 0

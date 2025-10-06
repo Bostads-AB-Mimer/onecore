@@ -18,18 +18,24 @@ import {
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
-import { Building as BuildingType, Staircase } from '@/services/types'
+import { Building as BuildingType, ResidenceSummary } from '@/services/types'
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
+import { UseQueryResult } from '@tanstack/react-query'
 
 interface BuildingDetailTabsMobileProps {
   building: BuildingType
-  staircases: Staircase[]
+  isLoading: boolean
+  residenceStaircaseLookupMap: Record<
+    string,
+    UseQueryResult<ResidenceSummary[], Error>
+  >
   basePath: string
 }
 
 export const BuildingDetailTabsMobile = ({
   building,
-  staircases,
+  isLoading,
+  residenceStaircaseLookupMap,
   basePath,
 }: BuildingDetailTabsMobileProps) => {
   const { features } = useFeatureToggles()
@@ -39,7 +45,11 @@ export const BuildingDetailTabsMobile = ({
       icon: Building,
       title: 'Uppgångar',
       content: features.showBuildingEntrances ? (
-        <BuildingEntrances staircases={staircases} basePath={basePath} />
+        <BuildingEntrances
+          isLoading={isLoading}
+          residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+          basePath={basePath}
+        />
       ) : (
         <FeatureGatedContent
           isEnabled={false}

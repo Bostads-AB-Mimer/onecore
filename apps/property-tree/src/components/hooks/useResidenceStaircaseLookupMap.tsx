@@ -38,5 +38,8 @@ export const useResidenceStaircaseLookupMap = (staircases: Staircase[]) => {
     [residenceQueries, staircases]
   )
 
-  return residenceStaircaseLookupMap
+  return {
+    residenceStaircaseLookupMap,
+    isLoading: residenceQueries.some((query) => query.isLoading),
+  }
 }

@@ -15,6 +15,7 @@ import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { useEffect } from 'react'
 import { Building, Residence, Staircase } from '@/services/types'
+import { useResidenceStaircaseLookupMap } from '../hooks/useResidenceStaircaseLookupMap'
 
 interface BuildingDetailTabsProps {
   building: Building
@@ -30,11 +31,19 @@ export const BuildingDetailTabs = ({
   const { features } = useFeatureToggles()
   const isMobile = useIsMobile()
 
+  const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
+    useResidenceStaircaseLookupMap(staircases)
+
+  useEffect(() => {
+    console.log('isStaircasesLoading', isStaircasesLoading)
+  }, [isStaircasesLoading])
+
   if (isMobile) {
     return (
       <BuildingDetailTabsMobile
+        isLoading={isStaircasesLoading}
         building={building}
-        staircases={staircases}
+        residenceStaircaseLookupMap={residenceStaircaseLookupMap}
         basePath={basePath}
       />
     )
@@ -67,7 +76,11 @@ export const BuildingDetailTabs = ({
           isEnabled={features.showBuildingEntrances}
           fallbackMessage="Uppgångsfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
         >
-          <BuildingEntrances staircases={staircases} basePath={basePath} />
+          <BuildingEntrances
+            isLoading={isStaircasesLoading}
+            residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+            basePath={basePath}
+          />
         </FeatureGatedContent>
       </TabsContent>
 
