@@ -573,25 +573,37 @@ export const getInvoiceRows = async (
 
   const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
   const invoiceRowsQuery = db.raw(
-    "select cmart.code as rentArticle, cmart.utskrgrupp as printGroup, krfkr.reduction as rowReduction, \
-        krfkr.amount as rowAmount, krfkr.vat as rowVat, cmcmp.code as company, \
-        krfkh.fromdate as invoiceFromDate, krfkh.todate as invoiceToDate, krfkh.expdate as expirationDate, \
-        krfkh.amount + krfkh.vat + roundoff + krfkh.reduction as invoiceTotal, * \
-      from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \
-        inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
-        inner join cmctc on krfkh.keycmctc = cmctc.keycmctc \
-        left join cmart on cmart.keycmart = krfkr.keycmart \
-        left join cmarg on cmart.keycmarg = cmarg.keycmarg \
-        left join repsk on cmart.keycmart = repsk.keycode \
-        left join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where ((repsr.keycode = ? and keyrektk = 'INTAKT' and repsk.year = ?) or \
-        (repsr.keycode is null and keyrektk is null and repsk.year is null)) and \
-        cmcmp.code = ? \
-        and (krfkh.type = 1 or krfkh.type = 2) \
-        and invoice in (" +
-      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
-      ') \
-      order by invoice asc, krfkr.printsort asc',
+    `
+    SELECT
+      cmart.code AS rentArticle,
+      cmart.utskrgrupp AS printGroup,
+      krfkr.reduction AS rowReduction,
+      krfkr.amount AS rowAmount,
+      krfkr.vat AS rowVat,
+      cmcmp.code AS company,
+      krfkh.fromdate AS invoiceFromDate,
+      krfkh.todate AS invoiceToDate,
+      krfkh.expdate AS expirationDate,
+      krfkh.amount + krfkh.vat + roundoff + krfkh.reduction AS invoiceTotal,
+      *
+    FROM krfkh
+    INNER JOIN krfkr ON krfkr.keykrfkh = krfkh.keykrfkh
+    INNER JOIN cmcmp ON krfkh.keycmcmp = cmcmp.keycmcmp
+    INNER JOIN cmctc ON krfkh.keycmctc = cmctc.keycmctc
+    LEFT JOIN cmart ON cmart.keycmart = krfkr.keycmart
+    LEFT JOIN cmarg ON cmart.keycmarg = cmarg.keycmarg
+    LEFT JOIN repsk ON cmart.keycmart = repsk.keycode
+    LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
+    WHERE
+      (
+        (repsr.keycode = ? AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
+        (repsr.keycode IS NULL AND keyrektk IS NULL AND repsk.year IS NULL)
+      )
+      AND cmcmp.code = ?
+      AND (krfkh.type = 1 OR krfkh.type = 2)
+      AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
+    ORDER BY invoice ASC, krfkr.printsort ASC
+    `,
     [keycode, year, companyId]
   )
 
