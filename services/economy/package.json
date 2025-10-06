@@ -1,12 +1,10 @@
 {
   "name": "@onecore/economy",
-  "version": "1.5.0",
-  "private": "true",
+  "version": "1.4.22",
   "description": "ONECore Economy Service",
-  "license": "MIT",
-  "author": "",
-  "packageManager": "pnpm@10.6.1",
   "main": "./src/index.ts",
+  "packageManager": "pnpm@10.6.1",
+  "private": "true",
   "scripts": {
     "test": "jest",
     "build": "holidays2json --pick SE --min && tsc",
@@ -31,6 +29,8 @@
     "ts:ci": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
     "@iteam/sanity-check": "^1.0.1",
     "@types/jest": "^29.5.11",

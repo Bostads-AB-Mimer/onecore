@@ -1,6 +1,6 @@
 {
   "name": "@onecore/utilities",
-  "version": "1.5.0",
+  "version": "1.4.22",
   "type": "commonjs",
   "description": "ONECore common utilities",
   "license": "AGPL-3.0-only",
@@ -16,15 +16,15 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "exports": {
     ".": {
       "require": "./dist/index.js",
       "import": "./dist/index.mjs"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "lint": "eslint src/",
