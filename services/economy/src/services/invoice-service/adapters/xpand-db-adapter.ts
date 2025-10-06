@@ -541,13 +541,17 @@ export const getRentalInvoices = async (
   toDate: Date,
   companyId: string
 ) => {
-  //return [{ invoice: '552509353956750' }]
+  /*return [
+    { invoice: '552509353737655' },
+    { invoice: '552509353737655K' },
+    { invoice: '552509353956750' },
+  ]*/
   const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
 
   console.log(keycode, companyId, fromDate, toDate)
 
   const rentalInvoiceNumbers = await db.raw(
-    'select DISTINCT(invoice) from krfkr inner join krfkh on krfkr.keykrfkh = krfkh.keykrfkh \
+    'select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \
   		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
 	    inner join cmart on cmart.code = krfkr.code \
 	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
@@ -555,11 +559,29 @@ export const getRentalInvoices = async (
       inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
       where (repsr.keycode = ?) \
       and cmcmp.code = ? \
-      and krfkh.fromdate >= ? AND krfkh.fromdate < ?',
+      and krfkh.fromdate >= ? AND krfkh.fromdate < ? \
+      and not invoice is null',
     [keycode, companyId, fromDate, toDate]
   )
 
   return rentalInvoiceNumbers
+}
+
+export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
+  const total = await db.raw(
+    'select SUM( \
+	case when krfkh.type = 2 then krfkh.amount + krfkh.vat + roundoff + krfkh.reduction \
+  when type = 1 then -(krfkh.amount + krfkh.vat + roundoff + krfkh.reduction) end) \
+	as invoicesTotal \
+	from krfkh \
+	where invoice in (' +
+      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
+      ')'
+  )
+
+  console.log('Total', total[0].invoicesTotal as number)
+
+  return total[0].invoicesTotal as number
 }
 
 export const getInvoiceRows = async (
@@ -676,6 +698,7 @@ export const getInvoiceRows = async (
           invoice.vat = -invoice.vat
           invoice.deduction = -invoice.deduction
           invoice.roundoff = -invoice.roundoff
+          invoice.invoiceTotalAmount = -invoice.invoiceTotalAmount
         }
 
         return invoice

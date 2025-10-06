@@ -124,21 +124,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoices/import/batches', async (ctx) => {
-    try {
-      const batchId = await createBatch()
-
-      ctx.status = 200
-      ctx.body = batchId
-    } catch (error: any) {
-      console.error('Error', error)
-      ctx.status = 500
-      ctx.body = {
-        message: error.message,
-      }
-    }
-  })
-
   router.post('(.*)/invoices/import/save-contacts', async (ctx) => {
     console.log('save-contacts')
     const metadata = generateRouteMetadata(ctx)

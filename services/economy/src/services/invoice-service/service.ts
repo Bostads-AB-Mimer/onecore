@@ -13,6 +13,8 @@ import {
   getInvoicesByChunks,
   getImportedInvoiceNumbers,
   getAllInvoiceRows,
+  verifyImport,
+  getBatchAccountTotals,
 } from './adapters/invoice-data-db-adapter'
 import {
   enrichInvoiceRows,
@@ -21,6 +23,7 @@ import {
   closeDb as closeXpandDb,
   getRentalInvoices,
   getInvoiceRows as getXpandInvoiceRows,
+  getBatchTotalAmount as getXpandBatchTotalAmount,
 } from './adapters/xpand-db-adapter'
 import {
   CounterPartCustomers,
@@ -525,6 +528,11 @@ export const createAggregateRows = async (batchId: string) => {
     chunkNum++
   }
 
+  const accountTotals = calculateAccountTotals(transactionRows)
+  const batchAccountTotals = await getBatchAccountTotals(batchId)
+
+  console.log(accountTotals, batchAccountTotals)
+
   return transactionRows
 }
 
@@ -722,6 +730,8 @@ export const importInvoiceRows = async (
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
     )
 
+    const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
+
     logger.info(
       {
         invoicesInXpand: rentalInvoiceNumbers.length,
@@ -753,7 +763,7 @@ export const importInvoiceRows = async (
       }
     }
 
-    const batchId = await createBatch()
+    const batchId = await createBatch(batchTotal)
     logger.info(`Created new batch: ${batchId}`)
 
     let chunkNum = 0
@@ -798,6 +808,8 @@ export const importInvoiceRows = async (
       chunkNum++
     }
 
+    await verifyImport(invoicesToImport, batchId, batchTotal)
+
     return {
       batchId,
       errors,
@@ -807,4 +819,23 @@ export const importInvoiceRows = async (
 
     throw error
   }
+}
+
+const calculateAccountTotals = (aggregateRows: InvoiceDataRow[]) => {
+  const accountTotals: Record<string, number> = {}
+
+  aggregateRows.forEach((aggregateRow) => {
+    const accountTotal = accountTotals[aggregateRow.account] || 0
+    accountTotals[aggregateRow.account] =
+      accountTotal + (aggregateRow.amount as number)
+  })
+
+  const accounts = Object.keys(accountTotals)
+
+  accounts.forEach((account) => {
+    accountTotals[account] =
+      Math.round((accountTotals[account] + Number.EPSILON) * 100) / 100
+  })
+
+  return accountTotals
 }

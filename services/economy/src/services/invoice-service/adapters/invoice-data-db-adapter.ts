@@ -29,8 +29,10 @@ export const closeDb = () => {
   db.destroy()
 }
 
-export const createBatch = async () => {
-  const batchResult = await db('invoice_batch').insert({}).returning('Id')
+export const createBatch = async (batchTotal: number) => {
+  const batchResult = await db('invoice_batch')
+    .insert({ BatchTotalAmount: batchTotal })
+    .returning('Id')
   const batchId = batchResult[0].Id
 
   return batchId
@@ -414,4 +416,65 @@ export const getAllInvoiceRows = async (batchId: string) => {
     .orderBy('InvoiceDate', 'ASC')
     .orderBy('LedgerAccount', 'ASC')
     .orderBy('InvoiceNumber', 'ASC')
+}
+
+export const verifyImport = async (
+  invoicesToImport: string[],
+  batchId: string,
+  xpandBatchTotal: number
+) => {
+  const importedInvoiceNumbers = (
+    await db('invoice_data')
+      .select('InvoiceNumber')
+      .distinct()
+      .where('batchId', batchId)
+  ).map((invoice) => invoice.InvoiceNumber)
+
+  const missedInvoices = invoicesToImport.filter(
+    (rentalInvoiceNumber: string) =>
+      !importedInvoiceNumbers.includes(rentalInvoiceNumber)
+  )
+
+  if (missedInvoices.length > 0) {
+    logger.error(
+      { missedInvoices },
+      'Invoices that were selected for import were not imported'
+    )
+    throw new Error('Invoices that were selected for import were not imported')
+  }
+
+  const batchTotalAmountResult = await db.raw(
+    'SELECT SUM(TotalAmount) FROM invoice_data where batchId = ?',
+    batchId
+  )
+  const batchTotalAmount = batchTotalAmountResult[0] as number
+  const batchTotalDiff = Math.abs(xpandBatchTotal - batchTotalAmount)
+
+  if (batchTotalDiff > 1) {
+    logger.error(
+      { batchTotalAmount, xpandTotalAmount: xpandBatchTotal },
+      'Xpand total amount does not match batch row totals'
+    )
+    throw new Error('Xpand total amount does not match batch row totals')
+  }
+
+  return missedInvoices.length === 0 && batchTotalDiff > 1
+}
+
+export const getBatchAccountTotals = async (batchId: string) => {
+  const accountResult = await db.raw(
+    'select account, sum(totalamount) as accountSum from invoice_data \
+      where batchId = ? \
+      group by account \
+      order by account',
+    [batchId]
+  )
+
+  const accountTotals: Record<string, number> = {}
+
+  accountResult.forEach((account: any) => {
+    accountTotals[account['account']] = account['accountSum']
+  })
+
+  return accountTotals
 }

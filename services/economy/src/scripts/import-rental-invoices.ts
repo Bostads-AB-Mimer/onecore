@@ -24,9 +24,9 @@ const importRentalInvoicesScript = async () => {
   for (let month = 10; month >= 10; month--) {
     logger.info({ month }, 'Processing month')
     const result = await importInvoiceRows(
-      new Date(`2025-${month.toString().padStart(2, '0')}-15T00:00:00.000Z`),
+      new Date(`2025-${month.toString().padStart(2, '0')}-01T00:00:00.000Z`),
       new Date(
-        `2025-${(month + 1).toString().padStart(2, '0')}-01T00:00:00.000Z`
+        `2025-${(month + 2).toString().padStart(2, '0')}-31T23:59:59.000Z`
       ),
       companyId
     )
