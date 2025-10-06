@@ -14,7 +14,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Edit, Trash2, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Search,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { KeySystem, KeySystemTypeLabels, Property, Key } from '@/services/types'
 import { format } from 'date-fns'
@@ -66,9 +73,10 @@ export function KeySystemsTable({
           ),
         ]
 
-        const addresses = await rentalObjectSearchService.getAddressesByRentalIds(
-          rentalObjectCodes
-        )
+        const addresses =
+          await rentalObjectSearchService.getAddressesByRentalIds(
+            rentalObjectCodes
+          )
         setAddressMap(addresses)
       } catch (error) {
         console.error('Failed to fetch addresses:', error)
@@ -103,14 +111,17 @@ export function KeySystemsTable({
   }
 
   // Group keys by rental object code
-  const groupedKeys = keysForExpandedSystem.reduce((acc, key) => {
-    const code = key.rentalObjectCode || 'Ingen objektkod'
-    if (!acc[code]) {
-      acc[code] = []
-    }
-    acc[code].push(key)
-    return acc
-  }, {} as Record<string, Key[]>)
+  const groupedKeys = keysForExpandedSystem.reduce(
+    (acc, key) => {
+      const code = key.rentalObjectCode || 'Ingen objektkod'
+      if (!acc[code]) {
+        acc[code] = []
+      }
+      acc[code].push(key)
+      return acc
+    },
+    {} as Record<string, Key[]>
+  )
 
   return (
     <div className="border rounded-lg">
@@ -272,14 +283,14 @@ export function KeySystemsTable({
                                   className="border rounded-lg p-3 bg-background"
                                 >
                                   <div className="mb-2 font-medium text-sm">
-                                    {rentalObjectCode} - {' '}
+                                    {rentalObjectCode} -{' '}
                                     <span className="text-muted-foreground font-normal">
                                       {isLoadingAddresses
                                         ? 'Laddar adress...'
                                         : addressMap[rentalObjectCode] ||
                                           'Okänd adress'}
-                                    </span>
-                                    {' '}({keys.length}{' '}
+                                    </span>{' '}
+                                    ({keys.length}{' '}
                                     {keys.length === 1 ? 'nyckel' : 'nycklar'})
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
