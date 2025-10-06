@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,24 +8,25 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb'
 import { generateBreadcrumbs } from '@/utils/breadcrumbUtils'
-import { PropertyDetail } from '@/types/api'
 
 interface PropertyBreadcrumbProps {
-  propertyDetail?: PropertyDetail
+  property?: { id: string; name: string }
+  building?: { id: string; name: string }
+  residence?: { id: string; name: string }
 }
 
 export const PropertyBreadcrumb = ({
-  propertyDetail,
+  property,
+  building,
+  residence,
 }: PropertyBreadcrumbProps) => {
-  const location = useLocation()
-  const breadcrumbs = generateBreadcrumbs(location.pathname, propertyDetail)
+  const breadcrumbs = generateBreadcrumbs(property, building, residence)
 
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbList>
         {breadcrumbs.map((breadcrumb, index) => {
           const isLast = index === breadcrumbs.length - 1
-
           return (
             <div key={breadcrumb.path} className="flex items-center">
               <BreadcrumbItem>
@@ -37,6 +38,7 @@ export const PropertyBreadcrumb = ({
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
+
               {!isLast && <BreadcrumbSeparator />}
             </div>
           )

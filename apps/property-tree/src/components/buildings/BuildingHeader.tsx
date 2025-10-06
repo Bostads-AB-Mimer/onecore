@@ -1,5 +1,4 @@
 import { Building } from '@/services/types'
-import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 interface BuildingHeaderProps {
   building: Building
@@ -12,8 +11,6 @@ export const BuildingHeader = ({
 }: BuildingHeaderProps) => {
   return (
     <div className="space-y-4">
-      <PropertyBreadcrumb />
-
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold leading-tight break-words">

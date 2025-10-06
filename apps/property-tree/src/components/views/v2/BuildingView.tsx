@@ -5,6 +5,7 @@ import { useBuildingDetail } from '@/components/hooks/useBuildingDetail'
 import { BuildingHeader } from '@/components/buildings/BuildingHeader'
 import { BuildingBasicInfo } from '@/components/buildings/BuildingBasicInfo'
 import { BuildingDetailTabs } from '@/components/buildings/BuildingDetailTabs'
+import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const BuildingDetailPage = () => {
   const { buildingId } = useParams()
@@ -62,6 +63,16 @@ const BuildingDetailPage = () => {
 
     return (
       <div className="py-4 space-y-4 sm:space-y-6 lg:space-y-8">
+        <PropertyBreadcrumb
+          property={{
+            id: data.property?.id,
+            name: data.property?.designation,
+          }}
+          building={{
+            id: data.building?.id,
+            name: data.building?.name ?? 'byggnad',
+          }}
+        />
         <BuildingHeader
           building={data.building}
           propertyName={data.property?.designation}

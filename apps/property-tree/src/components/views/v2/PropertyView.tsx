@@ -69,7 +69,12 @@ const PropertyView = () => {
 
     return (
       <div className="py-4 space-y-6">
-        <PropertyBreadcrumb propertyDetail={propertyDetail} />
+        <PropertyBreadcrumb
+          property={{
+            id: propertyDetail.id,
+            name: propertyDetail.designation,
+          }}
+        />
         <PropertyHeader propertyDetail={propertyDetail} />
 
         {/* Grundläggande information always visible above tabs */}
