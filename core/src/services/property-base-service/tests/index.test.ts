@@ -10,6 +10,7 @@ import * as leasingAdapter from '../../../adapters/leasing-adapter'
 
 import * as factory from '../../../../test/factories'
 import {
+  BuildingSchema,
   CompanySchema,
   PropertySchema,
   ResidenceSchema,
@@ -30,6 +31,93 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('@onecore/property-service', () => {
+  describe('GET /property/buildings', () => {
+    it('returns 200 and a list of buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .mockResolvedValueOnce({ ok: true, data: buildingsMock })
+
+      const res = await request(app.callback()).get(
+        '/property/buildings?propertyCode=001-001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(buildingsMock)
+      )
+      expect(() =>
+        z.array(BuildingSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 400 if property code is missing', async () => {
+      const res = await request(app.callback()).get('/property/buildings')
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildings')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/property/buildings?propertyCode=001-001'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
+    })
+  })
+
+  describe('GET /property/buildings/:id', () => {
+    it('returns 200 and a building by id', async () => {
+      const buildingMock = factory.building.build()
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingById')
+        .mockResolvedValueOnce({ ok: true, data: buildingMock })
+
+      const res = await request(app.callback()).get(
+        `/property/buildings/${buildingMock.id}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getBuildingSpy).toHaveBeenCalledWith(buildingMock.id)
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(buildingMock)
+      )
+      expect(() => BuildingSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 404 if no building is found', async () => {
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingById')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/property/buildings/building-id-123'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getBuildingSpy).toHaveBeenCalledWith('building-id-123')
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getBuildingSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingById')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/property/buildings/building-id-123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getBuildingSpy).toHaveBeenCalledWith('building-id-123')
+    })
+  })
+
   describe('GET /property/buildings/by-building-code/:buildingCode', () => {
     it('returns 200 and a building by code', async () => {
       const buildingMock = factory.building.build()
