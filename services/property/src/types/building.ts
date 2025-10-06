@@ -28,6 +28,16 @@ export const BuildingSchema = z.object({
     class: z.string().nullable(),
     value: z.number().nullable(),
   }),
+  quantityValues: z
+    .array(
+      z.object({
+        id: z.string(),
+        value: z.number(),
+        name: z.string(),
+        unitId: z.string().nullable(),
+      })
+    )
+    .optional(),
   deleted: z.boolean(),
   property: z
     .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
