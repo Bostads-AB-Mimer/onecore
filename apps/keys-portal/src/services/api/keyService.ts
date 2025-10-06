@@ -6,26 +6,23 @@ import type {
   UpdateKeyRequest,
   CreateKeySystemRequest,
   UpdateKeySystemRequest,
+  PaginatedResponse,
 } from '@/services/types'
 
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 
-export interface PaginationMeta {
-  totalRecords: number
-  page: number
-  limit: number
-  count: number
-}
-
-export interface PaginationLinks {
-  href: string
-  rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-}
-
-export interface PaginatedResponse<T> {
-  content: T[]
-  _meta: PaginationMeta
-  _links: PaginationLinks[]
+// Helper to ensure paginated response has proper structure
+function ensurePaginatedResponse<T>(data: any): PaginatedResponse<T> {
+  return {
+    content: data?.content ?? [],
+    _meta: data?._meta ?? {
+      totalRecords: 0,
+      page: 1,
+      limit: 60,
+      count: 0,
+    },
+    _links: data?._links ?? [],
+  }
 }
 
 export const keyService = {
@@ -35,18 +32,7 @@ export const keyService = {
       params: { query: { page, limit } },
     })
     if (error) throw error
-
-    const paginatedData = data as any
-    return {
-      content: paginatedData?.content ?? [],
-      _meta: paginatedData?._meta ?? {
-        totalRecords: 0,
-        page: 1,
-        limit: 60,
-        count: 0,
-      },
-      _links: paginatedData?._links ?? [],
-    }
+    return ensurePaginatedResponse<Key>(data)
   },
 
   async getKey(id: string): Promise<Key> {
@@ -77,24 +63,16 @@ export const keyService = {
     if (error) throw error
   },
 
-  async searchKeys(params: {
-    q?: string
-    fields?: string
-    id?: string
-    keyName?: string
-    keySequenceNumber?: string
-    flexNumber?: string
-    rentalObjectCode?: string
-    keyType?: string
-    keySystemId?: string
-    createdAt?: string
-    updatedAt?: string
-  }): Promise<Key[]> {
+  async searchKeys(
+    searchParams: Record<string, string | number | undefined>,
+    page: number = 1,
+    limit: number = 60
+  ): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys/search', {
-      params: { query: params },
+      params: { query: { ...searchParams, page, limit } },
     })
     if (error) throw error
-    return data?.content ?? []
+    return ensurePaginatedResponse<Key>(data)
   },
 
   // ------- KEY SYSTEMS -------
@@ -106,18 +84,7 @@ export const keyService = {
       params: { query: { page, limit } },
     })
     if (error) throw error
-
-    const paginatedData = data as any
-    return {
-      content: paginatedData?.content ?? [],
-      _meta: paginatedData?._meta ?? {
-        totalRecords: 0,
-        page: 1,
-        limit: 60,
-        count: 0,
-      },
-      _links: paginatedData?._links ?? [],
-    }
+    return ensurePaginatedResponse<KeySystem>(data)
   },
 
   async getKeySystem(id: string): Promise<KeySystem> {
@@ -163,5 +130,17 @@ export const keyService = {
       params: { path: { id } },
     })
     if (error) throw error
+  },
+
+  async searchKeySystems(
+    searchParams: Record<string, string | number | undefined>,
+    page: number = 1,
+    limit: number = 60
+  ): Promise<PaginatedResponse<KeySystem>> {
+    const { data, error } = await GET('/key-systems/search', {
+      params: { query: { ...searchParams, page, limit } },
+    })
+    if (error) throw error
+    return ensurePaginatedResponse<KeySystem>(data)
   },
 }

@@ -31,7 +31,26 @@ const Index = () => {
       setLoading(true)
       setError('')
       try {
-        const response = await keyService.getAllKeys(page, limit)
+        // Build search parameters based on current filters
+        const searchParams: Record<string, string> = {}
+
+        // Add search query if present
+        if (searchQuery.trim().length >= 3) {
+          searchParams.q = searchQuery.trim()
+          searchParams.fields = 'keyName,rentalObjectCode,keySystemId'
+        }
+
+        // Add type filter if not 'all'
+        if (selectedType !== 'all') {
+          searchParams.keyType = selectedType
+        }
+
+        // Use search endpoint if filtering/searching, otherwise use getAllKeys
+        const hasFilters = Object.keys(searchParams).length > 0
+        const response = hasFilters
+          ? await keyService.searchKeys(searchParams, page, limit)
+          : await keyService.getAllKeys(page, limit)
+
         setKeys(response.content)
         pagination.setPaginationMeta(response._meta)
 
@@ -70,26 +89,13 @@ const Index = () => {
         setLoading(false)
       }
     },
-    [toast, pagination]
+    [toast, pagination, searchQuery, selectedType]
   )
 
   useEffect(() => {
-    fetchKeys()
-  }, [])
-
-  const filteredKeys = useMemo(() => {
-    return keys.filter((key) => {
-      const q = searchQuery.toLowerCase()
-      const matchesSearch =
-        key.keyName.toLowerCase().includes(q) ||
-        key.rentalObjectCode?.toLowerCase().includes(q) ||
-        key.keySystemId?.toLowerCase().includes(q)
-
-      const matchesType = selectedType === 'all' || key.keyType === selectedType
-
-      return matchesSearch && matchesType
-    })
-  }, [keys, searchQuery, selectedType])
+    // Reset to page 1 and fetch when search/filter changes
+    pagination.handlePageChange(1)
+  }, [searchQuery, selectedType])
 
   const handleAddNew = () => {
     setEditingKey(null)
@@ -178,7 +184,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <KeysHeader
           totalKeys={pagination.paginationMeta.totalRecords}
-          displayedKeys={filteredKeys.length}
+          displayedKeys={keys.length}
         />
 
         <KeysToolbar
@@ -205,7 +211,7 @@ const Index = () => {
         {error && <div className="text-sm text-red-600 py-2">Fel: {error}</div>}
 
         <KeysTable
-          keys={filteredKeys}
+          keys={keys}
           keySystemMap={keySystemMap}
           onEdit={handleEdit}
           onDelete={handleDelete}
