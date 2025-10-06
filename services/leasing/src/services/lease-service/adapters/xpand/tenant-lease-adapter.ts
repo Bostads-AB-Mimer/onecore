@@ -625,7 +625,7 @@ const getAllLeasesByDateFilter = async (
         this.whereNull('lastdebitdate').orWhere(
           'lastdebitdate',
           '>=',
-          xpandDb.raw("DATEADD(YEAR, -5, GETDATE())")
+          xpandDb.raw('DATEADD(YEAR, -5, GETDATE())')
         )
       })
 

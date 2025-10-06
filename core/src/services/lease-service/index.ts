@@ -880,10 +880,22 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   const GetAllLeasesByDateFilterQueryParams = z.object({
-    fromDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    fromDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    lastDebitDateStart: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-    lastDebitDateEnd: z.string().optional().transform((val) => val ? new Date(val) : undefined),
+    fromDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    fromDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
   })
 
   router.get('/leases', async (ctx) => {
