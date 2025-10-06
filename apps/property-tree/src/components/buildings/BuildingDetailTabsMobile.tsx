@@ -10,9 +10,6 @@ import {
 } from 'lucide-react'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingPartsTab } from './tabs/BuildingPartsTab'
-import { BuildingSpacesTab } from './tabs/BuildingSpacesTab'
-import { BuildingInstallationsTab } from './tabs/BuildingInstallationsTab'
-import { BuildingParkingTab } from './tabs/BuildingParkingTab'
 import { BuildingDocumentsTab } from './tabs/BuildingDocumentsTab'
 import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
 //import { Notes } from '@/components/shared/Notes'
@@ -21,8 +18,8 @@ import {
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
-//import { useFeatureToggles } from "@/contexts/FeatureTogglesContext";
 import { Building as BuildingType, Staircase } from '@/services/types'
+import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 
 interface BuildingDetailTabsMobileProps {
   building: BuildingType
@@ -35,17 +32,7 @@ export const BuildingDetailTabsMobile = ({
   staircases,
   basePath,
 }: BuildingDetailTabsMobileProps) => {
-  //const { features } = useFeatureToggles();
-
-  const features = {
-    showBuildingEntrances: true,
-    showBuildingParts: false,
-    showBuildingSpaces: false,
-    showBuildingInstallations: false,
-    showBuildingParking: false,
-    showBuildingDocuments: false,
-  }
-
+  const { features } = useFeatureToggles()
   const accordionItems: MobileAccordionItem[] = [
     features.showBuildingEntrances && {
       id: 'entrances',
@@ -75,47 +62,9 @@ export const BuildingDetailTabsMobile = ({
         </FeatureGatedContent>
       ),
     },
-    features.showBuildingSpaces && {
-      id: 'spaces',
-      icon: Users,
-      title: 'Utrymmen',
-      content: (
-        <FeatureGatedContent
-          isEnabled={features.showBuildingSpaces}
-          fallbackMessage="Utrymmenfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingSpacesTab building={building} />
-        </FeatureGatedContent>
-      ),
-    },
-    features.showBuildingInstallations && {
-      id: 'installations',
-      icon: Wrench,
-      title: 'Installationer',
-      content: (
-        <FeatureGatedContent
-          isEnabled={features.showBuildingInstallations}
-          fallbackMessage="Installationerfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingInstallationsTab building={building} />
-        </FeatureGatedContent>
-      ),
-    },
-    features.showBuildingParking && {
-      id: 'parking',
-      icon: Car,
-      title: 'Parkering',
-      content: (
-        <FeatureGatedContent
-          isEnabled={features.showBuildingParking}
-          fallbackMessage="Parkeringfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingParkingTab building={building} />
-        </FeatureGatedContent>
-      ),
-    },
     features.showBuildingDocuments && {
       id: 'documents',
+      disabled: true,
       icon: FileText,
       title: 'Dokument',
       content: (
@@ -129,31 +78,17 @@ export const BuildingDetailTabsMobile = ({
     },
     {
       id: 'orders',
+      disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
       content: <BuildingOrdersTab building={building} />,
     },
-    /*
-    {
-      id: 'notes',
-      icon: StickyNote,
-      title: 'Noteringar',
-      content: (
-        <Notes
-          entityType="building"
-          entityId={building.id}
-          placeholder="Skriv din notering här..."
-          emptyMessage="Inga noteringar har lagts till för denna byggnad ännu."
-        />
-      ),
-    },
-    */
   ].filter(Boolean) as MobileAccordionItem[]
 
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['orders']}
+      defaultOpen={['entrances']}
       className="space-y-3"
     />
   )

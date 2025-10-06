@@ -1,4 +1,4 @@
-import { Staircase } from '@/services/types'
+import { Residence, Staircase } from '@/services/types'
 import { Button } from '@/components/ui/v2/Button'
 import { Badge } from '@/components/ui/v2/Badge'
 import {
@@ -9,11 +9,14 @@ import {
 } from '@/components/ui/Accordion'
 import { ChevronRight, Home } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useQueries } from '@tanstack/react-query'
-import { residenceService } from '@/services/api/core'
-import { useMemo } from 'react'
+import { useQueries, UseQueryResult } from '@tanstack/react-query'
+import { ResidenceSummary } from '@/services/types'
 
 interface BuildingEntranceHierarchyProps {
+  residenceStaircaseLookupMap: Record<
+    string,
+    UseQueryResult<ResidenceSummary[], Error>
+  >
   staircases: Staircase[]
   basePath: string
 }
@@ -51,39 +54,10 @@ const getApartmentTypeStyle = (type?: ApartmentType) => {
 */
 
 export const BuildingEntranceHierarchy = ({
+  residenceStaircaseLookupMap,
   staircases,
   basePath,
 }: BuildingEntranceHierarchyProps) => {
-  const residenceQueriesArray = useQueries({
-    queries: staircases.map((staircase) => {
-      return {
-        queryKey: [
-          'staircase-residence',
-          staircase.buildingCode,
-          staircase.code,
-        ],
-        queryFn: () =>
-          residenceService.getByBuildingCodeAndStaircaseCode(
-            staircase.buildingCode,
-            staircase.code
-          ),
-        enabled: !!staircase.code,
-      }
-    }),
-  })
-
-  const residenceQueries = useMemo(
-    () =>
-      staircases.reduce(
-        (acc, staircase, index) => {
-          acc[staircase.code] = residenceQueriesArray[index]
-          return acc
-        },
-        {} as Record<string, (typeof residenceQueriesArray)[number]>
-      ),
-    [residenceQueriesArray, staircases]
-  )
-
   // Return early if no entrances
   if (!staircases || staircases.length === 0) {
     return (
@@ -100,9 +74,11 @@ export const BuildingEntranceHierarchy = ({
     <div className="space-y-4">
       <Accordion type="single" collapsible className="space-y-2">
         {staircases.map((staircase: Staircase) => {
-          const isLoading = residenceQueries[staircase.code]?.isLoading
-          const error = residenceQueries[staircase.code]?.error
-          const residences = residenceQueries[staircase.code]?.data || []
+          const isLoading =
+            residenceStaircaseLookupMap[staircase.code]?.isLoading
+          const error = residenceStaircaseLookupMap[staircase.code]?.error
+          const residences =
+            residenceStaircaseLookupMap[staircase.code]?.data || []
 
           const hasResidences = residences.length > 0
 
@@ -142,7 +118,7 @@ export const BuildingEntranceHierarchy = ({
                               <div className="flex items-center gap-2">
                                 <Home className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium text-foreground">
-                                  {residence.code}
+                                  {residence.rentalId}
                                 </span>
                                 {/*
                             {residence.apartmentType && residence.apartmentType !== "Standard" && (
@@ -153,7 +129,8 @@ export const BuildingEntranceHierarchy = ({
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
-                                  {'x'}m² • {'x'} rum
+                                  {residence.quantityValues[0].value ?? '-'} m²
+                                  • {residence.residenceType.roomCount} rum
                                 </span>
                                 <Link to={`${basePath}/${residence.id}`}>
                                   <Button
@@ -172,34 +149,6 @@ export const BuildingEntranceHierarchy = ({
                     </div>
                   </div>
                 </div>
-
-                {/* Components */}
-                {/*
-                {entrance.components && entrance.components.length > 0 && (
-                  <div className="space-y-3">
-                    <h5 className="text-sm font-semibold text-foreground">
-                      Komponenter
-                    </h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {entrance.components.map((component) => (
-                        <ComponentCard
-                          key={component.id}
-                          title={component.name}
-                          description={component.description}
-                          type={component.type}
-                          location={entrance.name}
-                          specs={[
-                            {
-                              label: 'Status',
-                              value: component.status || 'Aktiv',
-                            },
-                          ]}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                */}
               </AccordionContent>
             </AccordionItem>
           )

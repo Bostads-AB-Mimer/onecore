@@ -2,7 +2,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingPartsTab } from './tabs/BuildingPartsTab'
-import { BuildingSpacesTab } from './tabs/BuildingSpacesTab'
 import { BuildingInstallationsTab } from './tabs/BuildingInstallationsTab'
 import { BuildingParkingTab } from './tabs/BuildingParkingTab'
 import { BuildingDocumentsTab } from './tabs/BuildingDocumentsTab'
@@ -20,14 +19,12 @@ import { Building, Residence, Staircase } from '@/services/types'
 interface BuildingDetailTabsProps {
   building: Building
   staircases: Staircase[]
-  residences: Residence[]
   basePath: string
 }
 
 export const BuildingDetailTabs = ({
   building,
   staircases,
-  residences,
   basePath,
 }: BuildingDetailTabsProps) => {
   const { features } = useFeatureToggles()

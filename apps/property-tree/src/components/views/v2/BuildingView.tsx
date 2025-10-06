@@ -21,7 +21,7 @@ const BuildingDetailPage = () => {
   const { data, isLoading, error } = useBuildingDetail(propertyId, buildingId)
 
   // Base path for apartment links
-  const basePath = `/properties/${propertyId}/${buildingId}`
+  const basePath = `/residences`
 
   useEffect(() => {
     if (error) {
@@ -76,7 +76,6 @@ const BuildingDetailPage = () => {
         <BuildingDetailTabs
           building={data.building}
           staircases={data?.staircases}
-          residences={data?.residences}
           basePath={basePath}
         />
       </div>
