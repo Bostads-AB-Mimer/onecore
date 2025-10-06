@@ -57,6 +57,7 @@ export const usePropertyFilters = () => {
           code: residence.code,
           name: residence.name,
           deleted: residence.deleted,
+          rentalId: residence.rentalId,
         })
       )
     }

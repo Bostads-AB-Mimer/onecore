@@ -5,7 +5,7 @@ import { ResponsiveTable } from '@/components/shared/v2/ResponsiveTable'
 
 export type SearchResult =
   | { type: 'property'; id: string; code: string; designation: string; municipality: string }
-  | { type: 'residence'; id: string; code: string; name: string | null; deleted: boolean }
+  | { type: 'residence'; id: string; code: string; name: string | null; deleted: boolean; rentalId: string | null }
   | { type: 'building'; id: string; code: string; name: string | null }
 
 interface SearchResultsTableProps {
@@ -13,6 +13,9 @@ interface SearchResultsTableProps {
 }
 
 export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
+  const hasResidences = results.some((r) => r.type === 'residence')
+  const hasProperties = results.some((r) => r.type === 'property')
+
   const getTypeDisplay = (type: string) => {
     switch (type) {
       case 'property':
@@ -70,8 +73,9 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'property':
         return result.municipality
       case 'building':
-      case 'residence':
         return result.code
+      case 'residence':
+        return result.rentalId || '-'
       default:
         return ''
     }
@@ -97,7 +101,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         },
         {
           key: 'info',
-          label: 'Information',
+          label: hasResidences && !hasProperties ? 'Hyres ID' : 'Information',
           render: (result) => getSecondaryInfo(result),
           hideOnMobile: true,
         },
