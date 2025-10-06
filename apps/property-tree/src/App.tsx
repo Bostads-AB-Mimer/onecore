@@ -16,6 +16,7 @@ import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
+import { DashboardView } from './components/views/DashboardView'
 import SidebarNavigation from './components/navigation/SidebarNavigation'
 import Page from './app/dashboard/Page'
 import {
@@ -91,7 +92,7 @@ function AppContent() {
           </header>
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Navigate to="/companies" replace />} />
+              <Route path="/" element={<DashboardView />} />
               <Route path="/page" element={<Page />} />
               <Route path="/companies/:companyId" element={<CompanyView />} />
               <Route path="/properties" element={<PropertyView />} />
