@@ -3,10 +3,9 @@ import { Building, Property } from '@/services/types'
 import {
   buildingService,
   propertyService,
-  residenceService,
   staircaseService,
 } from '@/services/api/core'
-import { Residence, Staircase } from '@/services/types'
+import { Staircase } from '@/services/types'
 
 export const useBuildingDetail = (propertyId: string, buildingId?: string) => {
   const buildingQuery = useQuery({
@@ -21,12 +20,6 @@ export const useBuildingDetail = (propertyId: string, buildingId?: string) => {
     enabled: !!propertyId,
   })
 
-  const residencesQuery = useQuery({
-    queryKey: ['residences', buildingQuery.data?.code],
-    queryFn: () => residenceService.getByBuildingCode(buildingQuery.data!.code),
-    enabled: !!buildingQuery.data?.code,
-  })
-
   const staircasesQuery = useQuery({
     queryKey: ['staircases', buildingQuery.data?.code],
     queryFn: () => staircaseService.getByBuildingCode(buildingQuery.data!.code),
@@ -36,25 +29,19 @@ export const useBuildingDetail = (propertyId: string, buildingId?: string) => {
   const isLoading =
     buildingQuery.isLoading ||
     staircasesQuery.isLoading ||
-    propertyQuery.isLoading ||
-    residencesQuery.isLoading
+    propertyQuery.isLoading
   const error =
-    buildingQuery.error ||
-    staircasesQuery.error ||
-    propertyQuery.error ||
-    residencesQuery.error
+    buildingQuery.error || staircasesQuery.error || propertyQuery.error
 
   const building = buildingQuery.data
   const property = propertyQuery.data
   const staircases = staircasesQuery.data
-  const residences = residencesQuery.data
 
   return {
     data: {
       building: building as Building,
       property: property as Property,
       staircases: staircases as Staircase[],
-      residences: residences as Residence[],
     },
     isLoading,
     error,

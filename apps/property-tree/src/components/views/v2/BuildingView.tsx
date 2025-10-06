@@ -69,7 +69,6 @@ const BuildingDetailPage = () => {
         <BuildingBasicInfo
           building={data.building}
           property={data?.property}
-          residenceCount={data?.residences?.length}
           address={data?.building?.name ?? '-'}
           objectNumber={data.building?.id}
         />
