@@ -11,6 +11,7 @@ import { AuthCallback } from './auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
 import { PropertyView } from './components/views/PropertyView'
+import SearchView from './components/views/SearchView'
 import { BuildingView } from './components/views/BuildingView'
 import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
@@ -94,7 +95,7 @@ function AppContent() {
               <Route path="/" element={<Navigate to="/companies" replace />} />
               <Route path="/page" element={<Page />} />
               <Route path="/companies/:companyId" element={<CompanyView />} />
-              <Route path="/properties" element={<PropertyView />} />
+              <Route path="/properties" element={<SearchView />} />
               <Route
                 path="/properties/:propertyId"
                 element={<PropertyView />}
