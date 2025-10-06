@@ -28,8 +28,20 @@ RUN pnpm deploy --filter @onecore/keys-portal --prod /out
 # ==========================
 # Run stage
 # ==========================
-FROM nginx:alpine AS runner
+FROM nginx:alpine
+
+RUN apk add --no-cache nodejs
+
+WORKDIR /app
 
 # Copy nginx configuration
-COPY --from=builder /out/dist /usr/share/nginx/html
 COPY --from=builder /out/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/apps/keys-portal/script ./script
+COPY --from=builder /out/dist /usr/share/nginx/html
+
+# Actual run config
+EXPOSE 80
+RUN chmod +x ./script/entrypoint.sh
+
+ENTRYPOINT ["script/entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
