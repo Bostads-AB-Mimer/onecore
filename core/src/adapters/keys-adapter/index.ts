@@ -170,6 +170,15 @@ export const KeysApi = {
     return r.ok ? ok(r.data) : r
   },
 
+  getByRentalObjectCode: async (
+    rentalObjectCode: string
+  ): Promise<AdapterResult<Key[], CommonErr>> => {
+    const r = await getJSON<{ content: Key[] }>(
+      `${BASE}/keys/by-rental-object/${rentalObjectCode}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   get: async (
     id: string
   ): Promise<AdapterResult<Key, 'not-found' | CommonErr>> => {

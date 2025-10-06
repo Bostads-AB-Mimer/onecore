@@ -286,6 +286,59 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /keys/by-rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get all keys by rental object code
+   *     description: Returns all keys associated with a specific rental object code without pagination.
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to filter keys by.
+   *     responses:
+   *       200:
+   *         description: List of keys for the rental object code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Key'
+   *       500:
+   *         description: An error occurred while fetching keys.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const rows = await db(TABLE)
+        .where({ rentalObjectCode: ctx.params.rentalObjectCode })
+        .orderBy('keyName', 'asc')
+
+      ctx.status = 200
+      ctx.body = { content: rows, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching keys by rental object code')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /keys/{id}:
    *   get:
    *     summary: Get key by ID
