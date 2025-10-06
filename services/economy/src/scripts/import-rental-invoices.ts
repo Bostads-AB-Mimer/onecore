@@ -20,16 +20,20 @@ const getInvoices = async () => {
 }
 
 const importRentalInvoicesScript = async () => {
-  const companyId = '001'
-  for (let month = 10; month >= 10; month--) {
-    logger.info({ month }, 'Processing month')
-    const result = await importInvoiceRows(
-      new Date(`2025-${month.toString().padStart(2, '0')}-01T00:00:00.000Z`),
-      new Date(
-        `2025-${(month + 2).toString().padStart(2, '0')}-31T23:59:59.000Z`
-      ),
-      companyId
+  const companyIds = ['001', '006']
+  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
+
+  const startDate = new Date(
+    Math.max(
+      new Date().setDate(new Date().getDate() - 90),
+      earliestStartDate.getTime()
     )
+  )
+  const endDate = new Date(new Date().setDate(startDate.getDate() + 180))
+
+  for (const companyId of companyIds) {
+    logger.info({ startDate, endDate }, 'Processing interval')
+    const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
     logger.info({ batchId }, 'Creating contact file for batch')
@@ -56,14 +60,14 @@ const importRentalInvoicesScript = async () => {
       ledgerCsv
     )
 
-    await uploadInvoiceFile(contactsFilename, contactsCsv)
+    /*await uploadInvoiceFile(contactsFilename, contactsCsv)
     logger.info({ contactsFilename }, 'Uploaded file')
     await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
     logger.info({ aggregatedFilename }, 'Uploaded file')
     await uploadInvoiceFile(ledgerFilename, ledgerCsv)
     logger.info({ ledgerFilename }, 'Uploaded file')
 
-    await markBatchAsProcessed(parseInt(batchId))
+    await markBatchAsProcessed(parseInt(batchId))*/
   }
 
   closeDatabases()

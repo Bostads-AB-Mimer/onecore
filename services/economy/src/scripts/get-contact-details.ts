@@ -10,15 +10,15 @@ import { getBatchContactsCsv } from '../services/invoice-service/service'
 
 const getContactDetails = async () => {
   const contactCodesFile = await fs.readFile(
-    path.join(config.rentalInvoices.importDirectory, 'contacts.txt')
+    path.join(config.rentalInvoices.importDirectory, 'contacts2.txt')
   )
   const contactCodes = contactCodesFile.toString().split('\n')
 
-  const batchId = await createBatch()
+  const batchId = await createBatch(0)
   const contacts = await getXpandContacts(contactCodes)
   await saveContacts(contacts, batchId)
 
-  const contactsFilename = `${batchId}-contacts-open.csv`
+  const contactsFilename = `${batchId}-001-contacts-open-ledger2.csv`
   const contactsCsv = await getBatchContactsCsv(batchId)
   await fs.writeFile(
     path.join(config.rentalInvoices.exportDirectory, contactsFilename),

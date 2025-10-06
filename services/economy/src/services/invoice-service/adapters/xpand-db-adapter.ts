@@ -579,8 +579,6 @@ export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
       ')'
   )
 
-  console.log('Total', total[0].invoicesTotal as number)
-
   return total[0].invoicesTotal as number
 }
 
