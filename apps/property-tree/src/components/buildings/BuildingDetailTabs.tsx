@@ -34,10 +34,6 @@ export const BuildingDetailTabs = ({
   const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
     useResidenceStaircaseLookupMap(staircases)
 
-  useEffect(() => {
-    console.log('isStaircasesLoading', isStaircasesLoading)
-  }, [isStaircasesLoading])
-
   if (isMobile) {
     return (
       <BuildingDetailTabsMobile
