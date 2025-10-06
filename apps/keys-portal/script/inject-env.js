@@ -27,7 +27,7 @@ export const injectEnv = (html, env) =>
   ENV_VARS.reduce(
     (html, vbl) =>
        env[vbl] !== undefined ? html.replace(
-        new RegExp(`(${vbl}\\s*:\\s*')([^']*)(')`),
+        new RegExp(`(${vbl}\s*:\s*')([^']*)(')`),
         `$1${env[vbl]}$3`
        ): html,
     html
