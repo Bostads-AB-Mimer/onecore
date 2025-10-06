@@ -81,6 +81,9 @@ const importBalanceCorrectionsFromCsv = (
   })
 }
 
+// Export for testing
+export { importInvoicesFromCsv, importBalanceCorrectionsFromCsv }
+
 export type EnrichResponse =
   | {
       ok: true
@@ -324,6 +327,9 @@ const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
     ),
   }))
 }
+
+// Export for testing
+export { addRoundoffToFirstRow, aggregateRows }
 
 const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
   return {

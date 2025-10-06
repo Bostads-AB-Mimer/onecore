@@ -121,6 +121,18 @@ const createBufferForSergel = (contents: string) => {
   return Buffer.from(contents.replaceAll('\n', '\r\n'), 'latin1')
 }
 
+// Export for testing
+export {
+  getDebtCollectionFiles,
+  readFile,
+  markCsvFileAsCompleted,
+  getExportFilePath,
+  createBufferForSergel,
+  importSftpConfig,
+  exportSftpConfig,
+}
+export type { DebtCollectionFile }
+
 const enrichers: Record<
   DebtCollectionFile['type'],
   (s: string) => Promise<EnrichResponse>
@@ -198,4 +210,10 @@ const processDebtCollectionFiles = async () => {
   }
 }
 
-processDebtCollectionFiles()
+// Export for testing
+export { processDebtCollectionFiles }
+
+// Only run the main process if this file is executed directly
+if (require.main === module) {
+  processDebtCollectionFiles()
+}
