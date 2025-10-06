@@ -3,6 +3,7 @@ import { MenuItem, Select } from '@mui/material'
 import { memo, useCallback } from 'react'
 
 import { RentalObjectWithListingHistory } from '../../../types'
+import { printVacantFrom } from '../../../common/formattingUtils'
 
 // Memoized Select component to prevent unnecessary re-renders
 const RentalRuleSelect = memo(
@@ -43,9 +44,9 @@ const numberFormatter = new Intl.NumberFormat('sv-SE', {
   currency: 'SEK',
 })
 
-export const getParkingSpaceColumns = (): Array<
-  GridColDef<RentalObjectWithListingHistory>
-> => {
+export const getParkingSpaceColumns = (
+  dateFormatter: Intl.DateTimeFormat
+): Array<GridColDef<RentalObjectWithListingHistory>> => {
   return [
     {
       field: 'address',
@@ -78,6 +79,13 @@ export const getParkingSpaceColumns = (): Array<
       flex: 1,
       headerName: 'Hyra',
       valueFormatter: ({ value }) => `${numberFormatter.format(value)}/mån`,
+    },
+    {
+      field: 'vacantFrom',
+      headerName: 'Ledig FR.O.M',
+      valueGetter: (params) => params.row.vacantFrom ?? '',
+      valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
+      flex: 0.6,
     },
     {
       field: 'previousListingsCount',

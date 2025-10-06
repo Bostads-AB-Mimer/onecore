@@ -23,6 +23,8 @@ import {
   getRentalRuleActionColumn,
 } from './utils/columnUtils'
 
+const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
+
 const ParkingSpaces = memo(
   ({
     columns,
@@ -79,7 +81,7 @@ export const PublishParkingSpacesListingsPage = () => {
   // Memoize columns to prevent unnecessary re-renders
   const columns = useMemo(
     () => [
-      ...getParkingSpaceColumns(),
+      ...getParkingSpaceColumns(dateFormatter),
       getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
     ],
     [rentalRules, handleRentalRuleChange]
