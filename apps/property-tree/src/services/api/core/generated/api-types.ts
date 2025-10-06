@@ -2133,6 +2133,84 @@ export interface paths {
       };
     };
   };
+  "/buildings": {
+    /**
+     * Get all buildings for a specific property
+     * @description Retrieves all buildings associated with a given property code.
+     * Returns detailed information about each building including its code, name,
+     * construction details, and associated property information.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The code of the property. */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the buildings. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/buildings/{id}": {
+    /**
+     * Get detailed information about a specific building
+     * @description Retrieves comprehensive information about a building using its unique building id.
+     * Returns details including construction year, renovation history, insurance information,
+     * and associated property data.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique id of the building */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved building information */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"];
+            };
+          };
+        };
+        /** @description Building not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Building not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/buildings/by-building-code/{buildingCode}": {
     /**
      * Get building by building code
@@ -2918,26 +2996,37 @@ export interface components {
     Building: {
       id: string;
       code: string;
-      name: string;
+      name: string | null;
       buildingType: {
-        id: string;
-        code: string;
-        name: string;
+        id: string | null;
+        code: string | null;
+        name: string | null;
       };
       construction: {
-        constructionYear: number;
-        renovationYear: number;
+        constructionYear: number | null;
+        renovationYear: number | null;
         valueYear: number | null;
       };
       features: {
-        heating: string | null;
-        fireRating: string | null;
+        heating?: string | null;
+        fireRating?: string | null;
       };
       insurance: {
         class: string | null;
         value: number | null;
       };
+      quantityValues?: ({
+          id: string;
+          value: number;
+          name: string;
+          unitId: string | null;
+        })[];
       deleted: boolean;
+      property?: ({
+        name: string | null;
+        code: string;
+        id: string;
+      }) | null;
     };
     Company: {
       id: string;

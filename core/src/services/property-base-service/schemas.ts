@@ -3,26 +3,39 @@ import { z } from 'zod'
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
   buildingType: z.object({
-    id: z.string(),
-    code: z.string(),
-    name: z.string(),
+    id: z.string().nullable(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
   }),
   construction: z.object({
-    constructionYear: z.number(),
-    renovationYear: z.number(),
+    constructionYear: z.number().nullable(),
+    renovationYear: z.number().nullable(),
     valueYear: z.number().nullable(),
   }),
   features: z.object({
-    heating: z.string().nullable(),
-    fireRating: z.string().nullable(),
+    heating: z.string().nullable().optional(),
+    fireRating: z.string().nullable().optional(),
   }),
   insurance: z.object({
     class: z.string().nullable(),
     value: z.number().nullable(),
   }),
+  quantityValues: z
+    .array(
+      z.object({
+        id: z.string(),
+        value: z.number(),
+        name: z.string(),
+        unitId: z.string().nullable(),
+      })
+    )
+    .optional(),
   deleted: z.boolean(),
+  property: z
+    .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
+    .nullish(),
 })
 
 export const CompanySchema = z.object({
@@ -400,6 +413,10 @@ export const FacilityDetailsSchema = z.object({
 
 export const GetRoomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+})
+
+export const GetBuildingsQueryParamsSchema = z.object({
+  propertyCode: z.string().min(1, { message: 'propertyCode is required.' }),
 })
 
 export const GetResidencesQueryParamsSchema = z.object({
