@@ -690,6 +690,20 @@ export const routes = (router: KoaRouter) => {
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *       - in: query
    *         name: q
    *         required: false
    *         schema:
@@ -739,16 +753,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *     responses:
    *       200:
-   *         description: Successfully retrieved search results
+   *         description: Successfully retrieved paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Key'
+   *               $ref: '#/components/schemas/PaginatedKeysResponse'
    *       400:
    *         description: Bad request
    *         content:
@@ -782,7 +791,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
@@ -1166,6 +1175,20 @@ export const routes = (router: KoaRouter) => {
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *       - in: query
    *         name: q
    *         required: false
    *         schema:
@@ -1236,16 +1259,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *     responses:
    *       200:
-   *         description: Successfully retrieved search results
+   *         description: Successfully retrieved paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeySystem'
+   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
    *       400:
    *         description: Bad request. Invalid parameters or field names
    *         content:
@@ -1279,7 +1297,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
