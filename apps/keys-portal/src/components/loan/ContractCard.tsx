@@ -99,9 +99,9 @@ export function ContractCard({
     async function loadKeys() {
       setKeysLoading(true)
       try {
-        const list = await keyService.searchKeys({
-          rentalObjectCode: lease.rentalPropertyId,
-        })
+        const list = await keyService.getKeysByRentalObjectCode(
+          lease.rentalPropertyId
+        )
         if (!cancelled) setKeys(list)
       } finally {
         if (!cancelled) setKeysLoading(false)
