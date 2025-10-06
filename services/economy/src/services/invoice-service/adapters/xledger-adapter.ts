@@ -159,7 +159,7 @@ const getContact = async (contactCode: string) => {
     logger.error(result.data.errors[0], 'Error querying Xledger')
   }
 
-  return result.data.customers.edges?.[0]?.node
+  return result.data.customers?.edges?.[0]?.node ?? null
 }
 
 const addContact = async (contact: any) => {
@@ -228,7 +228,7 @@ const getContactDbId = async (contactCode: string): Promise<string | null> => {
 
   const result = await makeXledgerRequest(query)
 
-  return result.data.customers.edges?.[0].node.dbId
+  return result.data.customers?.edges?.[0].node.dbId ?? null
 }
 
 const invoiceNodeFragment = `
@@ -275,7 +275,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
   }
 
   const result = await makeXledgerRequest(query)
-  return transformToInvoice(result.data.arTransactions.edges ?? [])
+  return transformToInvoice(result.data.arTransactions?.edges ?? [])
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
@@ -299,7 +299,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
   try {
     const result = await makeXledgerRequest(q)
 
-    if (!result.data.arTransactions.edges.length) {
+    if (!result.data.arTransactions?.edges) {
       return null
     }
 
@@ -350,7 +350,7 @@ const getAccountDbId = async (account: string) => {
 
     const result = await makeXledgerRequest(accountQuery)
 
-    result.data.accounts.edges.forEach((edge: any) => {
+    result.data.accounts?.edges.forEach((edge: any) => {
       accountJobIds[edge.node.code] = edge.node.dbId
     })
 
