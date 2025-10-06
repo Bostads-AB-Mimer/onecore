@@ -186,7 +186,6 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         onClick={() => setOpen((prev) => !prev)}
         sx={{
           cursor: 'pointer',
-          backgroundColor: invoice.type === 'Other' ? '#f5f5f5' : 'inherit',
         }}
         role="button"
         tabIndex={0}
@@ -220,29 +219,27 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
-                        Hyresartikel
-                      </TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>
                         Beskrivning
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
-                        Utskriftsgrupp
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {invoice.invoiceRows?.map((row, index) => (
+                    {invoice.invoiceRows.map((row, index) => (
                       <TableRow key={index}>
-                        <TableCell>{row.amount}</TableCell>
-                        <TableCell>{row.vat}</TableCell>
-                        <TableCell>{row.totalAmount}</TableCell>
-                        <TableCell>{row.rentArticle}</TableCell>
                         <TableCell>{row.invoiceRowText}</TableCell>
-                        <TableCell>{row.printGroup}</TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.amount}
+                        </TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.vat}
+                        </TableCell>
+                        <TableCell>
+                          {row.rowType === 3 ? null : row.totalAmount}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

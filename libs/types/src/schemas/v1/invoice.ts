@@ -21,4 +21,5 @@ export const InvoiceRowSchema = z.object({
   totalAmount: z.number(),
   vat: z.number(),
   printGroup: z.string(),
+  rowType: z.number(),
 })
