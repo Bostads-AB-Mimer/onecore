@@ -9,16 +9,16 @@ interface UsePublishParkingSpacesResult {
     rentalRules: Record<string, 'SCORED' | 'NON_SCORED'>
   ) => void
   isPending: boolean
-  message: { text: string; severity: 'success' | 'error' } | null
+  message: { text: string; severity: 'success' | 'error' | 'info' } | null
   setMessage: (
-    message: { text: string; severity: 'success' | 'error' } | null
+    message: { text: string; severity: 'success' | 'error' | 'info' } | null
   ) => void
 }
 
 export const usePublishParkingSpaces = (): UsePublishParkingSpacesResult => {
   const [message, setMessage] = useState<{
     text: string
-    severity: 'success' | 'error'
+    severity: 'success' | 'error' | 'info'
   } | null>(null)
 
   const { mutate: createMultipleListings, isPending } =
@@ -76,7 +76,7 @@ export const usePublishParkingSpaces = (): UsePublishParkingSpacesResult => {
     if (ids.length > 200) {
       setMessage({
         text: `Publicerar ${ids.length} parkeringsplatser i batchar om ${BATCH_SIZE}. Detta kan ta en stund...`,
-        severity: 'success',
+        severity: 'info',
       })
     }
 
