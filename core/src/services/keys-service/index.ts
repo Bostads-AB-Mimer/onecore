@@ -7,6 +7,7 @@ import {
   KeysApi,
   KeySystemsApi,
   LogsApi,
+  ReceiptsApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
@@ -1967,5 +1968,348 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
+  })
+
+  // ==================== RECEIPTS ROUTES ====================
+
+  /**
+   * @swagger
+   * /receipts:
+   *   post:
+   *     summary: Create a receipt
+   *     description: Create a new receipt record for a key loan
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - keyLoanId
+   *               - receiptType
+   *               - type
+   *               - leaseId
+   *             properties:
+   *               keyLoanId:
+   *                 type: string
+   *                 format: uuid
+   *               receiptType:
+   *                 type: string
+   *                 enum: [LOAN, RETURN]
+   *               type:
+   *                 type: string
+   *                 enum: [DIGITAL, PHYSICAL]
+   *               signed:
+   *                 type: boolean
+   *                 default: false
+   *               leaseId:
+   *                 type: string
+   *               fileId:
+   *                 type: string
+   *                 nullable: true
+   *     responses:
+   *       201:
+   *         description: Receipt created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       format: uuid
+   *                     keyLoanId:
+   *                       type: string
+   *                       format: uuid
+   *                     receiptType:
+   *                       type: string
+   *                       enum: [LOAN, RETURN]
+   *                     type:
+   *                       type: string
+   *                       enum: [DIGITAL, PHYSICAL]
+   *                     signed:
+   *                       type: boolean
+   *                     leaseId:
+   *                       type: string
+   *                     fileId:
+   *                       type: string
+   *                       nullable: true
+   *                     createdAt:
+   *                       type: string
+   *                       format: date-time
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       409:
+   *         description: Receipt already exists for this keyLoanId
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/receipts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body
+
+    const result = await ReceiptsApi.create(payload)
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error: 'Receipt already exists for this keyLoanId',
+          ...metadata,
+        }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error creating receipt')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 201
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /receipts/by-lease/{leaseId}:
+   *   get:
+   *     summary: Get receipts by lease ID
+   *     description: Retrieve all receipts associated with a specific lease
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The lease ID to filter receipts by
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved receipts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         format: uuid
+   *                       keyLoanId:
+   *                         type: string
+   *                         format: uuid
+   *                       receiptType:
+   *                         type: string
+   *                         enum: [LOAN, RETURN]
+   *                       type:
+   *                         type: string
+   *                         enum: [DIGITAL, PHYSICAL]
+   *                       signed:
+   *                         type: boolean
+   *                       leaseId:
+   *                         type: string
+   *                       fileId:
+   *                         type: string
+   *                         nullable: true
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/receipts/by-lease/:leaseId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await ReceiptsApi.getByLease(ctx.params.leaseId)
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching receipts by lease'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /receipts/by-key-loan/{keyLoanId}:
+   *   get:
+   *     summary: Get receipt by key loan ID
+   *     description: Retrieve a receipt associated with a specific key loan
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: keyLoanId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The key loan ID to filter receipts by
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved receipt
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       format: uuid
+   *                     keyLoanId:
+   *                       type: string
+   *                       format: uuid
+   *                     receiptType:
+   *                       type: string
+   *                       enum: [LOAN, RETURN]
+   *                     type:
+   *                       type: string
+   *                       enum: [DIGITAL, PHYSICAL]
+   *                     signed:
+   *                       type: boolean
+   *                     leaseId:
+   *                       type: string
+   *                     fileId:
+   *                       type: string
+   *                       nullable: true
+   *                     createdAt:
+   *                       type: string
+   *                       format: date-time
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/receipts/by-key-loan/:keyLoanId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await ReceiptsApi.getByKeyLoan(ctx.params.keyLoanId)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching receipt by key loan'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   delete:
+   *     summary: Delete a receipt
+   *     description: Delete a receipt by ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt to delete
+   *     responses:
+   *       200:
+   *         description: Receipt deleted successfully
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('/receipts/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await ReceiptsApi.remove(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error deleting receipt')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata }
   })
 }

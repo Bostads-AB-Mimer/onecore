@@ -158,3 +158,28 @@ export const CreateLogRequestSchema = z.object({
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
 })
+
+// Receipt schemas
+
+export const ReceiptTypeSchema = z.enum(['LOAN', 'RETURN'])
+export const ReceiptFormatSchema = z.enum(['DIGITAL', 'PHYSICAL'])
+
+export const ReceiptSchema = z.object({
+  id: z.string().uuid(),
+  keyLoanId: z.string().uuid(),
+  receiptType: ReceiptTypeSchema,
+  type: ReceiptFormatSchema,
+  signed: z.boolean(),
+  leaseId: z.string(),
+  fileId: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
+})
+
+export const CreateReceiptRequestSchema = z.object({
+  keyLoanId: z.string().uuid(),
+  receiptType: ReceiptTypeSchema,
+  type: ReceiptFormatSchema,
+  signed: z.boolean().optional(),
+  leaseId: z.string().min(1),
+  fileId: z.string().optional(),
+})
