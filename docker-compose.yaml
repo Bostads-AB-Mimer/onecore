@@ -2,6 +2,8 @@ services:
   sql:
     image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/azure-sql-edge}
     container_name: onecore-sql
+    platform: linux/amd64
+    user: root
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=s3cr3t_p455w0rd
@@ -16,7 +18,7 @@ services:
     container_name: onecore-elasticsearch
     environment:
       - xpack.security.enabled=false
-      - 'discovery.type=single-node'
+      - "discovery.type=single-node"
     image: docker.elastic.co/elasticsearch/elasticsearch:8.4.1
     networks:
       - onecore
