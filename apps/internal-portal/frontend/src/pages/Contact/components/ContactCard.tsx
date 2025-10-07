@@ -199,7 +199,11 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
       >
         <TableCell>{invoice.invoiceId}</TableCell>
         <TableCell>{yyyymmdd(new Date(invoice.invoiceDate))}</TableCell>
-        <TableCell>{yyyymmdd(new Date(invoice.expirationDate))}</TableCell>
+        <TableCell>
+          {invoice.expirationDate
+            ? yyyymmdd(new Date(invoice.expirationDate))
+            : '-'}
+        </TableCell>
         <TableCell>{invoice.amount}</TableCell>
         <TableCell>{invoice.reference}</TableCell>
         <TableCell>
