@@ -213,6 +213,7 @@ interface Invoice {
   paidAmount?: number
   daysSinceLastDebitDate?: number
   description?: string
+  sentToDebtCollection?: Date
   type: 'Regular' | 'Other'
 }
 
