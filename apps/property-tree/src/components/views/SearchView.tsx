@@ -1,6 +1,15 @@
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/v2/Card'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/v2/Collapsible'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/v2/Card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/v2/Collapsible'
 import { Button } from '@/components/ui/v2/Button'
 import { Badge } from '@/components/ui/v2/Badge'
 import { ChevronDown } from 'lucide-react'

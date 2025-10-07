@@ -4,8 +4,21 @@ import { Button } from '@/components/ui/v2/Button'
 import { ResponsiveTable } from '@/components/shared/v2/ResponsiveTable'
 
 export type SearchResult =
-  | { type: 'property'; id: string; code: string; designation: string; municipality: string }
-  | { type: 'residence'; id: string; code: string; name: string | null; deleted: boolean; rentalId: string | null }
+  | {
+      type: 'property'
+      id: string
+      code: string
+      designation: string
+      municipality: string
+    }
+  | {
+      type: 'residence'
+      id: string
+      code: string
+      name: string | null
+      deleted: boolean
+      rentalId: string | null
+    }
   | { type: 'building'; id: string; code: string; name: string | null }
 
 interface SearchResultsTableProps {
@@ -88,7 +101,9 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         {
           key: 'name',
           label: 'Namn',
-          render: (result) => <span className="font-medium">{getName(result)}</span>,
+          render: (result) => (
+            <span className="font-medium">{getName(result)}</span>
+          ),
         },
         {
           key: 'type',

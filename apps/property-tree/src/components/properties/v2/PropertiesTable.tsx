@@ -51,7 +51,9 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-medium text-sm">{property.designation}</h3>
-          <p className="text-xs text-muted-foreground">{property.municipality}</p>
+          <p className="text-xs text-muted-foreground">
+            {property.municipality}
+          </p>
         </div>
         <Badge variant="outline" className="bg-slate-100 text-xs">
           {property.code}
