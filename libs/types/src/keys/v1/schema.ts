@@ -83,6 +83,12 @@ export const LogSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
+export const KeyNoteSchema = z.object({
+  id: z.string().uuid(),
+  rentalObjectCode: z.string(),
+  description: z.string(),
+})
+
 // Request schemas for API endpoints
 export const CreateKeyRequestSchema = z.object({
   keyName: z.string(),
@@ -182,4 +188,16 @@ export const CreateReceiptRequestSchema = z.object({
   signed: z.boolean().optional(),
   leaseId: z.string().min(1),
   fileId: z.string().optional(),
+})
+
+// Request schemas for key notes
+
+export const CreateKeyNoteRequestSchema = z.object({
+  rentalObjectCode: z.string(),
+  description: z.string(),
+})
+
+export const UpdateKeyNoteRequestSchema = z.object({
+  rentalObjectCode: z.string().optional(),
+  description: z.string().optional(),
 })
