@@ -56,6 +56,22 @@ export const KeySystemTypeLabels = {
 
 export type KeySystemType = keyof typeof KeySystemTypeLabels
 
+// Helper to get filter options for key system types
+export function getKeySystemTypeFilterOptions() {
+  return Object.entries(KeySystemTypeLabels).map(([value, label]) => ({
+    value,
+    label,
+  }))
+}
+
+// Helper to get filter options for key system status
+export function getKeySystemStatusFilterOptions() {
+  return [
+    { label: 'Aktiv', value: 'true' },
+    { label: 'Inaktiv', value: 'false' },
+  ]
+}
+
 // Custom types that aren't in the API (if needed)
 export interface KeyLoanWithDetails extends KeyLoan {
   // additional computed properties
