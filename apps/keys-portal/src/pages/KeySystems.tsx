@@ -79,7 +79,8 @@ export default function KeySystems() {
           dateFilters.push(`<=${installationDateBefore}`)
         }
         if (dateFilters.length > 0) {
-          searchParams.installationDate = dateFilters.length === 1 ? dateFilters[0] : dateFilters
+          searchParams.installationDate =
+            dateFilters.length === 1 ? dateFilters[0] : dateFilters
         }
 
         // Use search endpoint if filtering/searching, otherwise use getAllKeySystems
