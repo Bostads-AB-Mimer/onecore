@@ -17,8 +17,6 @@ export default function KeySystems() {
     new Map()
   )
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
   // Column filters (for table header dropdowns)
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
     null
@@ -62,24 +60,12 @@ export default function KeySystems() {
           searchParams.fields = 'systemCode,name,manufacturer'
         }
 
-        // Add type filter from toolbar if not 'all'
-        if (selectedType !== 'all') {
-          searchParams.type = selectedType
-        }
-
-        // Add type filter from column header (overrides toolbar filter)
+        // Add type filter from column header
         if (selectedTypeFilter) {
           searchParams.type = selectedTypeFilter
         }
 
-        // Add status filter from toolbar if not 'all'
-        if (selectedStatus === 'active') {
-          searchParams.isActive = 'true'
-        } else if (selectedStatus === 'inactive') {
-          searchParams.isActive = 'false'
-        }
-
-        // Add status filter from column header (overrides toolbar filter)
+        // Add status filter from column header
         if (selectedStatusFilter) {
           searchParams.isActive = selectedStatusFilter
         }
@@ -147,8 +133,6 @@ export default function KeySystems() {
       toast,
       pagination,
       searchQuery,
-      selectedType,
-      selectedStatus,
       selectedTypeFilter,
       selectedStatusFilter,
       installationDateAfter,
@@ -161,8 +145,6 @@ export default function KeySystems() {
     pagination.handlePageChange(1)
   }, [
     searchQuery,
-    selectedType,
-    selectedStatus,
     selectedTypeFilter,
     selectedStatusFilter,
     installationDateAfter,
@@ -170,8 +152,14 @@ export default function KeySystems() {
   ])
 
   const handleAddNew = () => {
-    setEditingKeySystem(null)
-    setShowAddForm(true)
+    if (showAddForm && !editingKeySystem) {
+      // If form is already open for adding new (not editing), close it
+      setShowAddForm(false)
+    } else {
+      // Otherwise open form for adding new
+      setEditingKeySystem(null)
+      setShowAddForm(true)
+    }
   }
 
   const handleEdit = (KeySystem: KeySystem) => {
@@ -292,10 +280,6 @@ export default function KeySystems() {
       <KeySystemsToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
         onAddNew={handleAddNew}
       />
 
