@@ -412,3 +412,117 @@ export const LogsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 }
+
+/**
+ * ---- RECEIPTS ---------------------------------------------------------------
+ * Create, Read, Delete operations for receipts
+ */
+
+export const ReceiptsApi = {
+  create: async (payload: {
+    keyLoanId: string
+    receiptType: 'LOAN' | 'RETURN'
+    type: 'DIGITAL' | 'PHYSICAL'
+    signed?: boolean
+    leaseId: string
+    fileId?: string
+  }): Promise<
+    AdapterResult<
+      {
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      },
+      'bad-request' | 'conflict' | CommonErr
+    >
+  > => {
+    const r = await postJSON<{
+      content: {
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      }
+    }>(`${BASE}/receipts`, payload)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByLease: async (
+    leaseId: string
+  ): Promise<
+    AdapterResult<
+      Array<{
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      }>,
+      CommonErr
+    >
+  > => {
+    const r = await getJSON<{
+      content: Array<{
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      }>
+    }>(`${BASE}/receipts/by-lease/${leaseId}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByKeyLoan: async (
+    keyLoanId: string
+  ): Promise<
+    AdapterResult<
+      {
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      },
+      'not-found' | CommonErr
+    >
+  > => {
+    const r = await getJSON<{
+      content: {
+        id: string
+        keyLoanId: string
+        receiptType: 'LOAN' | 'RETURN'
+        type: 'DIGITAL' | 'PHYSICAL'
+        signed: boolean
+        leaseId: string
+        fileId: string | null
+        createdAt: string
+      }
+    }>(`${BASE}/receipts/by-key-loan/${keyLoanId}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+    return deleteJSON(`${BASE}/receipts/${id}`)
+  },
+}

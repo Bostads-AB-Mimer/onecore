@@ -15,6 +15,11 @@ import {
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateLogRequestSchema,
+  // Receipt schemas
+  ReceiptTypeSchema,
+  ReceiptFormatSchema,
+  ReceiptSchema,
+  CreateReceiptRequestSchema,
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
@@ -48,6 +53,12 @@ export type UpdateKeyLoanRequest = z.infer<typeof UpdateKeyLoanRequestSchema>
 
 // Request types for logs
 export type CreateLogRequest = z.infer<typeof CreateLogRequestSchema>
+
+// Receipt types
+export type ReceiptType = z.infer<typeof ReceiptTypeSchema>
+export type ReceiptFormat = z.infer<typeof ReceiptFormatSchema>
+export type Receipt = z.infer<typeof ReceiptSchema>
+export type CreateReceiptRequest = z.infer<typeof CreateReceiptRequestSchema>
 
 // Pagination types
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
