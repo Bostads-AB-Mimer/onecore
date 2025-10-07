@@ -9,6 +9,7 @@ type Key = keys.v1.Key
 type KeyLoan = keys.v1.KeyLoan
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
+type KeyNote = keys.v1.KeyNote
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 
 const BASE = Config.keysService.url
@@ -524,5 +525,47 @@ export const ReceiptsApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/receipts/${id}`)
+  },
+}
+
+/**
+ * ---- KEY NOTES --------------------------------------------------------------
+ */
+
+export const KeyNotesApi = {
+  getByRentalObjectCode: async (
+    rentalObjectCode: string
+  ): Promise<AdapterResult<KeyNote[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyNote[] }>(
+      `${BASE}/key-notes/by-rental-object/${rentalObjectCode}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  get: async (
+    id: string
+  ): Promise<AdapterResult<KeyNote, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: KeyNote }>(`${BASE}/key-notes/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  create: async (
+    payload: Partial<KeyNote>
+  ): Promise<AdapterResult<KeyNote, 'bad-request' | CommonErr>> => {
+    const r = await postJSON<{ content: KeyNote }>(`${BASE}/key-notes`, payload)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  update: async (
+    id: string,
+    payload: Partial<KeyNote>
+  ): Promise<
+    AdapterResult<KeyNote, 'not-found' | 'bad-request' | CommonErr>
+  > => {
+    const r = await patchJSON<{ content: KeyNote }>(
+      `${BASE}/key-notes/${id}`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
   },
 }
