@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { usePropertyDetail } from '@/components/hooks/usePropertyDetail'
 //import { useToast } from '@/hooks/use-toast'
 import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
@@ -10,6 +10,8 @@ import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const PropertyView = () => {
   const { propertyId } = useParams<{ propertyId: string }>()
+  const { state } = useLocation()
+  const companyId = state?.companyId
 
   //const { property } = useParams()
   //const { toast } = useToast()
@@ -69,7 +71,13 @@ const PropertyView = () => {
 
     return (
       <div className="py-4 space-y-6">
-        <PropertyBreadcrumb propertyDetail={propertyDetail} />
+        <PropertyBreadcrumb
+          property={{
+            id: propertyDetail.id,
+            name: propertyDetail.designation,
+          }}
+          companyId={companyId}
+        />
         <PropertyHeader propertyDetail={propertyDetail} />
 
         {/* Grundläggande information always visible above tabs */}

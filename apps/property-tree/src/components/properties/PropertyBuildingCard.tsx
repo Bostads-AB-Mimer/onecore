@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/Button'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 interface PropertyBuildingCardProps {
   building: Building
@@ -16,10 +16,12 @@ export const PropertyBuildingCard = ({
   building,
 }: PropertyBuildingCardProps) => {
   const navigate = useNavigate()
+  const { state } = useLocation()
+  const companyId = state?.companyId
 
   const handleOpenBuilding = () => {
     // Create a URL-friendly building name
-    navigate(`/buildings/${building.id}`)
+    navigate(`/buildings/${building.id}`, { state: { companyId } })
   }
 
   return (

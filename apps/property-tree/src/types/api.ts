@@ -1,3 +1,5 @@
+import { Staircase } from '@/services/types'
+
 // residence = apartment
 export interface Residence {
   id: string
@@ -182,23 +184,6 @@ export interface BuildingSpace {
   components: SpaceComponent[]
 }
 
-/*
-export interface Building {
-  id: string
-  name: string
-  type: string
-  constructionYear: number
-  renovationYear?: number
-  area: number
-  floors: number
-  units: number
-  tenants?: number
-  apartments?: Residence[]
-  entrances?: Entrance[]
-  spaces?: BuildingSpace[]
-}
-*/
-
 export interface PropertyValue {
   value: number
   name: string
@@ -300,7 +285,7 @@ export interface Building {
   features: BuildingFeatures
   insurance: BuildingInsurance
   // These are just to make the lovable code happy
-  entrances: Entrance[]
+  staircases: Staircase[]
   apartments: Residence[]
   type: string | null
   area: number | null
