@@ -345,7 +345,10 @@ export const addAccountInformation = async (
           row.totalAccount = TOTAL_ACCOUNT
         }
       } catch (error: any) {
-        console.log(row)
+        logger.error(
+          { error, row },
+          'Could not add account information for invoice data row'
+        )
       }
     }
   }

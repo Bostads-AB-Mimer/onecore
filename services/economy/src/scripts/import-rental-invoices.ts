@@ -40,10 +40,13 @@ const importRentalInvoicesScript = async () => {
     logger.info({ batchId }, 'Creating aggregate file for batch')
     const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
     const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
-    await fs.writeFile(
-      `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
-      aggregatedCsv
-    )
+
+    if (aggregatedCsv) {
+      await fs.writeFile(
+        `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
+        aggregatedCsv
+      )
+    }
 
     logger.info({ batchId }, 'Creating ledger file for batch')
     const ledgerFilename = `${batchId}-${companyId}-ledger.gl.csv`
@@ -55,8 +58,10 @@ const importRentalInvoicesScript = async () => {
 
     await uploadInvoiceFile(contactsFilename, contactsCsv)
     logger.info({ contactsFilename }, 'Uploaded file')
-    await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-    logger.info({ aggregatedFilename }, 'Uploaded file')
+    if (aggregatedCsv) {
+      await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+      logger.info({ aggregatedFilename }, 'Uploaded file')
+    }
     await uploadInvoiceFile(ledgerFilename, ledgerCsv)
     logger.info({ ledgerFilename }, 'Uploaded file')
 

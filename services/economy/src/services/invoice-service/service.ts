@@ -531,7 +531,11 @@ export const createAggregateRows = async (batchId: string) => {
   const accountTotals = calculateAccountTotals(transactionRows)
   const batchAccountTotals = await getBatchAccountTotals(batchId)
 
-  console.log(accountTotals, batchAccountTotals)
+  try {
+    verifyAccountTotals(accountTotals, batchAccountTotals)
+  } catch {
+    return null
+  }
 
   return transactionRows
 }
@@ -593,19 +597,21 @@ export const getBatchContactsCsv = async (batchId: string) => {
 
 export const getBatchAggregatedRowsCsv = async (batchId: string) => {
   const transactionRows = await createAggregateRows(batchId)
-  const csvContent: string[] = []
+  if (transactionRows) {
+    const csvContent: string[] = []
 
-  csvContent.push(
-    'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
-  )
-
-  transactionRows.forEach((transactionRow) => {
     csvContent.push(
-      `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1 || ''};${transactionRow.posting2 || ''};${transactionRow.posting3 || ''};${transactionRow.posting4 || ''};${transactionRow.posting5 || ''};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
+      'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
     )
-  })
 
-  return csvContent.join('\n')
+    transactionRows.forEach((transactionRow) => {
+      csvContent.push(
+        `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1 || ''};${transactionRow.posting2 || ''};${transactionRow.posting3 || ''};${transactionRow.posting4 || ''};${transactionRow.posting5 || ''};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
+      )
+    })
+
+    return csvContent.join('\n')
+  }
 }
 
 export const getBatchLedgerRowsCsv = async (batchId: string) => {
@@ -739,7 +745,6 @@ export const importInvoiceRows = async (
     const batchId = await createBatch(batchTotal)
     logger.info(`Created new batch: ${batchId}`)
 
-    let chunkNum = 0
     let chunkStart = 0
 
     while (chunkStart < invoiceDataRows.length) {
@@ -774,11 +779,7 @@ export const importInvoiceRows = async (
         batchId
       )
       const contacts = await getXpandContacts(contactCodes.contacts)
-      const result = await saveContacts(contacts, batchId)
-      /*if (contactCodes.errors && contactCodes.errors.length > 0) {
-        errors.push(contactCodes.err  ors)
-      }*/
-      chunkNum++
+      await saveContacts(contacts, batchId)
     }
 
     await verifyImport(invoicesToImport, batchId, batchTotal)
@@ -811,4 +812,48 @@ const calculateAccountTotals = (aggregateRows: InvoiceDataRow[]) => {
   })
 
   return accountTotals
+}
+
+const verifyAccountTotals = (
+  accountTotals: Record<string, number>,
+  batchAccountTotals: Record<string, number>
+) => {
+  let debtAccountTotal = 0
+
+  Object.keys(accountTotals).forEach((account) => {
+    if (account.startsWith('29')) {
+      debtAccountTotal += accountTotals[account]
+    } else {
+      if (
+        Math.abs(accountTotals[account] + batchAccountTotals[account]) > 0.01
+      ) {
+        logger.error(
+          {
+            account,
+            difference: accountTotals[account] + batchAccountTotals[account],
+          },
+          'Account amount not matching'
+        )
+        throw new Error('Account amount not matching: ' + account)
+      }
+    }
+  })
+
+  const batchTotal = Object.keys(batchAccountTotals).reduce((sum, account) => {
+    return (sum += batchAccountTotals[account])
+  }, 0)
+
+  if (Math.abs(batchTotal - debtAccountTotal) > 0.01) {
+    logger.error(
+      {
+        batchTotal,
+        debtAccountTotal,
+        difference: Math.abs(batchTotal - debtAccountTotal),
+      },
+      'Debt account total not matching batch account totals'
+    )
+    throw new Error('Debt account total not matching batch account totals')
+  }
+
+  return true
 }

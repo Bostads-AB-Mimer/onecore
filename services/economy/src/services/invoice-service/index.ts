@@ -8,7 +8,6 @@ import {
 } from './adapters/xledger-adapter'
 import {
   saveContacts,
-  createBatch,
   getContacts as getInvoiceContacts,
 } from './adapters/invoice-data-db-adapter'
 import {
