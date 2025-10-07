@@ -16,8 +16,14 @@ export const BuildingBasicInfo = ({
   const { quantityValues } = building
 
   // Extract specific quantity values
+  // TODO: Figure out which value is "allmän yta" in xpand
+
+  /*
   const buildingArea =
     (quantityValues?.find((x) => x.id === 'AREATEMP')?.value || '-') + ' m²'
+  */
+
+  const buildingArea = '-'
 
   const residenceCount =
     quantityValues?.find((x) => x.id === 'ANTALLGH')?.value ?? 0
