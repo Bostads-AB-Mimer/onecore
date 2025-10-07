@@ -51,11 +51,16 @@ export function FilterDropdown({
             className
           )}
         >
-          <Filter className={cn('h-3 w-3', hasActiveFilter && 'fill-current')} />
+          <Filter
+            className={cn('h-3 w-3', hasActiveFilter && 'fill-current')}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        <DropdownMenuRadioGroup value={selectedValue || undefined} onValueChange={handleSelect}>
+        <DropdownMenuRadioGroup
+          value={selectedValue || undefined}
+          onValueChange={handleSelect}
+        >
           {options.map((option) => (
             <DropdownMenuRadioItem key={option.value} value={option.value}>
               {option.label}
