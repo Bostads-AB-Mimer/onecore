@@ -173,7 +173,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}/${{ matrix.imageName || matrix.name }}
           tags: |
             type=raw,value=${{ needs.prepare.outputs.build_tag || needs.prepare.outputs.build_tag_base }}
-            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name || 'false' }}
+            type=raw,value=latest,enable=${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name && 'true' || 'false' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.label }}
             org.opencontainers.image.description=${{ needs.prepare.outputs.description }}
