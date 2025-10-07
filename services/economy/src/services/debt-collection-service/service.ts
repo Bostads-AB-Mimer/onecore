@@ -21,7 +21,7 @@ import {
   EnrichedXledgerBalanceCorrection,
 } from './types'
 
-const importInvoicesFromCsv = (
+export const importInvoicesFromCsv = (
   csv: string,
   separator = ','
 ): XledgerRentCase[] => {
@@ -51,7 +51,7 @@ const importInvoicesFromCsv = (
   })
 }
 
-const importBalanceCorrectionsFromCsv = (
+export const importBalanceCorrectionsFromCsv = (
   csv: string,
   separator = ','
 ): XledgerBalanceCorrection[] => {
@@ -80,9 +80,6 @@ const importBalanceCorrectionsFromCsv = (
     }
   })
 }
-
-// Export for testing
-export { importInvoicesFromCsv, importBalanceCorrectionsFromCsv }
 
 export type EnrichResponse =
   | {
@@ -276,7 +273,10 @@ export const enrichBalanceCorrections = async (
   }
 }
 
-const addRoundoffToFirstRow = (rows: RentInvoiceRow[], roundoff: number) => {
+export const addRoundoffToFirstRow = (
+  rows: RentInvoiceRow[],
+  roundoff: number
+) => {
   if (rows.length === 0) {
     return rows
   }
@@ -290,7 +290,7 @@ const addRoundoffToFirstRow = (rows: RentInvoiceRow[], roundoff: number) => {
   ]
 }
 
-const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
+export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
   const groups: Record<string, RentInvoiceRow[]> = {}
   const groupMapping: Record<string, string> = {
     O: 'N',
@@ -327,9 +327,6 @@ const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
     ),
   }))
 }
-
-// Export for testing
-export { addRoundoffToFirstRow, aggregateRows }
 
 const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
   return {

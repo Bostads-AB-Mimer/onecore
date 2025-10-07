@@ -9,7 +9,7 @@ import {
 } from '../services/debt-collection-service/service'
 import SftpClient, { FileInfo } from 'ssh2-sftp-client'
 
-const importSftpConfig: SftpClient.ConnectOptions = {
+export const importSftpConfig: SftpClient.ConnectOptions = {
   host: config.debtCollection.xledger.sftp.host,
   username: config.debtCollection.xledger.sftp.username,
   password: config.debtCollection.xledger.sftp.password,
@@ -22,7 +22,7 @@ const importSftpConfig: SftpClient.ConnectOptions = {
   debug: console.log,
 }
 
-const exportSftpConfig: SftpClient.ConnectOptions = {
+export const exportSftpConfig: SftpClient.ConnectOptions = {
   host: config.debtCollection.sergel.sftp.host,
   username: config.debtCollection.sergel.sftp.username,
   password: config.debtCollection.sergel.sftp.password,
@@ -62,13 +62,13 @@ const balanceCorrectionsDirectory =
 const otherInvoicesDirectory =
   config.debtCollection.xledger.otherInvoicesDirectory
 
-type DebtCollectionFile = {
+export type DebtCollectionFile = {
   type: 'rentInvoice' | 'otherInvoice' | 'balanceCorrection'
   directory: string
   fileName: string
 }
 
-const getDebtCollectionFiles = async (client: SftpClient) => {
+export const getDebtCollectionFiles = async (client: SftpClient) => {
   const filter = (fileInfo: FileInfo) =>
     fileInfo.name.toLowerCase().endsWith('.csv')
 
@@ -104,34 +104,25 @@ const getDebtCollectionFiles = async (client: SftpClient) => {
   ]
 }
 
-const readFile = async (client: SftpClient, filePath: string) => {
+export const readFile = async (client: SftpClient, filePath: string) => {
   const contents = await client.get(filePath)
   return contents.toString()
 }
 
-const markCsvFileAsCompleted = async (client: SftpClient, filePath: string) => {
+export const markCsvFileAsCompleted = async (
+  client: SftpClient,
+  filePath: string
+) => {
   await client.rename(filePath, filePath.replace(/\.csv/i, '.csv-imported'))
 }
 
-const getExportFilePath = (fileName: string) => {
+export const getExportFilePath = (fileName: string) => {
   return path.join(exportDirectory, fileName.replace(/\.csv/i, '.txt'))
 }
 
-const createBufferForSergel = (contents: string) => {
+export const createBufferForSergel = (contents: string) => {
   return Buffer.from(contents.replaceAll('\n', '\r\n'), 'latin1')
 }
-
-// Export for testing
-export {
-  getDebtCollectionFiles,
-  readFile,
-  markCsvFileAsCompleted,
-  getExportFilePath,
-  createBufferForSergel,
-  importSftpConfig,
-  exportSftpConfig,
-}
-export type { DebtCollectionFile }
 
 const enrichers: Record<
   DebtCollectionFile['type'],
@@ -142,7 +133,7 @@ const enrichers: Record<
   otherInvoice: enrichOtherInvoices,
 }
 
-const processDebtCollectionFiles = async () => {
+export const processDebtCollectionFiles = async () => {
   const importClient = new SftpClient()
   const exportClient = new SftpClient()
   const errors: string[] = []
@@ -210,10 +201,6 @@ const processDebtCollectionFiles = async () => {
   }
 }
 
-// Export for testing
-export { processDebtCollectionFiles }
-
-// Only run the main process if this file is executed directly
 if (require.main === module) {
   processDebtCollectionFiles()
 }
