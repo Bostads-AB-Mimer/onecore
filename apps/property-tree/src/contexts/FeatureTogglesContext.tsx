@@ -1,5 +1,3 @@
-/* Just hardcoded feature toggles for now. In a real app these would probably come from an API or be set per environment */
-
 interface FeatureToggles {
   showNavigation: boolean
   showRentals: boolean
@@ -50,51 +48,60 @@ interface FeatureToggles {
   showBarriers: boolean
   // Turnover (In- och utflytt)
   showTurnover: boolean
+  // Global inspections view
+  showAllInspections: boolean
+  // Dashboard cards
+  showDashboardEconomy: boolean
+  showDashboardContracts: boolean
+  showDashboardLocks: boolean
+  showDashboardOdoo: boolean
+  showDashboardGreenview: boolean
+  showDashboardCurves: boolean
 }
 
-export const featureToggles: FeatureToggles = {
+const DEFAULT_FEATURES: FeatureToggles = {
   showNavigation: true,
-  showRentals: true,
-  showDesignSystem: true,
+  showRentals: false,
+  showDesignSystem: false,
   showProperties: true,
-  showTenants: true,
+  showTenants: false,
   showBuildings: true,
   showApartments: true,
-  showRoomInformation: true,
-  showInspections: false,
+  showRoomInformation: false,
+  showInspections: true,
   showApartmentIssues: false,
-  showResidenceNotes: true,
-  showTenantInfo: true,
-  showDocuments: true,
-  showFloorplan: true,
-  showResidenceAccess: true,
+  showResidenceNotes: false,
+  showTenantInfo: false,
+  showDocuments: false,
+  showFloorplan: false,
+  showResidenceAccess: false,
   // Tenant detail page tabs
-  showTenantContracts: true,
+  showTenantContracts: false,
   showTenantQueue: false,
   showTenantCases: false,
-  showTenantLedger: true,
-  showTenantNotes: true,
+  showTenantLedger: false,
+  showTenantNotes: false,
   showTenantKeys: false,
-  showTenantEvents: false,
+  showTenantEvents: true,
   showTenantDocuments: true,
   // Rentals sections
-  showRentalsHousing: true,
-  showRentalsParking: true,
-  showRentalsStorage: true,
+  showRentalsHousing: false,
+  showRentalsParking: false,
+  showRentalsStorage: false,
   // Property detail page tabs
   showPropertyInfo: true,
   showPropertyStatistics: true,
   showPropertyDocuments: true,
   showPropertyPlanning: false,
   showPropertyBuildings: true,
-  showPropertyMaintenance: false,
-  showPropertyOrders: false,
+  showPropertyMaintenance: true,
+  showPropertyOrders: true,
   showPropertyAccess: false,
   showPropertyMap: true,
   // Building detail page tabs
   showBuildingEntrances: true,
   showBuildingParts: false,
-  showBuildingSpaces: true,
+  showBuildingSpaces: false,
   showBuildingInstallations: false,
   showBuildingParking: false,
   showBuildingDocuments: true,
@@ -102,4 +109,19 @@ export const featureToggles: FeatureToggles = {
   showBarriers: false,
   // Turnover (In- och utflytt)
   showTurnover: false,
+  // Global inspections view
+  showAllInspections: true,
+  // Dashboard cards
+  showDashboardEconomy: false,
+  showDashboardContracts: false,
+  showDashboardLocks: false,
+  showDashboardOdoo: false,
+  showDashboardGreenview: false,
+  showDashboardCurves: false,
+}
+
+export function useFeatureToggles() {
+  return {
+    features: DEFAULT_FEATURES,
+  }
 }
