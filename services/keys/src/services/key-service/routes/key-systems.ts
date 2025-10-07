@@ -274,20 +274,21 @@ export const routes = (router: KoaRouter) => {
       // Check if at least one search criteria was provided
       const hasQParam =
         typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
-      const hasFieldParams = Object.entries(ctx.query).some(
-        ([key, value]) => {
-          if (reservedParams.includes(key)) return false
+      const hasFieldParams = Object.entries(ctx.query).some(([key, value]) => {
+        if (reservedParams.includes(key)) return false
 
-          // Handle both single values and arrays
-          if (typeof value === 'string' && value.trim().length > 0) {
-            return true
-          }
-          if (Array.isArray(value) && value.some(v => typeof v === 'string' && v.trim().length > 0)) {
-            return true
-          }
-          return false
+        // Handle both single values and arrays
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return true
         }
-      )
+        if (
+          Array.isArray(value) &&
+          value.some((v) => typeof v === 'string' && v.trim().length > 0)
+        ) {
+          return true
+        }
+        return false
+      })
 
       if (!hasQParam && !hasFieldParams) {
         ctx.status = 400
