@@ -22,7 +22,12 @@ export const PropertyBreadcrumb = ({
   residence,
   companyId,
 }: PropertyBreadcrumbProps) => {
-  const breadcrumbs = generateBreadcrumbs(property, building, residence, companyId)
+  const breadcrumbs = generateBreadcrumbs(
+    property,
+    building,
+    residence,
+    companyId
+  )
 
   return (
     <Breadcrumb className="mb-4">
