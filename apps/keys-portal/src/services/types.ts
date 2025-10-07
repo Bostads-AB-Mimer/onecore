@@ -105,6 +105,43 @@ export function mapLeaseTypeKeyFromRaw(raw?: string): LeaseType {
   return 'unknown'
 }
 
+// ----- Logs (UI/domain) -----
+// Event type labels in Swedish
+export const LogEventTypeLabels = {
+  creation: 'Skapad',
+  update: 'Uppdaterad',
+  delete: 'Raderad',
+} as const
+
+export type LogEventType = keyof typeof LogEventTypeLabels
+
+// Object type labels in Swedish
+export const LogObjectTypeLabels = {
+  key: 'Nyckel',
+  keySystem: 'Nyckelsystem',
+  keyLoan: 'Nyckellån',
+} as const
+
+export type LogObjectType = keyof typeof LogObjectTypeLabels
+
+// Grouped log type for displaying multiple logs for the same object
+export interface GroupedLog {
+  objectId: string
+  count: number
+  latestLog: Log
+  logs: Log[]
+}
+
+// Filter parameters for log search
+export interface LogFilterParams {
+  eventType?: LogEventType[]
+  objectType?: LogObjectType[]
+  userName?: string
+  q?: string
+  eventTimeFrom?: string
+  eventTimeTo?: string
+}
+
 // ----- Receipts (UI/domain) -----
 export type ReceiptType = 'loan' | 'return'
 
