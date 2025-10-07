@@ -34,13 +34,10 @@ export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
 export type RentalPropertyResponse =
   components['schemas']['RentalPropertyResponse']
 
-// Key type definitions based on the existing codebase usage
+// Key type definitions aligned with database enum
 export const KeyTypeLabels = {
   LGH: 'Lägenhet',
   PB: 'Postbox',
-  TP: 'Trapphus',
-  HUS: 'Hus',
-  GEM: 'Gemensamt',
   FS: 'Fastighet',
   HN: 'Huvudnyckel',
 } as const
