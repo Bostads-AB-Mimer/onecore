@@ -7,6 +7,8 @@ export type Property = components['schemas']['Property']
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']
 export type Residence = components['schemas']['Residence']
+export type ResidenceSearchResult =
+  components['schemas']['ResidenceSearchResult']
 export type Room = components['schemas']['Room']
 export type Component = components['schemas']['Component']
 
@@ -38,4 +40,14 @@ export interface NavigationItem {
       href: string
     }
   }
+}
+
+export interface DashboardCard {
+  id: string
+  title: string
+  icon: any // LucideIcon type from lucide-react
+  description: string
+  path: string
+  isExternal: boolean
+  isDisabled: boolean
 }
