@@ -136,7 +136,7 @@ export function ContractCard({
 
   const totalKeys = keys.length
   const hasAnyKeys = totalKeys > 0
-  const order: KeyType[] = ['LGH', 'PB', 'TP', 'GEM', 'FS', 'HN', 'HUS']
+  const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
   const keysRegionId = `keys-${lease.leaseId}`
 
   const tenantNames = useMemo(
