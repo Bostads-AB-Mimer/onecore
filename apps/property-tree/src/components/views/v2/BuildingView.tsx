@@ -9,9 +9,9 @@ import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const BuildingDetailPage = () => {
   const { buildingId } = useParams()
-  const navigate = useNavigate()
   const { state } = useLocation()
   const propertyId = state?.propertyId
+  const companyId = state?.companyId
 
   //const { toast } = useToast()
 
@@ -72,6 +72,7 @@ const BuildingDetailPage = () => {
             id: data.building?.id,
             name: data.building?.name ?? 'byggnad',
           }}
+          companyId={companyId}
         />
         <BuildingHeader
           building={data.building}
