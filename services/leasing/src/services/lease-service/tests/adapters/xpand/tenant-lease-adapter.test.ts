@@ -11,6 +11,7 @@ jest.mock('knex', () => () => ({
   innerJoin: jest.fn().mockReturnThis(),
   leftJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
+  whereNotNull: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   then: jest
     .fn()
@@ -55,6 +56,8 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
       'P123456',
       false
     )
+
+    console.log('contactResult', contact)
 
     expect(contact).toStrictEqual({
       ok: true,
