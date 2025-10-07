@@ -19,6 +19,19 @@ export default function KeySystems() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
+  // Column filters (for table header dropdowns)
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
+    null
+  )
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    string | null
+  >(null)
+  const [installationDateAfter, setInstallationDateAfter] = useState<
+    string | null
+  >(null)
+  const [installationDateBefore, setInstallationDateBefore] = useState<
+    string | null
+  >(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKeySystem, setEditingKeySystem] = useState<KeySystem | null>(
     null
@@ -41,7 +54,7 @@ export default function KeySystems() {
         setIsLoading(true)
 
         // Build search parameters based on current filters
-        const searchParams: Record<string, string> = {}
+        const searchParams: Record<string, string | string[]> = {}
 
         // Add search query if present
         if (searchQuery.trim().length >= 3) {
@@ -49,16 +62,38 @@ export default function KeySystems() {
           searchParams.fields = 'systemCode,name,manufacturer'
         }
 
-        // Add type filter if not 'all'
+        // Add type filter from toolbar if not 'all'
         if (selectedType !== 'all') {
           searchParams.type = selectedType
         }
 
-        // Add status filter if not 'all'
+        // Add type filter from column header (overrides toolbar filter)
+        if (selectedTypeFilter) {
+          searchParams.type = selectedTypeFilter
+        }
+
+        // Add status filter from toolbar if not 'all'
         if (selectedStatus === 'active') {
           searchParams.isActive = 'true'
         } else if (selectedStatus === 'inactive') {
           searchParams.isActive = 'false'
+        }
+
+        // Add status filter from column header (overrides toolbar filter)
+        if (selectedStatusFilter) {
+          searchParams.isActive = selectedStatusFilter
+        }
+
+        // Add installation date filters (can be both at the same time)
+        const dateFilters: string[] = []
+        if (installationDateAfter) {
+          dateFilters.push(`>=${installationDateAfter}`)
+        }
+        if (installationDateBefore) {
+          dateFilters.push(`<=${installationDateBefore}`)
+        }
+        if (dateFilters.length > 0) {
+          searchParams.installationDate = dateFilters.length === 1 ? dateFilters[0] : dateFilters
         }
 
         // Use search endpoint if filtering/searching, otherwise use getAllKeySystems
@@ -108,13 +143,31 @@ export default function KeySystems() {
         setIsLoading(false)
       }
     },
-    [toast, pagination, searchQuery, selectedType, selectedStatus]
+    [
+      toast,
+      pagination,
+      searchQuery,
+      selectedType,
+      selectedStatus,
+      selectedTypeFilter,
+      selectedStatusFilter,
+      installationDateAfter,
+      installationDateBefore,
+    ]
   )
 
   useEffect(() => {
     // Reset to page 1 and fetch when search/filter changes
     pagination.handlePageChange(1)
-  }, [searchQuery, selectedType, selectedStatus])
+  }, [
+    searchQuery,
+    selectedType,
+    selectedStatus,
+    selectedTypeFilter,
+    selectedStatusFilter,
+    installationDateAfter,
+    installationDateBefore,
+  ])
 
   const handleAddNew = () => {
     setEditingKeySystem(null)
@@ -264,6 +317,14 @@ export default function KeySystems() {
         onToggleExpand={handleToggleExpand}
         keysForExpandedSystem={keysForExpandedSystem}
         isLoadingKeys={isLoadingKeys}
+        selectedType={selectedTypeFilter}
+        onTypeFilterChange={setSelectedTypeFilter}
+        selectedStatus={selectedStatusFilter}
+        onStatusFilterChange={setSelectedStatusFilter}
+        installationDateAfter={installationDateAfter}
+        installationDateBefore={installationDateBefore}
+        onInstallationDateAfterChange={setInstallationDateAfter}
+        onInstallationDateBeforeChange={setInstallationDateBefore}
       />
 
       <PaginationControls
