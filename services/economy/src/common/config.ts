@@ -120,7 +120,8 @@ const config = configPackage({
         host: '',
         username: '',
         password: '',
-        directory: 'economy',
+        directory: '.',
+        useSshDss: true,
       },
     },
     xledger: {

@@ -6,30 +6,27 @@ import {
   getBatchLedgerRowsCsv,
   importInvoiceRows,
   markBatchAsProcessed,
-  missingInvoices,
   uploadInvoiceFile,
 } from '../services/invoice-service/service'
 import fs from 'fs/promises'
 import config from '../common/config'
-import path, { sep } from 'node:path'
-
-const getInvoices = async () => {
-  console.log('Find missing invoices')
-  await missingInvoices('24')
-  await closeDatabases()
-}
+import { sep } from 'node:path'
 
 const importRentalInvoicesScript = async () => {
-  const companyId = '001'
-  for (let month = 10; month >= 10; month--) {
-    logger.info({ month }, 'Processing month')
-    const result = await importInvoiceRows(
-      new Date(`2025-${month.toString().padStart(2, '0')}-15T00:00:00.000Z`),
-      new Date(
-        `2025-${(month + 1).toString().padStart(2, '0')}-01T00:00:00.000Z`
-      ),
-      companyId
+  const companyIds = ['001', '006']
+  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
+
+  const startDate = new Date(
+    Math.max(
+      new Date().setDate(new Date().getDate() - 90),
+      earliestStartDate.getTime()
     )
+  )
+  const endDate = new Date(new Date().setDate(startDate.getDate() + 180))
+
+  for (const companyId of companyIds) {
+    logger.info({ startDate, endDate }, 'Processing interval')
+    const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
     logger.info({ batchId }, 'Creating contact file for batch')
@@ -43,10 +40,13 @@ const importRentalInvoicesScript = async () => {
     logger.info({ batchId }, 'Creating aggregate file for batch')
     const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
     const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
-    await fs.writeFile(
-      `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
-      aggregatedCsv
-    )
+
+    if (aggregatedCsv) {
+      await fs.writeFile(
+        `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
+        aggregatedCsv
+      )
+    }
 
     logger.info({ batchId }, 'Creating ledger file for batch')
     const ledgerFilename = `${batchId}-${companyId}-ledger.gl.csv`
@@ -58,8 +58,10 @@ const importRentalInvoicesScript = async () => {
 
     await uploadInvoiceFile(contactsFilename, contactsCsv)
     logger.info({ contactsFilename }, 'Uploaded file')
-    await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-    logger.info({ aggregatedFilename }, 'Uploaded file')
+    if (aggregatedCsv) {
+      await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+      logger.info({ aggregatedFilename }, 'Uploaded file')
+    }
     await uploadInvoiceFile(ledgerFilename, ledgerCsv)
     logger.info({ ledgerFilename }, 'Uploaded file')
 

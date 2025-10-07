@@ -147,6 +147,10 @@ export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
   | { ok: false; err: E; statusCode?: number }
 
-export const xledgerDateString = (date: Date) => {
-  return date.toISOString().substring(0, 10).replaceAll('-', '')
+export const xledgerDateString = (date: Date | null | undefined) => {
+  if (date) {
+    return date.toISOString().substring(0, 10).replaceAll('-', '')
+  } else {
+    return ''
+  }
 }

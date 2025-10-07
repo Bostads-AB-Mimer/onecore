@@ -8,7 +8,6 @@ import {
 } from './adapters/xledger-adapter'
 import {
   saveContacts,
-  createBatch,
   getContacts as getInvoiceContacts,
 } from './adapters/invoice-data-db-adapter'
 import {
@@ -115,21 +114,6 @@ export const routes = (router: KoaRouter) => {
         ),
         errors: contactCodes.errors,
       }
-    } catch (error: any) {
-      console.error('Error', error)
-      ctx.status = 500
-      ctx.body = {
-        message: error.message,
-      }
-    }
-  })
-
-  router.post('(.*)/invoices/import/batches', async (ctx) => {
-    try {
-      const batchId = await createBatch()
-
-      ctx.status = 200
-      ctx.body = batchId
     } catch (error: any) {
       console.error('Error', error)
       ctx.status = 500
