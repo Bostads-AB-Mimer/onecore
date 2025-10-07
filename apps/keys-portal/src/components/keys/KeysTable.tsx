@@ -15,13 +15,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Key, KeyTypeLabels } from '@/services/types'
+import { Key, KeyTypeLabels, getKeyTypeFilterOptions } from '@/services/types'
+import { FilterDropdown } from '@/components/ui/filter-dropdown'
+import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 
 interface KeysTableProps {
   keys: Key[]
   keySystemMap: Record<string, string>
   onEdit: (key: Key) => void
   onDelete: (keyId: string) => void
+  selectedType: string | null
+  onTypeFilterChange: (value: string | null) => void
+  createdAtAfter: string | null
+  createdAtBefore: string | null
+  onCreatedAtAfterChange: (value: string | null) => void
+  onCreatedAtBeforeChange: (value: string | null) => void
 }
 
 export function KeysTable({
@@ -29,6 +37,12 @@ export function KeysTable({
   keySystemMap,
   onEdit,
   onDelete,
+  selectedType,
+  onTypeFilterChange,
+  createdAtAfter,
+  createdAtBefore,
+  onCreatedAtAfterChange,
+  onCreatedAtBeforeChange,
 }: KeysTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE')
@@ -56,11 +70,30 @@ export function KeysTable({
           <TableRow className="hover:bg-transparent border-border">
             <TableHead className="font-medium">Nyckelnamn</TableHead>
             <TableHead className="font-medium">Objekt</TableHead>
-            <TableHead className="font-medium">Typ</TableHead>
+            <TableHead className="font-medium">
+              <div className="flex items-center gap-1">
+                Typ
+                <FilterDropdown
+                  options={getKeyTypeFilterOptions()}
+                  selectedValue={selectedType}
+                  onSelectionChange={onTypeFilterChange}
+                />
+              </div>
+            </TableHead>
             <TableHead className="font-medium">Låssystem</TableHead>
             <TableHead className="font-medium">Löpnummer</TableHead>
             <TableHead className="font-medium">Flexnr</TableHead>
-            <TableHead className="font-medium">Skapad</TableHead>
+            <TableHead className="font-medium">
+              <div className="flex items-center gap-1">
+                Skapad
+                <DateRangeFilterDropdown
+                  afterDate={createdAtAfter}
+                  beforeDate={createdAtBefore}
+                  onAfterDateChange={onCreatedAtAfterChange}
+                  onBeforeDateChange={onCreatedAtBeforeChange}
+                />
+              </div>
+            </TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>

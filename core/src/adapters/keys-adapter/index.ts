@@ -157,7 +157,8 @@ export const KeysApi = {
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          params.append(key, value.join(','))
+          // Add each array element as a separate parameter with the same key
+          value.forEach((v) => params.append(key, v))
         } else if (typeof value === 'string') {
           params.append(key, value)
         }

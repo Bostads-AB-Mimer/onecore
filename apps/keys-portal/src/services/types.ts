@@ -72,6 +72,14 @@ export function getKeySystemStatusFilterOptions() {
   ]
 }
 
+// Helper to get filter options for key types
+export function getKeyTypeFilterOptions() {
+  return Object.entries(KeyTypeLabels).map(([value, label]) => ({
+    value,
+    label,
+  }))
+}
+
 // Custom types that aren't in the API (if needed)
 export interface KeyLoanWithDetails extends KeyLoan {
   // additional computed properties

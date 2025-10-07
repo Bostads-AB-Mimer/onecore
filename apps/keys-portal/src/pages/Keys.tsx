@@ -16,10 +16,16 @@ const Index = () => {
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKey, setEditingKey] = useState<Key | null>(null)
   const { toast } = useToast()
+
+  // Column filters (for table header dropdowns)
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
+    null
+  )
+  const [createdAtAfter, setCreatedAtAfter] = useState<string | null>(null)
+  const [createdAtBefore, setCreatedAtBefore] = useState<string | null>(null)
 
   const pagination = usePagination({
     initialLimit: 60,
@@ -32,7 +38,7 @@ const Index = () => {
       setError('')
       try {
         // Build search parameters based on current filters
-        const searchParams: Record<string, string> = {}
+        const searchParams: Record<string, string | string[]> = {}
 
         // Add search query if present
         if (searchQuery.trim().length >= 3) {
@@ -40,9 +46,22 @@ const Index = () => {
           searchParams.fields = 'keyName,rentalObjectCode,keySystemId'
         }
 
-        // Add type filter if not 'all'
-        if (selectedType !== 'all') {
-          searchParams.keyType = selectedType
+        // Add column filters
+        if (selectedTypeFilter) {
+          searchParams.keyType = selectedTypeFilter
+        }
+
+        // Add date filters
+        const dateFilters: string[] = []
+        if (createdAtAfter) {
+          dateFilters.push(`>=${createdAtAfter}`)
+        }
+        if (createdAtBefore) {
+          dateFilters.push(`<=${createdAtBefore}`)
+        }
+        if (dateFilters.length > 0) {
+          searchParams.createdAt =
+            dateFilters.length === 1 ? dateFilters[0] : dateFilters
         }
 
         // Use search endpoint if filtering/searching, otherwise use getAllKeys
@@ -89,17 +108,28 @@ const Index = () => {
         setLoading(false)
       }
     },
-    [toast, pagination, searchQuery, selectedType]
+    [
+      toast,
+      pagination,
+      searchQuery,
+      selectedTypeFilter,
+      createdAtAfter,
+      createdAtBefore,
+    ]
   )
 
   useEffect(() => {
     // Reset to page 1 and fetch when search/filter changes
     pagination.handlePageChange(1)
-  }, [searchQuery, selectedType])
+  }, [searchQuery, selectedTypeFilter, createdAtAfter, createdAtBefore])
 
   const handleAddNew = () => {
-    setEditingKey(null)
-    setShowAddForm(true)
+    if (showAddForm && !editingKey) {
+      setShowAddForm(false)
+    } else {
+      setEditingKey(null)
+      setShowAddForm(true)
+    }
   }
 
   const handleEdit = (key: Key) => {
@@ -190,8 +220,6 @@ const Index = () => {
         <KeysToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          selectedType={selectedType}
-          onTypeChange={setSelectedType}
           onAddNew={handleAddNew}
         />
 
@@ -215,6 +243,12 @@ const Index = () => {
           keySystemMap={keySystemMap}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          selectedType={selectedTypeFilter}
+          onTypeFilterChange={setSelectedTypeFilter}
+          createdAtAfter={createdAtAfter}
+          createdAtBefore={createdAtBefore}
+          onCreatedAtAfterChange={setCreatedAtAfter}
+          onCreatedAtBeforeChange={setCreatedAtBefore}
         />
 
         <PaginationControls
