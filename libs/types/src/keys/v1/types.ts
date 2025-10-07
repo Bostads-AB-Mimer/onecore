@@ -2,11 +2,15 @@ import { z } from 'zod'
 import {
   KeyTypeSchema,
   KeySystemTypeSchema,
+  ReceiptTypeSchema,
+  ReceiptFormatSchema,
   // Main entity schemas
   KeySchema,
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
+  KeyNoteSchema,
+  ReceiptSchema,
   // Request schemas
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
@@ -15,11 +19,9 @@ import {
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateLogRequestSchema,
-  // Receipt schemas
-  ReceiptTypeSchema,
-  ReceiptFormatSchema,
-  ReceiptSchema,
   CreateReceiptRequestSchema,
+  CreateKeyNoteRequestSchema,
+  UpdateKeyNoteRequestSchema,
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
@@ -59,6 +61,11 @@ export type ReceiptType = z.infer<typeof ReceiptTypeSchema>
 export type ReceiptFormat = z.infer<typeof ReceiptFormatSchema>
 export type Receipt = z.infer<typeof ReceiptSchema>
 export type CreateReceiptRequest = z.infer<typeof CreateReceiptRequestSchema>
+
+// Request types for key notes
+export type KeyNote = z.infer<typeof KeyNoteSchema>
+export type CreateKeyNoteRequest = z.infer<typeof CreateKeyNoteRequestSchema>
+export type UpdateKeyNoteRequest = z.infer<typeof UpdateKeyNoteRequestSchema>
 
 // Pagination types
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
