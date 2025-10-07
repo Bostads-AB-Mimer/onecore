@@ -316,6 +316,136 @@ export interface paths {
       };
     };
   };
+  "/key-notes/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get all key notes by rental object code
+     * @description Returns all key notes associated with a specific rental object code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to filter key notes by. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description List of key notes for the rental object code. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key notes. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-notes/{id}": {
+    /**
+     * Get key note by ID
+     * @description Fetch a specific key note by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key note to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key note object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Key note not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while fetching the key note. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a key note
+     * @description Update the description of an existing key note.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key note to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Key note not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while updating the key note. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-notes": {
+    /**
+     * Create a key note
+     * @description Create a new key note record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description An error occurred while creating the key note. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-systems": {
     /**
      * List all key systems with pagination
@@ -1135,6 +1265,9 @@ export interface components {
     KeyLoan: components["schemas"]["KeyLoan"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     Log: components["schemas"]["Log"];
+    CreateKeyNoteRequest: components["schemas"]["CreateKeyNoteRequest"];
+    UpdateKeyNoteRequest: components["schemas"]["UpdateKeyNoteRequest"];
+    KeyNote: components["schemas"]["KeyNote"];
   };
   responses: never;
   parameters: never;
