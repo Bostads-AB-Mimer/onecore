@@ -6,18 +6,11 @@ import {
   getBatchLedgerRowsCsv,
   importInvoiceRows,
   markBatchAsProcessed,
-  missingInvoices,
   uploadInvoiceFile,
 } from '../services/invoice-service/service'
 import fs from 'fs/promises'
 import config from '../common/config'
-import path, { sep } from 'node:path'
-
-const getInvoices = async () => {
-  console.log('Find missing invoices')
-  await missingInvoices('24')
-  await closeDatabases()
-}
+import { sep } from 'node:path'
 
 const importRentalInvoicesScript = async () => {
   const companyIds = ['001', '006']
@@ -60,14 +53,14 @@ const importRentalInvoicesScript = async () => {
       ledgerCsv
     )
 
-    /*await uploadInvoiceFile(contactsFilename, contactsCsv)
+    await uploadInvoiceFile(contactsFilename, contactsCsv)
     logger.info({ contactsFilename }, 'Uploaded file')
     await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
     logger.info({ aggregatedFilename }, 'Uploaded file')
     await uploadInvoiceFile(ledgerFilename, ledgerCsv)
     logger.info({ ledgerFilename }, 'Uploaded file')
 
-    await markBatchAsProcessed(parseInt(batchId))*/
+    await markBatchAsProcessed(parseInt(batchId))
   }
 
   closeDatabases()

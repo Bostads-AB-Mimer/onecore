@@ -649,33 +649,6 @@ export const closeDatabases = () => {
   closeInvoiceDb()
 }
 
-export const missingInvoices = async (batchId: string) => {
-  const invoiceDbInvoices = (await getInvoices(batchId))
-    .filter((invoice) => invoice.invoiceFromDate.localeCompare('20251001') >= 0)
-    .map((invoice) => invoice.invoiceNumber)
-  const xpandInvoices: string[] = (
-    await getRentalInvoices(new Date(2025, 9, 1), new Date(2025, 10, 1), '001')
-  ).map((invoice: any): string => (invoice.invoice as string).trimEnd())
-
-  const onlyInInvoiceDb = invoiceDbInvoices.filter((dbInvoice) => {
-    return !xpandInvoices.includes(dbInvoice)
-  })
-
-  const onlyInXpandDb = xpandInvoices.filter((xpandInvoice) => {
-    return !invoiceDbInvoices.includes(xpandInvoice)
-  })
-
-  console.log(
-    'Invoice db',
-    invoiceDbInvoices.length,
-    'Xpand',
-    xpandInvoices.length
-  )
-
-  console.log('Only in invoice db', onlyInInvoiceDb)
-  console.log('Only in xpand db', onlyInXpandDb)
-}
-
 const getContractCode = (invoiceRow: InvoiceDataRow) => {
   if ((invoiceRow.rowType as number) !== 3) {
     logger.error(
