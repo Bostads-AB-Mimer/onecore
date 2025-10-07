@@ -9,7 +9,6 @@ on:
     branches:
       - main
       - epic/**
-      - feature/**
       - release/**
   push:
     tags:
