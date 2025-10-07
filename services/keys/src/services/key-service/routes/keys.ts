@@ -230,23 +230,25 @@ export const routes = (router: KoaRouter) => {
       // Handle AND search (individual field parameters) - search any param that's not q or fields
       const reservedParams = ['q', 'fields', 'page', 'limit']
       for (const [field, value] of Object.entries(ctx.query)) {
-        if (
-          !reservedParams.includes(field) &&
-          typeof value === 'string' &&
-          value.trim().length > 0
-        ) {
-          const trimmedValue = value.trim()
+        if (!reservedParams.includes(field)) {
+          const values = Array.isArray(value) ? value : [value]
 
-          // Check if value starts with a comparison operator (>=, <=, >, <)
-          const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
+          for (const val of values) {
+            if (typeof val === 'string' && val.trim().length > 0) {
+              const trimmedValue = val.trim()
 
-          if (operatorMatch) {
-            const operator = operatorMatch[1]
-            const compareValue = operatorMatch[2].trim()
-            query = query.where(field, operator, compareValue)
-          } else {
-            // No operator, use LIKE for partial matching
-            query = query.where(field, 'like', `%${trimmedValue}%`)
+              // Check if value starts with a comparison operator (>=, <=, >, <)
+              const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
+
+              if (operatorMatch) {
+                const operator = operatorMatch[1]
+                const compareValue = operatorMatch[2].trim()
+                query = query.where(field, operator, compareValue)
+              } else {
+                // No operator, use LIKE for partial matching
+                query = query.where(field, 'like', `%${trimmedValue}%`)
+              }
+            }
           }
         }
       }
@@ -254,12 +256,19 @@ export const routes = (router: KoaRouter) => {
       // Check if at least one search criteria was provided
       const hasQParam =
         typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
-      const hasFieldParams = Object.entries(ctx.query).some(
-        ([key, value]) =>
-          !reservedParams.includes(key) &&
-          typeof value === 'string' &&
-          value.trim().length > 0
-      )
+      const hasFieldParams = Object.entries(ctx.query).some(([key, value]) => {
+        if (reservedParams.includes(key)) return false
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return true
+        }
+        if (
+          Array.isArray(value) &&
+          value.some((v) => typeof v === 'string' && v.trim().length > 0)
+        ) {
+          return true
+        }
+        return false
+      })
 
       if (!hasQParam && !hasFieldParams) {
         ctx.status = 400
