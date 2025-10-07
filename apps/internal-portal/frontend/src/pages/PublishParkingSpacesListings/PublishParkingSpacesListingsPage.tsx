@@ -12,6 +12,7 @@ import {
   DialogActions,
 } from '@mui/material'
 import { type GridRowId, type GridColDef } from '@mui/x-data-grid'
+import { toast } from 'react-toastify'
 
 import { RentalObjectWithListingHistory } from '../../types'
 import { DataGridTable } from '../../components'
@@ -105,6 +106,14 @@ export const PublishParkingSpacesListingsPage = () => {
       initializeRentalRules(parkingSpaces)
     }
   }, [parkingSpaces, initializeRentalRules])
+
+  useEffect(() => {
+    toast(message?.text, {
+      type: message?.severity,
+      hideProgressBar: true,
+      autoClose: message?.severity === 'info' ? 15000 : 10000,
+    })
+  }, [message])
 
   return (
     <Box>
