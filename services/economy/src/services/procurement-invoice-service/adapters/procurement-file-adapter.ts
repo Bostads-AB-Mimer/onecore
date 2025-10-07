@@ -46,8 +46,9 @@ enum ProcurementInvoiceType {
  * - i.e. 0 = January
  *
  * Example:
- * Invoice has issue date 2025-06-05, with invoice period 2025-05-01 to 2025-05-31
- * Issue date month index is 5, and costs will be
+ * Invoice has issue date 2025-04-05, with invoice period 2025-03-01 to 2025-03-31
+ * Issue date has javascript month number 3, table below indicates -1, meaning
+ * the invoice will be put one month earlier than invoice, which is March.
  */
 const periodMonthInformation: Record<number, number> = {
   0: -1,
@@ -218,7 +219,7 @@ const readXmlFiles = async (xmlFileNames: string[]) => {
       const xmlContents = parser.parse(xmlFile)['Invoice']
       xmlFiles.push(xmlContents)
     } catch (err) {
-      logger.error({ xmlFileName }, 'Error reading xml file')
+      logger.error({ xmlFileName, err }, 'Error reading xml file')
     }
   }
 
@@ -249,6 +250,7 @@ const getXmlFilenames = async () => {
 
     return files.map((fileInfo) => fileInfo.name)
   } catch (err) {
+    logger.error({ err }, 'Could not get xml filenames from sftp')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()

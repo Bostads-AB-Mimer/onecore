@@ -44,8 +44,28 @@ export interface Config {
     exportDirectory: string
     sftp: SftpConfig
   }
+  debtCollection: {
+    xledger: {
+      sftp: SftpConfig
+      rentInvoicesDirectory: string
+      otherInvoicesDirectory: string
+      balanceCorrectionsDirectory: string
+    }
+    sergel: {
+      sftp: SftpConfig
+      directory: string
+    }
+  }
   health: {
     xledger: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    economyDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    xpandDatabase: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -66,6 +86,27 @@ const config = configPackage({
         directory: 'economy',
       },
     },
+    debtCollection: {
+      xledger: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+          useSshDss: true,
+        },
+        rentInvoicesDirectory: '',
+        otherInvoicesDirectory: '',
+        balanceCorrectionsDirectory: '',
+      },
+      sergel: {
+        sftp: {
+          host: '',
+          username: '',
+          password: '',
+        },
+        directory: '',
+      },
+    },
     xpandDatabase: {
       port: 1433,
     },
@@ -79,7 +120,8 @@ const config = configPackage({
         host: '',
         username: '',
         password: '',
-        directory: 'economy',
+        directory: '.',
+        useSshDss: true,
       },
     },
     xledger: {
@@ -99,6 +141,14 @@ const config = configPackage({
         systemName: 'xledger',
         minimumMinutesBetweenRequests: 5,
       },
+      economyDatabase: {
+        systemName: 'economy database',
+        minimumMinutesBetweenRequests: 5,
+      },
+      xpandDatabase: {
+        systemName: 'xpand database',
+        minimumMinutesBetweenRequests: 5,
+      },
     },
   },
 })
@@ -110,5 +160,6 @@ export default {
   xledger: config.get('xledger'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
+  debtCollection: config.get('debtCollection'),
   health: config.get('health'),
 } as Config
