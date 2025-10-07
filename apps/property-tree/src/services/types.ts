@@ -9,6 +9,7 @@ export type Staircase = components['schemas']['Staircase']
 export type Residence = components['schemas']['Residence']
 export type ResidenceSearchResult =
   components['schemas']['ResidenceSearchResult']
+export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type Room = components['schemas']['Room']
 export type Component = components['schemas']['Component']
 
