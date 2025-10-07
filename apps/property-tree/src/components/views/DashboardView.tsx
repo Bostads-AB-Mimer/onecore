@@ -162,7 +162,10 @@ export function DashboardView() {
       isExternal: true,
       isDisabled: true,
     },
-  ]
+  ].map((card) => ({
+    ...card,
+    isDisabled: card.isDisabled || !card.path,
+  }))
 
   const handleCardClick = (config: DashboardCard) => {
     if (config.isDisabled) {
