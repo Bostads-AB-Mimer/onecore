@@ -49,6 +49,9 @@ importers:
       globals:
         specifier: ^15.9.0
         version: 15.15.0
+      launch-goblin:
+        specifier: ^0.1.0
+        version: 0.1.1(5fd4a8b2e5ef6d1e3bd3d79ec3417356)
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -762,10 +765,10 @@ importers:
         version: 11.1.0(eslint@9.34.0(jiti@1.21.7))
       jest:
         specifier: ^29.7.0
-        version: 29.7.0(babel-plugin-macros@3.1.0)
+        version: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
       ts-jest:
         specifier: ^29.2.5
-        version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2)
+        version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2)
       tsup:
         specifier: ^8.0.2
         version: 8.5.0(jiti@1.21.7)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
@@ -4547,6 +4550,124 @@ packages:
   '@webcomponents/shadycss@1.11.2':
     resolution: {integrity: sha512-vRq+GniJAYSBmTRnhCYPAPq6THYqovJ/gzGThWbgEZUQaBccndGTi1hdiUP15HzEco0I6t4RCtXyX0rsSmwgPw==}
 
+  '@whimbrel/actor@0.0.5':
+    resolution: {integrity: sha512-7BYNAYXfEx4vlwoAHniF4vDVcncKGn/8DOWezdv5CE3ZJpLvE8pzK8xaOsD7pxucqJK3rllnoKtxSMqzsYdEaA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/project': ^0.0.5
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/array@0.0.5':
+    resolution: {integrity: sha512-hioPhOVkyP55ZlCdcJ6kfoRL7gDXzGtgYjTXWAKWNh6Ws1lo8yyR05086g1GY5RpT4XGy2U91tabfTizG/cyBA==}
+    peerDependencies:
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/core-api@0.0.5':
+    resolution: {integrity: sha512-sRVoD7GSoFpmh46DajJVypVhVTl9ohp/2DWdcEEtDppxQSYWSjmA8aSR9i3/Ye9tkuEKzaB2UA4lW3hyFlxZsg==}
+
+  '@whimbrel/core@0.0.5':
+    resolution: {integrity: sha512-Pkf4owqEOJOijQ6Ki47tUoh+qtcLCPpwNQljkcIMBJExEFMS4TLeZlJ9EMaEmudvGkiJW/sCMas61aUX/uXUDA==}
+    peerDependencies:
+      '@whimbrel/actor': ^0.0.5
+      '@whimbrel/array': ^0.0.5
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/filesystem': ^0.0.5
+      '@whimbrel/project': ^0.0.5
+      '@whimbrel/source': ^0.0.5
+      '@whimbrel/target': ^0.0.5
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/facet@0.0.5':
+    resolution: {integrity: sha512-Nto4D1utTVEO4eZPyerEHy8p9yg7Sem7lkofQvLZuKzUi2LjD1PbMVMSlmNCqHoajsumQrFnQ6Jo7G3o/hOcqQ==}
+    peerDependencies:
+      '@whimbrel/array': ^0.0.5
+      '@whimbrel/core-api': ^0.0.5
+
+  '@whimbrel/filesystem@0.0.5':
+    resolution: {integrity: sha512-kVBLQnF99su2hkuKIi+659gtVtcXsPKf9wP9JT6Mt5QR9xsei8EnvjQs6QrWQnjl0oAbfV+txVfRBZ9kptMeJg==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+
+  '@whimbrel/flow@0.0.5':
+    resolution: {integrity: sha512-hZwnbXwqZJXZ3e7jPYgq3xC5PmqoiRxvUpzQkRRS0erV9s1jlRidGrUMBoBtv5b+7hGhs9a+wUTD6/CW5V6M2A==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+
+  '@whimbrel/node@0.0.5':
+    resolution: {integrity: sha512-XpTjusqgkr5aVrEcFI0HaqDZGAbSS9jbMQ7TMIIqG6yYB0YWxHc7VOjiXr0WDH+vx6BKhOf9Am34MAs/bH7tjg==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+
+  '@whimbrel/npm@0.0.5':
+    resolution: {integrity: sha512-tGm+23w2ArBuCxAhNpspGr6Xt9Fq56oGtX+1HDge8uGqDbCHkHSHS64+pk2MyR8E2rL0BMPvRm1EAzVeqiI+tg==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/package-json': ^0.0.5
+      '@whimbrel/project': ^0.0.5
+
+  '@whimbrel/package-json@0.0.5':
+    resolution: {integrity: sha512-AfABoPnl4oSDriO+vmmcvNoRiGSARG6pQaQbZAUBsevKf+SjKpydnGb80BV8kxpUxLXZO12iZ9kXRDB5/epU0A==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/filesystem': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/struct-file': ^0.0.5
+
+  '@whimbrel/pnpm@0.0.5':
+    resolution: {integrity: sha512-G0jHRbO46w5C23Q+ZIeImpDPj/8E4VTc7XwguO96ikpuReXHZdTGMAyui9xLhcFcC1+fAfd5NiIZ/A0Gbv6qrA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/package-json': ^0.0.5
+      '@whimbrel/project': ^0.0.5
+
+  '@whimbrel/project@0.0.5':
+    resolution: {integrity: sha512-xbBNd/VKT/bDyO2HgQmR9nVversXzxPAPjKS80rM3LLORl07T/KWNmGpR0QTanmcTdtx4RIgwMuz49si0v6+tw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+
+  '@whimbrel/source@0.0.5':
+    resolution: {integrity: sha512-myRLo6Hg3gIZ6fyskt3A6BoYX00GAo0RzknTKJw65mjUti37+sAGvAzHFBmUbNvcMCZGYil48cWgLjgUSJGgUg==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/struct-file@0.0.5':
+    resolution: {integrity: sha512-yQBSbvWs0uBud0XokCo3SiNddolm30A3mIkQKnLfDv2XEmL5KQ0Wi8Zvjj1AV/DXl2COUwxeI5YU7KJlRNHfzQ==}
+    peerDependencies:
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/target@0.0.5':
+    resolution: {integrity: sha512-bEuB1p8eR9I1yrNzr3Y3uR7iyJpfGYCjTlAXzfvgR65r/GRRoWJRkvTUvQRoabNg1JjPF0+ikTvCCoG+R5gjHQ==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/flow': ^0.0.5
+      '@whimbrel/walk': ^0.0.5
+
+  '@whimbrel/turborepo@0.0.5':
+    resolution: {integrity: sha512-tMuKIjyOg9+TxTz2kte0Gi4A/tJJmVMGxEIIMGKKWLVY9y8p4UpmiKbMRLwd/qUxMQsPM8Rimsl8V0qFbjfFeQ==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.5
+      '@whimbrel/facet': ^0.0.5
+      '@whimbrel/package-json': ^0.0.5
+      '@whimbrel/struct-file': ^0.0.5
+
+  '@whimbrel/walk@0.0.5':
+    resolution: {integrity: sha512-8ItNV9MNaSD/emz+WoqxDTlBx9GuEttdT4jGSEW6UVK48ZWwxSzd8EYbz8sk07ApCMK+a/+9CqrfDGsuBSQNPA==}
+
   '@xmldom/xmldom@0.8.11':
     resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
     engines: {node: '>=10.0.0'}
@@ -5182,6 +5303,10 @@ packages:
   commander@13.1.0:
     resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
     engines: {node: '>=18'}
+
+  commander@14.0.1:
+    resolution: {integrity: sha512-2JkV3gUZUVrbNA+1sjBOYLsMZ5cEEl8GTFP2a4AVz5hvasAMCQ1D2l2le/cX+pV4N6ZU17zjUahLpIXRrnWL8A==}
+    engines: {node: '>=20'}
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
@@ -6957,6 +7082,10 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  isexe@3.1.1:
+    resolution: {integrity: sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ==}
+    engines: {node: '>=16'}
+
   isobject@3.0.1:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
@@ -7344,6 +7473,10 @@ packages:
   language-tags@1.0.9:
     resolution: {integrity: sha512-MbjN408fEndfiQXbFQ1vnd+1NoLDsnQW41410oQBXiyXDMYH5z505juWa4KUE1LqxRC7DgOgZDbKLxHIwm27hA==}
     engines: {node: '>=0.10'}
+
+  launch-goblin@0.1.1:
+    resolution: {integrity: sha512-4s13fxoP30FhYPCWgsozv11CegVGfclBjDf8s2meoG3fED8s3t1395PI5lFaVlyUmdmbJaCcZerqsCp/RUBKCA==}
+    hasBin: true
 
   lazystream@1.0.1:
     resolution: {integrity: sha512-b94GiNHQNy6JNTrt5w6zNyffMrNkXZb3KTkCZJb2V1xaEGCk093vkZ2jk3tpaeP33/OiXC+WvK9AxUebnf5nbw==}
@@ -7756,6 +7889,11 @@ packages:
 
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
+
+  neo-blessed@0.2.0:
+    resolution: {integrity: sha512-C2kC4K+G2QnNQFXUIxTQvqmrdSIzGTX1ZRKeDW6ChmvPRw8rTkTEJzbEQHiHy06d36PCl/yMOCjquCRV8SpSQw==}
+    engines: {node: '>= 8.0.0'}
+    hasBin: true
 
   no-case@2.3.2:
     resolution: {integrity: sha512-rmTZ9kz+f3rCvK2TD1Ue/oZlns7OGoIWP4fc3llxxRXlOkHKoWPPWJOfFYpITabSow43QJbRIoHQXtt10VldyQ==}
@@ -8976,6 +9114,10 @@ packages:
     resolution: {integrity: sha512-tjLPs7dVyqgItVFirHYqe2T+MfWc2VOBQ8QFKKbWTA3PU7liZR8zoSpAi/C1k1ilm9RsXIKYf197oap9wXGVYg==}
     engines: {node: '>=14.18.0'}
 
+  supports-color@10.2.0:
+    resolution: {integrity: sha512-5eG9FQjEjDbAlI5+kdpdyPIBMRH4GfTVDGREVupaZHmVoppknhM29b/S9BkQz7cathp85BVgRi/As3Siln7e0Q==}
+    engines: {node: '>=18'}
+
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
     engines: {node: '>=4'}
@@ -9727,6 +9869,11 @@ packages:
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
+    hasBin: true
+
+  which@5.0.0:
+    resolution: {integrity: sha512-JEdGzHwwkrbWoGOlIHqQ5gtprKGOenpDHpxE9zVR1bWbOtYRyPPHMe9FaP6x61CmNaTThSkb0DAJte5jD+DmzQ==}
+    engines: {node: ^18.17.0 || >=20.5.0}
     hasBin: true
 
   wonka@6.3.5:
@@ -13492,6 +13639,111 @@ snapshots:
 
   '@webcomponents/shadycss@1.11.2': {}
 
+  '@whimbrel/actor@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))(@whimbrel/walk@0.0.5)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/project': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))
+      '@whimbrel/walk': 0.0.5
+
+  '@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5)':
+    dependencies:
+      '@whimbrel/walk': 0.0.5
+      fast-deep-equal: 3.1.3
+
+  '@whimbrel/core-api@0.0.5': {}
+
+  '@whimbrel/core@0.0.5(519e108701bcc8d28b080c6426e0812e)':
+    dependencies:
+      '@whimbrel/actor': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))(@whimbrel/walk@0.0.5)
+      '@whimbrel/array': 0.0.5(@whimbrel/walk@0.0.5)
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/filesystem': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/project': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))
+      '@whimbrel/source': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/walk@0.0.5)
+      '@whimbrel/target': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/walk@0.0.5)
+      '@whimbrel/walk': 0.0.5
+
+  '@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)':
+    dependencies:
+      '@whimbrel/array': 0.0.5(@whimbrel/walk@0.0.5)
+      '@whimbrel/core-api': 0.0.5
+
+  '@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      jsonc-parser: 3.3.1
+
+  '@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+
+  '@whimbrel/node@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+
+  '@whimbrel/npm@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/package-json': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))
+      '@whimbrel/project': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))
+
+  '@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/filesystem': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/struct-file': 0.0.5(@whimbrel/walk@0.0.5)
+
+  '@whimbrel/pnpm@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/package-json': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))
+      '@whimbrel/project': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))
+
+  '@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+
+  '@whimbrel/source@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/walk@0.0.5)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/walk': 0.0.5
+
+  '@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)':
+    dependencies:
+      '@whimbrel/walk': 0.0.5
+      fast-deep-equal: 3.1.3
+      yaml: 2.8.1
+
+  '@whimbrel/target@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/walk@0.0.5)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/flow': 0.0.5(@whimbrel/core-api@0.0.5)
+      '@whimbrel/walk': 0.0.5
+
+  '@whimbrel/turborepo@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.5
+      '@whimbrel/facet': 0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)
+      '@whimbrel/package-json': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))
+      '@whimbrel/struct-file': 0.0.5(@whimbrel/walk@0.0.5)
+
+  '@whimbrel/walk@0.0.5': {}
+
   '@xmldom/xmldom@0.8.11': {}
 
   '@zip.js/zip.js@2.7.73': {}
@@ -14192,6 +14444,8 @@ snapshots:
   commander@11.1.0: {}
 
   commander@13.1.0: {}
+
+  commander@14.0.1: {}
 
   commander@2.20.3: {}
 
@@ -16104,6 +16358,8 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  isexe@3.1.1: {}
+
   isobject@3.0.1: {}
 
   isstream@0.1.2: {}
@@ -16217,9 +16473,9 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
+  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -16236,9 +16492,9 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(babel-plugin-macros@3.1.0):
+  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -16575,24 +16831,24 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
+  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
       - supports-color
       - ts-node
 
-  jest@29.7.0(babel-plugin-macros@3.1.0):
+  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(babel-plugin-macros@3.1.0)
+      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -16872,6 +17128,31 @@ snapshots:
   language-tags@1.0.9:
     dependencies:
       language-subtag-registry: 0.3.23
+
+  launch-goblin@0.1.1(5fd4a8b2e5ef6d1e3bd3d79ec3417356):
+    dependencies:
+      '@whimbrel/core': 0.0.5(519e108701bcc8d28b080c6426e0812e)
+      '@whimbrel/node': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))
+      '@whimbrel/npm': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))
+      '@whimbrel/package-json': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))
+      '@whimbrel/pnpm': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/project@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5)))
+      '@whimbrel/turborepo': 0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/package-json@0.0.5(@whimbrel/core-api@0.0.5)(@whimbrel/facet@0.0.5(@whimbrel/array@0.0.5(@whimbrel/walk@0.0.5))(@whimbrel/core-api@0.0.5))(@whimbrel/filesystem@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/flow@0.0.5(@whimbrel/core-api@0.0.5))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5)))(@whimbrel/struct-file@0.0.5(@whimbrel/walk@0.0.5))
+      commander: 14.0.1
+      neo-blessed: 0.2.0
+      supports-color: 10.2.0
+      which: 5.0.0
+    transitivePeerDependencies:
+      - '@whimbrel/actor'
+      - '@whimbrel/array'
+      - '@whimbrel/core-api'
+      - '@whimbrel/facet'
+      - '@whimbrel/filesystem'
+      - '@whimbrel/flow'
+      - '@whimbrel/project'
+      - '@whimbrel/source'
+      - '@whimbrel/struct-file'
+      - '@whimbrel/target'
+      - '@whimbrel/walk'
 
   lazystream@1.0.1:
     dependencies:
@@ -17258,6 +17539,8 @@ snapshots:
   negotiator@0.6.3: {}
 
   neo-async@2.6.2: {}
+
+  neo-blessed@0.2.0: {}
 
   no-case@2.3.2:
     dependencies:
@@ -18641,6 +18924,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  supports-color@10.2.0: {}
+
   supports-color@5.5.0:
     dependencies:
       has-flag: 3.0.0
@@ -18927,12 +19212,12 @@ snapshots:
       babel-jest: 29.7.0(@babel/core@7.28.3)
       jest-util: 29.7.0
 
-  ts-jest@29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2):
+  ts-jest@29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
-      jest: 29.7.0(babel-plugin-macros@3.1.0)
+      jest: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
@@ -19488,6 +19773,10 @@ snapshots:
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
+
+  which@5.0.0:
+    dependencies:
+      isexe: 3.1.1
 
   wonka@6.3.5: {}
 
