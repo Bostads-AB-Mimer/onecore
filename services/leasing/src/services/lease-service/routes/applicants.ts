@@ -415,6 +415,8 @@ export const routes = (router: KoaRouter) => {
         const propertyInfo =
           await getEstateCodeFromXpandByRentalObjectCode(rentalObjectCode)
 
+        console.log('1. propertyInfo.estatecode', propertyInfo?.estateCode)
+
         if (!propertyInfo) {
           ctx.status = 404
           ctx.body = {
@@ -458,8 +460,8 @@ export const routes = (router: KoaRouter) => {
         }
 
         const validatableLease =
-          contact.data.currentHousingContract ||
-          contact.data.upcomingHousingContract
+          contact.data.upcomingHousingContract ||
+          contact.data.currentHousingContract
 
         if (!validatableLease) {
           ctx.status = 403
