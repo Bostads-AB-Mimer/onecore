@@ -309,8 +309,8 @@ export const KeySystemsApi = {
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          // Handle array values (e.g., fields array)
-          params.append(key, value.join(','))
+          // Add each array element as a separate parameter with the same key
+          value.forEach((v) => params.append(key, v))
         } else if (typeof value === 'string') {
           params.append(key, value)
         }

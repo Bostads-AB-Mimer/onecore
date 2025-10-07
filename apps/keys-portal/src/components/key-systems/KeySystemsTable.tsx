@@ -23,11 +23,20 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { KeySystem, KeySystemTypeLabels, Property, Key } from '@/services/types'
+import {
+  KeySystem,
+  KeySystemTypeLabels,
+  Property,
+  Key,
+  getKeySystemTypeFilterOptions,
+  getKeySystemStatusFilterOptions,
+} from '@/services/types'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { useState, useEffect } from 'react'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
+import { FilterDropdown } from '@/components/ui/filter-dropdown'
+import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 
 interface KeySystemsTableProps {
   KeySystems: KeySystem[]
@@ -39,6 +48,14 @@ interface KeySystemsTableProps {
   onToggleExpand: (systemId: string) => void
   keysForExpandedSystem: Key[]
   isLoadingKeys: boolean
+  selectedType: string | null
+  onTypeFilterChange: (value: string | null) => void
+  selectedStatus: string | null
+  onStatusFilterChange: (value: string | null) => void
+  installationDateAfter: string | null
+  installationDateBefore: string | null
+  onInstallationDateAfterChange: (date: string | null) => void
+  onInstallationDateBeforeChange: (date: string | null) => void
 }
 
 export function KeySystemsTable({
@@ -50,6 +67,14 @@ export function KeySystemsTable({
   onToggleExpand,
   keysForExpandedSystem,
   isLoadingKeys,
+  selectedType,
+  onTypeFilterChange,
+  selectedStatus,
+  onStatusFilterChange,
+  installationDateAfter,
+  installationDateBefore,
+  onInstallationDateAfterChange,
+  onInstallationDateBeforeChange,
 }: KeySystemsTableProps) {
   const navigate = useNavigate()
   const [addressMap, setAddressMap] = useState<Record<string, string>>({})
@@ -133,9 +158,37 @@ export function KeySystemsTable({
             <TableHead>Namn</TableHead>
             <TableHead>Tillverkare</TableHead>
             <TableHead>Fastigheter</TableHead>
-            <TableHead>Typ</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Installationsdatum</TableHead>
+            <TableHead>
+              <div className="flex items-center gap-1">
+                Typ
+                <FilterDropdown
+                  options={getKeySystemTypeFilterOptions()}
+                  selectedValue={selectedType}
+                  onSelectionChange={onTypeFilterChange}
+                />
+              </div>
+            </TableHead>
+            <TableHead>
+              <div className="flex items-center gap-1">
+                Status
+                <FilterDropdown
+                  options={getKeySystemStatusFilterOptions()}
+                  selectedValue={selectedStatus}
+                  onSelectionChange={onStatusFilterChange}
+                />
+              </div>
+            </TableHead>
+            <TableHead>
+              <div className="flex items-center gap-1">
+                Installationsdatum
+                <DateRangeFilterDropdown
+                  afterDate={installationDateAfter}
+                  beforeDate={installationDateBefore}
+                  onAfterDateChange={onInstallationDateAfterChange}
+                  onBeforeDateChange={onInstallationDateBeforeChange}
+                />
+              </div>
+            </TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>

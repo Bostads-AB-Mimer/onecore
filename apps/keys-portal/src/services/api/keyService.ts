@@ -10,6 +10,7 @@ import type {
 } from '@/services/types'
 
 import { GET, POST, PATCH, DELETE } from './core/base-api'
+import { querySerializer } from '@/utils/querySerializer'
 
 // Helper to ensure paginated response has proper structure
 function ensurePaginatedResponse<T>(data: any): PaginatedResponse<T> {
@@ -147,12 +148,13 @@ export const keyService = {
   },
 
   async searchKeySystems(
-    searchParams: Record<string, string | number | undefined>,
+    searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
     limit: number = 60
   ): Promise<PaginatedResponse<KeySystem>> {
     const { data, error } = await GET('/key-systems/search', {
       params: { query: { ...searchParams, page, limit } },
+      querySerializer,
     })
     if (error) throw error
     return ensurePaginatedResponse<KeySystem>(data)
