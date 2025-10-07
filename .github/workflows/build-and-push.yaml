@@ -17,10 +17,12 @@ on:
   create:
     tags:
       - v*.*.*
+    branches:
+      - release/**
 
 jobs:
   prepare:
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'create' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       # Prefer workflow_run context if present, otherwise fall back defaults
