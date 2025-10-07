@@ -21,6 +21,7 @@ export type Tenant = components['schemas']['Lease']['tenants'][number]
 export type TenantAddress = NonNullable<
   components['schemas']['Lease']['tenants'][number]['address']
 >
+export type KeyNote = components['schemas']['KeyNote']
 
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
@@ -33,6 +34,8 @@ export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
 export type RentalPropertyResponse =
   components['schemas']['RentalPropertyResponse']
+export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
+export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
 
 // Key type definitions aligned with database enum
 export const KeyTypeLabels = {

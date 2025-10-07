@@ -3643,6 +3643,158 @@ export interface paths {
       };
     };
   };
+  "/key-notes/{id}": {
+    /**
+     * Get key note by ID
+     * @description Retrieve a specific key note by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key note */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved key note */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a key note
+     * @description Update the description of an existing key note
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the key note to update */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-notes/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get key note by rental object code
+     * @description Retrieve the key note for a specific rental object
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved key note */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-notes": {
+    /**
+     * Create a new key note
+     * @description Create a new key note for a rental object
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -4201,6 +4353,12 @@ export interface components {
       eventTime: string;
       description?: string | null;
     };
+    KeyNote: {
+      /** Format: uuid */
+      id: string;
+      rentalObjectCode: string;
+      description: string;
+    };
     CreateKeyRequest: {
       keyName: string;
       keySequenceNumber?: number;
@@ -4278,6 +4436,14 @@ export interface components {
       /** Format: uuid */
       objectId?: string | null;
       description?: string | null;
+    };
+    CreateKeyNoteRequest: {
+      rentalObjectCode: string;
+      description: string;
+    };
+    UpdateKeyNoteRequest: {
+      rentalObjectCode?: string;
+      description?: string;
     };
     PaginationMeta: {
       totalRecords: number;
