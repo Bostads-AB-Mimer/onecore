@@ -71,9 +71,7 @@ export function DateRangeFilterDropdown({
   const [valueBefore, setValueBefore] = React.useState(formatDate(dateBefore))
 
   const handleApply = () => {
-    onAfterDateChange(
-      dateAfter ? dateAfter.toISOString().split('T')[0] : null
-    )
+    onAfterDateChange(dateAfter ? dateAfter.toISOString().split('T')[0] : null)
     onBeforeDateChange(
       dateBefore ? dateBefore.toISOString().split('T')[0] : null
     )
@@ -100,7 +98,9 @@ export function DateRangeFilterDropdown({
             className
           )}
         >
-          <Filter className={cn('h-3 w-3', hasActiveFilter && 'fill-current')} />
+          <Filter
+            className={cn('h-3 w-3', hasActiveFilter && 'fill-current')}
+          />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4" align="start">
