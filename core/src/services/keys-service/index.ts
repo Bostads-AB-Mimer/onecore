@@ -72,6 +72,7 @@ export const routes = (router: KoaRouter) => {
 
   // Helper function to create log entries
   const createLogEntry = async (
+    user: any,
     eventType: 'creation' | 'update' | 'delete',
     objectType: 'key' | 'keySystem' | 'keyLoan',
     objectId: string,
@@ -79,7 +80,7 @@ export const routes = (router: KoaRouter) => {
   ) => {
     try {
       await LogsApi.create({
-        userName: 'system', // TODO: Replace with actual user from auth context
+        userName: user?.name || user?.preferred_username || 'system',
         eventType,
         objectType,
         objectId,
@@ -440,7 +441,13 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful creation
     const description = await buildKeyLoanDescription(result.data, 'Skapad')
-    await createLogEntry('creation', 'keyLoan', result.data.id, description)
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'keyLoan',
+      result.data.id,
+      description
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -532,7 +539,13 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful update
     const description = await buildKeyLoanDescription(result.data, 'Uppdaterad')
-    await createLogEntry('update', 'keyLoan', result.data.id, description)
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'keyLoan',
+      result.data.id,
+      description
+    )
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
@@ -609,7 +622,13 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
-    await createLogEntry('delete', 'keyLoan', ctx.params.id, description)
+    await createLogEntry(
+      ctx.state.user,
+      'delete',
+      'keyLoan',
+      ctx.params.id,
+      description
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -971,6 +990,7 @@ export const routes = (router: KoaRouter) => {
       ? `${result.data.keyName} ${result.data.keySequenceNumber}`
       : result.data.keyName
     await createLogEntry(
+      ctx.state.user,
       'creation',
       'key',
       result.data.id,
@@ -1060,6 +1080,7 @@ export const routes = (router: KoaRouter) => {
       ? `${result.data.keyName} ${result.data.keySequenceNumber}`
       : result.data.keyName
     await createLogEntry(
+      ctx.state.user,
       'update',
       'key',
       result.data.id,
@@ -1142,6 +1163,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful deletion
     await createLogEntry(
+      ctx.state.user,
       'delete',
       'key',
       ctx.params.id,
@@ -1485,6 +1507,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful creation
     await createLogEntry(
+      ctx.state.user,
       'creation',
       'keySystem',
       result.data.id,
@@ -1581,6 +1604,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful update
     await createLogEntry(
+      ctx.state.user,
       'update',
       'keySystem',
       result.data.id,
@@ -1663,6 +1687,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful deletion
     await createLogEntry(
+      ctx.state.user,
       'delete',
       'keySystem',
       ctx.params.id,
