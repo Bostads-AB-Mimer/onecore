@@ -81,10 +81,10 @@ function transformFromXpandRentalObject(row: any): RentalObject {
 
   // Determine if parking space is in special residential areas or properties
   const isSpecialResidentialArea = ['CEN', 'OXB', 'GRY'].includes(
-    row.residentialareacode
+    row.residentialareacode?.trim()
   )
   const isSpecialProperty = ['24104', '23001', '23002', '23003'].includes(
-    row.estatecode || ''
+    row.estatecode?.trim() || ''
   )
   // Determine vacantFrom date
   const lastDebitDate = row.lastdebitdate
