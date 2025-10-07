@@ -50,7 +50,7 @@ importers:
         specifier: ^15.9.0
         version: 15.15.0
       launch-goblin:
-        specifier: ^0.1.0
+        specifier: ^0.1.1
         version: 0.1.1(5fd4a8b2e5ef6d1e3bd3d79ec3417356)
       prettier:
         specifier: ^3.6.2
