@@ -275,7 +275,11 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
   }
 
   const result = await makeXledgerRequest(query)
-  return transformToInvoice(result.data?.arTransactions?.edges ?? [])
+  const invoiceEdges =
+    result.data?.arTransactions?.edges.filter(
+      (edge: any) => edge.node.slTransactionType.name === 'INVOICE'
+    ) ?? []
+  return transformToInvoice(invoiceEdges)
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
