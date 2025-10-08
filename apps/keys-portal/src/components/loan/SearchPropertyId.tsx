@@ -1,5 +1,6 @@
 // components/loan/SearchPropertyId.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -15,10 +16,15 @@ import { fetchLeasesByRentalPropertyId } from '@/services/api/leaseSearchService
 import type { Lease, Tenant } from '@/services/types'
 
 interface Props {
-  onTenantFound: (tenant: Tenant | null, contracts: Lease[]) => void
+  onTenantFound: (
+    tenant: Tenant | null,
+    contracts: Lease[],
+    rentalPropertyId: string
+  ) => void
 }
 
 export function SearchPropertyId({ onTenantFound }: Props) {
+  const [searchParams] = useSearchParams()
   const [rentalPropertyId, setRentalPropertyId] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -34,6 +40,24 @@ export function SearchPropertyId({ onTenantFound }: Props) {
       return
     }
 
+    await handleSearchById(id)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleSearch()
+  }
+
+  // Trigger search when URL parameter is present
+  useEffect(() => {
+    const objectParam = searchParams.get('object')
+    if (objectParam && objectParam.trim()) {
+      setRentalPropertyId(objectParam)
+      handleSearchById(objectParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const handleSearchById = async (id: string) => {
     setLoading(true)
     try {
       const contracts = await fetchLeasesByRentalPropertyId(id, {
@@ -60,7 +84,7 @@ export function SearchPropertyId({ onTenantFound }: Props) {
         return
       }
 
-      onTenantFound(tenant, contracts)
+      onTenantFound(tenant, contracts, id)
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
@@ -74,10 +98,6 @@ export function SearchPropertyId({ onTenantFound }: Props) {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch()
   }
 
   return (

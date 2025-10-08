@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SearchTenant } from '@/components/loan/SearchTenant'
 import { SearchPropertyId } from '@/components/loan/SearchPropertyId'
@@ -6,9 +7,10 @@ import { TenantInfo } from '@/components/loan/TenantInfo'
 import type { Tenant, Lease } from '@/services/types'
 
 export default function KeyLoan() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
   const [tenantContracts, setTenantContracts] = useState<Lease[]>([])
-  const [showTenantCard, setShowTenantCard] = useState<boolean>(true) // NEW
+  const [showTenantCard, setShowTenantCard] = useState<boolean>(true)
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
   const scrollToResults = () =>
@@ -18,24 +20,31 @@ export default function KeyLoan() {
     )
 
   // PNR flow
-  const handlePnrFound = (tenant: Tenant, contracts: Lease[]) => {
+  const handlePnrFound = (tenant: Tenant, contracts: Lease[], pnr: string) => {
     setSelectedTenant(tenant)
     setTenantContracts(contracts)
     setShowTenantCard(true)
+    setSearchParams({ tenant: pnr })
     scrollToResults()
   }
 
   // Property flow
-  const handlePropertyFound = (tenant: Tenant | null, contracts: Lease[]) => {
+  const handlePropertyFound = (
+    tenant: Tenant | null,
+    contracts: Lease[],
+    rentalPropertyId: string
+  ) => {
     setSelectedTenant(tenant)
     setTenantContracts(contracts)
     setShowTenantCard(true)
+    setSearchParams({ object: rentalPropertyId })
     scrollToResults()
   }
 
   const handleClearSearch = () => {
     setSelectedTenant(null)
     setTenantContracts([])
+    setSearchParams({})
   }
 
   return (
