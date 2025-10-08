@@ -205,7 +205,7 @@ interface Invoice {
   fromDate: Date
   toDate: Date
   invoiceDate: Date
-  expirationDate: Date
+  expirationDate?: Date
   debitStatus: number
   paymentStatus: PaymentStatus
   transactionType: InvoiceTransactionType
