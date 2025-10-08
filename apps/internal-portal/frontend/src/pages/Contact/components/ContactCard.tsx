@@ -142,6 +142,9 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>
+            Skickad till inkasso
+          </TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -211,6 +214,11 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         </TableCell>
         <TableCell>
           {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
+        </TableCell>
+        <TableCell>
+          {invoice.sentToDebtCollection
+            ? new Date(invoice.sentToDebtCollection).toLocaleDateString()
+            : '-'}
         </TableCell>
       </TableRow>
       <TableRow>
