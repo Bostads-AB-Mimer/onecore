@@ -415,7 +415,6 @@ export const routes = (router: KoaRouter) => {
         const propertyInfo =
           await getEstateCodeFromXpandByRentalObjectCode(rentalObjectCode)
 
-
         if (!propertyInfo) {
           ctx.status = 404
           ctx.body = {
