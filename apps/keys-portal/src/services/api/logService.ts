@@ -1,5 +1,5 @@
 // services/api/logService.ts
-import type { Log, LogFilterParams } from '@/services/types'
+import type { Log, LogFilterParams, PaginatedResponse } from '@/services/types'
 
 import { GET } from './core/base-api'
 
@@ -32,7 +32,7 @@ const normalizeLog = (row: any): Log => ({
 })
 
 export const logService = {
-  async fetchLogs(filters?: LogFilterParams): Promise<Log[]> {
+  async fetchLogs(filters?: LogFilterParams): Promise<PaginatedResponse<Log>> {
     const hasFree = (filters?.q ?? '').trim().length >= 3
     const hasFilters =
       !!filters?.eventType?.length ||
@@ -41,13 +41,22 @@ export const logService = {
       hasFree
 
     const query = hasFilters ? mapFiltersToQuery(filters) : {}
+
     const { data, error } = await GET(hasFilters ? '/logs/search' : '/logs', {
       params: { query }, // <-- required by openapi-fetch
     })
     if (error) throw error
 
     const rows = (data?.content ?? []) as any[]
-    return rows.map(normalizeLog)
+    return {
+      content: rows.map(normalizeLog),
+      _meta: {
+        currentPage: 1,
+        pageSize: rows.length,
+        totalRecords: rows.length,
+        totalPages: 1,
+      },
+    }
   },
 
   async getUniqueUsers(): Promise<string[]> {
