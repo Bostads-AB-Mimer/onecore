@@ -7,7 +7,13 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { Listing, ListingStatus } from '@onecore/types'
+import {
+  ApplicantStatus,
+  DetailedApplicant,
+  GetActiveOfferByListingIdErrorCodes,
+  Listing,
+  ListingStatus,
+} from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -278,6 +284,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.put('/listings/:listingId/status', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    //1. Close listing
     const result = await leasingAdapter.updateListingStatus(
       Number(ctx.params.listingId),
       ctx.request.body.status
@@ -287,6 +295,80 @@ export const routes = (router: KoaRouter) => {
       ctx.status = result.statusCode ?? 500
       ctx.body = { ...metadata, error: result.err }
       return
+    }
+
+    //2. Remove any active applications
+    if (ctx.request.body.status == ListingStatus.Closed) {
+      const applicantsResult =
+        await leasingAdapter.getDetailedApplicantsByListingId(
+          Number(ctx.params.listingId)
+        )
+
+      if (!applicantsResult.ok) {
+        ctx.status = applicantsResult.statusCode ?? 500
+        ctx.body = { ...metadata, error: 'Listing not found' }
+        return
+      }
+
+      if (applicantsResult.data) {
+        applicantsResult.data.forEach(
+          async (detailedApplicant: DetailedApplicant) => {
+            if (detailedApplicant.status === ApplicantStatus.Active) {
+              const responseData =
+                await leasingAdapter.withdrawApplicantByManager(
+                  detailedApplicant.id.toString()
+                )
+              if (!responseData.ok) {
+                logger.error(
+                  {
+                    applicantId: detailedApplicant.id,
+                    listingId: ctx.params.listingId,
+                  },
+                  'Error withdrawing applicant when closing listing'
+                )
+              }
+            }
+          }
+        )
+      }
+    }
+
+    //3. Deny any open offers for the listing
+    const offerResult = await leasingAdapter.getActiveOfferByListingId(
+      Number.parseInt(ctx.params.listingId)
+    )
+
+    if (!offerResult.ok) {
+      if (offerResult.err !== GetActiveOfferByListingIdErrorCodes.NotFound) {
+        logger.error(
+          { listingId: ctx.params.listingId, error: offerResult.err },
+          'Error getting active offer by listing id when closing listing'
+        )
+        ctx.status = offerResult.statusCode ?? 500
+        ctx.body = { error: 'Error getting active offer', ...metadata }
+        return
+      } else {
+        logger.debug(
+          { listingId: ctx.params.listingId, error: offerResult.err },
+          'Open offer not found when closing listing'
+        )
+      }
+    }
+
+    if (offerResult.ok) {
+      const closeOfferResult = await leasingAdapter.closeOfferByDeny(
+        offerResult.data.id
+      )
+
+      if (!closeOfferResult.ok) {
+        logger.error(
+          { listingId: ctx.params.listingId, offerId: offerResult.data.id },
+          'Error denying offer when closing listing'
+        )
+        ctx.status = closeOfferResult.statusCode ?? 500
+        ctx.body = { error: 'Error denying offer', ...metadata }
+        return
+      }
     }
 
     ctx.status = 200
