@@ -410,7 +410,8 @@ const getContactQuery = () => {
     .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
     .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
     .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-    .where('cmadr.tdate', null) //only get active addresss
+    .whereNotNull('cmadr.fdate') //only get addresses that has from date since a few contacts has addresses without from date and todate and those has never been active and should not be considered
+    .where('cmadr.tdate', null) //only get active address
 }
 
 const getPhoneNumbersForContact = async (keycmobj: string) => {
