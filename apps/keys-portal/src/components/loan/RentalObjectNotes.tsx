@@ -34,9 +34,8 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
     async function loadNote() {
       setLoading(true)
       try {
-        const notes = await keyNoteService.getKeyNotesByRentalObjectCode(
-          rentalObjectCode
-        )
+        const notes =
+          await keyNoteService.getKeyNotesByRentalObjectCode(rentalObjectCode)
         if (!cancelled) {
           // Assume one note per rental object
           const existingNote = notes[0] ?? null
