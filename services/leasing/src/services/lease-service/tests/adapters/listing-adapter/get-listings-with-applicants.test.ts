@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { ApplicantStatus, ListingStatus, OfferStatus } from '@onecore/types'
+import { ListingStatus, OfferStatus } from '@onecore/types'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'
 import * as offerAdapter from '../../../adapters/offer-adapter'
