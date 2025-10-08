@@ -18,6 +18,7 @@ import {
 import { Key, KeyTypeLabels, getKeyTypeFilterOptions } from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
+import { useNavigate } from 'react-router-dom'
 
 interface KeysTableProps {
   keys: Key[]
@@ -42,8 +43,14 @@ export function KeysTable({
   createdAtBefore,
   onDatesChange,
 }: KeysTableProps) {
+  const navigate = useNavigate()
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE')
+  }
+
+  const handleObjectClick = (rentalObjectCode: string) => {
+    navigate(`/KeyLoan?object=${rentalObjectCode}`)
   }
 
   const getTypeVariant = (type: string) => {
@@ -108,7 +115,18 @@ export function KeysTable({
             keys.map((key) => (
               <TableRow key={key.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{key.keyName}</TableCell>
-                <TableCell>{key.rentalObjectCode || '-'}</TableCell>
+                <TableCell>
+                  {key.rentalObjectCode ? (
+                    <button
+                      onClick={() => handleObjectClick(key.rentalObjectCode!)}
+                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      {key.rentalObjectCode}
+                    </button>
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={getTypeVariant(key.keyType)}

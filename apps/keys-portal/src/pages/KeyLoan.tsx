@@ -1,8 +1,6 @@
 import { useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SearchTenant } from '@/components/loan/SearchTenant'
-import { SearchPropertyId } from '@/components/loan/SearchPropertyId'
+import { UnifiedSearch } from '@/components/loan/UnifiedSearch'
 import { TenantInfo } from '@/components/loan/TenantInfo'
 import type { Tenant, Lease } from '@/services/types'
 
@@ -19,25 +17,23 @@ export default function KeyLoan() {
       100
     )
 
-  // PNR flow
-  const handlePnrFound = (tenant: Tenant, contracts: Lease[], pnr: string) => {
-    setSelectedTenant(tenant)
-    setTenantContracts(contracts)
-    setShowTenantCard(true)
-    setSearchParams({ tenant: pnr })
-    scrollToResults()
-  }
-
-  // Property flow
-  const handlePropertyFound = (
+  const handleResultFound = (
     tenant: Tenant | null,
     contracts: Lease[],
-    rentalPropertyId: string
+    searchValue: string,
+    type: 'pnr' | 'object'
   ) => {
     setSelectedTenant(tenant)
     setTenantContracts(contracts)
     setShowTenantCard(true)
-    setSearchParams({ object: rentalPropertyId })
+
+    // Update URL params based on search type
+    if (type === 'pnr') {
+      setSearchParams({ tenant: searchValue })
+    } else {
+      setSearchParams({ object: searchValue })
+    }
+
     scrollToResults()
   }
 
@@ -50,20 +46,7 @@ export default function KeyLoan() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="max-w-2xl mx-auto">
-        <Tabs defaultValue="personnummer" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="personnummer">Personnummer</TabsTrigger>
-            <TabsTrigger value="hyresobjekt">Hyresobjekt</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="personnummer" className="space-y-4">
-            <SearchTenant onTenantFound={handlePnrFound} />
-          </TabsContent>
-
-          <TabsContent value="hyresobjekt" className="space-y-4">
-            <SearchPropertyId onTenantFound={handlePropertyFound} />
-          </TabsContent>
-        </Tabs>
+        <UnifiedSearch onResultFound={handleResultFound} />
       </div>
 
       {/* Show results even when tenant is null (property search) */}
@@ -73,7 +56,7 @@ export default function KeyLoan() {
             tenant={selectedTenant}
             contracts={tenantContracts}
             onClearSearch={handleClearSearch}
-            showTenantCard={showTenantCard} // ← key line
+            showTenantCard={showTenantCard}
           />
         </div>
       )}
