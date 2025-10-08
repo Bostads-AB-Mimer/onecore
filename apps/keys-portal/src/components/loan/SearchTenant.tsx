@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -14,12 +15,13 @@ import { fetchTenantAndLeasesByPnr } from '@/services/api/leaseSearchService'
 import type { Lease, Tenant } from '@/services/types'
 
 interface SearchTenantProps {
-  onTenantFound: (tenant: Tenant, contracts: Lease[]) => void
+  onTenantFound: (tenant: Tenant, contracts: Lease[], pnr: string) => void
 }
 
 const isValidPnr = (pnr: string) => /^(?:\d{6}|\d{8})-?\d{4}$/.test(pnr.trim())
 
 export function SearchTenant({ onTenantFound }: SearchTenantProps) {
+  const [searchParams] = useSearchParams()
   const [personnummer, setPersonnummer] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -35,6 +37,24 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
       return
     }
 
+    await handleSearchByPnr(pnr)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleSearch()
+  }
+
+  // Trigger search when URL parameter is present
+  useEffect(() => {
+    const tenantParam = searchParams.get('tenant')
+    if (tenantParam && isValidPnr(tenantParam)) {
+      setPersonnummer(tenantParam)
+      handleSearchByPnr(tenantParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const handleSearchByPnr = async (pnr: string) => {
     setLoading(true)
     try {
       const result = await fetchTenantAndLeasesByPnr(pnr)
@@ -45,7 +65,7 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
         })
         return
       }
-      onTenantFound(result.tenant, result.contracts)
+      onTenantFound(result.tenant, result.contracts, pnr)
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
@@ -59,10 +79,6 @@ export function SearchTenant({ onTenantFound }: SearchTenantProps) {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch()
   }
 
   return (
