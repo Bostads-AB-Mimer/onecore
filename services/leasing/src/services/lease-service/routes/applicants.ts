@@ -458,8 +458,8 @@ export const routes = (router: KoaRouter) => {
         }
 
         const validatableLease =
-          contact.data.currentHousingContract ||
-          contact.data.upcomingHousingContract
+          contact.data.upcomingHousingContract ||
+          contact.data.currentHousingContract
 
         if (!validatableLease) {
           ctx.status = 403
