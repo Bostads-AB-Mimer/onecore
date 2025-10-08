@@ -1,6 +1,5 @@
-//TODO update     const payload = ctx.request.body ?
-
 import KoaRouter from '@koa/router'
+import multer from '@koa/multer'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
   KeyLoansApi,
@@ -19,6 +18,7 @@ const {
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
+  ReceiptSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   CreateKeyLoanRequestSchema,
@@ -31,6 +31,9 @@ const {
   PaginationMetaSchema,
   PaginationLinksSchema,
   createPaginatedResponseSchema,
+  CreateReceiptRequestSchema,
+  ReceiptTypeSchema,
+  ReceiptFormatSchema,
 } = keys.v1
 
 /**
@@ -68,6 +71,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('KeySystem', KeySystemSchema)
   registerSchema('Log', LogSchema)
   registerSchema('KeyNote', KeyNoteSchema)
+  registerSchema('Receipt', ReceiptSchema)
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
@@ -77,6 +81,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
   registerSchema('CreateKeyNoteRequest', CreateKeyNoteRequestSchema)
   registerSchema('UpdateKeyNoteRequest', UpdateKeyNoteRequestSchema)
+  registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
+  registerSchema('ReceiptType', ReceiptTypeSchema)
+  registerSchema('ReceiptFormat', ReceiptFormatSchema)
 
   // Helper function to create log entries
   const createLogEntry = async (
@@ -2589,5 +2596,208 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { ...metadata }
+  })
+
+  // Configure multer for file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+    },
+    fileFilter: (_req, file, cb) => {
+      // Only accept PDF files
+      if (file.mimetype === 'application/pdf') {
+        cb(null, true)
+      } else {
+        cb(new Error('Only PDF files are allowed'), false)
+      }
+    },
+  })
+
+  /**
+   * @swagger
+   * /receipts/{id}/upload:
+   *   post:
+   *     summary: Upload PDF file for a receipt
+   *     description: Upload a PDF file to attach to an existing receipt
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt to attach the file to
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     fileId:
+   *                       type: string
+   *                     fileName:
+   *                       type: string
+   *                     size:
+   *                       type: number
+   *       400:
+   *         description: Invalid file or receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       413:
+   *         description: File too large
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/receipts/:id/upload', upload.single('file'), async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Check if file was provided
+      if (!ctx.file || !ctx.file.buffer) {
+        ctx.status = 400
+        ctx.body = { reason: 'No file provided', ...metadata }
+        return
+      }
+
+      // Forward the file buffer to microservice
+      const result = await ReceiptsApi.uploadFile(
+        ctx.params.id,
+        ctx.file.buffer,
+        ctx.file.originalname,
+        ctx.file.mimetype
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { reason: 'Receipt not found', ...metadata }
+          return
+        }
+        if (result.err === 'bad-request') {
+          ctx.status = 400
+          ctx.body = { reason: 'Invalid file or receipt', ...metadata }
+          return
+        }
+
+        logger.error({ err: result.err, metadata }, 'Error uploading file')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (err) {
+      logger.error({ err }, 'Error uploading file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /receipts/{id}/download:
+   *   get:
+   *     summary: Get presigned download URL for receipt PDF
+   *     description: Generate a presigned URL to download the PDF file attached to a receipt
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt
+   *     responses:
+   *       200:
+   *         description: Download URL generated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     url:
+   *                       type: string
+   *                     expiresIn:
+   *                       type: number
+   *                     fileId:
+   *                       type: string
+   *       404:
+   *         description: Receipt or file not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/receipts/:id/download', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await ReceiptsApi.getDownloadUrl(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt or file not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error generating download URL'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 }
