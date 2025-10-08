@@ -44,9 +44,12 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<DashboardView />} />
+              <Route index element={<DashboardView />} />
+              {/* Legacy route ----------------------------*/}
+              <Route path="sv" element={<DashboardView />} />
+              {/*------------------------------------------*/}
               <Route path="companies/:companyId" element={<CompanyView />} />
-              <Route path="/properties" element={<SearchView />} />
+              <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
               <Route path="buildings/:buildingId" element={<BuildingView />} />
               <Route
