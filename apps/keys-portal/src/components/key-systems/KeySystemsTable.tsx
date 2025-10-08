@@ -54,8 +54,7 @@ interface KeySystemsTableProps {
   onStatusFilterChange: (value: string | null) => void
   installationDateAfter: string | null
   installationDateBefore: string | null
-  onInstallationDateAfterChange: (date: string | null) => void
-  onInstallationDateBeforeChange: (date: string | null) => void
+  onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
 }
 
 export function KeySystemsTable({
@@ -73,8 +72,7 @@ export function KeySystemsTable({
   onStatusFilterChange,
   installationDateAfter,
   installationDateBefore,
-  onInstallationDateAfterChange,
-  onInstallationDateBeforeChange,
+  onDatesChange,
 }: KeySystemsTableProps) {
   const navigate = useNavigate()
   const [addressMap, setAddressMap] = useState<Record<string, string>>({})
@@ -184,8 +182,7 @@ export function KeySystemsTable({
                 <DateRangeFilterDropdown
                   afterDate={installationDateAfter}
                   beforeDate={installationDateBefore}
-                  onAfterDateChange={onInstallationDateAfterChange}
-                  onBeforeDateChange={onInstallationDateBeforeChange}
+                  onDatesChange={onDatesChange}
                 />
               </div>
             </TableHead>

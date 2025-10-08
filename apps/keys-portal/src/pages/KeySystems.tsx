@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { KeySystemsHeader } from '@/components/key-systems/KeySystemsHeader'
 import { KeySystemsToolbar } from '@/components/key-systems/KeySystemsToolbar'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
@@ -9,41 +9,35 @@ import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyService } from '@/services/api/keyService'
 import { propertySearchService } from '@/services/api/propertySearchService'
-import { usePagination } from '@/hooks/usePagination'
+import { useUrlPagination } from '@/hooks/useUrlPagination'
 
 export default function KeySystems() {
+  const pagination = useUrlPagination()
   const [KeySystems, setKeySystems] = useState<KeySystem[]>([])
   const [propertyMap, setPropertyMap] = useState<Map<string, Property>>(
     new Map()
   )
-  const [searchQuery, setSearchQuery] = useState('')
-  // Column filters (for table header dropdowns)
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
-    null
-  )
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
-    string | null
-  >(null)
-  const [installationDateAfter, setInstallationDateAfter] = useState<
-    string | null
-  >(null)
-  const [installationDateBefore, setInstallationDateBefore] = useState<
-    string | null
-  >(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKeySystem, setEditingKeySystem] = useState<KeySystem | null>(
     null
   )
-  const [isLoading, setIsLoading] = useState(true)
   const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
   const [keysForExpandedSystem, setKeysForExpandedSystem] = useState<Key[]>([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const { toast } = useToast()
 
-  const pagination = usePagination({
-    initialLimit: 60,
-    onPageChange: (page, limit) => loadKeySystems(page, limit),
-  })
+  // Read all filters from URL
+  const searchQuery = pagination.searchParams.get('q') || ''
+  const selectedTypeFilter = pagination.searchParams.get('type') || null
+  const selectedStatusFilter = pagination.searchParams.get('isActive') || null
+  const installationDateAfter =
+    pagination.searchParams.get('installationDateAfter') || null
+  const installationDateBefore =
+    pagination.searchParams.get('installationDateBefore') || null
+
+  // Local state for search input (to allow typing without triggering URL changes)
+  const [searchInput, setSearchInput] = useState(searchQuery)
 
   // Load key systems and their properties from API
   const loadKeySystems = useCallback(
@@ -131,26 +125,72 @@ export default function KeySystems() {
       }
     },
     [
-      toast,
-      pagination,
       searchQuery,
       selectedTypeFilter,
       selectedStatusFilter,
       installationDateAfter,
       installationDateBefore,
+      toast,
+      pagination.setPaginationMeta,
     ]
   )
 
+  // Fetch data whenever URL params change
   useEffect(() => {
-    // Reset to page 1 and fetch when search/filter changes
-    pagination.handlePageChange(1)
+    loadKeySystems(pagination.currentPage, pagination.currentLimit)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    pagination.currentPage,
+    pagination.currentLimit,
     searchQuery,
     selectedTypeFilter,
     selectedStatusFilter,
     installationDateAfter,
     installationDateBefore,
+    // loadKeySystems intentionally omitted to prevent infinite loop
   ])
+
+  // Sync search input with URL when URL changes
+  useEffect(() => {
+    setSearchInput(searchQuery)
+  }, [searchQuery])
+
+  // Filter update handlers
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchInput(query)
+      // Only update URL if query is empty or has 3+ characters
+      if (query.trim().length === 0 || query.trim().length >= 3) {
+        pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
+      }
+    },
+    [pagination]
+  )
+
+  const handleTypeFilterChange = useCallback(
+    (type: string | null) => {
+      pagination.updateUrlParams({ type: type, page: '1' })
+    },
+    [pagination]
+  )
+
+  const handleStatusFilterChange = useCallback(
+    (status: string | null) => {
+      pagination.updateUrlParams({ isActive: status, page: '1' })
+    },
+    [pagination]
+  )
+
+  const handleInstallationDatesChange = useCallback(
+    (afterDate: string | null, beforeDate: string | null) => {
+      pagination.updateUrlParams({
+        installationDateAfter: afterDate,
+        installationDateBefore: beforeDate,
+        page: '1',
+      })
+    },
+    [pagination]
+  )
 
   const handleAddNew = () => {
     if (showAddForm && !editingKeySystem) {
@@ -279,8 +319,8 @@ export default function KeySystems() {
       />
 
       <KeySystemsToolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        searchQuery={searchInput}
+        onSearchChange={handleSearchChange}
         onAddNew={handleAddNew}
       />
 
@@ -303,18 +343,17 @@ export default function KeySystems() {
         keysForExpandedSystem={keysForExpandedSystem}
         isLoadingKeys={isLoadingKeys}
         selectedType={selectedTypeFilter}
-        onTypeFilterChange={setSelectedTypeFilter}
+        onTypeFilterChange={handleTypeFilterChange}
         selectedStatus={selectedStatusFilter}
-        onStatusFilterChange={setSelectedStatusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
         installationDateAfter={installationDateAfter}
         installationDateBefore={installationDateBefore}
-        onInstallationDateAfterChange={setInstallationDateAfter}
-        onInstallationDateBeforeChange={setInstallationDateBefore}
+        onDatesChange={handleInstallationDatesChange}
       />
 
       <PaginationControls
         paginationMeta={pagination.paginationMeta}
-        pageLimit={pagination.pageLimit}
+        pageLimit={pagination.currentLimit}
         customLimit={pagination.customLimit}
         isFocused={pagination.isFocused}
         onPageChange={pagination.handlePageChange}
