@@ -1,36 +1,32 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { KeysHeader } from '@/components/keys/KeysHeader'
 import { KeysToolbar } from '@/components/keys/KeysToolbar'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { useToast } from '@/hooks/use-toast'
+import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { Key } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
-import { usePagination } from '@/hooks/usePagination'
 
 const Index = () => {
+  const pagination = useUrlPagination()
   const [keys, setKeys] = useState<Key[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
-
-  const [searchQuery, setSearchQuery] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKey, setEditingKey] = useState<Key | null>(null)
   const { toast } = useToast()
 
-  // Column filters (for table header dropdowns)
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
-    null
-  )
-  const [createdAtAfter, setCreatedAtAfter] = useState<string | null>(null)
-  const [createdAtBefore, setCreatedAtBefore] = useState<string | null>(null)
+  // Read all filters from URL
+  const searchQuery = pagination.searchParams.get('q') || ''
+  const selectedTypeFilter = pagination.searchParams.get('keyType') || null
+  const createdAtAfter = pagination.searchParams.get('createdAtAfter') || null
+  const createdAtBefore = pagination.searchParams.get('createdAtBefore') || null
 
-  const pagination = usePagination({
-    initialLimit: 60,
-    onPageChange: (page, limit) => fetchKeys(page, limit),
-  })
+  // Local state for search input (to allow typing without triggering URL changes)
+  const [searchInput, setSearchInput] = useState(searchQuery)
 
   const fetchKeys = useCallback(
     async (page: number = 1, limit: number = 60) => {
@@ -109,19 +105,63 @@ const Index = () => {
       }
     },
     [
-      toast,
-      pagination,
       searchQuery,
       selectedTypeFilter,
       createdAtAfter,
       createdAtBefore,
+      toast,
+      pagination.setPaginationMeta,
     ]
   )
 
+  // Fetch data whenever URL params change
   useEffect(() => {
-    // Reset to page 1 and fetch when search/filter changes
-    pagination.handlePageChange(1)
-  }, [searchQuery, selectedTypeFilter, createdAtAfter, createdAtBefore])
+    fetchKeys(pagination.currentPage, pagination.currentLimit)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pagination.currentPage,
+    pagination.currentLimit,
+    searchQuery,
+    selectedTypeFilter,
+    createdAtAfter,
+    createdAtBefore,
+    // fetchKeys intentionally omitted to prevent infinite loop
+  ])
+
+  // Sync search input with URL when URL changes
+  useEffect(() => {
+    setSearchInput(searchQuery)
+  }, [searchQuery])
+
+  // Filter update handlers
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchInput(query)
+      // Only update URL if query is empty or has 3+ characters
+      if (query.trim().length === 0 || query.trim().length >= 3) {
+        pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
+      }
+    },
+    [pagination]
+  )
+
+  const handleTypeFilterChange = useCallback(
+    (type: string | null) => {
+      pagination.updateUrlParams({ keyType: type, page: '1' })
+    },
+    [pagination]
+  )
+
+  const handleDatesChange = useCallback(
+    (afterDate: string | null, beforeDate: string | null) => {
+      pagination.updateUrlParams({
+        createdAtAfter: afterDate,
+        createdAtBefore: beforeDate,
+        page: '1',
+      })
+    },
+    [pagination]
+  )
 
   const handleAddNew = () => {
     if (showAddForm && !editingKey) {
@@ -218,8 +258,8 @@ const Index = () => {
         />
 
         <KeysToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          searchQuery={searchInput}
+          onSearchChange={handleSearchChange}
           onAddNew={handleAddNew}
         />
 
@@ -244,16 +284,15 @@ const Index = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           selectedType={selectedTypeFilter}
-          onTypeFilterChange={setSelectedTypeFilter}
+          onTypeFilterChange={handleTypeFilterChange}
           createdAtAfter={createdAtAfter}
           createdAtBefore={createdAtBefore}
-          onCreatedAtAfterChange={setCreatedAtAfter}
-          onCreatedAtBeforeChange={setCreatedAtBefore}
+          onDatesChange={handleDatesChange}
         />
 
         <PaginationControls
           paginationMeta={pagination.paginationMeta}
-          pageLimit={pagination.pageLimit}
+          pageLimit={pagination.currentLimit}
           customLimit={pagination.customLimit}
           isFocused={pagination.isFocused}
           onPageChange={pagination.handlePageChange}
