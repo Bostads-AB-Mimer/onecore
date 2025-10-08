@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, DragEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
@@ -6,12 +6,19 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Printer, Calendar, ChevronDown, Plus } from 'lucide-react'
+import {
+  FileText,
+  Printer,
+  Calendar,
+  ChevronDown,
+  Plus,
+  Upload,
+  Download,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { Lease, Receipt, KeyLoan, Key } from '@/services/types'
-import { toReceiptTenant } from '@/services/types'
+import type { Lease, Receipt, KeyLoan, Key, Tenant } from '@/services/types'
 import { generateLoanReceipt, generateReturnReceipt } from '@/lib/pdf-receipts'
 import { receiptService } from '@/services/api/receiptService'
 import { keyLoanService } from '@/services/api/keyLoanService'
@@ -24,10 +31,20 @@ type LoanTransaction = {
   keys: Array<{ id: string; key_name: string; key_type: string }>
 }
 
+const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+
 export function ReceiptHistory({ lease }: { lease: Lease }) {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [transactions, setTransactions] = useState<LoanTransaction[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Upload/download UI state
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // single hidden input reused per-row uploads
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -64,7 +81,7 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     existingReceipts: Receipt[],
     leaseId: string
   ): LoanTransaction[] {
-    const existingIds = new Set(existingReceipts.flatMap((r) => r.keyLoanIds))
+    const existingIds = new Set(existingReceipts.map((r) => r.keyLoanId))
 
     const parseKeysCsv = (csv?: string): string[] =>
       String(csv ?? '')
@@ -76,11 +93,9 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
       items: KeyLoan[],
       kind: 'loan' | 'return'
     ): LoanTransaction[] => {
-      // exclude loans already included in receipts
       const usable = items.filter((l) => !existingIds.has(l.id))
       if (!usable.length) return []
 
-      // group by YYYY-MM-DD based on createdAt / returnedAt
       const byDay = new Map<string, KeyLoan[]>()
       for (const l of usable) {
         const dateIso =
@@ -97,16 +112,12 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
           kind === 'loan'
             ? arr[0].createdAt
             : (arr[0].returnedAt ?? arr[0].createdAt)
-
-        // Flatten all key ids from CSV across the loans in this day-group
         const keyIds = arr.flatMap((kl) => parseKeysCsv((kl as any).keys))
-
         tx.push({
           id: `${kind}-${leaseId}-${arr[0].id}`,
           type: kind,
           date: dateIso!,
           keyLoanIds: arr.map((x) => x.id),
-          // simple display labels; replace when you have richer key metadata
           keys: keyIds.map((id) => ({
             id,
             key_name: `Nyckel ${id.slice(0, 4)}`,
@@ -123,53 +134,38 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     ].sort((a, b) => b.date.localeCompare(a.date))
   }
 
-  const currentReceiptTenants = () => {
-    return lease.tenants && lease.tenants.length > 0
-      ? lease.tenants.map(toReceiptTenant)
-      : [
-          {
-            id: '',
-            personnummer: '',
-            firstName: 'Okänd',
-            lastName: 'Hyresgäst',
-          },
-        ]
-  }
+  const currentReceiptTenants = (): Tenant[] => lease.tenants ?? []
 
   const handleReprint = (receipt: Receipt) => {
     const tenants = currentReceiptTenants()
-    const keys: Key[] = [] // If you want actual key rows on the PDF, fetch them by receipt/keyLoanIds
-    if (receipt.receiptType === 'loan') {
-      generateLoanReceipt({ lease, tenants, keys, receiptType: 'loan' })
+    const keys: Key[] = []
+    if (receipt.receiptType === 'LOAN') {
+      generateLoanReceipt({ lease, tenants, keys, receiptType: 'LOAN' })
     } else {
-      generateReturnReceipt({ lease, tenants, keys, receiptType: 'return' })
+      generateReturnReceipt({ lease, tenants, keys, receiptType: 'RETURN' })
     }
   }
 
   const handleGenerateFromTx = async (tx: LoanTransaction) => {
     const tenants = currentReceiptTenants()
-    const receiptNumber = `${tx.type === 'loan' ? 'NYL' : 'NYÅ'}-${format(
-      new Date(),
-      'yyyyMMdd-HHmmss'
-    )}`
-
-    // Persist receipt
-    await receiptService.create({
-      receiptType: tx.type,
-      leaseId: lease.leaseId,
-      tenantId: tenants[0].id,
-      keyLoanIds: tx.keyLoanIds,
-      receiptNumber,
-    })
-
-    // Print (optional: supply real key rows)
+    await Promise.all(
+      tx.keyLoanIds.map((keyLoanId) =>
+        receiptService.create({
+          keyLoanId,
+          receiptType: tx.type === 'loan' ? 'LOAN' : 'RETURN',
+          leaseId: lease.leaseId,
+          type: 'DIGITAL',
+          signed: true,
+        })
+      )
+    )
     const keys: Key[] = []
     if (tx.type === 'loan') {
       generateLoanReceipt({
         lease,
         tenants,
         keys,
-        receiptType: 'loan',
+        receiptType: 'LOAN',
         operationDate: new Date(tx.date),
       })
     } else {
@@ -177,12 +173,10 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
         lease,
         tenants,
         keys,
-        receiptType: 'return',
+        receiptType: 'RETURN',
         operationDate: new Date(tx.date),
       })
     }
-
-    // Refresh
     const [r, keyLoans] = await Promise.all([
       receiptService.listByLease(lease.leaseId),
       keyLoanService.listByLease(lease.leaseId),
@@ -191,6 +185,64 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
     setTransactions(
       buildTransactions(keyLoans.loaned, keyLoans.returned, r, lease.leaseId)
     )
+  }
+
+  // ---- Per-row upload/download helpers ----
+  function validateFile(file: File): string | null {
+    if (file.type !== 'application/pdf') return 'Endast PDF-filer tillåtna.'
+    if (file.size > MAX_SIZE) return 'Filen är för stor (max 10 MB).'
+    return null
+  }
+
+  async function uploadForReceipt(receiptId: string, file: File) {
+    setErrorMsg(null)
+    setUploadingId(receiptId)
+    try {
+      const err = validateFile(file)
+      if (err) throw new Error(err)
+      await receiptService.uploadFile(receiptId, file)
+      // refresh list to reflect fileId
+      const r = await receiptService.listByLease(lease.leaseId)
+      setReceipts(r)
+    } catch (e: any) {
+      setErrorMsg(e?.message ?? 'Kunde inte ladda upp filen.')
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+  async function downloadForReceipt(receiptId: string) {
+    setDownloadingId(receiptId)
+    try {
+      await receiptService.downloadFile(receiptId) // opens new tab with presigned URL
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  function onPickFile(receiptId: string) {
+    pendingUploadReceiptIdRef.current = receiptId
+    fileInputRef.current?.click()
+  }
+
+  function onFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    const receiptId = pendingUploadReceiptIdRef.current
+    if (file && receiptId) {
+      void uploadForReceipt(receiptId, file)
+    }
+    // reset
+    pendingUploadReceiptIdRef.current = null
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function onRowDrop(e: DragEvent<HTMLDivElement>, receiptId: string) {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0] ?? null
+    if (file) void uploadForReceipt(receiptId, file)
+  }
+  function onRowDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
   }
 
   if (loading)
@@ -203,6 +255,15 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
 
   return (
     <Collapsible defaultOpen={false} className="w-full">
+      {/* hidden file input used by “Välj PDF” buttons */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={onFileInputChange}
+      />
+
       <CollapsibleTrigger className="flex w-full items-center justify-between p-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
@@ -218,38 +279,101 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
               <Printer className="h-3 w-3" />
               <span>BEFINTLIGA KVITTON ({receipts.length})</span>
             </div>
-            {receipts.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
-              >
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-medium">{r.receiptNumber}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(r.createdAt), "d MMM yyyy 'kl.' HH:mm", {
-                        locale: sv,
-                      })}
-                    </div>
-                  </div>
-                  <Badge
-                    variant={r.receiptType === 'loan' ? 'default' : 'secondary'}
-                  >
-                    {r.receiptType === 'loan' ? 'Utlåning' : 'Återlämning'}
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleReprint(r)}
-                  className="gap-2"
+
+            {errorMsg && (
+              <div className="text-xs text-destructive">{errorMsg}</div>
+            )}
+
+            {receipts.map((r) => {
+              const hasFile = Boolean(r.fileId)
+              const isUploading = uploadingId === r.id
+              const isDownloading = downloadingId === r.id
+
+              return (
+                <div
+                  key={r.id}
+                  className={`flex items-center justify-between p-3 border rounded-lg ${
+                    hasFile ? 'bg-muted/30' : 'border-dashed'
+                  }`}
+                  // Allow drag-and-drop to upload when missing a file
+                  onDrop={(e) => !hasFile && onRowDrop(e, r.id)}
+                  onDragOver={(e) => !hasFile && onRowDragOver(e)}
                 >
-                  <Printer className="h-3 w-3" />
-                  Skriv om
-                </Button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {'receiptNumber' in r && (r as any).receiptNumber
+                          ? (r as any).receiptNumber
+                          : r.id}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {format(
+                          new Date(r.createdAt),
+                          "d MMM yyyy 'kl.' HH:mm",
+                          {
+                            locale: sv,
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <Badge
+                      variant={
+                        r.receiptType === 'LOAN' ? 'default' : 'secondary'
+                      }
+                    >
+                      {r.receiptType === 'LOAN' ? 'Utlåning' : 'Återlämning'}
+                    </Badge>
+
+                    {hasFile ? (
+                      <Badge variant="secondary">PDF bifogad</Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-dashed">
+                        Ingen PDF
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleReprint(r)}
+                      className="gap-2"
+                    >
+                      <Printer className="h-3 w-3" />
+                      Skriv om
+                    </Button>
+
+                    {hasFile ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => downloadForReceipt(r.id)}
+                        disabled={isDownloading}
+                        className="gap-2"
+                      >
+                        <Download className="h-3 w-3" />
+                        {isDownloading ? 'Öppnar…' : 'Ladda ner PDF'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onPickFile(r.id)}
+                        disabled={isUploading}
+                        className="gap-2 border-dashed"
+                        title="Dra & släpp PDF på raden eller klicka för att välja fil"
+                      >
+                        <Upload className="h-3 w-3" />
+                        {isUploading ? 'Laddar upp…' : 'Välj PDF'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 

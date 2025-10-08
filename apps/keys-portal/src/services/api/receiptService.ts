@@ -1,70 +1,100 @@
-// services/api/receiptService.ts
-import type { Receipt } from '@/services/types'
-
-type CreateReceiptInput = {
-  receiptType: 'loan' | 'return'
-  leaseId: string
-  tenantId: string
-  keyLoanIds: string[]
-  receiptNumber: string
-}
-
-const LS_KEY = 'receipts.local.v1'
-
-function loadAll(): Receipt[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    const arr = raw ? (JSON.parse(raw) as Receipt[]) : []
-    return Array.isArray(arr) ? arr : []
-  } catch {
-    return []
-  }
-}
-
-function saveAll(list: Receipt[]) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(list))
-  } catch {
-    // best-effort: ignore storage failures
-  }
-}
-
-function uid() {
-  return `local_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`
-}
-
-const toMs = (iso?: string) => (iso ? new Date(iso).getTime() : 0)
+import type {
+  Receipt,
+  CreateReceiptRequest,
+  UploadFileResponse,
+  DownloadUrlResponse,
+} from '../types'
+import { GET, POST, DELETE } from './core/base-api'
 
 export const receiptService = {
-  async create(input: CreateReceiptInput): Promise<void> {
-    const nowIso = new Date().toISOString()
-    const next: Receipt = {
-      id: uid(),
-      receiptNumber: input.receiptNumber,
-      receiptType: input.receiptType,
-      leaseId: input.leaseId,
-      tenantId: input.tenantId,
-      keyLoanIds: input.keyLoanIds,
-      createdAt: nowIso,
+  /**
+   * Create a new receipt
+   */
+  async create(payload: CreateReceiptRequest): Promise<Receipt> {
+    const { data, error } = await POST('/receipts', { body: payload })
+    if (error) throw error
+    return data?.content as Receipt
+  },
+
+  /**
+   * Get all receipts for a specific lease
+   */
+  async listByLease(leaseId: string): Promise<Receipt[]> {
+    const { data, error } = await GET('/receipts/by-lease/{leaseId}', {
+      params: { path: { leaseId } },
+    })
+    if (error) throw error
+    return (data?.content ?? []) as Receipt[]
+  },
+
+  /**
+   * Get receipt by key loan ID
+   */
+  async getByKeyLoan(keyLoanId: string): Promise<Receipt | null> {
+    const { data, error } = await GET('/receipts/by-key-loan/{keyLoanId}', {
+      params: { path: { keyLoanId } },
+    })
+    if (error) {
+      if ((error as any)?.status === 404) return null
+      throw error
+    }
+    return data?.content as Receipt
+  },
+
+  /**
+   * Delete a receipt (also deletes associated file from MinIO if it exists)
+   */
+  async remove(id: string): Promise<void> {
+    const { error } = await DELETE('/receipts/{id}', {
+      params: { path: { id } },
+    })
+    if (error) throw error
+  },
+
+  /**
+   * Upload a PDF file to a receipt
+   */
+  async uploadFile(receiptId: string, file: File): Promise<UploadFileResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(
+      `${import.meta.env.VITE_CORE_API_URL}/receipts/${receiptId}/upload`,
+      {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(
+        errorData.error || errorData.reason || 'Failed to upload file'
+      )
     }
 
-    const all = loadAll()
-    saveAll([next, ...all])
+    const result = await response.json()
+    return result.content as UploadFileResponse
   },
 
-  async listByLease(leaseId: string): Promise<Receipt[]> {
-    return loadAll()
-      .filter((r) => r.leaseId === leaseId)
-      .sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
+  /**
+   * Get a presigned download URL for a receipt's PDF file
+   * The URL expires after 7 days
+   */
+  async getDownloadUrl(receiptId: string): Promise<DownloadUrlResponse> {
+    const { data, error } = await GET('/receipts/{id}/download', {
+      params: { path: { id: receiptId } },
+    })
+    if (error) throw error
+    return data?.content as DownloadUrlResponse
   },
 
-  async listAll(): Promise<Receipt[]> {
-    return loadAll().sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
-  },
-
-  async clearLocal(): Promise<void> {
-    saveAll([])
+  /**
+   * Download a receipt's PDF file
+   */
+  async downloadFile(receiptId: string): Promise<void> {
+    const { url } = await this.getDownloadUrl(receiptId)
+    window.open(url, '_blank')
   },
 }

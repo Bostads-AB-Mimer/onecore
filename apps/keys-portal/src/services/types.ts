@@ -1,7 +1,7 @@
 // Import directly from types, only for generics like pagination, all specific response types come from generated api-types
 import { keys } from '@onecore/types'
 
-import type { components } from './api/core/generated/api-types'
+import type { paths, components } from './api/core/generated/api-types'
 
 // Re-export pagination types from @onecore/types
 export type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
@@ -36,6 +36,43 @@ export type RentalPropertyResponse =
   components['schemas']['RentalPropertyResponse']
 export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
 export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
+export type CreateReceiptRequest =
+  paths['/receipts']['post']['requestBody']['content']['application/json']
+
+// Response object for a single receipt (the inner "content" payload)
+export type Receipt = NonNullable<
+  NonNullable<
+    paths['/receipts']['post']['responses']['201']['content']['application/json']
+  >['content']
+>
+
+// List by lease (GET /receipts/by-lease/{leaseId}) -> array in "content"
+export type ReceiptListItem = NonNullable<
+  NonNullable<
+    paths['/receipts/by-lease/{leaseId}']['get']['responses']['200']['content']['application/json']
+  >['content']
+>[number]
+
+// Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
+export type ReceiptByKeyLoan = NonNullable<
+  NonNullable<
+    paths['/receipts/by-key-loan/{keyLoanId}']['get']['responses']['200']['content']['application/json']
+  >['content']
+>
+
+// Upload file response (POST /receipts/{id}/upload) -> "content"
+export type UploadFileResponse = NonNullable<
+  NonNullable<
+    paths['/receipts/{id}/upload']['post']['responses']['200']['content']['application/json']
+  >['content']
+>
+
+// Presigned download URL (GET /receipts/{id}/download) -> "content"
+export type DownloadUrlResponse = NonNullable<
+  NonNullable<
+    paths['/receipts/{id}/download']['get']['responses']['200']['content']['application/json']
+  >['content']
+>
 
 // Key type definitions aligned with database enum
 export const KeyTypeLabels = {
@@ -151,42 +188,13 @@ export interface LogFilterParams {
 }
 
 // ----- Receipts (UI/domain) -----
-export type ReceiptType = 'loan' | 'return'
+// Note: Receipt API types are already defined above (lines 39-75) from generated OpenAPI types
 
-export interface Receipt {
-  id: string
-  receiptNumber: string
-  receiptType: ReceiptType
-  leaseId: string
-  tenantId: string
-  keyLoanIds: string[]
-  createdAt: string
-}
-
-export interface ReceiptTenant {
-  id: string
-  personnummer: string
-  firstName: string
-  lastName: string
-  email?: string
-  phone?: string
-}
-
+// UI-only helper type for PDF generation
 export interface ReceiptData {
   lease: Lease
-  tenants: ReceiptTenant[]
+  tenants: Tenant[]
   keys: Key[]
-  receiptType: ReceiptType
+  receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
-}
-
-export function toReceiptTenant(t: Tenant): ReceiptTenant {
-  return {
-    id: t.contactKey,
-    personnummer: t.nationalRegistrationNumber,
-    firstName: t.firstName,
-    lastName: t.lastName,
-    email: t.emailAddress,
-    phone: t.phoneNumbers?.[0]?.phoneNumber,
-  }
 }

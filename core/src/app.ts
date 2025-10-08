@@ -38,7 +38,7 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ multipart: true }))
+app.use(bodyParser({ multipart: false })) // Let multer handle multipart, not koa-body
 
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)

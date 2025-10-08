@@ -8,7 +8,7 @@ import type {
   KeySystem,
 } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
-import { KeyTypeLabels, toReceiptTenant } from '@/services/types'
+import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,10 +30,8 @@ type LoanStatus =
   | 'loaned_to_other'
   | 'returned'
 
-// Only LGH is allowed for extra creation
 const EXTRA_KEY_TYPE: KeyType = 'LGH'
 
-// Sort order for groups in the list
 const KEY_TYPE_ORDER: Partial<Record<KeyType, number>> = {
   LGH: 1,
   PB: 2,
@@ -58,7 +56,6 @@ const isConflict = (e: any) => {
   )
 }
 
-// pull up to two contacts from lease.tenants
 function deriveContacts(lease: Lease): { contact?: string; contact2?: string } {
   const names = (lease.tenants ?? [])
     .slice(0, 2)
@@ -86,20 +83,18 @@ export function EmbeddedKeysList({
 
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
-  const [lastTransactionKeyLoanIds, setLastTransactionKeyLoanIds] = useState<
-    string[]
-  >([])
+  const [lastTransactionKeyLoanId, setLastTransactionKeyLoanId] = useState<
+    string | null
+  >(null)
 
-  // --- Create extra LGH key ---
+  // --- Create LGH key ---
   const [createLghMode, setCreateLghMode] = useState(false)
   const [draftName, setDraftName] = useState('')
 
-  // Keep the default KeySystem object so we can display its code
   const [defaultKeySystem, setDefaultKeySystem] = useState<KeySystem | null>(
     null
   )
 
-  // next löp for LGH on this object
   const nextSeqForLGH = useMemo(() => {
     const seqs = keys
       .filter(
@@ -112,7 +107,6 @@ export function EmbeddedKeysList({
     return max + 1
   }, [keys, lease.rentalPropertyId])
 
-  // default keySystemId on this object (prefer LGH, else any)
   const defaultKeySystemId = useCallback(() => {
     const sameType = keys.find(
       (k) =>
@@ -127,13 +121,11 @@ export function EmbeddedKeysList({
     return anyOnObject?.keySystemId ?? ''
   }, [keys, lease.rentalPropertyId])
 
-  // Effective id (memoized) so we can fetch the KeySystem once per change
   const effectiveDefaultKeySystemId = useMemo(
     () => defaultKeySystemId(),
     [defaultKeySystemId]
   )
 
-  // Fetch the KeySystem to show system code in the form
   useEffect(() => {
     let cancelled = false
     const id = effectiveDefaultKeySystemId
@@ -144,7 +136,6 @@ export function EmbeddedKeysList({
     ;(async () => {
       try {
         const ks = await (keyService as any).getKeySystem?.(id)
-        // If your API has a different method name, adjust here.
         if (!cancelled) setDefaultKeySystem(ks ?? null)
       } catch {
         if (!cancelled) setDefaultKeySystem(null)
@@ -155,7 +146,6 @@ export function EmbeddedKeysList({
     }
   }, [effectiveDefaultKeySystemId])
 
-  // Human-friendly display for the key system: prefer systemCode, fall back
   const keySystemDisplayCode = useMemo(() => {
     const ks = defaultKeySystem as any
     return (
@@ -168,12 +158,10 @@ export function EmbeddedKeysList({
     )
   }, [defaultKeySystem, effectiveDefaultKeySystemId])
 
-  // keep keys in sync
   useEffect(() => {
     setKeys(initialKeys)
   }, [initialKeys])
 
-  // fetch keys if not provided
   useEffect(() => {
     if (initialKeys.length > 0) return
     let cancelled = false
@@ -193,7 +181,6 @@ export function EmbeddedKeysList({
     }
   }, [lease.rentalPropertyId, initialKeys.length])
 
-  // Load loans relevant to these keys
   const refreshLoans = useCallback(async () => {
     setLoadingLoans(true)
     try {
@@ -217,7 +204,6 @@ export function EmbeddedKeysList({
     refreshLoans()
   }, [refreshLoans])
 
-  // --- Status helpers ---
   const activeLoanByKeyId = useMemo(() => {
     const m = new Map<string, KeyLoan>()
     for (const l of loans) {
@@ -233,10 +219,13 @@ export function EmbeddedKeysList({
 
   const getStatus = (keyId: string): LoanStatus => {
     const activeLoan = activeLoanByKeyId.get(keyId)
-    if (activeLoan)
-      return activeLoan.lease === lease.leaseId
+    if (activeLoan) {
+      const loanLease = activeLoan.lease?.trim()
+      const currentLease = lease.leaseId?.trim()
+      return loanLease === currentLease
         ? 'loaned_to_customer'
         : 'loaned_to_other'
+    }
     const ever = loans.some((l) => {
       try {
         const ids = JSON.parse(l.keys ?? '[]') as string[]
@@ -257,113 +246,160 @@ export function EmbeddedKeysList({
     [keys, loans, lease.leaseId]
   )
 
+  const loanedToThisLeaseKeys = useMemo(
+    () => keys.filter((k) => getStatus(k.id) === 'loaned_to_customer'),
+    [keys, loans, lease.leaseId]
+  )
+
   const toggleSelection = (keyId: string, checked: boolean) => {
     setSelectedKeys((prev) =>
       checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
     )
   }
 
+  // ---- Selection buckets ----
+  const selectedForLoan = useMemo(
+    () =>
+      selectedKeys.filter((id) =>
+        ['never_loaned', 'returned'].includes(getStatus(id))
+      ),
+    [selectedKeys, loans]
+  )
+  const selectedForReturn = useMemo(
+    () => selectedKeys.filter((id) => getStatus(id) === 'loaned_to_customer'),
+    [selectedKeys, loans]
+  )
+
   // ---- Receipt helpers ----
   const openReceiptDialog = (
     type: 'loan' | 'return',
     keyIds: string[],
-    keyLoanIds: string[],
+    keyLoanId: string,
     when?: string
   ) => {
-    const tenants =
-      lease.tenants && lease.tenants.length > 0
-        ? lease.tenants.map(toReceiptTenant)
-        : [
-            {
-              id: '',
-              personnummer: '',
-              firstName: 'Okänd',
-              lastName: 'Hyresgäst',
-            },
-          ]
+    const tenants = lease.tenants ?? []
     const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
     setReceiptData({
       lease,
       tenants,
       keys: relevantKeys,
-      receiptType: type,
+      receiptType: type === 'loan' ? 'LOAN' : 'RETURN',
       operationDate: when ? new Date(when) : new Date(),
     })
-    setLastTransactionKeyLoanIds(keyLoanIds)
+    setLastTransactionKeyLoanId(keyLoanId)
     setShowReceiptDialog(true)
   }
 
-  // ---- Actions ----
-  const handleLoanSelected = async () => {
-    if (selectedKeys.length === 0) return
+  // ---- Actions: LOAN (selected) ----
+  const handleLoanSelected = async (keyIds = selectedForLoan) => {
+    if (keyIds.length === 0) return
     setIsProcessing(true)
     try {
       const { contact, contact2 } = deriveContacts(lease)
-      const createdIds: string[] = []
-      for (const keyId of selectedKeys) {
-        try {
-          const created = await keyLoanService.create({
-            keys: JSON.stringify([keyId]),
-            lease: lease.leaseId,
-            contact,
-            contact2,
-            pickedUpAt: new Date().toISOString(),
-            createdBy: 'ui',
-          })
-          if (created.id) createdIds.push(created.id)
-        } catch (err: any) {
-          if (isConflict(err)) {
-            const k = keys.find((k) => k.id === keyId)
-            toast({
-              title: 'Kan inte låna ut',
-              description: `Nyckeln ${k?.keyName ?? keyId} är redan utlånad.`,
-              variant: 'destructive',
-            })
-            continue
-          }
-          const msg =
-            httpData(err)?.message ||
-            httpData(err)?.error ||
-            err?.message ||
-            'Kunde inte skapa nyckellån.'
-          toast({ title: 'Fel', description: msg, variant: 'destructive' })
+
+      // Create ONE key_loan record with ALL selected keys
+      try {
+        const created = await keyLoanService.create({
+          keys: JSON.stringify(keyIds), // All keys in one transaction
+          lease: lease.leaseId,
+          contact,
+          contact2,
+          pickedUpAt: new Date().toISOString(),
+          createdBy: 'ui',
+        })
+
+        if (created.id) {
+          await refreshLoans()
+          openReceiptDialog('loan', keyIds, created.id) // Single keyLoanId
+          setSelectedKeys((prev) => prev.filter((id) => !keyIds.includes(id)))
         }
-      }
-      if (createdIds.length > 0) {
-        await refreshLoans()
-        openReceiptDialog('loan', selectedKeys, createdIds)
-        setSelectedKeys([])
+      } catch (err: any) {
+        if (isConflict(err)) {
+          toast({
+            title: 'Kan inte låna ut',
+            description: 'En eller flera nycklar är redan utlånade.',
+            variant: 'destructive',
+          })
+        } else {
+          toast({
+            title: 'Fel',
+            description:
+              httpData(err)?.message ||
+              httpData(err)?.error ||
+              err?.message ||
+              'Kunde inte skapa nyckellån.',
+            variant: 'destructive',
+          })
+        }
       }
     } finally {
       setIsProcessing(false)
     }
   }
 
-  const handleCreateLghKey = async () => {
+  // ---- Actions: RETURN (selected) ----
+  const handleReturnSelected = async (keyIds = selectedForReturn) => {
+    if (keyIds.length === 0) return
+    setIsProcessing(true)
     try {
-      const payload = {
-        keyName: draftName.trim(),
-        keyType: EXTRA_KEY_TYPE,
-        keySequenceNumber: nextSeqForLGH,
-        rentalObjectCode: lease.rentalPropertyId,
-        // Still send the *id* to the API
-        keySystemId: effectiveDefaultKeySystemId || undefined,
+      const now = new Date().toISOString()
+      let firstLoanId: string | null = null
+
+      // Update all existing loans with returnedAt and track the first loan ID
+      for (const keyId of keyIds) {
+        const active = activeLoanByKeyId.get(keyId)
+        if (!active) continue
+        if (!firstLoanId) firstLoanId = active.id // Use the first loan's ID for the receipt
+        try {
+          await keyLoanService.update(active.id, {
+            returnedAt: now,
+            availableToNextTenantFrom: now,
+          } as any)
+        } catch (err: any) {
+          toast({
+            title: 'Kunde inte ta emot nyckel',
+            description: httpData(err)?.message || err?.message || 'Okänt fel',
+            variant: 'destructive',
+          })
+        }
       }
-      const created = await keyService.createKey(payload)
-      setKeys((prev) => [...prev, created])
-      setDraftName('')
-      setCreateLghMode(false)
-      toast({
-        title: 'Nyckel skapad',
-        description: `${created.keyName} (${KeyTypeLabels[EXTRA_KEY_TYPE]}) – Löp ${created.keySequenceNumber}`,
-      })
-    } catch (e: any) {
-      toast({
-        title: 'Kunde inte skapa nyckel',
-        description: e?.message ?? 'Okänt fel',
-        variant: 'destructive',
-      })
+
+      // Create return receipt linked to the SAME key_loan (use first loan ID)
+      if (firstLoanId) {
+        await refreshLoans()
+        openReceiptDialog('return', keyIds, firstLoanId, now)
+        setSelectedKeys((prev) => prev.filter((id) => !keyIds.includes(id)))
+      }
+    } finally {
+      setIsProcessing(false)
     }
+  }
+
+  // ---- Batch (“alla”) helpers ----
+  const allAvailableForLoanIds = useMemo(
+    () => availableKeys.map((k) => k.id),
+    [availableKeys]
+  )
+  const allReturnableIds = useMemo(
+    () => loanedToThisLeaseKeys.map((k) => k.id),
+    [loanedToThisLeaseKeys]
+  )
+
+  // Single button that switches label depending on state:
+  // If there are any keys loaned to this lease -> show "Återlämna alla".
+  // Otherwise -> show "Låna ut alla".
+  const showReturnAll = allReturnableIds.length > 0
+  const batchButtonLabel = showReturnAll
+    ? `Återlämna alla (${allReturnableIds.length})`
+    : `Låna ut alla (${allAvailableForLoanIds.length})`
+  const batchButtonDisabled =
+    isProcessing ||
+    (showReturnAll
+      ? allReturnableIds.length === 0
+      : allAvailableForLoanIds.length === 0)
+  const handleBatchClick = () => {
+    if (showReturnAll) return handleReturnSelected(allReturnableIds)
+    return handleLoanSelected(allAvailableForLoanIds)
   }
 
   // ----- Derived for header chips -----
@@ -373,7 +409,7 @@ export function EmbeddedKeysList({
     return m
   }, [keys])
 
-  // ----- Sorted list (type → LÖP → createdAt → name) -----
+  // ----- Sorted list -----
   const sortedKeys = useMemo(() => {
     const getTypeRank = (t: KeyType) => KEY_TYPE_ORDER[t] ?? 999
     const getSeq = (k: Key) =>
@@ -417,17 +453,41 @@ export function EmbeddedKeysList({
             })}
           </div>
 
-          {/* Bulk & LGH create */}
+          {/* Bulk actions & LGH create */}
           <div className="flex flex-wrap items-center gap-2">
-            {availableKeys.length > 0 && (
+            {/* Batch button that toggles */}
+            <Button
+              size="sm"
+              onClick={handleBatchClick}
+              disabled={batchButtonDisabled}
+              className="flex items-center gap-1"
+            >
+              <Plus className="h-3 w-3" />
+              {batchButtonLabel}
+            </Button>
+
+            {/* Keep “selected” options */}
+            {selectedForLoan.length > 0 && (
               <Button
                 size="sm"
-                onClick={handleLoanSelected}
+                onClick={() => handleLoanSelected()}
                 disabled={isProcessing}
                 className="flex items-center gap-1"
               >
                 <Plus className="h-3 w-3" />
-                Låna ut valda ({selectedKeys.length})
+                Låna ut valda ({selectedForLoan.length})
+              </Button>
+            )}
+
+            {selectedForReturn.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleReturnSelected()}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                Ta emot valda ({selectedForReturn.length})
               </Button>
             )}
 
@@ -506,25 +566,22 @@ export function EmbeddedKeysList({
               const isLoanedToCustomer = status === 'loaned_to_customer'
               const isLoanedToOther = status === 'loaned_to_other'
               const isReturned = status === 'returned'
+
               const canBeLoaned = !isLoanedToCustomer && !isLoanedToOther
+              const canBeReturned = isLoanedToCustomer
+              const isSelectable = canBeLoaned || canBeReturned
 
               return (
                 <div
                   key={key.id}
-                  className={`flex items-center justify-between py-2 px-1 ${
-                    index > 0 ? 'border-t border-border/50' : ''
-                  }`}
+                  className={`flex items-center justify-between py-2 px-1 ${index > 0 ? 'border-t border-border/50' : ''}`}
                 >
                   <div className="flex items-center space-x-3 flex-1">
-                    {canBeLoaned && (
+                    {isSelectable && (
                       <Checkbox
                         checked={selectedKeys.includes(key.id)}
                         onCheckedChange={(checked) =>
-                          setSelectedKeys((prev) =>
-                            checked
-                              ? [...prev, key.id]
-                              : prev.filter((id) => id !== key.id)
-                          )
+                          toggleSelection(key.id, Boolean(checked))
                         }
                       />
                     )}
@@ -573,11 +630,7 @@ export function EmbeddedKeysList({
                       </TooltipProvider>
                     ) : (
                       <span
-                        className={`text-xs font-medium ${
-                          isReturned
-                            ? 'text-orange-600 dark:text-orange-400'
-                            : 'text-green-600 dark:text-green-400'
-                        }`}
+                        className={`text-xs font-medium ${isReturned ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
                       >
                         {isReturned
                           ? 'Återlämnad (kan lånas ut igen)'
@@ -589,21 +642,6 @@ export function EmbeddedKeysList({
               )
             })}
           </div>
-
-          {selectedKeys.length > 0 && (
-            <div className="flex justify-end items-center pt-2 border-t">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleLoanSelected}
-                disabled={isProcessing}
-                className="gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                Låna ut valda ({selectedKeys.length})
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -612,11 +650,37 @@ export function EmbeddedKeysList({
         onClose={() => {
           setShowReceiptDialog(false)
           setReceiptData(null)
-          setLastTransactionKeyLoanIds([])
+          setLastTransactionKeyLoanId(null)
         }}
         receiptData={receiptData}
-        keyLoanIds={lastTransactionKeyLoanIds}
+        keyLoanId={lastTransactionKeyLoanId}
       />
     </>
   )
+
+  async function handleCreateLghKey() {
+    try {
+      const payload = {
+        keyName: draftName.trim(),
+        keyType: EXTRA_KEY_TYPE,
+        keySequenceNumber: nextSeqForLGH,
+        rentalObjectCode: lease.rentalPropertyId,
+        keySystemId: effectiveDefaultKeySystemId || undefined,
+      }
+      const created = await keyService.createKey(payload)
+      setKeys((prev) => [...prev, created])
+      setDraftName('')
+      setCreateLghMode(false)
+      toast({
+        title: 'Nyckel skapad',
+        description: `${created.keyName} (${KeyTypeLabels[EXTRA_KEY_TYPE]}) – Löp ${created.keySequenceNumber}`,
+      })
+    } catch (e: any) {
+      toast({
+        title: 'Kunde inte skapa nyckel',
+        description: e?.message ?? 'Okänt fel',
+        variant: 'destructive',
+      })
+    }
+  }
 }

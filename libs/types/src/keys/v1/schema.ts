@@ -139,6 +139,7 @@ export const CreateKeyLoanRequestSchema = z.object({
   contact: z.string().optional(),
   contact2: z.string().optional(),
   lease: z.string().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   createdBy: z.string().nullable().optional(),
