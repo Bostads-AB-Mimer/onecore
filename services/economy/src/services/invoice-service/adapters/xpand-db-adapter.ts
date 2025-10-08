@@ -647,7 +647,7 @@ export const getInvoiceRows = async (
       sum += arg as number
     })
 
-    return sum
+    return Math.round((sum + Number.EPSILON) * 100) / 100
   }
 
   const trim = (column: any): string => {
