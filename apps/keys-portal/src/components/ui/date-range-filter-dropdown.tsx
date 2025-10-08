@@ -36,16 +36,14 @@ function isValidDate(date: Date | undefined) {
 interface DateRangeFilterDropdownProps {
   afterDate: string | null
   beforeDate: string | null
-  onAfterDateChange: (date: string | null) => void
-  onBeforeDateChange: (date: string | null) => void
+  onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
   className?: string
 }
 
 export function DateRangeFilterDropdown({
   afterDate,
   beforeDate,
-  onAfterDateChange,
-  onBeforeDateChange,
+  onDatesChange,
   className,
 }: DateRangeFilterDropdownProps) {
   const hasActiveFilter = afterDate !== null || beforeDate !== null
@@ -71,10 +69,11 @@ export function DateRangeFilterDropdown({
   const [valueBefore, setValueBefore] = React.useState(formatDate(dateBefore))
 
   const handleApply = () => {
-    onAfterDateChange(dateAfter ? dateAfter.toISOString().split('T')[0] : null)
-    onBeforeDateChange(
-      dateBefore ? dateBefore.toISOString().split('T')[0] : null
-    )
+    const afterValue = dateAfter ? dateAfter.toISOString().split('T')[0] : null
+    const beforeValue = dateBefore
+      ? dateBefore.toISOString().split('T')[0]
+      : null
+    onDatesChange(afterValue, beforeValue)
   }
 
   const handleClearAll = () => {
@@ -82,8 +81,7 @@ export function DateRangeFilterDropdown({
     setValueAfter('')
     setDateBefore(undefined)
     setValueBefore('')
-    onAfterDateChange(null)
-    onBeforeDateChange(null)
+    onDatesChange(null, null)
   }
 
   return (
@@ -119,6 +117,7 @@ export function DateRangeFilterDropdown({
                   const date = new Date(e.target.value)
                   setValueAfter(e.target.value)
                   if (isValidDate(date)) {
+                    date.setHours(12, 0, 0, 0)
                     setDateAfter(date)
                     setMonthAfter(date)
                   }
@@ -153,6 +152,10 @@ export function DateRangeFilterDropdown({
                     month={monthAfter}
                     onMonthChange={setMonthAfter}
                     onSelect={(date) => {
+                      // Set time to noon to avoid timezone conversion issues
+                      if (date) {
+                        date.setHours(12, 0, 0, 0)
+                      }
                       setDateAfter(date)
                       setValueAfter(formatDate(date))
                       setOpenAfter(false)
@@ -177,6 +180,7 @@ export function DateRangeFilterDropdown({
                   const date = new Date(e.target.value)
                   setValueBefore(e.target.value)
                   if (isValidDate(date)) {
+                    date.setHours(12, 0, 0, 0)
                     setDateBefore(date)
                     setMonthBefore(date)
                   }
@@ -211,6 +215,10 @@ export function DateRangeFilterDropdown({
                     month={monthBefore}
                     onMonthChange={setMonthBefore}
                     onSelect={(date) => {
+                      // Set time to noon to avoid timezone conversion issues
+                      if (date) {
+                        date.setHours(12, 0, 0, 0)
+                      }
                       setDateBefore(date)
                       setValueBefore(formatDate(date))
                       setOpenBefore(false)
