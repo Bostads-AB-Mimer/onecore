@@ -2,14 +2,16 @@ import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { AxiosError } from 'axios'
 import { keys } from '@onecore/types'
 import Config from '../../common/config'
-import { AdapterResult } from '../types' // keep this import path as in your repo
+import { AdapterResult } from '../types'
 
-// Import types from @onecore/types
+// ---- Import types from @onecore/types ---------------------------------------
 type Key = keys.v1.Key
 type KeyLoan = keys.v1.KeyLoan
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
 type KeyNote = keys.v1.KeyNote
+type Receipt = keys.v1.Receipt
+type CreateReceiptRequest = keys.v1.CreateReceiptRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 
 const BASE = Config.keysService.url
@@ -42,13 +44,11 @@ function ok<T>(data: T): AdapterResult<T, never> {
 }
 
 function fail<E extends CommonErr>(err: E): AdapterResult<never, E> {
-  // important: return a LITERAL, not `unknown`
   return { ok: false, err }
 }
 
 /**
  * ---- HTTP wrapper -----------------------------------------------------------
- * Axios throws on non-2xx; we catch and map to literal error codes.
  */
 
 async function getJSON<T>(
@@ -72,7 +72,6 @@ async function postJSON<T>(
 ): Promise<AdapterResult<T, CommonErr>> {
   try {
     const res = await axios.post<T>(url, body, { headers })
-    // Check if response is an error status even if axios didn't throw
     if (res.status >= 400) {
       const err = mapAxiosError({ response: res } as AxiosError)
       logger.error(
@@ -96,7 +95,6 @@ async function patchJSON<T>(
 ): Promise<AdapterResult<T, CommonErr>> {
   try {
     const res = await axios.patch<T>(url, body, { headers })
-    // Check if response is an error status even if axios didn't throw
     if (res.status >= 400) {
       const err = mapAxiosError({ response: res } as AxiosError)
       logger.error(
@@ -129,7 +127,6 @@ async function deleteJSON<T = unknown>(
 
 /**
  * ---- KEYS -------------------------------------------------------------------
- * Microservice responses are shaped like { content: T }
  */
 
 export const KeysApi = {
@@ -158,9 +155,8 @@ export const KeysApi = {
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          // Add each array element as a separate parameter with the same key
           value.forEach((v) => params.append(key, v))
-        } else if (typeof value === 'string') {
+        } else {
           params.append(key, value)
         }
       }
@@ -206,7 +202,6 @@ export const KeysApi = {
   remove: async (
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
-    // your delete returns { ...metadata } (no content); that's fine
     return deleteJSON(`${BASE}/keys/${id}`)
   },
 }
@@ -230,7 +225,7 @@ export const KeyLoansApi = {
       if (value !== undefined) {
         if (Array.isArray(value)) {
           params.append(key, value.join(','))
-        } else if (typeof value === 'string') {
+        } else {
           params.append(key, value)
         }
       }
@@ -307,13 +302,11 @@ export const KeySystemsApi = {
   > => {
     const params = new URLSearchParams()
 
-    // Add all search parameters to query string
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          // Add each array element as a separate parameter with the same key
           value.forEach((v) => params.append(key, v))
-        } else if (typeof value === 'string') {
+        } else {
           params.append(key, value)
         }
       }
@@ -369,7 +362,6 @@ export const KeySystemsApi = {
 
 /**
  * ---- LOGS -------------------------------------------------------------------
- * Read-only audit logs - no update or delete operations allowed
  */
 
 export const LogsApi = {
@@ -387,7 +379,7 @@ export const LogsApi = {
       if (value !== undefined) {
         if (Array.isArray(value)) {
           params.append(key, value.join(','))
-        } else if (typeof value === 'string') {
+        } else {
           params.append(key, value)
         }
       }
@@ -416,108 +408,33 @@ export const LogsApi = {
 
 /**
  * ---- RECEIPTS ---------------------------------------------------------------
- * Create, Read, Delete operations for receipts
  */
 
 export const ReceiptsApi = {
-  create: async (payload: {
-    keyLoanId: string
-    receiptType: 'LOAN' | 'RETURN'
-    type: 'DIGITAL' | 'PHYSICAL'
-    signed?: boolean
-    leaseId: string
-    fileId?: string
-  }): Promise<
-    AdapterResult<
-      {
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      },
-      'bad-request' | 'conflict' | CommonErr
-    >
+  create: async (
+    payload: CreateReceiptRequest
+  ): Promise<
+    AdapterResult<Receipt, 'bad-request' | 'conflict' | CommonErr>
   > => {
-    const r = await postJSON<{
-      content: {
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      }
-    }>(`${BASE}/receipts`, payload)
+    const r = await postJSON<{ content: Receipt }>(`${BASE}/receipts`, payload)
     return r.ok ? ok(r.data.content) : r
   },
 
   getByLease: async (
     leaseId: string
-  ): Promise<
-    AdapterResult<
-      Array<{
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      }>,
-      CommonErr
-    >
-  > => {
-    const r = await getJSON<{
-      content: Array<{
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      }>
-    }>(`${BASE}/receipts/by-lease/${leaseId}`)
+  ): Promise<AdapterResult<Receipt[], CommonErr>> => {
+    const r = await getJSON<{ content: Receipt[] }>(
+      `${BASE}/receipts/by-lease/${leaseId}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
   getByKeyLoan: async (
     keyLoanId: string
-  ): Promise<
-    AdapterResult<
-      {
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      },
-      'not-found' | CommonErr
-    >
-  > => {
-    const r = await getJSON<{
-      content: {
-        id: string
-        keyLoanId: string
-        receiptType: 'LOAN' | 'RETURN'
-        type: 'DIGITAL' | 'PHYSICAL'
-        signed: boolean
-        leaseId: string
-        fileId: string | null
-        createdAt: string
-      }
-    }>(`${BASE}/receipts/by-key-loan/${keyLoanId}`)
+  ): Promise<AdapterResult<Receipt, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: Receipt }>(
+      `${BASE}/receipts/by-key-loan/${keyLoanId}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
@@ -525,6 +442,63 @@ export const ReceiptsApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/receipts/${id}`)
+  },
+
+  // <-- Forward file buffer to microservice as multipart/form-data
+  uploadFile: async (
+    receiptId: string,
+    fileBuffer: Buffer,
+    fileName: string,
+    mimeType: string
+  ): Promise<
+    AdapterResult<
+      { fileId: string; fileName: string; size: number },
+      'bad-request' | 'not-found' | CommonErr
+    >
+  > => {
+    try {
+      // Create FormData to forward to microservice
+      const FormData = (await import('form-data')).default
+      const formData = new FormData()
+      formData.append('file', fileBuffer, {
+        filename: fileName,
+        contentType: mimeType,
+      })
+
+      const res = await axios.post<{
+        content: { fileId: string; fileName: string; size: number }
+      }>(`${BASE}/receipts/${receiptId}/upload`, formData as any, {
+        headers: formData.getHeaders(),
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      })
+
+      return ok(res.data.content)
+    } catch (e) {
+      const err = mapAxiosError(e)
+      logger.error(
+        {
+          err: e,
+          response: (e as AxiosError)?.response?.data,
+        },
+        `POST ${BASE}/receipts/${receiptId}/upload failed -> ${err}`
+      )
+      return fail(err)
+    }
+  },
+
+  getDownloadUrl: async (
+    receiptId: string
+  ): Promise<
+    AdapterResult<
+      { url: string; expiresIn: number; fileId: string },
+      'not-found' | CommonErr
+    >
+  > => {
+    const r = await getJSON<{
+      content: { url: string; expiresIn: number; fileId: string }
+    }>(`${BASE}/receipts/${receiptId}/download`)
+    return r.ok ? ok(r.data.content) : r
   },
 }
 

@@ -1154,8 +1154,69 @@ export interface paths {
       };
     };
   };
+  "/receipts/{id}/upload": {
+    /** Upload PDF file for a receipt */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid file or receipt not found */
+        400: {
+          content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+        /** @description File too large */
+        413: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/receipts/{id}/download": {
+    /** Get presigned download URL for receipt PDF */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              url?: string;
+              expiresIn?: number;
+            };
+          };
+        };
+        /** @description Receipt or file not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/receipts/{id}": {
-    /** Delete a receipt by id */
+    /** Delete a receipt by id (and associated file) */
     delete: {
       parameters: {
         path: {
@@ -1265,6 +1326,32 @@ export interface components {
     KeyLoan: components["schemas"]["KeyLoan"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     Log: components["schemas"]["Log"];
+    CreateReceiptRequest: {
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type: "DIGITAL" | "PHYSICAL";
+      signed?: boolean;
+      leaseId: string;
+      fileId?: string;
+    };
+    Receipt: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type: "DIGITAL" | "PHYSICAL";
+      signed: boolean;
+      leaseId: string;
+      fileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
     CreateKeyNoteRequest: components["schemas"]["CreateKeyNoteRequest"];
     UpdateKeyNoteRequest: components["schemas"]["UpdateKeyNoteRequest"];
     KeyNote: components["schemas"]["KeyNote"];
