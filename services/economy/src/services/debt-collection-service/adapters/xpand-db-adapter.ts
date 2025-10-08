@@ -216,12 +216,13 @@ export const getInvoiceRows = async (
     )
     .from('krfkh')
     .innerJoin('krfkr', 'krfkh.keykrfkh', 'krfkr.keykrfkh')
-    .innerJoin('cmart', 'krfkr.keycmart', 'cmart.keycmart')
-    .innerJoin('cmarg', 'cmart.keycmarg', 'cmarg.keycmarg')
+    .leftJoin('cmart', 'krfkr.keycmart', 'cmart.keycmart')
+    .leftJoin('cmarg', 'cmart.keycmarg', 'cmarg.keycmarg')
     .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
   return invoiceRows.map((row): RentInvoiceRow => {

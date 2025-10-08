@@ -290,42 +290,35 @@ export const addRoundoffToFirstRow = (
   ]
 }
 
-export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
-  const groups: Record<string, RentInvoiceRow[]> = {}
-  const groupMapping: Record<string, string> = {
-    O: 'N',
-    E: 'A',
+const chunk = <T>(arr: T[], indexes: number[]) => {
+  const chunks: T[][] = []
+  for (let i = 0; i < indexes.length; i++) {
+    const start = indexes[i]
+    const end = i === indexes.length - 1 ? undefined : indexes[i + 1]
+    chunks.push(arr.slice(start + 1, end))
   }
+  return chunks
+}
 
-  rows.forEach((row) => {
-    let key = row.printGroup || 'null'
-
-    if (groupMapping[key]) {
-      key = groupMapping[key]
+export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
+  const nullIndexes: number[] = []
+  rows.forEach((row, index) => {
+    if (row.printGroup === null) {
+      nullIndexes.push(index)
     }
-
-    if (!groups[key]) {
-      groups[key] = []
-    }
-
-    groups[key].push(row)
   })
 
-  const getMainRow = (groupRows: RentInvoiceRow[]) => {
-    return (
-      groupRows.find(
-        (row) => row.type === 'Rent' && row.rentType === 'Hyra bostad'
-      ) ?? groupRows[0]
-    )
-  }
+  return chunk(rows, nullIndexes).reduce((acc, group) => {
+    acc.push({
+      ...group[0],
+      amount: group.reduce(
+        (sum, row) => sum + row.amount + row.reduction + row.vat,
+        0
+      ),
+    })
 
-  return Object.values(groups).map((groupRows) => ({
-    ...getMainRow(groupRows),
-    amount: groupRows.reduce(
-      (sum, row) => sum + row.amount + row.reduction + row.vat,
-      0
-    ),
-  }))
+    return acc
+  }, [])
 }
 
 const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
