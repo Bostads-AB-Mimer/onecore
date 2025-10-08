@@ -5,6 +5,7 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { randomUUID } from 'crypto'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -113,7 +114,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       debitStatus: 0,
       paymentStatus: PaymentStatus.Unpaid,
       transactionType: InvoiceTransactionType.Rent,
-      transactionTypeName: invoiceData.node.slTransactionType.name,
+      transactionTypeName: randomUUID(),
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
@@ -225,7 +226,17 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 
 const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
-    query: `{customers (first: 10000, filter: { code: "${contactCode}" }) { edges { node { code description dbId }}}}`,
+    query: `{
+      customers (first: 10000, filter: { code: "${contactCode}" }) { 
+        edges {
+          node {
+            code
+            description
+            dbId
+          }
+        }
+      }
+    }`,
   }
 
   const result = await makeXledgerRequest(query)
