@@ -57,7 +57,6 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
       false
     )
 
-
     expect(contact).toStrictEqual({
       ok: true,
       data: {
