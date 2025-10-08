@@ -3795,6 +3795,298 @@ export interface paths {
       };
     };
   };
+  "/receipts": {
+    /**
+     * Create a receipt
+     * @description Create a new receipt record for a key loan
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            keyLoanId: string;
+            /** @enum {string} */
+            receiptType: "LOAN" | "RETURN";
+            /** @enum {string} */
+            type: "DIGITAL" | "PHYSICAL";
+            /** @default false */
+            signed?: boolean;
+            leaseId: string;
+            fileId?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Receipt created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                /** Format: uuid */
+                id?: string;
+                /** Format: uuid */
+                keyLoanId?: string;
+                /** @enum {string} */
+                receiptType?: "LOAN" | "RETURN";
+                /** @enum {string} */
+                type?: "DIGITAL" | "PHYSICAL";
+                signed?: boolean;
+                leaseId?: string;
+                fileId?: string | null;
+                /** Format: date-time */
+                createdAt?: string;
+              };
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Receipt already exists for this keyLoanId */
+        409: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/by-lease/{leaseId}": {
+    /**
+     * Get receipts by lease ID
+     * @description Retrieve all receipts associated with a specific lease
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The lease ID to filter receipts by */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved receipts */
+        200: {
+          content: {
+            "application/json": {
+              content?: ({
+                  /** Format: uuid */
+                  id?: string;
+                  /** Format: uuid */
+                  keyLoanId?: string;
+                  /** @enum {string} */
+                  receiptType?: "LOAN" | "RETURN";
+                  /** @enum {string} */
+                  type?: "DIGITAL" | "PHYSICAL";
+                  signed?: boolean;
+                  leaseId?: string;
+                  fileId?: string | null;
+                  /** Format: date-time */
+                  createdAt?: string;
+                })[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/by-key-loan/{keyLoanId}": {
+    /**
+     * Get receipt by key loan ID
+     * @description Retrieve a receipt associated with a specific key loan
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key loan ID to filter receipts by */
+          keyLoanId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved receipt */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** Format: uuid */
+                id?: string;
+                /** Format: uuid */
+                keyLoanId?: string;
+                /** @enum {string} */
+                receiptType?: "LOAN" | "RETURN";
+                /** @enum {string} */
+                type?: "DIGITAL" | "PHYSICAL";
+                signed?: boolean;
+                leaseId?: string;
+                fileId?: string | null;
+                /** Format: date-time */
+                createdAt?: string;
+              };
+            };
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}": {
+    /**
+     * Delete a receipt
+     * @description Delete a receipt by ID
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to delete */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Receipt deleted successfully */
+        200: {
+          content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}/upload": {
+    /**
+     * Upload PDF file for a receipt
+     * @description Upload a PDF file to attach to an existing receipt
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to attach the file to */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+                fileName?: string;
+                size?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid file or receipt not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}/download": {
+    /**
+     * Get presigned download URL for receipt PDF
+     * @description Generate a presigned URL to download the PDF file attached to a receipt
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                url?: string;
+                expiresIn?: number;
+                fileId?: string;
+              };
+            };
+          };
+        };
+        /** @description Receipt or file not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -4359,6 +4651,21 @@ export interface components {
       rentalObjectCode: string;
       description: string;
     };
+    Receipt: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type: "DIGITAL" | "PHYSICAL";
+      signed: boolean;
+      leaseId: string;
+      fileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
     CreateKeyRequest: {
       keyName: string;
       keySequenceNumber?: number;
@@ -4384,6 +4691,8 @@ export interface components {
       contact?: string;
       contact2?: string;
       lease?: string;
+      /** Format: date-time */
+      returnedAt?: string | null;
       /** Format: date-time */
       pickedUpAt?: string | null;
       /** Format: date-time */
@@ -4445,6 +4754,21 @@ export interface components {
       rentalObjectCode?: string;
       description?: string;
     };
+    CreateReceiptRequest: {
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type: "DIGITAL" | "PHYSICAL";
+      signed?: boolean;
+      leaseId: string;
+      fileId?: string;
+    };
+    /** @enum {string} */
+    ReceiptType: "LOAN" | "RETURN";
+    /** @enum {string} */
+    ReceiptFormat: "DIGITAL" | "PHYSICAL";
     PaginationMeta: {
       totalRecords: number;
       page: number;
