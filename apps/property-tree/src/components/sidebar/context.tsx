@@ -1,5 +1,3 @@
-'use client'
-
 import * as React from 'react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { TooltipProvider } from '@/components/ui/Tooltip'
