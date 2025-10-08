@@ -1,5 +1,3 @@
-'use client'
-
 import * as React from 'react'
 import { PanelLeft } from 'lucide-react'
 
