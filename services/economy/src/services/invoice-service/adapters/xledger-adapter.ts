@@ -99,6 +99,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
     797: 'Regular',
+    3536: 'Regular',
   }
 
   const invoices = invoiceData.map((invoiceData) => {
@@ -128,6 +129,8 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
 
     return invoice
   })
+
+  console.log('Xledger invoices', invoices)
 
   return invoices
 }
@@ -277,7 +280,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
 
   const query = {
     query: `{
-      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) {
+      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
         edges {
           node {
             ${invoiceNodeFragment}
@@ -297,7 +300,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
       arTransactions(
         first: 1
         filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797]
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
         }
       ) {
           edges {
