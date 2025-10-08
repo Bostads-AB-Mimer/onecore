@@ -114,11 +114,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
 
-  if (row.rentalObjectCode?.startsWith('110-010-99-0016')) {
-    console.log('vacantFrom', vacantFrom)
-    console.log('lastBlockStartDate', lastBlockStartDate)
-    console.log('lastBlockEndDate', lastBlockEndDate)
-  }
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
@@ -404,7 +399,6 @@ const getParkingSpace = async (
       .first()
 
     const result = await mainQuery
-    console.log('result', result)
 
     if (!result) {
       logger.error(
