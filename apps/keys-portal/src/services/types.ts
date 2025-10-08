@@ -13,6 +13,7 @@ export type Key = components['schemas']['Key']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type Log = components['schemas']['Log']
+export type KeyNote = components['schemas']['KeyNote']
 
 // Tables/respopnse types from core API generated schemas
 export type Property = components['schemas']['Property']
@@ -21,7 +22,6 @@ export type Tenant = components['schemas']['Lease']['tenants'][number]
 export type TenantAddress = NonNullable<
   components['schemas']['Lease']['tenants'][number]['address']
 >
-export type KeyNote = components['schemas']['KeyNote']
 
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
