@@ -9,12 +9,14 @@ import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
 import { AuthCallback } from './auth/AuthCallback'
 
 import { CompanyView } from './components/views/CompanyView'
+import SearchView from './components/views/SearchView'
 import PropertyView from './components/views/v2/PropertyView'
 import BuildingView from './components/views/v2/BuildingView'
 import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
 import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
+import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 
@@ -42,9 +44,12 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/companies" replace />} />
+              <Route index element={<DashboardView />} />
+              {/* Legacy route ----------------------------*/}
+              <Route path="sv" element={<DashboardView />} />
+              {/*------------------------------------------*/}
               <Route path="companies/:companyId" element={<CompanyView />} />
-              <Route path="properties" element={<PropertyView />} />
+              <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
               <Route path="buildings/:buildingId" element={<BuildingView />} />
               <Route

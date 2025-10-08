@@ -1,0 +1,166 @@
+{
+  "launchConfigs": {
+    "Internal Portal": {
+      "defaultTarget": "dev",
+      "components": {
+        "property-tree": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "backend": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "frontend": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "core": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "types": {
+          "selected": true,
+          "targets": []
+        },
+        "utilities": {
+          "selected": true,
+          "targets": []
+        },
+        "communication": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "economy": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "leasing": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "property": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "property-management": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "work-order": {
+          "selected": false,
+          "targets": [
+            "dev"
+          ]
+        },
+        "docker-compose.yaml": {
+          "selected": true,
+          "targets": [
+            "sql",
+            "elasticsearch",
+            "kibana"
+          ]
+        }
+      }
+    },
+    "All Services": {
+      "defaultTarget": "dev",
+      "components": {
+        "property-tree": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "backend": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "frontend": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "core": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "types": {
+          "selected": true,
+          "targets": []
+        },
+        "utilities": {
+          "selected": true,
+          "targets": []
+        },
+        "communication": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "economy": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "leasing": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "property": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "property-management": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "work-order": {
+          "selected": true,
+          "targets": [
+            "dev"
+          ]
+        },
+        "docker-compose.yaml": {
+          "selected": true,
+          "targets": [
+            "sql",
+            "elasticsearch",
+            "kibana"
+          ]
+        }
+      }
+    }
+  }
+}

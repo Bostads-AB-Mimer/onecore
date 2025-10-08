@@ -101,6 +101,7 @@ export const columnNames: string[] = [
 export type XpandContact = Contact & {
   autogiro: boolean
   invoiceDeliveryMethod: InvoiceDeliveryMethod
+  careOf?: string
 }
 
 export type InvoiceDataRow = Record<string, string | number>
@@ -146,6 +147,10 @@ export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
   | { ok: false; err: E; statusCode?: number }
 
-export const xledgerDateString = (date: Date) => {
-  return date.toISOString().substring(0, 10).replaceAll('-', '')
+export const xledgerDateString = (date: Date | null | undefined) => {
+  if (date) {
+    return date.toISOString().substring(0, 10).replaceAll('-', '')
+  } else {
+    return ''
+  }
 }

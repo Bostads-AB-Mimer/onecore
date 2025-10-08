@@ -31,7 +31,7 @@ export const PropertyDetailTabs = ({
     showPropertyPlanning: false,
     showPropertyBuildings: true,
     showPropertyMaintenance: false,
-    showPropertyOrders: true,
+    showPropertyOrders: false, // Temporarily disabled
     showPropertyAccess: false,
     showPropertyMap: false,
   }
