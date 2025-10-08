@@ -28,8 +28,7 @@ interface KeysTableProps {
   onTypeFilterChange: (value: string | null) => void
   createdAtAfter: string | null
   createdAtBefore: string | null
-  onCreatedAtAfterChange: (value: string | null) => void
-  onCreatedAtBeforeChange: (value: string | null) => void
+  onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
 }
 
 export function KeysTable({
@@ -41,8 +40,7 @@ export function KeysTable({
   onTypeFilterChange,
   createdAtAfter,
   createdAtBefore,
-  onCreatedAtAfterChange,
-  onCreatedAtBeforeChange,
+  onDatesChange,
 }: KeysTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE')
@@ -89,8 +87,7 @@ export function KeysTable({
                 <DateRangeFilterDropdown
                   afterDate={createdAtAfter}
                   beforeDate={createdAtBefore}
-                  onAfterDateChange={onCreatedAtAfterChange}
-                  onBeforeDateChange={onCreatedAtBeforeChange}
+                  onDatesChange={onDatesChange}
                 />
               </div>
             </TableHead>
