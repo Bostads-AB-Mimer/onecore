@@ -150,6 +150,44 @@ export const getWorkOrdersByContactCode = async (
   }
 }
 
+export const getWorkOrdersByPropertyId = async (
+  propertyId: string
+): Promise<WorkOrder[]> => {
+  try {
+    await odoo.connect()
+
+    // Then, find all work orders for those rental properties
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
+      'maintenance.request',
+      [['estate', '=', propertyId]],
+      WORK_ORDER_FIELDS
+    )
+
+    console.log('Odoo work orders:', odooWorkOrders)
+
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
+      'mail.message',
+      MESSAGE_DOMAIN(odooWorkOrders.map((workOrder) => workOrder.id)),
+      MESSAGE_FIELDS
+    )
+
+    const messagesById = groupBy(odooWorkOrderMessages, 'res_id')
+
+    const workOrders = odooWorkOrders.map((workOrder) => ({
+      ...transformWorkOrder(workOrder),
+      Messages: transformMessages(
+        messagesById[workOrder.id]
+      ) satisfies WorkOrderMessage[],
+      Url: WorkOrderUrl(workOrder.id),
+    }))
+
+    return workOrders
+  } catch (error) {
+    console.error('Error fetching work orders by propertyId:', error)
+    throw error
+  }
+}
+
 export const createWorkOrder = async (
   rentalPropertyInfo: RentalProperty,
   tenant: Tenant,
