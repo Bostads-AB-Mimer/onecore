@@ -3510,17 +3510,23 @@ export interface paths {
   };
   "/logs": {
     /**
-     * List logs
-     * @description Returns logs ordered by eventTime (desc).
+     * List logs with pagination
+     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
      */
     get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
       responses: {
-        /** @description List of logs */
+        /** @description Paginated list of logs */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"][];
-            };
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
           };
         };
         /** @description Server error */
@@ -3564,8 +3570,8 @@ export interface paths {
   };
   "/logs/search": {
     /**
-     * Search logs
-     * @description Search logs with flexible filtering.
+     * Search logs with pagination
+     * @description Search logs with flexible filtering and pagination.
      * - **OR search**: Use `q` with `fields` for multiple field search
      * - **AND search**: Use any Log field parameter for filtering
      * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
@@ -3574,26 +3580,27 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
           q?: string;
-          /** @description Comma-separated list of fields for OR search. Defaults to resourceId. */
+          /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
           fields?: string;
           id?: string;
+          userName?: string;
           eventType?: string;
           eventTime?: string;
-          actor?: string;
-          resourceType?: string;
-          resourceId?: string;
-          details?: string;
-          createdAt?: string;
+          objectType?: string;
+          objectId?: string;
+          description?: string;
         };
       };
       responses: {
-        /** @description Successfully retrieved search results */
+        /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"][];
-            };
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
           };
         };
         /** @description Bad request */
@@ -3603,6 +3610,35 @@ export interface paths {
           };
         };
         /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/object/{objectId}": {
+    /**
+     * Get all logs for a specific objectId
+     * @description Returns all log entries for a given objectId, ordered by most recent first
+     */
+    get: {
+      parameters: {
+        path: {
+          objectId: string;
+        };
+      };
+      responses: {
+        /** @description List of logs for the objectId */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Server error */
         500: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -4830,6 +4866,33 @@ export interface components {
           updatedAt: string;
           createdBy?: string | null;
           updatedBy?: string | null;
+        })[];
+      _meta: {
+        totalRecords: number;
+        page: number;
+        limit: number;
+        count: number;
+      };
+      _links: ({
+          href: string;
+          /** @enum {string} */
+          rel: "self" | "first" | "last" | "prev" | "next";
+        })[];
+    };
+    PaginatedLogsResponse: {
+      content: ({
+          /** Format: uuid */
+          id: string;
+          userName: string;
+          /** @enum {string} */
+          eventType: "creation" | "update" | "delete";
+          /** @enum {string} */
+          objectType: "key" | "keySystem" | "keyLoan";
+          /** Format: uuid */
+          objectId?: string | null;
+          /** Format: date-time */
+          eventTime: string;
+          description?: string | null;
         })[];
       _meta: {
         totalRecords: number;
