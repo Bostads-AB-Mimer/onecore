@@ -53,4 +53,15 @@ export const PropertyDetailsFactory = Factory.define<
     energyIndex: null,
     heatingNature: 0,
   },
+  marketArea: {
+    id: `market_area_${sequence}`,
+    code: `MA${sequence}`,
+    name: `Market Area ${sequence}`,
+  },
+  district: {
+    id: `district_${sequence}`,
+    code: `D${sequence}`,
+    caption: `District ${sequence}`,
+  },
+  propertyValues: [],
 }))

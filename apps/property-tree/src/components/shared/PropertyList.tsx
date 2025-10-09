@@ -7,20 +7,23 @@ import { Grid } from '@/components/ui/Grid'
 
 interface PropertyListProps {
   properties: Property[]
+  companyId?: string
 }
 
-export function PropertyList({ properties }: PropertyListProps) {
+export function PropertyList({ properties, companyId }: PropertyListProps) {
   const navigate = useNavigate()
 
   return (
-    <Card title="Fastigheter" icon={Building2}>
-      <Grid cols={2}>
+    <Card title="Fastigheter">
+      <Grid cols={2} className="p-4">
         {properties?.map((property) => (
           <motion.div
             key={property.id}
             whileHover={{ scale: 1.02 }}
             className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
-            onClick={() => navigate(`/properties/${property.id}`)}
+            onClick={() =>
+              navigate(`/properties/${property.id}`, { state: { companyId } })
+            }
           >
             <div className="flex items-center justify-between">
               <div>

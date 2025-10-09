@@ -81,6 +81,7 @@ export function PropertyList({ company }: PropertyListProps) {
                         <PropertyNavigation
                           key={property.id}
                           property={property}
+                          companyId={company.id}
                         />
                       ))}
                     </SidebarMenu>
