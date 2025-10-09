@@ -7,11 +7,11 @@ import {
 import { Badge } from '@/components/ui/v2/Badge'
 import { WorkOrder } from '@/services/api/core'
 
-type OrderCardProps = {
+type WorkOrderCardProps = {
   orderItem: WorkOrder
 }
 
-export function OrderCard({ orderItem }: OrderCardProps) {
+export function WorkOrderCard({ orderItem }: WorkOrderCardProps) {
   const getPriorityVariant = (
     priority: string
   ): 'priority-low' | 'priority-medium' | 'priority-high' => {
@@ -39,13 +39,17 @@ export function OrderCard({ orderItem }: OrderCardProps) {
               ID: {orderItem.id}
             </span>
           </div>
-          <Badge variant={getPriorityVariant(orderItem.priority ?? 'default')}>
-            {orderItem.priority === 'low'
-              ? 'Låg'
-              : orderItem.priority === 'medium'
-                ? 'Medium'
-                : 'Hög'}
-          </Badge>
+          {orderItem.priority && (
+            <Badge
+              variant={getPriorityVariant(orderItem.priority ?? 'default')}
+            >
+              {orderItem.priority === 'low'
+                ? 'Låg'
+                : orderItem.priority === 'medium'
+                  ? 'Medium'
+                  : 'Hög'}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent>

@@ -1,7 +1,5 @@
-import { OrdersManagement } from '@/components/orders/OrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
-import { MessageSquare } from 'lucide-react'
-import { useParams } from 'react-router-dom'
 
 interface PropertyOrdersTabProps {
   propertyDetail: any
@@ -10,14 +8,12 @@ interface PropertyOrdersTabProps {
 export const PropertyOrdersTab = ({
   propertyDetail,
 }: PropertyOrdersTabProps) => {
-  const { property } = useParams<{ property: string }>()
-
   // Use property directly as the property ID
-  const propertyId = property || propertyDetail.id || 'property-default'
+  const propertyId = propertyDetail.code || 'property-default'
 
   return (
     <TabLayout title="Ärenden för fastighet" showCard={true}>
-      <OrdersManagement contextType="residence" residenceId={propertyId} />
+      <WorkOrdersManagement contextType="property" id={propertyId} />
     </TabLayout>
   )
 }

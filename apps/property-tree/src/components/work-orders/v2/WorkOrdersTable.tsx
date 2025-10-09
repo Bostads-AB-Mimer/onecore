@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/v2/Button'
 import { WorkOrder } from '@/services/api/core'
 import { useState } from 'react'
 
-interface OrdersTableProps {
+interface WorkOrdersTableProps {
   orders: WorkOrder[]
 }
 
-export function OrdersTable({ orders }: OrdersTableProps) {
+export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
   const [showAll, setShowAll] = useState(false)
   const displayedOrders = showAll ? orders : orders.slice(0, 5)
   const hasMoreOrders = orders.length > 5
