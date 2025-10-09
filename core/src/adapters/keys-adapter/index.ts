@@ -365,36 +365,57 @@ export const KeySystemsApi = {
  */
 
 export const LogsApi = {
-  list: async (): Promise<AdapterResult<Log[], CommonErr>> => {
-    const r = await getJSON<{ content: Log[] }>(`${BASE}/logs`)
-    return r.ok ? ok(r.data.content) : r
+  list: async (
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString ? `${BASE}/logs?${queryString}` : `${BASE}/logs`
+
+    const r = await getJSON<PaginatedResponse<Log>>(url)
+    return r.ok ? ok(r.data) : r
   },
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<Log[], 'bad-request' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<PaginatedResponse<Log>, 'bad-request' | CommonErr>
+  > => {
     const params = new URLSearchParams()
 
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          params.append(key, value.join(','))
+          value.forEach((v) => params.append(key, v))
         } else {
           params.append(key, value)
         }
       }
     }
 
-    const r = await getJSON<{ content: Log[] }>(
+    const r = await getJSON<PaginatedResponse<Log>>(
       `${BASE}/logs/search?${params.toString()}`
     )
-    return r.ok ? ok(r.data.content) : r
+    return r.ok ? ok(r.data) : r
   },
 
   get: async (
     id: string
   ): Promise<AdapterResult<Log, 'not-found' | CommonErr>> => {
     const r = await getJSON<{ content: Log }>(`${BASE}/logs/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByObjectId: async (
+    objectId: string
+  ): Promise<AdapterResult<Log[], CommonErr>> => {
+    const r = await getJSON<{ content: Log[] }>(
+      `${BASE}/logs/object/${objectId}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 
