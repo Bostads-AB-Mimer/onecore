@@ -24,6 +24,11 @@ jobs:
           ref: ${{ github.event.inputs.source_branch }}
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+
       - name: Setup Node.js + pnpm
         uses: actions/setup-node@v4
         with:
@@ -40,10 +45,10 @@ jobs:
             pnpm version minor -r --include-workspace-root --no-git-tag-version
             new_version=$(jq -r .version package.json)
           fi
-      
+
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
           echo "branch_name=release/$new_version" >> $GITHUB_OUTPUT
-    
+
       - name: Commit and push new branch
         env:
           BRANCH_NAME: ${{ steps.version.outputs.branch_name }}
