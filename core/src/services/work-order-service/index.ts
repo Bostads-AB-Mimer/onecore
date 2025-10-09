@@ -710,76 +710,69 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '/work-orders/xpand/by-property-id/:propertyId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
-        ctx.query
+  router.get('/work-orders/xpand/by-property-id/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedParams.data
+
+    try {
+      const result = await workOrderAdapter.getXpandWorkOrdersByPropertyId(
+        ctx.params.propertyId,
+        { skip, limit, sortAscending }
       )
-      if (!parsedParams.success) {
-        ctx.status = 400
+
+      if (result.ok) {
+        ctx.status = 200
         ctx.body = {
-          error: 'Invalid query parameters',
+          content: {
+            totalCount: result.data.length,
+            workOrders: result.data.map(
+              (v): schemas.CoreXpandWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+              })
+            ),
+          },
           ...metadata,
         }
-        return
-      }
-
-      const { skip, limit, sortAscending } = parsedParams.data
-
-      try {
-        const result =
-          await workOrderAdapter.getXpandWorkOrdersByPropertyId(
-            ctx.params.propertyId,
-            { skip, limit, sortAscending }
-          )
-
-        if (result.ok) {
-          ctx.status = 200
-          ctx.body = {
-            content: {
-              totalCount: result.data.length,
-              workOrders: result.data.map(
-                (v): schemas.CoreXpandWorkOrder => ({
-                  accessCaption: v.AccessCaption,
-                  caption: v.Caption,
-                  code: v.Code,
-                  contactCode: v.ContactCode,
-                  id: v.Id,
-                  lastChanged: new Date(v.LastChanged),
-                  priority: v.Priority,
-                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                  registered: new Date(v.Registered),
-                  rentalObjectCode: v.RentalObjectCode,
-                  status: v.Status,
-                })
-              ),
-            },
-            ...metadata,
-          }
-        } else {
-          logger.error(
-            {
-              err: result.err,
-              metadata,
-            },
-            'Error getting workOrders by property id from xpand'
-          )
-          ctx.status = result.statusCode || 500
-          ctx.body = { error: result.err, ...metadata }
-        }
-      } catch (error) {
+      } else {
         logger.error(
-          error,
+          {
+            err: result.err,
+            metadata,
+          },
           'Error getting workOrders by property id from xpand'
         )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
       }
+    } catch (error) {
+      logger.error(error, 'Error getting workOrders by property id from xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
     }
-  )
+  })
 
   /**
    * @swagger

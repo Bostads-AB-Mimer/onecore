@@ -372,12 +372,14 @@ describe('work-order-adapter', () => {
         )
       )
 
-      const result =
-        await workOrderAdapter.getXpandWorkOrdersByPropertyId(propertyId, {
+      const result = await workOrderAdapter.getXpandWorkOrdersByPropertyId(
+        propertyId,
+        {
           skip: 10,
           limit: 50,
           sortAscending: true,
-        })
+        }
+      )
 
       expect(result).toMatchObject({
         ok: true,
