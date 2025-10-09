@@ -333,6 +333,60 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-key/{keyId}:
+   *   get:
+   *     summary: Get all loans for a specific key
+   *     description: Returns all loan records for the specified key ID, ordered by creation date DESC
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: keyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The key ID to fetch loans for
+   *     responses:
+   *       200:
+   *         description: Array of loans for this key
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoan'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-key/:keyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeyLoansApi.getByKey(ctx.params.keyId)
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching loans by key ID'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
