@@ -4574,6 +4574,8 @@ export interface components {
       keyType: "LGH" | "PB" | "FS" | "HN";
       /** Format: uuid */
       keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4675,6 +4677,7 @@ export interface components {
       keyType?: "LGH" | "PB" | "FS" | "HN";
       /** Format: uuid */
       keySystemId?: string | null;
+      disposed?: boolean;
     };
     CreateKeyLoanRequest: {
       keys: string;
@@ -4781,6 +4784,8 @@ export interface components {
           keyType: "LGH" | "PB" | "FS" | "HN";
           /** Format: uuid */
           keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
           /** Format: date-time */
           createdAt: string;
           /** Format: date-time */
