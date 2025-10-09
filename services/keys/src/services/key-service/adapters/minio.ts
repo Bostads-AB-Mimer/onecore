@@ -18,7 +18,7 @@ logger.info(
 export const minioClient = new Minio.Client({
   endPoint: Config.minio.endPoint,
   port: Config.minio.port,
-  useSSL: false, // Explicitly false for local development (docker-compose uses HTTP)
+  useSSL: Config.minio.useSSL,
   accessKey: Config.minio.accessKey,
   secretKey: Config.minio.secretKey,
 })
