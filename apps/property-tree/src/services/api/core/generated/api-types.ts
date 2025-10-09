@@ -1809,6 +1809,42 @@ export interface paths {
       };
     };
   };
+  "/work-orders/by-property-id/{propertyId}": {
+    /**
+     * Get work orders by property id
+     * @description Retrieves work orders based on the provided property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property id used to fetch work orders. */
+          propertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/work-orders/xpand/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id from xpand
@@ -1819,6 +1855,42 @@ export interface paths {
         path: {
           /** @description The rental property id used to fetch work orders. */
           rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/work-orders/xpand/by-property-id/{propertyId}": {
+    /**
+     * Get work orders by property id from xpand
+     * @description Retrieves work orders based on the provided property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property id used to fetch work orders. */
+          propertyId: string;
         };
       };
       responses: {
