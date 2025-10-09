@@ -441,19 +441,10 @@ export const ReceiptsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  getByLease: async (
-    leaseId: string
-  ): Promise<AdapterResult<Receipt[], CommonErr>> => {
-    const r = await getJSON<{ content: Receipt[] }>(
-      `${BASE}/receipts/by-lease/${leaseId}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
   getByKeyLoan: async (
     keyLoanId: string
-  ): Promise<AdapterResult<Receipt, 'not-found' | CommonErr>> => {
-    const r = await getJSON<{ content: Receipt }>(
+  ): Promise<AdapterResult<Receipt[], CommonErr>> => {
+    const r = await getJSON<{ content: Receipt[] }>(
       `${BASE}/receipts/by-key-loan/${keyLoanId}`
     )
     return r.ok ? ok(r.data.content) : r
@@ -463,6 +454,19 @@ export const ReceiptsApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/receipts/${id}`)
+  },
+
+  update: async (
+    id: string,
+    payload: Partial<Receipt>
+  ): Promise<
+    AdapterResult<Receipt, 'not-found' | 'bad-request' | CommonErr>
+  > => {
+    const r = await patchJSON<{ content: Receipt }>(
+      `${BASE}/receipts/${id}`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
   },
 
   // <-- Forward file buffer to microservice as multipart/form-data
