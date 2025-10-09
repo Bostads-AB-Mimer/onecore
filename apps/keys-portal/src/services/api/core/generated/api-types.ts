@@ -3848,7 +3848,6 @@ export interface paths {
             type: "DIGITAL" | "PHYSICAL";
             /** @default false */
             signed?: boolean;
-            leaseId: string;
             fileId?: string | null;
           };
         };
@@ -3868,7 +3867,6 @@ export interface paths {
                 /** @enum {string} */
                 type?: "DIGITAL" | "PHYSICAL";
                 signed?: boolean;
-                leaseId?: string;
                 fileId?: string | null;
                 /** Format: date-time */
                 createdAt?: string;
@@ -3886,50 +3884,6 @@ export interface paths {
         409: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/by-lease/{leaseId}": {
-    /**
-     * Get receipts by lease ID
-     * @description Retrieve all receipts associated with a specific lease
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The lease ID to filter receipts by */
-          leaseId: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved receipts */
-        200: {
-          content: {
-            "application/json": {
-              content?: ({
-                  /** Format: uuid */
-                  id?: string;
-                  /** Format: uuid */
-                  keyLoanId?: string;
-                  /** @enum {string} */
-                  receiptType?: "LOAN" | "RETURN";
-                  /** @enum {string} */
-                  type?: "DIGITAL" | "PHYSICAL";
-                  signed?: boolean;
-                  leaseId?: string;
-                  fileId?: string | null;
-                  /** Format: date-time */
-                  createdAt?: string;
-                })[];
-            };
           };
         };
         /** @description Internal server error */
@@ -3968,7 +3922,6 @@ export interface paths {
                 /** @enum {string} */
                 type?: "DIGITAL" | "PHYSICAL";
                 signed?: boolean;
-                leaseId?: string;
                 fileId?: string | null;
                 /** Format: date-time */
                 createdAt?: string;
@@ -4697,10 +4650,11 @@ export interface components {
       /** @enum {string} */
       type: "DIGITAL" | "PHYSICAL";
       signed: boolean;
-      leaseId: string;
       fileId?: string | null;
       /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
     };
     CreateKeyRequest: {
       keyName: string;
@@ -4798,7 +4752,6 @@ export interface components {
       /** @enum {string} */
       type: "DIGITAL" | "PHYSICAL";
       signed?: boolean;
-      leaseId: string;
       fileId?: string;
     };
     /** @enum {string} */

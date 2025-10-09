@@ -24,17 +24,14 @@ exports.up = async function up(knex) {
     // Whether the receipt has been signed
     table.boolean('signed').notNullable().defaultTo(false)
 
-    // Lease ID from core API
-    table.string('leaseId').notNullable()
-
     // MinIO file identifier (blob storage)
     table.string('fileId').nullable()
 
     table.timestamp('createdAt').defaultTo(knex.fn.now())
+    table.timestamp('updatedAt').defaultTo(knex.fn.now())
 
     // Helpful indexes
     table.index(['keyLoanId'])
-    table.index(['leaseId'])
     table.index(['createdAt'])
   })
 }

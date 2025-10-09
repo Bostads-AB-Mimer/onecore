@@ -10,8 +10,13 @@ import { keys } from '@onecore/types'
 
 const TABLE = 'receipts'
 
-const { CreateReceiptRequestSchema, ReceiptSchema } = keys.v1
+const {
+  CreateReceiptRequestSchema,
+  UpdateReceiptRequestSchema,
+  ReceiptSchema,
+} = keys.v1
 type CreateReceiptRequest = keys.v1.CreateReceiptRequest
+type UpdateReceiptRequest = keys.v1.UpdateReceiptRequest
 type Receipt = keys.v1.Receipt
 
 // Configure multer for in-memory storage (we'll upload to MinIO)
@@ -26,10 +31,10 @@ const upload = multer({
 
 const IdParamSchema = z.object({ id: z.string().uuid() })
 const KeyLoanParamSchema = z.object({ keyLoanId: z.string().uuid() })
-const LeaseParamSchema = z.object({ leaseId: z.string().min(1) })
 
 export const routes = (router: KoaRouter) => {
   registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
+  registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
   registerSchema('Receipt', ReceiptSchema)
 
   /**
@@ -65,25 +70,13 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateReceiptRequest = ctx.request.body
 
-        const existing = await db(TABLE)
-          .where({ keyLoanId: payload.keyLoanId })
-          .first()
-        if (existing) {
-          ctx.status = 409
-          ctx.body = {
-            reason: 'Receipt already exists for this keyLoanId',
-            ...metadata,
-          }
-          return
-        }
-
+        // Allow multiple receipts per keyLoan (e.g., LOAN + RETURN, or multiple partial returns)
         const [row] = await db(TABLE)
           .insert({
             keyLoanId: payload.keyLoanId,
             receiptType: payload.receiptType,
             type: payload.type,
             signed: payload.signed ?? false,
-            leaseId: payload.leaseId,
             fileId: payload.fileId ?? null,
           })
           .returning('*')
@@ -97,45 +90,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-
-  /**
-   * @swagger
-   * /receipts/by-lease/{leaseId}:
-   *   get:
-   *     summary: List receipts by lease
-   *     tags: [Receipts]
-   *     parameters:
-   *       - in: path
-   *         name: leaseId
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: List of receipts
-   */
-  router.get('/receipts/by-lease/:leaseId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const parse = LeaseParamSchema.safeParse({ leaseId: ctx.params.leaseId })
-      if (!parse.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid leaseId', ...metadata }
-        return
-      }
-
-      const rows = await db(TABLE)
-        .where({ leaseId: parse.data.leaseId })
-        .orderBy('createdAt', 'desc')
-
-      ctx.status = 200
-      ctx.body = { content: rows as Receipt[], ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error listing receipts by lease')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
 
   /**
    * @swagger
@@ -167,18 +121,14 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const row = await db(TABLE)
+      const rows = await db(TABLE)
         .where({ keyLoanId: parse.data.keyLoanId })
-        .first()
-      if (!row) {
-        ctx.status = 404
-        ctx.body = { reason: 'Receipt not found', ...metadata }
-        return
-      }
+        .orderBy('createdAt', 'desc')
+
       ctx.status = 200
-      ctx.body = { content: row as Receipt, ...metadata }
+      ctx.body = { content: rows as Receipt[], ...metadata }
     } catch (err) {
-      logger.error(err, 'Error fetching receipt by keyLoanId')
+      logger.error(err, 'Error fetching receipts by keyLoanId')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -244,10 +194,33 @@ export const routes = (router: KoaRouter) => {
       const fileId = await uploadFile(ctx.file.buffer, fileName, {
         'receipt-id': parse.data.id,
         'receipt-type': receipt.receiptType,
-        'lease-id': receipt.leaseId,
+        'key-loan-id': receipt.keyLoanId,
       })
 
-      await db(TABLE).where({ id: parse.data.id }).update({ fileId })
+      // Update receipt as signed
+      await db(TABLE).where({ id: parse.data.id }).update({
+        fileId,
+        signed: true, // Mark as signed when PDF is uploaded
+      })
+
+      // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
+      if (receipt.receiptType === 'LOAN') {
+        const keyLoanAlreadyActivated = await db('key_loans')
+          .where({ id: receipt.keyLoanId })
+          .whereNotNull('pickedUpAt')
+          .first()
+
+        if (!keyLoanAlreadyActivated) {
+          await db('key_loans')
+            .where({ id: receipt.keyLoanId })
+            .update({ pickedUpAt: db.fn.now() })
+
+          logger.info(
+            { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
+            'Key loan activated after signed receipt uploaded'
+          )
+        }
+      }
 
       ctx.status = 200
       ctx.body = {
@@ -326,6 +299,72 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   patch:
+   *     summary: Update a receipt (allows marking as signed)
+   *     tags: [Receipts]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateReceiptRequest'
+   *     responses:
+   *       200:
+   *         description: Receipt updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       404:
+   *         description: Receipt not found
+   */
+  router.patch(
+    '/receipts/:id',
+    parseRequestBody(UpdateReceiptRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+        if (!parse.success) {
+          ctx.status = 400
+          ctx.body = { reason: 'Invalid receipt id', ...metadata }
+          return
+        }
+
+        const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+        if (!receipt) {
+          ctx.status = 404
+          ctx.body = { reason: 'Receipt not found', ...metadata }
+          return
+        }
+
+        const payload: UpdateReceiptRequest = ctx.request.body
+        await db(TABLE).where({ id: parse.data.id }).update(payload)
+
+        const updated = await db(TABLE).where({ id: parse.data.id }).first()
+        ctx.status = 200
+        ctx.body = { content: updated as Receipt, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error updating receipt')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger

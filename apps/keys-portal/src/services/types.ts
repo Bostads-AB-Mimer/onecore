@@ -40,14 +40,7 @@ export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
 export type CreateReceiptRequest =
   paths['/receipts']['post']['requestBody']['content']['application/json']
 
-// List by lease (GET /receipts/by-lease/{leaseId}) -> array in "content"
-export type ReceiptListItem = NonNullable<
-  NonNullable<
-    paths['/receipts/by-lease/{leaseId}']['get']['responses']['200']['content']['application/json']
-  >['content']
->[number]
-
-// Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
+// Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> array in "content"
 export type ReceiptByKeyLoan = NonNullable<
   NonNullable<
     paths['/receipts/by-key-loan/{keyLoanId}']['get']['responses']['200']['content']['application/json']

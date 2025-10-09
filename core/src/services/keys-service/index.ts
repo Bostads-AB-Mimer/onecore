@@ -2356,7 +2356,6 @@ export const routes = (router: KoaRouter) => {
    *               - keyLoanId
    *               - receiptType
    *               - type
-   *               - leaseId
    *             properties:
    *               keyLoanId:
    *                 type: string
@@ -2370,8 +2369,6 @@ export const routes = (router: KoaRouter) => {
    *               signed:
    *                 type: boolean
    *                 default: false
-   *               leaseId:
-   *                 type: string
    *               fileId:
    *                 type: string
    *                 nullable: true
@@ -2400,8 +2397,6 @@ export const routes = (router: KoaRouter) => {
    *                       enum: [DIGITAL, PHYSICAL]
    *                     signed:
    *                       type: boolean
-   *                     leaseId:
-   *                       type: string
    *                     fileId:
    *                       type: string
    *                       nullable: true
@@ -2462,83 +2457,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /receipts/by-lease/{leaseId}:
-   *   get:
-   *     summary: Get receipts by lease ID
-   *     description: Retrieve all receipts associated with a specific lease
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: leaseId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The lease ID to filter receipts by
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved receipts
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                         format: uuid
-   *                       keyLoanId:
-   *                         type: string
-   *                         format: uuid
-   *                       receiptType:
-   *                         type: string
-   *                         enum: [LOAN, RETURN]
-   *                       type:
-   *                         type: string
-   *                         enum: [DIGITAL, PHYSICAL]
-   *                       signed:
-   *                         type: boolean
-   *                       leaseId:
-   *                         type: string
-   *                       fileId:
-   *                         type: string
-   *                         nullable: true
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/receipts/by-lease/:leaseId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await ReceiptsApi.getByLease(ctx.params.leaseId)
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching receipts by lease'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
    * /receipts/by-key-loan/{keyLoanId}:
    *   get:
    *     summary: Get receipt by key loan ID
@@ -2577,8 +2495,6 @@ export const routes = (router: KoaRouter) => {
    *                       enum: [DIGITAL, PHYSICAL]
    *                     signed:
    *                       type: boolean
-   *                     leaseId:
-   *                       type: string
    *                     fileId:
    *                       type: string
    *                       nullable: true
@@ -2606,15 +2522,9 @@ export const routes = (router: KoaRouter) => {
     const result = await ReceiptsApi.getByKeyLoan(ctx.params.keyLoanId)
 
     if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Receipt not found', ...metadata }
-        return
-      }
-
       logger.error(
         { err: result.err, metadata },
-        'Error fetching receipt by key loan'
+        'Error fetching receipts by key loan'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -2658,6 +2568,34 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  router.patch('/receipts/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body
+
+    const result = await ReceiptsApi.update(ctx.params.id, payload)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error updating receipt')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
   router.delete('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

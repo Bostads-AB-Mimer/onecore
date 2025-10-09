@@ -19,6 +19,7 @@ import {
 import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { EmbeddedKeysList } from './EmbeddedKeysList'
+import { ReceiptHistorySheet } from './ReceiptHistorySheet'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
@@ -166,6 +167,7 @@ export function ContractCard({
 
           <div className="flex items-center gap-2">
             <RentalObjectNotes rentalObjectCode={lease.rentalPropertyId} />
+            <ReceiptHistorySheet lease={lease} />
             {hasAnyKeys && (
               <Button
                 size="sm"
