@@ -4,10 +4,12 @@ import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
+import { paginate } from '../../../utils/pagination'
 
 const TABLE = 'logs'
 
-const { LogSchema, CreateLogRequestSchema } = keys.v1
+const { LogSchema, CreateLogRequestSchema, createPaginatedResponseSchema } =
+  keys.v1
 type CreateLogRequest = keys.v1.CreateLogRequest
 type Log = keys.v1.Log
 
@@ -22,30 +24,46 @@ type Log = keys.v1.Log
  *       $ref: '#/components/schemas/CreateLogRequest'
  *     Log:
  *       $ref: '#/components/schemas/Log'
+ *     PaginatedLogsResponse:
+ *       $ref: '#/components/schemas/PaginatedLogsResponse'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
   registerSchema('Log', LogSchema)
+  registerSchema(
+    'PaginatedLogsResponse',
+    createPaginatedResponseSchema(LogSchema)
+  )
   /**
    * @swagger
    * /logs:
    *   get:
-   *     summary: List logs
-   *     description: Returns logs ordered by eventTime (desc).
+   *     summary: List logs with pagination
+   *     description: Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
    *     tags: [Logs]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: List of logs
+   *         description: A paginated list of logs
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Log'
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
    *       500:
    *         description: Server error
    *         content:
@@ -56,9 +74,25 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('eventTime', 'desc')
+      const subquery = db(TABLE)
+        .select('*')
+        .select(
+          db.raw(
+            'ROW_NUMBER() OVER (PARTITION BY objectId ORDER BY eventTime DESC) as rn'
+          )
+        )
+
+      const query = db
+        .from(subquery.as('ranked_logs'))
+        .select('*')
+        .where('rn', 1)
+        .whereNotNull('objectId')
+        .orderBy('eventTime', 'desc')
+
+      const paginatedResult = await paginate(query, ctx)
+
       ctx.status = 200
-      ctx.body = { content: rows satisfies Log[], ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error listing logs')
       ctx.status = 500
@@ -70,15 +104,29 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /logs/search:
    *   get:
-   *     summary: Search logs
+   *     summary: Search logs with pagination
    *     description: |
-   *       Search logs with flexible filtering.
+   *       Search logs with flexible filtering and pagination.
    *       - **OR search**: Use `q` with `fields` for multiple field search
    *       - **AND search**: Use any Log field parameter for filtering
    *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
    *       - Only one OR group is supported, but you can combine it with multiple AND filters
    *     tags: [Logs]
    *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *       - in: query
    *         name: q
    *         required: false
@@ -90,9 +138,13 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search. Defaults to resourceId.
+   *         description: Comma-separated list of fields for OR search. Defaults to objectId.
    *       - in: query
    *         name: id
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: userName
    *         schema:
    *           type: string
    *       - in: query
@@ -104,47 +156,45 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *       - in: query
-   *         name: actor
+   *         name: objectType
    *         schema:
    *           type: string
    *       - in: query
-   *         name: resourceType
+   *         name: objectId
    *         schema:
    *           type: string
    *       - in: query
-   *         name: resourceId
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: details
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: createdAt
+   *         name: description
    *         schema:
    *           type: string
    *     responses:
    *       200:
-   *         description: Successfully retrieved search results
+   *         description: Successfully retrieved paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Log'
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
    *       400:
    *         description: Bad request
    *       500:
    *         description: Internal server error
    */
   router.get('/logs/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'page',
+      'limit',
+    ])
 
     try {
-      let query = db(TABLE).select('*')
+      let subquery = db(TABLE)
+        .select('*')
+        .select(
+          db.raw(
+            'ROW_NUMBER() OVER (PARTITION BY objectId ORDER BY eventTime DESC) as rn'
+          )
+        )
 
       // Handle OR search
       if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3) {
@@ -157,7 +207,7 @@ export const routes = (router: KoaRouter) => {
           fieldsToSearch = ['resourceId']
         }
 
-        query = query.where((builder) => {
+        subquery = subquery.where((builder) => {
           fieldsToSearch.forEach((field, index) => {
             if (index === 0) {
               builder.where(field, 'like', `%${searchTerm}%`)
@@ -169,7 +219,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       // Handle AND search
-      const reservedParams = ['q', 'fields']
+      const reservedParams = ['q', 'fields', 'page', 'limit']
       for (const [field, value] of Object.entries(ctx.query)) {
         if (
           !reservedParams.includes(field) &&
@@ -182,9 +232,9 @@ export const routes = (router: KoaRouter) => {
           if (operatorMatch) {
             const operator = operatorMatch[1]
             const compareValue = operatorMatch[2].trim()
-            query = query.where(field, operator, compareValue)
+            subquery = subquery.where(field, operator, compareValue)
           } else {
-            query = query.where(field, 'like', `%${trimmedValue}%`)
+            subquery = subquery.where(field, 'like', `%${trimmedValue}%`)
           }
         }
       }
@@ -207,12 +257,68 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rows = await query.orderBy('eventTime', 'desc').limit(10)
+      // Wrap query and filter for rn = 1 (most recent per objectId)
+      const query = db
+        .from(subquery.as('ranked_logs'))
+        .select('*')
+        .where('rn', 1)
+        .whereNotNull('objectId')
+        .orderBy('eventTime', 'desc')
+
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error searching logs')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /logs/object/{objectId}:
+   *   get:
+   *     summary: Get all logs for a specific objectId
+   *     description: Returns all log entries for a given objectId, ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: objectId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: List of logs for the objectId
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Log'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/object/:objectId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const rows = await db(TABLE)
+        .where({ objectId: ctx.params.objectId })
+        .orderBy('eventTime', 'desc')
 
       ctx.status = 200
       ctx.body = { content: rows satisfies Log[], ...metadata }
     } catch (err) {
-      logger.error(err, 'Error searching logs')
+      logger.error(err, 'Error fetching logs for objectId')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
