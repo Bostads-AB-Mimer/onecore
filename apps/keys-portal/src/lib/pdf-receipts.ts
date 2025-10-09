@@ -287,7 +287,7 @@ const addSignatureSection = (doc: jsPDF, y: number) => {
   return cy + 20
 }
 
-const addFooter = (doc: jsPDF, kind: 'loan' | 'return') => {
+const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
   const h = doc.internal.pageSize.height as number
 
   doc.setFont('helvetica', 'normal')
@@ -313,27 +313,35 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return') => {
   }
 
   const contact =
-    'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besök Torggatan 4  Tel 021-39 70 10 • Felanmälan 021-39 70 90 • mimer.nu'
+    'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besök Gasverksgatan 7 Tel 021-39 70 00 • Felanmälan 021-39 70 90 • mimer.nu'
   doc.text(contact, MARGIN_X, h - 10)
+
+  // Add receipt ID in subtle gray text for scanning purposes
+  if (receiptId) {
+    doc.setTextColor(128, 128, 128) // Light gray color
+    doc.text(`${receiptId}`, MARGIN_X, h - 4)
+    doc.setTextColor(0, 0, 0) // Reset to black
+  }
 
   doc.text('Sida 1', 190, h - 4, { align: 'right' })
 }
 
 /** ---------------- Public API (always one page) ---------------- */
 
-export const generateLoanReceipt = async (data: ReceiptData): Promise<void> => {
+export const generateLoanReceipt = async (data: ReceiptData, receiptId?: string): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
   y = addTenantInfo(doc, data.tenants, data.lease, y)
   y = addKeysTable(doc, data.keys, y, 42)
   addSignatureSection(doc, y)
-  addFooter(doc, 'loan')
+  addFooter(doc, 'loan', receiptId)
   const file = `nyckelutlaning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
 
 export const generateReturnReceipt = async (
-  data: ReceiptData
+  data: ReceiptData,
+  receiptId?: string
 ): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return')
@@ -362,7 +370,7 @@ export const generateReturnReceipt = async (
     y = cy
   }
 
-  addFooter(doc, 'return')
+  addFooter(doc, 'return', receiptId)
   const file = `nyckelaterlamning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }

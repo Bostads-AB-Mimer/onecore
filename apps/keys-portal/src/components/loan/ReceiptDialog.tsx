@@ -69,9 +69,9 @@ export function ReceiptDialog({
 
       // Generate PDF for download
       if (receiptData.receiptType === 'LOAN') {
-        generateLoanReceipt(receiptData)
+        generateLoanReceipt(receiptData, receipt.id)
       } else {
-        generateReturnReceipt(receiptData)
+        generateReturnReceipt(receiptData, receipt.id)
       }
     } finally {
       setIsCreating(false)
