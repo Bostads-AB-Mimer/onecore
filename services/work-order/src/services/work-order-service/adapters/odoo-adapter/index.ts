@@ -43,6 +43,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'call_between',
   'space_code',
   'equipment_code',
+  'estate_code',
   'rental_property_id',
   'create_date',
   'due_date',
@@ -141,6 +142,40 @@ export const getWorkOrdersByContactCode = async (
     const workOrders = odooWorkOrders.map((workOrder) => ({
       ...transformWorkOrder(workOrder),
       Messages: transformMessages(messagesById[workOrder.id]),
+    }))
+
+    return workOrders
+  } catch (error) {
+    console.error('Error fetching work orders:', error)
+    throw error
+  }
+}
+
+export const getWorkOrdersByPropertyId = async (
+  propertyId: string
+): Promise<WorkOrder[]> => {
+  try {
+    await odoo.connect()
+
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
+      'maintenance.request',
+      ['estate_code', '=', propertyId],
+      WORK_ORDER_FIELDS
+    )
+
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
+      'mail.message',
+      MESSAGE_DOMAIN(odooWorkOrders.map((workOrder) => workOrder.id)),
+      MESSAGE_FIELDS
+    )
+
+    const messagesById = groupBy(odooWorkOrderMessages, 'res_id')
+
+    const workOrders = odooWorkOrders.map((workOrder) => ({
+      ...transformWorkOrder(workOrder),
+      Messages: transformMessages(
+        messagesById[workOrder.id] satisfies OdooWorkOrderMessage[]
+      ),
     }))
 
     return workOrders
