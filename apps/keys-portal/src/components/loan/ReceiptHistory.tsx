@@ -18,7 +18,14 @@ import {
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { Lease, Receipt, KeyLoan, Key, Tenant } from '@/services/types'
+import type {
+  Lease,
+  Receipt,
+  KeyLoan,
+  Key,
+  Tenant,
+  ReceiptData,
+} from '@/services/types'
 import { generateLoanReceipt, generateReturnReceipt } from '@/lib/pdf-receipts'
 import { receiptService } from '@/services/api/receiptService'
 import { keyLoanService } from '@/services/api/keyLoanService'
@@ -153,9 +160,8 @@ export function ReceiptHistory({ lease }: { lease: Lease }) {
         receiptService.create({
           keyLoanId,
           receiptType: tx.type === 'loan' ? 'LOAN' : 'RETURN',
-          leaseId: lease.leaseId,
-          type: 'DIGITAL',
-          signed: true,
+          type: 'PHYSICAL',
+          signed: false,
         })
       )
     )

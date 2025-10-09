@@ -47,13 +47,22 @@ export function ReceiptDialog({
     setIsCreating(true)
     try {
       // Create receipt record (unsigned until PDF is uploaded)
+      console.log('📝 [ReceiptDialog] Creating receipt with:', {
+        keyLoanId,
+        receiptType: receiptData.receiptType,
+        leaseId: receiptData.lease.leaseId,
+        type: 'PHYSICAL',
+        signed: false,
+      })
+
       const receipt = await receiptService.create({
         keyLoanId,
         receiptType: receiptData.receiptType, // 'LOAN' | 'RETURN'
-        leaseId: receiptData.lease.leaseId,
         type: 'PHYSICAL', // Will be signed physically and scanned
         signed: false, // Not signed until PDF is uploaded
       })
+
+      console.log('✅ [ReceiptDialog] Receipt created:', receipt)
 
       setCreatedReceiptId(receipt.id)
       setIsCreated(true)
