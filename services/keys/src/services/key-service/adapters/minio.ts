@@ -9,16 +9,17 @@ logger.info(
     endPoint: Config.minio.endPoint,
     port: Config.minio.port,
     useSSL: Config.minio.useSSL,
+    useSSL_type: typeof Config.minio.useSSL,
     bucketName: Config.minio.bucketName,
   },
   'MinIO configuration'
 )
 
-// Initialize MinIO client
+// Initialize MinIO client with explicit useSSL boolean
 export const minioClient = new Minio.Client({
   endPoint: Config.minio.endPoint,
   port: Config.minio.port,
-  useSSL: Config.minio.useSSL,
+  useSSL: Config.minio.useSSL === true,
   accessKey: Config.minio.accessKey,
   secretKey: Config.minio.secretKey,
 })
