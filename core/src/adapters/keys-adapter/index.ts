@@ -237,6 +237,15 @@ export const KeyLoansApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  getByKey: async (
+    keyId: string
+  ): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyLoan[] }>(
+      `${BASE}/key-loans/by-key/${keyId}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   get: async (
     id: string
   ): Promise<AdapterResult<KeyLoan, 'not-found' | CommonErr>> => {
