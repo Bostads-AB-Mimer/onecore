@@ -234,7 +234,7 @@ export const routes = (router: KoaRouter) => {
             const compareValue = operatorMatch[2].trim()
             subquery = subquery.where(field, operator, compareValue)
           } else {
-            subquery = subquery.where(field, 'like', `%${trimmedValue}%`)
+            subquery = subquery.where(field, '=', trimmedValue)
           }
         }
       }
