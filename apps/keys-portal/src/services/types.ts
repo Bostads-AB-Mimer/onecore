@@ -14,6 +14,7 @@ export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
+export type Receipt = components['schemas']['Receipt']
 
 // Tables/respopnse types from core API generated schemas
 export type Property = components['schemas']['Property']
@@ -38,13 +39,6 @@ export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
 export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
 export type CreateReceiptRequest =
   paths['/receipts']['post']['requestBody']['content']['application/json']
-
-// Response object for a single receipt (the inner "content" payload)
-export type Receipt = NonNullable<
-  NonNullable<
-    paths['/receipts']['post']['responses']['201']['content']['application/json']
-  >['content']
->
 
 // List by lease (GET /receipts/by-lease/{leaseId}) -> array in "content"
 export type ReceiptListItem = NonNullable<
