@@ -13,21 +13,23 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
   const displayedOrders = showAll ? orders : orders.slice(0, 5)
   const hasMoreOrders = orders.length > 5
 
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+
   const getStatusBadge = (status: WorkOrder['status']) => {
     switch (status) {
-      case 'active':
+      case 'Resurs tilldelad':
         return (
           <Badge variant="outline" className="bg-green-100 text-green-800">
             Pågående
           </Badge>
         )
-      case 'pending':
+      case 'Väntar på handläggning':
         return (
           <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
             Väntande
           </Badge>
         )
-      case 'resolved':
+      case 'Avslutad':
         return (
           <Badge variant="outline" className="bg-slate-100 text-slate-800">
             Åtgärdat
@@ -50,40 +52,49 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
           {
             key: 'id',
             label: 'Ärendenummer',
-            render: (order) => <span className="font-medium">{order.id}</span>,
+            render: (order: WorkOrder) => (
+              <span className="font-medium">{order.id}</span>
+            ),
           },
           {
             key: 'title',
             label: 'Ärende',
-            render: (order) => order.title,
+            render: (order: WorkOrder) => order.caption,
           },
           {
             key: 'reportedDate',
             label: 'Skapad datum',
-            render: (order) => order.reportedDate,
+            render: (order: WorkOrder) =>
+              order.registered
+                ? dateFormatter.format(new Date(order.registered))
+                : '-',
             hideOnMobile: true,
           },
           {
             key: 'dueDate',
             label: 'Förfallodatum',
-            render: (order) => order.dueDate || '-',
+            render: (order: WorkOrder) =>
+              order.dueDate
+                ? dateFormatter.format(new Date(order.dueDate))
+                : '-',
             hideOnMobile: true,
           },
           {
             key: 'status',
             label: 'Status',
-            render: (order) => getStatusBadge(order.status),
+            render: (order: WorkOrder) => getStatusBadge(order.status),
           },
           {
             key: 'type',
             label: 'Typ',
-            render: (order) => order.type || '-',
+            render: (order: WorkOrder) =>
+              order._tag === 'internal' ? 'Odoo' : 'Xpand',
             hideOnMobile: true,
           },
           {
             key: 'action',
             label: 'Åtgärd',
-            render: (order) => (
+            render: (order: WorkOrder) => (
               <Button
                 variant="outline"
                 size="sm"
