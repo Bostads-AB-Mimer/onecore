@@ -37,6 +37,7 @@ export const KeySchema = z.object({
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
+  disposed: z.boolean().default(false),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -106,6 +107,7 @@ export const UpdateKeyRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema.optional(),
   keySystemId: z.string().uuid().nullable().optional(),
+  disposed: z.boolean().optional(),
 })
 
 // Request schemas for key systems
