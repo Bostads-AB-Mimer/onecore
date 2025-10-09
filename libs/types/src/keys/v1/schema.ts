@@ -177,9 +177,9 @@ export const ReceiptSchema = z.object({
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema,
   signed: z.boolean(),
-  leaseId: z.string(),
   fileId: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 })
 
 export const CreateReceiptRequestSchema = z.object({
@@ -187,7 +187,11 @@ export const CreateReceiptRequestSchema = z.object({
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema,
   signed: z.boolean().optional(),
-  leaseId: z.string().min(1),
+  fileId: z.string().optional(),
+})
+
+export const UpdateReceiptRequestSchema = z.object({
+  signed: z.boolean().optional(),
   fileId: z.string().optional(),
 })
 

@@ -1154,22 +1154,6 @@ export interface paths {
       };
     };
   };
-  "/receipts/by-lease/{leaseId}": {
-    /** List receipts by lease */
-    get: {
-      parameters: {
-        path: {
-          leaseId: string;
-        };
-      };
-      responses: {
-        /** @description List of receipts */
-        200: {
-          content: never;
-        };
-      };
-    };
-  };
   "/receipts/by-key-loan/{keyLoanId}": {
     /** Get receipt by keyLoanId */
     get: {
@@ -1263,6 +1247,33 @@ export interface paths {
         /** @description Deleted */
         204: {
           content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /** Update a receipt (allows marking as signed) */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateReceiptRequest"];
+        };
+      };
+      responses: {
+        /** @description Receipt updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
         };
         /** @description Receipt not found */
         404: {
@@ -1371,7 +1382,10 @@ export interface components {
       /** @enum {string} */
       type: "DIGITAL" | "PHYSICAL";
       signed?: boolean;
-      leaseId: string;
+      fileId?: string;
+    };
+    UpdateReceiptRequest: {
+      signed?: boolean;
       fileId?: string;
     };
     Receipt: {
@@ -1384,10 +1398,11 @@ export interface components {
       /** @enum {string} */
       type: "DIGITAL" | "PHYSICAL";
       signed: boolean;
-      leaseId: string;
       fileId?: string | null;
       /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
     };
     CreateKeyNoteRequest: components["schemas"]["CreateKeyNoteRequest"];
     UpdateKeyNoteRequest: components["schemas"]["UpdateKeyNoteRequest"];

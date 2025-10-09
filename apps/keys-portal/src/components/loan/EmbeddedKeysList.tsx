@@ -304,7 +304,7 @@ export function EmbeddedKeysList({
           lease: lease.leaseId,
           contact,
           contact2,
-          pickedUpAt: new Date().toISOString(),
+          pickedUpAt: null, // Pending - will be set when signed receipt is uploaded
           createdBy: 'ui',
         })
 

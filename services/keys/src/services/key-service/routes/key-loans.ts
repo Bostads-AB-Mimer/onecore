@@ -38,6 +38,7 @@ async function checkActiveKeyLoans(
   for (const keyId of keyIds) {
     let query = db(TABLE)
       .select('id')
+      .whereNotNull('pickedUpAt') // Only consider activated loans (not pending)
       .where((builder) => {
         // Active if: not returned yet OR not yet available to next tenant
         builder
