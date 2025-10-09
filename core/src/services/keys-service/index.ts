@@ -171,6 +171,10 @@ export const routes = (router: KoaRouter) => {
     'PaginatedKeySystemsResponse',
     createPaginatedResponseSchema(KeySystemSchema)
   )
+  registerSchema(
+    'PaginatedLogsResponse',
+    createPaginatedResponseSchema(LogSchema)
+  )
 
   // ==================== KEY LOANS ROUTES ====================
 
@@ -1719,12 +1723,192 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /logs:
    *   get:
-   *     summary: List logs
-   *     description: Returns logs ordered by eventTime (desc).
+   *     summary: List logs with pagination
+   *     description: Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
    *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: List of logs
+   *         description: Paginated list of logs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.list(page, limit)
+
+    if (!result.ok) {
+      logger.error({ err: result.err, metadata }, 'Error fetching logs')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
+  /**
+   * @swagger
+   * /logs/search:
+   *   get:
+   *     summary: Search logs with pagination
+   *     description: |
+   *       Search logs with flexible filtering and pagination.
+   *       - **OR search**: Use `q` with `fields` for multiple field search
+   *       - **AND search**: Use any Log field parameter for filtering
+   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - Only one OR group is supported, but you can combine it with multiple AND filters
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *       - in: query
+   *         name: q
+   *         required: false
+   *         schema:
+   *           type: string
+   *           minLength: 3
+   *       - in: query
+   *         name: fields
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields for OR search. Defaults to objectId.
+   *       - in: query
+   *         name: id
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: userName
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: eventType
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: eventTime
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: objectId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: description
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved paginated search results
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       400:
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'page',
+      'limit',
+    ])
+
+    const result = await LogsApi.search(ctx.query)
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid search parameters', ...metadata }
+        return
+      }
+      logger.error({ err: result.err, metadata }, 'Error searching logs')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
+  /**
+   * @swagger
+   * /logs/object/{objectId}:
+   *   get:
+   *     summary: Get all logs for a specific objectId
+   *     description: Returns all log entries for a given objectId, ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: objectId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: List of logs for the objectId
    *         content:
    *           application/json:
    *             schema:
@@ -1743,118 +1927,16 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/logs', async (ctx) => {
+  router.get('/logs/object/:objectId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await LogsApi.list()
+    const result = await LogsApi.getByObjectId(ctx.params.objectId)
 
     if (!result.ok) {
-      logger.error({ err: result.err, metadata }, 'Error fetching logs')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /logs/search:
-   *   get:
-   *     summary: Search logs
-   *     description: |
-   *       Search logs with flexible filtering.
-   *       - **OR search**: Use `q` with `fields` for multiple field search
-   *       - **AND search**: Use any Log field parameter for filtering
-   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-   *       - Only one OR group is supported, but you can combine it with multiple AND filters
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         required: false
-   *         schema:
-   *           type: string
-   *           minLength: 3
-   *       - in: query
-   *         name: fields
-   *         required: false
-   *         schema:
-   *           type: string
-   *         description: Comma-separated list of fields for OR search. Defaults to resourceId.
-   *       - in: query
-   *         name: id
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: eventType
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: eventTime
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: actor
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: resourceType
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: resourceId
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: details
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: createdAt
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved search results
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Log'
-   *       400:
-   *         description: Bad request
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/logs/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
-
-    const result = await LogsApi.search(ctx.query)
-
-    if (!result.ok) {
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid search parameters', ...metadata }
-        return
-      }
-      logger.error({ err: result.err, metadata }, 'Error searching logs')
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for objectId'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
       return
