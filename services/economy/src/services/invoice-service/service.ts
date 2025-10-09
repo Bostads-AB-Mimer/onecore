@@ -709,6 +709,13 @@ export const importInvoiceRows = async (
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
     )
 
+    if (!invoicesToImport || invoicesToImport.length === 0) {
+      return {
+        batchId: null,
+        errors: null,
+      }
+    }
+
     const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
 
     logger.info(

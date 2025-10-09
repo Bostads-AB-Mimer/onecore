@@ -162,6 +162,56 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     expect(getTenantSpy).toHaveBeenCalled()
   })
 
+  it('responds with ApplicationType Additional if user has no upcoming or current parking space in the same property as listing', async () => {
+    const listing = factory.listing.build({
+      rentalObjectCode: 'upcoming-rental-object-code',
+    })
+    const applicant = factory.applicant
+      .params({
+        listingId: listing.id,
+      })
+      .build()
+
+    const tenant = factory.tenant.build({
+      currentHousingContract: factory.lease.build({
+        rentalPropertyId: 'current-rental-object-code',
+      }),
+      upcomingHousingContract: factory.lease.build({
+        rentalPropertyId: 'upcoming-rental-object-code',
+      }),
+      parkingSpaceContracts: [],
+    })
+
+    jest
+      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
+      .mockImplementation(async (rentalObjectCode: string) => {
+        console.log('rentalObjectCode', rentalObjectCode)
+        if (rentalObjectCode === 'upcoming-rental-object-code') {
+          return { estateCode: '23003', type: 'bar' }
+        }
+        return { estateCode: 'another-code', type: 'foo' }
+      })
+
+    const getTenantSpy = jest
+      .spyOn(getTenantService, 'getTenant')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: tenant,
+      })
+
+    const res = await request(app.callback()).get(
+      `/applicants/validatePropertyRentalRules/${applicant.contactCode}/upcoming-rental-object-code`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      applicationType: 'Additional',
+      message:
+        'User is a tenant in the property and does not have any active parking space contracts in the listings residential area. User is eligible to apply with applicationType additional.',
+    })
+    expect(getTenantSpy).toHaveBeenCalled()
+  })
+
   it('responds with 200 and applicationType Replace if user already has parking space in the same property as listing', async () => {
     const listing = factory.listing.build()
     const applicant = factory.applicant

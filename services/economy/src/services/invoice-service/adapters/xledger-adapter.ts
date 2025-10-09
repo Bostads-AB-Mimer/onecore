@@ -5,6 +5,7 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { randomUUID } from 'crypto'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -43,7 +44,9 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
     await sleep(3000)
     return await makeXledgerRequest(query)
   } else {
-    const error = new Error(result.data)
+    const error = new Error(
+      result.data.map((error: any) => error.message).join('\n')
+    )
     logger.error(
       result.data,
       `Error making Xledger request (${getCallerFromError(error)})`
@@ -96,6 +99,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
     797: 'Regular',
+    3536: 'Regular',
   }
 
   const invoices = invoiceData.map((invoiceData) => {
@@ -111,7 +115,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       debitStatus: 0,
       paymentStatus: PaymentStatus.Unpaid,
       transactionType: InvoiceTransactionType.Rent,
-      transactionTypeName: invoiceData.node.slTransactionType.name,
+      transactionTypeName: randomUUID(),
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
@@ -125,6 +129,8 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
 
     return invoice
   })
+
+  console.log('Xledger invoices', invoices)
 
   return invoices
 }
@@ -223,7 +229,17 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 
 const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
-    query: `{customers (first: 10000, filter: { code: "${contactCode}" }) { edges { node { code description dbId }}}}`,
+    query: `{
+      customers (first: 10000, filter: { code: "${contactCode}" }) { 
+        edges {
+          node {
+            code
+            description
+            dbId
+          }
+        }
+      }
+    }`,
   }
 
   const result = await makeXledgerRequest(query)
@@ -264,7 +280,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
 
   const query = {
     query: `{
-      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId} }) {
+      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
         edges {
           node {
             ${invoiceNodeFragment}
@@ -284,7 +300,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
       arTransactions(
         first: 1
         filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797]
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
         }
       ) {
           edges {

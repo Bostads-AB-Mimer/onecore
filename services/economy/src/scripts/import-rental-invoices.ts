@@ -29,43 +29,47 @@ const importRentalInvoicesScript = async () => {
     const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
-    logger.info({ batchId }, 'Creating contact file for batch')
-    const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
-    const contactsCsv = await getBatchContactsCsv(batchId)
-    await fs.writeFile(
-      `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
-      contactsCsv
-    )
-
-    logger.info({ batchId }, 'Creating aggregate file for batch')
-    const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
-    const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
-
-    if (aggregatedCsv) {
+    if (result.batchId) {
+      logger.info({ batchId }, 'Creating contact file for batch')
+      const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
+      const contactsCsv = await getBatchContactsCsv(batchId)
       await fs.writeFile(
-        `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
-        aggregatedCsv
+        `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
+        contactsCsv
       )
+
+      logger.info({ batchId }, 'Creating aggregate file for batch')
+      const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
+      const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
+
+      if (aggregatedCsv) {
+        await fs.writeFile(
+          `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
+          aggregatedCsv
+        )
+      }
+
+      logger.info({ batchId }, 'Creating ledger file for batch')
+      const ledgerFilename = `${batchId}-${companyId}-ledger.gl.csv`
+      const ledgerCsv = await getBatchLedgerRowsCsv(batchId)
+      await fs.writeFile(
+        `${config.rentalInvoices.exportDirectory}${sep}${ledgerFilename}`,
+        ledgerCsv
+      )
+
+      await uploadInvoiceFile(contactsFilename, contactsCsv)
+      logger.info({ contactsFilename }, 'Uploaded file')
+      if (aggregatedCsv) {
+        await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+        logger.info({ aggregatedFilename }, 'Uploaded file')
+      }
+      await uploadInvoiceFile(ledgerFilename, ledgerCsv)
+      logger.info({ ledgerFilename }, 'Uploaded file')
+
+      await markBatchAsProcessed(parseInt(batchId))
+    } else {
+      logger.info({ companyId }, 'No new invoices found')
     }
-
-    logger.info({ batchId }, 'Creating ledger file for batch')
-    const ledgerFilename = `${batchId}-${companyId}-ledger.gl.csv`
-    const ledgerCsv = await getBatchLedgerRowsCsv(batchId)
-    await fs.writeFile(
-      `${config.rentalInvoices.exportDirectory}${sep}${ledgerFilename}`,
-      ledgerCsv
-    )
-
-    await uploadInvoiceFile(contactsFilename, contactsCsv)
-    logger.info({ contactsFilename }, 'Uploaded file')
-    if (aggregatedCsv) {
-      await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-      logger.info({ aggregatedFilename }, 'Uploaded file')
-    }
-    await uploadInvoiceFile(ledgerFilename, ledgerCsv)
-    logger.info({ ledgerFilename }, 'Uploaded file')
-
-    await markBatchAsProcessed(parseInt(batchId))
   }
 
   closeDatabases()
