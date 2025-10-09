@@ -1,36 +1,24 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
 import { logService } from '@/services/api/logService'
-import { groupLogsByObjectId } from '@/lib/logUtils'
 import { LogFilters } from '@/components/log/LogFilters'
 import { LogEventCard } from '@/components/log/LogEventCard'
-import { GroupedLogCard } from '@/components/log/GroupedLogCard'
-import type {
-  LogEventType,
-  LogObjectType,
-  Log,
-  GroupedLog,
-} from '@/services/types'
-
-function isGroupedLog(log: Log | GroupedLog): log is GroupedLog {
-  return 'logs' in log
-}
+import { PaginationControls } from '@/components/common/PaginationControls'
+import { useUrlPagination } from '@/hooks/useUrlPagination'
+import type { LogEventType, LogObjectType, Log } from '@/services/types'
 
 export default function ActivityLog() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const pagination = useUrlPagination()
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(false)
   const [uniqueUsers, setUniqueUsers] = useState<string[]>([])
 
   // Read all filters from URL
-  const searchQuery = searchParams.get('q') || ''
-  const eventTypeFilter = (searchParams.get('eventType') || 'all') as
-    | LogEventType
-    | 'all'
-  const objectTypeFilter = (searchParams.get('objectType') || 'all') as
-    | LogObjectType
-    | 'all'
-  const userNameFilter = searchParams.get('userName') || 'all'
+  const searchQuery = pagination.searchParams.get('q') || ''
+  const eventTypeFilter = (pagination.searchParams.get('eventType') ||
+    'all') as LogEventType | 'all'
+  const objectTypeFilter = (pagination.searchParams.get('objectType') ||
+    'all') as LogObjectType | 'all'
+  const userNameFilter = pagination.searchParams.get('userName') || 'all'
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
@@ -38,21 +26,33 @@ export default function ActivityLog() {
   const fetchLogs = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await logService.fetchLogs({
-        eventType: eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
-        objectType: objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
-        userName: userNameFilter === 'all' ? undefined : userNameFilter,
-        q: searchQuery.trim().length >= 3 ? searchQuery.trim() : undefined,
-      })
+      const response = await logService.fetchLogs(
+        {
+          eventType: eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
+          objectType:
+            objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
+          userName: userNameFilter === 'all' ? undefined : userNameFilter,
+          q: searchQuery.trim().length >= 3 ? searchQuery.trim() : undefined,
+        },
+        pagination.currentPage,
+        pagination.currentLimit
+      )
 
       setLogs(response.content)
+      pagination.setPaginationMeta(response._meta)
     } catch (error) {
       console.error('Failed to fetch logs:', error)
       setLogs([])
     } finally {
       setLoading(false)
     }
-  }, [searchQuery, eventTypeFilter, objectTypeFilter, userNameFilter])
+  }, [
+    searchQuery,
+    eventTypeFilter,
+    objectTypeFilter,
+    userNameFilter,
+    pagination,
+  ])
 
   // Fetch unique users on mount
   useEffect(() => {
@@ -76,6 +76,8 @@ export default function ActivityLog() {
     eventTypeFilter,
     objectTypeFilter,
     userNameFilter,
+    pagination.currentPage,
+    pagination.currentLimit,
     // fetchLogs intentionally omitted to prevent infinite loop
   ])
 
@@ -87,17 +89,9 @@ export default function ActivityLog() {
   // Helper to update URL params
   const updateUrlParams = useCallback(
     (updates: Record<string, string | null>) => {
-      const newParams = new URLSearchParams(searchParams)
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value === null || value === '') {
-          newParams.delete(key)
-        } else {
-          newParams.set(key, value)
-        }
-      })
-      setSearchParams(newParams)
+      pagination.updateUrlParams({ ...updates, page: '1' })
     },
-    [searchParams, setSearchParams]
+    [pagination]
   )
 
   // Filter update handlers
@@ -133,8 +127,6 @@ export default function ActivityLog() {
     [updateUrlParams]
   )
 
-  const groupedLogs = useMemo(() => groupLogsByObjectId(logs), [logs])
-
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -167,20 +159,30 @@ export default function ActivityLog() {
               <div className="text-center py-12 text-muted-foreground">
                 Laddar händelser...
               </div>
-            ) : groupedLogs.length === 0 ? (
+            ) : logs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 Inga händelser hittades
               </div>
             ) : (
-              <div className="space-y-4">
-                {groupedLogs.map((log) =>
-                  isGroupedLog(log) ? (
-                    <GroupedLogCard key={log.objectId} groupedLog={log} />
-                  ) : (
+              <>
+                <div className="space-y-4">
+                  {logs.map((log) => (
                     <LogEventCard key={log.id} log={log} />
-                  )
-                )}
-              </div>
+                  ))}
+                </div>
+
+                <PaginationControls
+                  paginationMeta={pagination.paginationMeta}
+                  pageLimit={pagination.currentLimit}
+                  customLimit={pagination.customLimit}
+                  isFocused={pagination.isFocused}
+                  onPageChange={pagination.handlePageChange}
+                  onLimitChange={pagination.handleLimitChange}
+                  onCustomLimitChange={pagination.setCustomLimit}
+                  onCustomLimitSubmit={pagination.handleCustomLimitSubmit}
+                  onFocusChange={pagination.setIsFocused}
+                />
+              </>
             )}
           </main>
         </div>
