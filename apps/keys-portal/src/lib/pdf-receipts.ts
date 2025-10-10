@@ -5,6 +5,7 @@ import { sv } from 'date-fns/locale'
 
 import type { ReceiptData } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
+import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
 import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 
@@ -110,14 +111,14 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
   return metaY3 + 11
 }
 
-const addTenantInfo = (
+const addTenantInfo = async (
   doc: jsPDF,
   tenants: ReceiptData['tenants'],
   lease: ReceiptData['lease'],
   y: number
 ) => {
-  // ~60mm block height (but we won't add a page automatically)
-  y = ensureSpaceNoPage(doc, y, 60)
+  // ~70mm block height (but we won't add a page automatically)
+  y = ensureSpaceNoPage(doc, y, 70)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
@@ -137,7 +138,12 @@ const addTenantInfo = (
         MARGIN_X,
         nextY + 7
       )
-      nextY += 14
+      doc.text(
+        `Kundnummer: ${tenant.contactCode}`,
+        MARGIN_X,
+        nextY + 14
+      )
+      nextY += 21
     } else {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
       doc.text(
@@ -145,13 +151,30 @@ const addTenantInfo = (
         MARGIN_X,
         nextY + 7
       )
-      nextY += 14
+      doc.text(
+        `Kundnummer: ${tenant.contactCode}`,
+        MARGIN_X,
+        nextY + 14
+      )
+      nextY += 21
     }
   })
 
   // Display rental property address
-  doc.text(`Adress: ${lease.rentalPropertyId}`, MARGIN_X, nextY)
-  nextY += 7
+  try {
+    const address = await rentalObjectSearchService.getAddressByRentalId(lease.rentalPropertyId)
+    if (address && address !== 'Okänd adress') {
+      doc.text(`Adress: ${address}`, MARGIN_X, nextY)
+      nextY += 7
+    } else {
+      doc.text(`Adress: n/a`, MARGIN_X, nextY)
+      nextY += 7
+    }
+  } catch (error) {
+    console.warn('Failed to fetch address for PDF receipt:', error)
+    doc.text(`Adress: n/a`, MARGIN_X, nextY)
+    nextY += 7
+  }
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
@@ -342,11 +365,11 @@ export const generateLoanReceipt = async (
 ): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
-  y = addTenantInfo(doc, data.tenants, data.lease, y)
+  y = await addTenantInfo(doc, data.tenants, data.lease, y)
   y = addKeysTable(doc, data.keys, y, 42)
   addSignatureSection(doc, y)
   addFooter(doc, 'loan', receiptId)
-  const file = `nyckelutlaning_${data.tenants[0].nationalRegistrationNumber}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelutlaning_${data.tenants[0].contactCode}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
 
@@ -356,7 +379,7 @@ export const generateReturnReceipt = async (
 ): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return')
-  y = addTenantInfo(doc, data.tenants, data.lease, y)
+  y = await addTenantInfo(doc, data.tenants, data.lease, y)
   // keep ~22mm for confirmation text
   y = addKeysTable(doc, data.keys, y, 22)
 
@@ -382,6 +405,6 @@ export const generateReturnReceipt = async (
   }
 
   addFooter(doc, 'return', receiptId)
-  const file = `nyckelaterlamning_${data.tenants[0].nationalRegistrationNumber}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
