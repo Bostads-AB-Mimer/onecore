@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Key, Lease, KeyType } from '@/services/types'
+import type { Key, Lease, KeyType, ReceiptData } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { keyService } from '@/services/api/keyService'
 import { getKeyLoanStatus, type KeyLoanInfo } from '@/utils/keyLoanStatus'
+import { useToast } from '@/hooks/use-toast'
+import { handleLoanKeys, handleReturnKeys } from '@/services/loanHandlers'
+import { KeyActionButtons } from './KeyActionButtons'
+import { AddKeyButton, AddKeyForm } from './AddKeyForm'
+import { ReceiptDialog } from './ReceiptDialog'
 
-type KeyWithStatus = Key & {
+export type KeyWithStatus = Key & {
   loanInfo: KeyLoanInfo
   displayStatus: string
-  canRent: boolean
 }
 
 const KEY_TYPE_ORDER: Partial<Record<KeyType, number>> = {
@@ -37,12 +41,64 @@ function getLeaseContactNames(lease: Lease): string[] {
 }
 
 export function LeaseKeyStatusList({ lease }: { lease: Lease }) {
+  const { toast } = useToast()
   const [keys, setKeys] = useState<Key[]>([])
   const [keysWithStatus, setKeysWithStatus] = useState<KeyWithStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+
+  // Receipt dialog state
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false)
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+  const [receiptId, setReceiptId] = useState<string | null>(null)
+
+  // Add key state
+  const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
   const tenantNames = useMemo(() => getLeaseContactNames(lease), [lease])
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
+
+  // Compute key status - extracted to reuse after loan/return operations
+  const computeKeyStatus = async (key: Key): Promise<KeyWithStatus> => {
+    try {
+      const loanInfo = await getKeyLoanStatus(
+        key.id,
+        tenantNames[0],
+        tenantNames[1]
+      )
+
+      let displayStatus = ''
+
+      if (loanInfo.isLoaned) {
+        if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
+          displayStatus = `Utlånat till den här hyresgästen`
+        } else {
+          displayStatus = `Utlånad till ${loanInfo.contact ?? 'Okänd'}`
+        }
+      } else {
+        if (loanInfo.contact === null) {
+          displayStatus = 'Ny'
+        } else if (tenantNames.includes(loanInfo.contact)) {
+          displayStatus = `Återlämnad av den här hyresgästen`
+        } else {
+          displayStatus = `Återlämnad av ${loanInfo.contact}`
+        }
+      }
+
+      return {
+        ...key,
+        loanInfo,
+        displayStatus,
+      } as KeyWithStatus
+    } catch (error) {
+      return {
+        ...key,
+        loanInfo: { isLoaned: false, contact: null },
+        displayStatus: 'Okänd status',
+      } as KeyWithStatus
+    }
+  }
 
   // Fetch keys for the rental object
   useEffect(() => {
@@ -72,65 +128,82 @@ export function LeaseKeyStatusList({ lease }: { lease: Lease }) {
 
     let cancelled = false
     ;(async () => {
-      const statusPromises = keys.map(async (key) => {
-        try {
-          const loanInfo = await getKeyLoanStatus(
-            key.id,
-            tenantNames[0],
-            tenantNames[1]
-          )
-
-          let displayStatus = ''
-          let canRent = false
-
-          if (loanInfo.isLoaned) {
-            // Currently loaned
-            if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
-              displayStatus = `Loaned by this tenant (${loanInfo.contact})`
-            } else {
-              displayStatus = `Loaned by ${loanInfo.contact ?? 'Unknown'}`
-            }
-          } else {
-            // Not currently loaned - can rent if lease is not past
-            canRent = leaseIsNotPast
-
-            if (loanInfo.contact === null) {
-              // Never loaned
-              displayStatus = 'New'
-            } else if (tenantNames.includes(loanInfo.contact)) {
-              // Returned by this tenant
-              displayStatus = `Returned by this tenant (${loanInfo.contact})`
-            } else {
-              // Returned by someone else
-              displayStatus = `Returned by ${loanInfo.contact}`
-            }
-          }
-
-          return {
-            ...key,
-            loanInfo,
-            displayStatus,
-            canRent,
-          } as KeyWithStatus
-        } catch (error) {
-          // If error fetching status, mark as unknown
-          return {
-            ...key,
-            loanInfo: { isLoaned: false, contact: null },
-            displayStatus: 'Unknown status',
-            canRent: false,
-          } as KeyWithStatus
-        }
-      })
-
-      const results = await Promise.all(statusPromises)
+      const results = await Promise.all(keys.map(computeKeyStatus))
       if (!cancelled) setKeysWithStatus(results)
     })()
 
     return () => {
       cancelled = true
     }
-  }, [keys, tenantNames, leaseIsNotPast])
+  }, [keys, tenantNames])
+
+  // Refresh all key statuses
+  const refreshStatuses = async () => {
+    const results = await Promise.all(keys.map(computeKeyStatus))
+    setKeysWithStatus(results)
+  }
+
+  // Handle key creation
+  const handleKeyCreated = async (newKey: Key) => {
+    setKeys((prev) => [...prev, newKey])
+    setShowAddKeyForm(false)
+  }
+
+  // Handle renting keys
+  const onRent = async (keyIds: string[]) => {
+    setIsProcessing(true)
+    const result = await handleLoanKeys({
+      keyIds,
+      contact: tenantNames[0],
+      contact2: tenantNames[1],
+    })
+
+    if (result.success) {
+      await refreshStatuses()
+      setSelectedKeys([])
+
+      // Open receipt dialog if we have a receiptId
+      if (result.receiptId) {
+        const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
+        setReceiptData({
+          lease,
+          tenants: lease.tenants ?? [],
+          keys: relevantKeys,
+          receiptType: 'LOAN',
+          operationDate: new Date(),
+        })
+        setReceiptId(result.receiptId)
+        setShowReceiptDialog(true)
+      }
+    }
+
+    toast({
+      title: result.title,
+      description: result.message,
+      variant: result.success ? 'default' : 'destructive',
+    })
+
+    setIsProcessing(false)
+  }
+
+  // Handle returning keys
+  const onReturn = async (keyIds: string[]) => {
+    setIsProcessing(true)
+    const result = await handleReturnKeys({ keyIds })
+
+    if (result.success) {
+      await refreshStatuses()
+      setSelectedKeys([])
+    }
+
+    toast({
+      title: result.title,
+      description: result.message,
+      variant: result.success ? 'default' : 'destructive',
+    })
+
+    setIsProcessing(false)
+  }
 
   // Sort keys by type and sequence
   const sortedKeys = useMemo(() => {
@@ -176,73 +249,128 @@ export function LeaseKeyStatusList({ lease }: { lease: Lease }) {
   }
 
   return (
-    <Card className="mt-2">
-      <CardContent className="space-y-4 p-3">
-        {/* Summary badges */}
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(KeyTypeLabels).map(([t, label]) => {
-            const n = countsByType.get(t) ?? 0
-            if (!n) return null
-            return (
-              <Badge key={t} variant="secondary" className="text-xs">
-                {label}: {n}
-              </Badge>
-            )
-          })}
-        </div>
+    <>
+      <Card className="mt-2">
+        <CardContent className="space-y-4 p-3">
+          {/* Summary badges */}
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(KeyTypeLabels).map(([t, label]) => {
+              const n = countsByType.get(t) ?? 0
+              if (!n) return null
+              return (
+                <Badge key={t} variant="secondary" className="text-xs">
+                  {label}: {n}
+                </Badge>
+              )
+            })}
+          </div>
 
-        {/* Keys list */}
-        <div className="space-y-1">
-          {sortedKeys.map((key, index) => {
-            const statusColor = key.loanInfo.isLoaned
-              ? 'text-destructive'
-              : key.canRent
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-muted-foreground'
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2">
+            <KeyActionButtons
+              selectedKeys={selectedKeys}
+              keysWithStatus={keysWithStatus}
+              tenantNames={tenantNames}
+              leaseIsNotPast={leaseIsNotPast}
+              isProcessing={isProcessing}
+              onRent={onRent}
+              onReturn={onReturn}
+            />
+            {!showAddKeyForm && (
+              <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
+            )}
+          </div>
 
-            return (
-              <div
-                key={key.id}
-                className={`flex items-center justify-between py-2 px-1 ${
-                  index > 0 ? 'border-t border-border/50' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-3 flex-1">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-sm">{key.keyName}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {KeyTypeLabels[key.keyType as KeyType]}
-                      </span>
-                      {key.keySequenceNumber && (
-                        <span className="text-xs text-muted-foreground">
-                          Seq: {key.keySequenceNumber}
+          {/* Add key form */}
+          {showAddKeyForm && (
+            <AddKeyForm
+              keys={keys}
+              rentalObjectCode={lease.rentalPropertyId}
+              onKeyCreated={handleKeyCreated}
+              onCancel={() => setShowAddKeyForm(false)}
+            />
+          )}
+
+          {/* Keys list */}
+          <div className="space-y-1">
+            {sortedKeys.map((key, index) => {
+              const canRent = !key.loanInfo.isLoaned && leaseIsNotPast
+              const canReturn =
+                key.loanInfo.isLoaned &&
+                key.loanInfo.contact &&
+                tenantNames.includes(key.loanInfo.contact)
+              const isSelectable = canRent || canReturn
+
+              const statusColor = key.loanInfo.isLoaned
+                ? 'text-destructive'
+                : canRent
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-muted-foreground'
+
+              return (
+                <div
+                  key={key.id}
+                  className={`flex items-center justify-between py-2 px-1 ${
+                    index > 0 ? 'border-t border-border/50' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 flex-1">
+                    {isSelectable && (
+                      <Checkbox
+                        checked={selectedKeys.includes(key.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedKeys((prev) =>
+                            checked
+                              ? [...prev, key.id]
+                              : prev.filter((id) => id !== key.id)
+                          )
+                        }}
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-sm">
+                          {key.keyName}
                         </span>
-                      )}
-                      {key.flexNumber && (
                         <span className="text-xs text-muted-foreground">
-                          Flex: {key.flexNumber}
+                          {KeyTypeLabels[key.keyType as KeyType]}
                         </span>
-                      )}
+                        {key.keySequenceNumber && (
+                          <span className="text-xs text-muted-foreground">
+                            Seq: {key.keySequenceNumber}
+                          </span>
+                        )}
+                        {key.flexNumber && (
+                          <span className="text-xs text-muted-foreground">
+                            Flex: {key.flexNumber}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${statusColor}`}>
-                    {key.displayStatus}
-                  </span>
-                  {key.canRent && (
-                    <Button size="sm" variant="outline">
-                      Rent
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${statusColor}`}>
+                      {key.displayStatus}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <ReceiptDialog
+        isOpen={showReceiptDialog}
+        onClose={() => {
+          setShowReceiptDialog(false)
+          setReceiptData(null)
+          setReceiptId(null)
+        }}
+        receiptData={receiptData}
+        receiptId={receiptId}
+      />
+    </>
   )
 }

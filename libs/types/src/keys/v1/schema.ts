@@ -47,7 +47,6 @@ export const KeyLoanSchema = z.object({
   keys: z.string(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
-  lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
@@ -140,7 +139,6 @@ export const CreateKeyLoanRequestSchema = z.object({
   keys: z.string(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
-  lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
@@ -151,7 +149,6 @@ export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.string().optional(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
-  lease: z.string().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
@@ -178,7 +175,6 @@ export const ReceiptSchema = z.object({
   keyLoanId: z.string().uuid(),
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema,
-  signed: z.boolean(),
   fileId: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -187,13 +183,7 @@ export const ReceiptSchema = z.object({
 export const CreateReceiptRequestSchema = z.object({
   keyLoanId: z.string().uuid(),
   receiptType: ReceiptTypeSchema,
-  type: ReceiptFormatSchema,
-  signed: z.boolean().optional(),
-  fileId: z.string().optional(),
-})
-
-export const UpdateReceiptRequestSchema = z.object({
-  signed: z.boolean().optional(),
+  type: ReceiptFormatSchema.optional(),
   fileId: z.string().optional(),
 })
 

@@ -2405,66 +2405,19 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - keyLoanId
-   *               - receiptType
-   *               - type
-   *             properties:
-   *               keyLoanId:
-   *                 type: string
-   *                 format: uuid
-   *               receiptType:
-   *                 type: string
-   *                 enum: [LOAN, RETURN]
-   *               type:
-   *                 type: string
-   *                 enum: [DIGITAL, PHYSICAL]
-   *               signed:
-   *                 type: boolean
-   *                 default: false
-   *               fileId:
-   *                 type: string
-   *                 nullable: true
+   *             $ref: '#/components/schemas/CreateReceiptRequest'
    *     responses:
    *       201:
-   *         description: Receipt created successfully
+   *         description: Key note created successfully
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       format: uuid
-   *                     keyLoanId:
-   *                       type: string
-   *                       format: uuid
-   *                     receiptType:
-   *                       type: string
-   *                       enum: [LOAN, RETURN]
-   *                     type:
-   *                       type: string
-   *                       enum: [DIGITAL, PHYSICAL]
-   *                     signed:
-   *                       type: boolean
-   *                     fileId:
-   *                       type: string
-   *                       nullable: true
-   *                     createdAt:
-   *                       type: string
-   *                       format: date-time
+   *                   $ref: '#/components/schemas/Receipt'
    *       400:
    *         description: Invalid request data
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       409:
-   *         description: Receipt already exists for this keyLoanId
    *         content:
    *           application/json:
    *             schema:
