@@ -1,7 +1,15 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, FileText, Upload, Printer, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import {
+  AlertCircle,
+  FileText,
+  Upload,
+  Printer,
+  ChevronDown,
+  ChevronUp,
+  Download,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
@@ -62,7 +70,10 @@ export function KeyLoanCard({
           {/* Status Badge */}
           <div className="flex items-center gap-2">
             {hasUnsignedLoanReceipt && isActive && (
-              <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-600 bg-yellow-100 dark:bg-yellow-950">
+              <Badge
+                variant="outline"
+                className="text-xs border-yellow-600 text-yellow-600 bg-yellow-100 dark:bg-yellow-950"
+              >
                 <AlertCircle className="h-3 w-3 mr-1" />
                 Ej signerad
               </Badge>
@@ -115,7 +126,8 @@ export function KeyLoanCard({
               <div className="text-xs text-yellow-800 dark:text-yellow-200">
                 <p className="font-semibold">Utlåningskvitto ej signerat</p>
                 <p className="mt-1">
-                  Nycklarna är inte officiellt utlånade förrän kvittot är signerat och uppladdat.
+                  Nycklarna är inte officiellt utlånade förrän kvittot är
+                  signerat och uppladdat.
                 </p>
               </div>
             </div>
@@ -187,7 +199,9 @@ export function KeyLoanCard({
         {/* Show existing receipts */}
         {receipts.length > 0 && (
           <div className="pt-2 space-y-1 border-t">
-            <div className="text-xs font-medium text-muted-foreground">Kvitton:</div>
+            <div className="text-xs font-medium text-muted-foreground">
+              Kvitton:
+            </div>
             {receipts.map((receipt) => (
               <div
                 key={receipt.id}
@@ -197,17 +211,22 @@ export function KeyLoanCard({
                   <span className="text-muted-foreground">
                     {receipt.receiptType === 'LOAN' ? 'Utlåning' : 'Retur'}
                   </span>
-                  {receipt.receiptType === 'LOAN' && (
-                    receipt.fileId ? (
-                      <Badge variant="default" className="text-[10px] py-0 px-1">
+                  {receipt.receiptType === 'LOAN' &&
+                    (receipt.fileId ? (
+                      <Badge
+                        variant="default"
+                        className="text-[10px] py-0 px-1"
+                      >
                         ✓ Signerad
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] py-0 px-1 border-yellow-600 text-yellow-600">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] py-0 px-1 border-yellow-600 text-yellow-600"
+                      >
                         Ej signerad
                       </Badge>
-                    )
-                  )}
+                    ))}
                 </div>
                 <div className="flex items-center gap-1">
                   {receipt.fileId && (
