@@ -313,7 +313,7 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
   }
 
   const contact =
-    'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besök Gasverksgatan 7 Tel 021-39 70 00 • Felanmälan 021-39 70 90 • mimer.nu'
+    'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besöksadress: Gasverksgatan 7 Tel: 021-39 70 00 • mimer.nu'
   doc.text(contact, MARGIN_X, h - 10)
 
   // Add receipt ID in subtle gray text for scanning purposes
