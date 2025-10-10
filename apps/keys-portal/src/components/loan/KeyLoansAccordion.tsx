@@ -1,7 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { KeyRound, Clock } from 'lucide-react'
 
-import type { Lease, KeyLoan, Key, Receipt, ReceiptData } from '@/services/types'
+import type {
+  Lease,
+  KeyLoan,
+  Key,
+  Receipt,
+  ReceiptData,
+} from '@/services/types'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 import { receiptService } from '@/services/api/receiptService'
@@ -24,9 +30,13 @@ interface KeyLoanWithDetails {
 export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
   const [keyLoans, setKeyLoans] = useState<KeyLoanWithDetails[]>([])
   const [loading, setLoading] = useState(false)
-  const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(null)
+  const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(
+    null
+  )
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [activePartialReturnLoanId, setActivePartialReturnLoanId] = useState<string | null>(null)
+  const [activePartialReturnLoanId, setActivePartialReturnLoanId] = useState<
+    string | null
+  >(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
@@ -34,7 +44,9 @@ export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
     setLoading(true)
     try {
       // Fetch all key loans for this lease's rental object
-      const { loaned, returned } = await keyLoanService.listByLease(lease.rentalPropertyId)
+      const { loaned, returned } = await keyLoanService.listByLease(
+        lease.rentalPropertyId
+      )
       const allKeyLoans = [...loaned, ...returned]
 
       // Enrich each key loan with key details and receipts
@@ -83,7 +95,9 @@ export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
     fetchKeyLoans()
   }, [lease.leaseId])
 
-  const handleGenerateLoanReceipt = async (loanWithDetails: KeyLoanWithDetails) => {
+  const handleGenerateLoanReceipt = async (
+    loanWithDetails: KeyLoanWithDetails
+  ) => {
     const receiptData: ReceiptData = {
       lease,
       tenants: lease.tenants ?? [],
@@ -113,7 +127,9 @@ export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
     }
   }
 
-  const handleGenerateReturnReceipt = async (loanWithDetails: KeyLoanWithDetails) => {
+  const handleGenerateReturnReceipt = async (
+    loanWithDetails: KeyLoanWithDetails
+  ) => {
     const receiptData: ReceiptData = {
       lease,
       tenants: lease.tenants ?? [],
@@ -317,7 +333,9 @@ export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
               hasUnsignedLoanReceipt={hasUnsignedLoanReceipt}
               uploadingReceiptId={uploadingReceiptId}
               uploadError={uploadError}
-              onGenerateLoanReceipt={() => handleGenerateLoanReceipt(loanWithDetails)}
+              onGenerateLoanReceipt={() =>
+                handleGenerateLoanReceipt(loanWithDetails)
+              }
               onToggleReturnAccordion={() =>
                 setActivePartialReturnLoanId(
                   activePartialReturnLoanId === loanWithDetails.keyLoan.id
@@ -342,7 +360,11 @@ export function KeyLoansAccordion({ lease }: KeyLoansAccordionProps) {
           }}
           keys={activeLoanWithDetails.keys}
           onConfirm={async (selectedKeyIds, isReplacement) => {
-            await handlePartialReturn(activeLoanWithDetails, selectedKeyIds, isReplacement)
+            await handlePartialReturn(
+              activeLoanWithDetails,
+              selectedKeyIds,
+              isReplacement
+            )
           }}
         />
       )}

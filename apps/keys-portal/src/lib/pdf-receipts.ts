@@ -1,4 +1,3 @@
-// src/lib/pdf-receipts.ts
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -418,9 +417,10 @@ export const generateReturnReceipt = async (
     doc.text('BEKRÄFTELSE', MARGIN_X, y)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9.5)
-    const confirmText = data.missingKeys && data.missingKeys.length > 0
-      ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
-      : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+    const confirmText =
+      data.missingKeys && data.missingKeys.length > 0
+        ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
+        : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
     const lines = doc.splitTextToSize(confirmText, 170)
     let cy = y + 7
     lines.forEach((line) => {
