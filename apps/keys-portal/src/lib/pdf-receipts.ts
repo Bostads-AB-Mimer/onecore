@@ -196,12 +196,14 @@ const addTenantInfo = async (
  * Keys table that **always fits** on one page:
  * - Computes how many rows can fit given the remaining space and `reserveAfter`.
  * - Renders "+X fler" if truncated.
+ * - Optionally shows missing keys section in RED
  */
 const addKeysTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   y: number,
-  reserveAfter: number // mm to keep free for the block that follows (e.g., signature/confirmation)
+  reserveAfter: number, // mm to keep free for the block that follows (e.g., signature/confirmation)
+  missingKeys?: ReceiptData['missingKeys'] // Keys that were not returned (for partial returns)
 ) => {
   const bottom = contentBottom(doc)
 
@@ -262,7 +264,37 @@ const addKeysTable = (
 
   // summary
   doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
-  return cy + 6
+  cy += 6
+
+  // Missing keys section (for partial returns)
+  if (missingKeys && missingKeys.length > 0) {
+    cy += 4
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(200, 0, 0) // Red color for missing keys
+    doc.text('SAKNADE NYCKLAR (ej återlämnade):', MARGIN_X, cy)
+    cy += 6
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(0, 0, 0) // Reset to black
+    missingKeys.forEach((k) => {
+      const labelForType =
+        (KeyTypeLabels as Record<string, string>)[
+          k.keyType as unknown as string
+        ] || (k.keyType as string)
+      const text = `• ${k.keyName} (${labelForType})`
+      doc.text(text, MARGIN_X, cy)
+      cy += 5
+    })
+    cy += 2
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8)
+    doc.text(`Antal saknade nycklar: ${missingKeys.length}`, MARGIN_X, cy)
+    cy += 6
+  }
+
+  return cy
 }
 
 /**
@@ -360,7 +392,7 @@ export const generateLoanReceipt = async (
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
-  y = addKeysTable(doc, data.keys, y, 42)
+  y = addKeysTable(doc, data.keys, y, 42, data.missingKeys)
   addSignatureSection(doc, y)
   addFooter(doc, 'loan', receiptId)
   const file = `nyckelutlaning_${data.tenants[0].contactCode}_${format(new Date(), 'yyyyMMdd')}.pdf`
@@ -375,7 +407,7 @@ export const generateReturnReceipt = async (
   let y = await addHeader(doc, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
   // keep ~22mm for confirmation text
-  y = addKeysTable(doc, data.keys, y, 22)
+  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys)
 
   // Compact confirmation block that will fit on one page
   const bottom = contentBottom(doc)
@@ -386,10 +418,10 @@ export const generateReturnReceipt = async (
     doc.text('BEKRÄFTELSE', MARGIN_X, y)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9.5)
-    const lines = doc.splitTextToSize(
-      'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.',
-      170
-    )
+    const confirmText = data.missingKeys && data.missingKeys.length > 0
+      ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
+      : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+    const lines = doc.splitTextToSize(confirmText, 170)
     let cy = y + 7
     lines.forEach((line) => {
       doc.text(line, MARGIN_X, cy)

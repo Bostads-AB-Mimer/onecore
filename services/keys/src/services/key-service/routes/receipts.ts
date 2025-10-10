@@ -76,7 +76,6 @@ export const routes = (router: KoaRouter) => {
             keyLoanId: payload.keyLoanId,
             receiptType: payload.receiptType,
             type: payload.type,
-            signed: payload.signed ?? false,
             fileId: payload.fileId ?? null,
           })
           .returning('*')
@@ -197,10 +196,9 @@ export const routes = (router: KoaRouter) => {
         'key-loan-id': receipt.keyLoanId,
       })
 
-      // Update receipt as signed
+      // Update receipt with fileId (fileId presence indicates signed status)
       await db(TABLE).where({ id: parse.data.id }).update({
         fileId,
-        signed: true, // Mark as signed when PDF is uploaded
       })
 
       // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
