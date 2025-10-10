@@ -61,6 +61,16 @@ export function AddKeyForm({
     return max + 1
   }, [keys, rentalObjectCode])
 
+  // Determine flex number from existing keys on this rental object
+  const defaultFlexNumber = useMemo(() => {
+    const keysOnObject = keys.filter(
+      (k) => k.rentalObjectCode === rentalObjectCode
+    )
+    if (keysOnObject.length === 0) return 1
+    // Get the first key's flex number (all should be the same)
+    return keysOnObject[0].flexNumber ?? 1
+  }, [keys, rentalObjectCode])
+
   // Determine default key system ID
   const defaultKeySystemId = useCallback(() => {
     const sameType = keys.find(
@@ -123,6 +133,7 @@ export function AddKeyForm({
         keyName: draftName.trim(),
         keyType: DEFAULT_KEY_TYPE,
         keySequenceNumber: nextSequenceNumber,
+        flexNumber: defaultFlexNumber,
         rentalObjectCode,
         keySystemId: effectiveDefaultKeySystemId || undefined,
       }
@@ -180,6 +191,12 @@ export function AddKeyForm({
       <div className="text-xs text-muted-foreground">
         <span className="mr-3">Objekt-ID: {rentalObjectCode}</span>
         <span className="mr-3">Låssystem: {keySystemDisplayCode}</span>
+        <span className="mr-3">Flex: {defaultFlexNumber}</span>
+        {defaultFlexNumber === 3 && (
+          <span className="text-orange-600 font-medium">
+            (MAX - låset behöver bytas snart)
+          </span>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">
