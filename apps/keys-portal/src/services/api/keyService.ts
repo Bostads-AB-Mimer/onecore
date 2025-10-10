@@ -91,6 +91,17 @@ export const keyService = {
     return (data?.content ?? []) as Key[]
   },
 
+  async bulkUpdateFlex(
+    rentalObjectCode: string,
+    flexNumber: number
+  ): Promise<{ updatedCount: number }> {
+    const { data, error } = await POST('/keys/bulk-update-flex', {
+      body: { rentalObjectCode, flexNumber },
+    })
+    if (error) throw error
+    return data?.content as { updatedCount: number }
+  },
+
   // ------- KEY SYSTEMS -------
   async getAllKeySystems(
     page: number = 1,
