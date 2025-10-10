@@ -37,10 +37,9 @@ export type RentalPropertyResponse =
   components['schemas']['RentalPropertyResponse']
 export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
 export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
-export type CreateReceiptRequest =
-  paths['/receipts']['post']['requestBody']['content']['application/json']
+export type CreateReceiptRequest = components['schemas']['CreateReceiptRequest']
 
-// Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> array in "content"
+// Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
 export type ReceiptByKeyLoan = NonNullable<
   NonNullable<
     paths['/receipts/by-key-loan/{keyLoanId}']['get']['responses']['200']['content']['application/json']

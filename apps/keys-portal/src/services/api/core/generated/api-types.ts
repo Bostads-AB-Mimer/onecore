@@ -3,9 +3,8 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "/auth/generatehash": {
+  '/auth/generatehash': {
     /**
      * Generates a salt and hashes the given password using that salt.
      * @description Generates a salt and hashes the given password using that salt. Pass cleartext password as query parameter.
@@ -14,18 +13,18 @@ export interface paths {
       parameters: {
         query: {
           /** @description The cleartext password that should be hashed */
-          password: string;
-        };
-      };
+          password: string
+        }
+      }
       responses: {
         /** @description Hashed password and salt */
         200: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/generatetoken": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/generatetoken': {
     /**
      * Generates a JWT token
      * @description Validates username and password from request body and returns a JWT token.
@@ -33,41 +32,41 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/x-www-form-urlencoded": {
-            username?: string;
-            password?: string;
-          };
-        };
-      };
+          'application/x-www-form-urlencoded': {
+            username?: string
+            password?: string
+          }
+        }
+      }
       responses: {
         /** @description A valid JWT token */
         200: {
           content: {
-            "application/json": {
-              token?: string;
-            };
-          };
-        };
+            'application/json': {
+              token?: string
+            }
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": {
-              errorMessage?: string;
-            };
-          };
-        };
+            'application/json': {
+              errorMessage?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/auth/login": {
+            'application/json': {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/auth/login': {
     /**
      * Redirects to Keycloak login
      * @description Redirects the user to the Keycloak login page
@@ -76,12 +75,12 @@ export interface paths {
       responses: {
         /** @description Redirect to Keycloak login */
         302: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/callback": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/callback': {
     /**
      * OAuth callback endpoint
      * @description Handles the OAuth callback from Keycloak
@@ -89,21 +88,21 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            code?: string;
-            redirectUri?: string;
-          };
-        };
-      };
+          'application/json': {
+            code?: string
+            redirectUri?: string
+          }
+        }
+      }
       responses: {
         /** @description User profile information */
         200: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/logout": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/logout': {
     /**
      * Logout endpoint
      * @description Clears authentication cookies and redirects to Keycloak logout
@@ -112,12 +111,12 @@ export interface paths {
       responses: {
         /** @description Redirect to login page */
         302: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/profile": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/profile': {
     /**
      * Get user profile
      * @description Returns the authenticated user's profile information
@@ -126,18 +125,17 @@ export interface paths {
       responses: {
         /** @description User profile information */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Unauthorized */
         401: {
-          content: never;
-        };
-      };
-    };
-  };
-  "openapi": {
-  };
-  "/health": {
+          content: never
+        }
+      }
+    }
+  }
+  openapi: {}
+  '/health': {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -147,37 +145,36 @@ export interface paths {
         /** @description Successful response with system health status */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /**
                * @description Name of the system.
                * @example core
                */
-              name?: string;
+              name?: string
               /**
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string;
-              subsystems?: ({
-                  /** @description Name of the subsystem. */
-                  name?: string;
-                  /**
-                   * @description Status of the subsystem.
-                   * @enum {string}
-                   */
-                  status?: "active" | "impaired" | "failure" | "unknown";
-                  /** @description Additional details about the subsystem status. */
-                  details?: string;
-                })[];
-            };
-          };
-        };
-      };
-    };
-  };
-  "security": {
-  };
-  "/leases/by-rental-property-id/{rentalPropertyId}": {
+              status?: string
+              subsystems?: {
+                /** @description Name of the subsystem. */
+                name?: string
+                /**
+                 * @description Status of the subsystem.
+                 * @enum {string}
+                 */
+                status?: 'active' | 'impaired' | 'failure' | 'unknown'
+                /** @description Additional details about the subsystem status. */
+                details?: string
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
+  security: {}
+  '/leases/by-rental-property-id/{rentalPropertyId}': {
     /**
      * Get leases with related entities for a specific rental property id
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
@@ -186,36 +183,36 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
+          includeUpcomingLeases?: boolean
           /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean;
+          includeTerminatedLeases?: boolean
           /** @description Whether to include contact information in the response */
-          includeContacts?: boolean;
-        };
+          includeContacts?: boolean
+        }
         path: {
           /** @description Rental roperty id of the building/residence to fetch leases for. */
-          rentalPropertyId: string;
-        };
-      };
+          rentalPropertyId: string
+        }
+      }
       responses: {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
         /** @description Invalid query parameters */
         400: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/leases/by-pnr/{pnr}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-pnr/{pnr}': {
     /**
      * Get leases with related entities for a specific Personal Number (PNR)
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
@@ -224,20 +221,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string;
-        };
-      };
+          pnr: string
+        }
+      }
       responses: {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": components["schemas"]["Lease"][];
-          };
-        };
-      };
-    };
-  };
-  "/leases/by-pnr/{pnr}/includingAllLeases": {
+            'application/json': components['schemas']['Lease'][]
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-pnr/{pnr}/includingAllLeases': {
     /**
      * Get all leases (active, upcoming, and terminated) for a PNR
      * @description Retrieves lease information along with related entities (tenants, properties, etc.) for the specified PNR. Includes **active**, **upcoming**, and **terminated** leases.
@@ -246,27 +243,27 @@ export interface paths {
       parameters: {
         path: {
           /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string;
-        };
-      };
+          pnr: string
+        }
+      }
       responses: {
         /** @description Successful response with leases and related entities. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-              [key: string]: unknown;
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+              [key: string]: unknown
+            }
+          }
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/by-contact-code/{contactCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/by-contact-code/{contactCode}': {
     /**
      * Get leases with related entities for a specific contact code
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
@@ -275,20 +272,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": components["schemas"]["Lease"][];
-          };
-        };
-      };
-    };
-  };
-  "/consumer-reports/by-pnr/{pnr}": {
+            'application/json': components['schemas']['Lease'][]
+          }
+        }
+      }
+    }
+  }
+  '/consumer-reports/by-pnr/{pnr}': {
     /**
      * Get consumer report for a specific Personal Number (PNR)
      * @description Retrieves credit information and consumer report for the specified Personal Number (PNR).
@@ -297,20 +294,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description Personal Number (PNR) of the individual to fetch credit information for. */
-          pnr: string;
-        };
-      };
+          pnr: string
+        }
+      }
       responses: {
         /** @description Successful response with credit information and consumer report */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/contacts/by-pnr/{pnr}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/contacts/by-pnr/{pnr}': {
     /**
      * Get contact information for a specific Personal Number (PNR)
      * @description Retrieves contact information associated with the specified Personal Number (PNR).
@@ -319,20 +316,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description Personal Number (PNR) of the individual to fetch contact information for. */
-          pnr: string;
-        };
-      };
+          pnr: string
+        }
+      }
       responses: {
         /** @description Successful response with contact information */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}/offers": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}/offers': {
     /**
      * Get offers for a contact
      * @description Retrieves all offers associated with a specific contact based on the provided contact code.
@@ -341,28 +338,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique code identifying the contact. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful response with a list of offers for the contact. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description The contact was not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve offers. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/offers/{offerId}/applicants/{contactCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/offers/{offerId}/applicants/{contactCode}': {
     /**
      * Get a specific offer for an applicant
      * @description Retrieve details of a specific offer associated with an applicant using contact code and offer ID.
@@ -371,30 +368,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the offer. */
-          offerId: string;
+          offerId: string
           /** @description The unique code identifying the applicant. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Details of the specified offer. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Offer not found for the specified contact code and offer ID. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve the offer. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/offers/by-listing-id/{listingId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/offers/by-listing-id/{listingId}': {
     /**
      * Get offers for a specific listing
      * @description Get all offers for a listing.
@@ -403,24 +400,24 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the listing. */
-          listingId: number;
-        };
-      };
+          listingId: number
+        }
+      }
       responses: {
         /** @description A list of offers. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/offers/by-listing-id/{listingId}/active": {
+          content: never
+        }
+      }
+    }
+  }
+  '/offers/by-listing-id/{listingId}/active': {
     /**
      * Gets active offer for a specific listing
      * @description Get an offer for a listing.
@@ -429,24 +426,24 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the listing. */
-          listingId: number;
-        };
-      };
+          listingId: number
+        }
+      }
       responses: {
         /** @description The active offer. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/search': {
     /**
      * Search contacts by PNR or contact code
      * @description Retrieves contacts based on the provided search query.
@@ -455,28 +452,28 @@ export interface paths {
       parameters: {
         query: {
           /** @description The search query to filter contacts. */
-          q: string;
-        };
-      };
+          q: string
+        }
+      }
       responses: {
         /** @description Successful response with search results */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Bad request. The query parameter 'q' must be a string. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve contacts. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}': {
     /**
      * Get contact by contact code
      * @description Retrieves a contact based on the provided contact code.
@@ -485,20 +482,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code used to identify the contact. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested contact */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/tenants/by-contact-code/{contactCode}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/tenants/by-contact-code/{contactCode}': {
     /**
      * Get tenant by contact code
      * @description Retrieves a tenant based on the provided contact code.
@@ -507,31 +504,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code used to identify the contact. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved tenant information. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The tenant data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve Tenant information. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/by-phone-number/{pnr}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/by-phone-number/{pnr}': {
     /**
      * Get contact by phone number
      * @description Retrieves a contact based on the provided phone number.
@@ -540,20 +537,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The phone number used to identify the contact. */
-          pnr: string;
-        };
-      };
+          pnr: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested contact */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/leases": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/leases': {
     /**
      * Get all leases with optional date filters
      * @description Retrieves all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years.
@@ -562,48 +559,48 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter leases with fromDate greater than or equal to this date. */
-          fromDateStart?: string;
+          fromDateStart?: string
           /** @description Filter leases with fromDate less than or equal to this date. */
-          fromDateEnd?: string;
+          fromDateEnd?: string
           /** @description Filter leases with lastDebitDate greater than or equal to this date. */
-          lastDebitDateStart?: string;
+          lastDebitDateStart?: string
           /** @description Filter leases with lastDebitDate less than or equal to this date. */
-          lastDebitDateEnd?: string;
-        };
-      };
+          lastDebitDateEnd?: string
+        }
+      }
       responses: {
         /** @description Successful response with leases matching the filter criteria */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  leaseId?: string;
-                  rentalPropertyId?: string;
-                  /** Format: date */
-                  fromDate?: string;
-                  /** Format: date */
-                  lastDebitDate?: string;
-                  /** Format: date */
-                  noticeDate?: string;
-                  /** Format: date */
-                  preferredMoveOutDate?: string;
-                  leaseType?: string;
-                }[];
-            };
-          };
-        };
+                leaseId?: string
+                rentalPropertyId?: string
+                /** Format: date */
+                fromDate?: string
+                /** Format: date */
+                lastDebitDate?: string
+                /** Format: date */
+                noticeDate?: string
+                /** Format: date */
+                preferredMoveOutDate?: string
+                leaseType?: string
+              }[]
+            }
+          }
+        }
         /** @description Invalid query parameters */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{id}': {
     /**
      * Get lease by ID
      * @description Retrieves lease details along with related entities based on the provided ID.
@@ -612,22 +609,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the lease to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested lease and related entities */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/offers/{offerId}/accept": {
+            'application/json': {
+              content?: components['schemas']['Lease']
+            }
+          }
+        }
+      }
+    }
+  }
+  '/offers/{offerId}/accept': {
     /**
      * Accept an offer
      * @description Accepts an offer for the contact of the contactCode provided
@@ -636,22 +633,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the offer to accept */
-          offerId: string;
-        };
-      };
+          offerId: string
+        }
+      }
       responses: {
         /** @description Offer accepted successful. */
         202: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to accept the offer. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/offers/{offerId}/deny": {
+          content: never
+        }
+      }
+    }
+  }
+  '/offers/{offerId}/deny': {
     /**
      * Deny an offer
      * @description Denies an offer
@@ -660,22 +657,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the offer to deny */
-          offerId: string;
-        };
-      };
+          offerId: string
+        }
+      }
       responses: {
         /** @description Offer denied successful. */
         202: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to deny the offer. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/offers/{offerId}/expire": {
+          content: never
+        }
+      }
+    }
+  }
+  '/offers/{offerId}/expire': {
     /**
      * Expire an offer
      * @description Expires an offer
@@ -684,22 +681,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the offer to expire */
-          offerId: string;
-        };
-      };
+          offerId: string
+        }
+      }
       responses: {
         /** @description Offer expired successful. */
         202: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to expire the offer. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/applicants": {
+          content: never
+        }
+      }
+    }
+  }
+  '/applicants': {
     /**
      * Get applicants by contact code
      * @description Retrieves applicants based on the contact code.
@@ -708,20 +705,20 @@ export interface paths {
       parameters: {
         query: {
           /** @description The contact code used to fetch applicants. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful retrieval of applicants. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/applicants/validate-rental-rules/property/{contactCode}/{rentalObjectCode}': {
     /**
      * Validate property rental rules for applicant
      * @description Validate property rental rules for an applicant based on contact code and listing ID.
@@ -730,61 +727,61 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code of the applicant. */
-          contactCode: string;
+          contactCode: string
           /** @description The xpand rental object code of the property. */
-          rentalObjectCode: number;
-        };
-      };
+          rentalObjectCode: number
+        }
+      }
       responses: {
         /** @description No property rental rules apply to this property. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property. */
-              applicationType?: string;
+              applicationType?: string
               /** @example No property rental rules applies to this property. */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Rental object code is not a parking space. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Rental object code entity is not a parking space. */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Applicant is not eligible for the property based on property rental rules. */
         403: {
           content: {
-            "application/json": {
-              reason?: string;
-            };
-          };
-        };
+            'application/json': {
+              reason?: string
+            }
+          }
+        }
         /** @description Listing, property info, or applicant not found. */
         404: {
           content: {
-            "application/json": {
-              reason?: string;
-            };
-          };
-        };
+            'application/json': {
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while validating property rental rules. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example An error occurred while validating property rental rules. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/applicants/validate-rental-rules/residential-area/{contactCode}/{districtCode}': {
     /**
      * Validate residential area rental rules for applicant
      * @description Validate residential area rental rules for an applicant based on contact code and district code.
@@ -793,52 +790,52 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code of the applicant. */
-          contactCode: string;
+          contactCode: string
           /** @description The xpand district code of the residential area to validate against. */
-          districtCode: string;
-        };
-      };
+          districtCode: string
+        }
+      }
       responses: {
         /** @description Either no residential area rental rules apply or applicant is eligible to apply for parking space. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Additional - applicant is eligible for applying for an additional parking space. Replace - applicant is eligible for replacing their current parking space in the same residential area or property. */
-              applicationType?: string;
-              reason?: string;
-            };
-          };
-        };
+              applicationType?: string
+              reason?: string
+            }
+          }
+        }
         /** @description Applicant is not eligible for the listing based on residential area rental rules. */
         403: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Applicant does not have any current or upcoming housing contracts in the residential area. */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Listing or applicant not found. */
         404: {
           content: {
-            "application/json": {
-              reason?: string;
-            };
-          };
-        };
+            'application/json': {
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while validating residential area rental rules. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example An error occurred while validating residential area rental rules. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/applicants-with-listings/by-contact-code/{contactCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/applicants-with-listings/by-contact-code/{contactCode}': {
     /**
      * Get applicants with listings by contact code
      * @description Retrieves applicants along with their listings based on the contact code.
@@ -847,20 +844,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code used to fetch applicants and their associated listings. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful retrieval of applicants with their listings. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/applicants/{contactCode}/{listingId}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/applicants/{contactCode}/{listingId}': {
     /**
      * Get applicant by contact code and listing ID
      * @description Retrieves an applicant by their contact code and listing ID.
@@ -869,22 +866,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code of the applicant. */
-          contactCode: string;
+          contactCode: string
           /** @description The ID of the listing associated with the applicant. */
-          listingId: string;
-        };
-      };
+          listingId: string
+        }
+      }
       responses: {
         /** @description Successful retrieval of the applicant. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/applicants/{applicantId}/by-manager": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/applicants/{applicantId}/by-manager': {
     /**
      * Withdraw applicant by manager
      * @description Withdraws an applicant by the manager using the applicant ID.
@@ -893,32 +890,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the applicant to be withdrawn. */
-          applicantId: string;
-        };
-      };
+          applicantId: string
+        }
+      }
       responses: {
         /** @description Successful withdrawal of the applicant by manager. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Applicant successfully withdrawn by manager. */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to withdraw the applicant. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Error message describing the issue. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/applicants/{applicantId}/by-user/{contactCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/applicants/{applicantId}/by-user/{contactCode}': {
     /**
      * Withdraw applicant by user
      * @description Withdraws an applicant by the user identified by contact code and applicant ID.
@@ -927,34 +924,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the applicant to be withdrawn. */
-          applicantId: string;
+          applicantId: string
           /** @description The contact code of the user initiating the withdrawal. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successful withdrawal of the applicant by user. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Applicant successfully withdrawn by user. */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to withdraw the applicant. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Error message describing the issue. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}/application-profile": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}/application-profile': {
     /**
      * Gets an application profile by contact code
      * @description Retrieve application profile information by contact code.
@@ -963,31 +960,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code associated with the application profile. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved application profile. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The application profile data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve application profile information. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}/application-profile/admin": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}/application-profile/admin': {
     /**
      * Creates or updates an application profile by contact code
      * @description Create or update application profile information by contact code.
@@ -996,41 +993,41 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code associated with the application profile. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": Record<string, never>;
-        };
-      };
+          'application/json': Record<string, never>
+        }
+      }
       responses: {
         /** @description Successfully updated application profile. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The application profile data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Successfully created application profile. */
         201: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The application profile data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to update application profile information. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}/application-profile/client": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}/application-profile/client': {
     /**
      * Creates or updates an application profile by contact code
      * @description Create or update application profile information by contact code.
@@ -1039,41 +1036,41 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code associated with the application profile. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": Record<string, never>;
-        };
-      };
+          'application/json': Record<string, never>
+        }
+      }
       responses: {
         /** @description Successfully updated application profile. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The application profile data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Successfully created application profile. */
         201: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The application profile data. */
-              data?: Record<string, never>;
-            };
-          };
-        };
+              data?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to update application profile information. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/{contactCode}/{rentalObjectCode}/verify-application": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/{contactCode}/{rentalObjectCode}/verify-application': {
     /**
      * Validate max num residents.
      * @description Checks if application is allowed based on current number of residents.
@@ -1082,32 +1079,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code associated with the application profile. */
-          contactCode: string;
+          contactCode: string
           /** @description The rental object code associated with the rental property. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Application allowed. */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Application not allowed. */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to retrieve application profile information. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/listings": {
+          content: never
+        }
+      }
+    }
+  }
+  '/listings': {
     /**
      * Get listings
      * @description Retrieves a list of listings.
@@ -1116,26 +1113,26 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The listing category, either PARKING_SPACE, APARTMENT or STORAGE. */
-          listingCategory?: string;
+          listingCategory?: string
           /** @description true for published listings, false for unpublished listings. */
-          published?: boolean;
+          published?: boolean
           /** @description The rental rule for the listings, either SCORED or NON_SCORED. */
-          rentalRule?: string;
+          rentalRule?: string
           /** @description A contact code to filter out listings that are not valid to rent for the contact. */
-          validToRentForContactCode?: string;
-        };
-      };
+          validToRentForContactCode?: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested list of listings. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings/{listingId}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings/{listingId}': {
     /**
      * Delete a Listing by ID
      * @description Deletes a listing by it's ID.
@@ -1144,31 +1141,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the listing to delete. */
-          listingId: number;
-        };
-      };
+          listingId: number
+        }
+      }
       responses: {
         /** @description Successfully deleted listing. */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Conflict. */
         409: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/listings/{listingId}/status": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/status': {
     /**
      * Update a listings status by ID
      * @description Updates a listing status by it's ID.
@@ -1177,36 +1174,36 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the listing to delete. */
-          listingId: number;
-        };
-      };
+          listingId: number
+        }
+      }
       requestBody: {
         content: {
-          "application/json": Record<string, never>;
-        };
-      };
+          'application/json': Record<string, never>
+        }
+      }
       responses: {
         /** @description Successfully updated listing. */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Listing not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/listings/sync-internal-from-xpand": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/listings/sync-internal-from-xpand': {
     /**
      * Sync internal parking spaces from xpand to onecores database
      * @description null
@@ -1215,16 +1212,16 @@ export interface paths {
       responses: {
         /** @description Request ok. */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to sync internal parking spaces. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/listings/{listingId}/offers": {
+          content: never
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/offers': {
     /**
      * Create an offer for a listing
      * @description Creates an offer for the specified listing.
@@ -1233,22 +1230,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the listing to create an offer for. */
-          listingId: string;
-        };
-      };
+          listingId: string
+        }
+      }
       responses: {
         /** @description Offer creation successful. */
         201: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. Failed to create the offer. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/listings/{listingId}/applicants/details": {
+          content: never
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/applicants/details': {
     /**
      * Get listing by ID with detailed applicants
      * @description Retrieves a listing by ID along with detailed information about its applicants.
@@ -1257,20 +1254,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the listing to fetch along with detailed applicant information. */
-          listingId: string;
-        };
-      };
+          listingId: string
+        }
+      }
       responses: {
         /** @description Successful retrieval of the listing with detailed applicant information. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings/{id}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings/{id}': {
     /**
      * Get listing by ID
      * @description Retrieves details of a listing based on the provided ID.
@@ -1279,20 +1276,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the listing to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested listing details. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/listings-with-applicants": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings-with-applicants': {
     /**
      * Get listings with applicants
      * @description Retrieves a list of listings along with their associated applicants.
@@ -1301,24 +1298,24 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filters listings by one of the above types. Must be one of the specified values. */
-          type?: "published" | "ready-for-offer" | "offered" | "historical";
-        };
-      };
+          type?: 'published' | 'ready-for-offer' | 'offered' | 'historical'
+        }
+      }
       responses: {
         /** @description Successful response with listings and their applicants. */
         200: {
           content: {
-            "application/json": Record<string, never>[];
-          };
-        };
+            'application/json': Record<string, never>[]
+          }
+        }
         /** @description Internal server error. Failed to retrieve listings with applicants. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/vacant-parkingspaces": {
+          content: never
+        }
+      }
+    }
+  }
+  '/vacant-parkingspaces': {
     /**
      * Get all vacant parking spaces
      * @description Retrieves a list of all vacant parking spaces.
@@ -1328,39 +1325,39 @@ export interface paths {
         /** @description A list of vacant parking spaces. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  rentalObjectCode?: string;
-                  address?: string;
-                  monthlyRent?: number;
-                  propertyCaption?: string;
-                  propertyCode?: string;
-                  residentialAreaCode?: string;
-                  residentialAreaCaption?: string;
-                  objectTypeCaption?: string;
-                  objectTypeCode?: string;
-                  /** Format: date-time */
-                  vacantFrom?: string;
-                  districtCaption?: string;
-                  districtCode?: string;
-                  braArea?: number;
-                }[];
-            };
-          };
-        };
+                rentalObjectCode?: string
+                address?: string
+                monthlyRent?: number
+                propertyCaption?: string
+                propertyCode?: string
+                residentialAreaCode?: string
+                residentialAreaCaption?: string
+                objectTypeCaption?: string
+                objectTypeCode?: string
+                /** Format: date-time */
+                vacantFrom?: string
+                districtCaption?: string
+                districtCode?: string
+                braArea?: number
+              }[]
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve vacant parking spaces. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description Error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/rental-objects/by-code/{rentalObjectCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}': {
     /**
      * Get a rental object by code
      * @description Fetches a rental object by Rental Object Code.
@@ -1369,46 +1366,46 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the rental object to fetch. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the rental object. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  rentalObjectCode?: string;
-                  address?: string;
-                  monthlyRent?: number;
-                  propertyCaption?: string;
-                  propertyCode?: string;
-                  residentialAreaCode?: string;
-                  residentialAreaCaption?: string;
-                  objectTypeCaption?: string;
-                  objectTypeCode?: string;
-                  /** Format: date-time */
-                  vacantFrom?: string;
-                  districtCaption?: string;
-                  districtCode?: string;
-                  braArea?: number;
-                }[];
-            };
-          };
-        };
+                rentalObjectCode?: string
+                address?: string
+                monthlyRent?: number
+                propertyCaption?: string
+                propertyCode?: string
+                residentialAreaCode?: string
+                residentialAreaCaption?: string
+                objectTypeCaption?: string
+                objectTypeCode?: string
+                /** Format: date-time */
+                vacantFrom?: string
+                districtCaption?: string
+                districtCode?: string
+                braArea?: number
+              }[]
+            }
+          }
+        }
         /** @description Internal server error. Failed to fetch rental object. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The error message. */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}/floorplan": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}/floorplan': {
     /**
      * Get floor plan for a rental property
      * @description Returns the floor plan image for the specified rental property.
@@ -1417,100 +1414,100 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the rental property. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved floor plan image */
         200: {
           content: {
-            "image/jpeg": string;
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}/material-options": {
+            'image/jpeg': string
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}/material-options': {
     /** Get room types with material options by rental property ID */
     get: {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch room types for */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with room types and their material options */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}/material-options/{materialOptionId}": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}/material-options/{materialOptionId}': {
     /** Get material option by ID for a specific rental property */
     get: {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch material options from */
-          id: string;
+          id: string
           /** @description ID of the material option to fetch */
-          materialOptionId: string;
-        };
-      };
+          materialOptionId: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested material option */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{apartmentId}/contracts/{contractId}/material-choices": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{apartmentId}/contracts/{contractId}/material-choices': {
     /** Get material choices for a specific apartment and contract */
     get: {
       parameters: {
         path: {
           /** @description ID of the apartment to fetch material choices for */
-          apartmentId: string;
+          apartmentId: string
           /** @description ID of the contract to fetch material choices for */
-          contractId: string;
-        };
-      };
+          contractId: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested material choices */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}/rooms-with-material-choices": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}/rooms-with-material-choices': {
     /** Get rooms with material choices for a specific rental property */
     get: {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch rooms with material choices for */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested rooms and their material choices */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}/material-choices": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}/material-choices': {
     /**
      * Get material choices for a specific rental property
      * @description Retrieve material choices associated with a rental property identified by {id}.
@@ -1519,18 +1516,18 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch material choices for. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with the requested material choices */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
     /**
      * Save material choices for a rental property
      * @description Saves material choices for a specific rental property.
@@ -1539,25 +1536,25 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the rental property to save material choices for. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": Record<string, never>;
-        };
-      };
+          'application/json': Record<string, never>
+        }
+      }
       responses: {
         /** @description Material choices successfully saved */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/material-choice-statuses": {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/material-choice-statuses': {
     /**
      * Get material choice statuses for rental properties
      * @description Retrieves statuses of material choices associated with rental properties. Optionally includes rental property details if specified in query parameter.
@@ -1566,20 +1563,20 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Optional parameter to include rental property details in response. */
-          includeRentalProperties?: "true";
-        };
-      };
+          includeRentalProperties?: 'true'
+        }
+      }
       responses: {
         /** @description Successful response with material choice statuses */
         200: {
           content: {
-            "application/json": unknown[];
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/{id}": {
+            'application/json': unknown[]
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/{id}': {
     /**
      * Get rental property by ID
      * @description Retrieves details of a rental property based on the provided ID.
@@ -1588,22 +1585,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successful response with rental property details */
         200: {
           content: {
-            "application/json": {
-              data?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/parking-spaces/{parkingSpaceId}/leases": {
+            'application/json': {
+              data?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/parking-spaces/{parkingSpaceId}/leases': {
     /**
      * Create lease for an external parking space
      * @description Creates a new lease for the specified external parking space.
@@ -1612,38 +1609,38 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the parking space for which the lease is being created. */
-          parkingSpaceId: string;
-        };
-      };
+          parkingSpaceId: string
+        }
+      }
       responses: {
         /** @description Lease successfully created */
         201: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Parking space id is missing. It needs to be passed in the url. */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example A technical error has occured. */
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/parking-spaces/{parkingSpaceId}/note-of-interests": {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/parking-spaces/{parkingSpaceId}/note-of-interests': {
     /**
      * Create a note of interest for an internal parking space
      * @description Creates a new note of interest for the specified internal parking space.
@@ -1652,38 +1649,38 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the parking space for which the note of interest is being created. */
-          parkingSpaceId: string;
-        };
-      };
+          parkingSpaceId: string
+        }
+      }
       responses: {
         /** @description Note of interest successfully created */
         201: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Contact code is missing. It needs to be passed in the body (contactCode) */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example A technical error has occured. */
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/rental-properties/by-rental-object-code/{rentalObjectCode}": {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-properties/by-rental-object-code/{rentalObjectCode}': {
     /**
      * Get rental property information from Xpand
      * @description Retrieves detailed information about a rental property from Xpand based on the provided rental object code.
@@ -1692,32 +1689,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description Rental object code used to identify the specific rental property in Xpand. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved rental property information */
         200: {
           content: {
-            "application/json": components["schemas"]["RentalPropertyResponse"];
-          };
-        };
+            'application/json': components['schemas']['RentalPropertyResponse']
+          }
+        }
         /** @description Rental property not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-rental-property-id/{rentalPropertyId}/{type}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-rental-property-id/{rentalPropertyId}/{type}': {
     /**
      * Get maintenance units for a rental property
      * @description Retrieves maintenance units for a specific rental property, optionally filtered by type.
@@ -1726,22 +1723,22 @@ export interface paths {
       parameters: {
         path: {
           /** @description ID of the rental property to fetch maintenance units for. */
-          rentalPropertyId: string;
+          rentalPropertyId: string
           /** @description Optional type filter for maintenance units. */
-          type: string;
-        };
-      };
+          type: string
+        }
+      }
       responses: {
         /** @description Successful response with maintenance units */
         200: {
           content: {
-            "application/json": unknown[];
-          };
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-contact-code/{contactCode}": {
+            'application/json': unknown[]
+          }
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-contact-code/{contactCode}': {
     /**
      * Get maintenance units by contact code.
      * @description Returns all maintenance units belonging to a contact code.
@@ -1750,33 +1747,33 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code for which to retrieve maintenance units. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  ok?: boolean;
-                  data?: components["schemas"]["MaintenanceUnit"][];
-                }[];
-            };
-          };
-        };
+                ok?: boolean
+                data?: components['schemas']['MaintenanceUnit'][]
+              }[]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/work-orders/data/{identifier}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/work-orders/data/{identifier}': {
     /**
      * Get work order data by different identifiers
      * @description Retrieves work order data along with associated leases based on the provided identifier type.
@@ -1785,50 +1782,55 @@ export interface paths {
       parameters: {
         query: {
           /** @description The type of the identifier used to fetch work order data. */
-          handler: "rentalObjectId" | "leaseId" | "pnr" | "phoneNumber" | "contactCode";
-        };
+          handler:
+            | 'rentalObjectId'
+            | 'leaseId'
+            | 'pnr'
+            | 'phoneNumber'
+            | 'contactCode'
+        }
         path: {
           /** @description The identifier value for fetching work order data. */
-          identifier: string;
-        };
-      };
+          identifier: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work order data. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  rentalPropertyId?: string;
-                  leases?: {
-                      leaseId?: string;
-                      rentalPropertyId?: string;
-                    }[];
-                }[];
-            };
-          };
-        };
+                rentalPropertyId?: string
+                leases?: {
+                  leaseId?: string
+                  rentalPropertyId?: string
+                }[]
+              }[]
+            }
+          }
+        }
         /** @description Invalid handler */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid handler */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work order data. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/by-contact-code/{contactCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/by-contact-code/{contactCode}': {
     /**
      * Get work orders by contact code
      * @description Retrieves work orders based on the provided contact code.
@@ -1837,34 +1839,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code used to fetch work orders. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                totalCount?: number;
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
-            };
-          };
-        };
+                totalCount?: number
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/by-rental-property-id/{rentalPropertyId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/by-rental-property-id/{rentalPropertyId}': {
     /**
      * Get work orders by rental property id
      * @description Retrieves work orders based on the provided rental property id.
@@ -1873,34 +1875,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental property id used to fetch work orders. */
-          rentalPropertyId: string;
-        };
-      };
+          rentalPropertyId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                totalCount?: number;
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
-            };
-          };
-        };
+                totalCount?: number
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/xpand/by-rental-property-id/{rentalPropertyId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/xpand/by-rental-property-id/{rentalPropertyId}': {
     /**
      * Get work orders by rental property id from xpand
      * @description Retrieves work orders based on the provided rental property id.
@@ -1909,34 +1911,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental property id used to fetch work orders. */
-          rentalPropertyId: string;
-        };
-      };
+          rentalPropertyId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                totalCount?: number;
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
-            };
-          };
-        };
+                totalCount?: number
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/xpand/{code}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/xpand/{code}': {
     /**
      * Get work order details by rental property id from xpand
      * @description Retrieves work order details.
@@ -1945,40 +1947,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description The work order code to fetch details for. */
-          code: string;
-        };
-      };
+          code: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work order. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["XpandWorkOrder"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['XpandWorkOrder']
+            }
+          }
+        }
         /** @description Work order not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Work order not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders': {
     /**
      * Create a new work order
      * @description Creates a new work order.
@@ -1986,64 +1988,64 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description The contact code of the tenant. */
-            ContactCode?: string;
+            ContactCode?: string
             /** @description The rental property ID. */
-            RentalObjectCode?: string;
+            RentalObjectCode?: string
             Rows?: {
-                /** @description The location code of the work order. */
-                LocationCode?: string;
-              }[];
+              /** @description The location code of the work order. */
+              LocationCode?: string
+            }[]
             /** @description Access options for the work order. */
-            AccessOptions?: Record<string, never>;
+            AccessOptions?: Record<string, never>
             /** @description Pet information for the work order. */
-            Pet?: Record<string, never>;
-            Images?: string[];
-          };
-        };
-      };
+            Pet?: Record<string, never>
+            Images?: string[]
+          }
+        }
+      }
       responses: {
         /** @description Successfully created the work order. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Work order created */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Bad request. Missing or invalid parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example ContactCode is missing */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Not found. Rental property or active lease not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Rental property not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to create the work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Failed to create a new work order */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/{workOrderId}/update": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/{workOrderId}/update': {
     /**
      * Update a work order with a message
      * @description Adds a message to the specified work order.
@@ -2052,49 +2054,49 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to be updated. */
-          workOrderId: string;
-        };
-      };
+          workOrderId: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description The message to be added to the work order. */
-            message?: string;
-          };
-        };
-      };
+            message?: string
+          }
+        }
+      }
       responses: {
         /** @description Successfully added the message to the work order. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Message added to work order with ID {workOrderId} */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Bad request. Missing or invalid parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Message is missing from the request body */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to add the message to the work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Failed to add message to work order with ID {workOrderId} */
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/{workOrderId}/close": {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/{workOrderId}/close': {
     /**
      * Close a work order
      * @description Closes a work order based on the provided work order ID.
@@ -2103,32 +2105,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to be closed. */
-          workOrderId: string;
-        };
-      };
+          workOrderId: string
+        }
+      }
       responses: {
         /** @description Successfully closed the work order. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Work order with ID {workOrderId} updated successfully */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to close the work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Failed to update work order with ID {workOrderId} */
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/send-sms": {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/send-sms': {
     /**
      * Send SMS for a work order
      * @description Sends an SMS message to the specified phone number for a work order.
@@ -2136,46 +2138,46 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description The phone number to send the SMS to. */
-            phoneNumber?: string;
+            phoneNumber?: string
             /** @description The message to be sent via SMS. */
-            text?: string;
-          };
-        };
-      };
+            text?: string
+          }
+        }
+      }
       responses: {
         /** @description Successfully sent the SMS. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Sms sent to {phoneNumber} */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Bad request. Missing or invalid parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Bad request: phoneNumber and message are required */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to send the SMS. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Unexpected error sending sms to {phoneNumber} */
-              message?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/work-orders/send-email": {
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/send-email': {
     /**
      * Send email for a work order
      * @description Sends an email to the specified recipient for a work order.
@@ -2183,48 +2185,48 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description The email address of the recipient. */
-            to?: string;
+            to?: string
             /** @description The subject of the email. */
-            subject?: string;
+            subject?: string
             /** @description The message to be sent in the email. */
-            message?: string;
-          };
-        };
-      };
+            message?: string
+          }
+        }
+      }
       responses: {
         /** @description Successfully sent the email. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Email sent to {to} */
-              message?: string;
-            };
-          };
-        };
+              message?: string
+            }
+          }
+        }
         /** @description Bad request. Missing or invalid parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Bad request: to, subject, and message are required */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to send the email. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Failed to send email to {to}, status: {statusCode} */
-              text?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/buildings/by-building-code/{buildingCode}": {
+              text?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/buildings/by-building-code/{buildingCode}': {
     /**
      * Get building by building code
      * @description Retrieves building data by building code
@@ -2233,40 +2235,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the building */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved building */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Building"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Building']
+            }
+          }
+        }
         /** @description Building not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Building not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/companies": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/companies': {
     /**
      * Get all companies
      * @description Retrieves companies from property base
@@ -2276,24 +2278,24 @@ export interface paths {
         /** @description Successfully retrieved companies */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Company"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Company'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/residences": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences': {
     /**
      * Get residences by building code and (optional) staircase code
      * @description Retrieves residences by building code and (optional) staircase code
@@ -2302,41 +2304,41 @@ export interface paths {
       parameters: {
         query: {
           /** @description Code for the building to fetch residences from */
-          buildingCode: string;
+          buildingCode: string
           /** @description Code for the staircase to fetch residences from */
-          staircaseCode?: string;
-        };
-      };
+          staircaseCode?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved residences */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Residence"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Residence'][]
+            }
+          }
+        }
         /** @description Missing building code or invalid query parameters */
         400: {
           content: {
-            "application/json": {
-              error?: Record<string, never>;
-            };
-          };
-        };
+            'application/json': {
+              error?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/properties": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/properties': {
     /**
      * Get properties by company code and (optional) tract
      * @description Retrieves properties by company code and (optional) tract
@@ -2345,41 +2347,41 @@ export interface paths {
       parameters: {
         query: {
           /** @description The code of the company that owns the properties. */
-          companyCode: string;
+          companyCode: string
           /** @description Optional filter to get properties in a specific tract. */
-          tract?: string;
-        };
-      };
+          tract?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved properties */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Property"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
         /** @description Missing company code or invalid query parameters */
         400: {
           content: {
-            "application/json": {
-              error?: Record<string, never>;
-            };
-          };
-        };
+            'application/json': {
+              error?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/properties/search": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/properties/search': {
     /**
      * Search properties
      * @description Retrieves a list of all real estate properties by name.
@@ -2388,30 +2390,30 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The search query. */
-          q?: string;
-        };
-      };
+          q?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved list of properties. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Property"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/properties/{propertyId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{propertyId}': {
     /**
      * Get property by property id
      * @description Retrieves property by property id
@@ -2420,40 +2422,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description The id of the property */
-          propertyId: string;
-        };
-      };
+          propertyId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved property */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Property"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Property']
+            }
+          }
+        }
         /** @description Property not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Property not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/residences/by-rental-id/{rentalId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/by-rental-id/{rentalId}': {
     /**
      * Get residence data by residence rental id
      * @description Retrieves residence data by residence rental id
@@ -2462,40 +2464,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description Rental id for the residence to fetch */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved residence. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceByRentalIdDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceByRentalIdDetails']
+            }
+          }
+        }
         /** @description Residence not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Residence not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve residence data. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/residences/{residenceId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/{residenceId}': {
     /**
      * Get residence data by residenceId
      * @description Retrieves residence data by residenceId
@@ -2504,40 +2506,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description Id for the residence to fetch */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved residence. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceDetails']
+            }
+          }
+        }
         /** @description Residence not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Residence not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve residence data. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/staircases": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/staircases': {
     /**
      * Get staircases for a building
      * @description Retrieves staircases for a building
@@ -2546,40 +2548,40 @@ export interface paths {
       parameters: {
         query: {
           /** @description Code for the building to fetch staircases for */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved staircases. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Staircase"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Staircase'][]
+            }
+          }
+        }
         /** @description Missing buildingCode */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Missing buildingCode */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/rooms": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rooms': {
     /**
      * Get rooms by residence id.
      * @description Returns all rooms belonging to a residence.
@@ -2588,30 +2590,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The id of the residence. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the rooms. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Room"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Room'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/parking-spaces/by-rental-id/{rentalId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/by-rental-id/{rentalId}': {
     /**
      * Get parking space data by rentalId
      * @description Retrieves parking space data by rentalId
@@ -2620,40 +2622,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description Rental id to fetch parking space for */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved parking space. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ParkingSpace"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ParkingSpace']
+            }
+          }
+        }
         /** @description Parking space not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Parking space not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve parking space data. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-rental-id/{rentalId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-rental-id/{rentalId}': {
     /**
      * Get maintenance units by rental id.
      * @description Returns all maintenance units belonging to a rental property.
@@ -2662,30 +2664,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the rental property for which to retrieve maintenance units. */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-building-code/{buildingCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-building-code/{buildingCode}': {
     /**
      * Get maintenance units by building code.
      * @description Returns all maintenance units belonging to a building.
@@ -2694,30 +2696,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the building for which to retrieve maintenance units. */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/facilities/by-rental-id/{rentalId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-rental-id/{rentalId}': {
     /**
      * Get facility by rental id.
      * @description Returns facility.
@@ -2726,30 +2728,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental id of the facility. */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the facility. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["FacilityDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['FacilityDetails']
+            }
+          }
+        }
         /** @description Not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-property-code/{code}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-property-code/{code}': {
     /**
      * Get maintenance units by property code.
      * @description Returns all maintenance units belonging to a property.
@@ -2758,30 +2760,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the property for which to retrieve maintenance units. */
-          code: string;
-        };
-      };
+          code: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/search': {
     /**
      * Omni-search for different entities
      * @description Search for properties, buildings, and residences.
@@ -2790,30 +2792,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The search query string. Matches on property name, building name or residence rental object id */
-          q: string;
-        };
-      };
+          q: string
+        }
+      }
       responses: {
         /** @description A list of search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["SearchResult"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['SearchResult'][]
+            }
+          }
+        }
         /** @description Bad request - invalid query parameters */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loans": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans': {
     /**
      * List all key loans
      * @description Fetches a list of all key loans ordered by creation date.
@@ -2823,19 +2825,19 @@ export interface paths {
         /** @description A list of key loans. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan'][]
+            }
+          }
+        }
         /** @description An error occurred while listing key loans. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Create a new key loan
      * @description Create a new key loan record.
@@ -2843,34 +2845,34 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyLoanRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyLoanRequest']
+        }
+      }
       responses: {
         /** @description Key loan created successfully. */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan']
+            }
+          }
+        }
         /** @description Invalid request data. */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description An error occurred while creating the key loan. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-loans/search": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/search': {
     /**
      * Search key loans
      * @description Search key loans with flexible filtering.
@@ -2882,45 +2884,75 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to lease. */
-          fields?: string;
-          id?: string;
-          keys?: string;
-          contact?: string;
-          lease?: string;
-          returnedAt?: string;
-          availableToNextTenantFrom?: string;
-          pickedUpAt?: string;
-          createdAt?: string;
-          updatedAt?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          keys?: string
+          contact?: string
+          lease?: string
+          returnedAt?: string
+          availableToNextTenantFrom?: string
+          pickedUpAt?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan'][]
+            }
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-loans/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/by-key/{keyId}': {
+    /**
+     * Get all loans for a specific key
+     * @description Returns all loan records for the specified key ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key ID to fetch loans for */
+          keyId: string
+        }
+      }
+      responses: {
+        /** @description Array of loans for this key */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyLoan'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/{id}': {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
@@ -2929,32 +2961,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key loan object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan']
+            }
+          }
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description An error occurred while fetching the key loan. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Delete a key loan
      * @description Delete an existing key loan by ID.
@@ -2963,28 +2995,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to delete. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key loan deleted successfully. */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description An error occurred while deleting the key loan. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Update a key loan
      * @description Partially update an existing key loan.
@@ -2993,45 +3025,45 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyLoanRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyLoanRequest']
+        }
+      }
       responses: {
         /** @description Key loan updated successfully. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan']
+            }
+          }
+        }
         /** @description Invalid request data. */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description An error occurred while updating the key loan. */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/keys": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys': {
     /**
      * List keys with pagination
      * @description Returns paginated keys ordered by createdAt (desc).
@@ -3040,58 +3072,58 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description Paginated list of keys */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeysResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /** Create a key */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyRequest']
+        }
+      }
       responses: {
         /** @description Created */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Invalid key_type */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/keys/search": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/search': {
     /**
      * Search keys
      * @description Search keys with flexible filtering.
@@ -3104,46 +3136,46 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-          q?: string;
+          limit?: number
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to keyName. */
-          fields?: string;
-          id?: string;
-          keyName?: string;
-          keySequenceNumber?: string;
-          flexNumber?: string;
-          rentalObjectCode?: string;
-          keyType?: string;
-          keySystemId?: string;
-          createdAt?: string;
-          updatedAt?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          keyName?: string
+          keySequenceNumber?: string
+          flexNumber?: string
+          rentalObjectCode?: string
+          keyType?: string
+          keySystemId?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeysResponse']
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/keys/by-rental-object/{rentalObjectCode}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/by-rental-object/{rentalObjectCode}': {
     /**
      * Get all keys by rental object code
      * @description Returns all keys associated with a specific rental object code without pagination
@@ -3152,127 +3184,127 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental object code to filter keys by */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved keys */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key'][]
+            }
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/keys/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/{id}': {
     /** Get key by ID */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key found */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /** Delete a key */
     delete: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Deleted */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /** Update a key (partial) */
     patch: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyRequest']
+        }
+      }
       responses: {
         /** @description Updated */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Invalid key_type */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-systems": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems': {
     /**
      * List all key systems with pagination
      * @description Retrieve a paginated list of all key systems
@@ -3281,26 +3313,26 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated key systems */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeySystemsResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Create a new key system
      * @description Create a new key system
@@ -3308,34 +3340,34 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeySystemRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeySystemRequest']
+        }
+      }
       responses: {
         /** @description Key system created successfully */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeySystem"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
         /** @description Invalid type or duplicate system code */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-systems/search": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/search': {
     /**
      * Search key systems
      * @description Search key systems with flexible filtering.
@@ -3352,52 +3384,52 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
+          limit?: number
           /** @description Search query for OR search across fields specified in 'fields' parameter */
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
-          fields?: string;
-          id?: string;
-          systemCode?: string;
-          name?: string;
-          manufacturer?: string;
-          managingSupplier?: string;
-          type?: string;
-          propertyIds?: string;
-          installationDate?: string;
-          isActive?: string;
-          description?: string;
-          createdAt?: string;
-          updatedAt?: string;
-          createdBy?: string;
-          updatedBy?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          systemCode?: string
+          name?: string
+          manufacturer?: string
+          managingSupplier?: string
+          type?: string
+          propertyIds?: string
+          installationDate?: string
+          isActive?: string
+          description?: string
+          createdAt?: string
+          updatedAt?: string
+          createdBy?: string
+          updatedBy?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeySystemsResponse']
+          }
+        }
         /** @description Bad request. Invalid parameters or field names */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-systems/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}': {
     /**
      * Get key system by ID
      * @description Retrieve a specific key system by its ID
@@ -3406,32 +3438,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved key system */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeySystem"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
         /** @description Key system not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Delete a key system
      * @description Delete a key system by ID
@@ -3440,28 +3472,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system to delete */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key system deleted successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key system not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Update a key system
      * @description Partially update a key system
@@ -3470,45 +3502,45 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system to update */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeySystemRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeySystemRequest']
+        }
+      }
       responses: {
         /** @description Key system updated successfully */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeySystem"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
         /** @description Invalid type or duplicate system code */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Key system not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs': {
     /**
      * List logs with pagination
      * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
@@ -3517,58 +3549,58 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description Paginated list of logs */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /** Create a log */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateLogRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateLogRequest']
+        }
+      }
       responses: {
         /** @description Created */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
         /** @description Invalid or missing fields */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/search": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/search': {
     /**
      * Search logs with pagination
      * @description Search logs with flexible filtering and pagination.
@@ -3581,44 +3613,44 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-          q?: string;
+          limit?: number
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
-          fields?: string;
-          id?: string;
-          userName?: string;
-          eventType?: string;
-          eventTime?: string;
-          objectType?: string;
-          objectId?: string;
-          description?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          userName?: string
+          eventType?: string
+          eventTime?: string
+          objectType?: string
+          objectId?: string
+          description?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Bad request */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/object/{objectId}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/object/{objectId}': {
     /**
      * Get all logs for a specific objectId
      * @description Returns all log entries for a given objectId, ordered by most recent first
@@ -3626,60 +3658,60 @@ export interface paths {
     get: {
       parameters: {
         path: {
-          objectId: string;
-        };
-      };
+          objectId: string
+        }
+      }
       responses: {
         /** @description List of logs for the objectId */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/{id}': {
     /** Get log by ID */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Log found */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
         /** @description Not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-notes/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-notes/{id}': {
     /**
      * Get key note by ID
      * @description Retrieve a specific key note by its ID
@@ -3688,32 +3720,32 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key note */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved key note */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Key note not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /**
      * Update a key note
      * @description Update the description of an existing key note
@@ -3722,45 +3754,45 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key note to update */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyNoteRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyNoteRequest']
+        }
+      }
       responses: {
         /** @description Key note updated successfully */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Invalid request data */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Key note not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-notes/by-rental-object/{rentalObjectCode}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-notes/by-rental-object/{rentalObjectCode}': {
     /**
      * Get key note by rental object code
      * @description Retrieve the key note for a specific rental object
@@ -3769,34 +3801,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental object code */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved key note */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Key note not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/key-notes": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-notes': {
     /**
      * Create a new key note
      * @description Create a new key note for a rental object
@@ -3804,34 +3836,34 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyNoteRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyNoteRequest']
+        }
+      }
       responses: {
         /** @description Key note created successfully */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Invalid request data */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts': {
     /**
      * Create a receipt
      * @description Create a new receipt record for a key loan
@@ -3839,63 +3871,34 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** Format: uuid */
-            keyLoanId: string;
-            /** @enum {string} */
-            receiptType: "LOAN" | "RETURN";
-            /** @enum {string} */
-            type: "DIGITAL" | "PHYSICAL";
-            /** @default false */
-            signed?: boolean;
-            fileId?: string | null;
-          };
-        };
-      };
+          'application/json': components['schemas']['CreateReceiptRequest']
+        }
+      }
       responses: {
-        /** @description Receipt created successfully */
+        /** @description Key note created successfully */
         201: {
           content: {
-            "application/json": {
-              content?: {
-                /** Format: uuid */
-                id?: string;
-                /** Format: uuid */
-                keyLoanId?: string;
-                /** @enum {string} */
-                receiptType?: "LOAN" | "RETURN";
-                /** @enum {string} */
-                type?: "DIGITAL" | "PHYSICAL";
-                signed?: boolean;
-                fileId?: string | null;
-                /** Format: date-time */
-                createdAt?: string;
-              };
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
         /** @description Invalid request data */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Receipt already exists for this keyLoanId */
-        409: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/by-key-loan/{keyLoanId}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/by-key-loan/{keyLoanId}': {
     /**
      * Get receipt by key loan ID
      * @description Retrieve a receipt associated with a specific key loan
@@ -3904,47 +3907,47 @@ export interface paths {
       parameters: {
         path: {
           /** @description The key loan ID to filter receipts by */
-          keyLoanId: string;
-        };
-      };
+          keyLoanId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved receipt */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** Format: uuid */
-                id?: string;
+                id?: string
                 /** Format: uuid */
-                keyLoanId?: string;
+                keyLoanId?: string
                 /** @enum {string} */
-                receiptType?: "LOAN" | "RETURN";
+                receiptType?: 'LOAN' | 'RETURN'
                 /** @enum {string} */
-                type?: "DIGITAL" | "PHYSICAL";
-                signed?: boolean;
-                fileId?: string | null;
+                type?: 'DIGITAL' | 'PHYSICAL'
+                signed?: boolean
+                fileId?: string | null
                 /** Format: date-time */
-                createdAt?: string;
-              };
-            };
-          };
-        };
+                createdAt?: string
+              }
+            }
+          }
+        }
         /** @description Receipt not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/{id}': {
     /**
      * Delete a receipt
      * @description Delete a receipt by ID
@@ -3953,30 +3956,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the receipt to delete */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Receipt deleted successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Receipt not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/{id}/upload': {
     /**
      * Upload PDF file for a receipt
      * @description Upload a PDF file to attach to an existing receipt
@@ -3985,58 +3988,58 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the receipt to attach the file to */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "multipart/form-data": {
+          'multipart/form-data': {
             /** Format: binary */
-            file?: string;
-          };
-        };
-      };
+            file?: string
+          }
+        }
+      }
       responses: {
         /** @description File uploaded successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                fileId?: string;
-                fileName?: string;
-                size?: number;
-              };
-            };
-          };
-        };
+                fileId?: string
+                fileName?: string
+                size?: number
+              }
+            }
+          }
+        }
         /** @description Invalid file or receipt not found */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Receipt not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description File too large */
         413: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/{id}/download": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/{id}/download': {
     /**
      * Get presigned download URL for receipt PDF
      * @description Generate a presigned URL to download the PDF file attached to a receipt
@@ -4045,981 +4048,981 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the receipt */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Download URL generated */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                url?: string;
-                expiresIn?: number;
-                fileId?: string;
-              };
-            };
-          };
-        };
+                url?: string
+                expiresIn?: number
+                fileId?: string
+              }
+            }
+          }
+        }
         /** @description Receipt or file not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
     Lease: {
-      leaseId: string;
-      leaseNumber: string;
+      leaseId: string
+      leaseNumber: string
       /** Format: date-time */
-      leaseStartDate: string;
+      leaseStartDate: string
       /** Format: date-time */
-      leaseEndDate?: string;
+      leaseEndDate?: string
       /** @enum {string} */
-      status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-      tenantContactIds?: string[];
-      rentalPropertyId: string;
+      status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+      tenantContactIds?: string[]
+      rentalPropertyId: string
       rentalProperty?: {
-        rentalPropertyId: string;
-        apartmentNumber: number;
-        size: number;
-        type: string;
+        rentalPropertyId: string
+        apartmentNumber: number
+        size: number
+        type: string
         address?: {
-          street: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        rentalPropertyType: string;
-        additionsIncludedInRent: string;
-        otherInfo?: string;
+          street: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        rentalPropertyType: string
+        additionsIncludedInRent: string
+        otherInfo?: string
         roomTypes?: {
-            roomTypeId: string;
-            name: string;
-          }[];
+          roomTypeId: string
+          name: string
+        }[]
         /** Format: date-time */
-        lastUpdated?: string;
-      };
-      type: string;
+        lastUpdated?: string
+      }
+      type: string
       rentInfo?: {
         currentRent: {
-          rentId?: string;
-          leaseId?: string;
-          currentRent: number;
-          vat: number;
-          additionalChargeDescription?: string;
-          additionalChargeAmount?: number;
+          rentId?: string
+          leaseId?: string
+          currentRent: number
+          vat: number
+          additionalChargeDescription?: string
+          additionalChargeAmount?: number
           /** Format: date-time */
-          rentStartDate?: string;
+          rentStartDate?: string
           /** Format: date-time */
-          rentEndDate?: string;
-        };
-      };
+          rentEndDate?: string
+        }
+      }
       address?: {
-        street: string;
-        number: string;
-        postalCode: string;
-        city: string;
-      };
-      noticeGivenBy?: string;
+        street: string
+        number: string
+        postalCode: string
+        city: string
+      }
+      noticeGivenBy?: string
       /** Format: date-time */
-      noticeDate?: string;
-      noticeTimeTenant?: string;
+      noticeDate?: string
+      noticeTimeTenant?: string
       /** Format: date-time */
-      preferredMoveOutDate?: string;
+      preferredMoveOutDate?: string
       /** Format: date-time */
-      terminationDate?: string;
+      terminationDate?: string
       /** Format: date-time */
-      contractDate?: string;
+      contractDate?: string
       /** Format: date-time */
-      lastDebitDate?: string;
+      lastDebitDate?: string
       /** Format: date-time */
-      approvalDate?: string;
+      approvalDate?: string
       residentialArea?: {
-        code: string;
-        caption: string;
-      };
+        code: string
+        caption: string
+      }
       tenants?: {
-          contactCode: string;
-          contactKey: string;
-          leaseIds?: string[];
-          firstName: string;
-          lastName: string;
-          fullName: string;
-          nationalRegistrationNumber: string;
+        contactCode: string
+        contactKey: string
+        leaseIds?: string[]
+        firstName: string
+        lastName: string
+        fullName: string
+        nationalRegistrationNumber: string
+        /** Format: date-time */
+        birthDate: string
+        address?: {
+          street: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        phoneNumbers?: {
+          phoneNumber: string
+          type: string
+          isMainNumber: boolean
+        }[]
+        emailAddress?: string
+        isTenant: boolean
+        parkingSpaceWaitingList?: {
           /** Format: date-time */
-          birthDate: string;
-          address?: {
-            street: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          phoneNumbers?: {
-              phoneNumber: string;
-              type: string;
-              isMainNumber: boolean;
-            }[];
-          emailAddress?: string;
-          isTenant: boolean;
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string;
-            queuePoints: number;
-            type: number;
-          };
-          specialAttention?: boolean;
-        }[];
-    };
+          queueTime: string
+          queuePoints: number
+          type: number
+        }
+        specialAttention?: boolean
+      }[]
+    }
     WorkOrder: {
-      accessCaption: string;
-      caption: string;
-      code: string;
-      contactCode: string;
-      description: string;
-      detailsCaption: string;
-      externalResource: boolean;
-      id: string;
+      accessCaption: string
+      caption: string
+      code: string
+      contactCode: string
+      description: string
+      detailsCaption: string
+      externalResource: boolean
+      id: string
       /** Format: date-time */
-      lastChanged: string;
-      priority: string;
+      lastChanged: string
+      priority: string
       /** Format: date-time */
-      registered: string;
-      dueDate: ("null" | null) | string;
-      rentalObjectCode: string;
-      status: string;
-      hiddenFromMyPages?: boolean;
-      workOrderRows: ({
-          description: string | null;
-          locationCode: string | null;
-          equipmentCode: string | null;
-        })[];
+      registered: string
+      dueDate: ('null' | null) | string
+      rentalObjectCode: string
+      status: string
+      hiddenFromMyPages?: boolean
+      workOrderRows: {
+        description: string | null
+        locationCode: string | null
+        equipmentCode: string | null
+      }[]
       messages?: {
-          id: number;
-          body: string;
-          messageType: string;
-          author: string;
-          /** Format: date-time */
-          createDate: string;
-        }[];
-      url?: string;
-    };
+        id: number
+        body: string
+        messageType: string
+        author: string
+        /** Format: date-time */
+        createDate: string
+      }[]
+      url?: string
+    }
     XpandWorkOrder: {
-      accessCaption: string;
-      caption: string | null;
-      code: string;
-      contactCode: string | null;
-      id: string;
+      accessCaption: string
+      caption: string | null
+      code: string
+      contactCode: string | null
+      id: string
       /** Format: date-time */
-      lastChanged: string;
-      priority: string | null;
+      lastChanged: string
+      priority: string | null
       /** Format: date-time */
-      registered: string;
-      dueDate: ("null" | null) | string;
-      rentalObjectCode: string;
-      status: string;
-    };
+      registered: string
+      dueDate: ('null' | null) | string
+      rentalObjectCode: string
+      status: string
+    }
     Building: {
-      id: string;
-      code: string;
-      name: string;
+      id: string
+      code: string
+      name: string
       buildingType: {
-        id: string;
-        code: string;
-        name: string;
-      };
+        id: string
+        code: string
+        name: string
+      }
       construction: {
-        constructionYear: number;
-        renovationYear: number;
-        valueYear: number | null;
-      };
+        constructionYear: number
+        renovationYear: number
+        valueYear: number | null
+      }
       features: {
-        heating: string | null;
-        fireRating: string | null;
-      };
+        heating: string | null
+        fireRating: string | null
+      }
       insurance: {
-        class: string | null;
-        value: number | null;
-      };
-      deleted: boolean;
-    };
+        class: string | null
+        value: number | null
+      }
+      deleted: boolean
+    }
     Company: {
-      id: string;
-      propertyObjectId: string;
-      code: string;
-      name: string;
-      organizationNumber: string | null;
-    };
+      id: string
+      propertyObjectId: string
+      code: string
+      name: string
+      organizationNumber: string | null
+    }
     Property: {
-      id: string;
-      propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
-      valueAreaId: string | null;
-      code: string;
-      designation: string;
-      municipality: string;
-      tract: string;
-      block: string;
-      sector: string | null;
-      propertyIndexNumber: string | null;
-      congregation: string;
-      builtStatus: number;
-      separateAssessmentUnit: number;
-      consolidationNumber: string;
-      ownershipType: string;
-      registrationDate: string | null;
-      acquisitionDate: string | null;
-      isLeasehold: number;
-      leaseholdTerminationDate: string | null;
-      area: string | null;
-      purpose: string | null;
-      buildingType: string | null;
-      propertyTaxNumber: string | null;
-      mainPartAssessedValue: number;
-      includeInAssessedValue: number;
-      grading: number;
-      deleteMark: number;
+      id: string
+      propertyObjectId: string
+      marketAreaId: string
+      districtId: string
+      propertyDesignationId: string
+      valueAreaId: string | null
+      code: string
+      designation: string
+      municipality: string
+      tract: string
+      block: string
+      sector: string | null
+      propertyIndexNumber: string | null
+      congregation: string
+      builtStatus: number
+      separateAssessmentUnit: number
+      consolidationNumber: string
+      ownershipType: string
+      registrationDate: string | null
+      acquisitionDate: string | null
+      isLeasehold: number
+      leaseholdTerminationDate: string | null
+      area: string | null
+      purpose: string | null
+      buildingType: string | null
+      propertyTaxNumber: string | null
+      mainPartAssessedValue: number
+      includeInAssessedValue: number
+      grading: number
+      deleteMark: number
       /** Format: date-time */
-      fromDate: string;
+      fromDate: string
       /** Format: date-time */
-      toDate: string;
-      timestamp: string;
-    };
+      toDate: string
+      timestamp: string
+    }
     Residence: {
-      id: string;
-      code: string;
-      name: string;
-      deleted: boolean;
+      id: string
+      code: string
+      name: string
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
-    };
+        toDate: string
+      }
+    }
     ResidenceDetails: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       /** @enum {string|null} */
-      status: "VACANT" | "LEASED" | null;
-      location: string | null;
+      status: 'VACANT' | 'LEASED' | null
+      location: string | null
       accessibility: {
-        wheelchairAccessible: boolean;
-        residenceAdapted: boolean;
-        elevator: boolean;
-      };
+        wheelchairAccessible: boolean
+        residenceAdapted: boolean
+        elevator: boolean
+      }
       features: {
         balcony1?: {
-          location: string;
-          type: string;
-        };
+          location: string
+          type: string
+        }
         balcony2?: {
-          location: string;
-          type: string;
-        };
-        patioLocation: string | null;
-        hygieneFacility: string | null;
-        sauna: boolean;
-        extraToilet: boolean;
-        sharedKitchen: boolean;
-        petAllergyFree: boolean;
+          location: string
+          type: string
+        }
+        patioLocation: string | null
+        hygieneFacility: string | null
+        sauna: boolean
+        extraToilet: boolean
+        sharedKitchen: boolean
+        petAllergyFree: boolean
         /** @description Is the apartment checked for electric allergy intolerance? */
-        electricAllergyIntolerance: boolean;
-        smokeFree: boolean;
-        asbestos: boolean;
-      };
-      floor: string | null;
-      partNo?: number | null;
-      part?: string | null;
-      deleted: boolean;
+        electricAllergyIntolerance: boolean
+        smokeFree: boolean
+        asbestos: boolean
+      }
+      floor: string | null
+      partNo?: number | null
+      part?: string | null
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
+        toDate: string
+      }
       residenceType: {
-        residenceTypeId: string;
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-        systemStandard: number;
-        checklistId: string | null;
-        componentTypeActionId: string | null;
-        statisticsGroupSCBId: string | null;
-        statisticsGroup2Id: string | null;
-        statisticsGroup3Id: string | null;
-        statisticsGroup4Id: string | null;
-        timestamp: string;
-      };
+        residenceTypeId: string
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+        systemStandard: number
+        checklistId: string | null
+        componentTypeActionId: string | null
+        statisticsGroupSCBId: string | null
+        statisticsGroup2Id: string | null
+        statisticsGroup3Id: string | null
+        statisticsGroup4Id: string | null
+        timestamp: string
+      }
       propertyObject: {
         energy: {
-          energyClass: number;
+          energyClass: number
           /** Format: date-time */
-          energyRegistered?: string;
+          energyRegistered?: string
           /** Format: date-time */
-          energyReceived?: string;
-          energyIndex?: number;
-        };
-        rentalId: string | null;
-        rentalInformation: ({
+          energyReceived?: string
+          energyIndex?: number
+        }
+        rentalId: string | null
+        rentalInformation: {
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-      };
+            code: string
+            name: string | null
+          }
+        } | null
+      }
       property: {
-        name: string | null;
-        code: string | null;
-      };
+        name: string | null
+        code: string | null
+      }
       building: {
-        name: string | null;
-        code: string | null;
-      };
-      malarEnergiFacilityId: string | null;
-      size: number | null;
-    };
+        name: string | null
+        code: string | null
+      }
+      malarEnergiFacilityId: string | null
+      size: number | null
+    }
     Staircase: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       features: {
-        floorPlan: string | null;
-        accessibleByElevator: boolean;
-      };
+        floorPlan: string | null
+        accessibleByElevator: boolean
+      }
       dates: {
         /** Format: date-time */
-        from: string;
+        from: string
         /** Format: date-time */
-        to: string;
-      };
-      deleted: boolean;
+        to: string
+      }
+      deleted: boolean
       /** Format: date-time */
-      timestamp: string;
-    };
+      timestamp: string
+    }
     Room: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       usage: {
-        shared: boolean;
-        allowPeriodicWorks: boolean;
-        spaceType: number;
-      };
+        shared: boolean
+        allowPeriodicWorks: boolean
+        spaceType: number
+      }
       features: {
-        hasToilet: boolean;
-        isHeated: boolean;
-        hasThermostatValve: boolean;
-        orientation: number;
-      };
+        hasToilet: boolean
+        isHeated: boolean
+        hasThermostatValve: boolean
+        orientation: number
+      }
       dates: {
         /** Format: date-time */
-        installation: string | null;
+        installation: string | null
         /** Format: date-time */
-        from: string;
+        from: string
         /** Format: date-time */
-        to: string;
+        to: string
         /** Format: date-time */
-        availableFrom: string | null;
+        availableFrom: string | null
         /** Format: date-time */
-        availableTo: string | null;
-      };
-      sortingOrder: number;
-      deleted: boolean;
-      timestamp: string;
-      roomType: ({
-        id: string;
-        code: string;
-        name: string | null;
-        use: number;
-        optionAllowed: number;
-        isSystemStandard: number;
-        allowSmallRoomsInValuation: number;
-        timestamp: string;
-      }) | null;
-    };
+        availableTo: string | null
+      }
+      sortingOrder: number
+      deleted: boolean
+      timestamp: string
+      roomType: {
+        id: string
+        code: string
+        name: string | null
+        use: number
+        optionAllowed: number
+        isSystemStandard: number
+        allowSmallRoomsInValuation: number
+        timestamp: string
+      } | null
+    }
     ParkingSpace: {
-      rentalId: string;
-      companyCode: string;
-      companyName: string;
-      managementUnitCode: string;
-      managementUnitName: string;
-      propertyCode: string;
-      propertyName: string;
-      buildingCode: string | null;
-      buildingName: string | null;
+      rentalId: string
+      companyCode: string
+      companyName: string
+      managementUnitCode: string
+      managementUnitName: string
+      propertyCode: string
+      propertyName: string
+      buildingCode: string | null
+      buildingName: string | null
       parkingSpace: {
-        propertyObjectId: string;
-        code: string;
-        name: string;
-        parkingNumber: string;
+        propertyObjectId: string
+        code: string
+        name: string
+        parkingNumber: string
         parkingSpaceType: {
-          code: string;
-          name: string;
-        };
-      };
+          code: string
+          name: string
+        }
+      }
       address: {
-        streetAddress: string | null;
-        streetAddress2: string | null;
-        postalCode: string | null;
-        city: string | null;
-      };
-    };
+        streetAddress: string | null
+        streetAddress2: string | null
+        postalCode: string | null
+        city: string | null
+      }
+    }
     MaintenanceUnit: {
-      id: string;
-      rentalPropertyId?: string;
-      code: string;
-      caption: string | null;
-      type?: string | null;
-      estateCode: string | null;
-      estate: string | null;
-    };
+      id: string
+      rentalPropertyId?: string
+      code: string
+      caption: string | null
+      type?: string | null
+      estateCode: string | null
+      estate: string | null
+    }
     ResidenceByRentalIdDetails: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       accessibility: {
-        wheelchairAccessible: boolean;
-        elevator: boolean;
-      };
+        wheelchairAccessible: boolean
+        elevator: boolean
+      }
       features: {
-        hygieneFacility: string | null;
-      };
-      entrance: string | null;
-      floor: string | null;
-      deleted: boolean;
+        hygieneFacility: string | null
+      }
+      entrance: string | null
+      floor: string | null
+      deleted: boolean
       type: {
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+      }
+      rentalInformation: {
+        apartmentNumber: string | null
+        rentalId: string | null
         type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
+          code: string
+          name: string | null
+        }
+      } | null
       property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
-    };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      areaSize: number | null
+    }
     FacilityDetails: {
-      id: string;
-      code: string;
-      name: string | null;
-      entrance: string | null;
-      deleted: boolean;
+      id: string
+      code: string
+      name: string | null
+      entrance: string | null
+      deleted: boolean
       type: {
-        code: string;
-        name: string | null;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
+        code: string
+        name: string | null
+      }
+      rentalInformation: {
+        apartmentNumber: string | null
+        rentalId: string | null
         type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
+          code: string
+          name: string | null
+        }
+      } | null
       property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
-    };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      areaSize: number | null
+    }
     Key: {
       /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number;
-      rentalObjectCode?: string;
+      id: string
+      keyName: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
       /** @enum {string} */
-      keyType: "LGH" | "PB" | "FS" | "HN";
+      keyType: 'LGH' | 'PB' | 'FS' | 'HN'
       /** Format: uuid */
-      keySystemId?: string | null;
+      keySystemId?: string | null
       /** @default false */
-      disposed?: boolean;
+      disposed?: boolean
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+    }
     KeyLoan: {
       /** Format: uuid */
-      id: string;
-      keys: string;
-      contact?: string;
-      contact2?: string;
-      lease?: string;
+      id: string
+      keys: string
+      contact?: string
+      contact2?: string
       /** Format: date-time */
-      returnedAt?: string | null;
+      returnedAt?: string | null
       /** Format: date-time */
-      availableToNextTenantFrom?: string | null;
+      availableToNextTenantFrom?: string | null
       /** Format: date-time */
-      pickedUpAt?: string | null;
+      pickedUpAt?: string | null
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
-    };
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+    }
     KeySystem: {
       /** Format: uuid */
-      id: string;
-      systemCode: string;
-      name: string;
-      manufacturer: string;
-      managingSupplier?: string | null;
+      id: string
+      systemCode: string
+      name: string
+      manufacturer: string
+      managingSupplier?: string | null
       /** @enum {string} */
-      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      propertyIds?: string;
+      type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
       /** Format: date-time */
-      installationDate?: string | null;
-      isActive?: boolean;
-      description?: string | null;
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
-    };
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+    }
     Log: {
       /** Format: uuid */
-      id: string;
-      userName: string;
+      id: string
+      userName: string
       /** @enum {string} */
-      eventType: "creation" | "update" | "delete";
+      eventType: 'creation' | 'update' | 'delete'
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan";
+      objectType: 'key' | 'keySystem' | 'keyLoan'
       /** Format: uuid */
-      objectId?: string | null;
+      objectId?: string | null
       /** Format: date-time */
-      eventTime: string;
-      description?: string | null;
-    };
+      eventTime: string
+      description?: string | null
+    }
     KeyNote: {
       /** Format: uuid */
-      id: string;
-      rentalObjectCode: string;
-      description: string;
-    };
+      id: string
+      rentalObjectCode: string
+      description: string
+    }
     Receipt: {
       /** Format: uuid */
-      id: string;
+      id: string
       /** Format: uuid */
-      keyLoanId: string;
+      keyLoanId: string
       /** @enum {string} */
-      receiptType: "LOAN" | "RETURN";
+      receiptType: 'LOAN' | 'RETURN'
       /** @enum {string} */
-      type: "DIGITAL" | "PHYSICAL";
-      signed: boolean;
-      fileId?: string | null;
+      type: 'DIGITAL' | 'PHYSICAL'
+      fileId?: string | null
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
+      updatedAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
     CreateKeyRequest: {
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number;
-      rentalObjectCode?: string;
+      keyName: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
       /** @enum {string} */
-      keyType: "LGH" | "PB" | "FS" | "HN";
+      keyType: 'LGH' | 'PB' | 'FS' | 'HN'
       /** Format: uuid */
-      keySystemId?: string | null;
-    };
+      keySystemId?: string | null
+    }
     UpdateKeyRequest: {
-      keyName?: string;
-      keySequenceNumber?: number;
-      flexNumber?: number;
-      rentalObjectCode?: string;
+      keyName?: string
+      keySequenceNumber?: number
+      flexNumber?: number
+      rentalObjectCode?: string
       /** @enum {string} */
-      keyType?: "LGH" | "PB" | "FS" | "HN";
+      keyType?: 'LGH' | 'PB' | 'FS' | 'HN'
       /** Format: uuid */
-      keySystemId?: string | null;
-      disposed?: boolean;
-    };
+      keySystemId?: string | null
+      disposed?: boolean
+    }
     CreateKeyLoanRequest: {
-      keys: string;
-      contact?: string;
-      contact2?: string;
-      lease?: string;
+      keys: string
+      contact?: string
+      contact2?: string
       /** Format: date-time */
-      returnedAt?: string | null;
+      returnedAt?: string | null
       /** Format: date-time */
-      pickedUpAt?: string | null;
+      pickedUpAt?: string | null
       /** Format: date-time */
-      availableToNextTenantFrom?: string | null;
-      createdBy?: string | null;
-    };
+      availableToNextTenantFrom?: string | null
+      createdBy?: string | null
+    }
     UpdateKeyLoanRequest: {
-      keys?: string;
-      contact?: string;
-      contact2?: string;
-      lease?: string;
+      keys?: string
+      contact?: string
+      contact2?: string
       /** Format: date-time */
-      returnedAt?: string | null;
+      returnedAt?: string | null
       /** Format: date-time */
-      availableToNextTenantFrom?: string | null;
+      availableToNextTenantFrom?: string | null
       /** Format: date-time */
-      pickedUpAt?: string | null;
-      updatedBy?: string | null;
-    };
+      pickedUpAt?: string | null
+      updatedBy?: string | null
+    }
     CreateKeySystemRequest: {
-      systemCode: string;
-      name: string;
-      manufacturer: string;
+      systemCode: string
+      name: string
+      manufacturer: string
       /** @enum {string} */
-      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      propertyIds?: string;
+      type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
       /** Format: date-time */
-      installationDate?: string | null;
-      isActive?: boolean;
-      description?: string | null;
-    };
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
+    }
     UpdateKeySystemRequest: {
-      systemCode?: string;
-      name?: string;
-      manufacturer?: string;
+      systemCode?: string
+      name?: string
+      manufacturer?: string
       /** @enum {string} */
-      type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      propertyIds?: string;
+      type?: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+      propertyIds?: string
       /** Format: date-time */
-      installationDate?: string | null;
-      isActive?: boolean;
-      description?: string | null;
-    };
+      installationDate?: string | null
+      isActive?: boolean
+      description?: string | null
+    }
     CreateLogRequest: {
-      userName: string;
+      userName: string
       /** @enum {string} */
-      eventType: "creation" | "update" | "delete";
+      eventType: 'creation' | 'update' | 'delete'
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan";
+      objectType: 'key' | 'keySystem' | 'keyLoan'
       /** Format: uuid */
-      objectId?: string | null;
-      description?: string | null;
-    };
+      objectId?: string | null
+      description?: string | null
+    }
     CreateKeyNoteRequest: {
-      rentalObjectCode: string;
-      description: string;
-    };
+      rentalObjectCode: string
+      description: string
+    }
     UpdateKeyNoteRequest: {
-      rentalObjectCode?: string;
-      description?: string;
-    };
+      rentalObjectCode?: string
+      description?: string
+    }
     CreateReceiptRequest: {
       /** Format: uuid */
-      keyLoanId: string;
+      keyLoanId: string
       /** @enum {string} */
-      receiptType: "LOAN" | "RETURN";
+      receiptType: 'LOAN' | 'RETURN'
       /** @enum {string} */
-      type: "DIGITAL" | "PHYSICAL";
-      signed?: boolean;
-      fileId?: string;
-    };
+      type?: 'DIGITAL' | 'PHYSICAL'
+      fileId?: string
+    }
     /** @enum {string} */
-    ReceiptType: "LOAN" | "RETURN";
+    ReceiptType: 'LOAN' | 'RETURN'
     /** @enum {string} */
-    ReceiptFormat: "DIGITAL" | "PHYSICAL";
+    ReceiptFormat: 'DIGITAL' | 'PHYSICAL'
     PaginationMeta: {
-      totalRecords: number;
-      page: number;
-      limit: number;
-      count: number;
-    };
+      totalRecords: number
+      page: number
+      limit: number
+      count: number
+    }
     PaginationLinks: {
-      href: string;
+      href: string
       /** @enum {string} */
-      rel: "self" | "first" | "last" | "prev" | "next";
-    };
+      rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+    }
     PaginatedKeysResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "LGH" | "PB" | "FS" | "HN";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
+      content: {
+        /** Format: uuid */
+        id: string
+        keyName: string
+        keySequenceNumber?: number
+        flexNumber?: number
+        rentalObjectCode?: string
+        /** @enum {string} */
+        keyType: 'LGH' | 'PB' | 'FS' | 'HN'
+        /** Format: uuid */
+        keySystemId?: string | null
+        /** @default false */
+        disposed?: boolean
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
       _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+      _links: {
+        href: string
+        /** @enum {string} */
+        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+      }[]
+    }
     PaginatedKeySystemsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          systemCode: string;
-          name: string;
-          manufacturer: string;
-          managingSupplier?: string | null;
-          /** @enum {string} */
-          type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-          propertyIds?: string;
-          /** Format: date-time */
-          installationDate?: string | null;
-          isActive?: boolean;
-          description?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          createdBy?: string | null;
-          updatedBy?: string | null;
-        })[];
+      content: {
+        /** Format: uuid */
+        id: string
+        systemCode: string
+        name: string
+        manufacturer: string
+        managingSupplier?: string | null
+        /** @enum {string} */
+        type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+        propertyIds?: string
+        /** Format: date-time */
+        installationDate?: string | null
+        isActive?: boolean
+        description?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        createdBy?: string | null
+        updatedBy?: string | null
+      }[]
       _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+      _links: {
+        href: string
+        /** @enum {string} */
+        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+      }[]
+    }
     PaginatedLogsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          userName: string;
-          /** @enum {string} */
-          eventType: "creation" | "update" | "delete";
-          /** @enum {string} */
-          objectType: "key" | "keySystem" | "keyLoan";
-          /** Format: uuid */
-          objectId?: string | null;
-          /** Format: date-time */
-          eventTime: string;
-          description?: string | null;
-        })[];
+      content: {
+        /** Format: uuid */
+        id: string
+        userName: string
+        /** @enum {string} */
+        eventType: 'creation' | 'update' | 'delete'
+        /** @enum {string} */
+        objectType: 'key' | 'keySystem' | 'keyLoan'
+        /** Format: uuid */
+        objectId?: string | null
+        /** Format: date-time */
+        eventTime: string
+        description?: string | null
+      }[]
       _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+      _links: {
+        href: string
+        /** @enum {string} */
+        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+      }[]
+    }
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
-      q: string;
-    };
+      q: string
+    }
     PropertySearchResult: {
       /** @description Unique identifier for the search result */
-      id: string;
+      id: string
       /**
        * @description Indicates this is a property result
        * @enum {string}
        */
-      type: "property";
+      type: 'property'
       /** @description Name or designation of the property */
-      name: string;
-    };
+      name: string
+    }
     BuildingSearchResult: {
       /** @description Unique identifier for the search result */
-      id: string;
+      id: string
       /**
        * @description Indicates this is a building result
        * @enum {string}
        */
-      type: "building";
+      type: 'building'
       /** @description Name of the building */
-      name: string | null;
-      property?: ({
+      name: string | null
+      property?: {
         /** @description Property associated with the building */
-        name: string | null;
-        id: string;
-        code: string;
-      }) | null;
-    };
+        name: string | null
+        id: string
+        code: string
+      } | null
+    }
     ResidenceSearchResult: {
       /** @description Unique identifier for the search result */
-      id: string;
+      id: string
       /**
        * @description Indicates this is a residence result
        * @enum {string}
        */
-      type: "residence";
+      type: 'residence'
       /** @description Name of the residence */
-      name: string | null;
+      name: string | null
       /** @description Rental object ID of the residence */
-      rentalId: string | null;
+      rentalId: string | null
       property: {
-        code: string | null;
+        code: string | null
         /** @description Name of property associated with the residence */
-        name: string | null;
-      };
+        name: string | null
+      }
       building: {
-        code: string | null;
+        code: string | null
         /** @description Name of building associated with the residence */
-        name: string | null;
-      };
-    };
+        name: string | null
+      }
+    }
     /** @description A search result that can be either a property, building or residence */
-    SearchResult: {
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a property result
-       * @enum {string}
-       */
-      type: "property";
-      /** @description Name or designation of the property */
-      name: string;
-    } | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a building result
-       * @enum {string}
-       */
-      type: "building";
-      /** @description Name of the building */
-      name: string | null;
-      property?: ({
-        /** @description Property associated with the building */
-        name: string | null;
-        id: string;
-        code: string;
-      }) | null;
-    }) | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a residence result
-       * @enum {string}
-       */
-      type: "residence";
-      /** @description Name of the residence */
-      name: string | null;
-      /** @description Rental object ID of the residence */
-      rentalId: string | null;
-      property: {
-        code: string | null;
-        /** @description Name of property associated with the residence */
-        name: string | null;
-      };
-      building: {
-        code: string | null;
-        /** @description Name of building associated with the residence */
-        name: string | null;
-      };
-    });
+    SearchResult:
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a property result
+           * @enum {string}
+           */
+          type: 'property'
+          /** @description Name or designation of the property */
+          name: string
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a building result
+           * @enum {string}
+           */
+          type: 'building'
+          /** @description Name of the building */
+          name: string | null
+          property?: {
+            /** @description Property associated with the building */
+            name: string | null
+            id: string
+            code: string
+          } | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a residence result
+           * @enum {string}
+           */
+          type: 'residence'
+          /** @description Name of the residence */
+          name: string | null
+          /** @description Rental object ID of the residence */
+          rentalId: string | null
+          property: {
+            code: string | null
+            /** @description Name of property associated with the residence */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the residence */
+            name: string | null
+          }
+        }
     RentalPropertyResponse: {
       content?: {
-        id?: string;
-        type?: string;
+        id?: string
+        type?: string
         property?: {
-          rentalTypeCode?: string;
-          rentalType?: string;
-          address?: string;
-          code?: string;
-          number?: string;
-          type?: string;
-          roomTypeCode?: string;
-          entrance?: string;
-          floor?: string;
-          hasElevator?: boolean;
-          washSpace?: string;
-          area?: number;
-          estateCode?: string;
-          estate?: string;
-          buildingCode?: string;
-          building?: string;
-        };
-      };
+          rentalTypeCode?: string
+          rentalType?: string
+          address?: string
+          code?: string
+          number?: string
+          type?: string
+          roomTypeCode?: string
+          entrance?: string
+          floor?: string
+          hasElevator?: boolean
+          washSpace?: string
+          area?: number
+          estateCode?: string
+          estate?: string
+          buildingCode?: string
+          building?: string
+        }
+      }
       _links?: {
         self?: {
-          href?: string;
-        };
+          href?: string
+        }
         link?: {
-          href?: string;
-          templated?: boolean;
-        };
-      };
-    };
+          href?: string
+          templated?: boolean
+        }
+      }
+    }
     ErrorResponse: {
       /** @example Internal server error */
-      error?: string;
-    };
+      error?: string
+    }
     NotFoundResponse: {
       /** @example Resource not found */
-      reason?: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+      reason?: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>
