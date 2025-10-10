@@ -53,7 +53,7 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
             key: 'id',
             label: 'Ärendenummer',
             render: (order: WorkOrder) => (
-              <span className="font-medium">{order.id}</span>
+              <span className="font-medium">{order.code}</span>
             ),
           },
           {
