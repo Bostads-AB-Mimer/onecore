@@ -6,7 +6,7 @@ import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 //import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
 //import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
-//import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
+import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 //import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
 import { useIsMobile } from '@/components/hooks/useMobile'
@@ -31,7 +31,7 @@ export const PropertyDetailTabs = ({
     showPropertyPlanning: false,
     showPropertyBuildings: true,
     showPropertyMaintenance: false,
-    showPropertyOrders: false, // Temporarily disabled
+    showPropertyOrders: true,
     showPropertyAccess: false,
     showPropertyMap: false,
   }
@@ -132,7 +132,6 @@ export const PropertyDetailTabs = ({
       )}
         */}
 
-      {/*}
       {features.showPropertyOrders && (
         <TabsContent value="orders">
           <FeatureGatedContent
@@ -144,6 +143,7 @@ export const PropertyDetailTabs = ({
         </TabsContent>
       )}
 
+      {/*
       {features.showPropertyAccess && (
         <TabsContent value="access">
           <FeatureGatedContent
