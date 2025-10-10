@@ -91,6 +91,7 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
               order._tag === 'internal' ? 'Odoo' : 'Xpand',
             hideOnMobile: true,
           },
+          /* Hide until we have action to perform
           {
             key: 'action',
             label: 'Åtgärd',
@@ -104,6 +105,7 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
               </Button>
             ),
           },
+          */
         ]}
         keyExtractor={(order) => order.id}
         mobileCardRenderer={(order) => (

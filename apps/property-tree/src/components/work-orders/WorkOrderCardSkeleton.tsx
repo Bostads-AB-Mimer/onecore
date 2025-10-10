@@ -1,8 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/v2/Card'
+import { Card, CardContent, CardHeader } from '@/components/ui/v2/Card'
 
 export function WorkOrderCardSkeleton() {
   return (
