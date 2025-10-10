@@ -20,7 +20,7 @@
     "migrate:make": "pnpx knex migrate:make",
     "migrate:seed": "pnpx knex seed:run --env dev",
     "migrate:up": "pnpx knex migrate:latest --env dev",
-    "prepare:dotenv": "if not exist .env copy .env.template .env",
+    "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
