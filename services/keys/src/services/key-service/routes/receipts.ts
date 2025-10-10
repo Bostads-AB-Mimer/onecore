@@ -199,6 +199,7 @@ export const routes = (router: KoaRouter) => {
       // Update receipt with fileId (fileId presence indicates signed status)
       await db(TABLE).where({ id: parse.data.id }).update({
         fileId,
+        updatedAt: db.fn.now(),
       })
 
       // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
@@ -351,7 +352,10 @@ export const routes = (router: KoaRouter) => {
         }
 
         const payload: UpdateReceiptRequest = ctx.request.body
-        await db(TABLE).where({ id: parse.data.id }).update(payload)
+        await db(TABLE).where({ id: parse.data.id }).update({
+          ...payload,
+          updatedAt: db.fn.now(),
+        })
 
         const updated = await db(TABLE).where({ id: parse.data.id }).first()
         ctx.status = 200
