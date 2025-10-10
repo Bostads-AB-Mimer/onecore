@@ -132,11 +132,19 @@ const addTenantInfo = (
     const fullName = `${tenant.firstName} ${tenant.lastName}`.trim()
     if (index === 0) {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
-      doc.text(`Personnummer: ${tenant.nationalRegistrationNumber}`, MARGIN_X, nextY + 7)
+      doc.text(
+        `Personnummer: ${tenant.nationalRegistrationNumber}`,
+        MARGIN_X,
+        nextY + 7
+      )
       nextY += 14
     } else {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
-      doc.text(`Personnummer: ${tenant.nationalRegistrationNumber}`, MARGIN_X, nextY + 7)
+      doc.text(
+        `Personnummer: ${tenant.nationalRegistrationNumber}`,
+        MARGIN_X,
+        nextY + 7
+      )
       nextY += 14
     }
   })
@@ -328,7 +336,10 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
 
 /** ---------------- Public API (always one page) ---------------- */
 
-export const generateLoanReceipt = async (data: ReceiptData, receiptId?: string): Promise<void> => {
+export const generateLoanReceipt = async (
+  data: ReceiptData,
+  receiptId?: string
+): Promise<void> => {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
   y = addTenantInfo(doc, data.tenants, data.lease, y)
