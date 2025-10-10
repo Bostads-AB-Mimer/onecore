@@ -17,14 +17,17 @@ export const receiptService = {
   },
 
   /**
-   * Get receipts by key loan ID
+   * Get receipt by key loan ID
    */
-  async getByKeyLoan(keyLoanId: string): Promise<Receipt[]> {
+  async getByKeyLoan(keyLoanId: string): Promise<Receipt | null> {
     const { data, error } = await GET('/receipts/by-key-loan/{keyLoanId}', {
       params: { path: { keyLoanId } },
     })
-    if (error) throw error
-    return (data?.content ?? []) as Receipt[]
+    if (error) {
+      if ((error as any)?.status === 404) return null
+      throw error
+    }
+    return data?.content as Receipt
   },
 
   /**

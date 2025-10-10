@@ -58,6 +58,14 @@ export const keyLoanService = {
     return data?.content as KeyLoan
   },
 
+  async getByKeyId(keyId: string): Promise<KeyLoan[]> {
+    const { data, error } = await GET('/key-loans/by-key/{keyId}', {
+      params: { path: { keyId } },
+    })
+    if (error) throw error
+    return data?.content ?? []
+  },
+
   async create(payload: CreateKeyLoanRequest): Promise<KeyLoan> {
     const { data, error } = await POST('/key-loans', { body: payload })
     if (error) {

@@ -193,7 +193,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search. Defaults to lease.
+   *         description: Comma-separated list of fields for OR search. Defaults to contact and contact2.
    *       - in: query
    *         name: id
    *         schema:
@@ -208,10 +208,6 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *       - in: query
    *         name: contact2
-   *         schema:
-   *           type: string
-   *       - in: query
-   *         name: lease
    *         schema:
    *           type: string
    *       - in: query
@@ -265,7 +261,7 @@ export const routes = (router: KoaRouter) => {
         if (typeof ctx.query.fields === 'string') {
           fieldsToSearch = ctx.query.fields.split(',').map((f) => f.trim())
         } else {
-          fieldsToSearch = ['lease']
+          fieldsToSearch = ['contact', 'contact2']
         }
 
         query = query.where((builder) => {
