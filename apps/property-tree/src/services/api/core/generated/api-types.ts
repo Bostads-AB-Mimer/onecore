@@ -1044,6 +1044,8 @@ export interface paths {
           rentalRule?: string;
           /** @description A contact code to filter out listings that are not valid to rent for the contact. */
           validToRentForContactCode?: string;
+          /** @description A Rental Object Code to filter the listings. */
+          rentalObjectCode?: string;
         };
       };
       responses: {
@@ -1123,24 +1125,6 @@ export interface paths {
               error?: string;
             };
           };
-        };
-      };
-    };
-  };
-  "/listings/sync-internal-from-xpand": {
-    /**
-     * Sync internal parking spaces from xpand to onecores database
-     * @description null
-     */
-    post: {
-      responses: {
-        /** @description Request ok. */
-        200: {
-          content: never;
-        };
-        /** @description Internal server error. Failed to sync internal parking spaces. */
-        500: {
-          content: never;
         };
       };
     };
@@ -1233,6 +1217,55 @@ export interface paths {
           };
         };
         /** @description Internal server error. Failed to retrieve listings with applicants. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/listings/batch": {
+    /**
+     * Create multiple listings
+     * @description Create multiple listings in a single request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            listings: ({
+                rentalObjectCode: string;
+                /** Format: date-time */
+                publishedFrom: string;
+                /** Format: date-time */
+                publishedTo: string;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "CLOSED" | "ASSIGNED" | "EXPIRED" | "NO_APPLICANTS";
+                /** @enum {string} */
+                rentalRule: "SCORED" | "NON_SCORED";
+                /** @enum {string} */
+                listingCategory: "PARKING_SPACE" | "APARTMENT" | "STORAGE";
+              })[];
+          };
+        };
+      };
+      responses: {
+        /** @description All listings created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Partial success. Some listings created, some failed. */
+        207: {
+          content: never;
+        };
+        /** @description Bad request. Invalid input data. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. Failed to create listings. */
         500: {
           content: never;
         };
