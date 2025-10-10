@@ -132,11 +132,11 @@ const addTenantInfo = (
     const fullName = `${tenant.firstName} ${tenant.lastName}`.trim()
     if (index === 0) {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
-      doc.text(`Personnummer: ${tenant.personnummer}`, MARGIN_X, nextY + 7)
+      doc.text(`Personnummer: ${tenant.nationalRegistrationNumber}`, MARGIN_X, nextY + 7)
       nextY += 14
     } else {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
-      doc.text(`Personnummer: ${tenant.personnummer}`, MARGIN_X, nextY + 7)
+      doc.text(`Personnummer: ${tenant.nationalRegistrationNumber}`, MARGIN_X, nextY + 7)
       nextY += 14
     }
   })
@@ -335,7 +335,7 @@ export const generateLoanReceipt = async (data: ReceiptData, receiptId?: string)
   y = addKeysTable(doc, data.keys, y, 42)
   addSignatureSection(doc, y)
   addFooter(doc, 'loan', receiptId)
-  const file = `nyckelutlaning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelutlaning_${data.tenants[0].nationalRegistrationNumber}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
 
@@ -371,6 +371,6 @@ export const generateReturnReceipt = async (
   }
 
   addFooter(doc, 'return', receiptId)
-  const file = `nyckelaterlamning_${data.tenants[0].personnummer}_${format(new Date(), 'yyyyMMdd')}.pdf`
+  const file = `nyckelaterlamning_${data.tenants[0].nationalRegistrationNumber}_${format(new Date(), 'yyyyMMdd')}.pdf`
   doc.save(file)
 }
