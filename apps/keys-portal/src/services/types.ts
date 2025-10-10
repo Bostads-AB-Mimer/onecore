@@ -183,4 +183,5 @@ export interface ReceiptData {
   keys: Key[]
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
+  missingKeys?: Key[] // Keys that were not returned (for partial returns)
 }
