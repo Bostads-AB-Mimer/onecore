@@ -25,7 +25,12 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser())
+app.use(bodyParser({
+  enableTypes: ['json', 'text'], // Skip multipart parsing
+  formLimit: '10mb',
+  jsonLimit: '10mb',
+  textLimit: '10mb'
+}))
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 
