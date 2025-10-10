@@ -202,7 +202,10 @@ const Index = () => {
           }
 
           try {
-            await keyService.bulkUpdateFlex(rentalObjectCode, keyData.flexNumber)
+            await keyService.bulkUpdateFlex(
+              rentalObjectCode,
+              keyData.flexNumber
+            )
           } catch (flexErr) {
             console.error('Failed to bulk update flex:', flexErr)
             toast({
