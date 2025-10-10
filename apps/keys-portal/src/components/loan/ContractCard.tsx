@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
+import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { EmbeddedKeysList } from './EmbeddedKeysList'
 import { ReceiptHistorySheet } from './ReceiptHistorySheet'
 import { RentalObjectNotes } from './RentalObjectNotes'
@@ -281,7 +282,7 @@ export function ContractCard({
 
         {open && (
           <div id={keysRegionId} className="pt-2">
-            <EmbeddedKeysList lease={lease} initialKeys={keys} />
+            <LeaseKeyStatusList lease={lease} />
           </div>
         )}
       </CardContent>

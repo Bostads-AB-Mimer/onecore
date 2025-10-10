@@ -23,12 +23,7 @@ import { Plus } from 'lucide-react'
 import { ReceiptDialog } from './ReceiptDialog'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
-
-type LoanStatus =
-  | 'never_loaned'
-  | 'loaned_to_customer'
-  | 'loaned_to_other'
-  | 'returned'
+import { getKeyLoanStatus, type KeyLoanInfo } from '@/utils/keyLoanStatus'
 
 const EXTRA_KEY_TYPE: KeyType = 'LGH'
 

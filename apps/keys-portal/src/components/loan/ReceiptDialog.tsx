@@ -9,27 +9,21 @@ import {
 import { Button } from '@/components/ui/button'
 import { FileText, Printer, Upload, Download } from 'lucide-react'
 
-import type { ReceiptData, Receipt } from '@/services/types'
+import type { ReceiptData } from '@/services/types'
 import { generateLoanReceipt, generateReturnReceipt } from '@/lib/pdf-receipts'
 import { receiptService } from '@/services/api/receiptService'
-
-interface ReceiptDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  receiptData: ReceiptData | null
-  keyLoanId: string | null
-}
 
 export function ReceiptDialog({
   isOpen,
   onClose,
   receiptData,
-  keyLoanId,
-}: ReceiptDialogProps) {
-  const [isCreating, setIsCreating] = useState(false)
-  const [createdReceiptId, setCreatedReceiptId] = useState<string | null>(null)
-  const [isCreated, setIsCreated] = useState(false)
-
+  receiptId,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  receiptData: ReceiptData | null
+  receiptId: string | null
+}) {
   // Upload state
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -37,44 +31,20 @@ export function ReceiptDialog({
   const [uploadInfo, setUploadInfo] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Optional: per-receipt download busy flags
-  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  // Download state
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
-  const handleCreateReceipt = async () => {
-    if (!receiptData || !keyLoanId) return
-    setIsCreating(true)
-    try {
-      // Create receipt record (unsigned until PDF is uploaded)
-      console.log('📝 [ReceiptDialog] Creating receipt with:', {
-        keyLoanId,
-        receiptType: receiptData.receiptType,
-        leaseId: receiptData.lease.leaseId,
-        type: 'PHYSICAL',
-        signed: false,
-      })
+  // Generate and download PDF
+  const handlePrintPDF = async () => {
+    if (!receiptData) return
 
-      const receipt = await receiptService.create({
-        keyLoanId,
-        receiptType: receiptData.receiptType, // 'LOAN' | 'RETURN'
-        type: 'PHYSICAL', // Will be signed physically and scanned
-        signed: false, // Not signed until PDF is uploaded
-      })
-
-      console.log('✅ [ReceiptDialog] Receipt created:', receipt)
-
-      setCreatedReceiptId(receipt.id)
-      setIsCreated(true)
-
-      // Generate PDF for download
-      if (receiptData.receiptType === 'LOAN') {
-        generateLoanReceipt(receiptData, receipt.id)
-      } else {
-        generateReturnReceipt(receiptData, receipt.id)
-      }
-    } finally {
-      setIsCreating(false)
+    // Generate PDF for download
+    if (receiptData.receiptType === 'LOAN') {
+      generateLoanReceipt(receiptData)
+    } else {
+      generateReturnReceipt(receiptData)
     }
   }
 
@@ -86,12 +56,12 @@ export function ReceiptDialog({
   }
 
   async function doUpload(file: File) {
-    if (!createdReceiptId) return
+    if (!receiptId) return
     setUploadError(null)
     setUploadDone(false)
     setIsUploading(true)
     try {
-      await receiptService.uploadFile(createdReceiptId, file)
+      await receiptService.uploadFile(receiptId, file)
       setUploadDone(true)
       setUploadInfo('Uppladdning klar!')
     } catch (e: any) {
@@ -119,27 +89,24 @@ export function ReceiptDialog({
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
-    if (!isCreated || isUploading) return
+    if (isUploading) return
     const file = e.dataTransfer.files?.[0] ?? null
     onFileSelected(file)
   }
+
   function onDragOver(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
   }
 
   // ---------- Download helper ----------
   async function handleDownload() {
-    if (!createdReceiptId) return
-    setDownloadingIds((prev) => new Set(prev).add(createdReceiptId))
+    if (!receiptId) return
+    setIsDownloading(true)
     try {
       // This opens the file in a new tab (uses presigned URL under the hood)
-      await receiptService.downloadFile(createdReceiptId)
+      await receiptService.downloadFile(receiptId)
     } finally {
-      setDownloadingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(createdReceiptId)
-        return next
-      })
+      setIsDownloading(false)
     }
   }
 
@@ -162,14 +129,25 @@ export function ReceiptDialog({
             {actionText} framgångsrikt
           </DialogTitle>
           <DialogDescription>
-            Vill du skapa och skriva ut ett {receiptText} för denna transaktion?
+            Ett {receiptText} har skapats. Du kan skriva ut det och ladda upp en
+            signerad version.
           </DialogDescription>
         </DialogHeader>
 
-        {/* After receipt is created, show the dropzone */}
-        {isCreated && createdReceiptId && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-medium">Bifoga PDF till kvitto</p>
+        <div className="space-y-4">
+          {/* Print PDF button */}
+          <Button
+            onClick={handlePrintPDF}
+            className="gap-2 w-full"
+            disabled={!receiptData}
+          >
+            <Printer className="h-4 w-4" />
+            Skriv ut kvitto (PDF)
+          </Button>
+
+          {/* Upload section */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Bifoga signerad PDF</p>
             <div
               onDrop={onDrop}
               onDragOver={onDragOver}
@@ -219,35 +197,19 @@ export function ReceiptDialog({
                 size="sm"
                 className="gap-2 w-full"
                 onClick={handleDownload}
-                disabled={downloadingIds.has(createdReceiptId)}
+                disabled={isDownloading}
               >
                 <Download className="h-4 w-4" />
-                {downloadingIds.has(createdReceiptId)
-                  ? 'Öppnar kvitto…'
-                  : 'Ladda ner PDF'}
+                {isDownloading ? 'Öppnar kvitto…' : 'Ladda ner uppladdad PDF'}
               </Button>
             )}
           </div>
-        )}
+        </div>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isCreating || isUploading}
-          >
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Stäng
           </Button>
-          {!isCreated && (
-            <Button
-              onClick={handleCreateReceipt}
-              disabled={isCreating}
-              className="gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              {isCreating ? 'Skapar kvitto...' : 'Skapa kvitto'}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>

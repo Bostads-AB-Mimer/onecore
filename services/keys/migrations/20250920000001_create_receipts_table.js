@@ -19,10 +19,7 @@ exports.up = async function up(knex) {
     table.enum('receiptType', ['LOAN', 'RETURN']).notNullable()
 
     // Receipt format: DIGITAL or PHYSICAL
-    table.enum('type', ['DIGITAL', 'PHYSICAL']).notNullable()
-
-    // Whether the receipt has been signed
-    table.boolean('signed').notNullable().defaultTo(false)
+    table.enum('type', ['DIGITAL', 'PHYSICAL']).nullable()
 
     // MinIO file identifier (blob storage)
     table.string('fileId').nullable()
@@ -33,6 +30,7 @@ exports.up = async function up(knex) {
     // Helpful indexes
     table.index(['keyLoanId'])
     table.index(['createdAt'])
+    table.index(['updatedAt'])
   })
 }
 
