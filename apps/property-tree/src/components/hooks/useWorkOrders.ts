@@ -6,10 +6,7 @@ const useWorkOrders = (
   id: string,
   contextType: 'property' | 'tenant' | 'residence' | 'building'
 ) => {
-  const [activeWorkOrders, setActiveWorkOrders] = useState<WorkOrder[]>([])
-  const [historicalWorkOrders, setHistoricalWorkOrders] = useState<WorkOrder[]>(
-    []
-  )
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
 
   const getWorkOrdersFn = () => {
     switch (contextType) {
@@ -33,20 +30,12 @@ const useWorkOrders = (
 
   useEffect(() => {
     if (workOrdersQuery.data) {
-      const active = workOrdersQuery.data.filter(
-        (order) => order.status !== 'Avslutad'
-      )
-      const historical = workOrdersQuery.data.filter(
-        (order) => order.status === 'Avslutad'
-      )
-      setActiveWorkOrders(active)
-      setHistoricalWorkOrders(historical)
+      setWorkOrders(workOrdersQuery.data)
     }
   }, [workOrdersQuery.data])
 
   return {
-    activeWorkOrders,
-    historicalWorkOrders,
+    workOrders,
     isLoading: workOrdersQuery.isLoading,
     error: workOrdersQuery.error,
   }

@@ -20,15 +20,10 @@ export function WorkOrdersManagement({
   tenant,
 }: WorkOrdersManagementProps) {
   // Fetch work orders based on context type and id
-  const { activeWorkOrders, historicalWorkOrders, isLoading, error } =
-    useWorkOrders(id, contextType)
+  const { workOrders, isLoading, error } = useWorkOrders(id, contextType)
 
   return (
-    <TabLayout
-      title="Ärenden"
-      count={activeWorkOrders.length + historicalWorkOrders.length}
-      showCard={true}
-    >
+    <TabLayout title="Ärenden" count={workOrders.length} showCard={true}>
       <div className="space-y-4">
         <div className="flex items-center justify-start">
           <Button
@@ -42,40 +37,13 @@ export function WorkOrdersManagement({
           </Button>
         </div>
 
-        <Tabs defaultValue="active" className="space-y-6">
-          <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
-            <TabsTrigger value="active">Aktiva ärenden</TabsTrigger>
-            <TabsTrigger value="history">Ärendehistorik</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="active">
-            {isLoading ? (
-              <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-                {[...Array(4)].map((_, i) => (
-                  <WorkOrderCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : activeWorkOrders.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-                {activeWorkOrders.map((orderItem) => (
-                  <WorkOrderCard key={orderItem.id} orderItem={orderItem} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-500 p-2">Inga aktiva ärenden.</p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="history">
-            {isLoading ? (
-              <WorkOrdersTableSkeleton />
-            ) : historicalWorkOrders.length > 0 ? (
-              <WorkOrdersTable orders={historicalWorkOrders} />
-            ) : (
-              <p className="text-slate-500 p-2">Ingen ärendehistorik.</p>
-            )}
-          </TabsContent>
-        </Tabs>
+        {isLoading ? (
+          <WorkOrdersTableSkeleton />
+        ) : workOrders.length > 0 ? (
+          <WorkOrdersTable orders={workOrders} />
+        ) : (
+          <p className="text-slate-500 p-2">Ingen ärendehistorik.</p>
+        )}
       </div>
     </TabLayout>
   )
