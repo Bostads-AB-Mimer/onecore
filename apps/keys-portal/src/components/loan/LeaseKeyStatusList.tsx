@@ -7,7 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { keyService } from '@/services/api/keyService'
 import { getKeyLoanStatus, type KeyLoanInfo } from '@/utils/keyLoanStatus'
 import { useToast } from '@/hooks/use-toast'
-import { handleLoanKeys, handleReturnKeys, handleSwitchKeys } from '@/services/loanHandlers'
+import {
+  handleLoanKeys,
+  handleReturnKeys,
+  handleSwitchKeys,
+} from '@/services/loanHandlers'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
@@ -265,7 +269,10 @@ export function LeaseKeyStatusList({
               receiptType: 'RETURN',
               operationDate: new Date(),
             }
-            await generateReturnReceipt(returnReceiptData, result.returnReceiptId)
+            await generateReturnReceipt(
+              returnReceiptData,
+              result.returnReceiptId
+            )
 
             // Generate new loan receipt (all keys from the loan)
             const loanReceiptData: ReceiptData = {
@@ -372,7 +379,9 @@ export function LeaseKeyStatusList({
             })}
             {sortedKeys.length > 0 && sortedKeys[0].flexNumber && (
               <Badge
-                variant={sortedKeys[0].flexNumber === 3 ? 'destructive' : 'outline'}
+                variant={
+                  sortedKeys[0].flexNumber === 3 ? 'destructive' : 'outline'
+                }
                 className="text-xs"
               >
                 Flex: {sortedKeys[0].flexNumber}

@@ -352,10 +352,12 @@ export const routes = (router: KoaRouter) => {
         }
 
         const payload: UpdateReceiptRequest = ctx.request.body
-        await db(TABLE).where({ id: parse.data.id }).update({
-          ...payload,
-          updatedAt: db.fn.now(),
-        })
+        await db(TABLE)
+          .where({ id: parse.data.id })
+          .update({
+            ...payload,
+            updatedAt: db.fn.now(),
+          })
 
         const updated = await db(TABLE).where({ id: parse.data.id }).first()
         ctx.status = 200
