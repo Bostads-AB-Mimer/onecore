@@ -32,6 +32,7 @@ const {
   PaginationLinksSchema,
   createPaginatedResponseSchema,
   CreateReceiptRequestSchema,
+  UpdateReceiptRequestSchema,
   ReceiptTypeSchema,
   ReceiptFormatSchema,
 } = keys.v1
@@ -82,6 +83,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyNoteRequest', CreateKeyNoteRequestSchema)
   registerSchema('UpdateKeyNoteRequest', UpdateKeyNoteRequestSchema)
   registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
+  registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
   registerSchema('ReceiptType', ReceiptTypeSchema)
   registerSchema('ReceiptFormat', ReceiptFormatSchema)
 
@@ -2486,28 +2488,9 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       format: uuid
-   *                     keyLoanId:
-   *                       type: string
-   *                       format: uuid
-   *                     receiptType:
-   *                       type: string
-   *                       enum: [LOAN, RETURN]
-   *                     type:
-   *                       type: string
-   *                       enum: [DIGITAL, PHYSICAL]
-   *                     signed:
-   *                       type: boolean
-   *                     fileId:
-   *                       type: string
-   *                       nullable: true
-   *                     createdAt:
-   *                       type: string
-   *                       format: date-time
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Receipt'
    *       404:
    *         description: Receipt not found
    *         content:
@@ -2545,9 +2528,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /receipts/{id}:
-   *   delete:
-   *     summary: Delete a receipt
-   *     description: Delete a receipt by ID
+   *   patch:
+   *     summary: Update a receipt
+   *     description: Update a receipt (e.g., set fileId after upload)
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -2556,10 +2539,29 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *           format: uuid
-   *         description: The ID of the receipt to delete
+   *         description: The ID of the receipt to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateReceiptRequest'
    *     responses:
    *       200:
-   *         description: Receipt deleted successfully
+   *         description: Receipt updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    *       404:
    *         description: Receipt not found
    *         content:
@@ -2603,6 +2605,39 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   delete:
+   *     summary: Delete a receipt
+   *     description: Delete a receipt by ID (and associated file from MinIO)
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt to delete
+   *     responses:
+   *       204:
+   *         description: Receipt deleted successfully
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.delete('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

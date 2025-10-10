@@ -20,7 +20,7 @@ import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { EmbeddedKeysList } from './EmbeddedKeysList'
-import { ReceiptHistorySheet } from './ReceiptHistorySheet'
+import { KeyLoansAccordion } from './KeyLoansAccordion'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
@@ -59,6 +59,7 @@ export function ContractCard({
   rentalAddress,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
+  const [keyLoansOpen, setKeyLoansOpen] = useState(false)
   const [addressStr, setAddressStr] = useState<string | null>(
     rentalAddress ?? null
   )
@@ -141,6 +142,7 @@ export function ContractCard({
   const hasAnyKeys = totalKeys > 0
   const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
   const keysRegionId = `keys-${lease.leaseId}`
+  const keyLoansRegionId = `key-loans-${lease.leaseId}`
 
   const tenantNames = useMemo(
     () =>
@@ -168,7 +170,26 @@ export function ContractCard({
 
           <div className="flex items-center gap-2">
             <RentalObjectNotes rentalObjectCode={lease.rentalPropertyId} />
-            <ReceiptHistorySheet lease={lease} />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setKeyLoansOpen((v) => !v)}
+              aria-expanded={keyLoansOpen}
+              aria-controls={keyLoansRegionId}
+              className="h-7 px-2 text-xs gap-1"
+            >
+              {keyLoansOpen ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Dölj nyckellån
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Visa nyckellån
+                </>
+              )}
+            </Button>
             {hasAnyKeys && (
               <Button
                 size="sm"
@@ -279,6 +300,12 @@ export function ContractCard({
             </div>
           )}
         </div>
+
+        {keyLoansOpen && (
+          <div id={keyLoansRegionId} className="pt-2">
+            <KeyLoansAccordion lease={lease} />
+          </div>
+        )}
 
         {open && (
           <div id={keysRegionId} className="pt-2">
