@@ -138,11 +138,7 @@ const addTenantInfo = async (
         MARGIN_X,
         nextY + 7
       )
-      doc.text(
-        `Kundnummer: ${tenant.contactCode}`,
-        MARGIN_X,
-        nextY + 14
-      )
+      doc.text(`Kundnummer: ${tenant.contactCode}`, MARGIN_X, nextY + 14)
       nextY += 21
     } else {
       doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
@@ -151,18 +147,16 @@ const addTenantInfo = async (
         MARGIN_X,
         nextY + 7
       )
-      doc.text(
-        `Kundnummer: ${tenant.contactCode}`,
-        MARGIN_X,
-        nextY + 14
-      )
+      doc.text(`Kundnummer: ${tenant.contactCode}`, MARGIN_X, nextY + 14)
       nextY += 21
     }
   })
 
   // Display rental property address
   try {
-    const address = await rentalObjectSearchService.getAddressByRentalId(lease.rentalPropertyId)
+    const address = await rentalObjectSearchService.getAddressByRentalId(
+      lease.rentalPropertyId
+    )
     if (address && address !== 'Okänd adress') {
       doc.text(`Adress: ${address}`, MARGIN_X, nextY)
       nextY += 7
