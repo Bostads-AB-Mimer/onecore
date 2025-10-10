@@ -116,9 +116,6 @@ export const routes = (router: KoaRouter) => {
    *                       contact2:
    *                         type: string
    *                         description: Second contact information.
-   *                       lease:
-   *                         type: string
-   *                         description: Lease identifier.
    *                       returnedAt:
    *                         type: string
    *                         format: date-time
@@ -417,9 +414,6 @@ export const routes = (router: KoaRouter) => {
    *                     contact2:
    *                       type: string
    *                       description: Second contact information.
-   *                     lease:
-   *                       type: string
-   *                       description: Lease identifier.
    *                     returnedAt:
    *                       type: string
    *                       format: date-time

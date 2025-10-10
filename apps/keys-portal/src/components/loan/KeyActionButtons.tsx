@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import type { KeyWithStatus } from './LeaseKeyStatusList'
 
 type Props = {
@@ -10,6 +10,7 @@ type Props = {
   isProcessing: boolean
   onRent: (keyIds: string[]) => void
   onReturn: (keyIds: string[]) => void
+  onSwitch?: (keyIds: string[]) => void
 }
 
 export function KeyActionButtons({
@@ -20,6 +21,7 @@ export function KeyActionButtons({
   isProcessing,
   onRent,
   onReturn,
+  onSwitch,
 }: Props) {
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
@@ -34,6 +36,14 @@ export function KeyActionButtons({
       k.loanInfo.isLoaned &&
       k.loanInfo.contact &&
       tenantNames.includes(k.loanInfo.contact)
+  )
+
+  const switchableKeys = selectedKeysData.filter(
+    (k) =>
+      k.loanInfo.isLoaned &&
+      k.loanInfo.contact &&
+      tenantNames.includes(k.loanInfo.contact) &&
+      leaseIsNotPast
   )
 
   // All available keys
@@ -76,6 +86,18 @@ export function KeyActionButtons({
               className="flex items-center gap-1"
             >
               Återlämna valda ({returnableKeys.length})
+            </Button>
+          )}
+          {onSwitch && switchableKeys.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSwitch(switchableKeys.map((k) => k.id))}
+              disabled={isProcessing}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Byt nyckel ({switchableKeys.length})
             </Button>
           )}
         </>

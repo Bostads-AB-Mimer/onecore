@@ -187,6 +187,10 @@ export const CreateReceiptRequestSchema = z.object({
   fileId: z.string().optional(),
 })
 
+export const UpdateReceiptRequestSchema = z.object({
+  fileId: z.string().optional(),
+})
+
 // Request schemas for key notes
 
 export const CreateKeyNoteRequestSchema = z.object({
@@ -197,4 +201,10 @@ export const CreateKeyNoteRequestSchema = z.object({
 export const UpdateKeyNoteRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   description: z.string().optional(),
+})
+
+// Bulk flex update request schema
+export const BulkUpdateFlexRequestSchema = z.object({
+  rentalObjectCode: z.string(),
+  flexNumber: z.number().int().min(1).max(3),
 })

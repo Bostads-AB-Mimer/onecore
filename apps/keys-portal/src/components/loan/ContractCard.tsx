@@ -19,7 +19,6 @@ import {
 import type { Lease, Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
-import { EmbeddedKeysList } from './EmbeddedKeysList'
 import { KeyLoansAccordion } from './KeyLoansAccordion'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
@@ -309,7 +308,17 @@ export function ContractCard({
 
         {open && (
           <div id={keysRegionId} className="pt-2">
-            <LeaseKeyStatusList lease={lease} />
+            <LeaseKeyStatusList
+              lease={lease}
+              onKeysLoaned={() => {
+                setKeyLoansOpen(true)
+                setOpen(false)
+              }}
+              onKeysSwitched={() => {
+                setKeyLoansOpen(true)
+                setOpen(false)
+              }}
+            />
           </div>
         )}
       </CardContent>
