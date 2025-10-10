@@ -17,17 +17,17 @@ export const receiptService = {
   },
 
   /**
-   * Get receipt by key loan ID
+   * Get all receipts for a key loan ID
    */
-  async getByKeyLoan(keyLoanId: string): Promise<Receipt | null> {
+  async getByKeyLoan(keyLoanId: string): Promise<Receipt[]> {
     const { data, error } = await GET('/receipts/by-key-loan/{keyLoanId}', {
       params: { path: { keyLoanId } },
     })
     if (error) {
-      if ((error as any)?.status === 404) return null
+      if ((error as any)?.status === 404) return []
       throw error
     }
-    return data?.content as Receipt
+    return (data?.content ?? []) as Receipt[]
   },
 
   /**
@@ -88,18 +88,20 @@ export const receiptService = {
   },
 
   /**
-   * Get all receipts for a specific lease
-   * Fetches keyLoans for the lease, then fetches receipts for each keyLoan
+   * Get all receipts for a specific lease's rental object
+   * Fetches keyLoans for the rental object, then fetches receipts for each keyLoan
    */
-  async listByLease(leaseId: string): Promise<Receipt[]> {
+  async listByLease(rentalObjectCode: string): Promise<Receipt[]> {
     const { keyLoanService } = await import('./keyLoanService')
 
-    // Get all keyLoans for this lease
-    const keyLoans = await keyLoanService.search({ lease: leaseId })
+    // Get all keyLoans for this rental object
+    const { loaned, returned } =
+      await keyLoanService.listByLease(rentalObjectCode)
+    const allKeyLoans = [...loaned, ...returned]
 
     // Fetch receipts for each keyLoan
     const receiptsArrays = await Promise.all(
-      keyLoans.map((loan) => this.getByKeyLoan(loan.id))
+      allKeyLoans.map((loan) => this.getByKeyLoan(loan.id))
     )
 
     // Flatten and deduplicate

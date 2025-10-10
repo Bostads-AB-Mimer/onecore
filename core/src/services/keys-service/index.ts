@@ -21,6 +21,7 @@ const {
   ReceiptSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
+  BulkUpdateFlexRequestSchema,
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateKeySystemRequestSchema,
@@ -75,6 +76,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Receipt', ReceiptSchema)
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
+  registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
   registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
@@ -1247,6 +1249,74 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /keys/bulk-update-flex:
+   *   post:
+   *     summary: Bulk update flex number for all keys on a rental object
+   *     description: Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/BulkUpdateFlexRequest'
+   *     responses:
+   *       200:
+   *         description: Flex numbers updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     updatedCount:
+   *                       type: integer
+   *                       description: Number of keys updated
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/keys/bulk-update-flex', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body
+
+    const result = await KeysApi.bulkUpdateFlex(
+      payload.rentalObjectCode,
+      payload.flexNumber
+    )
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error bulk updating flex')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   // ==================== KEY SYSTEMS ROUTES ====================

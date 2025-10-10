@@ -204,6 +204,19 @@ export const KeysApi = {
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/keys/${id}`)
   },
+
+  bulkUpdateFlex: async (
+    rentalObjectCode: string,
+    flexNumber: number
+  ): Promise<
+    AdapterResult<{ updatedCount: number }, 'bad-request' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: { updatedCount: number } }>(
+      `${BASE}/keys/bulk-update-flex`,
+      { rentalObjectCode, flexNumber }
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
 }
 
 /**

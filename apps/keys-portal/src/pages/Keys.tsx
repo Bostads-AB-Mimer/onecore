@@ -182,13 +182,55 @@ const Index = () => {
   ) => {
     if (editingKey) {
       try {
+        // Check if flex number changed and if rentalObjectCode exists
+        const flexChanged =
+          keyData.flexNumber !== editingKey.flexNumber &&
+          keyData.flexNumber !== undefined
+        const rentalObjectCode =
+          keyData.rentalObjectCode || editingKey.rentalObjectCode
+
+        // If flex changed and we have a rental object, sync all keys
+        if (flexChanged && rentalObjectCode && keyData.flexNumber) {
+          // Validate flex is within bounds
+          if (keyData.flexNumber < 1 || keyData.flexNumber > 3) {
+            toast({
+              title: 'Ogiltigt flex-nummer',
+              description: 'Flex-nummer måste vara mellan 1 och 3.',
+              variant: 'destructive',
+            })
+            return
+          }
+
+          try {
+            await keyService.bulkUpdateFlex(rentalObjectCode, keyData.flexNumber)
+          } catch (flexErr) {
+            console.error('Failed to bulk update flex:', flexErr)
+            toast({
+              title: 'Kunde inte uppdatera flex',
+              description:
+                'Flex-numret kunde inte uppdateras för alla nycklar.',
+              variant: 'destructive',
+            })
+            return
+          }
+        }
+
         const updated = await keyService.updateKey(editingKey.id, keyData)
-        setKeys((prev) =>
-          prev.map((k) => (k.id === editingKey.id ? updated : k))
-        )
+
+        // Refetch keys if flex was changed to update all affected keys in the list
+        if (flexChanged && rentalObjectCode) {
+          await fetchKeys(pagination.currentPage, pagination.currentLimit)
+        } else {
+          setKeys((prev) =>
+            prev.map((k) => (k.id === editingKey.id ? updated : k))
+          )
+        }
+
         toast({
           title: 'Nyckel uppdaterad',
-          description: `${updated.keyName ?? keyData.keyName} har uppdaterats.`,
+          description: flexChanged
+            ? `${updated.keyName ?? keyData.keyName} och alla nycklar på ${rentalObjectCode} har uppdaterats till flex ${keyData.flexNumber}.`
+            : `${updated.keyName ?? keyData.keyName} har uppdaterats.`,
         })
         setShowAddForm(false)
       } catch (e) {

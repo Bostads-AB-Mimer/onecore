@@ -12,12 +12,14 @@ const {
   KeySchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
+  BulkUpdateFlexRequestSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   createPaginatedResponseSchema,
 } = keys.v1
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
+type BulkUpdateFlexRequest = keys.v1.BulkUpdateFlexRequest
 
 /**
  * @swagger
@@ -37,6 +39,7 @@ export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
+  registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('Key', KeySchema)
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
@@ -621,4 +624,77 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /keys/bulk-update-flex:
+   *   post:
+   *     summary: Bulk update flex number for all keys on a rental object
+   *     description: Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
+   *     tags: [Keys]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/BulkUpdateFlexRequest'
+   *     responses:
+   *       200:
+   *         description: Flex numbers updated successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     updatedCount:
+   *                       type: integer
+   *                       description: Number of keys updated
+   *       400:
+   *         description: Invalid request body.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
+   *       500:
+   *         description: An error occurred while updating keys.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.post(
+    '/keys/bulk-update-flex',
+    parseRequestBody(BulkUpdateFlexRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: BulkUpdateFlexRequest = ctx.request.body
+
+        const updatedCount = await db(TABLE)
+          .where({ rentalObjectCode: payload.rentalObjectCode })
+          .update({
+            flexNumber: payload.flexNumber,
+            updatedAt: db.fn.now(),
+          })
+
+        ctx.status = 200
+        ctx.body = { content: { updatedCount }, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error bulk updating flex number')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 }

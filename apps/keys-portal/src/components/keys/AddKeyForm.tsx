@@ -354,11 +354,13 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
 
             <div className="space-y-1">
               <Label htmlFor="flexNumber" className="text-xs">
-                Flexnr
+                Flexnr (1-3)
               </Label>
               <Input
                 id="flexNumber"
                 type="number"
+                min="1"
+                max="3"
                 className="h-8"
                 value={formData.flexNumber}
                 onChange={(e) =>
@@ -369,6 +371,11 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                 }
                 placeholder="1"
               />
+              {formData.flexNumber === '3' && (
+                <p className="text-xs text-orange-600">
+                  Varning: Flex 3 är max. Efter detta behöver låset bytas.
+                </p>
+              )}
             </div>
           </div>
         </div>

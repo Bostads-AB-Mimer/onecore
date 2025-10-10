@@ -23,6 +23,7 @@ import {
   UpdateReceiptRequestSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
+  BulkUpdateFlexRequestSchema,
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
@@ -68,6 +69,9 @@ export type UpdateReceiptRequest = z.infer<typeof UpdateReceiptRequestSchema>
 export type KeyNote = z.infer<typeof KeyNoteSchema>
 export type CreateKeyNoteRequest = z.infer<typeof CreateKeyNoteRequestSchema>
 export type UpdateKeyNoteRequest = z.infer<typeof UpdateKeyNoteRequestSchema>
+
+// Bulk update request types
+export type BulkUpdateFlexRequest = z.infer<typeof BulkUpdateFlexRequestSchema>
 
 // Pagination types
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>

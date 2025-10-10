@@ -26,7 +26,6 @@ export const keyLoanService = {
     id?: string
     keys?: string
     contact?: string
-    lease?: string
     returnedAt?: string
     availableToNextTenantFrom?: string
     pickedUpAt?: string
@@ -99,14 +98,31 @@ export const keyLoanService = {
     if (error) throw error
   },
 
-  // Optional helper your UI was calling:
+  /**
+   * Get all key loans associated with a lease by fetching loans for each key
+   * in the lease's rental object
+   */
   async listByLease(
-    leaseId: string
+    rentalObjectCode: string
   ): Promise<{ loaned: KeyLoan[]; returned: KeyLoan[] }> {
-    // If you don’t have a backend route for this, do a search instead:
-    const rows = await this.search({ lease: leaseId })
-    const loaned = rows.filter((r) => !r.returnedAt)
-    const returned = rows.filter((r) => !!r.returnedAt)
+    // Import keyService dynamically to avoid circular dependency
+    const { keyService } = await import('./keyService')
+
+    // Get all keys for this rental object
+    const keys = await keyService.getKeysByRentalObjectCode(rentalObjectCode)
+
+    // Fetch loans for each key and deduplicate
+    const loanMap = new Map<string, KeyLoan>()
+
+    for (const key of keys) {
+      const loans = await this.getByKeyId(key.id)
+      loans.forEach((loan) => loanMap.set(loan.id, loan))
+    }
+
+    const allLoans = Array.from(loanMap.values())
+    const loaned = allLoans.filter((r) => !r.returnedAt)
+    const returned = allLoans.filter((r) => !!r.returnedAt)
+
     return { loaned, returned }
   },
 }
