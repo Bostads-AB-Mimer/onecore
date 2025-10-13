@@ -5,9 +5,12 @@
  * @returns { Promise<void> }
  */
 exports.up = async function up(knex) {
-  await knex.schema.alterTable('receipts', (table) => {
-    table.dropColumn('signed')
-  })
+  const hasColumn = await knex.schema.hasColumn('receipts', 'signed')
+  if (hasColumn) {
+    await knex.schema.alterTable('receipts', (table) => {
+      table.dropColumn('signed')
+    })
+  }
 }
 
 /**
@@ -21,7 +24,5 @@ exports.down = async function down(knex) {
   })
 
   // Restore signed status based on fileId presence
-  await knex('receipts')
-    .update({ signed: true })
-    .whereNotNull('fileId')
+  await knex('receipts').update({ signed: true }).whereNotNull('fileId')
 }
