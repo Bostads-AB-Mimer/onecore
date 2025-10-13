@@ -67,6 +67,7 @@ export function ContractCard({
   const [keys, setKeys] = useState<Key[]>([])
   const [keysLoading, setKeysLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
 
   const handleCopyObjectId = async () => {
     try {
@@ -302,7 +303,7 @@ export function ContractCard({
 
         {keyLoansOpen && (
           <div id={keyLoansRegionId} className="pt-2">
-            <KeyLoansAccordion lease={lease} />
+            <KeyLoansAccordion lease={lease} refreshKey={keyLoansRefreshKey} />
           </div>
         )}
 
@@ -313,10 +314,20 @@ export function ContractCard({
               onKeysLoaned={() => {
                 setKeyLoansOpen(true)
                 setOpen(false)
+                // Force KeyLoansAccordion to refresh and show the new loan
+                setKeyLoansRefreshKey((prev) => prev + 1)
               }}
               onKeysSwitched={() => {
                 setKeyLoansOpen(true)
                 setOpen(false)
+                // Force KeyLoansAccordion to refresh
+                setKeyLoansRefreshKey((prev) => prev + 1)
+              }}
+              onKeysReturned={() => {
+                setKeyLoansOpen(true)
+                setOpen(false)
+                // Force KeyLoansAccordion to refresh and show the returned loan
+                setKeyLoansRefreshKey((prev) => prev + 1)
               }}
             />
           </div>

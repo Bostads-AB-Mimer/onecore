@@ -191,18 +191,12 @@ const addTenantInfo = async (
   return afterLeaseY + 22
 }
 
-/**
- * Keys table that **always fits** on one page:
- * - Computes how many rows can fit given the remaining space and `reserveAfter`.
- * - Renders "+X fler" if truncated.
- * - Optionally shows missing keys section in RED
- */
 const addKeysTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   y: number,
-  reserveAfter: number, // mm to keep free for the block that follows (e.g., signature/confirmation)
-  missingKeys?: ReceiptData['missingKeys'] // Keys that were not returned (for partial returns)
+  reserveAfter: number,
+  missingKeys?: ReceiptData['missingKeys']
 ) => {
   const bottom = contentBottom(doc)
 
@@ -226,7 +220,7 @@ const addKeysTable = (
   doc.line(MARGIN_X, top + 2, 180, top + 2)
 
   const rowStartY = top + 7
-  const rowH = 6 // compact row height
+  const rowH = 6
   const spaceForRows = bottom - reserveAfter - rowStartY
   const rowsAllowed = Math.max(0, Math.floor(spaceForRows / rowH))
 
@@ -270,13 +264,13 @@ const addKeysTable = (
     cy += 4
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.setTextColor(200, 0, 0) // Red color for missing keys
+    doc.setTextColor(200, 0, 0)
     doc.text('SAKNADE NYCKLAR (ej återlämnade):', MARGIN_X, cy)
     cy += 6
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
-    doc.setTextColor(0, 0, 0) // Reset to black
+    doc.setTextColor(0, 0, 0)
     missingKeys.forEach((k) => {
       const labelForType =
         (KeyTypeLabels as Record<string, string>)[
@@ -296,21 +290,15 @@ const addKeysTable = (
   return cy
 }
 
-/**
- * Signature section that **never** spills onto another page.
- * If there’s not enough room for the full paragraph, it draws a compact version.
- */
 const addSignatureSection = (doc: jsPDF, y: number) => {
   const bottom = contentBottom(doc)
 
   // Full-height block wants ~45mm
   const fullNeed = 45
-  const compactNeed = 24 // minimal: headline + signature lines
+  const compactNeed = 24 // minimal
 
-  // If even compact doesn’t fit, just return without drawing (extreme edge case)
   if (y + compactNeed > bottom) return y
 
-  // Can we draw the full block?
   const canFull = y + fullNeed <= bottom
 
   doc.setFont('helvetica', 'bold')
@@ -331,11 +319,9 @@ const addSignatureSection = (doc: jsPDF, y: number) => {
     })
     cy += 15
   } else {
-    // Compact: no paragraph, just spacing before signature lines
     cy += 4
   }
 
-  // Signature lines
   doc.line(MARGIN_X, cy, 100, cy)
   doc.text('Hyresgästens signatur', MARGIN_X, cy + 8)
   doc.line(120, cy, 180, cy)
@@ -349,7 +335,6 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
 
-  // Disclaimer a bit above bottom
   const disclaimerTop = h - FOOTER_TEXT_TOP_OFFSET
   if (kind === 'loan') {
     const text =
@@ -372,43 +357,38 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
     'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besöksadress: Gasverksgatan 7 Tel: 021-39 70 00 • mimer.nu'
   doc.text(contact, MARGIN_X, h - 10)
 
-  // Add receipt ID in subtle gray text for scanning purposes
   if (receiptId) {
-    doc.setTextColor(128, 128, 128) // Light gray color
+    doc.setTextColor(128, 128, 128)
     doc.text(`${receiptId}`, MARGIN_X, h - 4)
-    doc.setTextColor(0, 0, 0) // Reset to black
+    doc.setTextColor(0, 0, 0)
   }
 
   doc.text('Sida 1', 190, h - 4, { align: 'right' })
 }
 
-/** ---------------- Public API (always one page) ---------------- */
+/* ---------------- Internal builders that DO NOT trigger download ---------------- */
 
-export const generateLoanReceipt = async (
-  data: ReceiptData,
-  receiptId?: string
-): Promise<void> => {
+async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
   y = addKeysTable(doc, data.keys, y, 42, data.missingKeys)
   addSignatureSection(doc, y)
   addFooter(doc, 'loan', receiptId)
-  const file = `nyckelutlaning_${data.tenants[0].contactCode}_${format(new Date(), 'yyyyMMdd')}.pdf`
-  doc.save(file)
+  const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
+    new Date(),
+    'yyyyMMdd'
+  )}.pdf`
+  return { doc, fileName }
 }
 
-export const generateReturnReceipt = async (
-  data: ReceiptData,
-  receiptId?: string
-): Promise<void> => {
+async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
   // keep ~22mm for confirmation text
   y = addKeysTable(doc, data.keys, y, 22, data.missingKeys)
 
-  // Compact confirmation block that will fit on one page
   const bottom = contentBottom(doc)
   const need = 18
   if (y + need <= bottom) {
@@ -427,10 +407,50 @@ export const generateReturnReceipt = async (
       doc.text(line, MARGIN_X, cy)
       cy += 5.5
     })
-    y = cy
   }
 
   addFooter(doc, 'return', receiptId)
-  const file = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(new Date(), 'yyyyMMdd')}.pdf`
-  doc.save(file)
+  const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
+    new Date(),
+    'yyyyMMdd'
+  )}.pdf`
+  return { doc, fileName }
+}
+
+/* ---------------- Public API: Downloaders (existing behavior) ---------------- */
+
+export const generateLoanReceipt = async (
+  data: ReceiptData,
+  receiptId?: string
+): Promise<void> => {
+  const { doc, fileName } = await buildLoanDoc(data, receiptId)
+  doc.save(fileName)
+}
+
+export const generateReturnReceipt = async (
+  data: ReceiptData,
+  receiptId?: string
+): Promise<void> => {
+  const { doc, fileName } = await buildReturnDoc(data, receiptId)
+  doc.save(fileName)
+}
+
+/* ---------------- Public API: Blob helpers (for opening in a new tab) ---------------- */
+
+export const generateLoanReceiptBlob = async (
+  data: ReceiptData,
+  receiptId?: string
+): Promise<{ blob: Blob; fileName: string }> => {
+  const { doc, fileName } = await buildLoanDoc(data, receiptId)
+  const blob = doc.output('blob') as Blob
+  return { blob, fileName }
+}
+
+export const generateReturnReceiptBlob = async (
+  data: ReceiptData,
+  receiptId?: string
+): Promise<{ blob: Blob; fileName: string }> => {
+  const { doc, fileName } = await buildReturnDoc(data, receiptId)
+  const blob = doc.output('blob') as Blob
+  return { blob, fileName }
 }

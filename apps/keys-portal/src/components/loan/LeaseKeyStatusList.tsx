@@ -10,12 +10,11 @@ import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
   handleReturnKeys,
-  handleSwitchKeys,
+  handleSwitchKeysWithReceipts,
 } from '@/services/loanHandlers'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
-import { generateReturnReceipt, generateLoanReceipt } from '@/lib/pdf-receipts'
 
 export type KeyWithStatus = Key & {
   loanInfo: KeyLoanInfo
@@ -49,10 +48,12 @@ export function LeaseKeyStatusList({
   lease,
   onKeysLoaned,
   onKeysSwitched,
+  onKeysReturned,
 }: {
   lease: Lease
   onKeysLoaned?: () => void
   onKeysSwitched?: () => void
+  onKeysReturned?: () => void
 }) {
   const { toast } = useToast()
   const [keys, setKeys] = useState<Key[]>([])
@@ -132,7 +133,6 @@ export function LeaseKeyStatusList({
     }
   }, [lease.rentalPropertyId])
 
-  // Get status for each key
   useEffect(() => {
     if (keys.length === 0) {
       setKeysWithStatus([])
@@ -150,19 +150,16 @@ export function LeaseKeyStatusList({
     }
   }, [keys, tenantNames])
 
-  // Refresh all key statuses
   const refreshStatuses = async () => {
     const results = await Promise.all(keys.map(computeKeyStatus))
     setKeysWithStatus(results)
   }
 
-  // Handle key creation
   const handleKeyCreated = async (newKey: Key) => {
     setKeys((prev) => [...prev, newKey])
     setShowAddKeyForm(false)
   }
 
-  // Handle renting keys
   const onRent = async (keyIds: string[]) => {
     setIsProcessing(true)
     const result = await handleLoanKeys({
@@ -187,10 +184,9 @@ export function LeaseKeyStatusList({
         })
         setReceiptId(result.receiptId)
         setShowReceiptDialog(true)
+      } else {
+        onKeysLoaned?.()
       }
-
-      // Notify parent to switch tabs
-      onKeysLoaned?.()
     }
 
     toast({
@@ -202,7 +198,6 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  // Handle returning keys
   const onReturn = async (keyIds: string[]) => {
     setIsProcessing(true)
     const result = await handleReturnKeys({ keyIds })
@@ -210,6 +205,21 @@ export function LeaseKeyStatusList({
     if (result.success) {
       await refreshStatuses()
       setSelectedKeys([])
+
+      if (result.receiptId) {
+        const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
+        setReceiptData({
+          lease,
+          tenants: lease.tenants ?? [],
+          keys: relevantKeys,
+          receiptType: 'RETURN',
+          operationDate: new Date(),
+        })
+        setReceiptId(result.receiptId)
+        setShowReceiptDialog(true)
+      } else {
+        onKeysReturned?.()
+      }
     }
 
     toast({
@@ -221,105 +231,39 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  // Handle switching/replacing keys
   const onSwitch = async (keyIds: string[]) => {
     setIsProcessing(true)
 
-    try {
-      // First, get the active loan to find all keys in that loan
-      const { keyLoanService } = await import('@/services/api/keyLoanService')
-      const loans = await keyLoanService.getByKeyId(keyIds[0])
-      const activeLoan = loans.find((loan) => !loan.returnedAt)
+    const result = await handleSwitchKeysWithReceipts({
+      keyIdsToSwitch: keyIds,
+      contact: tenantNames[0],
+      contact2: tenantNames[1],
+      lease,
+      allKeys: keys,
+    })
 
-      if (!activeLoan) {
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte hitta aktivt lån för vald nyckel',
-          variant: 'destructive',
-        })
-        setIsProcessing(false)
-        return
+    if (result.success) {
+      await refreshStatuses()
+      setSelectedKeys([])
+
+      if (result.receiptData && result.receiptId) {
+        setReceiptData(result.receiptData)
+        setReceiptId(result.receiptId)
+        setShowReceiptDialog(true)
       }
 
-      // Parse all keys from the active loan
-      const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-      const allLoanKeys = keys.filter((k) => loanKeyIds.includes(k.id))
-      const switchedKeys = allLoanKeys.filter((k) => keyIds.includes(k.id))
-      const returnedKeys = allLoanKeys.filter((k) => !keyIds.includes(k.id))
-
-      const result = await handleSwitchKeys({
-        keyIdsToSwitch: keyIds,
-        contact: tenantNames[0],
-        contact2: tenantNames[1],
-      })
-
-      if (result.success) {
-        await refreshStatuses()
-        setSelectedKeys([])
-
-        // Generate PDFs for both receipts if we have IDs
-        if (result.returnReceiptId && result.newLoanReceiptId) {
-          try {
-            // Generate return receipt (with missing keys marked)
-            const returnReceiptData: ReceiptData = {
-              lease,
-              tenants: lease.tenants ?? [],
-              keys: returnedKeys, // Keys that were returned
-              missingKeys: switchedKeys, // Keys being switched/missing
-              receiptType: 'RETURN',
-              operationDate: new Date(),
-            }
-            await generateReturnReceipt(
-              returnReceiptData,
-              result.returnReceiptId
-            )
-
-            // Generate new loan receipt (all keys from the loan)
-            const loanReceiptData: ReceiptData = {
-              lease,
-              tenants: lease.tenants ?? [],
-              keys: allLoanKeys, // All keys from the loan including replacement
-              receiptType: 'LOAN',
-              operationDate: new Date(),
-            }
-            await generateLoanReceipt(loanReceiptData, result.newLoanReceiptId)
-
-            // Show the new loan receipt dialog
-            setReceiptData(loanReceiptData)
-            setReceiptId(result.newLoanReceiptId)
-            setShowReceiptDialog(true)
-          } catch (pdfErr) {
-            console.error('Failed to generate PDFs:', pdfErr)
-          }
-        }
-
-        toast({
-          title: result.title,
-          description: result.message,
-          variant: result.success ? 'default' : 'destructive',
-        })
-
-        // Notify parent to switch tabs
-        onKeysSwitched?.()
-      } else {
-        toast({
-          title: result.title,
-          description: result.message,
-          variant: 'destructive',
-        })
-      }
-    } catch (err: any) {
-      toast({
-        title: 'Fel',
-        description: err?.message || 'Kunde inte byta nyckel',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsProcessing(false)
+      onKeysSwitched?.()
     }
+
+    toast({
+      title: result.title,
+      description: result.message,
+      variant: result.success ? 'default' : 'destructive',
+    })
+
+    setIsProcessing(false)
   }
 
-  // Sort keys by type and sequence
   const sortedKeys = useMemo(() => {
     const getTypeRank = (t: KeyType) => KEY_TYPE_ORDER[t] ?? 999
     const getSeq = (k: Key) =>
@@ -463,7 +407,7 @@ export function LeaseKeyStatusList({
                         </span>
                         {key.keySequenceNumber && (
                           <span className="text-xs text-muted-foreground">
-                            Seq: {key.keySequenceNumber}
+                            Löp: {key.keySequenceNumber}
                           </span>
                         )}
                         {key.flexNumber && (
@@ -491,11 +435,18 @@ export function LeaseKeyStatusList({
         isOpen={showReceiptDialog}
         onClose={() => {
           setShowReceiptDialog(false)
+          const wasReturnReceipt = receiptData?.receiptType === 'RETURN'
           setReceiptData(null)
           setReceiptId(null)
+          if (wasReturnReceipt) {
+            onKeysReturned?.()
+          } else {
+            onKeysLoaned?.()
+          }
         }}
         receiptData={receiptData}
         receiptId={receiptId}
+        enableUpload={false}
       />
     </>
   )
