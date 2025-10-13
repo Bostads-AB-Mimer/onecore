@@ -104,7 +104,7 @@ describe('createOfferForInternalParkingSpace', () => {
       error: CreateOfferErrorCodes.NoApplicants,
       httpStatus: 500,
       response: {
-        message: 'No eligible applicant found, cannot create new offer',
+        message: 'No eligible applicant found, no offer created.',
         errorCode: CreateOfferErrorCodes.NoApplicants,
       },
     })
