@@ -68,6 +68,7 @@ export function ContractCard({
   const [keysLoading, setKeysLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
+  const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
 
   const handleCopyObjectId = async () => {
     try {
@@ -176,7 +177,11 @@ export function ContractCard({
               onClick={() => setKeyLoansOpen((v) => !v)}
               aria-expanded={keyLoansOpen}
               aria-controls={keyLoansRegionId}
-              className="h-7 px-2 text-xs gap-1"
+              className={`h-7 px-2 text-xs gap-1 ${
+                hasUnsignedLoans
+                  ? 'border-yellow-600 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-200'
+                  : ''
+              }`}
             >
               {keyLoansOpen ? (
                 <>
@@ -301,11 +306,13 @@ export function ContractCard({
           )}
         </div>
 
-        {keyLoansOpen && (
-          <div id={keyLoansRegionId} className="pt-2">
-            <KeyLoansAccordion lease={lease} refreshKey={keyLoansRefreshKey} />
-          </div>
-        )}
+        <div className={keyLoansOpen ? 'pt-2' : 'hidden'} id={keyLoansRegionId}>
+          <KeyLoansAccordion
+            lease={lease}
+            refreshKey={keyLoansRefreshKey}
+            onUnsignedLoansChange={setHasUnsignedLoans}
+          />
+        </div>
 
         {open && (
           <div id={keysRegionId} className="pt-2">
