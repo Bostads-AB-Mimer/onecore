@@ -6,14 +6,12 @@ import {
   FileText,
   Upload,
   Printer,
-  ChevronDown,
-  ChevronUp,
   Download,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { KeyLoan, Key, Receipt, Lease } from '@/services/types'
+import type { KeyLoan, Key, Receipt } from '@/services/types'
 
 interface KeyLoanCardProps {
   keyLoan: KeyLoan
@@ -26,11 +24,9 @@ interface KeyLoanCardProps {
   uploadingReceiptId: string | null
   uploadError: string | null
   onGenerateLoanReceipt: () => void
-  onToggleReturnAccordion: () => void
+  onGenerateReturnReceipt?: () => void
   onUploadReceipt: (receiptId: string) => void
   onDownloadReceipt: (receipt: Receipt) => void
-  isReturnAccordionOpen: boolean
-  renderReturnAccordion?: () => React.ReactNode
 }
 
 export function KeyLoanCard({
@@ -38,16 +34,15 @@ export function KeyLoanCard({
   keys,
   receipts,
   loanReceipt,
+  returnReceipt,
   isActive,
   hasUnsignedLoanReceipt,
   uploadingReceiptId,
   uploadError,
   onGenerateLoanReceipt,
-  onToggleReturnAccordion,
+  onGenerateReturnReceipt,
   onUploadReceipt,
   onDownloadReceipt,
-  isReturnAccordionOpen,
-  renderReturnAccordion,
 }: KeyLoanCardProps) {
   return (
     <Card
@@ -57,157 +52,147 @@ export function KeyLoanCard({
           : ''
       }`}
     >
-      <CardContent className="p-3 space-y-2">
-        {/* Keys in this loan */}
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">
-            {keys.length > 0 ? (
-              <span>{keys.map((k) => k.keyName).join(', ')}</span>
-            ) : (
-              <span className="text-muted-foreground italic">Inga nycklar</span>
-            )}
+      <CardContent className="p-2 space-y-1">
+        {/* Compact header: keys + status + dates in one line */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          {/* Left: Keys and dates */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-xs font-medium truncate">
+                {keys.length > 0 ? (
+                  <span>{keys.map((k) => k.keyName).join(', ')}</span>
+                ) : (
+                  <span className="text-muted-foreground italic">Inga nycklar</span>
+                )}
+              </div>
+              <div className="text-[10px] text-muted-foreground flex gap-2">
+                <span>
+                  {keyLoan.createdAt
+                    ? format(new Date(keyLoan.createdAt), 'dd/MM/yy', {
+                        locale: sv,
+                      })
+                    : 'Okänd'}
+                </span>
+                {keyLoan.pickedUpAt && (
+                  <span>
+                    → {format(new Date(keyLoan.pickedUpAt), 'dd/MM/yy', {
+                      locale: sv,
+                    })}
+                  </span>
+                )}
+                {keyLoan.returnedAt && (
+                  <span>
+                    → {format(new Date(keyLoan.returnedAt), 'dd/MM/yy', {
+                      locale: sv,
+                    })}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          {/* Status Badge */}
-          <div className="flex items-center gap-2">
+
+          {/* Right: Status badges */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {hasUnsignedLoanReceipt && isActive && (
               <Badge
                 variant="outline"
-                className="text-xs border-yellow-600 text-yellow-600 bg-yellow-100 dark:bg-yellow-950"
+                className="text-[9px] py-0 px-1 border-yellow-600 text-yellow-600 bg-yellow-100 dark:bg-yellow-950 h-4"
               >
-                <AlertCircle className="h-3 w-3 mr-1" />
+                <AlertCircle className="h-2 w-2 mr-0.5" />
                 Ej signerad
               </Badge>
             )}
             {keyLoan.returnedAt ? (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">
                 Återlämnad
               </Badge>
             ) : (
-              <Badge variant="default" className="text-xs">
+              <Badge variant="default" className="text-[9px] py-0 px-1 h-4">
                 Aktiv
               </Badge>
             )}
           </div>
         </div>
 
-        {/* Dates */}
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div>
-            Skapad:{' '}
-            {keyLoan.createdAt
-              ? format(new Date(keyLoan.createdAt), 'dd MMM yyyy', {
-                  locale: sv,
-                })
-              : 'Okänd'}
-          </div>
-          {keyLoan.pickedUpAt && (
-            <div>
-              Hämtad:{' '}
-              {format(new Date(keyLoan.pickedUpAt), 'dd MMM yyyy', {
-                locale: sv,
-              })}
-            </div>
-          )}
-          {keyLoan.returnedAt && (
-            <div>
-              Återlämnad:{' '}
-              {format(new Date(keyLoan.returnedAt), 'dd MMM yyyy', {
-                locale: sv,
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Warning for unsigned loan receipt */}
+        {/* Warning for unsigned loan receipt - more compact */}
         {hasUnsignedLoanReceipt && isActive && loanReceipt && (
-          <div className="bg-yellow-100 dark:bg-yellow-950/30 border border-yellow-600 rounded p-2 space-y-2">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-yellow-800 dark:text-yellow-200">
+          <div className="bg-yellow-100 dark:bg-yellow-950/30 border border-yellow-600 rounded p-1.5 space-y-1">
+            <div className="flex items-start gap-1.5">
+              <AlertCircle className="h-2.5 w-2.5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="text-[10px] text-yellow-800 dark:text-yellow-200">
                 <p className="font-semibold">Utlåningskvitto ej signerat</p>
-                <p className="mt-1">
-                  Nycklarna är inte officiellt utlånade förrän kvittot är
-                  signerat och uppladdat.
+                <p className="mt-0.5">
+                  Kvittot måste signeras och laddas upp.
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 text-xs border-yellow-600 hover:bg-yellow-100"
+                className="flex-1 text-[10px] h-6 border-yellow-600 hover:bg-yellow-100 px-1.5"
                 onClick={() => onUploadReceipt(loanReceipt.id)}
                 disabled={uploadingReceiptId === loanReceipt.id}
               >
-                <Upload className="h-3 w-3 mr-1" />
+                <Upload className="h-2 w-2 mr-0.5" />
                 {uploadingReceiptId === loanReceipt.id
                   ? 'Laddar upp...'
-                  : 'Ladda upp signerad PDF'}
+                  : 'Ladda upp'}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-xs"
+                className="text-[10px] h-6 px-1.5"
                 onClick={onGenerateLoanReceipt}
               >
-                <Printer className="h-3 w-3 mr-1" />
-                Generera igen
+                <Printer className="h-2 w-2 mr-0.5" />
+                Generera
               </Button>
             </div>
             {uploadError && (
-              <div className="text-xs text-red-600 dark:text-red-400">
-                ⚠️ {uploadError}
+              <div className="text-[10px] text-red-600 dark:text-red-400">
+                {uploadError}
               </div>
             )}
           </div>
         )}
 
-        {/* Receipt Buttons */}
-        <div className="flex gap-2 pt-2">
-          {/* Loan Receipt Button */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 text-xs"
-            onClick={onGenerateLoanReceipt}
-          >
-            <FileText className="h-3 w-3 mr-1" />
-            Utlåningskvitto
-          </Button>
-
-          {/* Partial Return / Replacement Button - only show if keys have NOT been returned yet */}
-          {!keyLoan.returnedAt && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 text-xs"
-              onClick={onToggleReturnAccordion}
-            >
-              {isReturnAccordionOpen ? (
-                <ChevronUp className="h-3 w-3 mr-1" />
-              ) : (
-                <ChevronDown className="h-3 w-3 mr-1" />
-              )}
-              Byte/Delretur
-            </Button>
-          )}
-        </div>
-
-        {/* Partial Return / Replacement Accordion - rendered by parent */}
-        {renderReturnAccordion && renderReturnAccordion()}
-
-        {/* Show existing receipts */}
+        {/* Compact receipts list */}
         {receipts.length > 0 && (
-          <div className="pt-2 space-y-1 border-t">
-            <div className="text-xs font-medium text-muted-foreground">
-              Kvitton:
+          <div className="pt-1 space-y-0.5 border-t">
+            <div className="flex items-center justify-between gap-1">
+              <div className="text-[10px] font-medium text-muted-foreground">
+                Kvitton
+              </div>
+              <div className="flex gap-0.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-[10px] h-5 px-1"
+                  onClick={onGenerateLoanReceipt}
+                >
+                  <FileText className="h-2 w-2 mr-0.5" />
+                  Utlåning
+                </Button>
+                {!isActive && onGenerateReturnReceipt && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-[10px] h-5 px-1"
+                    onClick={onGenerateReturnReceipt}
+                  >
+                    <FileText className="h-2 w-2 mr-0.5" />
+                    Retur
+                  </Button>
+                )}
+              </div>
             </div>
             {receipts.map((receipt) => (
               <div
                 key={receipt.id}
-                className="flex items-center justify-between text-xs"
+                className="flex items-center justify-between text-[10px] py-0.5"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">
                     {receipt.receiptType === 'LOAN' ? 'Utlåning' : 'Retur'}
                   </span>
@@ -215,39 +200,39 @@ export function KeyLoanCard({
                     (receipt.fileId ? (
                       <Badge
                         variant="default"
-                        className="text-[10px] py-0 px-1"
+                        className="text-[8px] py-0 px-0.5 h-3"
                       >
-                        ✓ Signerad
+                        ✓
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
-                        className="text-[10px] py-0 px-1 border-yellow-600 text-yellow-600"
+                        className="text-[8px] py-0 px-0.5 border-yellow-600 text-yellow-600 h-3"
                       >
-                        Ej signerad
+                        !
                       </Badge>
                     ))}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   {receipt.fileId && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2"
+                      className="h-5 px-1"
                       onClick={() => onDownloadReceipt(receipt)}
                     >
-                      <Download className="h-3 w-3" />
+                      <Download className="h-2 w-2" />
                     </Button>
                   )}
                   {!receipt.fileId && receipt.receiptType === 'LOAN' && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2 text-yellow-600"
+                      className="h-5 px-1 text-yellow-600"
                       onClick={() => onUploadReceipt(receipt.id)}
                       disabled={uploadingReceiptId === receipt.id}
                     >
-                      <Upload className="h-3 w-3" />
+                      <Upload className="h-2 w-2" />
                     </Button>
                   )}
                 </div>

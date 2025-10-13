@@ -1,6 +1,7 @@
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
-import { keyService } from './api/keyService'
+import { handleGenerateSwitchReceipts } from './receiptHandlers'
+import type { Key, Lease, ReceiptData } from './types'
 
 export type LoanKeysParams = {
   keyIds: string[]
@@ -52,6 +53,7 @@ export async function handleLoanKeys({
       const receipt = await receiptService.create({
         keyLoanId: created.id,
         receiptType: 'LOAN',
+        type: 'PHYSICAL', // <-- IMPORTANT: ensure backend accepts and returns an ID
       })
       receiptId = receipt.id
     } catch (receiptErr) {
@@ -61,7 +63,7 @@ export async function handleLoanKeys({
 
     return {
       success: true,
-      title: 'Nyckel utlånad',
+      title: 'Nyckel utlånad - Kvitto måste signeras',
       keyLoanId: created.id,
       receiptId,
     }
@@ -85,13 +87,16 @@ export type ReturnKeysResult = {
   success: boolean
   title: string
   message?: string
+  keyLoanId?: string
+  receiptId?: string
 }
 
 /**
  * Handler for returning keys
  * Validates that all keys in each active loan are included in the return request
+ * Creates a return receipt for the returned keys
  * @param keyIds - Array of key IDs to return
- * @returns Result with success status
+ * @returns Result with success status, keyLoanId, and receiptId
  */
 export async function handleReturnKeys({
   keyIds,
@@ -108,6 +113,8 @@ export async function handleReturnKeys({
     const now = new Date().toISOString()
     const keyIdSet = new Set(keyIds)
     const processedLoanIds = new Set<string>()
+    let lastProcessedLoanId: string | undefined
+    let receiptId: string | undefined
 
     // Find all active loans for the selected keys
     for (const keyId of keyIds) {
@@ -134,15 +141,30 @@ export async function handleReturnKeys({
 
       // Mark this loan as processed and update it
       processedLoanIds.add(activeLoan.id)
+      lastProcessedLoanId = activeLoan.id
       await keyLoanService.update(activeLoan.id, {
         returnedAt: now,
         availableToNextTenantFrom: now,
       } as any)
+
+      // Create return receipt for this loan
+      try {
+        const receipt = await receiptService.create({
+          keyLoanId: activeLoan.id,
+          receiptType: 'RETURN',
+          type: 'PHYSICAL',
+        })
+        receiptId = receipt.id
+      } catch (receiptErr) {
+        console.error('Failed to create return receipt:', receiptErr)
+      }
     }
 
     return {
       success: true,
       title: 'Nycklar återlämnade',
+      keyLoanId: lastProcessedLoanId,
+      receiptId,
     }
   } catch (err: any) {
     return {
@@ -210,31 +232,6 @@ export async function handleSwitchKeys({
       // Parse all keys in this loan
       const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
 
-      // Get one of the keys to determine rentalObjectCode and current flex
-      const firstKey = await keyService.getKey(loanKeyIds[0])
-      const currentFlex = firstKey.flexNumber ?? 1
-      const rentalObjectCode = firstKey.rentalObjectCode
-
-      // Check if we can increment flex (max is 3)
-      if (currentFlex >= 3) {
-        return {
-          success: false,
-          title: 'Kan inte byta nyckel',
-          message:
-            'Flex-nummer är redan på max (3). Hela låset behöver bytas och nya nycklar med flex 1 måste skapas.',
-        }
-      }
-
-      // Increment flex for ALL keys on this rental object
-      if (rentalObjectCode) {
-        try {
-          await keyService.bulkUpdateFlex(rentalObjectCode, currentFlex + 1)
-        } catch (flexErr) {
-          console.error('Failed to update flex numbers:', flexErr)
-          // Continue with the switch even if flex update fails
-        }
-      }
-
       // Mark this loan as processed
       processedLoanIds.add(activeLoan.id)
 
@@ -263,7 +260,7 @@ export async function handleSwitchKeys({
         contact,
         contact2,
         pickedUpAt: null, // Pending signature
-        createdBy: 'ui-switch',
+        createdBy: 'ui',
       })
       newKeyLoanId = newLoan.id
 
@@ -293,6 +290,126 @@ export async function handleSwitchKeys({
       success: false,
       title: 'Fel',
       message: err?.message || 'Kunde inte byta nyckel.',
+    }
+  }
+}
+
+export type SwitchKeysWithReceiptsParams = {
+  keyIdsToSwitch: string[]
+  contact?: string
+  contact2?: string
+  lease: Lease
+  allKeys: Key[]
+}
+
+export type SwitchKeysWithReceiptsResult = {
+  success: boolean
+  title: string
+  message?: string
+  receiptData?: ReceiptData
+  receiptId?: string
+}
+
+/**
+ * Comprehensive handler for switching keys with receipt generation
+ * Handles the entire flow: fetch active loan, categorize keys, switch operation, generate PDFs
+ * @param params - Parameters including keyIdsToSwitch, contact info, lease, and all available keys
+ * @returns Result with success status, receipts, and toast data
+ */
+export async function handleSwitchKeysWithReceipts({
+  keyIdsToSwitch,
+  contact,
+  contact2,
+  lease,
+  allKeys,
+}: SwitchKeysWithReceiptsParams): Promise<SwitchKeysWithReceiptsResult> {
+  if (keyIdsToSwitch.length === 0) {
+    return {
+      success: false,
+      title: 'Fel',
+      message: 'Inga nycklar valda',
+    }
+  }
+
+  try {
+    // Step 1: Fetch active loan for the first key
+    const loans = await keyLoanService.getByKeyId(keyIdsToSwitch[0])
+    const activeLoan = loans.find((loan) => !loan.returnedAt)
+
+    if (!activeLoan) {
+      return {
+        success: false,
+        title: 'Fel',
+        message: 'Kunde inte hitta aktivt lån för vald nyckel',
+      }
+    }
+
+    // Step 2: Parse and categorize keys from the active loan
+    const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
+    const allLoanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
+    const switchedKeys = allLoanKeys.filter((k) =>
+      keyIdsToSwitch.includes(k.id)
+    )
+    const returnedKeys = allLoanKeys.filter(
+      (k) => !keyIdsToSwitch.includes(k.id)
+    )
+
+    // Step 3: Perform the switch operation
+    const switchResult = await handleSwitchKeys({
+      keyIdsToSwitch,
+      contact,
+      contact2,
+    })
+
+    if (!switchResult.success) {
+      return {
+        success: false,
+        title: switchResult.title,
+        message: switchResult.message,
+      }
+    }
+
+    // Step 4: Generate PDFs if we have receipt IDs
+    let receiptData: ReceiptData | undefined
+    let receiptId: string | undefined
+
+    if (switchResult.returnReceiptId && switchResult.newLoanReceiptId) {
+      const pdfResult = await handleGenerateSwitchReceipts({
+        lease,
+        allLoanKeys,
+        switchedKeys,
+        returnedKeys,
+        returnReceiptId: switchResult.returnReceiptId,
+        newLoanReceiptId: switchResult.newLoanReceiptId,
+      })
+
+      if (pdfResult.success) {
+        // Prepare receipt data for dialog display
+        receiptData = {
+          lease,
+          tenants: lease.tenants ?? [],
+          keys: allLoanKeys,
+          receiptType: 'LOAN',
+          operationDate: new Date(),
+        }
+        receiptId = switchResult.newLoanReceiptId
+      } else {
+        console.error('Failed to generate PDFs:', pdfResult.error)
+      }
+    }
+
+    return {
+      success: true,
+      title: switchResult.title,
+      message: switchResult.message,
+      receiptData,
+      receiptId,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      title: 'Fel',
+      message: err?.message || 'Kunde inte byta nyckel',
     }
   }
 }
