@@ -211,11 +211,6 @@ export const acceptOffer = async (
     }
 
     logger.debug(log)
-    communicationAdapter.sendNotificationToRole(
-      'dev',
-      `Accept offer - summary`,
-      log.join('\n')
-    )
 
     return {
       processStatus: ProcessStatus.successful,

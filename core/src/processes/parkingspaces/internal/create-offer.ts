@@ -123,12 +123,13 @@ export const createOfferForInternalParkingSpace = async (
         )
       }
 
-      return endFailingProcess(
-        log,
-        CreateOfferErrorCodes.NoApplicants,
-        500,
-        `No eligible applicant found, cannot create new offer`
+      logger.info(
+        { listingId: listing.id },
+        'No eligible applicant found, no offer created.'
       )
+      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 500, {
+        message: 'No eligible applicant found, no offer created.',
+      })
     }
 
     const getContact = await leasingAdapter.getContactByContactCode(
