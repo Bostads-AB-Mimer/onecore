@@ -128,6 +128,13 @@ export const routes = (router: KoaRouter) => {
     const result = await listingTextContentAdapter.create(parseResult.data)
 
     if (!result.ok) {
+      // Check if this is a duplicate rental object code error
+      if (result.err.message.includes('already exists for rental object code')) {
+        ctx.status = 409
+        ctx.body = { error: result.err.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
       ctx.body = { error: 'Failed to create listing text content', ...metadata }
       return
@@ -139,7 +146,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /listing-text-content/{id}:
+   * /listing-text-content/{rentalObjectCode}:
    *   put:
    *     summary: Update listing text content
    *     description: |
@@ -147,12 +154,12 @@ export const routes = (router: KoaRouter) => {
    *     tags: [ListingTextContent]
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
-   *           type: number
+   *           type: string
    *         description: |
-   *           The ID of the listing text content to update.
+   *           The rental object code of the listing text content to update.
    *     requestBody:
    *       required: true
    *       content:
@@ -191,9 +198,9 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/listing-text-content/:id', async (ctx) => {
+  router.put('(.*)/listing-text-content/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { rentalObjectCode } = ctx.params
 
     const parseResult =
       leasing.v1.UpdateListingTextContentRequestSchema.safeParse(
@@ -212,11 +219,18 @@ export const routes = (router: KoaRouter) => {
     }
 
     const result = await listingTextContentAdapter.update(
-      Number(id),
+      rentalObjectCode,
       parseResult.data
     )
 
     if (!result.ok) {
+      // Check if this is a "not found" error
+      if (result.err.message.includes('not found')) {
+        ctx.status = 404
+        ctx.body = { error: result.err.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
       ctx.body = { error: 'Failed to update listing text content', ...metadata }
       return
@@ -227,7 +241,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /listing-text-content/{id}:
+   * /listing-text-content/{rentalObjectCode}:
    *   delete:
    *     summary: Delete listing text content
    *     description: |
@@ -235,12 +249,12 @@ export const routes = (router: KoaRouter) => {
    *     tags: [ListingTextContent]
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
-   *           type: number
+   *           type: string
    *         description: |
-   *           The ID of the listing text content to delete.
+   *           The rental object code of the listing text content to delete.
    *     responses:
    *       200:
    *         description: Listing text content deleted successfully
@@ -251,13 +265,20 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/listing-text-content/:id', async (ctx) => {
+  router.delete('(.*)/listing-text-content/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { rentalObjectCode } = ctx.params
 
-    const result = await listingTextContentAdapter.remove(Number(id))
+    const result = await listingTextContentAdapter.remove(rentalObjectCode)
 
     if (!result.ok) {
+      // Check if this is a "not found" error
+      if (result.err.message.includes('not found')) {
+        ctx.status = 404
+        ctx.body = { error: result.err.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
       ctx.body = { error: 'Failed to delete listing text content', ...metadata }
       return
