@@ -577,6 +577,7 @@ export const getInvoiceRows = async (
     SELECT
       cmart.code AS rentArticle,
       cmart.utskrgrupp AS printGroup,
+      krfkr.printgroup AS printGroupLabel,
       krfkr.reduction AS rowReduction,
       krfkr.amount AS rowAmount,
       krfkr.vat AS rowVat,
@@ -665,6 +666,7 @@ export const getInvoiceRows = async (
           fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
           toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
           printGroup: trim(invoiceRow['printGroup']),
+          printGroupLabel: trim(invoiceRow['printGroupLabel']),
           invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           rowType: sumColumns(invoiceRow['rowtype']),
         }
