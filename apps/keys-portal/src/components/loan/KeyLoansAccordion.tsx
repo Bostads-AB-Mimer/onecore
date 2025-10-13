@@ -21,6 +21,7 @@ import { KeyLoanCard } from './KeyLoanCard'
 interface KeyLoansAccordionProps {
   lease: Lease
   refreshKey?: number
+  onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
 }
 
 interface KeyLoanWithDetails {
@@ -34,6 +35,7 @@ interface KeyLoanWithDetails {
 export function KeyLoansAccordion({
   lease,
   refreshKey,
+  onUnsignedLoansChange,
 }: KeyLoansAccordionProps) {
   const [keyLoans, setKeyLoans] = useState<KeyLoanWithDetails[]>([])
   const [loading, setLoading] = useState(false)
@@ -137,6 +139,15 @@ export function KeyLoansAccordion({
       })
 
       setKeyLoans(enriched)
+
+      // Notify parent if there are any unsigned active loans
+      const hasUnsignedActiveLoans = enriched.some(
+        (loan) =>
+          !loan.keyLoan.returnedAt &&
+          loan.loanReceipt &&
+          !loan.loanReceipt.fileId
+      )
+      onUnsignedLoansChange?.(hasUnsignedActiveLoans)
     } catch (err) {
       console.error('Failed to fetch key loans:', err)
     } finally {

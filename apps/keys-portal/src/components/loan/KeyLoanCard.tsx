@@ -130,7 +130,7 @@ export function KeyLoanCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 text-[10px] h-6 border-yellow-600 hover:bg-yellow-100 px-1.5"
+                className="text-[10px] h-6 border-yellow-600 hover:bg-yellow-100 px-1.5"
                 onClick={() => onUploadReceipt(loanReceipt.id)}
                 disabled={uploadingReceiptId === loanReceipt.id}
               >
