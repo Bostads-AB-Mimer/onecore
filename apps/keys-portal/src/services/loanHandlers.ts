@@ -214,7 +214,6 @@ export async function handleSwitchKeys({
 
   try {
     const now = new Date().toISOString()
-    const keyIdSet = new Set(keyIdsToSwitch)
     const processedLoanIds = new Set<string>()
     let returnReceiptId: string | undefined
     let newKeyLoanId: string | undefined

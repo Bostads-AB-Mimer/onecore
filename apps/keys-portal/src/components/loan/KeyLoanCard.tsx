@@ -1,13 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  AlertCircle,
-  FileText,
-  Upload,
-  Printer,
-  Download,
-} from 'lucide-react'
+import { AlertCircle, FileText, Upload, Printer, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
@@ -62,7 +56,9 @@ export function KeyLoanCard({
                 {keys.length > 0 ? (
                   <span>{keys.map((k) => k.keyName).join(', ')}</span>
                 ) : (
-                  <span className="text-muted-foreground italic">Inga nycklar</span>
+                  <span className="text-muted-foreground italic">
+                    Inga nycklar
+                  </span>
                 )}
               </div>
               <div className="text-[10px] text-muted-foreground flex gap-2">
@@ -75,14 +71,16 @@ export function KeyLoanCard({
                 </span>
                 {keyLoan.pickedUpAt && (
                   <span>
-                    → {format(new Date(keyLoan.pickedUpAt), 'dd/MM/yy', {
+                    →{' '}
+                    {format(new Date(keyLoan.pickedUpAt), 'dd/MM/yy', {
                       locale: sv,
                     })}
                   </span>
                 )}
                 {keyLoan.returnedAt && (
                   <span>
-                    → {format(new Date(keyLoan.returnedAt), 'dd/MM/yy', {
+                    →{' '}
+                    {format(new Date(keyLoan.returnedAt), 'dd/MM/yy', {
                       locale: sv,
                     })}
                   </span>
@@ -121,9 +119,7 @@ export function KeyLoanCard({
               <AlertCircle className="h-2.5 w-2.5 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="text-[10px] text-yellow-800 dark:text-yellow-200">
                 <p className="font-semibold">Utlåningskvitto ej signerat</p>
-                <p className="mt-0.5">
-                  Kvittot måste signeras och laddas upp.
-                </p>
+                <p className="mt-0.5">Kvittot måste signeras och laddas upp.</p>
               </div>
             </div>
             <div className="flex gap-1">

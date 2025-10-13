@@ -378,12 +378,8 @@ export function KeyLoansAccordion({
   }
 
   // Separate active and returned loans
-  const activeLoans = keyLoans.filter(
-    (loan) => !loan.keyLoan.returnedAt
-  )
-  const returnedLoans = keyLoans.filter(
-    (loan) => loan.keyLoan.returnedAt
-  )
+  const activeLoans = keyLoans.filter((loan) => !loan.keyLoan.returnedAt)
+  const returnedLoans = keyLoans.filter((loan) => loan.keyLoan.returnedAt)
 
   return (
     <>
@@ -402,7 +398,8 @@ export function KeyLoansAccordion({
           <div className="space-y-2">
             {activeLoans.map((loanWithDetails) => {
               const hasUnsignedLoanReceipt =
-                loanWithDetails.loanReceipt && !loanWithDetails.loanReceipt.fileId
+                loanWithDetails.loanReceipt &&
+                !loanWithDetails.loanReceipt.fileId
               const isActive = !loanWithDetails.keyLoan.returnedAt
 
               return (
