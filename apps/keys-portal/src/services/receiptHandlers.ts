@@ -1,4 +1,4 @@
-import type { Key, Lease, ReceiptData } from '@/services/types'
+import type { Key, Lease } from '@/services/types'
 
 export type GenerateSwitchReceiptsParams = {
   lease: Lease
@@ -21,21 +21,14 @@ export type GenerateSwitchReceiptsResult = {
  * @returns Result with success status
  */
 export async function handleGenerateSwitchReceipts({
-  lease,
-  allLoanKeys,
-  switchedKeys,
-  returnedKeys,
-  returnReceiptId,
-  newLoanReceiptId,
+  lease: _lease,
+  allLoanKeys: _allLoanKeys,
+  switchedKeys: _switchedKeys,
+  returnedKeys: _returnedKeys,
+  returnReceiptId: _returnReceiptId,
+  newLoanReceiptId: _newLoanReceiptId,
 }: GenerateSwitchReceiptsParams): Promise<GenerateSwitchReceiptsResult> {
-  try {
-    // Receipt data is prepared but not downloaded
-    // The ReceiptDialog will handle opening the PDFs in a new tab when needed
-    return { success: true }
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error?.message || 'Failed to prepare receipt data',
-    }
-  }
+  // Receipt data is prepared but not downloaded
+  // The ReceiptDialog will handle opening the PDFs in a new tab when needed
+  return { success: true }
 }
