@@ -7,6 +7,12 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 
 import * as factory from '../../../../test/factories'
+import {
+  ApplicantStatus,
+  GetActiveOfferByListingIdErrorCodes,
+  ListingStatus,
+  UpdateListingStatusErrorCodes,
+} from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -507,5 +513,181 @@ describe('POST /listings/batch', () => {
     expect(res.body).toEqual({
       error: 'Failed to create listings',
     })
+  })
+})
+
+describe('PUT /listings/:listingId/status', () => {
+  it('should return error and correct status if updateListingStatus fails', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: UpdateListingStatusErrorCodes.Unknown,
+      })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(res.status).toBe(500)
+  })
+  it('should remove active applications when status is set to Closed', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          factory.detailedApplicant.build({
+            id: 1,
+            listingId: 1,
+            status: ApplicantStatus.Active,
+          }),
+          factory.detailedApplicant.build({
+            id: 2,
+            listingId: 1,
+            status: ApplicantStatus.Active,
+          }),
+          factory.detailedApplicant.build({
+            id: 3,
+            listingId: 1,
+            status: ApplicantStatus.Offered,
+          }),
+        ],
+      })
+
+    const withdrawSpy = jest
+      .spyOn(tenantLeaseAdapter, 'withdrawApplicantByManager')
+      .mockResolvedValue({ ok: true })
+
+    await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(withdrawSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should handle error when getDetailedApplicantsByListingId fails', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: UpdateListingStatusErrorCodes.Unknown,
+      })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error')
+  })
+  it('should deny open offers when closing listing', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    const getActiveOfferByListingIdSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getActiveOfferByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.offer.build({ id: 42 }),
+      })
+
+    const closeOfferByDenySpy = jest
+      .spyOn(tenantLeaseAdapter, 'closeOfferByDeny')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(getActiveOfferByListingIdSpy).toHaveBeenCalledWith(1)
+    expect(closeOfferByDenySpy).toHaveBeenCalledWith(42)
+    expect(res.status).toBe(200)
+  })
+  it('should handle error when getActiveOfferByListingId fails', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getActiveOfferByListingId')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.Unknown,
+      })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error')
+  })
+  it('should handle error when closeOfferByDeny fails', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getActiveOfferByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.offer.build({ id: 42 }),
+      })
+
+    jest.spyOn(tenantLeaseAdapter, 'closeOfferByDeny').mockResolvedValueOnce({
+      ok: false,
+      err: UpdateListingStatusErrorCodes.Unknown,
+    })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error')
+  })
+  it('should return 200 and metadata if everything succeeds', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getActiveOfferByListingId')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: GetActiveOfferByListingIdErrorCodes.NotFound,
+      })
+
+    const res = await request(app.callback())
+      .put('/listings/1/status')
+      .send({ status: ListingStatus.Closed })
+
+    expect(res.status).toBe(200)
   })
 })
