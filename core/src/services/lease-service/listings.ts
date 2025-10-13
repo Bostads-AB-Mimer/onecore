@@ -297,8 +297,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    //2. Remove any active applications
     if (ctx.request.body.status == ListingStatus.Closed) {
+      //2. Remove any active applications
       const applicantsResult =
         await leasingAdapter.getDetailedApplicantsByListingId(
           Number(ctx.params.listingId)
@@ -331,43 +331,43 @@ export const routes = (router: KoaRouter) => {
           }
         )
       }
-    }
 
-    //3. Deny any open offers for the listing
-    const offerResult = await leasingAdapter.getActiveOfferByListingId(
-      Number.parseInt(ctx.params.listingId)
-    )
-
-    if (!offerResult.ok) {
-      if (offerResult.err !== GetActiveOfferByListingIdErrorCodes.NotFound) {
-        logger.error(
-          { listingId: ctx.params.listingId, error: offerResult.err },
-          'Error getting active offer by listing id when closing listing'
-        )
-        ctx.status = offerResult.statusCode ?? 500
-        ctx.body = { error: 'Error getting active offer', ...metadata }
-        return
-      } else {
-        logger.debug(
-          { listingId: ctx.params.listingId, error: offerResult.err },
-          'Open offer not found when closing listing'
-        )
-      }
-    }
-
-    if (offerResult.ok) {
-      const closeOfferResult = await leasingAdapter.closeOfferByDeny(
-        offerResult.data.id
+      //3. Deny any open offers for the listing
+      const offerResult = await leasingAdapter.getActiveOfferByListingId(
+        Number.parseInt(ctx.params.listingId)
       )
 
-      if (!closeOfferResult.ok) {
-        logger.error(
-          { listingId: ctx.params.listingId, offerId: offerResult.data.id },
-          'Error denying offer when closing listing'
+      if (!offerResult.ok) {
+        if (offerResult.err !== GetActiveOfferByListingIdErrorCodes.NotFound) {
+          logger.error(
+            { listingId: ctx.params.listingId, error: offerResult.err },
+            'Error getting active offer by listing id when closing listing'
+          )
+          ctx.status = offerResult.statusCode ?? 500
+          ctx.body = { error: 'Error getting active offer', ...metadata }
+          return
+        } else {
+          logger.debug(
+            { listingId: ctx.params.listingId, error: offerResult.err },
+            'Open offer not found when closing listing'
+          )
+        }
+      }
+
+      if (offerResult.ok) {
+        const closeOfferResult = await leasingAdapter.closeOfferByDeny(
+          offerResult.data.id
         )
-        ctx.status = closeOfferResult.statusCode ?? 500
-        ctx.body = { error: 'Error denying offer', ...metadata }
-        return
+
+        if (!closeOfferResult.ok) {
+          logger.error(
+            { listingId: ctx.params.listingId, offerId: offerResult.data.id },
+            'Error denying offer when closing listing'
+          )
+          ctx.status = closeOfferResult.statusCode ?? 500
+          ctx.body = { error: 'Error denying offer', ...metadata }
+          return
+        }
       }
     }
 
