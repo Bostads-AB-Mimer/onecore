@@ -6,14 +6,14 @@ exports.up = function (knex) {
   return knex.transaction(async (trx) => {
     await trx.raw(`
   CREATE TABLE listing_text_content (
-    id int NOT NULL PRIMARY KEY IDENTITY(1,1),
+    id uniqueidentifier NOT NULL PRIMARY KEY DEFAULT NEWID(),
     rentalObjectCode nvarchar(100) NOT NULL,
     contentBlocks nvarchar(max) NOT NULL,
     createdAt datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     updatedAt datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET()
   );
 
-  CREATE INDEX idx_listing_text_content_rental_object_code
+  CREATE UNIQUE INDEX UQ_listing_text_content_rental_object_code
   ON listing_text_content (rentalObjectCode);
 `)
   })
