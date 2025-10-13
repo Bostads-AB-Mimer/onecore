@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button'
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw, Copy } from 'lucide-react'
 import type { KeyWithStatus } from './LeaseKeyStatusList'
+import { FlexMenu } from './FlexMenu'
+import { useState } from 'react'
 
 type Props = {
   selectedKeys: string[]
@@ -11,6 +13,7 @@ type Props = {
   onRent: (keyIds: string[]) => void
   onReturn: (keyIds: string[]) => void
   onSwitch?: (keyIds: string[]) => void
+  onRefresh?: () => void
 }
 
 export function KeyActionButtons({
@@ -22,7 +25,10 @@ export function KeyActionButtons({
   onRent,
   onReturn,
   onSwitch,
+  onRefresh,
 }: Props) {
+  const [flexMenuOpen, setFlexMenuOpen] = useState(false)
+
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
     .filter((k): k is KeyWithStatus => k !== undefined)
@@ -62,68 +68,87 @@ export function KeyActionButtons({
   const hasSelectedKeys = selectedKeys.length > 0
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {/* Selected keys buttons */}
-      {hasSelectedKeys && (
-        <>
-          {rentableKeys.length > 0 && (
-            <Button
-              size="sm"
-              onClick={() => onRent(rentableKeys.map((k) => k.id))}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              <Plus className="h-3 w-3" />
-              Låna ut valda ({rentableKeys.length})
-            </Button>
-          )}
-          {returnableKeys.length > 0 && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => onReturn(returnableKeys.map((k) => k.id))}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              Återlämna valda ({returnableKeys.length})
-            </Button>
-          )}
-          {onSwitch && switchableKeys.length > 0 && (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {/* Selected keys buttons */}
+        {hasSelectedKeys && (
+          <>
+            {rentableKeys.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => onRent(rentableKeys.map((k) => k.id))}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                Låna ut valda ({rentableKeys.length})
+              </Button>
+            )}
+            {returnableKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onReturn(returnableKeys.map((k) => k.id))}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                Återlämna valda ({returnableKeys.length})
+              </Button>
+            )}
+            {onSwitch && switchableKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSwitch(switchableKeys.map((k) => k.id))}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Byt nyckel ({switchableKeys.length})
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onSwitch(switchableKeys.map((k) => k.id))}
+              onClick={() => setFlexMenuOpen(true)}
               disabled={isProcessing}
               className="flex items-center gap-1"
             >
-              <RefreshCw className="h-3 w-3" />
-              Byt nyckel ({switchableKeys.length})
+              <Copy className="h-3 w-3" />
+              Flex ({selectedKeys.length})
             </Button>
-          )}
-        </>
-      )}
+          </>
+        )}
 
-      {/* Bulk action buttons */}
-      {allAvailableKeys.length > 0 && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onRent(allAvailableKeys.map((k) => k.id))}
-          disabled={isProcessing}
-        >
-          Låna ut alla tillgängliga ({allAvailableKeys.length})
-        </Button>
-      )}
-      {allRentedByTenant.length > 0 && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onReturn(allRentedByTenant.map((k) => k.id))}
-          disabled={isProcessing}
-        >
-          Återlämna alla ({allRentedByTenant.length})
-        </Button>
-      )}
-    </div>
+        {/* Bulk action buttons */}
+        {allAvailableKeys.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onRent(allAvailableKeys.map((k) => k.id))}
+            disabled={isProcessing}
+          >
+            Låna ut alla tillgängliga ({allAvailableKeys.length})
+          </Button>
+        )}
+        {allRentedByTenant.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onReturn(allRentedByTenant.map((k) => k.id))}
+            disabled={isProcessing}
+          >
+            Återlämna alla ({allRentedByTenant.length})
+          </Button>
+        )}
+      </div>
+
+      <FlexMenu
+        open={flexMenuOpen}
+        onOpenChange={setFlexMenuOpen}
+        selectedKeys={selectedKeysData}
+        onSuccess={onRefresh}
+      />
+    </>
   )
 }
