@@ -16,11 +16,11 @@ function transformFromDbListingTextContent(
   row: DbListingTextContent
 ): ListingTextContent {
   return {
-    id: row.Id,
-    rentalObjectCode: row.RentalObjectCode,
-    contentBlocks: JSON.parse(row.ContentBlocks),
-    createdAt: row.CreatedAt,
-    updatedAt: row.UpdatedAt,
+    id: row.id,
+    rentalObjectCode: row.rentalObjectCode,
+    contentBlocks: JSON.parse(row.contentBlocks),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }
 
@@ -31,14 +31,14 @@ const getByRentalObjectCode = async (
   const result = await dbConnection
     .from('listing_text_content AS ltc')
     .select<DbListingTextContent>(
-      'ltc.id AS Id',
-      'ltc.rentalObjectCode AS RentalObjectCode',
-      'ltc.contentBlocks AS ContentBlocks',
-      'ltc.createdAt AS CreatedAt',
-      'ltc.updatedAt AS UpdatedAt'
+      'ltc.id AS id',
+      'ltc.rentalObjectCode AS rentalObjectCode',
+      'ltc.contentBlocks AS contentBlocks',
+      'ltc.createdAt AS createdAt',
+      'ltc.updatedAt AS updatedAt'
     )
     .where({
-      RentalObjectCode: rentalObjectCode,
+      rentalObjectCode: rentalObjectCode,
     })
     .first()
 
@@ -63,6 +63,22 @@ const create = async (
       data: transformFromDbListingTextContent(inserted),
     }
   } catch (error) {
+    // Check if this is a unique constraint violation
+    if (
+      error instanceof Error &&
+      (error.message.includes('UQ_listing_text_content_rental_object_code') ||
+        error.message.includes('duplicate') ||
+        error.message.includes('unique') ||
+        (error as any).code === '23505') // PostgreSQL error code
+    ) {
+      return {
+        ok: false,
+        err: new Error(
+          `Listing text content already exists for rental object code: ${listingTextContent.rentalObjectCode}`
+        ),
+      }
+    }
+
     return {
       ok: false,
       err: error instanceof Error ? error : new Error('Unknown error'),
@@ -71,7 +87,7 @@ const create = async (
 }
 
 const update = async (
-  id: number,
+  rentalObjectCode: string,
   updateData: UpdateListingTextContentRequest,
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
@@ -87,9 +103,16 @@ const update = async (
 
     const [updated] = await dbConnection
       .table('listing_text_content')
-      .where({ Id: id })
+      .where({ RentalObjectCode: rentalObjectCode })
       .update(updateFields)
       .returning('*')
+
+    if (!updated) {
+      return {
+        ok: false,
+        err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
+      }
+    }
 
     return {
       ok: true,
@@ -104,11 +127,21 @@ const update = async (
 }
 
 const remove = async (
-  id: number,
+  rentalObjectCode: string,
   dbConnection = db
 ): Promise<AdapterResult<void, Error>> => {
   try {
-    await dbConnection.table('listing_text_content').where({ Id: id }).delete()
+    const deletedCount = await dbConnection
+      .table('listing_text_content')
+      .where({ RentalObjectCode: rentalObjectCode })
+      .delete()
+
+    if (deletedCount === 0) {
+      return {
+        ok: false,
+        err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
+      }
+    }
 
     return {
       ok: true,

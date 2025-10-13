@@ -13,7 +13,7 @@ export const ContentBlockSchema = z.object({
 })
 
 export const ListingTextContentSchema = z.object({
-  id: z.number().int(),
+  id: z.string().uuid(),
   rentalObjectCode: z.string(),
   contentBlocks: z.array(ContentBlockSchema),
   createdAt: z.date(),
