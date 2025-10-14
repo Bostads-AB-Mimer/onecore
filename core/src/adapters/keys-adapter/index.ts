@@ -463,6 +463,13 @@ export const ReceiptsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  get: async (
+    id: string
+  ): Promise<AdapterResult<Receipt, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: Receipt }>(`${BASE}/receipts/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
   getByKeyLoan: async (
     keyLoanId: string
   ): Promise<AdapterResult<Receipt[], CommonErr>> => {

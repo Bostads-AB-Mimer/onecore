@@ -19,6 +19,17 @@ export const receiptService = {
   },
 
   /**
+   * Get a receipt by ID
+   */
+  async getById(receiptId: string): Promise<Receipt> {
+    const { data, error } = await GET('/receipts/{id}', {
+      params: { path: { id: receiptId } },
+    })
+    if (error) throw error
+    return data?.content as Receipt
+  },
+
+  /**
    * Get all receipts for a key loan ID
    */
   async getByKeyLoan(keyLoanId: string): Promise<Receipt[]> {
