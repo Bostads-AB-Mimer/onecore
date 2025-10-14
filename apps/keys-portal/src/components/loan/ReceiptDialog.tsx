@@ -12,10 +12,7 @@ import { FileText, Printer, Upload, Download, AlertCircle } from 'lucide-react'
 
 import type { ReceiptData } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
-import {
-  generateLoanReceiptBlob,
-  generateReturnReceiptBlob,
-} from '@/lib/pdf-receipts'
+import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 
 export function ReceiptDialog({
   isOpen,
@@ -42,66 +39,10 @@ export function ReceiptDialog({
 
   const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
-  // ---------- PRINT (open the *real* jsPDF PDF in a new tab + auto print) ----------
+  // ---------- PRINT (open the PDF in a new tab with auto print) ----------
   const handleOpenPdfTab = async () => {
     if (!receiptData) return
-
-    // Open a placeholder tab synchronously to avoid popup blockers
-    const win = window.open('', '_blank')
-    if (!win) {
-      // Popup blocked; you could also fall back to creating a temporary link and clicking it.
-      return
-    }
-    win.document.write(
-      '<!doctype html><title>Kvitto</title><body>Förbereder kvitto…</body>'
-    )
-    win.document.close()
-
-    // Build the actual jsPDF as a Blob
-    const { blob, fileName } =
-      receiptData.receiptType === 'LOAN'
-        ? await generateLoanReceiptBlob(receiptData, receiptId ?? undefined)
-        : await generateReturnReceiptBlob(receiptData, receiptId ?? undefined)
-
-    const pdfUrl = URL.createObjectURL(blob)
-
-    // Create a tiny HTML viewer that embeds the PDF and triggers print
-    const viewerHtml = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${fileName}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>html,body,iframe{margin:0;padding:0;height:100%;width:100%;border:0}</style>
-</head>
-<body>
-  <iframe id="pdf" src="${pdfUrl}#view=FitH" allow="clipboard-write"></iframe>
-  <script>
-    const iframe = document.getElementById('pdf');
-    // Try printing shortly after load; some viewers need a delay
-    iframe.addEventListener('load', () => {
-      setTimeout(() => {
-        try { iframe.contentWindow && iframe.contentWindow.print && iframe.contentWindow.print(); } catch (e) {}
-      }, 400);
-    });
-  </script>
-</body>
-</html>`
-
-    const viewerBlob = new Blob([viewerHtml], { type: 'text/html' })
-    const viewerUrl = URL.createObjectURL(viewerBlob)
-
-    // Navigate the already-open tab to the viewer
-    win.location.href = viewerUrl
-
-    // Cleanup after a while (tab holds the URLs while open)
-    setTimeout(
-      () => {
-        URL.revokeObjectURL(pdfUrl)
-        URL.revokeObjectURL(viewerUrl)
-      },
-      5 * 60 * 1000
-    )
+    await openPdfInNewTab(receiptData, receiptId ?? undefined)
   }
 
   // ---------- Upload helpers (only shown if enableUpload) ----------
