@@ -1,3 +1,5 @@
+import { authConfig } from '@/auth-config'
+
 import type {
   Receipt,
   CreateReceiptRequest,
@@ -48,7 +50,7 @@ export const receiptService = {
     formData.append('file', file)
 
     const response = await fetch(
-      `${import.meta.env.VITE_CORE_API_URL}/receipts/${receiptId}/upload`,
+      `${authConfig.apiUrl}/receipts/${receiptId}/upload`,
       {
         method: 'POST',
         body: formData,
