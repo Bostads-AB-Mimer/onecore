@@ -10,11 +10,14 @@ import {
   getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
+  getUnpaidInvoices,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
 } from './adapters/xledger-adapter'
 import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
+  getContacts as getXpandContacts,
+  getInvoicesWithFilter,
 } from './adapters/xpand-db-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -87,6 +90,38 @@ export const routes = (router: KoaRouter) => {
         { error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.get('(.*)/invoices/unpaid', async (ctx) => {
+    const queryParams = economy.GetUnpaidInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    try {
+      const { offset = 0, size = 50 } = queryParams.data || {}
+      const xledgerInvoices = await getUnpaidInvoices()
+
+      const filteredInvoices = await getInvoicesWithFilter(
+        '001',
+        xledgerInvoices.map((v) => v.invoiceId),
+        offset,
+        size,
+        { homeInsurance: true } // TODO We might want to get this from a query parameter depending on the UI
+      )
+
+      ctx.status = 200
+      ctx.body = filteredInvoices
+    } catch (error: any) {
+      console.log('error: ', error)
       ctx.status = 500
       ctx.body = {
         message: error.message,

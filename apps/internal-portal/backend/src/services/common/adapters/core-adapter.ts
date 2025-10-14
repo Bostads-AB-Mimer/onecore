@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import Config from '../../../common/config'
+import { Invoice } from '@onecore/types'
 
 const coreBaseUrl = Config.core.url
 const coreUsername = Config.core.username
@@ -32,6 +33,23 @@ const createHeaders = (accessToken: string) => {
   return headers
 }
 
+const getUnpaidInvoices = async (offset?: number, size?: number) => {
+  const params = new URLSearchParams()
+  if (offset !== undefined) {
+    params.append('offset', offset.toString())
+  }
+  if (size !== undefined) {
+    params.append('size', size.toString())
+  }
+
+  const url = `${coreBaseUrl}/invoices/unpaid?${params.toString()}`
+
+  return getFromCore<{ content: Invoice[] }>({
+    method: 'GET',
+    url,
+  })
+}
+
 const getFromCore = async <T = any>(
   config: AxiosRequestConfig<any>
 ): Promise<AxiosResponse<T, any>> => {
@@ -55,4 +73,4 @@ const getFromCore = async <T = any>(
   }
 }
 
-export { getFromCore }
+export { getUnpaidInvoices, getFromCore }

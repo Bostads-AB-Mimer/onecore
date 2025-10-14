@@ -5,9 +5,11 @@ import {
   InvoiceRow,
   InvoiceTransactionType,
   invoiceTransactionTypeTranslation,
+  PaymentStatus,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import trimStrings from '../../../utils/trimStrings'
 
 import config from '@src/common/config'
 import {
@@ -712,6 +714,80 @@ export const getInvoiceRows = async (
   )
 
   return convertedInvoiceRows
+}
+
+export const getInvoicesWithFilter = async (
+  companyId: string,
+  invoiceNumbers: string[],
+  offset: number,
+  size: number,
+  filter?: { homeInsurance: boolean }
+): Promise<Invoice[]> => {
+  if (invoiceNumbers.length === 0) {
+    return []
+  }
+
+  const query = db('krfkh')
+    .select(
+      'krfkh.invoice AS invoiceId',
+      'krfkh.reference AS leaseId',
+      'krfkh.fromdate AS fromDate',
+      'krfkh.invdate AS invoiceDate',
+      'krfkh.todate AS toDate',
+      'krfkh.expdate AS expirationDate',
+      'krfkh.amount AS amount',
+      'krfkh.reduction AS reduction',
+      'krfkh.vat AS vat',
+      'krfkh.roundoff AS roundoff',
+      'krfkh.debstatus AS debitStatus',
+      'krfkh.paystatus AS paymentStatus',
+      'cmctc.cmctckod AS contactCode',
+      'cmctc.cmctcben AS tenantName',
+      'krfkh.keyrevrt as transactionType',
+      'revrt.name as transactionTypeName'
+    )
+    .innerJoin('cmcmp', 'krfkh.keycmcmp', 'cmcmp.keycmcmp')
+    .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
+    .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
+    .whereRaw(
+      `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
+    )
+    .where('cmcmp.code', companyId)
+    .where(function () {
+      this.where('krfkh.type', 1).orWhere('krfkh.type', 2)
+    })
+    .orderBy('krfkh.invdate', 'desc')
+    .offset(offset)
+    .limit(size)
+
+  if (filter?.homeInsurance) {
+    query.whereExists(function () {
+      this.select(1)
+        .from('krfkr')
+        .whereRaw('krfkr.keykrfkh = krfkh.keykrfkh')
+        .where(function () {
+          this.where('krfkr.code', 'like', 'HEMFÖR%')
+            .orWhere('krfkr.code', 'like', 'HYRSÄT%')
+            .orWhere('krfkr.code', 'like', 'VHK%')
+        })
+    })
+  }
+
+  const invoices = await query.then(trimStrings)
+
+  logger.info(
+    {
+      requestedInvoices: invoiceNumbers.length,
+      includedInvoices: invoices.length,
+    },
+    'Retrieved invoices'
+  )
+
+  const convertedInvoices = invoices.map((invoice: any): Invoice => {
+    return transformFromDbInvoice(invoice, invoice['contactCode'])
+  })
+
+  return convertedInvoices
 }
 
 function getTransactionType(transactionTypeString: any) {

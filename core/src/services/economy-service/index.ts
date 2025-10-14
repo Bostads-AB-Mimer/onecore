@@ -53,6 +53,33 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/invoices/unpaid', async (ctx) => {
+    const queryParams = economy.GetUnpaidInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const metadata = generateRouteMetadata(ctx)
+    const { offset, size } = queryParams.data || {}
+    const result = await economyAdapter.getUnpaidInvoices(offset, size)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Failed to fetch unpaid invoices',
+        ok: false,
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
+
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(
