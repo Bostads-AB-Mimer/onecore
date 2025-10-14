@@ -31,7 +31,7 @@ export const PropertySchema = z.object({
   congregation: z.string().nullable(),
   builtStatus: z.number().int(),
   separateAssessmentUnit: z.number().int(),
-  consolidationNumber: z.string(),
+  consolidationNumber: z.string().nullable(),
   ownershipType: z.string(),
   registrationDate: z.string().nullable(),
   acquisitionDate: z.string().nullable(),
