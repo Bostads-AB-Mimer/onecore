@@ -228,7 +228,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
-      customers (first: 10000, filter: { code: "${contactCode}" }) { 
+      customers (first: 1, filter: { code: "${contactCode}" }) {
         edges {
           node {
             code
