@@ -1,20 +1,28 @@
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
-import { Property } from '@/services/types'
+import type { PropertyDetail } from '@/types/api'
 
 interface PropertyOrdersTabProps {
-  propertyDetail: Property
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyOrdersTab = ({
   propertyDetail,
 }: PropertyOrdersTabProps) => {
-  // Use property directly as the property ID
-  const propertyId = propertyDetail.code || 'property-default'
+  // Validate that property code exists
+  if (!propertyDetail.code) {
+    return (
+      <TabLayout title="Ärenden för fastighet" showCard={true}>
+        <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
+          Fastighetskod saknas. Kunde inte hämta ärenden.
+        </div>
+      </TabLayout>
+    )
+  }
 
   return (
     <TabLayout title="Ärenden för fastighet" showCard={true}>
-      <WorkOrdersManagement contextType="property" id={propertyId} />
+      <WorkOrdersManagement contextType="property" id={propertyDetail.code} />
     </TabLayout>
   )
 }

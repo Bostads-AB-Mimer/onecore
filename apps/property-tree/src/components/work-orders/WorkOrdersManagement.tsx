@@ -1,9 +1,6 @@
 import { Button } from '@/components/ui/v2/Button'
-import { WorkOrderCard } from '@/components/work-orders/WorkOrderCard'
-import { WorkOrderCardSkeleton } from '@/components/work-orders/WorkOrderCardSkeleton'
 import { WorkOrdersTable } from '@/components/work-orders/v2/WorkOrdersTable'
 import { WorkOrdersTableSkeleton } from '@/components/work-orders/WorkOrdersTableSkeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { FilePlus } from 'lucide-react'
 import useWorkOrders from '../hooks/useWorkOrders'
@@ -28,23 +25,23 @@ export function WorkOrdersManagement({
             disabled
             size={'default'}
             variant={'default'}
-            onClick={() => {}} // Placeholder action)}
+            onClick={() => {}} // Placeholder action
           >
             <FilePlus className="mr-2 h-4 w-4" />
             Skapa ärende
           </Button>
         </div>
 
-        {isLoading ? (
+        {error ? (
+          <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
+            Kunde inte hämta ärendehistorik. Försök igen senare.
+          </div>
+        ) : isLoading ? (
           <WorkOrdersTableSkeleton />
         ) : workOrders.length > 0 ? (
           <WorkOrdersTable orders={workOrders} />
         ) : (
           <p className="text-slate-500 p-2">Ingen ärendehistorik.</p>
-        )}
-
-        {error && (
-          <div className="text-red-500">Kunde inte hämta ärendehistorik.</div>
         )}
       </div>
     </TabLayout>

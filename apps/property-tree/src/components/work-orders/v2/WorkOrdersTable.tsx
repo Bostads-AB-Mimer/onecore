@@ -9,10 +9,12 @@ interface WorkOrdersTableProps {
   orders: WorkOrder[]
 }
 
+const INITIAL_DISPLAY_COUNT = 5
+
 export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
   const [showAll, setShowAll] = useState(false)
-  const displayedOrders = showAll ? orders : orders.slice(0, 5)
-  const hasMoreOrders = orders.length > 5
+  const displayedOrders = showAll ? orders : orders.slice(0, INITIAL_DISPLAY_COUNT)
+  const hasMoreOrders = orders.length > INITIAL_DISPLAY_COUNT
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE')
 
@@ -144,7 +146,7 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
       {hasMoreOrders && !showAll && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => setShowAll(true)}>
-            Se fler ({orders.length - 5} till)
+            Se fler ({orders.length - INITIAL_DISPLAY_COUNT} till)
           </Button>
         </div>
       )}
