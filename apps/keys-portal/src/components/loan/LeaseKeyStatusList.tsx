@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Key, Lease, KeyType, ReceiptData } from '@/services/types'
+import type { Key, Lease, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
   handleReturnKeys,
-  handleSwitchKeysWithReceipts,
+  handleDisposeKeys,
 } from '@/services/loanHandlers'
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
@@ -44,12 +44,10 @@ function getLeaseContactNames(lease: Lease): string[] {
 export function LeaseKeyStatusList({
   lease,
   onKeysLoaned,
-  onKeysSwitched,
   onKeysReturned,
 }: {
   lease: Lease
   onKeysLoaned?: () => void
-  onKeysSwitched?: () => void
   onKeysReturned?: () => void
 }) {
   const { toast } = useToast()
@@ -61,7 +59,6 @@ export function LeaseKeyStatusList({
 
   // Receipt dialog state
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
-  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [receiptId, setReceiptId] = useState<string | null>(null)
 
   // Transfer dialog state
@@ -157,14 +154,6 @@ export function LeaseKeyStatusList({
 
       // Open receipt dialog if we have a receiptId
       if (result.receiptId) {
-        const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
-        setReceiptData({
-          lease,
-          tenants: lease.tenants ?? [],
-          keys: relevantKeys,
-          receiptType: 'LOAN',
-          operationDate: new Date(),
-        })
         setReceiptId(result.receiptId)
         setShowReceiptDialog(true)
       } else {
@@ -188,21 +177,8 @@ export function LeaseKeyStatusList({
     if (result.success) {
       await refreshStatuses()
       setSelectedKeys([])
-
-      if (result.receiptId) {
-        const relevantKeys = keys.filter((k) => keyIds.includes(k.id))
-        setReceiptData({
-          lease,
-          tenants: lease.tenants ?? [],
-          keys: relevantKeys,
-          receiptType: 'RETURN',
-          operationDate: new Date(),
-        })
-        setReceiptId(result.receiptId)
-        setShowReceiptDialog(true)
-      } else {
-        onKeysReturned?.()
-      }
+      // Don't show receipt dialog for returns - just notify parent
+      onKeysReturned?.()
     }
 
     toast({
@@ -214,28 +190,14 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  const onSwitch = async (keyIds: string[]) => {
+  const onDispose = async (keyIds: string[]) => {
     setIsProcessing(true)
 
-    const result = await handleSwitchKeysWithReceipts({
-      keyIdsToSwitch: keyIds,
-      contact: tenantNames[0],
-      contact2: tenantNames[1],
-      lease,
-      allKeys: keys,
-    })
+    const result = await handleDisposeKeys({ keyIds })
 
     if (result.success) {
       await refreshStatuses()
       setSelectedKeys([])
-
-      if (result.receiptData && result.receiptId) {
-        setReceiptData(result.receiptData)
-        setReceiptId(result.receiptId)
-        setShowReceiptDialog(true)
-      }
-
-      onKeysSwitched?.()
     }
 
     toast({
@@ -313,7 +275,7 @@ export function LeaseKeyStatusList({
               isProcessing={isProcessing}
               onRent={onRent}
               onReturn={onReturn}
-              onSwitch={onSwitch}
+              onDispose={onDispose}
               onRefresh={async () => {
                 // Refresh keys and statuses after flex keys are created
                 const list = await keyService.searchKeys({
@@ -411,17 +373,13 @@ export function LeaseKeyStatusList({
         isOpen={showReceiptDialog}
         onClose={() => {
           setShowReceiptDialog(false)
-          const wasReturnReceipt = receiptData?.receiptType === 'RETURN'
-          setReceiptData(null)
           setReceiptId(null)
-          if (wasReturnReceipt) {
-            onKeysReturned?.()
-          } else {
-            onKeysLoaned?.()
-          }
+          // Always call onKeysLoaned when receipt dialog closes
+          // (works for both loan and return receipts in this context)
+          onKeysLoaned?.()
         }}
-        receiptData={receiptData}
         receiptId={receiptId}
+        lease={lease}
         enableUpload={false}
       />
 
@@ -432,22 +390,12 @@ export function LeaseKeyStatusList({
         existingLoans={existingLoansForTransfer}
         contact={tenantNames[0]}
         contact2={tenantNames[1]}
-        onSuccess={async (allLoanedKeyIds, receiptId) => {
+        onSuccess={async (receiptId) => {
           // Refresh and show receipt
           await refreshStatuses()
           setSelectedKeys([])
 
           if (receiptId) {
-            const relevantKeys = keys.filter((k) =>
-              allLoanedKeyIds.includes(k.id)
-            )
-            setReceiptData({
-              lease,
-              tenants: lease.tenants ?? [],
-              keys: relevantKeys,
-              receiptType: 'LOAN',
-              operationDate: new Date(),
-            })
             setReceiptId(receiptId)
             setShowReceiptDialog(true)
           } else {

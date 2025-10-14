@@ -2536,6 +2536,68 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /receipts/{id}:
+   *   get:
+   *     summary: Get a receipt by ID
+   *     description: Retrieve a specific receipt by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The receipt ID
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved receipt
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/receipts/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await ReceiptsApi.get(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error fetching receipt')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /receipts/by-key-loan/{keyLoanId}:
    *   get:
    *     summary: Get receipt by key loan ID
