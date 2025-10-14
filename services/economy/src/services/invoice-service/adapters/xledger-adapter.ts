@@ -228,7 +228,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
-      customers (first: 10000, filter: { code: "${contactCode}" }) { 
+      customers (first: 1, filter: { code: "${contactCode}" }) {
         edges {
           node {
             code
@@ -283,7 +283,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
 
   const query = {
     query: `{
-      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
+      arTransactions(first: 100, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
         edges {
           node {
             ${invoiceNodeFragment}
