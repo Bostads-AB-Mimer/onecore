@@ -297,7 +297,7 @@ export function ContractCard({
           </div>
 
           {hasAnyKeys && (
-            <div className="md:col-span-9 flex flex-wrap items-start gap-1.5 mt-1">
+            <div className="md:col-span-12 flex flex-wrap items-start gap-1.5 mt-1">
               <div className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
                 <KeyRound className="h-3.5 w-3.5 opacity-80" />
                 <span>Nycklar</span>
@@ -320,17 +320,6 @@ export function ContractCard({
                   )
                 })}
               </div>
-            </div>
-          )}
-
-          {hasAnyKeys && (
-            <div className="md:col-span-3 flex items-start md:justify-end mt-1">
-              <span className="text-xs text-muted-foreground">
-                Antal Nycklar:{' '}
-                <span className="font-medium text-foreground">
-                  {keysLoading ? '…' : totalKeys}
-                </span>
-              </span>
             </div>
           )}
         </div>
