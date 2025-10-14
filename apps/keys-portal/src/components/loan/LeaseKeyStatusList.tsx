@@ -265,14 +265,8 @@ export function LeaseKeyStatusList({
               )
             })}
             {sortedKeys.length > 0 && sortedKeys[0].flexNumber && (
-              <Badge
-                variant={
-                  sortedKeys[0].flexNumber === 3 ? 'destructive' : 'outline'
-                }
-                className="text-xs"
-              >
+              <Badge variant="outline" className="text-xs">
                 Flex: {sortedKeys[0].flexNumber}
-                {sortedKeys[0].flexNumber === 3 && ' (MAX - byt lås)'}
               </Badge>
             )}
           </div>
