@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { WorkOrder } from '@/services/api/core'
 import { useState } from 'react'
+import { resolve } from '@/utils/env'
 
 interface WorkOrdersTableProps {
   orders: WorkOrder[]
@@ -40,8 +41,18 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
     }
   }
 
-  const handleOpenOrder = (orderId: string) => {
-    // Här kan du lägga till navigering eller modal för att visa ärendedetaljer
+  const handleOpenOrder = (code: string) => {
+    // Assuming the code is od-xxxxx, extract the numeric ID
+    const id = code.replace('od-', '')
+    const odooUrl = resolve('VITE_ODOO_URL', '')
+    if (!odooUrl || odooUrl.trim() === '') {
+      console.error('ODOO_URL is not defined')
+      return
+    }
+    window.open(
+      `${odooUrl}/web#id=${id}&model=maintenance.request&view_type=form`,
+      '_blank'
+    )
   }
 
   return (
@@ -91,21 +102,20 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
               order._tag === 'internal' ? 'Odoo' : 'Xpand',
             hideOnMobile: true,
           },
-          /* Hide until we have action to perform
           {
             key: 'action',
             label: 'Åtgärd',
             render: (order: WorkOrder) => (
               <Button
+                disabled={order._tag === 'external'}
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenOrder(order.id)}
+                onClick={() => handleOpenOrder(order.code)}
               >
                 Öppna
               </Button>
             ),
           },
-          */
         ]}
         keyExtractor={(order) => order.id}
         mobileCardRenderer={(order) => (
