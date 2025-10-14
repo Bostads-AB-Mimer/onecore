@@ -1,9 +1,16 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
+import { economy, InvoicePaymentEvent } from '@onecore/types'
+import { z } from 'zod'
 
 import {
   getInvoiceByInvoiceNumber,
+  getInvoiceMatchId,
+  getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
 } from './adapters/xledger-adapter'
 import {
@@ -40,7 +47,7 @@ export const routes = (router: KoaRouter) => {
       const xledgerInvoices =
         (await getXledgerInvoicesByContactCode(contactCode)) ?? []
       const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
+        (await getXpandInvoicesByContactCode(contactCode, { from })) ?? []
 
       const xledgerInvoiceIds = xledgerInvoices.map(
         (invoice) => invoice.invoiceId
@@ -88,6 +95,30 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = result
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.get('(.*)/invoices/:invoiceNumber/payment-events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const matchId = await getInvoiceMatchId(ctx.params.invoiceNumber)
+      if (!matchId) {
+        ctx.status = 404
+        return
+      }
+
+      const events = await getInvoicePaymentEvents(matchId)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody<InvoicePaymentEvent[]>(
+        events,
+        metadata
+      )
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
