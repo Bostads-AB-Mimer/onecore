@@ -283,7 +283,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
 
   const query = {
     query: `{
-      arTransactions(first: 10000, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
+      arTransactions(first: 100, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
         edges {
           node {
             ${invoiceNodeFragment}
