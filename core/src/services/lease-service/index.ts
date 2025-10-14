@@ -27,6 +27,7 @@ import { routes as applicationProfileRoutesOld } from './application-profile-old
 import { routes as listings } from './listings'
 import { routes as commentsRoutes } from './comments'
 import { routes as rentalObjectsRoutes } from './rental-objects'
+import { routes as textContentRoutes } from './text-content'
 
 import { registerSchema } from '../../utils/openapi'
 import {
@@ -82,6 +83,7 @@ export const routes = (router: KoaRouter) => {
   listings(router)
   commentsRoutes(router)
   rentalObjectsRoutes(router)
+  textContentRoutes(router)
 
   /**
    * @swagger
