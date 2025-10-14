@@ -719,6 +719,81 @@ const createLeaseForNonScoredParkingSpace = async (params: {
   }
 }
 
+type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
+type CreateListingTextContentRequest = z.infer<typeof leasing.v1.CreateListingTextContentRequestSchema>
+type UpdateListingTextContentRequest = z.infer<typeof leasing.v1.UpdateListingTextContentRequestSchema>
+
+const getListingTextContentByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingTextContent }>({
+      method: 'get',
+      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createListingTextContent = async (
+  data: CreateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingTextContent }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listing-text-content`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 409) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const updateListingTextContent = async (
+  rentalObjectCode: string,
+  data: UpdateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingTextContent }>({
+      method: 'put',
+      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const deleteListingTextContent = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'delete',
+      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+    })
+    return { ok: true, data: null }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addComment,
   removeComment,
@@ -748,4 +823,8 @@ export {
   getInvoicesByContactCode,
   getLeasesByContactCode,
   createLeaseForNonScoredParkingSpace,
+  getListingTextContentByRentalObjectCode,
+  createListingTextContent,
+  updateListingTextContent,
+  deleteListingTextContent,
 }
