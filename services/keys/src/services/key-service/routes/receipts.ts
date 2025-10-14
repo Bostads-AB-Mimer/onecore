@@ -92,6 +92,58 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /receipts/{id}:
+   *   get:
+   *     summary: Get a receipt by ID
+   *     tags: [Receipts]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Receipt
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       404:
+   *         description: Receipt not found
+   */
+  router.get('/receipts/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+      if (!parse.success) {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid receipt id', ...metadata }
+        return
+      }
+
+      const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+      if (!receipt) {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: receipt as Receipt, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching receipt by id')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /receipts/by-key-loan/{keyLoanId}:
    *   get:
    *     summary: Get receipt by keyLoanId
