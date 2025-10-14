@@ -118,20 +118,21 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
           },
         ]}
         keyExtractor={(order) => order.id}
-        mobileCardRenderer={(order) => (
+        mobileCardRenderer={(order: WorkOrder) => (
           <div className="space-y-2 w-full">
             <div className="flex justify-between items-start">
               <div>
-                <div className="font-medium">{order.id}</div>
-                <div className="text-sm">{order.title}</div>
+                <div className="font-medium">{order.code}</div>
+                <div className="text-sm">{order.caption}</div>
               </div>
               {getStatusBadge(order.status)}
             </div>
             <div className="flex justify-end">
               <Button
+                disabled={order._tag === 'external'}
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenOrder(order.id)}
+                onClick={() => handleOpenOrder(order.code)}
               >
                 Öppna
               </Button>
