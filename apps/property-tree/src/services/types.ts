@@ -1,4 +1,5 @@
 import type { components } from './api/generated/api-types'
+import type { components as coreComponents } from './api/core/generated/api-types'
 
 // Extract types from the generated schemas
 export type Company = components['schemas']['Company']
@@ -11,6 +12,21 @@ export type ResidenceSearchResult =
   components['schemas']['ResidenceSearchResult']
 export type Room = components['schemas']['Room']
 export type Component = components['schemas']['Component']
+
+// Key-related types from core API
+export type Key = coreComponents['schemas']['Key']
+export type KeyLoan = coreComponents['schemas']['KeyLoan']
+export type KeySystem = coreComponents['schemas']['KeySystem']
+
+// Key type definitions aligned with keys-portal
+export const KeyTypeLabels = {
+  LGH: 'Lägenhet',
+  PB: 'Postbox',
+  FS: 'Fastighet',
+  HN: 'Huvudnyckel',
+} as const
+
+export type KeyType = keyof typeof KeyTypeLabels
 
 // Custom types that aren't in the API
 export interface Issue {
