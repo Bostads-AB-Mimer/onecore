@@ -2,8 +2,10 @@ import { Users, User } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/v2/Button'
+import { Separator } from '@/components/ui/v2/Separator'
 import { TenantPersonalInfo } from './TenantPersonalInfo'
 import { TenantContactActions } from './TenantContactActions'
+import { TenantKeyLoans } from './TenantKeyLoans'
 import { components } from '@/services/api/core/generated/api-types'
 
 type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
@@ -44,6 +46,10 @@ export function TenantCard(props: Props) {
           email={props.tenant.emailAddress || 'N/A'}
         />
       </div>
+
+      <Separator className="my-6" />
+
+      <TenantKeyLoans rentalPropertyId={props.lease.rentalPropertyId} />
     </div>
   )
 }
