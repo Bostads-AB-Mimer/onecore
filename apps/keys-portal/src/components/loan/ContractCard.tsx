@@ -65,7 +65,6 @@ export function ContractCard({
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
   const [keys, setKeys] = useState<Key[]>([])
-  const [keysLoading, setKeysLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
@@ -102,7 +101,6 @@ export function ContractCard({
   useEffect(() => {
     let cancelled = false
     async function loadKeys() {
-      setKeysLoading(true)
       try {
         const list = await keyService.getKeysByRentalObjectCode(
           lease.rentalPropertyId
@@ -137,8 +135,8 @@ export function ContractCard({
 
           if (!cancelled) setKeys(filteredKeys)
         }
-      } finally {
-        if (!cancelled) setKeysLoading(false)
+      } catch (err) {
+        console.error('Failed to load keys:', err)
       }
     }
     loadKeys()
@@ -173,15 +171,6 @@ export function ContractCard({
   const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
   const keysRegionId = `keys-${lease.leaseId}`
   const keyLoansRegionId = `key-loans-${lease.leaseId}`
-
-  const tenantNames = useMemo(
-    () =>
-      (lease.tenants ?? [])
-        .map((t) => [t.firstName, t.lastName].filter(Boolean).join(' '))
-        .filter(Boolean)
-        .join(' & '),
-    [lease.tenants]
-  )
 
   return (
     <Card className="relative border rounded-xl">
@@ -330,6 +319,7 @@ export function ContractCard({
               lease={lease}
               refreshKey={keyLoansRefreshKey}
               onUnsignedLoansChange={setHasUnsignedLoans}
+              preloadedKeys={keys}
             />
           </div>
         )}
