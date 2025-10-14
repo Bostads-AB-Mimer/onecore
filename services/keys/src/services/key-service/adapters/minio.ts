@@ -6,7 +6,7 @@ import { Readable } from 'stream'
 // Log MinIO configuration for debugging
 logger.info(
   {
-    endPoint: Config.minio.endPoint,
+    endPoint: Config.minio.endpoint,
     port: Config.minio.port,
     useSSL: Config.minio.useSsl,
     bucketName: Config.minio.bucketName,
@@ -16,7 +16,7 @@ logger.info(
 
 // Initialize MinIO client with explicit useSSL boolean
 export const minioClient = new Minio.Client({
-  endPoint: Config.minio.endPoint,
+  endPoint: Config.minio.endpoint,
   port: Config.minio.port,
   useSSL: Config.minio.useSsl,
   accessKey: Config.minio.accessKey,
