@@ -17,9 +17,10 @@ type Props = {
   onOpenChange: (open: boolean) => void
   title: string
   description: string
-  selectedKeys: Key[]
+  selectedKeys?: Key[] // Optional - if not provided, use leftContent
   leftTitle: string
   rightTitle: string
+  leftContent?: ReactNode // Optional custom left content
   rightContent: ReactNode
   isProcessing: boolean
   onAccept: () => void
@@ -35,6 +36,7 @@ export function BeforeAfterDialogBase({
   selectedKeys,
   leftTitle,
   rightTitle,
+  leftContent,
   rightContent,
   isProcessing,
   onAccept,
@@ -50,28 +52,32 @@ export function BeforeAfterDialogBase({
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* Left side - Selected keys */}
+          {/* Left side - Selected keys or custom content */}
           <div>
             <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
               {leftTitle}
             </h3>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {selectedKeys.map((key) => (
-                <div
-                  key={key.id}
-                  className="p-3 border rounded-lg bg-muted/50 text-sm"
-                >
-                  <div className="font-medium">{key.keyName}</div>
-                  <div className="text-muted-foreground">
-                    {KeyTypeLabels[key.keyType]}
-                    {key.flexNumber !== undefined &&
-                      ` • Flex: ${key.flexNumber}`}
-                    {key.keySequenceNumber !== undefined &&
-                      ` • Sekv: ${key.keySequenceNumber}`}
+            {leftContent ? (
+              leftContent
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {selectedKeys?.map((key) => (
+                  <div
+                    key={key.id}
+                    className="p-3 border rounded-lg bg-muted/50 text-sm"
+                  >
+                    <div className="font-medium">{key.keyName}</div>
+                    <div className="text-muted-foreground">
+                      {KeyTypeLabels[key.keyType]}
+                      {key.flexNumber !== undefined &&
+                        ` • Flex: ${key.flexNumber}`}
+                      {key.keySequenceNumber !== undefined &&
+                        ` • Sekv: ${key.keySequenceNumber}`}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right side - Custom content */}
