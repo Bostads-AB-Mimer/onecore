@@ -111,19 +111,22 @@ export async function handleReturnKeys({
   try {
     const now = new Date().toISOString()
     const keyIdSet = new Set(keyIds)
-    const processedLoanIds = new Set<string>()
     let lastProcessedLoanId: string | undefined
     let receiptId: string | undefined
 
-    // Find all active loans for the selected keys
+    // Build a map of unique active loans first to avoid duplicate fetches
+    const uniqueActiveLoans = new Map<string, any>()
     for (const keyId of keyIds) {
       const loans = await keyLoanService.getByKeyId(keyId)
       const activeLoan = loans.find((loan) => !loan.returnedAt)
 
-      if (!activeLoan || processedLoanIds.has(activeLoan.id)) {
-        continue
+      if (activeLoan && !uniqueActiveLoans.has(activeLoan.id)) {
+        uniqueActiveLoans.set(activeLoan.id, activeLoan)
       }
+    }
 
+    // Process each unique active loan once
+    for (const [loanId, activeLoan] of uniqueActiveLoans.entries()) {
       // Parse all keys in this loan
       const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
 
@@ -138,10 +141,9 @@ export async function handleReturnKeys({
         }
       }
 
-      // Mark this loan as processed and update it
-      processedLoanIds.add(activeLoan.id)
-      lastProcessedLoanId = activeLoan.id
-      await keyLoanService.update(activeLoan.id, {
+      // Update the loan
+      lastProcessedLoanId = loanId
+      await keyLoanService.update(loanId, {
         returnedAt: now,
         availableToNextTenantFrom: now,
       } as any)
@@ -149,7 +151,7 @@ export async function handleReturnKeys({
       // Create return receipt for this loan
       try {
         const receipt = await receiptService.create({
-          keyLoanId: activeLoan.id,
+          keyLoanId: loanId,
           receiptType: 'RETURN',
           type: 'PHYSICAL',
         })
@@ -213,28 +215,28 @@ export async function handleSwitchKeys({
 
   try {
     const now = new Date().toISOString()
-    const processedLoanIds = new Set<string>()
     let returnReceiptId: string | undefined
     let newKeyLoanId: string | undefined
     let newLoanReceiptId: string | undefined
 
-    // Find all active loans for the selected keys
+    // Build a map of unique active loans first to avoid duplicate fetches
+    const uniqueActiveLoans = new Map<string, any>()
     for (const keyId of keyIdsToSwitch) {
       const loans = await keyLoanService.getByKeyId(keyId)
       const activeLoan = loans.find((loan) => !loan.returnedAt)
 
-      if (!activeLoan || processedLoanIds.has(activeLoan.id)) {
-        continue
+      if (activeLoan && !uniqueActiveLoans.has(activeLoan.id)) {
+        uniqueActiveLoans.set(activeLoan.id, activeLoan)
       }
+    }
 
+    // Process each unique active loan once
+    for (const [loanId, activeLoan] of uniqueActiveLoans.entries()) {
       // Parse all keys in this loan
       const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
 
-      // Mark this loan as processed
-      processedLoanIds.add(activeLoan.id)
-
       // Step 1: Mark the original loan as returned
-      await keyLoanService.update(activeLoan.id, {
+      await keyLoanService.update(loanId, {
         returnedAt: now,
         availableToNextTenantFrom: now,
       } as any)
@@ -243,7 +245,7 @@ export async function handleSwitchKeys({
       // Note: The actual PDF generation with missing keys will be handled in the component
       try {
         const returnReceipt = await receiptService.create({
-          keyLoanId: activeLoan.id,
+          keyLoanId: loanId,
           receiptType: 'RETURN',
           type: 'PHYSICAL',
         })
@@ -364,6 +366,8 @@ export async function handleSwitchKeysWithReceipts({
 
   try {
     // Step 1: Fetch active loan for the first key
+    // Note: We only need to fetch once since all keys to switch should belong to the same loan.
+    // The switch operation validates this implicitly.
     const loans = await keyLoanService.getByKeyId(keyIdsToSwitch[0])
     const activeLoan = loans.find((loan) => !loan.returnedAt)
 
