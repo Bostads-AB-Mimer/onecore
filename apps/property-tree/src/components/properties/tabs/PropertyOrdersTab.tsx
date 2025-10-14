@@ -1,8 +1,9 @@
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
+import { Property } from '@/services/types'
 
 interface PropertyOrdersTabProps {
-  propertyDetail: any
+  propertyDetail: Property
 }
 
 export const PropertyOrdersTab = ({
