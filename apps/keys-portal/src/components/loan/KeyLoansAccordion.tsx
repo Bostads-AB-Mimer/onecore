@@ -1,22 +1,12 @@
-import { useEffect, useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { KeyRound, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-import type {
-  Lease,
-  KeyLoan,
-  Key,
-  Receipt,
-  ReceiptData,
-} from '@/services/types'
-import { keyLoanService } from '@/services/api/keyLoanService'
-import { keyService } from '@/services/api/keyService'
+import type { Lease, Receipt, ReceiptData } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
-import {
-  generateLoanReceiptBlob,
-  generateReturnReceiptBlob,
-} from '@/lib/pdf-receipts'
+import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 import { KeyLoanCard } from './KeyLoanCard'
+import { useKeyLoans, type KeyLoanWithDetails } from '@/hooks/useKeyLoans'
 
 interface KeyLoansAccordionProps {
   lease: Lease
@@ -24,21 +14,16 @@ interface KeyLoansAccordionProps {
   onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
 }
 
-interface KeyLoanWithDetails {
-  keyLoan: KeyLoan
-  keys: Key[]
-  receipts: Receipt[]
-  loanReceipt?: Receipt
-  returnReceipt?: Receipt
-}
-
 export function KeyLoansAccordion({
   lease,
   refreshKey,
   onUnsignedLoansChange,
 }: KeyLoansAccordionProps) {
-  const [keyLoans, setKeyLoans] = useState<KeyLoanWithDetails[]>([])
-  const [loading, setLoading] = useState(false)
+  const { activeLoans, returnedLoans, loading, refresh } = useKeyLoans(
+    lease,
+    onUnsignedLoansChange
+  )
+
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(
     null
   )
@@ -47,181 +32,18 @@ export function KeyLoansAccordion({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
-  const fetchKeyLoans = async () => {
-    setLoading(true)
-    try {
-      const { loaned, returned } = await keyLoanService.listByLease(
-        lease.rentalPropertyId
-      )
-      const allKeyLoans = [...loaned, ...returned]
-
-      const enriched: KeyLoanWithDetails[] = []
-      for (const keyLoan of allKeyLoans) {
-        try {
-          const keyIds: string[] = JSON.parse(keyLoan.keys || '[]')
-
-          const keys: Key[] = []
-          for (const keyId of keyIds) {
-            try {
-              const key = await keyService.getKey(keyId)
-              keys.push(key)
-            } catch (err) {
-              console.error(`Failed to fetch key ${keyId}:`, err)
-            }
-          }
-
-          const receipts = await receiptService.getByKeyLoan(keyLoan.id)
-          const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-          const returnReceipt = receipts.find((r) => r.receiptType === 'RETURN')
-
-          enriched.push({
-            keyLoan,
-            keys,
-            receipts,
-            loanReceipt,
-            returnReceipt,
-          })
-        } catch (err) {
-          console.error(`Failed to enrich key loan ${keyLoan.id}:`, err)
-        }
-      }
-
-      // Auto-create receipts for active loans that don't have one
-      for (const loanWithDetails of enriched) {
-        if (
-          !loanWithDetails.keyLoan.returnedAt &&
-          !loanWithDetails.loanReceipt
-        ) {
-          try {
-            console.log(
-              'Auto-creating missing receipt for loan:',
-              loanWithDetails.keyLoan.id
-            )
-            const receipt = await receiptService.create({
-              keyLoanId: loanWithDetails.keyLoan.id,
-              receiptType: 'LOAN',
-              type: 'PHYSICAL',
-            })
-            loanWithDetails.loanReceipt = receipt
-            loanWithDetails.receipts.push(receipt)
-          } catch (err) {
-            console.error(
-              'Failed to auto-create receipt for loan:',
-              loanWithDetails.keyLoan.id,
-              err
-            )
-          }
-        }
-      }
-
-      // Sort: unsigned active loans first, then signed active loans, then returned loans
-      enriched.sort((a, b) => {
-        const aIsActive = !a.keyLoan.returnedAt
-        const bIsActive = !b.keyLoan.returnedAt
-        const aIsUnsigned = a.loanReceipt && !a.loanReceipt.fileId
-        const bIsUnsigned = b.loanReceipt && !b.loanReceipt.fileId
-
-        if (aIsActive !== bIsActive) {
-          return aIsActive ? -1 : 1
-        }
-
-        if (aIsActive && bIsActive && aIsUnsigned !== bIsUnsigned) {
-          return aIsUnsigned ? -1 : 1
-        }
-
-        const aDate = a.keyLoan.createdAt
-          ? new Date(a.keyLoan.createdAt).getTime()
-          : 0
-        const bDate = b.keyLoan.createdAt
-          ? new Date(b.keyLoan.createdAt).getTime()
-          : 0
-        return bDate - aDate
-      })
-
-      setKeyLoans(enriched)
-
-      // Notify parent if there are any unsigned active loans
-      const hasUnsignedActiveLoans = enriched.some(
-        (loan) =>
-          !loan.keyLoan.returnedAt &&
-          loan.loanReceipt &&
-          !loan.loanReceipt.fileId
-      )
-      onUnsignedLoansChange?.(hasUnsignedActiveLoans)
-    } catch (err) {
-      console.error('Failed to fetch key loans:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Refresh when refreshKey changes
   useEffect(() => {
-    fetchKeyLoans()
-  }, [lease.leaseId, refreshKey])
-
-  // Helper function to open PDF directly in new tab with print dialog
-  const openPdfInNewTab = async (
-    receiptData: ReceiptData,
-    receiptId?: string
-  ) => {
-    // Open a placeholder tab synchronously to avoid popup blockers
-    const win = window.open('', '_blank')
-    if (!win) {
-      console.error('Popup blocked')
-      return
+    if (refreshKey !== undefined) {
+      refresh()
     }
-    win.document.write(
-      '<!doctype html><title>Kvitto</title><body>Förbereder kvitto…</body>'
-    )
-    win.document.close()
+  }, [refreshKey, refresh])
 
-    // Build the actual jsPDF as a Blob
-    const { blob, fileName } =
-      receiptData.receiptType === 'LOAN'
-        ? await generateLoanReceiptBlob(receiptData, receiptId)
-        : await generateReturnReceiptBlob(receiptData, receiptId)
-
-    const pdfUrl = URL.createObjectURL(blob)
-
-    // Create a tiny HTML viewer that embeds the PDF and triggers print
-    const viewerHtml = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${fileName}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>html,body,iframe{margin:0;padding:0;height:100%;width:100%;border:0}</style>
-</head>
-<body>
-  <iframe id="pdf" src="${pdfUrl}#view=FitH" allow="clipboard-write"></iframe>
-  <script>
-    const iframe = document.getElementById('pdf');
-    // Try printing shortly after load; some viewers need a delay
-    iframe.addEventListener('load', () => {
-      setTimeout(() => {
-        try { iframe.contentWindow && iframe.contentWindow.print && iframe.contentWindow.print(); } catch (e) {}
-      }, 400);
-    });
-  </script>
-</body>
-</html>`
-
-    const viewerBlob = new Blob([viewerHtml], { type: 'text/html' })
-    const viewerUrl = URL.createObjectURL(viewerBlob)
-
-    // Navigate the already-open tab to the viewer
-    win.location.href = viewerUrl
-
-    // Cleanup after a while (tab holds the URLs while open)
-    setTimeout(
-      () => {
-        URL.revokeObjectURL(pdfUrl)
-        URL.revokeObjectURL(viewerUrl)
-      },
-      5 * 60 * 1000
-    )
-  }
-
+  /**
+   * Handles generating or downloading a loan receipt
+   * If signed receipt exists (has fileId), downloads from MinIO
+   * Otherwise, generates PDF client-side and opens in new tab
+   */
   const handleGenerateLoanReceipt = async (
     loanWithDetails: KeyLoanWithDetails
   ) => {
@@ -255,7 +77,7 @@ export function KeyLoansAccordion({
           type: 'PHYSICAL',
         })
 
-        await fetchKeyLoans()
+        await refresh()
 
         // Open PDF directly in new tab
         await openPdfInNewTab(baseReceiptData, receipt.id)
@@ -268,6 +90,11 @@ export function KeyLoansAccordion({
     }
   }
 
+  /**
+   * Handles generating or downloading a return receipt
+   * If signed receipt exists (has fileId), downloads from MinIO
+   * Otherwise, generates PDF client-side and opens in new tab
+   */
   const handleGenerateReturnReceipt = async (
     loanWithDetails: KeyLoanWithDetails
   ) => {
@@ -301,7 +128,7 @@ export function KeyLoansAccordion({
           type: 'PHYSICAL',
         })
 
-        await fetchKeyLoans()
+        await refresh()
 
         // Open PDF directly in new tab
         await openPdfInNewTab(baseReceiptData, receipt.id)
@@ -314,6 +141,9 @@ export function KeyLoansAccordion({
     }
   }
 
+  /**
+   * Downloads a receipt file from MinIO
+   */
   const handleDownloadReceipt = async (receipt: Receipt) => {
     try {
       await receiptService.downloadFile(receipt.id)
@@ -322,6 +152,9 @@ export function KeyLoansAccordion({
     }
   }
 
+  /**
+   * Handles uploading a signed receipt file
+   */
   const handleUploadReceipt = async (receiptId: string, file: File) => {
     setUploadError(null)
     setUploadingReceiptId(receiptId)
@@ -336,7 +169,7 @@ export function KeyLoansAccordion({
       }
 
       await receiptService.uploadFile(receiptId, file)
-      await fetchKeyLoans()
+      await refresh()
     } catch (err: any) {
       setUploadError(err?.message ?? 'Kunde inte ladda upp filen')
     } finally {
@@ -344,11 +177,17 @@ export function KeyLoansAccordion({
     }
   }
 
+  /**
+   * Triggers file picker for receipt upload
+   */
   const onPickFile = (receiptId: string) => {
     pendingUploadReceiptIdRef.current = receiptId
     fileInputRef.current?.click()
   }
 
+  /**
+   * Handles file selection from file picker
+   */
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
     const receiptId = pendingUploadReceiptIdRef.current
@@ -368,7 +207,7 @@ export function KeyLoansAccordion({
     )
   }
 
-  if (keyLoans.length === 0) {
+  if (activeLoans.length === 0 && returnedLoans.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-muted-foreground">
         <KeyRound className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -376,10 +215,6 @@ export function KeyLoansAccordion({
       </div>
     )
   }
-
-  // Separate active and returned loans
-  const activeLoans = keyLoans.filter((loan) => !loan.keyLoan.returnedAt)
-  const returnedLoans = keyLoans.filter((loan) => loan.keyLoan.returnedAt)
 
   return (
     <>
