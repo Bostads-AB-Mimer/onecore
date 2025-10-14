@@ -107,7 +107,36 @@ export function ContractCard({
         const list = await keyService.getKeysByRentalObjectCode(
           lease.rentalPropertyId
         )
-        if (!cancelled) setKeys(list)
+
+        // If the keys section is not open, just show non-disposed keys (fast path)
+        if (!open) {
+          const visibleKeys = list.filter((key) => !key.disposed)
+          if (!cancelled) setKeys(visibleKeys)
+        } else {
+          // If keys section is open, check disposed keys for active loans (slow path)
+          const { keyLoanService } = await import(
+            '@/services/api/keyLoanService'
+          )
+
+          const visibleKeysPromises = list.map(async (key) => {
+            // If key is not disposed, always show it
+            if (!key.disposed) return key
+
+            // If key is disposed, check if it has an active loan
+            const loans = await keyLoanService.getByKeyId(key.id)
+            const hasActiveLoan = loans.some((loan) => !loan.returnedAt)
+
+            // Only show disposed keys if they have an active loan
+            return hasActiveLoan ? key : null
+          })
+
+          const visibleKeys = await Promise.all(visibleKeysPromises)
+          const filteredKeys = visibleKeys.filter(
+            (key): key is Key => key !== null
+          )
+
+          if (!cancelled) setKeys(filteredKeys)
+        }
       } finally {
         if (!cancelled) setKeysLoading(false)
       }
@@ -116,7 +145,7 @@ export function ContractCard({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId])
+  }, [lease.rentalPropertyId, open])
 
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
@@ -306,13 +335,15 @@ export function ContractCard({
           )}
         </div>
 
-        <div className={keyLoansOpen ? 'pt-2' : 'hidden'} id={keyLoansRegionId}>
-          <KeyLoansAccordion
-            lease={lease}
-            refreshKey={keyLoansRefreshKey}
-            onUnsignedLoansChange={setHasUnsignedLoans}
-          />
-        </div>
+        {keyLoansOpen && (
+          <div className="pt-2" id={keyLoansRegionId}>
+            <KeyLoansAccordion
+              lease={lease}
+              refreshKey={keyLoansRefreshKey}
+              onUnsignedLoansChange={setHasUnsignedLoans}
+            />
+          </div>
+        )}
 
         {open && (
           <div id={keysRegionId} className="pt-2">

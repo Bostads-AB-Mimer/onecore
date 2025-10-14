@@ -78,6 +78,24 @@ export function sortKeysByTypeAndSequence<T extends Key>(keys: T[]): T[] {
 }
 
 /**
+ * Checks if a key is a "new flex" key (has the status "Ny beställd flex")
+ * A key is "new flex" if it:
+ * - Has never been loaned (loanInfo.contact === null)
+ * - Is a flex key (has higher flex number than other keys with same name/type)
+ * @param keyWithStatus - The key with status information
+ * @param allKeys - All keys to compare against
+ * @returns true if the key is a new flex key
+ */
+export function isNewFlexKey(
+  keyWithStatus: KeyWithStatus,
+  allKeys: Key[]
+): boolean {
+  return (
+    keyWithStatus.loanInfo.contact === null && isFlexKey(keyWithStatus, allKeys)
+  )
+}
+
+/**
  * Computes the display status text for a key based on its loan information
  * @param loanInfo - The loan information for the key
  * @param key - The key itself
@@ -91,6 +109,15 @@ export function getKeyDisplayStatus(
   allKeys: Key[],
   tenantNames: string[]
 ): string {
+  // Check if key is disposed - show special status
+  if (key.disposed) {
+    if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
+      return `Kasserad, utlånad till den här hyresgästen`
+    } else {
+      return `Kasserad, utlånad till ${loanInfo.contact ?? 'Okänd'}`
+    }
+  }
+
   if (loanInfo.isLoaned) {
     // Key is currently loaned
     if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
@@ -163,4 +190,26 @@ export async function computeKeyWithStatus(
       displayStatus: 'Okänd status',
     }
   }
+}
+
+/**
+ * Filters out disposed keys that don't have active loans.
+ * A key should be visible if:
+ * - It's not disposed, OR
+ * - It's disposed but currently loaned out
+ *
+ * This ensures disposed keys remain visible until they are returned.
+ *
+ * @param keysWithStatus - Array of keys with status information
+ * @returns Filtered array containing only visible keys
+ */
+export function filterVisibleKeys(
+  keysWithStatus: KeyWithStatus[]
+): KeyWithStatus[] {
+  return keysWithStatus.filter((key) => {
+    // Show key if it's not disposed
+    if (!key.disposed) return true
+    // Show disposed key only if it's currently loaned
+    return key.loanInfo.isLoaned
+  })
 }
