@@ -13,7 +13,7 @@ import config from '../common/config'
 import { sep } from 'node:path'
 
 const importRentalInvoicesScript = async () => {
-  const companyIds = ['001', '006']
+  const companyIds = ['001' /*, '006'*/]
   const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
 
   const startDate = new Date(
