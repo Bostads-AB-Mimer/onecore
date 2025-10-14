@@ -11,7 +11,7 @@ export interface Config {
     database: string
   }
   minio: {
-    endPoint: string
+    endpoint: string
     port: number
     useSsl: boolean
     accessKey: string
