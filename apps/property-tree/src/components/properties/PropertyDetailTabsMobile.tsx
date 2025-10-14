@@ -1,14 +1,4 @@
-import {
-  Info,
-  FileText,
-  Calendar,
-  Building,
-  Wrench,
-  Map,
-  Home,
-  BarChart3,
-  KeyRound,
-} from 'lucide-react'
+import { Info, Building, Home, BarChart3 } from 'lucide-react'
 import { PropertyInfoTab } from './tabs/PropertyInfoTab'
 import { PropertyDocumentsTab } from './tabs/PropertyDocumentsTab'
 import { PropertyPlanningTab } from './tabs/PropertyPlanningTab'
@@ -16,7 +6,7 @@ import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 //import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
 //import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
-//import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
+import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 //import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import {
   MobileAccordion,
@@ -41,7 +31,7 @@ export const PropertyDetailTabsMobile = ({
     showPropertyPlanning: false,
     showPropertyBuildings: true,
     showPropertyMaintenance: false,
-    showPropertyOrders: false,
+    showPropertyOrders: true,
     showPropertyAccess: false,
     showPropertyMap: false,
   }
@@ -89,14 +79,16 @@ export const PropertyDetailTabsMobile = ({
       title: 'Planerat underhåll',
       content: <PropertyPlanningTab />,
     },
-   
+    */
+
     features.showPropertyOrders && {
       id: 'orders',
       icon: Home,
       title: 'Ärenden',
       content: <PropertyOrdersTab propertyDetail={propertyDetail} />,
     },
-    
+
+    /*
     features.showPropertyAccess && {
       id: 'access',
       icon: KeyRound,
