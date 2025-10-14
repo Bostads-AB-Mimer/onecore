@@ -11,10 +11,11 @@ import {
   CircularProgress,
   Collapse,
 } from '@mui/material'
+import { useState } from 'react'
 import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
 
 import { InvoiceWithRows, useContact } from '../hooks/useContact'
-import { useState } from 'react'
+import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 
 export function ContactCard(props: { contactCode: string }) {
   const query = useContact(props.contactCode)
@@ -216,44 +217,81 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
           <Collapse in={open} timeout={0} unmountOnExit>
-            <Box margin={1}>
-              {invoice.type === 'Other' ? (
-                <p>Text: {invoice.description}</p>
-              ) : (
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
-                        Beskrivning
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {invoice.invoiceRows.map((row, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{row.invoiceRowText}</TableCell>
-                        <TableCell>
-                          {row.rowType === 3 ? null : row.amount}
-                        </TableCell>
-                        <TableCell>
-                          {row.rowType === 3 ? null : row.vat}
-                        </TableCell>
-                        <TableCell>
-                          {row.rowType === 3 ? null : row.totalAmount}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </Box>
+            <InvoiceDetails invoice={invoice} />
           </Collapse>
         </TableCell>
       </TableRow>
     </>
+  )
+}
+
+function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
+  const { invoice } = props
+  const eventsQuery = useInvoicePaymentEvents(invoice.invoiceId)
+
+  if (eventsQuery.isLoading) {
+    return (
+      <Box margin={1}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  return (
+    <Box margin={1}>
+      {invoice.type === 'Other' ? (
+        <p>Text: {invoice.description}</p>
+      ) : (
+        <>
+          <Typography variant="h2" sx={{ mt: 1, mb: 1, fontSize: 18 }}>
+            Fakturarader
+          </Typography>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }}>Beskrivning</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {invoice.invoiceRows.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>{row.invoiceRowText}</TableCell>
+                  <TableCell>{row.rowType === 3 ? null : row.amount}</TableCell>
+                  <TableCell>{row.rowType === 3 ? null : row.vat}</TableCell>
+                  <TableCell>
+                    {row.rowType === 3 ? null : row.totalAmount}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </>
+      )}
+      <Typography variant="h2" sx={{ mt: 2, mb: 1, fontSize: 18 }}>
+        Betalhändelser
+      </Typography>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Text</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {eventsQuery.data?.map((event, index) => (
+            <TableRow key={index}>
+              <TableCell>{event.transactionSourceCode}</TableCell>
+              <TableCell>{event.amount}</TableCell>
+              <TableCell>{event.text}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
   )
 }
 

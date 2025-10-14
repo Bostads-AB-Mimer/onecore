@@ -3,10 +3,9 @@ import {
   generateRouteMetadata,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
+import { economy } from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
-import { parseRequestBody } from '@/middlewares/parse-request-body'
-import { economy } from '@onecore/types'
 
 /**
  * @swagger
@@ -24,6 +23,21 @@ import { economy } from '@onecore/types'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
+  router.get('/invoices/:invoiceId/payment-events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getInvoicePaymentEvents(
+      ctx.params.invoiceId
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
+
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(
