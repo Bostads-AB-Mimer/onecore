@@ -21,7 +21,8 @@ const useWorkOrders = (
   }
 
   // Only enable query for implemented context types
-  const isImplemented = contextType === 'property' || contextType === 'residence'
+  const isImplemented =
+    contextType === 'property' || contextType === 'residence'
 
   const workOrdersQuery = useQuery({
     queryKey: ['workOrders', contextType, id],

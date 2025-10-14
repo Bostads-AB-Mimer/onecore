@@ -13,7 +13,9 @@ const INITIAL_DISPLAY_COUNT = 5
 
 export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
   const [showAll, setShowAll] = useState(false)
-  const displayedOrders = showAll ? orders : orders.slice(0, INITIAL_DISPLAY_COUNT)
+  const displayedOrders = showAll
+    ? orders
+    : orders.slice(0, INITIAL_DISPLAY_COUNT)
   const hasMoreOrders = orders.length > INITIAL_DISPLAY_COUNT
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE')
