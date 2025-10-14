@@ -1,7 +1,8 @@
-import { receiptService } from './api/receiptService'
+import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
+
 import { keyLoanService } from './api/keyLoanService'
 import { keyService } from './api/keyService'
-import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
+import { receiptService } from './api/receiptService'
 import type { ReceiptData, Lease } from './types'
 
 /**
