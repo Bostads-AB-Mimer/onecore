@@ -27,9 +27,12 @@ export const keyService = {
    */
   async getByRentalObjectCode(rentalObjectCode: string): Promise<Key[]> {
     try {
-      const { data, error } = await GET('/keys/by-rental-object/{rentalObjectCode}', {
-        params: { path: { rentalObjectCode } },
-      })
+      const { data, error } = await GET(
+        '/keys/by-rental-object/{rentalObjectCode}',
+        {
+          params: { path: { rentalObjectCode } },
+        }
+      )
 
       if (error || !data?.content) {
         return []
