@@ -635,6 +635,111 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+// Text Content functions
+type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
+type CreateListingTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingTextContentRequestSchema
+>
+type UpdateListingTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingTextContentRequestSchema
+>
+
+const getListingTextContentByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.get<{
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`)
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      err,
+      'Error getting listing text content by rental object code:'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const createListingTextContent = async (
+  data: CreateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await axios.post<{
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content`, data)
+
+    if (response.status === 201) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 409) {
+      return { ok: false, err: 'conflict' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error creating listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const updateListingTextContent = async (
+  rentalObjectCode: string,
+  data: UpdateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.put<{
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`, data)
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error updating listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const deleteListingTextContent = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.delete(
+      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error deleting listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
@@ -662,6 +767,10 @@ export {
   validateResidentialAreaRentalRules,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
+  getListingTextContentByRentalObjectCode,
+  createListingTextContent,
+  updateListingTextContent,
+  deleteListingTextContent,
 }
 
 export {
