@@ -130,8 +130,6 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     return invoice
   })
 
-  console.log('Xledger invoices', invoices)
-
   return invoices
 }
 
@@ -274,7 +272,12 @@ const invoiceNodeFragment = `
 
 export const getInvoicesByContactCode = async (contactCode: string) => {
   const xledgerId = await getContactDbId(contactCode)
+
   if (!xledgerId) {
+    logger.error(
+      { contactCode },
+      'Could not find customer with contact code in Xledger'
+    )
     return null
   }
 

@@ -287,7 +287,7 @@ export const createLedgerRowsNew = async (
       if (
         (customerLedgerRow.amount as number) -
           (invoiceRows[0].InvoiceTotalAmount as number) >
-        0.01
+        1
       ) {
         logger.error(
           { customerLedgerRow, invoiceRow: invoiceRows[0] },
@@ -664,7 +664,11 @@ const getContractCode = (invoiceRow: InvoiceDataRow) => {
     throw new Error('Wrong type of invoice row for getting contract code')
   }
 
-  return (invoiceRow.invoiceRowText as string).split(',')[0]
+  if ((invoiceRow.invoiceRowText as string).split(',').length > 1) {
+    return (invoiceRow.invoiceRowText as string).split(',')[0]
+  } else {
+    return (invoiceRow.invoiceRowText as string).split(' ')[0]
+  }
 }
 
 const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
