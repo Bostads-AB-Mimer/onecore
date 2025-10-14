@@ -9,6 +9,7 @@ import { getKeyLoanStatus } from '@/utils/keyLoanStatus'
 import {
   sortKeysByTypeAndSequence,
   computeKeyWithStatus,
+  filterVisibleKeys,
   type KeyWithStatus,
 } from '@/utils/keyStatusHelpers'
 import { useToast } from '@/hooks/use-toast'
@@ -221,17 +222,23 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  const sortedKeys = useMemo(
-    () => sortKeysByTypeAndSequence(keysWithStatus),
+  // Filter out disposed keys that don't have active loans
+  const visibleKeys = useMemo(
+    () => filterVisibleKeys(keysWithStatus),
     [keysWithStatus]
   )
 
-  // Summary counts by type
+  const sortedKeys = useMemo(
+    () => sortKeysByTypeAndSequence(visibleKeys),
+    [visibleKeys]
+  )
+
+  // Summary counts by type (only visible keys)
   const countsByType = useMemo(() => {
     const m = new Map<string, number>()
-    keysWithStatus.forEach((k) => m.set(k.keyType, (m.get(k.keyType) ?? 0) + 1))
+    visibleKeys.forEach((k) => m.set(k.keyType, (m.get(k.keyType) ?? 0) + 1))
     return m
-  }, [keysWithStatus])
+  }, [visibleKeys])
 
   if (loading) {
     return <div className="text-xs text-muted-foreground">Loading keys...</div>
