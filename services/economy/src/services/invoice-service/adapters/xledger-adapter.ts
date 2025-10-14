@@ -414,6 +414,29 @@ export const getInvoicesByContactCode = async (
   return transformToInvoice(result.data?.arTransactions?.edges ?? [])
 }
 
+export const getUnpaidInvoices = async () => {
+  const query = {
+    query: `{
+      arTransactions(
+        first: 10000,
+        filter: {
+          invoiceRemaining_gt: 0,
+          headerTransactionSourceDbId_in: [600, 797, 3536]
+        }
+      ) {
+        edges {
+          node {
+            ${invoiceNodeFragment}
+          }
+        }
+      }
+     }`,
+  }
+
+  const result = await makeXledgerRequest(query)
+  return transformToInvoice(result.data?.arTransactions?.edges ?? [])
+}
+
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
   const q = {
     query: `query {
