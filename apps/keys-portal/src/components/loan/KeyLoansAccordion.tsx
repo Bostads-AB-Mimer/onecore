@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { KeyRound, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-import type { Lease, Receipt, ReceiptData } from '@/services/types'
+import type { Lease, Receipt, ReceiptData, Key } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 import { KeyLoanCard } from './KeyLoanCard'
@@ -12,16 +12,19 @@ interface KeyLoansAccordionProps {
   lease: Lease
   refreshKey?: number
   onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
+  preloadedKeys?: Key[]
 }
 
 export function KeyLoansAccordion({
   lease,
   refreshKey,
   onUnsignedLoansChange,
+  preloadedKeys,
 }: KeyLoansAccordionProps) {
   const { activeLoans, returnedLoans, loading, refresh } = useKeyLoans(
     lease,
-    onUnsignedLoansChange
+    onUnsignedLoansChange,
+    preloadedKeys
   )
 
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(

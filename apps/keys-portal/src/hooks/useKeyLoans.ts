@@ -29,11 +29,13 @@ export interface UseKeyLoansResult {
  *
  * @param lease - The lease to fetch key loans for
  * @param onUnsignedLoansChange - Optional callback when unsigned loan status changes
+ * @param preloadedKeys - Optional pre-fetched keys to avoid duplicate fetches
  * @returns Key loan data and control functions
  */
 export function useKeyLoans(
   lease: Lease,
-  onUnsignedLoansChange?: (hasUnsigned: boolean) => void
+  onUnsignedLoansChange?: (hasUnsigned: boolean) => void,
+  preloadedKeys?: Key[]
 ): UseKeyLoansResult {
   const [keyLoans, setKeyLoans] = useState<KeyLoanWithDetails[]>([])
   const [loading, setLoading] = useState(false)
@@ -42,25 +44,48 @@ export function useKeyLoans(
     setLoading(true)
     try {
       const { loaned, returned } = await keyLoanService.listByLease(
-        lease.rentalPropertyId
+        lease.rentalPropertyId,
+        preloadedKeys
       )
       const allKeyLoans = [...loaned, ...returned]
 
+      // Step 1: Collect all unique key IDs across all loans
+      const allUniqueKeyIds = new Set<string>()
+      allKeyLoans.forEach((loan) => {
+        const keyIds: string[] = JSON.parse(loan.keys || '[]')
+        keyIds.forEach((id) => allUniqueKeyIds.add(id))
+      })
+
+      // Step 2: Build key cache - use preloaded keys first, then fetch missing ones
+      const keyCache = new Map<string, Key>()
+
+      // If we have preloaded keys, use them first to avoid duplicate fetches
+      if (preloadedKeys && preloadedKeys.length > 0) {
+        preloadedKeys.forEach((key) => keyCache.set(key.id, key))
+      }
+
+      // Fetch only the keys that aren't in the cache
+      for (const keyId of allUniqueKeyIds) {
+        if (!keyCache.has(keyId)) {
+          try {
+            const key = await keyService.getKey(keyId)
+            keyCache.set(keyId, key)
+          } catch (err) {
+            console.error(`Failed to fetch key ${keyId}:`, err)
+          }
+        }
+      }
+
+      // Step 3: Enrich each loan with keys from cache and fetch receipts
       const enriched: KeyLoanWithDetails[] = []
       for (const keyLoan of allKeyLoans) {
         try {
           const keyIds: string[] = JSON.parse(keyLoan.keys || '[]')
 
-          // Fetch all keys for this loan
-          const keys: Key[] = []
-          for (const keyId of keyIds) {
-            try {
-              const key = await keyService.getKey(keyId)
-              keys.push(key)
-            } catch (err) {
-              console.error(`Failed to fetch key ${keyId}:`, err)
-            }
-          }
+          // Get keys from cache (no network calls)
+          const keys: Key[] = keyIds
+            .map((id) => keyCache.get(id))
+            .filter((key): key is Key => key !== undefined)
 
           // Fetch all receipts for this loan
           const receipts = await receiptService.getByKeyLoan(keyLoan.id)
@@ -149,6 +174,10 @@ export function useKeyLoans(
     } finally {
       setLoading(false)
     }
+    // Note: preloadedKeys is intentionally excluded from dependencies to prevent
+    // re-fetching when the array reference changes (React creates new array refs on each render).
+    // The callback will still use the latest preloadedKeys value when it runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lease.rentalPropertyId, onUnsignedLoansChange])
 
   useEffect(() => {

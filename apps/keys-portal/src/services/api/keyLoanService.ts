@@ -101,22 +101,53 @@ export const keyLoanService = {
   /**
    * Get all key loans associated with a lease by fetching loans for each key
    * in the lease's rental object
+   * Optimized to avoid duplicate API calls for keys that belong to the same loan
+   * @param rentalObjectCode - The rental object code to fetch loans for
+   * @param preloadedKeys - Optional pre-fetched keys to avoid duplicate fetches
    */
   async listByLease(
-    rentalObjectCode: string
+    rentalObjectCode: string,
+    preloadedKeys?: any[]
   ): Promise<{ loaned: KeyLoan[]; returned: KeyLoan[] }> {
-    // Import keyService dynamically to avoid circular dependency
-    const { keyService } = await import('./keyService')
+    // Use preloaded keys if available, otherwise fetch them
+    let keys: any[]
+    if (preloadedKeys && preloadedKeys.length > 0) {
+      keys = preloadedKeys
+    } else {
+      // Import keyService dynamically to avoid circular dependency
+      const { keyService } = await import('./keyService')
+      keys = await keyService.getKeysByRentalObjectCode(rentalObjectCode)
+    }
 
-    // Get all keys for this rental object
-    const keys = await keyService.getKeysByRentalObjectCode(rentalObjectCode)
-
-    // Fetch loans for each key and deduplicate
+    // Track which keys we've already fetched loans for
+    const processedKeyIds = new Set<string>()
     const loanMap = new Map<string, KeyLoan>()
 
     for (const key of keys) {
+      // Skip if we've already processed this key
+      if (processedKeyIds.has(key.id)) {
+        continue
+      }
+
+      // Fetch loans for this key
       const loans = await this.getByKeyId(key.id)
-      loans.forEach((loan) => loanMap.set(loan.id, loan))
+
+      // Add loans to the map and mark all keys in each loan as processed
+      loans.forEach((loan) => {
+        loanMap.set(loan.id, loan)
+
+        // Mark all keys in this loan as processed to avoid redundant API calls
+        try {
+          const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
+          loanKeyIds.forEach((id) => processedKeyIds.add(id))
+        } catch {
+          // If parsing fails, just mark the current key
+          processedKeyIds.add(key.id)
+        }
+      })
+
+      // Also mark the current key as processed (in case it has no loans)
+      processedKeyIds.add(key.id)
     }
 
     const allLoans = Array.from(loanMap.values())
