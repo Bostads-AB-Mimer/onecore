@@ -1226,6 +1226,75 @@ export interface paths {
       };
     };
   };
+  "/receipts/{id}": {
+    /** Get a receipt by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Receipt */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /** Delete a receipt by id (and associated file) */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Deleted */
+        204: {
+          content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /** Update a receipt (allows marking as signed) */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateReceiptRequest"];
+        };
+      };
+      responses: {
+        /** @description Receipt updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/receipts/by-key-loan/{keyLoanId}": {
     /** Get receipt by keyLoanId */
     get: {
@@ -1301,53 +1370,6 @@ export interface paths {
           };
         };
         /** @description Receipt or file not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}": {
-    /** Delete a receipt by id (and associated file) */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Deleted */
-        204: {
-          content: never;
-        };
-        /** @description Receipt not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a receipt (allows marking as signed) */
-    patch: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateReceiptRequest"];
-        };
-      };
-      responses: {
-        /** @description Receipt updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Receipt"];
-            };
-          };
-        };
-        /** @description Receipt not found */
         404: {
           content: never;
         };

@@ -3934,16 +3934,16 @@ export interface paths {
       };
     };
   };
-  "/receipts/by-key-loan/{keyLoanId}": {
+  "/receipts/{id}": {
     /**
-     * Get receipt by key loan ID
-     * @description Retrieve a receipt associated with a specific key loan
+     * Get a receipt by ID
+     * @description Retrieve a specific receipt by its ID
      */
     get: {
       parameters: {
         path: {
-          /** @description The key loan ID to filter receipts by */
-          keyLoanId: string;
+          /** @description The receipt ID */
+          id: string;
         };
       };
       responses: {
@@ -3951,7 +3951,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Receipt"][];
+              content?: components["schemas"]["Receipt"];
             };
           };
         };
@@ -3969,8 +3969,6 @@ export interface paths {
         };
       };
     };
-  };
-  "/receipts/{id}": {
     /**
      * Delete a receipt
      * @description Delete a receipt by ID (and associated file from MinIO)
@@ -4030,6 +4028,42 @@ export interface paths {
         400: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/by-key-loan/{keyLoanId}": {
+    /**
+     * Get receipt by key loan ID
+     * @description Retrieve a receipt associated with a specific key loan
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key loan ID to filter receipts by */
+          keyLoanId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved receipt */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"][];
+            };
           };
         };
         /** @description Receipt not found */
