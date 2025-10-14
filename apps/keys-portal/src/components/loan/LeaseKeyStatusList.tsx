@@ -18,9 +18,12 @@ import {
   handleReturnKeys,
   handleSwitchKeysWithReceipts,
 } from '@/services/loanHandlers'
+import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
+import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
+import { KeyLoanTransferDialog } from './KeyLoanTransferDialog'
 
 function isLeaseNotPast(lease: Lease): boolean {
   // If no end date, it's current or future
@@ -60,6 +63,13 @@ export function LeaseKeyStatusList({
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [receiptId, setReceiptId] = useState<string | null>(null)
+
+  // Transfer dialog state
+  const [showTransferDialog, setShowTransferDialog] = useState(false)
+  const [pendingLoanKeyIds, setPendingLoanKeyIds] = useState<string[]>([])
+  const [existingLoansForTransfer, setExistingLoansForTransfer] = useState<
+    ExistingLoanInfo[]
+  >([])
 
   // Add key state
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
@@ -119,6 +129,21 @@ export function LeaseKeyStatusList({
   }
 
   const onRent = async (keyIds: string[]) => {
+    // Check if there are existing active loans for these contacts on this object
+    const existingLoans = await findExistingActiveLoansForTransfer(
+      tenantNames,
+      lease.rentalPropertyId
+    )
+
+    if (existingLoans.length > 0) {
+      // Show transfer dialog
+      setPendingLoanKeyIds(keyIds)
+      setExistingLoansForTransfer(existingLoans)
+      setShowTransferDialog(true)
+      return
+    }
+
+    // No existing loans - proceed normally
     setIsProcessing(true)
     const result = await handleLoanKeys({
       keyIds,
@@ -398,6 +423,37 @@ export function LeaseKeyStatusList({
         receiptData={receiptData}
         receiptId={receiptId}
         enableUpload={false}
+      />
+
+      <KeyLoanTransferDialog
+        open={showTransferDialog}
+        onOpenChange={setShowTransferDialog}
+        newKeys={keys.filter((k) => pendingLoanKeyIds.includes(k.id))}
+        existingLoans={existingLoansForTransfer}
+        contact={tenantNames[0]}
+        contact2={tenantNames[1]}
+        onSuccess={async (allLoanedKeyIds, receiptId) => {
+          // Refresh and show receipt
+          await refreshStatuses()
+          setSelectedKeys([])
+
+          if (receiptId) {
+            const relevantKeys = keys.filter((k) =>
+              allLoanedKeyIds.includes(k.id)
+            )
+            setReceiptData({
+              lease,
+              tenants: lease.tenants ?? [],
+              keys: relevantKeys,
+              receiptType: 'LOAN',
+              operationDate: new Date(),
+            })
+            setReceiptId(receiptId)
+            setShowReceiptDialog(true)
+          } else {
+            onKeysLoaned?.()
+          }
+        }}
       />
     </>
   )
