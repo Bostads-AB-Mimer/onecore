@@ -5,7 +5,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { keyService } from '@/services/api/keyService'
-import { getKeyLoanStatus, type KeyLoanInfo } from '@/utils/keyLoanStatus'
+import { getKeyLoanStatus } from '@/utils/keyLoanStatus'
+import {
+  sortKeysByTypeAndSequence,
+  computeKeyWithStatus,
+  type KeyWithStatus,
+} from '@/utils/keyStatusHelpers'
 import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
@@ -15,18 +20,6 @@ import {
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
-
-export type KeyWithStatus = Key & {
-  loanInfo: KeyLoanInfo
-  displayStatus: string
-}
-
-const KEY_TYPE_ORDER: Partial<Record<KeyType, number>> = {
-  LGH: 1,
-  PB: 2,
-  FS: 3,
-  HN: 4,
-}
 
 function isLeaseNotPast(lease: Lease): boolean {
   // If no end date, it's current or future
@@ -74,44 +67,8 @@ export function LeaseKeyStatusList({
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
 
   // Compute key status - extracted to reuse after loan/return operations
-  const computeKeyStatus = async (key: Key): Promise<KeyWithStatus> => {
-    try {
-      const loanInfo = await getKeyLoanStatus(
-        key.id,
-        tenantNames[0],
-        tenantNames[1]
-      )
-
-      let displayStatus = ''
-
-      if (loanInfo.isLoaned) {
-        if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
-          displayStatus = `Utlånat till den här hyresgästen`
-        } else {
-          displayStatus = `Utlånad till ${loanInfo.contact ?? 'Okänd'}`
-        }
-      } else {
-        if (loanInfo.contact === null) {
-          displayStatus = 'Ny'
-        } else if (tenantNames.includes(loanInfo.contact)) {
-          displayStatus = `Återlämnad av den här hyresgästen`
-        } else {
-          displayStatus = `Återlämnad av ${loanInfo.contact}`
-        }
-      }
-
-      return {
-        ...key,
-        loanInfo,
-        displayStatus,
-      } as KeyWithStatus
-    } catch (error) {
-      return {
-        ...key,
-        loanInfo: { isLoaned: false, contact: null },
-        displayStatus: 'Okänd status',
-      } as KeyWithStatus
-    }
+  const computeKeyStatus = (key: Key): Promise<KeyWithStatus> => {
+    return computeKeyWithStatus(key, keys, tenantNames, getKeyLoanStatus)
   }
 
   // Fetch keys for the rental object
@@ -264,24 +221,10 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  const sortedKeys = useMemo(() => {
-    const getTypeRank = (t: KeyType) => KEY_TYPE_ORDER[t] ?? 999
-    const getSeq = (k: Key) =>
-      k.keySequenceNumber == null
-        ? Number.POSITIVE_INFINITY
-        : Number(k.keySequenceNumber)
-
-    return [...keysWithStatus].sort((a, b) => {
-      const typeCmp =
-        getTypeRank(a.keyType as KeyType) - getTypeRank(b.keyType as KeyType)
-      if (typeCmp !== 0) return typeCmp
-
-      const seqCmp = getSeq(a) - getSeq(b)
-      if (seqCmp !== 0) return seqCmp
-
-      return (a.keyName || '').localeCompare(b.keyName || '')
-    })
-  }, [keysWithStatus])
+  const sortedKeys = useMemo(
+    () => sortKeysByTypeAndSequence(keysWithStatus),
+    [keysWithStatus]
+  )
 
   // Summary counts by type
   const countsByType = useMemo(() => {
@@ -345,6 +288,13 @@ export function LeaseKeyStatusList({
               onRent={onRent}
               onReturn={onReturn}
               onSwitch={onSwitch}
+              onRefresh={async () => {
+                // Refresh keys and statuses after flex keys are created
+                const list = await keyService.searchKeys({
+                  rentalObjectCode: lease.rentalPropertyId,
+                })
+                setKeys(list.content)
+              }}
             />
             {!showAddKeyForm && (
               <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
