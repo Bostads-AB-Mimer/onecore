@@ -371,11 +371,6 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                 }
                 placeholder="1"
               />
-              {formData.flexNumber === '3' && (
-                <p className="text-xs text-orange-600">
-                  Varning: Flex 3 är max. Efter detta behöver låset bytas.
-                </p>
-              )}
             </div>
           </div>
         </div>
