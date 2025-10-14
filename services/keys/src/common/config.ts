@@ -13,7 +13,7 @@ export interface Config {
   minio: {
     endPoint: string
     port: number
-    useSSL: boolean
+    useSsl: boolean
     accessKey: string
     secretKey: string
     bucketName: string
@@ -24,19 +24,19 @@ const config = configPackage({
   defaults: {
     port: 5080,
     keysDatabase: {
-      host: process.env.KEYS_DATABASE__HOST ?? 'localhost',
-      user: process.env.KEYS_DATABASE__USER ?? 'sa',
-      password: process.env.KEYS_DATABASE__PASSWORD ?? '',
-      port: Number(process.env.KEYS_DATABASE__PORT ?? 1433),
-      database: process.env.KEYS_DATABASE__DATABASE ?? 'keys-management',
+      host: 'localhost',
+      user: 'sa',
+      password: '',
+      port: 1433,
+      database: 'keys-management',
     },
     minio: {
-      endPoint: process.env.MINIO_ENDPOINT,
-      port: Number(process.env.MINIO_PORT),
-      useSSL: process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY,
-      secretKey: process.env.MINIO_SECRET_KEY,
-      bucketName: process.env.MINIO_BUCKET_NAME,
+      endPoint: 'localhost',
+      port: 9000,
+      useSsl: false,
+      accessKey: '',
+      secretKey: '',
+      bucketName: 'receipts',
     },
   },
 })
