@@ -130,8 +130,6 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     return invoice
   })
 
-  console.log('Xledger invoices', invoices)
-
   return invoices
 }
 
