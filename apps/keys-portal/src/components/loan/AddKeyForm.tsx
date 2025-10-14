@@ -192,11 +192,6 @@ export function AddKeyForm({
         <span className="mr-3">Objekt-ID: {rentalObjectCode}</span>
         <span className="mr-3">Låssystem: {keySystemDisplayCode}</span>
         <span className="mr-3">Flex: {defaultFlexNumber}</span>
-        {defaultFlexNumber === 3 && (
-          <span className="text-orange-600 font-medium">
-            (MAX - låset behöver bytas snart)
-          </span>
-        )}
       </div>
 
       <div className="flex justify-end gap-2">
