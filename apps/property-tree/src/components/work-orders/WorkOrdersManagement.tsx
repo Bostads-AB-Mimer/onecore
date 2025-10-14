@@ -11,13 +11,11 @@ import useWorkOrders from '../hooks/useWorkOrders'
 export interface WorkOrdersManagementProps {
   id: string
   contextType?: 'property' | 'tenant' | 'residence' | 'building'
-  tenant?: any // Adding the missing tenant prop
 }
 
 export function WorkOrdersManagement({
   id,
   contextType = 'residence',
-  tenant,
 }: WorkOrdersManagementProps) {
   // Fetch work orders based on context type and id
   const { workOrders, isLoading, error } = useWorkOrders(id, contextType)
@@ -43,6 +41,10 @@ export function WorkOrdersManagement({
           <WorkOrdersTable orders={workOrders} />
         ) : (
           <p className="text-slate-500 p-2">Ingen ärendehistorik.</p>
+        )}
+
+        {error && (
+          <div className="text-red-500">Kunde inte hämta ärendehistorik.</div>
         )}
       </div>
     </TabLayout>
