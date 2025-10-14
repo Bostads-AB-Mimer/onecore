@@ -17,9 +17,9 @@ export const PropertyDesignationSchema = z.object({
 export const PropertySchema = z.object({
   id: z.string().trim(),
   propertyObjectId: z.string().trim(),
-  marketAreaId: z.string().trim(),
-  districtId: z.string().trim(),
-  propertyDesignationId: z.string().trim(),
+  marketAreaId: z.string().trim().nullable(),
+  districtId: z.string().trim().nullable(),
+  propertyDesignationId: z.string().trim().nullable(),
   valueAreaId: z.string().nullable(),
   code: z.string(),
   designation: z.string(),
@@ -28,7 +28,7 @@ export const PropertySchema = z.object({
   block: z.string(),
   sector: z.string().nullable(),
   propertyIndexNumber: z.string().nullable(),
-  congregation: z.string(),
+  congregation: z.string().nullable(),
   builtStatus: z.number().int(),
   separateAssessmentUnit: z.number().int(),
   consolidationNumber: z.string(),
@@ -53,9 +53,9 @@ export const PropertySchema = z.object({
 export const PropertyDetailsSchema = z.object({
   id: z.string().trim(),
   propertyObjectId: z.string().trim(),
-  marketAreaId: z.string().trim(),
-  districtId: z.string().trim(),
-  propertyDesignationId: z.string().trim(),
+  marketAreaId: z.string().trim().nullable(),
+  districtId: z.string().trim().nullable(),
+  propertyDesignationId: z.string().trim().nullable(),
   valueAreaId: z.string().nullable(),
   code: z.string(),
   designation: z.string(),
@@ -64,12 +64,12 @@ export const PropertyDetailsSchema = z.object({
   block: z.string(),
   sector: z.string().nullable(),
   propertyIndexNumber: z.string().nullable(),
-  congregation: z.string(),
+  congregation: z.string().nullable(),
   builtStatus: z.number().int(),
   separateAssessmentUnit: z.number().int(),
-  consolidationNumber: z.string(),
+  consolidationNumber: z.string().nullable(),
   ownershipType: z.string(),
-  registrationDate: z.string().nullable(),
+  registrationDate: z.date().nullable(),
   acquisitionDate: z.string().nullable(),
   isLeasehold: z.number().int(),
   leaseholdTerminationDate: z.string().nullable(),
@@ -84,16 +84,20 @@ export const PropertyDetailsSchema = z.object({
   fromDate: z.date(),
   toDate: z.date(),
   timestamp: z.string(),
-  marketArea: z.object({
-    id: z.string().trim(),
-    code: z.string().trim(),
-    name: z.string().trim(),
-  }),
-  district: z.object({
-    id: z.string().trim(),
-    code: z.string().trim(),
-    caption: z.string().trim(),
-  }),
+  marketArea: z
+    .object({
+      id: z.string().trim(),
+      code: z.string().trim(),
+      name: z.string().trim(),
+    })
+    .nullable(),
+  district: z
+    .object({
+      id: z.string().trim(),
+      code: z.string().trim(),
+      caption: z.string().trim(),
+    })
+    .nullable(),
   propertyObject: z.object({
     id: z.string().trim(),
     deleteMark: z.number().int(),

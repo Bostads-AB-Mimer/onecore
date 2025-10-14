@@ -990,9 +990,9 @@ export interface components {
     Property: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -1002,7 +1002,7 @@ export interface components {
       block: string;
       sector: string | null;
       propertyIndexNumber: string | null;
-      congregation: string;
+      congregation: string | null;
       builtStatus: number;
       separateAssessmentUnit: number;
       consolidationNumber: string;
@@ -1028,9 +1028,9 @@ export interface components {
     PropertyDetails: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -1040,11 +1040,12 @@ export interface components {
       block: string;
       sector: string | null;
       propertyIndexNumber: string | null;
-      congregation: string;
+      congregation: string | null;
       builtStatus: number;
       separateAssessmentUnit: number;
-      consolidationNumber: string;
+      consolidationNumber: string | null;
       ownershipType: string;
+      /** Format: date-time */
       registrationDate: string | null;
       acquisitionDate: string | null;
       isLeasehold: number;
@@ -1066,12 +1067,12 @@ export interface components {
         id: string;
         code: string;
         name: string;
-      };
+      } | null;
       district: {
         id: string;
         code: string;
         caption: string;
-      };
+      } | null;
       propertyObject: {
         id: string;
         deleteMark: number;

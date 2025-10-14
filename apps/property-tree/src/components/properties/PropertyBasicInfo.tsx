@@ -15,10 +15,6 @@ export const PropertyBasicInfo = ({
   showBasicInfoOnly = false,
   showDetailedInfo = false,
 }: PropertyBasicInfoProps) => {
-  // Extract the current route information from the window location
-  const routeParts = window.location.pathname.split('/')
-  const propertyKey = routeParts.slice(2).join('/')
-
   // Basic information card that should always show at the top
   const renderBasicInfoCard = () => (
     <Card className="mb-6">
@@ -47,7 +43,7 @@ export const PropertyBasicInfo = ({
           <div>
             <p className="text-sm text-muted-foreground">Distrikt</p>
             <p className="font-medium">
-              {propertyDetail.district.caption || '-'}
+              {propertyDetail?.district?.caption || '-'}
             </p>
           </div>
 
@@ -61,7 +57,7 @@ export const PropertyBasicInfo = ({
               Stadsdel/Marknadsområde
             </p>
             <p className="font-medium">
-              {propertyDetail.marketArea.name || '-'}
+              {propertyDetail?.marketArea?.name || '-'}
             </p>
           </div>
 
