@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent } from 'react'
+import { useState, useRef, DragEvent, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,23 +10,27 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FileText, Printer, Upload, Download, AlertCircle } from 'lucide-react'
 
-import type { ReceiptData } from '@/services/types'
+import type { ReceiptData, Lease } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
+import { fetchReceiptData } from '@/services/receiptHandlers'
 
 export function ReceiptDialog({
   isOpen,
   onClose,
-  receiptData,
   receiptId,
+  lease,
   enableUpload = true, // parent can hide upload UI (you use false)
 }: {
   isOpen: boolean
   onClose: () => void
-  receiptData: ReceiptData | null
   receiptId: string | null
+  lease: Lease
   enableUpload?: boolean
 }) {
+  // Fetch receipt data when dialog opens
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false)
   // Upload state (only used if enableUpload)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -38,6 +42,37 @@ export function ReceiptDialog({
   const [isDownloading, setIsDownloading] = useState(false)
 
   const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+
+  // Fetch receipt data when dialog opens or receiptId changes
+  useEffect(() => {
+    if (!isOpen || !receiptId) {
+      setReceiptData(null)
+      return
+    }
+
+    let cancelled = false
+    const loadReceiptData = async () => {
+      setIsLoadingReceipt(true)
+      try {
+        const data = await fetchReceiptData(receiptId, lease)
+        if (!cancelled) {
+          setReceiptData(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch receipt data:', err)
+      } finally {
+        if (!cancelled) {
+          setIsLoadingReceipt(false)
+        }
+      }
+    }
+
+    loadReceiptData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, receiptId, lease])
 
   // ---------- PRINT (open the PDF in a new tab with auto print) ----------
   const handleOpenPdfTab = async () => {
@@ -118,6 +153,11 @@ export function ReceiptDialog({
         : 'Ett utlåningskvitto har skapats. Skriv ut och låt hyresgästen signera.'
       : 'Ett återlämningskvitto har skapats. Du kan skriva ut det.'
 
+  // Don't show dialog for return receipts - they're auto-generated for records only
+  if (receiptData?.receiptType === 'RETURN') {
+    return null
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -148,10 +188,10 @@ export function ReceiptDialog({
           <Button
             onClick={handleOpenPdfTab}
             className="gap-2 w-full"
-            disabled={!receiptData}
+            disabled={!receiptData || isLoadingReceipt}
           >
             <Printer className="h-4 w-4" />
-            Skriv ut kvitto
+            {isLoadingReceipt ? 'Laddar kvitto...' : 'Skriv ut kvitto'}
           </Button>
 
           {/* Optional upload section (hidden in your current usage) */}

@@ -14,7 +14,7 @@ type Props = {
   existingLoans: ExistingLoanInfo[] // Existing loans that will be closed
   contact?: string
   contact2?: string
-  onSuccess: (allLoanedKeyIds: string[], receiptId?: string) => void // Called after successful transfer
+  onSuccess: (receiptId?: string) => void // Called after successful transfer
 }
 
 export function KeyLoanTransferDialog({
@@ -73,7 +73,7 @@ export function KeyLoanTransferDialog({
           description: `${allNewLoanKeyIds.length} nycklar utlånade (${newKeys.length} nya + ${transferCount} överförda)`,
         })
         onOpenChange(false)
-        onSuccess(allNewLoanKeyIds, loanResult.receiptId)
+        onSuccess(loanResult.receiptId)
       } else {
         toast({
           title: loanResult.title,

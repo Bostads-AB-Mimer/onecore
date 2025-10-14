@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, RefreshCw, Copy } from 'lucide-react'
+import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
 import { isNewFlexKey } from '@/utils/keyStatusHelpers'
 import { FlexMenu } from './FlexMenu'
 import { IncomingFlexMenu } from './IncomingFlexMenu'
+import { DisposeKeysDialog } from './DisposeKeysDialog'
 
 type Props = {
   selectedKeys: string[]
@@ -15,7 +16,7 @@ type Props = {
   isProcessing: boolean
   onRent: (keyIds: string[]) => void
   onReturn: (keyIds: string[]) => void
-  onSwitch?: (keyIds: string[]) => void
+  onDispose?: (keyIds: string[]) => void
   onRefresh?: () => void
   allKeys?: KeyWithStatus[]
 }
@@ -28,12 +29,13 @@ export function KeyActionButtons({
   isProcessing,
   onRent,
   onReturn,
-  onSwitch,
+  onDispose,
   onRefresh,
   allKeys,
 }: Props) {
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
   const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
+  const [disposeDialogOpen, setDisposeDialogOpen] = useState(false)
 
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
@@ -48,14 +50,6 @@ export function KeyActionButtons({
       k.loanInfo.isLoaned &&
       k.loanInfo.contact &&
       tenantNames.includes(k.loanInfo.contact)
-  )
-
-  const switchableKeys = selectedKeysData.filter(
-    (k) =>
-      k.loanInfo.isLoaned &&
-      k.loanInfo.contact &&
-      tenantNames.includes(k.loanInfo.contact) &&
-      leaseIsNotPast
   )
 
   // All available keys
@@ -105,18 +99,6 @@ export function KeyActionButtons({
                 Återlämna valda ({returnableKeys.length})
               </Button>
             )}
-            {onSwitch && switchableKeys.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onSwitch(switchableKeys.map((k) => k.id))}
-                disabled={isProcessing}
-                className="flex items-center gap-1"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Byt nyckel ({switchableKeys.length})
-              </Button>
-            )}
             {newFlexKeys.length > 0 && (
               <Button
                 size="sm"
@@ -139,6 +121,18 @@ export function KeyActionButtons({
               <Copy className="h-3 w-3" />
               Flex ({selectedKeys.length})
             </Button>
+            {onDispose && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setDisposeDialogOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                Kassera ({selectedKeys.length})
+              </Button>
+            )}
           </>
         )}
 
@@ -178,6 +172,13 @@ export function KeyActionButtons({
         selectedKeys={newFlexKeys}
         allKeys={allKeys || keysWithStatus}
         onSuccess={onRefresh}
+      />
+
+      <DisposeKeysDialog
+        open={disposeDialogOpen}
+        onOpenChange={setDisposeDialogOpen}
+        selectedKeys={selectedKeysData}
+        onConfirm={() => onDispose?.(selectedKeys)}
       />
     </>
   )
