@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Plus, RefreshCw, Copy } from 'lucide-react'
 
 import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
+import { isNewFlexKey } from '@/utils/keyStatusHelpers'
 import { FlexMenu } from './FlexMenu'
+import { IncomingFlexMenu } from './IncomingFlexMenu'
 
 type Props = {
   selectedKeys: string[]
@@ -15,6 +17,7 @@ type Props = {
   onReturn: (keyIds: string[]) => void
   onSwitch?: (keyIds: string[]) => void
   onRefresh?: () => void
+  allKeys?: KeyWithStatus[]
 }
 
 export function KeyActionButtons({
@@ -27,8 +30,10 @@ export function KeyActionButtons({
   onReturn,
   onSwitch,
   onRefresh,
+  allKeys,
 }: Props) {
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
+  const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
 
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
@@ -64,6 +69,10 @@ export function KeyActionButtons({
       k.loanInfo.isLoaned &&
       k.loanInfo.contact &&
       tenantNames.includes(k.loanInfo.contact)
+  )
+
+  const newFlexKeys = selectedKeysData.filter((k) =>
+    isNewFlexKey(k, allKeys || keysWithStatus)
   )
 
   const hasSelectedKeys = selectedKeys.length > 0
@@ -108,6 +117,18 @@ export function KeyActionButtons({
                 Byt nyckel ({switchableKeys.length})
               </Button>
             )}
+            {newFlexKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIncomingFlexMenuOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <Copy className="h-3 w-3" />
+                Inkommen flex ({newFlexKeys.length})
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -148,6 +169,14 @@ export function KeyActionButtons({
         open={flexMenuOpen}
         onOpenChange={setFlexMenuOpen}
         selectedKeys={selectedKeysData}
+        onSuccess={onRefresh}
+      />
+
+      <IncomingFlexMenu
+        open={incomingFlexMenuOpen}
+        onOpenChange={setIncomingFlexMenuOpen}
+        selectedKeys={newFlexKeys}
+        allKeys={allKeys || keysWithStatus}
         onSuccess={onRefresh}
       />
     </>
