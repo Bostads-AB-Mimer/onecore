@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, RefreshCw, Copy } from 'lucide-react'
-import type { KeyWithStatus } from './LeaseKeyStatusList'
+
+import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
 import { FlexMenu } from './FlexMenu'
-import { useState } from 'react'
 
 type Props = {
   selectedKeys: string[]
