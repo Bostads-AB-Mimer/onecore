@@ -773,14 +773,17 @@ export interface paths {
     /**
      * Search keys with pagination
      * @description Search keys with flexible filtering and pagination support.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any Key field parameter for filtering
+     * - **OR search**: Use `q` with `fields` for fuzzy LIKE search across multiple fields
+     * - **AND search**: Use any Key field parameter for exact match filtering (uses strict equality)
      * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
      * - Only one OR group is supported, but you can combine it with multiple AND filters
      *
      * Examples:
+     * - `?q=master&fields=keyName` - Fuzzy search for "master" in keyName
+     * - `?keyType=LGH` - Exact match for keyType = 'LGH'
+     * - `?disposed=true` - Show only disposed keys
      * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
-     * - `?keyName=master&createdAt=<2024-12-31` - Key name contains "master" AND created before Dec 31, 2024
+     * - `?keyType=LGH&createdAt=<2024-12-31` - Exact keyType AND created before Dec 31, 2024
      */
     get: {
       parameters: {
