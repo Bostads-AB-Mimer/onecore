@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
+import * as keysAdapter from '../adapters/keys-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
@@ -276,9 +277,10 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE)
-        .where({ rentalObjectCode: ctx.params.rentalObjectCode })
-        .orderBy('keyName', 'asc')
+      const rows = await keysAdapter.getKeysByRentalObject(
+        ctx.params.rentalObjectCode,
+        db
+      )
 
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
@@ -337,7 +339,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const row = await db(TABLE).where({ id: ctx.params.id }).first()
+      const row = await keysAdapter.getKeyById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404
         ctx.body = { reason: 'Key not found', ...metadata }
@@ -404,7 +406,7 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyRequest = ctx.request.body
 
-        const [row] = await db(TABLE).insert(payload).returning('*')
+        const row = await keysAdapter.createKey(payload, db)
         ctx.status = 201
         ctx.body = { content: row, ...metadata }
       } catch (err) {
@@ -484,10 +486,7 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: UpdateKeyRequest = ctx.request.body
 
-        const [row] = await db(TABLE)
-          .where({ id: ctx.params.id })
-          .update({ ...payload, updatedAt: db.fn.now() })
-          .returning('*')
+        const row = await keysAdapter.updateKey(ctx.params.id, payload, db)
 
         if (!row) {
           ctx.status = 404
@@ -550,7 +549,7 @@ export const routes = (router: KoaRouter) => {
   router.delete('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const n = await db(TABLE).where({ id: ctx.params.id }).del()
+      const n = await keysAdapter.deleteKey(ctx.params.id, db)
       if (!n) {
         ctx.status = 404
         ctx.body = { reason: 'Key not found', ...metadata }
@@ -621,12 +620,11 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: BulkUpdateFlexRequest = ctx.request.body
 
-        const updatedCount = await db(TABLE)
-          .where({ rentalObjectCode: payload.rentalObjectCode })
-          .update({
-            flexNumber: payload.flexNumber,
-            updatedAt: db.fn.now(),
-          })
+        const updatedCount = await keysAdapter.bulkUpdateFlexNumber(
+          payload.rentalObjectCode,
+          payload.flexNumber,
+          db
+        )
 
         ctx.status = 200
         ctx.body = { content: { updatedCount }, ...metadata }
