@@ -143,6 +143,7 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -213,9 +214,12 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         <TableCell>
           {invoice.paymentStatus == PaymentStatus.Paid ? 'Betald' : 'Obetald'}
         </TableCell>
+        <TableCell>
+          {invoice.source === 'legacy' ? 'xpand' : 'xledger'}
+        </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout={0} unmountOnExit>
             <InvoiceDetails invoice={invoice} />
           </Collapse>
@@ -227,15 +231,6 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
 
 function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
   const { invoice } = props
-  const eventsQuery = useInvoicePaymentEvents(invoice.invoiceId)
-
-  if (eventsQuery.isLoading) {
-    return (
-      <Box margin={1}>
-        <CircularProgress />
-      </Box>
-    )
-  }
 
   return (
     <Box margin={1}>
@@ -270,28 +265,44 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
           </Table>
         </>
       )}
-      <Typography variant="h2" sx={{ mt: 2, mb: 1, fontSize: 18 }}>
-        Betalhändelser
-      </Typography>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Text</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {eventsQuery.data?.map((event, index) => (
-            <TableRow key={index}>
-              <TableCell>{event.transactionSourceCode}</TableCell>
-              <TableCell>{event.amount}</TableCell>
-              <TableCell>{event.text}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {invoice.source === 'next' && (
+        <>
+          <Typography variant="h2" sx={{ mt: 2, mb: 1, fontSize: 18 }}>
+            Betalhändelser
+          </Typography>
+          <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+        </>
+      )}
     </Box>
+  )
+}
+
+function InvoicePaymentEvents(props: { invoiceId: string }) {
+  const eventsQuery = useInvoicePaymentEvents(props.invoiceId)
+
+  if (eventsQuery.isLoading) {
+    return <CircularProgress />
+  }
+
+  return (
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Text</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {eventsQuery.data?.map((event, index) => (
+          <TableRow key={index}>
+            <TableCell>{event.transactionSourceCode}</TableCell>
+            <TableCell>{event.amount}</TableCell>
+            <TableCell>{event.text}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
