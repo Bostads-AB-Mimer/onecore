@@ -103,22 +103,22 @@ const ListingTextContentForm = () => {
           rentalObjectCode,
           data: { contentBlocks },
         })
-        toast.success('Annonseringsinnehåll uppdaterat!')
+        toast.success('Annonsinnehåll uppdaterat!')
       } else {
         await createMutation.mutateAsync({
           rentalObjectCode: objectCode,
           contentBlocks,
         })
-        toast.success('Annonseringsinnehåll skapat!')
+        toast.success('Annonsinnehåll skapat!')
       }
 
-      navigate('/annonseringsinnehall')
+      navigate('/annonsinnehall')
     } catch (error) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 409) {
-          toast.error('Annonseringsinnehåll finns redan för denna objektskod')
+          toast.error('Annonsinnehåll finns redan för denna objektskod')
         } else if (error.response?.status === 404) {
-          toast.error('Annonseringsinnehåll hittades inte')
+          toast.error('Annonsinnehåll hittades inte')
         } else {
           toast.error('Ett fel inträffade vid sparande')
         }
@@ -133,8 +133,8 @@ const ListingTextContentForm = () => {
 
     try {
       await deleteMutation.mutateAsync({ rentalObjectCode })
-      toast.success('Annonseringsinnehåll raderat')
-      navigate('/annonseringsinnehall')
+      toast.success('Annonsinnehåll raderat')
+      navigate('/annonsinnehall')
     } catch (error) {
       toast.error('Ett fel inträffade vid radering')
     }
@@ -157,11 +157,11 @@ const ListingTextContentForm = () => {
     return (
       <Box padding={3}>
         <Typography color="error" gutterBottom>
-          Kunde inte ladda annonseringsinnehåll
+          Kunde inte ladda annonsinnehåll
         </Typography>
         <Button
           variant="contained"
-          onClick={() => navigate('/annonseringsinnehall')}
+          onClick={() => navigate('/annonsinnehall')}
         >
           Tillbaka
         </Button>
@@ -181,12 +181,12 @@ const ListingTextContentForm = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/annonseringsinnehall')}
+            onClick={() => navigate('/annonsinnehall')}
           >
             Tillbaka
           </Button>
           <Typography variant="h4">
-            {isEditMode ? 'Redigera' : 'Skapa'} annonseringsinnehåll
+            {isEditMode ? 'Redigera' : 'Skapa'} annonsinnehåll
           </Typography>
         </Box>
 

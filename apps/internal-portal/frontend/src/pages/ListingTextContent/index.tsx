@@ -36,9 +36,9 @@ const ListingTextContent = () => {
         justifyContent="space-between"
         paddingBottom="1rem"
       >
-        <Typography variant="h1">Annonseringsinnehåll</Typography>
+        <Typography variant="h1">Annonsinnehåll</Typography>
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
-          <Link to="/annonseringsinnehall/ny">
+          <Link to="/annonsinnehall/ny">
             <Button variant="dark-outlined" startIcon={<AddIcon />}>
               Skapa nytt
             </Button>
@@ -78,20 +78,20 @@ const ListingTextContent = () => {
               {error.response?.status === 404 ? (
                 <Stack spacing={2}>
                   <Typography color="text.secondary">
-                    Inget annonseringsinnehåll hittades för objektskod:{' '}
+                    Inget annonsinnehåll hittades för objektskod:{' '}
                     <strong>{searchedCode}</strong>
                   </Typography>
                   <Box>
-                    <Link to={`/annonseringsinnehall/ny?code=${searchedCode}`}>
+                    <Link to={`/annonsinnehall/ny?code=${searchedCode}`}>
                       <Button variant="contained" size="small">
-                        Skapa annonseringsinnehåll för {searchedCode}
+                        Skapa annonsinnehåll för {searchedCode}
                       </Button>
                     </Link>
                   </Box>
                 </Stack>
               ) : (
                 <Typography color="error">
-                  Ett fel inträffade vid hämtning av annonseringsinnehåll.
+                  Ett fel inträffade vid hämtning av annonsinnehåll.
                 </Typography>
               )}
             </Box>
@@ -113,7 +113,7 @@ const ListingTextContent = () => {
                     Hyresid: {data.rentalObjectCode}
                   </Typography>
                   <Link
-                    to={`/annonseringsinnehall/${data.rentalObjectCode}/redigera`}
+                    to={`/annonsinnehall/${data.rentalObjectCode}/redigera`}
                   >
                     <Button variant="contained">
                       Visa och redigera
