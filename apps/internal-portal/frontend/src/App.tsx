@@ -22,6 +22,8 @@ import { mdTheme } from './theme'
 import Residences from './pages/Residences/Residences'
 import SearchParkingSpaces from './pages/ParkingSpaces/search'
 import PublishParkingSpacesPage from './pages/PublishParkingSpacesListings/PublishParkingSpacesListingsPage'
+import ListingTextContent from './pages/ListingTextContent'
+import ListingTextContentForm from './pages/ListingTextContent/ListingTextContentForm'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +81,18 @@ function App() {
                     element={<MaterialChoiceDetails />}
                   />
                   <Route path="/sokandeprofil" element={<Residences />} />
+                  <Route
+                    path="/annonseringsinnehall"
+                    element={<ListingTextContent />}
+                  />
+                  <Route
+                    path="/annonseringsinnehall/ny"
+                    element={<ListingTextContentForm />}
+                  />
+                  <Route
+                    path="/annonseringsinnehall/:rentalObjectCode/redigera"
+                    element={<ListingTextContentForm />}
+                  />
                   <Route path="/logout" element={<Login />} />
                 </Route>
               </Routes>
