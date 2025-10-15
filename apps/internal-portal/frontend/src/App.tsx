@@ -21,6 +21,8 @@ import ParkingSpace from './pages/ParkingSpace'
 import { mdTheme } from './theme'
 import Residences from './pages/Residences/Residences'
 import { Contact } from './pages/Contact/index'
+import ListingTextContent from './pages/ListingTextContent'
+import ListingTextContentForm from './pages/ListingTextContent/ListingTextContentForm'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +73,18 @@ function App() {
                   />
                   <Route path="/sokandeprofil" element={<Residences />} />
                   <Route path="/kundkort" element={<Contact />} />
+                  <Route
+                    path="/annonseringsinnehall"
+                    element={<ListingTextContent />}
+                  />
+                  <Route
+                    path="/annonseringsinnehall/ny"
+                    element={<ListingTextContentForm />}
+                  />
+                  <Route
+                    path="/annonseringsinnehall/:rentalObjectCode/redigera"
+                    element={<ListingTextContentForm />}
+                  />
                   <Route path="/logout" element={<Login />} />
                 </Route>
               </Routes>
