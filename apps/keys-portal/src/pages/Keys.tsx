@@ -22,6 +22,7 @@ const Index = () => {
   // Read all filters from URL
   const searchQuery = pagination.searchParams.get('q') || ''
   const selectedTypeFilter = pagination.searchParams.get('keyType') || null
+  const selectedDisposedFilter = pagination.searchParams.get('disposed') || null
   const createdAtAfter = pagination.searchParams.get('createdAtAfter') || null
   const createdAtBefore = pagination.searchParams.get('createdAtBefore') || null
 
@@ -45,6 +46,9 @@ const Index = () => {
         // Add column filters
         if (selectedTypeFilter) {
           searchParams.keyType = selectedTypeFilter
+        }
+        if (selectedDisposedFilter) {
+          searchParams.disposed = selectedDisposedFilter
         }
 
         // Add date filters
@@ -107,6 +111,7 @@ const Index = () => {
     [
       searchQuery,
       selectedTypeFilter,
+      selectedDisposedFilter,
       createdAtAfter,
       createdAtBefore,
       toast,
@@ -123,6 +128,7 @@ const Index = () => {
     pagination.currentLimit,
     searchQuery,
     selectedTypeFilter,
+    selectedDisposedFilter,
     createdAtAfter,
     createdAtBefore,
     // fetchKeys intentionally omitted to prevent infinite loop
@@ -148,6 +154,13 @@ const Index = () => {
   const handleTypeFilterChange = useCallback(
     (type: string | null) => {
       pagination.updateUrlParams({ keyType: type, page: '1' })
+    },
+    [pagination]
+  )
+
+  const handleDisposedFilterChange = useCallback(
+    (disposed: string | null) => {
+      pagination.updateUrlParams({ disposed, page: '1' })
     },
     [pagination]
   )
@@ -330,6 +343,8 @@ const Index = () => {
           onDelete={handleDelete}
           selectedType={selectedTypeFilter}
           onTypeFilterChange={handleTypeFilterChange}
+          selectedDisposed={selectedDisposedFilter}
+          onDisposedFilterChange={handleDisposedFilterChange}
           createdAtAfter={createdAtAfter}
           createdAtBefore={createdAtBefore}
           onDatesChange={handleDatesChange}

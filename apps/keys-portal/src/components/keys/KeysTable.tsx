@@ -27,6 +27,8 @@ interface KeysTableProps {
   onDelete: (keyId: string) => void
   selectedType: string | null
   onTypeFilterChange: (value: string | null) => void
+  selectedDisposed: string | null
+  onDisposedFilterChange: (value: string | null) => void
   createdAtAfter: string | null
   createdAtBefore: string | null
   onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
@@ -39,6 +41,8 @@ export function KeysTable({
   onDelete,
   selectedType,
   onTypeFilterChange,
+  selectedDisposed,
+  onDisposedFilterChange,
   createdAtAfter,
   createdAtBefore,
   onDatesChange,
@@ -90,6 +94,19 @@ export function KeysTable({
             <TableHead className="font-medium">Flexnr</TableHead>
             <TableHead className="font-medium">
               <div className="flex items-center gap-1">
+                Kasserad
+                <FilterDropdown
+                  options={[
+                    { label: 'Ja', value: 'true' },
+                    { label: 'Nej', value: 'false' },
+                  ]}
+                  selectedValue={selectedDisposed}
+                  onSelectionChange={onDisposedFilterChange}
+                />
+              </div>
+            </TableHead>
+            <TableHead className="font-medium">
+              <div className="flex items-center gap-1">
                 Skapad
                 <DateRangeFilterDropdown
                   afterDate={createdAtAfter}
@@ -105,7 +122,7 @@ export function KeysTable({
           {keys.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={8}
+                colSpan={9}
                 className="text-center py-8 text-muted-foreground"
               >
                 Inga nycklar hittades
@@ -142,6 +159,17 @@ export function KeysTable({
                 </TableCell>
                 <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                 <TableCell>{key.flexNumber || '-'}</TableCell>
+                <TableCell>
+                  {key.disposed ? (
+                    <Badge variant="destructive" className="text-xs">
+                      Ja
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      Nej
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDate(key.createdAt)}
                 </TableCell>
