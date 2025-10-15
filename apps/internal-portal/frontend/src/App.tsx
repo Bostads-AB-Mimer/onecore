@@ -84,15 +84,15 @@ function App() {
                   <Route path="/sokandeprofil" element={<Residences />} />
                   <Route path="/kundkort" element={<Contact />} />
                   <Route
-                    path="/annonseringsinnehall"
+                    path="/annonsinnehall"
                     element={<ListingTextContent />}
                   />
                   <Route
-                    path="/annonseringsinnehall/ny"
+                    path="/annonsinnehall/ny"
                     element={<ListingTextContentForm />}
                   />
                   <Route
-                    path="/annonseringsinnehall/:rentalObjectCode/redigera"
+                    path="/annonsinnehall/:rentalObjectCode/redigera"
                     element={<ListingTextContentForm />}
                   />
                   <Route path="/logout" element={<Login />} />

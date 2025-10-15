@@ -73,9 +73,9 @@ const SiteMenu = () => (
                 <Typography>Kundkort</Typography>
               </MenuItem>
             </Link>
-            <Link to="/annonseringsinnehall">
+            <Link to="/annonsinnehall">
               <MenuItem onClick={popupState.close}>
-                <Typography>Annonseringsinnehåll</Typography>
+                <Typography>Annonsinnehåll</Typography>
               </MenuItem>
             </Link>
           </Menu>
