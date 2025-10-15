@@ -1,5 +1,5 @@
 import request from 'supertest'
-import Koa from 'Koa'
+import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
@@ -30,7 +30,7 @@ describe('GET /logs/:id', () => {
     const mockLog = factory.log.build({
       id: 'log-123',
       userName: 'test@example.com',
-      eventType: 'CREATE',
+      eventType: 'creation',
     })
 
     const getLogByIdSpy = jest
@@ -44,7 +44,7 @@ describe('GET /logs/:id', () => {
     expect(res.body.content).toMatchObject({
       id: 'log-123',
       userName: 'test@example.com',
-      eventType: 'CREATE',
+      eventType: 'creation',
     })
   })
 
@@ -89,12 +89,12 @@ describe('GET /logs/object/:objectId', () => {
       factory.log.build({
         id: 'log-1',
         objectId: 'key-abc',
-        eventType: 'CREATE',
+        eventType: 'creation',
       }),
       factory.log.build({
         id: 'log-2',
         objectId: 'key-abc',
-        eventType: 'UPDATE',
+        eventType: 'update',
       }),
     ]
 
@@ -193,7 +193,7 @@ describe('POST /logs', () => {
 
   it('validates missing required fields and returns 400', async () => {
     const res = await request(app.callback()).post('/logs').send({
-      eventType: 'CREATE',
+      eventType: 'creation',
       // userName is missing
     })
 
