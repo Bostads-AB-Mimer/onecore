@@ -17,6 +17,11 @@ import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
 import { InvoiceWithRows, useContact } from '../hooks/useContact'
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 
+const moneyFormatter = new Intl.NumberFormat('sv-SE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
 export function ContactCard(props: { contactCode: string }) {
   const query = useContact(props.contactCode)
 
@@ -206,7 +211,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
             ? yyyymmdd(new Date(invoice.expirationDate))
             : '-'}
         </TableCell>
-        <TableCell>{invoice.amount}</TableCell>
+        <TableCell>{moneyFormatter.format(invoice.amount)}</TableCell>
         <TableCell>{invoice.reference}</TableCell>
         <TableCell>
           {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
@@ -254,10 +259,18 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
               {invoice.invoiceRows.map((row, index) => (
                 <TableRow key={index}>
                   <TableCell>{row.invoiceRowText}</TableCell>
-                  <TableCell>{row.rowType === 3 ? null : row.amount}</TableCell>
-                  <TableCell>{row.rowType === 3 ? null : row.vat}</TableCell>
                   <TableCell>
-                    {row.rowType === 3 ? null : row.totalAmount}
+                    {row.rowType === 3
+                      ? null
+                      : moneyFormatter.format(row.amount)}
+                  </TableCell>
+                  <TableCell>
+                    {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
+                  </TableCell>
+                  <TableCell>
+                    {row.rowType === 3
+                      ? null
+                      : moneyFormatter.format(row.totalAmount)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -297,7 +310,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
         {eventsQuery.data?.map((event, index) => (
           <TableRow key={index}>
             <TableCell>{event.transactionSourceCode}</TableCell>
-            <TableCell>{event.amount}</TableCell>
+            <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
             <TableCell>{event.text}</TableCell>
           </TableRow>
         ))}
