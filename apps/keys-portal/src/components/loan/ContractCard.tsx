@@ -334,12 +334,6 @@ export function ContractCard({
                 // Force KeyLoansAccordion to refresh and show the new loan
                 setKeyLoansRefreshKey((prev) => prev + 1)
               }}
-              onKeysSwitched={() => {
-                setKeyLoansOpen(true)
-                setOpen(false)
-                // Force KeyLoansAccordion to refresh
-                setKeyLoansRefreshKey((prev) => prev + 1)
-              }}
               onKeysReturned={() => {
                 setKeyLoansOpen(true)
                 setOpen(false)
