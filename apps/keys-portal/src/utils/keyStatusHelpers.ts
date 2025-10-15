@@ -21,33 +21,35 @@ const KEY_TYPE_ORDER: Partial<Record<KeyType, number>> = {
 }
 
 /**
- * Checks if a key is a "flex" key (has a higher flex number than other keys with same name/type)
+ * Checks the flex status of a key relative to other keys with the same name/type
  * @param key - The key to check
  * @param allKeys - All keys to compare against
- * @returns true if the key has a higher flex number than at least one other key with the same name and type
+ * @returns 'NOT_FLEX' if not a flex key, 'FLEX_ORDERED' if lower flex keys exist and are not disposed, 'FLEX_INCOMING' if all lower flex keys are disposed
  */
-export function isFlexKey(key: Key, allKeys: Key[]): boolean {
+function getFlexStatus(
+  key: Key,
+  allKeys: Key[]
+): 'NOT_FLEX' | 'FLEX_ORDERED' | 'FLEX_INCOMING' {
   // Key must have a flex number
-  if (key.flexNumber === undefined) return false
+  if (key.flexNumber === undefined) return 'NOT_FLEX'
 
-  // Find other keys with same name and type but different flex numbers
-  const sameNameTypeKeys = allKeys.filter(
+  // Find keys with same name/type and lower flex numbers
+  const lowerFlexKeys = allKeys.filter(
     (k) =>
       k.keyName === key.keyName &&
       k.keyType === key.keyType &&
+      k.id !== key.id &&
       k.flexNumber !== undefined &&
-      k.id !== key.id
+      k.flexNumber < key.flexNumber
   )
 
-  // If there are no other keys with same name/type, it's not a flex key
-  if (sameNameTypeKeys.length === 0) return false
+  // If no lower flex keys, not a flex key
+  if (lowerFlexKeys.length === 0) return 'NOT_FLEX'
 
-  // Check if this key has a higher flex number than at least one other key
-  const hasLowerFlexKeys = sameNameTypeKeys.some(
-    (k) => k.flexNumber! < key.flexNumber!
-  )
+  // Check if any lower flex keys are NOT disposed
+  const hasActiveLowerFlexKeys = lowerFlexKeys.some((k) => !k.disposed)
 
-  return hasLowerFlexKeys
+  return hasActiveLowerFlexKeys ? 'FLEX_ORDERED' : 'FLEX_INCOMING'
 }
 
 /**
@@ -78,7 +80,7 @@ export function sortKeysByTypeAndSequence<T extends Key>(keys: T[]): T[] {
 }
 
 /**
- * Checks if a key is a "new flex" key (has the status "Ny beställd flex")
+ * Checks if a key is a "new flex" key (has the status "Ny beställd flex" or "Ny inkommen flex")
  * A key is "new flex" if it:
  * - Has never been loaned (loanInfo.contact === null)
  * - Is a flex key (has higher flex number than other keys with same name/type)
@@ -90,8 +92,9 @@ export function isNewFlexKey(
   keyWithStatus: KeyWithStatus,
   allKeys: Key[]
 ): boolean {
+  const flexStatus = getFlexStatus(keyWithStatus, allKeys)
   return (
-    keyWithStatus.loanInfo.contact === null && isFlexKey(keyWithStatus, allKeys)
+    keyWithStatus.loanInfo.contact === null && flexStatus === 'FLEX_ORDERED'
   )
 }
 
@@ -128,9 +131,12 @@ export function getKeyDisplayStatus(
   } else {
     // Key is not currently loaned
     if (loanInfo.contact === null) {
-      // Never been loaned - check if it's a flex key
-      if (isFlexKey(key, allKeys)) {
+      // Never been loaned - check flex status
+      const flexStatus = getFlexStatus(key, allKeys)
+      if (flexStatus === 'FLEX_ORDERED') {
         return 'Ny beställd flex'
+      } else if (flexStatus === 'FLEX_INCOMING') {
+        return 'Ny inkommen flex'
       } else {
         return 'Ny'
       }
