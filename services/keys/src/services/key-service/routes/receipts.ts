@@ -7,6 +7,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { uploadFile, getFileUrl, deleteFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
+import * as receiptsAdapter from '../adapters/receipts-adapter'
 
 const TABLE = 'receipts'
 
@@ -70,18 +71,25 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateReceiptRequest = ctx.request.body
 
+        // Validate that the key loan exists
+        const loanExists = await receiptsAdapter.keyLoanExists(
+          payload.keyLoanId,
+          db
+        )
+        if (!loanExists) {
+          ctx.status = 404
+          ctx.body = {
+            reason: 'Key loan not found',
+            ...metadata,
+          }
+          return
+        }
+
         // Allow multiple receipts per keyLoan (e.g., LOAN + RETURN, or multiple partial returns)
-        const [row] = await db(TABLE)
-          .insert({
-            keyLoanId: payload.keyLoanId,
-            receiptType: payload.receiptType,
-            type: payload.type,
-            fileId: payload.fileId ?? null,
-          })
-          .returning('*')
+        const row = await receiptsAdapter.createReceipt(payload, db)
 
         ctx.status = 201
-        ctx.body = { content: row as Receipt, ...metadata }
+        ctx.body = { content: row, ...metadata }
       } catch (err) {
         logger.error(err, 'Error creating receipt')
         ctx.status = 500
@@ -126,7 +134,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
       if (!receipt) {
         ctx.status = 404
         ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -134,7 +142,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: receipt as Receipt, ...metadata }
+      ctx.body = { content: receipt, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching receipt by id')
       ctx.status = 500
@@ -172,12 +180,13 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rows = await db(TABLE)
-        .where({ keyLoanId: parse.data.keyLoanId })
-        .orderBy('createdAt', 'desc')
+      const rows = await receiptsAdapter.getReceiptsByKeyLoanId(
+        parse.data.keyLoanId,
+        db
+      )
 
       ctx.status = 200
-      ctx.body = { content: rows as Receipt[], ...metadata }
+      ctx.body = { content: rows, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching receipts by keyLoanId')
       ctx.status = 500
