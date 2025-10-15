@@ -126,7 +126,8 @@ export function ReturnKeysDialog({
       const result = await handleReturnKeys({
         keyIds: allKeyIdsToReturn,
         availableToNextTenantFrom: availableDate?.toISOString(),
-        selectedForReceipt: Array.from(selectedKeyIds), // Will be used later for receipt
+        selectedForReceipt: Array.from(selectedKeyIds),
+        lease,
       })
 
       if (result.success) {

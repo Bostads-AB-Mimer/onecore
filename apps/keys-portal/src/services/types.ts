@@ -180,8 +180,9 @@ export interface LogFilterParams {
 export interface ReceiptData {
   lease: Lease
   tenants: Tenant[]
-  keys: Key[]
+  keys: Key[] // For RETURN: keys that were returned (checked in dialog)
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
-  missingKeys?: Key[] // Keys that were not returned (for partial returns)
+  missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
+  disposedKeys?: Key[] // For RETURN: keys that were disposed
 }

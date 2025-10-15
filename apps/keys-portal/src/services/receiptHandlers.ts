@@ -1,9 +1,10 @@
+import { generateReturnReceiptBlob } from '@/lib/pdf-receipts'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 
 import { keyLoanService } from './api/keyLoanService'
 import { keyService } from './api/keyService'
 import { receiptService } from './api/receiptService'
-import type { ReceiptData, Lease } from './types'
+import type { ReceiptData, Lease, Key } from './types'
 
 /**
  * Fetches all data needed for a receipt and constructs ReceiptData
@@ -72,4 +73,54 @@ export async function generateAndOpenReceipt(
 ): Promise<void> {
   const receiptData = await fetchReceiptData(receiptId, lease)
   await openPdfInNewTab(receiptData, receiptId)
+}
+
+/**
+ * Generates and uploads a return receipt PDF to MinIO for a single loan
+ * @param receiptId - The receipt ID
+ * @param loanKeys - All key objects in this specific loan
+ * @param selectedKeyIds - Key IDs that were checked in the dialog
+ * @param lease - The lease associated with the receipt
+ */
+export async function generateAndUploadReturnReceipt(
+  receiptId: string,
+  loanKeys: Key[],
+  selectedKeyIds: Set<string>,
+  lease: Lease
+): Promise<void> {
+  // Categorize keys into returned/missing/disposed
+  const returned: Key[] = []
+  const missing: Key[] = []
+  const disposed: Key[] = []
+
+  loanKeys.forEach((key) => {
+    if (key.disposed) {
+      disposed.push(key)
+    } else if (selectedKeyIds.has(key.id)) {
+      returned.push(key)
+    } else {
+      missing.push(key)
+    }
+  })
+
+  // Build receipt data
+  const receiptData: ReceiptData = {
+    lease,
+    tenants: lease.tenants ?? [],
+    keys: returned,
+    receiptType: 'RETURN',
+    operationDate: new Date(),
+    missingKeys: missing.length > 0 ? missing : undefined,
+    disposedKeys: disposed.length > 0 ? disposed : undefined,
+  }
+
+  // Generate PDF blob
+  const { blob } = await generateReturnReceiptBlob(receiptData, receiptId)
+
+  // Convert to File and upload to MinIO
+  const file = new File([blob], `return_${receiptId}.pdf`, {
+    type: 'application/pdf',
+  })
+
+  await receiptService.uploadFile(receiptId, file)
 }
