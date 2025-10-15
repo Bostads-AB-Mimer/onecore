@@ -207,7 +207,7 @@ export interface PropertyDetail {
   congregation: string
   builtStatus: number
   separateAssessmentUnit: number
-  consolidationNumber: string
+  consolidationNumber: string | null
   ownershipType: string
   registrationDate: string | null
   acquisitionDate: string | null
