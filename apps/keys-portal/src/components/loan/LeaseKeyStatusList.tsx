@@ -116,8 +116,12 @@ export function LeaseKeyStatusList({
   }, [keys, tenantNames])
 
   const refreshStatuses = async () => {
-    const results = await Promise.all(keys.map(computeKeyStatus))
-    setKeysWithStatus(results)
+    // Refetch keys from backend to get updated key properties (e.g., disposed status)
+    const list = await keyService.searchKeys({
+      rentalObjectCode: lease.rentalPropertyId,
+    })
+    setKeys(list.content)
+    // The useEffect will automatically recompute statuses when keys changes
   }
 
   const handleKeyCreated = async (newKey: Key) => {
