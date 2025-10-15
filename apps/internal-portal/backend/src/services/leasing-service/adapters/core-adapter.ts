@@ -794,6 +794,23 @@ const deleteListingTextContent = async (
   }
 }
 
+const getRentalPropertyByCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<any, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: any }>({
+      method: 'get',
+      url: `${coreBaseUrl}/rental-properties/by-rental-object-code/${rentalObjectCode}`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addComment,
   removeComment,
@@ -827,4 +844,5 @@ export {
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,
+  getRentalPropertyByCode,
 }
