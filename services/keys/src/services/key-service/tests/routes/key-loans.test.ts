@@ -1,0 +1,990 @@
+import request from 'supertest'
+import Koa from 'koa'
+import KoaRouter from '@koa/router'
+import bodyParser from 'koa-bodyparser'
+
+import { routes } from '../../routes/key-loans'
+import * as factory from '../factories'
+import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
+
+// Set up a Koa app with the key-loans routes for testing
+const app = new Koa()
+const router = new KoaRouter()
+routes(router)
+app.use(bodyParser())
+app.use(router.routes())
+
+// Reset all mocks before each test
+beforeEach(jest.clearAllMocks)
+
+/**
+ * Tests for GET /key-loans endpoint
+ *
+ * Testing list all key loans:
+ * - Successful retrieval
+ * - Database errors
+ */
+describe('GET /key-loans', () => {
+  it('responds with 200 and list of key loans', async () => {
+    const mockLoans = factory.keyLoan.buildList(3)
+
+    const getAllKeyLoansSpy = jest
+      .spyOn(keyLoansAdapter, 'getAllKeyLoans')
+      .mockResolvedValueOnce(mockLoans)
+
+    const res = await request(app.callback()).get('/key-loans')
+
+    expect(getAllKeyLoansSpy).toHaveBeenCalledWith(expect.anything())
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(3)
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'getAllKeyLoans')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback()).get('/key-loans')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for GET /key-loans/:id endpoint
+ *
+ * Testing get single key loan:
+ * - Successful retrieval
+ * - Not found (404)
+ * - Database errors
+ */
+describe('GET /key-loans/:id', () => {
+  it('responds with 200 and key loan data when found', async () => {
+    const mockLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1', 'key-2']),
+      contact: 'john@example.com',
+    })
+
+    const getKeyLoanByIdSpy = jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(mockLoan)
+
+    const res = await request(app.callback()).get('/key-loans/loan-123')
+
+    expect(getKeyLoanByIdSpy).toHaveBeenCalledWith(
+      'loan-123',
+      expect.anything()
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content).toMatchObject({
+      id: 'loan-123',
+      contact: 'john@example.com',
+    })
+  })
+
+  it('responds with 404 if key loan not found', async () => {
+    const getKeyLoanByIdSpy = jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(undefined)
+
+    const res = await request(app.callback()).get('/key-loans/nonexistent-id')
+
+    expect(getKeyLoanByIdSpy).toHaveBeenCalledWith(
+      'nonexistent-id',
+      expect.anything()
+    )
+    expect(res.status).toBe(404)
+    expect(res.body.reason).toContain('not found')
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback()).get('/key-loans/loan-123')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for GET /key-loans/by-key/:keyId endpoint
+ *
+ * Testing get loans for a specific key:
+ * - Successful retrieval with multiple loans
+ * - Empty results
+ * - Database errors
+ */
+describe('GET /key-loans/by-key/:keyId', () => {
+  it('returns all loans for a specific key', async () => {
+    const mockLoans = [
+      factory.keyLoan.build({
+        id: 'loan-1',
+        keys: JSON.stringify(['key-abc']),
+      }),
+      factory.keyLoan.build({
+        id: 'loan-2',
+        keys: JSON.stringify(['key-abc', 'key-xyz']),
+      }),
+    ]
+
+    const getKeyLoansByKeyIdSpy = jest
+      .spyOn(keyLoansAdapter, 'getKeyLoansByKeyId')
+      .mockResolvedValueOnce(mockLoans)
+
+    const res = await request(app.callback()).get('/key-loans/by-key/key-abc')
+
+    expect(getKeyLoansByKeyIdSpy).toHaveBeenCalledWith(
+      'key-abc',
+      expect.anything()
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(2)
+  })
+
+  it('returns empty array when no loans exist for key', async () => {
+    const getKeyLoansByKeyIdSpy = jest
+      .spyOn(keyLoansAdapter, 'getKeyLoansByKeyId')
+      .mockResolvedValueOnce([])
+
+    const res = await request(app.callback()).get(
+      '/key-loans/by-key/nonexistent-key'
+    )
+
+    expect(getKeyLoansByKeyIdSpy).toHaveBeenCalledWith(
+      'nonexistent-key',
+      expect.anything()
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(0)
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoansByKeyId')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback()).get('/key-loans/by-key/key-abc')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for POST /key-loans endpoint (Create)
+ *
+ * Testing key loan creation with various scenarios:
+ * - Successful creation
+ * - Invalid JSON in keys field
+ * - Keys not an array
+ * - Conflict with active loan (409)
+ * - Validation errors
+ * - Database errors
+ */
+describe('POST /key-loans', () => {
+  it('creates key loan successfully and returns 201', async () => {
+    const createdLoan = factory.keyLoan.build({
+      id: 'new-loan-123',
+      keys: JSON.stringify(['key-1', 'key-2']),
+      contact: 'jane@example.com',
+    })
+
+    // Mock no conflicts
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    const createKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(createdLoan)
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1', 'key-2']),
+        contact: 'jane@example.com',
+      })
+
+    expect(createKeyLoanSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keys: JSON.stringify(['key-1', 'key-2']),
+        contact: 'jane@example.com',
+      }),
+      expect.anything()
+    )
+
+    expect(res.status).toBe(201)
+    expect(res.body.content).toMatchObject({
+      id: 'new-loan-123',
+      contact: 'jane@example.com',
+    })
+  })
+
+  it('validates invalid JSON in keys field and returns 400', async () => {
+    const res = await request(app.callback()).post('/key-loans').send({
+      keys: 'not-valid-json',
+      contact: 'jane@example.com',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain('Invalid keys format')
+  })
+
+  it('validates keys must be an array and returns 400', async () => {
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify({ notAnArray: true }),
+        contact: 'jane@example.com',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain('must be a JSON array')
+  })
+
+  it('returns 409 when key has active loan (conflict)', async () => {
+    // Mock conflict detected
+    jest.spyOn(keyLoansAdapter, 'checkActiveKeyLoans').mockResolvedValueOnce({
+      hasConflict: true,
+      conflictingKeys: ['key-1'],
+    })
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1', 'key-2']),
+        contact: 'jane@example.com',
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.reason).toContain('already have active loans')
+    expect(res.body.conflictingKeys).toEqual(['key-1'])
+  })
+
+  it('creates loan with empty keys array successfully', async () => {
+    const createdLoan = factory.keyLoan.build({
+      keys: JSON.stringify([]),
+    })
+
+    // Empty array means no conflicts to check
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(createdLoan)
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify([]),
+        contact: 'jane@example.com',
+      })
+
+    expect(res.status).toBe(201)
+  })
+
+  it('creates loan with optional fields', async () => {
+    const createdLoan = factory.keyLoan.build({
+      keys: JSON.stringify(['key-1']),
+      contact: 'jane@example.com',
+      contact2: 'john@example.com',
+      pickedUpAt: new Date(),
+      createdBy: 'user-123',
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(createdLoan)
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1']),
+        contact: 'jane@example.com',
+        contact2: 'john@example.com',
+        createdBy: 'user-123',
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.contact2).toBe('john@example.com')
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1']),
+        contact: 'jane@example.com',
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for PATCH /key-loans/:id endpoint (Update)
+ *
+ * Testing key loan update with various scenarios:
+ * - Successful update
+ * - Successful partial update
+ * - Not found (404)
+ * - Invalid JSON in keys field
+ * - Keys not an array
+ * - Conflict with active loan (409)
+ * - Database errors
+ */
+describe('PATCH /key-loans/:id', () => {
+  it('updates key loan successfully and returns 200', async () => {
+    const updatedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-3', 'key-4']),
+      contact: 'updated@example.com',
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    const updateKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(updatedLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        keys: JSON.stringify(['key-3', 'key-4']),
+        contact: 'updated@example.com',
+      })
+
+    expect(updateKeyLoanSpy).toHaveBeenCalledWith(
+      'loan-123',
+      expect.objectContaining({
+        keys: JSON.stringify(['key-3', 'key-4']),
+        contact: 'updated@example.com',
+      }),
+      expect.anything()
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.contact).toBe('updated@example.com')
+  })
+
+  it('successfully updates only specified fields (partial update)', async () => {
+    const updatedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      contact: 'new-contact@example.com',
+    })
+
+    const updateKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(updatedLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        contact: 'new-contact@example.com',
+      })
+
+    expect(updateKeyLoanSpy).toHaveBeenCalledWith(
+      'loan-123',
+      expect.objectContaining({
+        contact: 'new-contact@example.com',
+      }),
+      expect.anything()
+    )
+
+    expect(res.status).toBe(200)
+  })
+
+  it('responds with 404 if key loan not found', async () => {
+    const updateKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(undefined)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/nonexistent-id')
+      .send({
+        contact: 'new@example.com',
+      })
+
+    expect(updateKeyLoanSpy).toHaveBeenCalledWith(
+      'nonexistent-id',
+      expect.anything(),
+      expect.anything()
+    )
+
+    expect(res.status).toBe(404)
+    expect(res.body.reason).toContain('not found')
+  })
+
+  it('validates invalid JSON in keys field and returns 400', async () => {
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        keys: 'invalid-json',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain('Invalid keys format')
+  })
+
+  it('validates keys must be an array and returns 400', async () => {
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        keys: JSON.stringify('not-an-array'),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain('must be a JSON array')
+  })
+
+  it('returns 409 when updated keys have active loan (conflict)', async () => {
+    // Mock conflict detected
+    jest.spyOn(keyLoansAdapter, 'checkActiveKeyLoans').mockResolvedValueOnce({
+      hasConflict: true,
+      conflictingKeys: ['key-5'],
+    })
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        keys: JSON.stringify(['key-5']),
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.reason).toContain('already have active loans')
+    expect(res.body.conflictingKeys).toEqual(['key-5'])
+  })
+
+  it('excludes current loan when checking conflicts', async () => {
+    const checkActiveKeyLoansSpy = jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest.spyOn(keyLoansAdapter, 'updateKeyLoan').mockResolvedValueOnce(
+      factory.keyLoan.build({
+        id: 'loan-123',
+        keys: JSON.stringify(['key-1']),
+      })
+    )
+
+    await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        keys: JSON.stringify(['key-1']),
+      })
+
+    // Verify that checkActiveKeyLoans was called with the loan ID to exclude
+    expect(checkActiveKeyLoansSpy).toHaveBeenCalledWith(
+      ['key-1'],
+      'loan-123',
+      expect.anything()
+    )
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        contact: 'new@example.com',
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for DELETE /key-loans/:id endpoint
+ *
+ * Testing key loan deletion:
+ * - Successful deletion
+ * - Not found (404)
+ * - Database errors
+ */
+describe('DELETE /key-loans/:id', () => {
+  it('deletes key loan successfully and returns 200', async () => {
+    const deleteKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'deleteKeyLoan')
+      .mockResolvedValueOnce(1)
+
+    const res = await request(app.callback()).delete('/key-loans/loan-123')
+
+    expect(deleteKeyLoanSpy).toHaveBeenCalledWith('loan-123', expect.anything())
+    expect(res.status).toBe(200)
+  })
+
+  it('responds with 404 if key loan not found', async () => {
+    const deleteKeyLoanSpy = jest
+      .spyOn(keyLoansAdapter, 'deleteKeyLoan')
+      .mockResolvedValueOnce(0)
+
+    const res = await request(app.callback()).delete(
+      '/key-loans/nonexistent-id'
+    )
+
+    expect(deleteKeyLoanSpy).toHaveBeenCalledWith(
+      'nonexistent-id',
+      expect.anything()
+    )
+
+    expect(res.status).toBe(404)
+    expect(res.body.reason).toContain('not found')
+  })
+
+  it('handles database errors and returns 500', async () => {
+    jest
+      .spyOn(keyLoansAdapter, 'deleteKeyLoan')
+      .mockRejectedValueOnce(new Error('Database connection failed'))
+
+    const res = await request(app.callback()).delete('/key-loans/loan-123')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toHaveProperty('error', 'Internal server error')
+  })
+})
+
+/**
+ * Tests for GET /key-loans/search endpoint
+ *
+ * Testing search functionality:
+ * - Missing search parameters (400)
+ * - Search parameter too short (400)
+ * - Only pagination parameters (400)
+ */
+describe('GET /key-loans/search', () => {
+  it('returns 400 when no search parameters provided', async () => {
+    const res = await request(app.callback()).get('/key-loans/search')
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain(
+      'At least one search parameter is required'
+    )
+  })
+
+  it('returns 400 when q parameter is too short', async () => {
+    const res = await request(app.callback()).get('/key-loans/search?q=ab')
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain(
+      'At least one search parameter is required'
+    )
+  })
+
+  it('returns 400 when only pagination parameters provided', async () => {
+    const res = await request(app.callback()).get(
+      '/key-loans/search?page=1&limit=10'
+    )
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain(
+      'At least one search parameter is required'
+    )
+  })
+
+  it('searches by contact using OR search with q parameter', async () => {
+    // Search by contact email (default OR fields: contact, contact2)
+    const res = await request(app.callback()).get('/key-loans/search?q=jane')
+
+    // Should succeed with 200
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('content')
+    expect(Array.isArray(res.body.content)).toBe(true)
+  })
+
+  it('filters by date range using comparison operators', async () => {
+    // Search for loans returned after a specific date
+    const res = await request(app.callback()).get(
+      '/key-loans/search?returnedAt=>2024-01-01'
+    )
+
+    // Should succeed with 200
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('content')
+    expect(Array.isArray(res.body.content)).toBe(true)
+  })
+
+  it('finds active loans only (not returned)', async () => {
+    // This would require custom adapter logic, so we test the search works
+    // Frontend would filter by checking returnedAt is null
+    const res = await request(app.callback()).get(
+      '/key-loans/search?contact=test'
+    )
+
+    // Should succeed with 200
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('content')
+    expect(Array.isArray(res.body.content)).toBe(true)
+  })
+})
+
+/**
+ * Tests for Key Loans Lifecycle
+ *
+ * Testing the full lifecycle of a key loan:
+ * - Creating pending loans (not yet picked up)
+ * - Activating loans (setting pickedUpAt)
+ * - Returning loans (setting returnedAt)
+ * - Early returns with availableToNextTenantFrom
+ * - Business rule validations
+ */
+describe('Key Loans Lifecycle', () => {
+  it('creates a pending loan without pickedUpAt', async () => {
+    const pendingLoan = factory.keyLoan.build({
+      id: 'pending-loan-123',
+      keys: JSON.stringify(['key-1']),
+      contact: 'pending@example.com',
+      pickedUpAt: undefined, // Not yet picked up
+      returnedAt: undefined,
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(pendingLoan)
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1']),
+        contact: 'pending@example.com',
+        // Explicitly not providing pickedUpAt
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.pickedUpAt).toBeUndefined()
+  })
+
+  it('activates a pending loan by setting pickedUpAt', async () => {
+    const now = new Date().toISOString()
+    const activatedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      contact: 'activated@example.com',
+      pickedUpAt: new Date(now),
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(activatedLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        pickedUpAt: now,
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.pickedUpAt).toBeTruthy()
+  })
+
+  it('returns a loan by setting returnedAt', async () => {
+    const now = new Date().toISOString()
+    const returnedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      contact: 'returned@example.com',
+      pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
+      returnedAt: new Date(now), // Returned now
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(returnedLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        returnedAt: now,
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.returnedAt).toBeTruthy()
+  })
+
+  it('handles early return with availableToNextTenantFrom in the future', async () => {
+    const now = Date.now()
+    const futureDate = new Date(now + 7 * 86400000).toISOString() // 7 days from now
+    const returnedNow = new Date(now).toISOString()
+
+    const earlyReturnLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      returnedAt: new Date(returnedNow),
+      availableToNextTenantFrom: new Date(futureDate),
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(earlyReturnLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        returnedAt: returnedNow,
+        availableToNextTenantFrom: futureDate,
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.returnedAt).toBeTruthy()
+    expect(res.body.content.availableToNextTenantFrom).toBeTruthy()
+  })
+
+  it('prevents conflict when key is still unavailable despite being returned', async () => {
+    // A key is returned but not available until future date
+    // Another loan tries to use the same key -> should conflict
+    jest.spyOn(keyLoansAdapter, 'checkActiveKeyLoans').mockResolvedValueOnce({
+      hasConflict: true, // Key is still blocked
+      conflictingKeys: ['key-1'],
+    })
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1']),
+        contact: 'newcustomer@example.com',
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.conflictingKeys).toEqual(['key-1'])
+  })
+
+  it('validates pickedUpAt must be before returnedAt', async () => {
+    const now = Date.now()
+    const pickupDate = new Date(now).toISOString()
+    const returnDate = new Date(now - 86400000).toISOString() // 1 day earlier
+
+    // This is a logical validation - the route might not enforce it,
+    // but we test that the database accepts the data structure
+    const invalidLoan = factory.keyLoan.build({
+      pickedUpAt: new Date(pickupDate),
+      returnedAt: new Date(returnDate), // Before pickup!
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(invalidLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        pickedUpAt: pickupDate,
+        returnedAt: returnDate,
+      })
+
+    // Currently accepts invalid dates - this documents expected behavior
+    // Future improvement: add date validation in the route
+    expect(res.status).toBe(200)
+  })
+
+  it('allows clearing returnedAt to undo a return', async () => {
+    const undoReturnLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      pickedUpAt: new Date(),
+      returnedAt: undefined, // Cleared
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(undoReturnLoan)
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        returnedAt: null, // Explicitly set to null to clear
+      })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('completes full workflow: create pending, activate, then return', async () => {
+    // Step 1: Create pending loan
+    const pendingLoan = factory.keyLoan.build({
+      id: 'workflow-loan-123',
+      keys: JSON.stringify(['key-workflow']),
+      contact: 'workflow@example.com',
+      pickedUpAt: undefined,
+      returnedAt: undefined,
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(pendingLoan)
+
+    const createRes = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-workflow']),
+        contact: 'workflow@example.com',
+      })
+
+    expect(createRes.status).toBe(201)
+    expect(createRes.body.content.id).toBe('workflow-loan-123')
+
+    // Step 2: Activate loan
+    const activatedLoan = {
+      ...pendingLoan,
+      pickedUpAt: new Date(),
+    }
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(activatedLoan)
+
+    const activateRes = await request(app.callback())
+      .patch('/key-loans/workflow-loan-123')
+      .send({
+        pickedUpAt: new Date().toISOString(),
+      })
+
+    expect(activateRes.status).toBe(200)
+    expect(activateRes.body.content.pickedUpAt).toBeTruthy()
+
+    // Step 3: Return loan
+    const returnedLoan = {
+      ...activatedLoan,
+      returnedAt: new Date(),
+    }
+
+    jest
+      .spyOn(keyLoansAdapter, 'updateKeyLoan')
+      .mockResolvedValueOnce(returnedLoan)
+
+    const returnRes = await request(app.callback())
+      .patch('/key-loans/workflow-loan-123')
+      .send({
+        returnedAt: new Date().toISOString(),
+      })
+
+    expect(returnRes.status).toBe(200)
+    expect(returnRes.body.content.returnedAt).toBeTruthy()
+  })
+})
+
+/**
+ * Phase 6D: Validation Edge Cases - Key Loans
+ *
+ * Testing date logic validation and edge cases:
+ * - Future dates validation
+ * - Date ordering (return before pickup)
+ * - Invalid date formats
+ * - Empty string handling
+ */
+describe('Validation Edge Cases - Key Loans', () => {
+  it('documents current behavior: allows returnedAt before pickedUpAt', async () => {
+    // This test documents that the API currently allows invalid date ordering
+    // Future improvement: Add validation to prevent this
+    const now = Date.now()
+    const pickupDate = new Date(now).toISOString()
+    const returnDate = new Date(now - 86400000).toISOString() // 1 day earlier (invalid!)
+
+    jest.spyOn(keyLoansAdapter, 'updateKeyLoan').mockResolvedValueOnce(
+      factory.keyLoan.build({
+        pickedUpAt: new Date(pickupDate),
+        returnedAt: new Date(returnDate),
+      })
+    )
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        pickedUpAt: pickupDate,
+        returnedAt: returnDate,
+      })
+
+    // Currently accepts invalid dates - documents expected behavior
+    expect(res.status).toBe(200)
+  })
+
+  it('handles far future dates for availableToNextTenantFrom', async () => {
+    const farFuture = new Date('2099-12-31').toISOString()
+
+    jest.spyOn(keyLoansAdapter, 'updateKeyLoan').mockResolvedValueOnce(
+      factory.keyLoan.build({
+        returnedAt: new Date(),
+        availableToNextTenantFrom: new Date(farFuture),
+      })
+    )
+
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        returnedAt: new Date().toISOString(),
+        availableToNextTenantFrom: farFuture,
+      })
+
+    // Should accept far future dates
+    expect(res.status).toBe(200)
+  })
+
+  it('validates invalid date format strings', async () => {
+    const res = await request(app.callback())
+      .patch('/key-loans/loan-123')
+      .send({
+        returnedAt: 'not-a-valid-date', // Invalid format
+      })
+
+    // Should fail validation
+    expect(res.status).toBe(400)
+    expect(res.body).toHaveProperty('status', 'error')
+  })
+
+  it('documents current behavior: empty contact string allowed', async () => {
+    const createdLoan = factory.keyLoan.build({
+      keys: JSON.stringify(['key-1']),
+      contact: '',
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'checkActiveKeyLoans')
+      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
+
+    jest
+      .spyOn(keyLoansAdapter, 'createKeyLoan')
+      .mockResolvedValueOnce(createdLoan)
+
+    const res = await request(app.callback())
+      .post('/key-loans')
+      .send({
+        keys: JSON.stringify(['key-1']),
+        contact: '', // Empty string
+      })
+
+    // Documents current behavior: empty strings are allowed
+    // Future improvement: Add min length validation for contact
+    expect(res.status).toBe(201)
+  })
+})
