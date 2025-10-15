@@ -450,7 +450,7 @@ const createRentInvoiceComment = (
     ' ',
     rightPad(rentalProperty.code, 4, ' '),
     ' ',
-    rightPad(rentalProperty.address, 33, ' '),
+    rightPad(rentalProperty.address, 32, ' '),
     rightPad(rentalProperty.type, 30, ' '),
     rightPad(
       `Area: ${rentalProperty.areaSize?.toFixed(1).replace('.', ',') ?? '0,0'}`,
