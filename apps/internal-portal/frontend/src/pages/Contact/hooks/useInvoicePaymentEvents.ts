@@ -38,7 +38,7 @@ export const useInvoicePaymentEvents = (invoiceId: string) => {
       if (error.response?.status === 401) {
         return false
       } else {
-        return failureCount < 3
+        return failureCount < 1
       }
     },
   })

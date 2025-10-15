@@ -276,8 +276,8 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Text</TableCell>
           </TableRow>
         </TableHead>
