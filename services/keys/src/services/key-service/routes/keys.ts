@@ -5,6 +5,7 @@ import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
+import { buildSearchQuery } from '../../../utils/search-builder'
 
 const TABLE = 'keys'
 
@@ -206,80 +207,16 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
-      let query = db(TABLE).select('*')
+      const query = db(TABLE).select('*')
 
-      // Handle OR search (q with fields)
-      if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3) {
-        const searchTerm = ctx.query.q.trim()
-
-        // Get fields to search across (OR condition)
-        let fieldsToSearch: string[] = []
-
-        if (typeof ctx.query.fields === 'string') {
-          fieldsToSearch = ctx.query.fields.split(',').map((f) => f.trim())
-        } else {
-          fieldsToSearch = ['keyName']
-        }
-
-        // Add OR conditions
-        query = query.where((builder) => {
-          fieldsToSearch.forEach((field, index) => {
-            if (index === 0) {
-              builder.where(field, 'like', `%${searchTerm}%`)
-            } else {
-              builder.orWhere(field, 'like', `%${searchTerm}%`)
-            }
-          })
-        })
-      }
-
-      // Handle AND search (individual field parameters) - search any param that's not q or fields
-      const reservedParams = ['q', 'fields', 'page', 'limit']
-      for (const [field, value] of Object.entries(ctx.query)) {
-        if (!reservedParams.includes(field)) {
-          const values = Array.isArray(value) ? value : [value]
-
-          for (const val of values) {
-            if (typeof val === 'string' && val.trim().length > 0) {
-              const trimmedValue = val.trim()
-
-              // Check if value starts with a comparison operator (>=, <=, >, <)
-              const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
-
-              if (operatorMatch) {
-                const operator = operatorMatch[1]
-                const compareValue = operatorMatch[2].trim()
-                query = query.where(field, operator, compareValue)
-              } else {
-                // Use strict equality for all AND filters (better performance and matches UI behavior)
-                query = query.where(field, '=', trimmedValue)
-              }
-            }
-          }
-        }
-      }
-
-      // Check if at least one search criteria was provided
-      const hasQParam =
-        typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
-      const hasFieldParams = Object.entries(ctx.query).some(([key, value]) => {
-        if (reservedParams.includes(key)) return false
-        if (typeof value === 'string' && value.trim().length > 0) {
-          return true
-        }
-        if (
-          Array.isArray(value) &&
-          value.some((v) => typeof v === 'string' && v.trim().length > 0)
-        ) {
-          return true
-        }
-        return false
+      const searchResult = buildSearchQuery(query, ctx, {
+        defaultSearchFields: ['keyName'],
       })
 
-      if (!hasQParam && !hasFieldParams) {
+      if (!searchResult.hasSearchParams) {
         ctx.status = 400
         ctx.body = {
-          reason: 'At least one search parameter is required',
+          reason: searchResult.error,
           ...metadata,
         }
         return
