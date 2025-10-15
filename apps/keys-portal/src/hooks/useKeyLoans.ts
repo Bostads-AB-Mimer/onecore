@@ -76,9 +76,22 @@ export function useKeyLoans(
         }
       }
 
-      // Step 3: Enrich each loan with keys from cache and fetch receipts
+      // Step 3: Fetch all receipts in parallel for better performance
+      const receiptsArrays = await Promise.all(
+        allKeyLoans.map((loan) =>
+          receiptService.getByKeyLoan(loan.id).catch((err) => {
+            console.error(`Failed to fetch receipts for loan ${loan.id}:`, err)
+            return []
+          })
+        )
+      )
+
+      // Step 4: Enrich each loan with keys and receipts, auto-creating if needed
       const enriched: KeyLoanWithDetails[] = []
-      for (const keyLoan of allKeyLoans) {
+      for (let i = 0; i < allKeyLoans.length; i++) {
+        const keyLoan = allKeyLoans[i]
+        let receipts = receiptsArrays[i]
+
         try {
           const keyIds: string[] = JSON.parse(keyLoan.keys || '[]')
 
@@ -87,10 +100,27 @@ export function useKeyLoans(
             .map((id) => keyCache.get(id))
             .filter((key): key is Key => key !== undefined)
 
-          // Fetch all receipts for this loan
-          const receipts = await receiptService.getByKeyLoan(keyLoan.id)
-          const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+          let loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
           const returnReceipt = receipts.find((r) => r.receiptType === 'RETURN')
+
+          // Auto-create missing receipt for active loans
+          if (!keyLoan.returnedAt && !loanReceipt) {
+            try {
+              console.log('Auto-creating missing receipt for loan:', keyLoan.id)
+              loanReceipt = await receiptService.create({
+                keyLoanId: keyLoan.id,
+                receiptType: 'LOAN',
+                type: 'PHYSICAL',
+              })
+              receipts = [...receipts, loanReceipt]
+            } catch (err) {
+              console.error(
+                'Failed to auto-create receipt for loan:',
+                keyLoan.id,
+                err
+              )
+            }
+          }
 
           enriched.push({
             keyLoan,
@@ -101,34 +131,6 @@ export function useKeyLoans(
           })
         } catch (err) {
           console.error(`Failed to enrich key loan ${keyLoan.id}:`, err)
-        }
-      }
-
-      // Auto-create missing receipts for active loans
-      for (const loanWithDetails of enriched) {
-        if (
-          !loanWithDetails.keyLoan.returnedAt &&
-          !loanWithDetails.loanReceipt
-        ) {
-          try {
-            console.log(
-              'Auto-creating missing receipt for loan:',
-              loanWithDetails.keyLoan.id
-            )
-            const receipt = await receiptService.create({
-              keyLoanId: loanWithDetails.keyLoan.id,
-              receiptType: 'LOAN',
-              type: 'PHYSICAL',
-            })
-            loanWithDetails.loanReceipt = receipt
-            loanWithDetails.receipts.push(receipt)
-          } catch (err) {
-            console.error(
-              'Failed to auto-create receipt for loan:',
-              loanWithDetails.keyLoan.id,
-              err
-            )
-          }
         }
       }
 
