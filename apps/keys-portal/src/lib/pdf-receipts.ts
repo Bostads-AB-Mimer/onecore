@@ -35,12 +35,6 @@ function loadLogo(): Promise<HTMLImageElement | null> {
   return _logoPromise
 }
 
-function ensureSpaceNoPage(doc: jsPDF, y: number, need: number): number {
-  const bottom = contentBottom(doc)
-  if (y + need > bottom) return y
-  return y
-}
-
 const generateReceiptNumber = (type: 'loan' | 'return'): string => {
   const now = new Date()
   const prefix = type === 'loan' ? 'NYL' : 'NYÅ'
@@ -116,38 +110,41 @@ const addTenantInfo = async (
   lease: ReceiptData['lease'],
   y: number
 ) => {
-  // ~70mm block height (but we won't add a page automatically)
-  y = ensureSpaceNoPage(doc, y, 70)
+  // Two-column layout: left column for HYRESGÄST, right column for AVTAL
+  const leftCol = MARGIN_X
+  const rightCol = 108
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.text('HYRESGÄST', MARGIN_X, y)
+  doc.text('HYRESGÄST', leftCol, y)
+  doc.text('AVTAL', rightCol, y)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  let nextY = y + 8
+  let leftY = y + 8
+  let rightY = y + 8
 
-  // Display all tenants
+  // Left column: Display all tenants
   tenants.forEach((tenant, index) => {
     const fullName = `${tenant.firstName} ${tenant.lastName}`.trim()
     if (index === 0) {
-      doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
+      doc.text(`Namn: ${fullName}`, leftCol, leftY)
       doc.text(
         `Personnummer: ${tenant.nationalRegistrationNumber}`,
-        MARGIN_X,
-        nextY + 7
+        leftCol,
+        leftY + 7
       )
-      doc.text(`Kundnummer: ${tenant.contactCode}`, MARGIN_X, nextY + 14)
-      nextY += 21
+      doc.text(`Kundnummer: ${tenant.contactCode}`, leftCol, leftY + 14)
+      leftY += 21
     } else {
-      doc.text(`Namn: ${fullName}`, MARGIN_X, nextY)
+      doc.text(`Namn: ${fullName}`, leftCol, leftY)
       doc.text(
         `Personnummer: ${tenant.nationalRegistrationNumber}`,
-        MARGIN_X,
-        nextY + 7
+        leftCol,
+        leftY + 7
       )
-      doc.text(`Kundnummer: ${tenant.contactCode}`, MARGIN_X, nextY + 14)
-      nextY += 21
+      doc.text(`Kundnummer: ${tenant.contactCode}`, leftCol, leftY + 14)
+      leftY += 21
     }
   })
 
@@ -157,59 +154,75 @@ const addTenantInfo = async (
       lease.rentalPropertyId
     )
     if (address && address !== 'Okänd adress') {
-      doc.text(`Adress: ${address}`, MARGIN_X, nextY)
-      nextY += 7
+      doc.text(`Adress: ${address}`, leftCol, leftY)
+      leftY += 7
     } else {
-      doc.text(`Adress: n/a`, MARGIN_X, nextY)
-      nextY += 7
+      doc.text(`Adress: n/a`, leftCol, leftY)
+      leftY += 7
     }
   } catch (error) {
     console.warn('Failed to fetch address for PDF receipt:', error)
-    doc.text(`Adress: n/a`, MARGIN_X, nextY)
-    nextY += 7
+    doc.text(`Adress: n/a`, leftCol, leftY)
+    leftY += 7
   }
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text('AVTAL', MARGIN_X, nextY + 7)
+  // Right column: Display AVTAL info
+  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, rightCol, rightY)
+  rightY += 7
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, MARGIN_X, nextY + 15)
-
-  // Wrap long leaseId (no truncation)
-  const leaseIdY = nextY + 22
-  const leaseIdLines = doc.splitTextToSize(`Avtal ID: ${lease.leaseId}`, 170)
-  doc.text(leaseIdLines, MARGIN_X, leaseIdY)
+  // Wrap long leaseId (max width for right column)
+  const leaseIdLines = doc.splitTextToSize(`Avtal ID: ${lease.leaseId}`, 82)
+  doc.text(leaseIdLines, rightCol, rightY)
   const leaseIdBlockHeight = Array.isArray(leaseIdLines)
     ? (leaseIdLines as string[]).length * 7
     : 7
+  rightY += leaseIdBlockHeight
 
-  const afterLeaseY = leaseIdY + leaseIdBlockHeight
-  doc.text(`Avtalnummer: ${lease.leaseNumber}`, MARGIN_X, afterLeaseY + 7)
-
-  return afterLeaseY + 22
+  // Return the max Y position from both columns + spacing
+  return Math.max(leftY, rightY) + 7
 }
 
-const addKeysTable = (
+/**
+ * Helper function to render keys in table format
+ * @param doc - jsPDF document
+ * @param keys - Keys to render
+ * @param y - Starting Y position
+ * @param headerText - Section header text
+ * @param headerColor - RGB color for header (optional, defaults to black)
+ * @param reserveAfter - Space to reserve after the table (only for final section)
+ * @returns New Y position after rendering, or null if we need a new page
+ */
+const renderKeysTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   y: number,
-  reserveAfter: number,
-  missingKeys?: ReceiptData['missingKeys'],
-  disposedKeys?: ReceiptData['disposedKeys']
-) => {
+  headerText: string,
+  headerColor?: { r: number; g: number; b: number },
+  reserveAfter: number = 0
+): number => {
   const bottom = contentBottom(doc)
 
-  // If nothing of the table header fits, bail
-  if (y + 26 > bottom) return y
+  // Minimum space needed for a table section header + one row
+  const minSpaceNeeded = 35
 
+  // If not enough space for even the header, add new page
+  if (y + minSpaceNeeded > bottom) {
+    doc.addPage()
+    y = 20 // Start from top of new page
+  }
+
+  // Section header
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
-  // Change header based on whether this is a return receipt with categorized keys
-  const headerText = (missingKeys || disposedKeys) ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
+  if (headerColor) {
+    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+  } else {
+    doc.setTextColor(0, 0, 0)
+  }
   doc.text(headerText, MARGIN_X, y)
+  doc.setTextColor(0, 0, 0) // Reset to black for table content
 
+  // Table header
   const top = y + 8
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8.5)
@@ -222,10 +235,11 @@ const addKeysTable = (
   doc.setLineWidth(0.4)
   doc.line(MARGIN_X, top + 2, 180, top + 2)
 
+  // Table rows - only apply reserveAfter if this is the final section
   const rowStartY = top + 7
   const rowH = 6
   const spaceForRows = bottom - reserveAfter - rowStartY
-  const rowsAllowed = Math.max(0, Math.floor(spaceForRows / rowH))
+  const rowsAllowed = Math.max(1, Math.floor(spaceForRows / rowH)) // At least 1 row
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
@@ -244,7 +258,7 @@ const addKeysTable = (
     cy += rowH
   })
 
-  // bottom rule
+  // Bottom rule
   doc.line(MARGIN_X, cy, 180, cy)
 
   // "+X fler" if truncated
@@ -258,65 +272,43 @@ const addKeysTable = (
     cy += 8
   }
 
-  // summary
+  // Summary
   doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
   cy += 6
 
-  // Missing keys section (for partial returns)
-  if (missingKeys && missingKeys.length > 0) {
-    cy += 4
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(200, 0, 0)
-    doc.text('NYCKLAR SAKNAS VID INLÄMNING:', MARGIN_X, cy)
-    cy += 6
+  return cy
+}
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(0, 0, 0)
-    missingKeys.forEach((k) => {
-      const labelForType =
-        (KeyTypeLabels as Record<string, string>)[
-          k.keyType as unknown as string
-        ] || (k.keyType as string)
-      const text = `• ${k.keyName} (${labelForType})`
-      doc.text(text, MARGIN_X, cy)
-      cy += 5
-    })
-    cy += 2
-    doc.setFont('helvetica', 'italic')
-    doc.setFontSize(8)
-    doc.text(`Antal saknade nycklar: ${missingKeys.length}`, MARGIN_X, cy)
-    cy += 6
+const addKeysTable = (
+  doc: jsPDF,
+  keys: ReceiptData['keys'],
+  y: number,
+  reserveAfter: number,
+  missingKeys?: ReceiptData['missingKeys'],
+  disposedKeys?: ReceiptData['disposedKeys']
+) => {
+  // Determine which section is the last one (to apply reserveAfter)
+  const hasDisposedKeys = disposedKeys && disposedKeys.length > 0
+  const hasMissingKeys = missingKeys && missingKeys.length > 0
+
+  // Render returned keys section (don't reserve space unless it's the last section)
+  const headerText = (hasMissingKeys || hasDisposedKeys) ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
+  const returnedReserve = (!hasMissingKeys && !hasDisposedKeys) ? reserveAfter : 0
+  let cy = renderKeysTable(doc, keys, y, headerText, undefined, returnedReserve)
+
+  // Render missing keys section if present
+  if (hasMissingKeys) {
+    cy += 4
+    const redColor = { r: 200, g: 0, b: 0 }
+    const missingReserve = !hasDisposedKeys ? reserveAfter : 0
+    cy = renderKeysTable(doc, missingKeys, cy, 'NYCKLAR SAKNAS VID INLÄMNING', redColor, missingReserve)
   }
 
-  // Disposed keys section
-  if (disposedKeys && disposedKeys.length > 0) {
+  // Render disposed keys section if present (this is always last, so apply reserveAfter)
+  if (hasDisposedKeys) {
     cy += 4
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(150, 150, 150)
-    doc.text('TIDIGARE KASSERADE NYCKLAR:', MARGIN_X, cy)
-    cy += 6
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(100, 100, 100)
-    disposedKeys.forEach((k) => {
-      const labelForType =
-        (KeyTypeLabels as Record<string, string>)[
-          k.keyType as unknown as string
-        ] || (k.keyType as string)
-      const text = `• ${k.keyName} (${labelForType})`
-      doc.text(text, MARGIN_X, cy)
-      cy += 5
-    })
-    cy += 2
-    doc.setFont('helvetica', 'italic')
-    doc.setFontSize(8)
-    doc.text(`Antal kasserade nycklar: ${disposedKeys.length}`, MARGIN_X, cy)
-    doc.setTextColor(0, 0, 0)
-    cy += 6
+    const grayColor = { r: 150, g: 150, b: 150 }
+    cy = renderKeysTable(doc, disposedKeys, cy, 'TIDIGARE KASSERADE NYCKLAR', grayColor, reserveAfter)
   }
 
   return cy
