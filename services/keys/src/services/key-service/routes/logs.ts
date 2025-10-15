@@ -5,6 +5,7 @@ import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
+import { buildSearchQuery } from '../../../utils/search-builder'
 
 const TABLE = 'logs'
 
@@ -188,7 +189,7 @@ export const routes = (router: KoaRouter) => {
     ])
 
     try {
-      let subquery = db(TABLE)
+      const subquery = db(TABLE)
         .select('*')
         .select(
           db.raw(
@@ -196,62 +197,14 @@ export const routes = (router: KoaRouter) => {
           )
         )
 
-      // Handle OR search
-      if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3) {
-        const searchTerm = ctx.query.q.trim()
-        let fieldsToSearch: string[] = []
+      const searchResult = buildSearchQuery(subquery, ctx, {
+        defaultSearchFields: ['resourceId'],
+      })
 
-        if (typeof ctx.query.fields === 'string') {
-          fieldsToSearch = ctx.query.fields.split(',').map((f) => f.trim())
-        } else {
-          fieldsToSearch = ['resourceId']
-        }
-
-        subquery = subquery.where((builder) => {
-          fieldsToSearch.forEach((field, index) => {
-            if (index === 0) {
-              builder.where(field, 'like', `%${searchTerm}%`)
-            } else {
-              builder.orWhere(field, 'like', `%${searchTerm}%`)
-            }
-          })
-        })
-      }
-
-      // Handle AND search
-      const reservedParams = ['q', 'fields', 'page', 'limit']
-      for (const [field, value] of Object.entries(ctx.query)) {
-        if (
-          !reservedParams.includes(field) &&
-          typeof value === 'string' &&
-          value.trim().length > 0
-        ) {
-          const trimmedValue = value.trim()
-          const operatorMatch = trimmedValue.match(/^(>=|<=|>|<)(.+)$/)
-
-          if (operatorMatch) {
-            const operator = operatorMatch[1]
-            const compareValue = operatorMatch[2].trim()
-            subquery = subquery.where(field, operator, compareValue)
-          } else {
-            subquery = subquery.where(field, '=', trimmedValue)
-          }
-        }
-      }
-
-      const hasQParam =
-        typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 3
-      const hasFieldParams = Object.entries(ctx.query).some(
-        ([key, value]) =>
-          !reservedParams.includes(key) &&
-          typeof value === 'string' &&
-          value.trim().length > 0
-      )
-
-      if (!hasQParam && !hasFieldParams) {
+      if (!searchResult.hasSearchParams) {
         ctx.status = 400
         ctx.body = {
-          reason: 'At least one search parameter is required',
+          reason: searchResult.error,
           ...metadata,
         }
         return
