@@ -20,6 +20,7 @@ export interface UseKeyLoansResult {
   loading: boolean
   hasUnsignedActiveLoans: boolean
   refresh: () => Promise<void>
+  fetchReturnedLoansReceipts: () => Promise<void>
 }
 
 /**
@@ -76,9 +77,9 @@ export function useKeyLoans(
         }
       }
 
-      // Step 3: Fetch all receipts in parallel for better performance
-      const receiptsArrays = await Promise.all(
-        allKeyLoans.map((loan) =>
+      // Step 3: Fetch receipts ONLY for active loans initially (lazy-load returned loans)
+      const activeReceiptsArrays = await Promise.all(
+        loaned.map((loan) =>
           receiptService.getByKeyLoan(loan.id).catch((err) => {
             console.error(`Failed to fetch receipts for loan ${loan.id}:`, err)
             return []
@@ -86,25 +87,31 @@ export function useKeyLoans(
         )
       )
 
-      // Step 4: Enrich each loan with keys and receipts, auto-creating if needed
-      const enriched: KeyLoanWithDetails[] = []
-      for (let i = 0; i < allKeyLoans.length; i++) {
-        const keyLoan = allKeyLoans[i]
-        let receipts = receiptsArrays[i]
-
+      // Helper function to get keys from cache
+      const getKeysFromCache = (loan: KeyLoan): Key[] => {
         try {
-          const keyIds: string[] = JSON.parse(keyLoan.keys || '[]')
-
-          // Get keys from cache (no network calls)
-          const keys: Key[] = keyIds
+          const keyIds: string[] = JSON.parse(loan.keys || '[]')
+          return keyIds
             .map((id) => keyCache.get(id))
             .filter((key): key is Key => key !== undefined)
+        } catch {
+          return []
+        }
+      }
 
+      // Step 4: Enrich active loans with keys and receipts, auto-creating if needed
+      const enrichedActive: KeyLoanWithDetails[] = []
+      for (let i = 0; i < loaned.length; i++) {
+        const keyLoan = loaned[i]
+        let receipts = activeReceiptsArrays[i]
+
+        try {
+          const keys = getKeysFromCache(keyLoan)
           let loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
           const returnReceipt = receipts.find((r) => r.receiptType === 'RETURN')
 
           // Auto-create missing receipt for active loans
-          if (!keyLoan.returnedAt && !loanReceipt) {
+          if (!loanReceipt) {
             try {
               console.log('Auto-creating missing receipt for loan:', keyLoan.id)
               loanReceipt = await receiptService.create({
@@ -122,7 +129,7 @@ export function useKeyLoans(
             }
           }
 
-          enriched.push({
+          enrichedActive.push({
             keyLoan,
             keys,
             receipts,
@@ -134,7 +141,17 @@ export function useKeyLoans(
         }
       }
 
-      // Sort: unsigned active loans first, then signed active loans, then returned loans
+      // Step 5: Enrich returned loans with keys but WITHOUT receipts (lazy-load later)
+      const enrichedReturned: KeyLoanWithDetails[] = returned.map((loan) => ({
+        keyLoan: loan,
+        keys: getKeysFromCache(loan),
+        receipts: [], // Empty initially - will be fetched on demand
+        loanReceipt: undefined,
+        returnReceipt: undefined,
+      }))
+
+      // Combine and sort
+      const enriched = [...enrichedActive, ...enrichedReturned]
       enriched.sort((a, b) => {
         const aIsActive = !a.keyLoan.returnedAt
         const bIsActive = !b.keyLoan.returnedAt
@@ -164,11 +181,8 @@ export function useKeyLoans(
       setKeyLoans(enriched)
 
       // Notify parent of unsigned loan status
-      const hasUnsignedActiveLoans = enriched.some(
-        (loan) =>
-          !loan.keyLoan.returnedAt &&
-          loan.loanReceipt &&
-          !loan.loanReceipt.fileId
+      const hasUnsignedActiveLoans = enrichedActive.some(
+        (loan) => loan.loanReceipt && !loan.loanReceipt.fileId
       )
       onUnsignedLoansChange?.(hasUnsignedActiveLoans)
     } catch (err) {
@@ -186,6 +200,67 @@ export function useKeyLoans(
     fetchKeyLoans()
   }, [fetchKeyLoans])
 
+  // Lazy-load receipts for returned loans
+  const fetchReturnedLoansReceipts = useCallback(async () => {
+    const returnedLoans = keyLoans.filter((loan) => loan.keyLoan.returnedAt)
+
+    // Check if receipts already loaded
+    const needsReceipts = returnedLoans.some(
+      (loan) => loan.receipts.length === 0
+    )
+    if (!needsReceipts) {
+      return // Already loaded
+    }
+
+    try {
+      // Fetch receipts for all returned loans in parallel
+      const receiptsArrays = await Promise.all(
+        returnedLoans.map((loanWithDetails) =>
+          receiptService
+            .getByKeyLoan(loanWithDetails.keyLoan.id)
+            .catch((err) => {
+              console.error(
+                `Failed to fetch receipts for returned loan ${loanWithDetails.keyLoan.id}:`,
+                err
+              )
+              return []
+            })
+        )
+      )
+
+      // Update the keyLoans state with the fetched receipts
+      setKeyLoans((prev) =>
+        prev.map((loan) => {
+          if (!loan.keyLoan.returnedAt) {
+            return loan // Keep active loans unchanged
+          }
+
+          // Find the index of this returned loan
+          const returnedIndex = returnedLoans.findIndex(
+            (rl) => rl.keyLoan.id === loan.keyLoan.id
+          )
+
+          if (returnedIndex === -1) {
+            return loan
+          }
+
+          const receipts = receiptsArrays[returnedIndex]
+          const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+          const returnReceipt = receipts.find((r) => r.receiptType === 'RETURN')
+
+          return {
+            ...loan,
+            receipts,
+            loanReceipt,
+            returnReceipt,
+          }
+        })
+      )
+    } catch (err) {
+      console.error('Failed to fetch returned loans receipts:', err)
+    }
+  }, [keyLoans])
+
   // Separate active and returned loans
   const activeLoans = keyLoans.filter((loan) => !loan.keyLoan.returnedAt)
   const returnedLoans = keyLoans.filter((loan) => loan.keyLoan.returnedAt)
@@ -202,5 +277,6 @@ export function useKeyLoans(
     loading,
     hasUnsignedActiveLoans,
     refresh: fetchKeyLoans,
+    fetchReturnedLoansReceipts,
   }
 }
