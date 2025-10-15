@@ -1,6 +1,8 @@
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
+import { generateAndUploadReturnReceipt } from './receiptHandlers'
+import type { Key, Lease } from './types'
 
 export type LoanKeysParams = {
   keyIds: string[]
@@ -79,9 +81,10 @@ export async function handleLoanKeys({
 }
 
 export type ReturnKeysParams = {
-  keyIds: string[]
+  keyIds: string[] // ALL keys being returned (entire loan)
   availableToNextTenantFrom?: string // ISO date string
-  selectedForReceipt?: string[] // Key IDs selected for receipt (for future use)
+  selectedForReceipt?: string[] // Key IDs that were checked in dialog (for receipt PDF)
+  lease?: Lease // Lease information for PDF generation
 }
 
 export type ReturnKeysResult = {
@@ -102,7 +105,8 @@ export type ReturnKeysResult = {
 export async function handleReturnKeys({
   keyIds,
   availableToNextTenantFrom,
-  selectedForReceipt: _selectedForReceipt, // For future use - not implemented yet
+  selectedForReceipt,
+  lease,
 }: ReturnKeysParams): Promise<ReturnKeysResult> {
   if (keyIds.length === 0) {
     return {
@@ -160,6 +164,30 @@ export async function handleReturnKeys({
           type: 'PHYSICAL',
         })
         receiptId = receipt.id
+
+        // Generate and upload PDF if we have lease info
+        if (lease && receiptId && selectedForReceipt) {
+          try {
+            // Fetch all key objects for this loan
+            const loanKeys: Key[] = []
+            for (const keyId of loanKeyIds) {
+              const key = await keyService.getKey(keyId)
+              if (key) loanKeys.push(key)
+            }
+
+            // Generate and upload the return receipt PDF
+            const selectedSet = new Set(selectedForReceipt)
+            await generateAndUploadReturnReceipt(
+              receiptId,
+              loanKeys,
+              selectedSet,
+              lease
+            )
+          } catch (pdfErr) {
+            console.error('Failed to generate/upload PDF:', pdfErr)
+            // Don't fail the return if PDF generation fails
+          }
+        }
       } catch (receiptErr) {
         console.error('Failed to create return receipt:', receiptErr)
       }

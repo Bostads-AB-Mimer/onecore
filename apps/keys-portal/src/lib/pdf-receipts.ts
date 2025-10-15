@@ -196,7 +196,8 @@ const addKeysTable = (
   keys: ReceiptData['keys'],
   y: number,
   reserveAfter: number,
-  missingKeys?: ReceiptData['missingKeys']
+  missingKeys?: ReceiptData['missingKeys'],
+  disposedKeys?: ReceiptData['disposedKeys']
 ) => {
   const bottom = contentBottom(doc)
 
@@ -205,7 +206,9 @@ const addKeysTable = (
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
-  doc.text('NYCKLAR', MARGIN_X, y)
+  // Change header based on whether this is a return receipt with categorized keys
+  const headerText = (missingKeys || disposedKeys) ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
+  doc.text(headerText, MARGIN_X, y)
 
   const top = y + 8
   doc.setFont('helvetica', 'bold')
@@ -265,7 +268,7 @@ const addKeysTable = (
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
     doc.setTextColor(200, 0, 0)
-    doc.text('SAKNADE NYCKLAR (ej återlämnade):', MARGIN_X, cy)
+    doc.text('NYCKLAR SAKNAS VID INLÄMNING:', MARGIN_X, cy)
     cy += 6
 
     doc.setFont('helvetica', 'normal')
@@ -284,6 +287,35 @@ const addKeysTable = (
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(8)
     doc.text(`Antal saknade nycklar: ${missingKeys.length}`, MARGIN_X, cy)
+    cy += 6
+  }
+
+  // Disposed keys section
+  if (disposedKeys && disposedKeys.length > 0) {
+    cy += 4
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(150, 150, 150)
+    doc.text('TIDIGARE KASSERADE NYCKLAR:', MARGIN_X, cy)
+    cy += 6
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    disposedKeys.forEach((k) => {
+      const labelForType =
+        (KeyTypeLabels as Record<string, string>)[
+          k.keyType as unknown as string
+        ] || (k.keyType as string)
+      const text = `• ${k.keyName} (${labelForType})`
+      doc.text(text, MARGIN_X, cy)
+      cy += 5
+    })
+    cy += 2
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8)
+    doc.text(`Antal kasserade nycklar: ${disposedKeys.length}`, MARGIN_X, cy)
+    doc.setTextColor(0, 0, 0)
     cy += 6
   }
 
@@ -387,7 +419,7 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   let y = await addHeader(doc, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
   // keep ~22mm for confirmation text
-  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys)
+  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys, data.disposedKeys)
 
   const bottom = contentBottom(doc)
   const need = 18
