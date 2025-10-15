@@ -107,7 +107,7 @@ export const getDebtCollectionFiles = async (client: SftpClient) => {
 export const readFile = async (
   client: SftpClient,
   filePath: string,
-  encoding: BufferEncoding
+  encoding?: BufferEncoding
 ) => {
   const contents = await client.get(filePath)
   return contents.toString(encoding)
