@@ -4,8 +4,7 @@ import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
-
-const TABLE = 'key_notes'
+import * as keyNotesAdapter from '../adapters/key-notes-adapter'
 
 const {
   KeyNoteSchema,
@@ -66,9 +65,10 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-notes/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE)
-        .where({ rentalObjectCode: ctx.params.rentalObjectCode })
-        .orderBy('id', 'desc')
+      const rows = await keyNotesAdapter.getKeyNotesByRentalObject(
+        ctx.params.rentalObjectCode,
+        db
+      )
 
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
@@ -111,7 +111,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-notes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const row = await db(TABLE).where({ id: ctx.params.id }).first()
+      const row = await keyNotesAdapter.getKeyNoteById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404
         ctx.body = { reason: 'Key note not found', ...metadata }
@@ -161,8 +161,8 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: CreateKeyNoteRequest = ctx.request.body
+        const row = await keyNotesAdapter.createKeyNote(payload, db)
 
-        const [row] = await db(TABLE).insert(payload).returning('*')
         ctx.status = 201
         ctx.body = { content: row, ...metadata }
       } catch (err) {
@@ -217,11 +217,11 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: UpdateKeyNoteRequest = ctx.request.body
-
-        const [row] = await db(TABLE)
-          .where({ id: ctx.params.id })
-          .update(payload)
-          .returning('*')
+        const row = await keyNotesAdapter.updateKeyNote(
+          ctx.params.id,
+          payload,
+          db
+        )
 
         if (!row) {
           ctx.status = 404
