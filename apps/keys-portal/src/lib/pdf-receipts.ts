@@ -292,8 +292,9 @@ const addKeysTable = (
   const hasMissingKeys = missingKeys && missingKeys.length > 0
 
   // Render returned keys section (don't reserve space unless it's the last section)
-  const headerText = (hasMissingKeys || hasDisposedKeys) ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
-  const returnedReserve = (!hasMissingKeys && !hasDisposedKeys) ? reserveAfter : 0
+  const headerText =
+    hasMissingKeys || hasDisposedKeys ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
+  const returnedReserve = !hasMissingKeys && !hasDisposedKeys ? reserveAfter : 0
   let cy = renderKeysTable(doc, keys, y, headerText, undefined, returnedReserve)
 
   // Render missing keys section if present
@@ -301,14 +302,28 @@ const addKeysTable = (
     cy += 4
     const redColor = { r: 200, g: 0, b: 0 }
     const missingReserve = !hasDisposedKeys ? reserveAfter : 0
-    cy = renderKeysTable(doc, missingKeys, cy, 'NYCKLAR SAKNAS VID INLÄMNING', redColor, missingReserve)
+    cy = renderKeysTable(
+      doc,
+      missingKeys,
+      cy,
+      'NYCKLAR SAKNAS VID INLÄMNING',
+      redColor,
+      missingReserve
+    )
   }
 
   // Render disposed keys section if present (this is always last, so apply reserveAfter)
   if (hasDisposedKeys) {
     cy += 4
     const grayColor = { r: 150, g: 150, b: 150 }
-    cy = renderKeysTable(doc, disposedKeys, cy, 'TIDIGARE KASSERADE NYCKLAR', grayColor, reserveAfter)
+    cy = renderKeysTable(
+      doc,
+      disposedKeys,
+      cy,
+      'TIDIGARE KASSERADE NYCKLAR',
+      grayColor,
+      reserveAfter
+    )
   }
 
   return cy
