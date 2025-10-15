@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
@@ -68,6 +68,11 @@ export function ContractCard({
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
+
+  // Stabilize callback reference to prevent unnecessary re-renders in child components
+  const handleUnsignedLoansChange = useCallback((hasUnsigned: boolean) => {
+    setHasUnsignedLoans(hasUnsigned)
+  }, [])
 
   const handleCopyObjectId = async () => {
     try {
@@ -318,7 +323,7 @@ export function ContractCard({
             <KeyLoansAccordion
               lease={lease}
               refreshKey={keyLoansRefreshKey}
-              onUnsignedLoansChange={setHasUnsignedLoans}
+              onUnsignedLoansChange={handleUnsignedLoansChange}
               preloadedKeys={keys}
             />
           </div>

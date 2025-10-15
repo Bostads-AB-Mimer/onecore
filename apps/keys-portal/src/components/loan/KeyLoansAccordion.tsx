@@ -36,11 +36,14 @@ export function KeyLoansAccordion({
   const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
   // Refresh when refreshKey changes
+  // Note: We intentionally use refreshKey as the only dependency to avoid
+  // re-fetching when the refresh callback reference changes
   useEffect(() => {
-    if (refreshKey !== undefined) {
+    if (refreshKey !== undefined && refreshKey > 0) {
       refresh()
     }
-  }, [refreshKey, refresh])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   /**
    * Handles generating or downloading a loan receipt
