@@ -483,6 +483,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     transactionType: getTransactionType(row.transactionType),
     transactionTypeName: row.transactionTypeName.trim(),
     type: 'Regular',
+    source: 'legacy',
   }
 }
 

@@ -215,6 +215,7 @@ interface Invoice {
   daysSinceLastDebitDate?: number
   description?: string
   type: 'Regular' | 'Other'
+  source: 'legacy' | 'next'
 }
 
 interface WaitingList {

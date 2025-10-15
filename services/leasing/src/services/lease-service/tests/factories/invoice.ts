@@ -15,4 +15,5 @@ export const InvoiceFactory = Factory.define<Invoice>(() => ({
   transactionType: InvoiceTransactionType.Rent,
   transactionTypeName: 'HYRA',
   type: 'Regular',
+  source: 'legacy',
 }))
