@@ -21,7 +21,10 @@
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
     "start": "pnpm run migrate:up && node -r dotenv/config build/index",
-    "__test": "DOTENV_CONFIG_PATH=.env.test node -r dotenv-config ../../node_modules/.bin/jest --config jest.config.js",
+    "test:create-db": "node scripts/create-test-db.js",
+    "test:drop-db": "node scripts/drop-test-db.js",
+    "test": "pnpm test:create-db && cross-env DOTENV_CONFIG_PATH=.env.test jest",
+    "test:watch": "cross-env DOTENV_CONFIG_PATH=.env.test jest --watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

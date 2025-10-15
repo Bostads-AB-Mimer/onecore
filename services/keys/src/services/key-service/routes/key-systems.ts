@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
+import * as keySystemsAdapter from '../adapters/key-systems-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
@@ -271,7 +272,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const row = await db(TABLE).where({ id: ctx.params.id }).first()
+      const row = await keySystemsAdapter.getKeySystemById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404
         ctx.body = { reason: 'Key system not found', ...metadata }
@@ -327,9 +328,10 @@ export const routes = (router: KoaRouter) => {
 
         // Check for duplicate systemCode
         if (payload.systemCode) {
-          const existing = await db(TABLE)
-            .where({ systemCode: payload.systemCode })
-            .first()
+          const existing = await keySystemsAdapter.getKeySystemBySystemCode(
+            payload.systemCode,
+            db
+          )
           if (existing) {
             ctx.status = 409
             ctx.body = {
@@ -340,7 +342,7 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const [row] = await db(TABLE).insert(payload).returning('*')
+        const row = await keySystemsAdapter.createKeySystem(payload, db)
         ctx.status = 201
         ctx.body = { content: row satisfies KeySystem, ...metadata }
       } catch (err) {
@@ -401,11 +403,11 @@ export const routes = (router: KoaRouter) => {
 
         // Check for duplicate systemCode if being updated
         if (payload.systemCode) {
-          const existing = await db(TABLE)
-            .where({ systemCode: payload.systemCode })
-            .whereNot({ id: ctx.params.id })
-            .first()
-          if (existing) {
+          const existing = await keySystemsAdapter.getKeySystemBySystemCode(
+            payload.systemCode,
+            db
+          )
+          if (existing && existing.id !== ctx.params.id) {
             ctx.status = 409
             ctx.body = {
               error: 'Key system with this system code already exists',
@@ -415,10 +417,11 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const [row] = await db(TABLE)
-          .where({ id: ctx.params.id })
-          .update({ ...payload, updatedAt: db.fn.now() })
-          .returning('*')
+        const row = await keySystemsAdapter.updateKeySystem(
+          ctx.params.id,
+          payload,
+          db
+        )
 
         if (!row) {
           ctx.status = 404
@@ -461,7 +464,7 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const n = await db(TABLE).where({ id: ctx.params.id }).del()
+      const n = await keySystemsAdapter.deleteKeySystem(ctx.params.id, db)
       if (!n) {
         ctx.status = 404
         ctx.body = { reason: 'Key system not found', ...metadata }
