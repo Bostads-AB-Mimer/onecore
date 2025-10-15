@@ -101,8 +101,27 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     797: 'Regular',
     3536: 'Regular',
   }
+  const debtCollectionRegex = /Sergel Inkasso (?<date>\d{8})/
 
   const invoices = invoiceData.map((invoiceData) => {
+    let sentToDebtCollection: Date | undefined
+
+    if (typeof invoiceData.node.text === 'string') {
+      const match = (invoiceData.node.text as string).match(debtCollectionRegex)
+
+      if (match && match.groups?.date) {
+        const date = dateFromXledgerDateString(match.groups.date)
+
+        if (date.toString() !== 'Invalid Date') {
+          sentToDebtCollection = date
+        } else {
+          logger.warn(
+            `Invalid debt collection date in invoice description: ${invoiceData.node.text}`
+          )
+        }
+      }
+    }
+
     const invoice: Invoice = {
       invoiceId: invoiceData.node.invoiceNumber,
       leaseId: 'missing',
@@ -121,6 +140,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
         parseFloat(invoiceData.node.invoiceRemaining),
       type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
       description: invoiceData.node.text,
+      sentToDebtCollection,
     }
 
     if (invoice.paidAmount === invoice.amount) {
