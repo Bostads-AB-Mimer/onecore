@@ -15,7 +15,6 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
-  handleReturnKeys,
   handleDisposeKeys,
 } from '@/services/loanHandlers'
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
@@ -24,6 +23,7 @@ import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
 import { KeyLoanTransferDialog } from './KeyLoanTransferDialog'
+import { ReturnKeysDialog } from './ReturnKeysDialog'
 
 function isLeaseNotPast(lease: Lease): boolean {
   // If no end date, it's current or future
@@ -67,6 +67,10 @@ export function LeaseKeyStatusList({
   const [existingLoansForTransfer, setExistingLoansForTransfer] = useState<
     ExistingLoanInfo[]
   >([])
+
+  // Return dialog state
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
+  const [pendingReturnKeyIds, setPendingReturnKeyIds] = useState<string[]>([])
 
   // Add key state
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
@@ -175,23 +179,9 @@ export function LeaseKeyStatusList({
   }
 
   const onReturn = async (keyIds: string[]) => {
-    setIsProcessing(true)
-    const result = await handleReturnKeys({ keyIds })
-
-    if (result.success) {
-      await refreshStatuses()
-      setSelectedKeys([])
-      // Don't show receipt dialog for returns - just notify parent
-      onKeysReturned?.()
-    }
-
-    toast({
-      title: result.title,
-      description: result.message,
-      variant: result.success ? 'default' : 'destructive',
-    })
-
-    setIsProcessing(false)
+    // Show the return dialog
+    setPendingReturnKeyIds(keyIds)
+    setShowReturnDialog(true)
   }
 
   const onDispose = async (keyIds: string[]) => {
@@ -405,6 +395,20 @@ export function LeaseKeyStatusList({
           } else {
             onKeysLoaned?.()
           }
+        }}
+      />
+
+      <ReturnKeysDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}
+        keyIds={pendingReturnKeyIds}
+        allKeys={keys}
+        lease={lease}
+        onSuccess={async () => {
+          // Refresh statuses and clear selection
+          await refreshStatuses()
+          setSelectedKeys([])
+          onKeysReturned?.()
         }}
       />
     </>

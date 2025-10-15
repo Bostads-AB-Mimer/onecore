@@ -80,6 +80,8 @@ export async function handleLoanKeys({
 
 export type ReturnKeysParams = {
   keyIds: string[]
+  availableToNextTenantFrom?: string // ISO date string
+  selectedForReceipt?: string[] // Key IDs selected for receipt (for future use)
 }
 
 export type ReturnKeysResult = {
@@ -99,6 +101,8 @@ export type ReturnKeysResult = {
  */
 export async function handleReturnKeys({
   keyIds,
+  availableToNextTenantFrom,
+  selectedForReceipt: _selectedForReceipt, // For future use - not implemented yet
 }: ReturnKeysParams): Promise<ReturnKeysResult> {
   if (keyIds.length === 0) {
     return {
@@ -145,7 +149,7 @@ export async function handleReturnKeys({
       lastProcessedLoanId = loanId
       await keyLoanService.update(loanId, {
         returnedAt: now,
-        availableToNextTenantFrom: now,
+        availableToNextTenantFrom: availableToNextTenantFrom || now,
       } as any)
 
       // Create return receipt for this loan
