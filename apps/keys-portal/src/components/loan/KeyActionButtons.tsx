@@ -52,9 +52,9 @@ export function KeyActionButtons({
       tenantNames.includes(k.loanInfo.contact)
   )
 
-  // All available keys
+  // All available keys (excluding disposed keys)
   const allAvailableKeys = keysWithStatus.filter(
-    (k) => !k.loanInfo.isLoaned && leaseIsNotPast
+    (k) => !k.loanInfo.isLoaned && leaseIsNotPast && !k.disposed
   )
 
   // All keys rented by this tenant
