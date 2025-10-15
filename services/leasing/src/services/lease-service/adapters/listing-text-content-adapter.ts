@@ -1,6 +1,8 @@
 import { leasing } from '@onecore/types'
 import { DbListingTextContent, AdapterResult } from './types'
 import z from 'zod'
+import { logger } from '@onecore/utilities'
+import { RequestError } from 'tedious'
 
 import { db } from './db'
 
@@ -16,11 +18,11 @@ function transformFromDbListingTextContent(
   row: DbListingTextContent
 ): ListingTextContent {
   return {
-    id: row.id,
-    rentalObjectCode: row.rentalObjectCode,
-    contentBlocks: JSON.parse(row.contentBlocks),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    id: row.Id,
+    rentalObjectCode: row.RentalObjectCode,
+    contentBlocks: JSON.parse(row.ContentBlocks),
+    createdAt: row.CreatedAt,
+    updatedAt: row.UpdatedAt,
   }
 }
 
@@ -28,21 +30,39 @@ const getByRentalObjectCode = async (
   rentalObjectCode: string,
   dbConnection = db
 ): Promise<ListingTextContent | undefined> => {
+  logger.info(
+    { rentalObjectCode },
+    'Getting listing text content from leasing DB'
+  )
+
   const result = await dbConnection
     .from('listing_text_content AS ltc')
     .select<DbListingTextContent>(
-      'ltc.id AS id',
-      'ltc.rentalObjectCode AS rentalObjectCode',
-      'ltc.contentBlocks AS contentBlocks',
-      'ltc.createdAt AS createdAt',
-      'ltc.updatedAt AS updatedAt'
+      'ltc.Id',
+      'ltc.RentalObjectCode',
+      'ltc.ContentBlocks',
+      'ltc.CreatedAt',
+      'ltc.UpdatedAt'
     )
     .where({
-      rentalObjectCode: rentalObjectCode,
+      RentalObjectCode: rentalObjectCode,
     })
     .first()
 
-  return result ? transformFromDbListingTextContent(result) : undefined
+  if (!result) {
+    logger.info(
+      { rentalObjectCode },
+      'Getting listing text content from leasing DB complete - not found'
+    )
+    return undefined
+  }
+
+  logger.info(
+    { rentalObjectCode },
+    'Getting listing text content from leasing DB complete'
+  )
+
+  return transformFromDbListingTextContent(result)
 }
 
 const create = async (
@@ -50,6 +70,11 @@ const create = async (
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
   try {
+    logger.info(
+      { rentalObjectCode: listingTextContent.rentalObjectCode },
+      'Creating listing text content in leasing DB'
+    )
+
     const [inserted] = await dbConnection
       .table('listing_text_content')
       .insert({
@@ -58,25 +83,38 @@ const create = async (
       })
       .returning('*')
 
+    logger.info(
+      { rentalObjectCode: listingTextContent.rentalObjectCode },
+      'Creating listing text content in leasing DB complete'
+    )
+
     return {
       ok: true,
       data: transformFromDbListingTextContent(inserted),
     }
   } catch (error) {
-    // Check if this is a unique constraint violation
-    if (
-      error instanceof Error &&
-      (error.message.includes('UQ_listing_text_content_rental_object_code') ||
-        error.message.includes('duplicate') ||
-        error.message.includes('unique') ||
-        (error as any).code === '23505') // PostgreSQL error code
-    ) {
-      return {
-        ok: false,
-        err: new Error(
-          `Listing text content already exists for rental object code: ${listingTextContent.rentalObjectCode}`
-        ),
+    // Check if this is a unique constraint violation (SQL Server pattern)
+    if (error instanceof RequestError) {
+      if (
+        error.message.includes('UQ_listing_text_content_rental_object_code') ||
+        error.message.includes('unique')
+      ) {
+        logger.info(
+          { rentalObjectCode: listingTextContent.rentalObjectCode },
+          'listingTextContentAdapter.create - cannot insert duplicate rental object code'
+        )
+        return {
+          ok: false,
+          err: new Error(
+            `Listing text content already exists for rental object code: ${listingTextContent.rentalObjectCode}`
+          ),
+        }
       }
+
+      logger.error(
+        { rentalObjectCode: listingTextContent.rentalObjectCode, error },
+        'listingTextContentAdapter.create'
+      )
     }
 
     return {
@@ -92,6 +130,11 @@ const update = async (
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
   try {
+    logger.info(
+      { rentalObjectCode },
+      'Updating listing text content in leasing DB'
+    )
+
     const updateFields: Record<string, any> = {}
 
     if (updateData.contentBlocks !== undefined) {
@@ -108,17 +151,30 @@ const update = async (
       .returning('*')
 
     if (!updated) {
+      logger.info(
+        { rentalObjectCode },
+        'Updating listing text content in leasing DB complete - not found'
+      )
       return {
         ok: false,
         err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
       }
     }
 
+    logger.info(
+      { rentalObjectCode },
+      'Updating listing text content in leasing DB complete'
+    )
+
     return {
       ok: true,
       data: transformFromDbListingTextContent(updated),
     }
   } catch (error) {
+    logger.error(
+      { rentalObjectCode, error },
+      'listingTextContentAdapter.update'
+    )
     return {
       ok: false,
       err: error instanceof Error ? error : new Error('Unknown error'),
@@ -131,23 +187,41 @@ const remove = async (
   dbConnection = db
 ): Promise<AdapterResult<void, Error>> => {
   try {
+    logger.info(
+      { rentalObjectCode },
+      'Deleting listing text content from leasing DB'
+    )
+
     const deletedCount = await dbConnection
       .table('listing_text_content')
       .where({ RentalObjectCode: rentalObjectCode })
       .delete()
 
     if (deletedCount === 0) {
+      logger.info(
+        { rentalObjectCode },
+        'Deleting listing text content from leasing DB complete - not found'
+      )
       return {
         ok: false,
         err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
       }
     }
 
+    logger.info(
+      { rentalObjectCode },
+      'Deleting listing text content from leasing DB complete'
+    )
+
     return {
       ok: true,
       data: undefined,
     }
   } catch (error) {
+    logger.error(
+      { rentalObjectCode, error },
+      'listingTextContentAdapter.remove'
+    )
     return {
       ok: false,
       err: error instanceof Error ? error : new Error('Unknown error'),

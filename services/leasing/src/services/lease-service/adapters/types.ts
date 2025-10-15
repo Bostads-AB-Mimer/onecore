@@ -80,11 +80,11 @@ export type DbComment = {
 }
 
 export type DbListingTextContent = {
-  id: string
-  rentalObjectCode: string
-  contentBlocks: string
-  createdAt: Date
-  updatedAt: Date
+  Id: string
+  RentalObjectCode: string
+  ContentBlocks: string
+  CreatedAt: Date
+  UpdatedAt: Date
 }
 
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }
