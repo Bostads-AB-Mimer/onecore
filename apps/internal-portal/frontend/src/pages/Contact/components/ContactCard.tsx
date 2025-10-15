@@ -34,6 +34,12 @@ export function ContactCard(props: { contactCode: string }) {
 
   const { data: contact } = query
 
+  const invoices = contact.invoices.sort((a, b) =>
+    a.invoiceDate < b.invoiceDate ? 1 : -1
+  )
+
+  const leases = contact.leases.sort((a, b) => (a.status < b.status ? -1 : 1))
+
   return (
     <Box>
       <Typography variant="h2" fontSize={24}>
@@ -47,16 +53,14 @@ export function ContactCard(props: { contactCode: string }) {
       {!contact.leases?.length ? (
         <Typography fontStyle="italic">Inga kontrakt hittades</Typography>
       ) : (
-        <Leases
-          leases={contact.leases.sort((a, b) => (a.status < b.status ? -1 : 1))}
-        />
+        <Leases leases={leases} />
       )}
       <Divider />
       <Typography variant="h2">Fakturor</Typography>
       {!contact.invoices.length ? (
         <Typography fontStyle="italic">Inga fakturor hittades</Typography>
       ) : (
-        <Invoices invoices={contact.invoices} />
+        <Invoices invoices={invoices} />
       )}
       <Divider />
     </Box>
@@ -147,16 +151,12 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
         </TableRow>
       </TableHead>
       <TableBody>
-        {Array.from(props.invoices)
-          .sort((invoice1, invoice2) =>
-            invoice1.invoiceDate < invoice2.invoiceDate ? 1 : -1
-          )
-          .map((invoice) => (
-            <InvoiceTableRow
-              key={`${invoice.invoiceId}-${invoice.invoiceDate}`}
-              invoice={invoice}
-            />
-          ))}
+        {props.invoices.map((invoice) => (
+          <InvoiceTableRow
+            key={`${invoice.invoiceId}-${invoice.invoiceDate}`}
+            invoice={invoice}
+          />
+        ))}
       </TableBody>
     </Table>
   )
