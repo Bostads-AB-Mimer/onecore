@@ -81,6 +81,7 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
               </button>
             </div>
           )}
+          {/*
           <Link to="/settings">
             <Button
               variant="ghost"
@@ -92,6 +93,7 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
               <span className="sr-only">Inställningar</span>
             </Button>
           </Link>
+          */}
         </div>
       </div>
 
