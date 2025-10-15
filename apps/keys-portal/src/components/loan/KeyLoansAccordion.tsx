@@ -21,17 +21,20 @@ export function KeyLoansAccordion({
   onUnsignedLoansChange,
   preloadedKeys,
 }: KeyLoansAccordionProps) {
-  const { activeLoans, returnedLoans, loading, refresh } = useKeyLoans(
-    lease,
-    onUnsignedLoansChange,
-    preloadedKeys
-  )
+  const {
+    activeLoans,
+    returnedLoans,
+    loading,
+    refresh,
+    fetchReturnedLoansReceipts,
+  } = useKeyLoans(lease, onUnsignedLoansChange, preloadedKeys)
 
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(
     null
   )
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showReturnedLoans, setShowReturnedLoans] = useState(false)
+  const [returnedLoading, setReturnedLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
@@ -44,6 +47,30 @@ export function KeyLoansAccordion({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
+
+  /**
+   * Handles toggling the returned loans accordion
+   * Lazy-loads receipts for returned loans on first expand
+   */
+  const handleToggleReturnedLoans = async () => {
+    const willShow = !showReturnedLoans
+
+    // If we're about to show returned loans, check if we need to fetch receipts
+    if (willShow) {
+      // Check if any returned loan needs receipts
+      const needsReceipts = returnedLoans.some(
+        (loan) => loan.receipts.length === 0
+      )
+
+      if (needsReceipts) {
+        setReturnedLoading(true)
+        await fetchReturnedLoansReceipts()
+        setReturnedLoading(false)
+      }
+    }
+
+    setShowReturnedLoans(willShow)
+  }
 
   /**
    * Handles generating or downloading a loan receipt
@@ -282,10 +309,16 @@ export function KeyLoansAccordion({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setShowReturnedLoans((v) => !v)}
+              onClick={handleToggleReturnedLoans}
+              disabled={returnedLoading}
               className="w-full h-8 text-xs gap-2"
             >
-              {showReturnedLoans ? (
+              {returnedLoading ? (
+                <>
+                  <Clock className="h-3.5 w-3.5 animate-spin" />
+                  Laddar kvitton...
+                </>
+              ) : showReturnedLoans ? (
                 <>
                   <ChevronUp className="h-3.5 w-3.5" />
                   Dölj återlämnade lån ({returnedLoans.length})
