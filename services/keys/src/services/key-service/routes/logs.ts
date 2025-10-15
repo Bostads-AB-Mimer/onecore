@@ -6,8 +6,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
-
-const TABLE = 'logs'
+import * as logsAdapter from '../adapters/logs-adapter'
 
 const { LogSchema, CreateLogRequestSchema, createPaginatedResponseSchema } =
   keys.v1
@@ -75,21 +74,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const subquery = db(TABLE)
-        .select('*')
-        .select(
-          db.raw(
-            'ROW_NUMBER() OVER (PARTITION BY objectId ORDER BY eventTime DESC) as rn'
-          )
-        )
-
-      const query = db
-        .from(subquery.as('ranked_logs'))
-        .select('*')
-        .where('rn', 1)
-        .whereNotNull('objectId')
-        .orderBy('eventTime', 'desc')
-
+      const query = logsAdapter.getAllLogsQuery(db)
       const paginatedResult = await paginate(query, ctx)
 
       ctx.status = 200
@@ -139,7 +124,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search. Defaults to objectId.
+   *         description: Comma-separated list of fields for OR search. Defaults to objectId and userName.
    *       - in: query
    *         name: id
    *         schema:
@@ -189,16 +174,9 @@ export const routes = (router: KoaRouter) => {
     ])
 
     try {
-      const subquery = db(TABLE)
-        .select('*')
-        .select(
-          db.raw(
-            'ROW_NUMBER() OVER (PARTITION BY objectId ORDER BY eventTime DESC) as rn'
-          )
-        )
-
-      const searchResult = buildSearchQuery(subquery, ctx, {
-        defaultSearchFields: ['resourceId'],
+      const baseQuery = logsAdapter.getLogsSearchQuery(db)
+      const searchResult = buildSearchQuery(baseQuery, ctx, {
+        defaultSearchFields: ['objectId', 'userName'],
       })
 
       if (!searchResult.hasSearchParams) {
@@ -210,15 +188,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // Wrap query and filter for rn = 1 (most recent per objectId)
-      const query = db
-        .from(subquery.as('ranked_logs'))
-        .select('*')
-        .where('rn', 1)
-        .whereNotNull('objectId')
-        .orderBy('eventTime', 'desc')
-
-      const paginatedResult = await paginate(query, ctx)
+      const paginatedResult = await paginate(baseQuery, ctx)
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }
@@ -264,9 +234,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/object/:objectId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE)
-        .where({ objectId: ctx.params.objectId })
-        .orderBy('eventTime', 'desc')
+      const rows = await logsAdapter.getLogsByObjectId(ctx.params.objectId, db)
 
       ctx.status = 200
       ctx.body = { content: rows satisfies Log[], ...metadata }
@@ -316,7 +284,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const row = await db(TABLE).where({ id: ctx.params.id }).first()
+      const row = await logsAdapter.getLogById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404
         ctx.body = { reason: 'Log not found', ...metadata }
@@ -373,8 +341,8 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: CreateLogRequest = ctx.request.body
+        const row = await logsAdapter.createLog(payload, db)
 
-        const [row] = await db(TABLE).insert(payload).returning('*')
         ctx.status = 201
         ctx.body = { content: row satisfies Log, ...metadata }
       } catch (err) {
