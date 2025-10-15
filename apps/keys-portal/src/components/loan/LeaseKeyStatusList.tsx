@@ -13,10 +13,7 @@ import {
   type KeyWithStatus,
 } from '@/utils/keyStatusHelpers'
 import { useToast } from '@/hooks/use-toast'
-import {
-  handleLoanKeys,
-  handleDisposeKeys,
-} from '@/services/loanHandlers'
+import { handleLoanKeys, handleDisposeKeys } from '@/services/loanHandlers'
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { KeyActionButtons } from './KeyActionButtons'
