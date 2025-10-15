@@ -4,6 +4,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
+import * as keyLoansAdapter from '../adapters/key-loans-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
@@ -18,53 +19,6 @@ const {
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 type KeyLoanResponse = keys.v1.KeyLoan
-
-/**
- * Check if any of the provided keys have active loans (not returned yet)
- * @param keyIds - Array of key IDs to check
- * @param excludeLoanId - Optional loan ID to exclude from the check (for updates)
- * @returns Object with hasConflict flag and array of conflicting key IDs
- */
-async function checkActiveKeyLoans(
-  keyIds: string[],
-  excludeLoanId?: string
-): Promise<{ hasConflict: boolean; conflictingKeys: string[] }> {
-  if (keyIds.length === 0) {
-    return { hasConflict: false, conflictingKeys: [] }
-  }
-
-  const conflictingKeys: string[] = []
-
-  // Check each key ID for active loans
-  for (const keyId of keyIds) {
-    let query = db(TABLE)
-      .select('id')
-      .whereNotNull('pickedUpAt') // Only consider activated loans (not pending)
-      .where((builder) => {
-        // Active if: not returned yet OR not yet available to next tenant
-        builder
-          .whereNull('returnedAt')
-          .orWhere('availableToNextTenantFrom', '>', db.fn.now())
-      })
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-
-    // Exclude specific loan ID if provided (for update scenarios)
-    if (excludeLoanId) {
-      query = query.whereNot('id', excludeLoanId)
-    }
-
-    const activeLoan = await query.first()
-
-    if (activeLoan) {
-      conflictingKeys.push(keyId)
-    }
-  }
-
-  return {
-    hasConflict: conflictingKeys.length > 0,
-    conflictingKeys,
-  }
-}
 
 /**
  * @swagger
@@ -157,7 +111,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-loans', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const rows = await keyLoansAdapter.getAllKeyLoans(db)
       ctx.status = 200
       ctx.body = { content: rows satisfies KeyLoanResponse[], ...metadata }
     } catch (err) {
@@ -317,9 +271,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const { keyId } = ctx.params
 
-      const loans = await db(TABLE)
-        .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-        .orderBy('createdAt', 'desc')
+      const loans = await keyLoansAdapter.getKeyLoansByKeyId(keyId, db)
 
       ctx.status = 200
       ctx.body = { content: loans satisfies KeyLoanResponse[], ...metadata }
@@ -417,7 +369,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const row = await db(TABLE).where({ id: ctx.params.id }).first()
+      const row = await keyLoansAdapter.getKeyLoanById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404
         ctx.body = {
@@ -501,7 +453,7 @@ export const routes = (router: KoaRouter) => {
 
         // Check for conflicting active loans
         const { hasConflict, conflictingKeys } =
-          await checkActiveKeyLoans(keyIds)
+          await keyLoansAdapter.checkActiveKeyLoans(keyIds, undefined, db)
 
         if (hasConflict) {
           ctx.status = 409
@@ -514,7 +466,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const [row] = await db(TABLE).insert(payload).returning('*')
+        const row = await keyLoansAdapter.createKeyLoan(payload, db)
         ctx.status = 201
         ctx.body = { content: row satisfies KeyLoanResponse, ...metadata }
       } catch (err) {
@@ -608,10 +560,8 @@ export const routes = (router: KoaRouter) => {
           }
 
           // Check for conflicting active loans, excluding the current loan
-          const { hasConflict, conflictingKeys } = await checkActiveKeyLoans(
-            keyIds,
-            ctx.params.id
-          )
+          const { hasConflict, conflictingKeys } =
+            await keyLoansAdapter.checkActiveKeyLoans(keyIds, ctx.params.id, db)
 
           if (hasConflict) {
             ctx.status = 409
@@ -625,10 +575,11 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const [row] = await db(TABLE)
-          .where({ id: ctx.params.id })
-          .update({ ...payload, updatedAt: db.fn.now() })
-          .returning('*')
+        const row = await keyLoansAdapter.updateKeyLoan(
+          ctx.params.id,
+          payload,
+          db
+        )
 
         if (!row) {
           ctx.status = 404
@@ -694,7 +645,7 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const n = await db(TABLE).where({ id: ctx.params.id }).del()
+      const n = await keyLoansAdapter.deleteKeyLoan(ctx.params.id, db)
       if (!n) {
         ctx.status = 404
         ctx.body = {
