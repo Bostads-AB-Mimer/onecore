@@ -18,8 +18,10 @@ import {
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
+import { keyService } from '@/services/api/keyService'
 import type { KeySystem } from '@/services/types'
 import { X } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface AddKeyFormProps {
   onSave: (key: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>) => void
@@ -28,6 +30,8 @@ interface AddKeyFormProps {
 }
 
 export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
+  const { toast } = useToast()
+
   // Form state management with initial values from editingKey if provided
   const [formData, setFormData] = useState({
     keyName: editingKey?.keyName || '',
@@ -49,6 +53,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   const [keySystemSearchQuery, setKeySystemSearchQuery] = useState('')
   const [debouncedKeySystemQuery, setDebouncedKeySystemQuery] = useState('')
   const [keySystemSelected, setKeySystemSelected] = useState(false)
+
+  // Sequence number validation error
+  const [sequenceNumberError, setSequenceNumberError] = useState<string>('')
 
   // Debounce key system search query (500ms delay like internal portal)
   const updateDebouncedQuery = useDebounce((query: string) => {
@@ -108,6 +115,143 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     updateDebouncedQuery(keySystemSearchQuery)
   }, [keySystemSearchQuery, updateDebouncedQuery])
 
+  // Parse and validate sequence number input
+  const parseSequenceNumberInput = (
+    input: string
+  ): { isValid: boolean; numbers: number[]; error?: string } => {
+    // Empty input is valid (optional field)
+    if (!input || input.trim() === '') {
+      return { isValid: true, numbers: [] }
+    }
+
+    const trimmed = input.trim()
+
+    // Check if it's a range (contains hyphen)
+    if (trimmed.includes('-')) {
+      const parts = trimmed.split('-')
+      if (parts.length !== 2) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: 'Ogiltigt format. Använd format: 1-10',
+        }
+      }
+
+      const start = parseInt(parts[0], 10)
+      const end = parseInt(parts[1], 10)
+
+      if (isNaN(start) || isNaN(end)) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: 'Ogiltiga nummer i intervallet',
+        }
+      }
+
+      if (start < 1) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: 'Startnummer måste vara minst 1',
+        }
+      }
+
+      if (start > end) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: 'Startnummer måste vara mindre än eller lika med slutnummer',
+        }
+      }
+
+      if (start === end) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: 'För samma nummer, skriv bara ett nummer (t.ex. 10)',
+        }
+      }
+
+      const count = end - start + 1
+      if (count > 10) {
+        return {
+          isValid: false,
+          numbers: [],
+          error: `Du kan bara skapa max 10 nycklar åt gången (du försökte skapa ${count} nycklar)`,
+        }
+      }
+
+      // Generate array of numbers
+      const numbers = Array.from({ length: count }, (_, i) => start + i)
+      return { isValid: true, numbers }
+    }
+
+    // Single number
+    const num = parseInt(trimmed, 10)
+    if (isNaN(num)) {
+      return {
+        isValid: false,
+        numbers: [],
+        error: 'Ogiltigt nummer',
+      }
+    }
+
+    if (num < 1) {
+      return {
+        isValid: false,
+        numbers: [],
+        error: 'Löpnummer måste vara minst 1',
+      }
+    }
+
+    return { isValid: true, numbers: [num] }
+  }
+
+  // Check for existing keys with same name, sequence number, and key system
+  const checkForDuplicates = async (
+    keyName: string,
+    sequenceNumbers: number[],
+    keySystemId: string | undefined
+  ): Promise<number[]> => {
+    // If no sequence numbers or no key system, can't have duplicates
+    if (sequenceNumbers.length === 0 || !keySystemId) {
+      return []
+    }
+
+    try {
+      // Search for existing keys with same name and key system
+      const response = await keyService.searchKeys(
+        {
+          keyName,
+          keySystemId,
+          disposed: 'false', // Only check non-disposed keys
+        },
+        1,
+        1000 // Get all matching keys
+      )
+
+      // Extract existing sequence numbers from non-disposed keys
+      const existingSequenceNumbers = response.content
+        .filter(
+          (key) =>
+            key.keySequenceNumber !== null &&
+            key.keySequenceNumber !== undefined
+        )
+        .map((key) => key.keySequenceNumber as number)
+
+      // Find duplicates - sequence numbers that already exist in non-disposed keys
+      const duplicates = sequenceNumbers.filter((seqNum) =>
+        existingSequenceNumbers.includes(seqNum)
+      )
+
+      return duplicates
+    } catch (error) {
+      console.error('Error checking for duplicates:', error)
+      // If error, return empty array to allow creation (fail open)
+      return []
+    }
+  }
+
   // Handle rental object input changes and trigger search
   const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -139,21 +283,79 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   }
 
   // Handle form submission and validation
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate required fields
     if (!formData.keyName || !formData.keyType) return
 
-    // Prepare key data for saving, converting string numbers to actual numbers
-    onSave({
-      keyName: formData.keyName,
-      keySequenceNumber: formData.keySequenceNumber
-        ? Number(formData.keySequenceNumber)
-        : undefined,
-      flexNumber: formData.flexNumber ? Number(formData.flexNumber) : undefined,
-      rentalObjectCode: formData.rentalObject || undefined,
-      keyType: formData.keyType,
-      keySystemId: formData.keySystemId || undefined,
-    })
+    // Parse and validate sequence number input
+    const sequenceValidation = parseSequenceNumberInput(
+      String(formData.keySequenceNumber || '')
+    )
+
+    if (!sequenceValidation.isValid) {
+      setSequenceNumberError(sequenceValidation.error || 'Ogiltigt löpnummer')
+      return
+    }
+
+    // Clear any previous errors
+    setSequenceNumberError('')
+
+    // If no sequence numbers specified, create a single key without sequence number
+    if (sequenceValidation.numbers.length === 0) {
+      onSave({
+        keyName: formData.keyName,
+        keySequenceNumber: undefined,
+        flexNumber: formData.flexNumber
+          ? Number(formData.flexNumber)
+          : undefined,
+        rentalObjectCode: formData.rentalObject || undefined,
+        keyType: formData.keyType,
+        keySystemId: formData.keySystemId || undefined,
+      })
+    } else {
+      // Check for duplicate keys before creating
+      const duplicates = await checkForDuplicates(
+        formData.keyName,
+        sequenceValidation.numbers,
+        formData.keySystemId || undefined
+      )
+
+      // Filter out duplicates - only create keys that don't already exist
+      const numbersToCreate = sequenceValidation.numbers.filter(
+        (seqNum) => !duplicates.includes(seqNum)
+      )
+
+      // Create keys for non-duplicate sequence numbers
+      numbersToCreate.forEach((seqNum) => {
+        onSave({
+          keyName: formData.keyName,
+          keySequenceNumber: seqNum,
+          flexNumber: formData.flexNumber
+            ? Number(formData.flexNumber)
+            : undefined,
+          rentalObjectCode: formData.rentalObject || undefined,
+          keyType: formData.keyType,
+          keySystemId: formData.keySystemId || undefined,
+        })
+      })
+
+      // Show toast message about results
+      if (numbersToCreate.length > 0 && duplicates.length > 0) {
+        // Some created, some skipped
+        toast({
+          title: `${numbersToCreate.length} ${numbersToCreate.length === 1 ? 'nyckel' : 'nycklar'} skapades`,
+          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan och hoppades över.`,
+        })
+      } else if (numbersToCreate.length === 0 && duplicates.length > 0) {
+        // None created, all duplicates
+        toast({
+          title: 'Inga nycklar skapades',
+          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan.`,
+          variant: 'destructive',
+        })
+      }
+      // If all created successfully (no duplicates), let the parent component show success toast
+    }
 
     // Reset form after successful save
     setFormData({
@@ -169,6 +371,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setIsSearching(false)
     setKeySystemSearchQuery('')
     setDebouncedKeySystemQuery('')
+    setSequenceNumberError('')
   }
 
   // Handle form cancellation and reset form state
@@ -188,6 +391,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setIsSearching(false)
     setKeySystemSearchQuery('')
     setDebouncedKeySystemQuery('')
+    setSequenceNumberError('')
   }
 
   return (
@@ -251,17 +455,28 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
               </Label>
               <Input
                 id="keySequenceNumber"
-                type="number"
-                className="h-8"
+                type="text"
+                className={`h-8 ${sequenceNumberError ? 'border-red-500' : ''}`}
                 value={formData.keySequenceNumber}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev,
                     keySequenceNumber: e.target.value,
                   }))
-                }
-                placeholder="1, 2, 3..."
+                  // Clear error when user starts typing
+                  if (sequenceNumberError) {
+                    setSequenceNumberError('')
+                  }
+                }}
+                placeholder="1 eller 1-10 (max 10)"
               />
+              {sequenceNumberError ? (
+                <p className="text-xs text-red-600">{sequenceNumberError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Ange ett nummer (t.ex. 5) eller intervall (t.ex. 1-10)
+                </p>
+              )}
             </div>
           </div>
 
