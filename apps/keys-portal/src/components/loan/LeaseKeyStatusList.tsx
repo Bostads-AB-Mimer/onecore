@@ -300,9 +300,7 @@ export function LeaseKeyStatusList({
             {sortedKeys.map((key, index) => {
               const canRent = !key.loanInfo.isLoaned && leaseIsNotPast
               const canReturn =
-                key.loanInfo.isLoaned &&
-                key.loanInfo.contact &&
-                tenantNames.includes(key.loanInfo.contact)
+                key.loanInfo.isLoaned && key.loanInfo.matchesCurrentTenant
               const isSelectable = canRent || canReturn
 
               const statusColor = key.loanInfo.isLoaned
