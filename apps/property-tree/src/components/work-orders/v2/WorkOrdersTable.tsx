@@ -1,7 +1,7 @@
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
-import { WorkOrder } from '@/services/api/core'
+import { InternalWorkOrder, WorkOrder } from '@/services/api/core'
 import { useState } from 'react'
 import { resolve } from '@/utils/env'
 
@@ -28,6 +28,12 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
             Pågående
           </Badge>
         )
+      case 'Påbörjad':
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-800">
+            Påbörjad
+          </Badge>
+        )
       case 'Väntar på handläggning':
         return (
           <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
@@ -45,18 +51,8 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
     }
   }
 
-  const handleOpenOrder = (code: string) => {
-    // Assuming the code is od-xxxxx, extract the numeric ID
-    const id = code.replace('od-', '')
-    const odooUrl = resolve('VITE_ODOO_URL', '')
-    if (!odooUrl || odooUrl.trim() === '') {
-      console.error('ODOO_URL is not defined')
-      return
-    }
-    window.open(
-      `${odooUrl}/web#id=${id}&model=maintenance.request&view_type=form`,
-      '_blank'
-    )
+  const handleOpenOrder = (order: InternalWorkOrder) => {
+    window.open(order.url, '_blank')
   }
 
   return (
@@ -114,7 +110,10 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
                 disabled={order._tag === 'external'}
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenOrder(order.code)}
+                onClick={() =>
+                  // Only internal orders can be opened
+                  order._tag === 'internal' && handleOpenOrder(order)
+                }
               >
                 Öppna
               </Button>
@@ -136,7 +135,10 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
                 disabled={order._tag === 'external'}
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenOrder(order.code)}
+                onClick={() =>
+                  // Only internal orders can be opened
+                  order._tag === 'internal' && handleOpenOrder(order)
+                }
               >
                 Öppna
               </Button>

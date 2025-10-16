@@ -7,7 +7,7 @@ import useWorkOrders from '../hooks/useWorkOrders'
 
 export interface WorkOrdersManagementProps {
   id: string
-  contextType?: 'property' | 'tenant' | 'residence' | 'building'
+  contextType?: 'property' | 'building' | 'residence'
 }
 
 export function WorkOrdersManagement({
