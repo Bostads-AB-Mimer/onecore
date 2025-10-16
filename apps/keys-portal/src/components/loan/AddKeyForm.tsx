@@ -1,12 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
-import type { Key, KeyType, KeySystem } from '@/services/types'
+import { Plus, Minus, Trash2 } from 'lucide-react'
+import type { Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { useToast } from '@/hooks/use-toast'
-
-const DEFAULT_KEY_TYPE: KeyType = 'LGH'
 
 type AddKeyButtonProps = {
   onClick: () => void
@@ -23,13 +21,23 @@ export function AddKeyButton({ onClick, disabled = false }: AddKeyButtonProps) {
       className="flex items-center gap-1"
     >
       <Plus className="h-3 w-3" />
-      Lägg till nyckel
+      Lägg till ny nyckel
     </Button>
   )
 }
 
+type KeyRow = {
+  id: string
+  keyType: KeyType
+  keyName: string
+  flexNumber: number
+  quantity: number
+  startingSequenceNumber: number
+}
+
 type Props = {
   keys: Key[]
+  selectedKeyIds?: string[]
   rentalObjectCode: string
   onKeyCreated: (key: Key) => void
   onCancel: () => void
@@ -37,118 +45,242 @@ type Props = {
 
 export function AddKeyForm({
   keys,
+  selectedKeyIds = [],
   rentalObjectCode,
   onKeyCreated,
   onCancel,
 }: Props) {
   const { toast } = useToast()
-  const [draftName, setDraftName] = useState('')
+  const [rows, setRows] = useState<KeyRow[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [defaultKeySystem, setDefaultKeySystem] = useState<KeySystem | null>(
-    null
-  )
 
-  // Calculate next sequence number
-  const nextSequenceNumber = useMemo(() => {
-    const seqs = keys
-      .filter(
+  // Calculate next sequence number for a given type/name/flex combination
+  // Uses the keys prop which contains all keys for this rental object
+  const calculateNextSequenceNumber = useCallback(
+    (keyType: KeyType, keyName: string, flexNumber: number): number => {
+      const matchingKeys = keys.filter(
         (k) =>
-          k.rentalObjectCode === rentalObjectCode &&
-          k.keyType === DEFAULT_KEY_TYPE
+          k.keyType === keyType &&
+          k.keyName === keyName &&
+          k.flexNumber === flexNumber &&
+          !k.disposed // Exclude disposed keys
       )
-      .map((k) => Number(k.keySequenceNumber || 0))
-    const max = seqs.length ? Math.max(...seqs) : 0
-    return max + 1
-  }, [keys, rentalObjectCode])
 
-  // Determine flex number from existing keys on this rental object
-  const defaultFlexNumber = useMemo(() => {
-    const keysOnObject = keys.filter(
-      (k) => k.rentalObjectCode === rentalObjectCode
-    )
-    if (keysOnObject.length === 0) return 1
-    // Get the first key's flex number (all should be the same)
-    return keysOnObject[0].flexNumber ?? 1
-  }, [keys, rentalObjectCode])
+      if (matchingKeys.length === 0) return 1
 
-  // Determine default key system ID
-  const defaultKeySystemId = useCallback(() => {
-    const sameType = keys.find(
-      (k) =>
-        k.rentalObjectCode === rentalObjectCode &&
-        k.keyType === DEFAULT_KEY_TYPE &&
-        k.keySystemId
-    )
-    if (sameType?.keySystemId) return sameType.keySystemId
-    const anyOnObject = keys.find(
-      (k) => k.rentalObjectCode === rentalObjectCode && k.keySystemId
-    )
-    return anyOnObject?.keySystemId ?? ''
-  }, [keys, rentalObjectCode])
-
-  const effectiveDefaultKeySystemId = useMemo(
-    () => defaultKeySystemId(),
-    [defaultKeySystemId]
+      const maxSeq = Math.max(
+        ...matchingKeys.map((k) => Number(k.keySequenceNumber || 0))
+      )
+      return maxSeq + 1
+    },
+    [keys]
   )
 
-  // Fetch key system details
+  // Initialize rows from selected keys
   useEffect(() => {
-    let cancelled = false
-    const id = effectiveDefaultKeySystemId
-    if (!id) {
-      setDefaultKeySystem(null)
+    if (selectedKeyIds.length === 0) {
+      // No keys selected, add one empty row
+      const defaultFlexNumber =
+        keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
+        1
+
+      const defaultKeyType: KeyType = 'LGH'
+      const defaultKeyName = `${defaultKeyType}-1`
+
+      setRows([
+        {
+          id: crypto.randomUUID(),
+          keyType: defaultKeyType,
+          keyName: defaultKeyName,
+          flexNumber: defaultFlexNumber,
+          quantity: 1,
+          startingSequenceNumber: calculateNextSequenceNumber(
+            defaultKeyType,
+            defaultKeyName,
+            defaultFlexNumber
+          ),
+        },
+      ])
       return
     }
-    ;(async () => {
-      try {
-        const ks = await (keyService as any).getKeySystem?.(id)
-        if (!cancelled) setDefaultKeySystem(ks ?? null)
-      } catch {
-        if (!cancelled) setDefaultKeySystem(null)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [effectiveDefaultKeySystemId])
 
-  const keySystemDisplayCode = useMemo(() => {
-    const ks = defaultKeySystem as any
-    return (
-      ks?.systemCode ??
-      ks?.system_code ??
-      ks?.systemcode ??
-      ks?.name ??
-      effectiveDefaultKeySystemId ??
-      '—'
+    // Group selected keys by type/name/flex combination
+    const selectedKeys = keys.filter((k) => selectedKeyIds.includes(k.id))
+    const grouped = new Map<string, Key[]>()
+
+    selectedKeys.forEach((key) => {
+      const groupKey = `${key.keyType}-${key.keyName}-${key.flexNumber}`
+      const existing = grouped.get(groupKey) || []
+      grouped.set(groupKey, [...existing, key])
+    })
+
+    // Create rows from grouped keys
+    const newRows: KeyRow[] = Array.from(grouped.values()).map((group) => {
+      const firstKey = group[0]
+      return {
+        id: crypto.randomUUID(),
+        keyType: firstKey.keyType as KeyType,
+        keyName: firstKey.keyName,
+        flexNumber: firstKey.flexNumber ?? 1,
+        quantity: 1, // Always start with quantity 1
+        startingSequenceNumber: calculateNextSequenceNumber(
+          firstKey.keyType as KeyType,
+          firstKey.keyName,
+          firstKey.flexNumber ?? 1
+        ),
+      }
+    })
+
+    setRows(newRows)
+  }, [selectedKeyIds, keys, rentalObjectCode, calculateNextSequenceNumber])
+
+  // Recalculate sequence numbers when keys changes
+  useEffect(() => {
+    if (rows.length === 0 || keys.length === 0) return
+
+    setRows((prevRows) =>
+      prevRows.map((row) => ({
+        ...row,
+        startingSequenceNumber: calculateNextSequenceNumber(
+          row.keyType,
+          row.keyName,
+          row.flexNumber
+        ),
+      }))
     )
-  }, [defaultKeySystem, effectiveDefaultKeySystemId])
+  }, [keys, calculateNextSequenceNumber])
+
+  const handleAddRow = () => {
+    const defaultFlexNumber =
+      keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ?? 1
+
+    const defaultKeyType: KeyType = 'LGH'
+    const defaultKeyName = `${defaultKeyType}-1`
+
+    setRows([
+      ...rows,
+      {
+        id: crypto.randomUUID(),
+        keyType: defaultKeyType,
+        keyName: defaultKeyName,
+        flexNumber: defaultFlexNumber,
+        quantity: 1,
+        startingSequenceNumber: calculateNextSequenceNumber(
+          defaultKeyType,
+          defaultKeyName,
+          defaultFlexNumber
+        ),
+      },
+    ])
+  }
+
+  const handleRemoveRow = (id: string) => {
+    setRows(rows.filter((r) => r.id !== id))
+  }
+
+  const handleQuantityChange = (id: string, delta: number) => {
+    setRows(
+      rows.map((r) => {
+        if (r.id === id) {
+          const newQuantity = Math.max(1, r.quantity + delta)
+          return { ...r, quantity: newQuantity }
+        }
+        return r
+      })
+    )
+  }
+
+  const handleRowChange = (
+    id: string,
+    field: keyof KeyRow,
+    value: string | number
+  ) => {
+    setRows(
+      rows.map((r) => {
+        if (r.id !== id) return r
+
+        const updated = { ...r, [field]: value }
+
+        // Recalculate sequence number when type, name, or flex changes
+        if (
+          field === 'keyType' ||
+          field === 'keyName' ||
+          field === 'flexNumber'
+        ) {
+          updated.startingSequenceNumber = calculateNextSequenceNumber(
+            updated.keyType,
+            updated.keyName,
+            updated.flexNumber
+          )
+        }
+
+        return updated
+      })
+    )
+  }
 
   const handleSubmit = async () => {
-    if (!draftName.trim()) return
+    if (rows.length === 0) return
+
+    // Validate all rows have names
+    const invalidRows = rows.filter((r) => !r.keyName.trim())
+    if (invalidRows.length > 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'All rows must have a key name',
+        variant: 'destructive',
+      })
+      return
+    }
 
     setIsSubmitting(true)
+
     try {
-      const payload = {
-        keyName: draftName.trim(),
-        keyType: DEFAULT_KEY_TYPE,
-        keySequenceNumber: nextSequenceNumber,
-        flexNumber: defaultFlexNumber,
-        rentalObjectCode,
-        keySystemId: effectiveDefaultKeySystemId || undefined,
+      const keysToCreate: Array<{
+        keyName: string
+        keyType: KeyType
+        keySequenceNumber: number
+        flexNumber: number
+        rentalObjectCode: string
+        keySystemId?: string
+      }> = []
+
+      // Determine default key system ID
+      const defaultKeySystemId = keys.find(
+        (k) => k.rentalObjectCode === rentalObjectCode && k.keySystemId
+      )?.keySystemId
+
+      // Generate all keys from all rows
+      for (const row of rows) {
+        for (let i = 0; i < row.quantity; i++) {
+          keysToCreate.push({
+            keyName: row.keyName,
+            keyType: row.keyType,
+            keySequenceNumber: row.startingSequenceNumber + i,
+            flexNumber: row.flexNumber,
+            rentalObjectCode,
+            keySystemId: defaultKeySystemId,
+          })
+        }
       }
-      const created = await keyService.createKey(payload)
+
+      // Create all keys
+      let createdCount = 0
+      for (const keyPayload of keysToCreate) {
+        const created = await keyService.createKey(keyPayload)
+        onKeyCreated(created)
+        createdCount++
+      }
 
       toast({
-        title: 'Nyckel skapad',
-        description: `${created.keyName} (${KeyTypeLabels[DEFAULT_KEY_TYPE]}) – Löp ${created.keySequenceNumber}`,
+        title: 'Nycklar skapade',
+        description: `${createdCount} ${createdCount === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
       })
 
-      setDraftName('')
-      onKeyCreated(created)
+      setRows([])
     } catch (e: any) {
       toast({
-        title: 'Kunde inte skapa nyckel',
+        title: 'Kunde inte skapa nycklar',
         description: e?.message ?? 'Okänt fel',
         variant: 'destructive',
       })
@@ -157,43 +289,146 @@ export function AddKeyForm({
     }
   }
 
+  const totalKeysToCreate = rows.reduce((sum, row) => sum + row.quantity, 0)
+
   return (
     <div className="rounded-md border p-3 space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="col-span-1 md:col-span-2">
-          <label className="text-xs block mb-1">Nyckelnamn *</label>
-          <input
-            className="h-8 w-full border rounded px-2 bg-background"
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            placeholder={`t.ex. LGH-${nextSequenceNumber}`}
-            disabled={isSubmitting}
-          />
-        </div>
-        <div>
-          <label className="text-xs block mb-1">Typ</label>
-          <input
-            className="h-8 w-full border rounded px-2 bg-muted text-muted-foreground"
-            value={KeyTypeLabels[DEFAULT_KEY_TYPE]}
-            readOnly
-          />
-        </div>
-        <div>
-          <label className="text-xs block mb-1">Löpnummer</label>
-          <input
-            className="h-8 w-full border rounded px-2 bg-muted text-muted-foreground"
-            value={nextSequenceNumber}
-            readOnly
-          />
-        </div>
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="grid grid-cols-12 gap-2 items-end p-2 border rounded-md bg-muted/30"
+          >
+            {/* Type dropdown */}
+            <div className="col-span-2">
+              <label className="text-xs block mb-1">Typ</label>
+              <select
+                className="h-8 w-full border rounded px-2 bg-background text-sm"
+                value={row.keyType}
+                onChange={(e) =>
+                  handleRowChange(row.id, 'keyType', e.target.value as KeyType)
+                }
+                disabled={isSubmitting}
+              >
+                {Object.entries(KeyTypeLabels).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Name input */}
+            <div className="col-span-3">
+              <label className="text-xs block mb-1">Namn</label>
+              <input
+                className="h-8 w-full border rounded px-2 bg-background text-sm"
+                value={row.keyName}
+                onChange={(e) =>
+                  handleRowChange(row.id, 'keyName', e.target.value)
+                }
+                disabled={isSubmitting}
+                placeholder="Nyckelnamn"
+              />
+            </div>
+
+            {/* Flex input */}
+            <div className="col-span-2">
+              <label className="text-xs block mb-1">Flex</label>
+              <input
+                type="number"
+                className="h-8 w-full border rounded px-2 bg-background text-sm"
+                value={row.flexNumber}
+                onChange={(e) =>
+                  handleRowChange(
+                    row.id,
+                    'flexNumber',
+                    parseInt(e.target.value) || 1
+                  )
+                }
+                disabled={isSubmitting}
+                min="1"
+              />
+            </div>
+
+            {/* Starting löpnummer (read-only) */}
+            <div className="col-span-2">
+              <label className="text-xs block mb-1">Löpnr</label>
+              <input
+                className="h-8 w-full border rounded px-2 bg-muted text-muted-foreground text-sm"
+                value={
+                  row.quantity === 1
+                    ? row.startingSequenceNumber
+                    : `${row.startingSequenceNumber}-${row.startingSequenceNumber + row.quantity - 1}`
+                }
+                readOnly
+              />
+            </div>
+
+            {/* Quantity controls */}
+            <div className="col-span-2">
+              <label className="text-xs block mb-1">Antal</label>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleQuantityChange(row.id, -1)}
+                  disabled={isSubmitting || row.quantity <= 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <div className="flex-1 text-center text-sm font-medium">
+                  {row.quantity}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleQuantityChange(row.id, 1)}
+                  disabled={isSubmitting}
+                  className="h-8 w-8 p-0"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Remove button */}
+            <div className="col-span-1 flex items-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleRemoveRow(row.id)}
+                disabled={isSubmitting || rows.length === 1}
+                className="h-8 w-8 p-0"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add row button */}
+      <div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleAddRow}
+          disabled={isSubmitting}
+          className="flex items-center gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          Lägg till rad
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground">
         <span className="mr-3">Objekt-ID: {rentalObjectCode}</span>
-        <span className="mr-3">Låssystem: {keySystemDisplayCode}</span>
-        <span className="mr-3">Flex: {defaultFlexNumber}</span>
+        <span>Totalt antal nycklar att skapa: {totalKeysToCreate}</span>
       </div>
 
+      {/* Action buttons */}
       <div className="flex justify-end gap-2">
         <Button
           size="sm"
@@ -205,10 +440,10 @@ export function AddKeyForm({
         </Button>
         <Button
           size="sm"
-          disabled={!draftName.trim() || isSubmitting}
+          disabled={rows.length === 0 || isSubmitting}
           onClick={handleSubmit}
         >
-          Skapa
+          Skapa ({totalKeysToCreate})
         </Button>
       </div>
     </div>
