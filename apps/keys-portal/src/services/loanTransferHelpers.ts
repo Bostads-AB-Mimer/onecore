@@ -11,12 +11,12 @@ export type ExistingLoanInfo = {
 
 /**
  * Find existing active loans for the given contacts on the specified rental object
- * @param contacts - Array of contact names (contact1, contact2) - matches on ANY contact
+ * @param contactCodes - Array of contact codes (contactCode1, contactCode2) - matches on ANY contact
  * @param rentalObjectCode - The rental object code to check loans for
  * @returns Array of existing loan info with keys categorized
  */
 export async function findExistingActiveLoansForTransfer(
-  contacts: string[],
+  contactCodes: string[],
   rentalObjectCode: string
 ): Promise<ExistingLoanInfo[]> {
   try {
@@ -26,10 +26,10 @@ export async function findExistingActiveLoansForTransfer(
     const existingLoans: ExistingLoanInfo[] = []
 
     for (const loan of loaned) {
-      // Check if this loan matches any of the contacts
+      // Check if this loan matches any of the contact codes
       const matchesContact =
-        (loan.contact && contacts.includes(loan.contact)) ||
-        (loan.contact2 && contacts.includes(loan.contact2))
+        (loan.contact && contactCodes.includes(loan.contact)) ||
+        (loan.contact2 && contactCodes.includes(loan.contact2))
 
       if (!matchesContact) continue
 

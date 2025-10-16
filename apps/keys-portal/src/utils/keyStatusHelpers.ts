@@ -103,18 +103,16 @@ export function isNewFlexKey(
  * @param loanInfo - The loan information for the key
  * @param key - The key itself
  * @param allKeys - All keys (needed to check if it's a flex key)
- * @param tenantNames - Names of the current tenant(s)
  * @returns Human-readable status string in Swedish
  */
 export function getKeyDisplayStatus(
   loanInfo: KeyLoanInfo,
   key: Key,
-  allKeys: Key[],
-  tenantNames: string[]
+  allKeys: Key[]
 ): string {
   // Check if key is disposed - show special status
   if (key.disposed) {
-    if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
+    if (loanInfo.matchesCurrentTenant) {
       return `Kasserad, utlånad till den här hyresgästen`
     } else {
       return `Kasserad, utlånad till ${loanInfo.contact ?? 'Okänd'}`
@@ -123,7 +121,7 @@ export function getKeyDisplayStatus(
 
   if (loanInfo.isLoaned) {
     // Key is currently loaned
-    if (loanInfo.contact && tenantNames.includes(loanInfo.contact)) {
+    if (loanInfo.matchesCurrentTenant) {
       return `Utlånat till den här hyresgästen`
     } else {
       return `Utlånad till ${loanInfo.contact ?? 'Okänd'}`
@@ -140,7 +138,7 @@ export function getKeyDisplayStatus(
       } else {
         return 'Ny'
       }
-    } else if (tenantNames.includes(loanInfo.contact)) {
+    } else if (loanInfo.matchesCurrentTenant) {
       // Was returned by current tenant
       return `Återlämnad av den här hyresgästen`
     } else {
@@ -155,33 +153,28 @@ export function getKeyDisplayStatus(
  * Handles errors gracefully by returning a KeyWithStatus with unknown status
  * @param key - The key to compute status for
  * @param allKeys - All keys (needed for flex key detection)
- * @param tenantNames - Names of the current tenant(s)
+ * @param tenantContactCodes - Contact codes of the current tenant(s) (used for matching against DB)
  * @param getKeyLoanStatusFn - Function to fetch loan status (injected for testability)
  * @returns Promise resolving to KeyWithStatus
  */
 export async function computeKeyWithStatus(
   key: Key,
   allKeys: Key[],
-  tenantNames: string[],
+  tenantContactCodes: string[],
   getKeyLoanStatusFn: (
     keyId: string,
-    contact1?: string,
-    contact2?: string
+    contactCode1?: string,
+    contactCode2?: string
   ) => Promise<KeyLoanInfo>
 ): Promise<KeyWithStatus> {
   try {
     const loanInfo = await getKeyLoanStatusFn(
       key.id,
-      tenantNames[0],
-      tenantNames[1]
+      tenantContactCodes[0],
+      tenantContactCodes[1]
     )
 
-    const displayStatus = getKeyDisplayStatus(
-      loanInfo,
-      key,
-      allKeys,
-      tenantNames
-    )
+    const displayStatus = getKeyDisplayStatus(loanInfo, key, allKeys)
 
     return {
       ...key,
@@ -192,7 +185,7 @@ export async function computeKeyWithStatus(
     // Return key with unknown status on error
     return {
       ...key,
-      loanInfo: { isLoaned: false, contact: null },
+      loanInfo: { isLoaned: false, contact: null, matchesCurrentTenant: false },
       displayStatus: 'Okänd status',
     }
   }
