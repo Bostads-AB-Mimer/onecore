@@ -3,6 +3,6 @@
   "compilerOptions": {
     "rootDirs": ["./src", "./test"],
     "outDir": "./build",
-    "types": ["koa-body", "jest", "node"]
+    "types": ["koa-body", "jest"]
   }
 }
