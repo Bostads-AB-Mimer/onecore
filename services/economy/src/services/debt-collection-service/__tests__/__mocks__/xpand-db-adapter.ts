@@ -66,6 +66,8 @@ export const createMockRentInvoiceRow = (
   reduction: 0,
   vat: 0,
   printGroup: 'N',
+  code: '',
+  rowType: 0,
   ...overrides,
 })
 

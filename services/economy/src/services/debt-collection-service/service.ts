@@ -100,8 +100,9 @@ export const enrichRentInvoices = async (
       getInvoiceRows(rows.map((row) => row.invoiceNumber)),
     ])
 
+    const allLeaseIds = extractLeaseIdsFromInvoiceRows(allInvoiceRows)
     const rentalProperties = await getRentalProperties(
-      invoices.map((i) => i.reference.split('/')[0])
+      allLeaseIds.map(getRentalIdFromLeaseId)
     )
 
     const enrichedInvoices = rows.map((row): EnrichedXledgerRentCase => {
@@ -125,14 +126,24 @@ export const enrichRentInvoices = async (
       const invoiceRows = allInvoiceRows.filter(
         (ir) => ir.invoiceNumber === invoice.invoiceNumber
       )
-      const rentalProperty = rentalProperties.find(
-        (res) => res.rentalId === invoice.reference.split('/')[0]
+      const leaseIdsForInvoice = extractLeaseIdsFromInvoiceRows(invoiceRows)
+      const rentalPropertiesForInvoice = rentalProperties.filter(
+        (rentalProperty) =>
+          leaseIdsForInvoice
+            .map(getRentalIdFromLeaseId)
+            .includes(rentalProperty.rentalId)
       )
-      if (!rentalProperty) {
+
+      if (rentalPropertiesForInvoice.length === 0) {
         throw new Error(
-          `Rental property not found for invoice ${invoice.invoiceNumber} with reference ${invoice.reference}`
+          `Rental properties not found for invoice ${invoice.invoiceNumber}`
         )
       }
+
+      const reference = getReferenceForInvoice(
+        leaseIdsForInvoice,
+        rentalPropertiesForInvoice
+      )
 
       const aggregatedRows = aggregateRows(invoiceRows)
       const aggregatedRowsWithRoundoff = addRoundoffToFirstRow(
@@ -143,10 +154,10 @@ export const enrichRentInvoices = async (
       return {
         ...row,
         contact,
-        invoice: createInvoiceFromRentInvoiceWithRentalProperty(
+        invoice: createInvoiceFromRentInvoiceWithRentalProperties(
           {
             invoiceNumber: invoice.invoiceNumber,
-            reference: invoice.reference,
+            reference: reference,
             roundoff: invoice.roundoff,
             fromDate: new Date(invoice.fromDate),
             toDate: new Date(invoice.toDate),
@@ -157,7 +168,7 @@ export const enrichRentInvoices = async (
               : undefined,
             careOf: invoice.careOf ?? undefined,
           },
-          rentalProperty,
+          rentalPropertiesForInvoice,
           aggregatedRowsWithRoundoff,
           row.totalAmount - row.remainingAmount
         ),
@@ -223,9 +234,14 @@ export const enrichBalanceCorrections = async (
   try {
     const rows = importBalanceCorrectionsFromCsv(csv, ';')
 
-    const invoices = await getInvoices(rows.map((row) => row.invoiceNumber))
+    const [invoices, allInvoiceRows] = await Promise.all([
+      getInvoices(rows.map((row) => row.invoiceNumber)),
+      getInvoiceRows(rows.map((row) => row.invoiceNumber)),
+    ])
+
+    const leaseIds = extractLeaseIdsFromInvoiceRows(allInvoiceRows)
     const rentalProperties = await getRentalProperties(
-      invoices.map((i) => i.reference.split('/')[0])
+      leaseIds.map(getRentalIdFromLeaseId)
     )
 
     const enrichedBalanceCorrections = rows.map(
@@ -235,22 +251,34 @@ export const enrichBalanceCorrections = async (
         )
 
         if (invoice) {
-          const rentalProperty = rentalProperties.find(
-            (res) => res.rentalId === invoice.reference.split('/')[0]
+          const invoiceRows = allInvoiceRows.filter(
+            (ir) => ir.invoiceNumber === invoice.invoiceNumber
+          )
+          const leaseIdsForInvoice = extractLeaseIdsFromInvoiceRows(invoiceRows)
+          const rentalPropertiesForInvoice = rentalProperties.filter(
+            (rentalProperty) =>
+              leaseIdsForInvoice
+                .map(getRentalIdFromLeaseId)
+                .includes(rentalProperty.rentalId)
           )
 
-          if (!rentalProperty) {
+          if (rentalPropertiesForInvoice.length === 0) {
             throw new Error(
-              `Rental property not found for invoice ${invoice.invoiceNumber} with reference ${invoice.reference}`
+              `Rental properties not found for invoice ${invoice.invoiceNumber}`
             )
           }
+
+          const reference = getReferenceForInvoice(
+            leaseIdsForInvoice,
+            rentalPropertiesForInvoice
+          )
 
           return {
             ...row,
             hasInvoice: true,
-            reference: invoice.reference,
+            reference: reference,
             lastDebitDate: invoice.lastDebitDate,
-            rentalProperty: rentalProperty,
+            rentalProperty: getMainRentalProperty(rentalPropertiesForInvoice),
           }
         }
 
@@ -291,41 +319,110 @@ export const addRoundoffToFirstRow = (
 }
 
 export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
-  const groups: Record<string, RentInvoiceRow[]> = {}
-  const groupMapping: Record<string, string> = {
-    O: 'N',
-    E: 'A',
+  const groups: RentInvoiceRow[][] = []
+
+  let i = 0
+  while (i < rows.length) {
+    const row = rows[i]
+
+    if (row.rowType === 3) {
+      // Header row
+      const regex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
+      const match = row.text.match(regex)
+      if (!match) {
+        console.error(row)
+        throw new Error(
+          `${row.text} does not match regular expression for lease ids`
+        )
+      }
+
+      const leaseId = match[0]
+      const group: RentInvoiceRow[] = []
+
+      // Group following rows with same printgroup until we hit a new header or end
+      i++
+      const printGroup = rows[i].printGroup
+      group.push(rows[i])
+      i++
+
+      while (
+        i < rows.length &&
+        rows[i].rowType !== 3 &&
+        rows[i].printGroup === printGroup
+      ) {
+        group.push(rows[i])
+        i++
+      }
+
+      groups.push(group)
+    } else if (row.printGroup === null) {
+      // No printgroup, do not group
+      groups.push([row])
+      i++
+    }
   }
-
-  rows.forEach((row) => {
-    let key = row.printGroup || 'null'
-
-    if (groupMapping[key]) {
-      key = groupMapping[key]
-    }
-
-    if (!groups[key]) {
-      groups[key] = []
-    }
-
-    groups[key].push(row)
-  })
 
   const getMainRow = (groupRows: RentInvoiceRow[]) => {
     return (
       groupRows.find(
-        (row) => row.type === 'Rent' && row.rentType === 'Hyra bostad'
+        (row) => row.text === 'Hyra bostad' || row.text === 'Hyra p-plats'
       ) ?? groupRows[0]
     )
   }
 
-  return Object.values(groups).map((groupRows) => ({
-    ...getMainRow(groupRows),
-    amount: groupRows.reduce(
-      (sum, row) => sum + row.amount + row.reduction + row.vat,
-      0
-    ),
-  }))
+  return groups.reduce((acc, group) => {
+    acc.push({
+      ...getMainRow(group),
+      amount: group.reduce(
+        (sum, row) => sum + row.amount + row.reduction + row.vat,
+        0
+      ),
+    })
+
+    return acc
+  }, [])
+}
+
+const getRentalIdFromLeaseId = (leaseId: string) => {
+  return leaseId.split('/')[0]
+}
+
+const extractLeaseIdsFromInvoiceRows = (rows: RentInvoiceRow[]) => {
+  const leaseIdRegex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
+
+  return rows.reduce<string[]>((leaseIds, row) => {
+    if (row.rowType === 3) {
+      const match = row.text.match(leaseIdRegex)
+
+      if (match) {
+        leaseIds.push(match[0])
+      }
+    }
+
+    return leaseIds
+  }, [])
+}
+
+const getMainRentalProperty = (rentalProperties: RentalProperty[]) => {
+  return (
+    rentalProperties.find(
+      (property) => property.rentalPropertyType === 'Residence'
+    ) ?? rentalProperties[0]
+  )
+}
+
+const getReferenceForInvoice = (
+  leaseIds: string[],
+  rentalProperties: RentalProperty[]
+) => {
+  const mainRentalProperty = getMainRentalProperty(rentalProperties)
+
+  return (
+    leaseIds.find(
+      (leaseId) =>
+        getRentalIdFromLeaseId(leaseId) === mainRentalProperty.rentalId
+    ) ?? ''
+  )
 }
 
 const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
@@ -337,12 +434,13 @@ const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
     comment: invoice.comment ? `       -        Avser: ${invoice.comment}` : '',
     careOf: invoice.careOf,
     rows: [],
+    rentalProperties: [],
   }
 }
 
-const createInvoiceFromRentInvoiceWithRentalProperty = (
+const createInvoiceFromRentInvoiceWithRentalProperties = (
   invoice: RentInvoice,
-  rentalProperty: RentalProperty,
+  rentalProperties: RentalProperty[],
   rows: RentInvoiceRow[],
   amountPaid: number
 ): Invoice => {
@@ -425,12 +523,15 @@ const createInvoiceFromRentInvoiceWithRentalProperty = (
     invoiceNumber: invoice.invoiceNumber,
     reference: invoice.reference,
     amount: unpaidRows.reduce((sum, row) => sum + row.amount, 0),
-    rentalProperty: rentalProperty,
+    rentalProperties: rentalProperties,
     fromDate: invoice.fromDate,
     toDate: invoice.toDate,
     invoiceDate: invoice.invoiceDate,
     expiryDate: invoice.expiryDate,
-    comment: createRentInvoiceComment(invoice, rentalProperty),
+    comment: createRentInvoiceComment(
+      invoice,
+      getMainRentalProperty(rentalProperties)
+    ),
     careOf: invoice.careOf,
     lastDebitDate: invoice.lastDebitDate,
     rows: unpaidRows,
