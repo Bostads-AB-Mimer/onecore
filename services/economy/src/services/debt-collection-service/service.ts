@@ -336,13 +336,12 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
         )
       }
 
-      const leaseId = match[0]
-      const group: RentInvoiceRow[] = []
+      const currentGroup: RentInvoiceRow[] = []
 
       // Group following rows with same printgroup until we hit a new header or end
       i++
       const printGroup = rows[i].printGroup
-      group.push(rows[i])
+      currentGroup.push(rows[i])
       i++
 
       while (
@@ -350,11 +349,11 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
         rows[i].rowType !== 3 &&
         rows[i].printGroup === printGroup
       ) {
-        group.push(rows[i])
+        currentGroup.push(rows[i])
         i++
       }
 
-      groups.push(group)
+      groups.push(currentGroup)
     } else if (row.printGroup === null) {
       // No printgroup, do not group
       groups.push([row])
