@@ -8,6 +8,7 @@ import type { KeyLoanInfo } from './keyLoanStatus'
 export type KeyWithStatus = Key & {
   loanInfo: KeyLoanInfo
   displayStatus: string
+  displayDate?: string // Formatted date string to display (e.g., "Hämtad: 15/10/2025")
 }
 
 /**
@@ -18,6 +19,29 @@ const KEY_TYPE_ORDER: Partial<Record<KeyType, number>> = {
   PB: 2,
   FS: 3,
   HN: 4,
+}
+
+/**
+ * Formats an ISO date string to Swedish date format (DD/MM/YYYY)
+ * @param isoDateString - ISO 8601 date string
+ * @returns Formatted date string or undefined if invalid
+ */
+function formatSwedishDate(isoDateString?: string): string | undefined {
+  if (!isoDateString) return undefined
+
+  try {
+    const date = new Date(isoDateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return undefined
+
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+
+    return `${day}/${month}/${year}`
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -99,32 +123,41 @@ export function isNewFlexKey(
 }
 
 /**
- * Computes the display status text for a key based on its loan information
+ * Computes the display status text and date for a key based on its loan information
  * @param loanInfo - The loan information for the key
  * @param key - The key itself
  * @param allKeys - All keys (needed to check if it's a flex key)
- * @returns Human-readable status string in Swedish
+ * @returns Object with status text and optional formatted date string
  */
 export function getKeyDisplayStatus(
   loanInfo: KeyLoanInfo,
   key: Key,
   allKeys: Key[]
-): string {
+): { status: string; date?: string } {
   // Check if key is disposed - show special status
   if (key.disposed) {
     if (loanInfo.matchesCurrentTenant) {
-      return `Kasserad, utlånad till den här hyresgästen`
+      return { status: `Kasserad, utlånad till den här hyresgästen` }
     } else {
-      return `Kasserad, utlånad till ${loanInfo.contact ?? 'Okänd'}`
+      return { status: `Kasserad, utlånad till ${loanInfo.contact ?? 'Okänd'}` }
     }
   }
 
   if (loanInfo.isLoaned) {
-    // Key is currently loaned
+    // Key is currently loaned - show pickup date
+    const formattedDate = formatSwedishDate(loanInfo.pickedUpAt)
+    const dateString = formattedDate ? `Hämtad: ${formattedDate}` : undefined
+
     if (loanInfo.matchesCurrentTenant) {
-      return `Utlånat till den här hyresgästen`
+      return {
+        status: `Utlånat till den här hyresgästen`,
+        date: dateString,
+      }
     } else {
-      return `Utlånad till ${loanInfo.contact ?? 'Okänd'}`
+      return {
+        status: `Utlånad till ${loanInfo.contact ?? 'Okänd'}`,
+        date: dateString,
+      }
     }
   } else {
     // Key is not currently loaned
@@ -132,18 +165,34 @@ export function getKeyDisplayStatus(
       // Never been loaned - check flex status
       const flexStatus = getFlexStatus(key, allKeys)
       if (flexStatus === 'FLEX_ORDERED') {
-        return 'Ny beställd flex'
+        return { status: 'Ny beställd flex' }
       } else if (flexStatus === 'FLEX_INCOMING') {
-        return 'Ny inkommen flex'
+        return { status: 'Ny inkommen flex' }
       } else {
-        return 'Ny'
+        return { status: 'Ny' }
       }
     } else if (loanInfo.matchesCurrentTenant) {
-      // Was returned by current tenant
-      return `Återlämnad av den här hyresgästen`
+      // Was returned by current tenant - show availability date
+      const formattedDate = formatSwedishDate(loanInfo.availableToNextTenantFrom)
+      const dateString = formattedDate
+        ? `Tillgänglig fr.o.m: ${formattedDate}`
+        : undefined
+
+      return {
+        status: `Återlämnad av den här hyresgästen`,
+        date: dateString,
+      }
     } else {
-      // Was returned by someone else
-      return `Återlämnad av ${loanInfo.contact}`
+      // Was returned by someone else - show availability date
+      const formattedDate = formatSwedishDate(loanInfo.availableToNextTenantFrom)
+      const dateString = formattedDate
+        ? `Tillgänglig fr.o.m: ${formattedDate}`
+        : undefined
+
+      return {
+        status: `Återlämnad av ${loanInfo.contact}`,
+        date: dateString,
+      }
     }
   }
 }
@@ -174,12 +223,13 @@ export async function computeKeyWithStatus(
       tenantContactCodes[1]
     )
 
-    const displayStatus = getKeyDisplayStatus(loanInfo, key, allKeys)
+    const { status, date } = getKeyDisplayStatus(loanInfo, key, allKeys)
 
     return {
       ...key,
       loanInfo,
-      displayStatus,
+      displayStatus: status,
+      displayDate: date,
     }
   } catch {
     // Return key with unknown status on error
