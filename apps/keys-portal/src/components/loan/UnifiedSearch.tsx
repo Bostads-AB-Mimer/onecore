@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import {
   fetchTenantAndLeasesByPnr,
   fetchLeasesByRentalPropertyId,
+  fetchTenantAndLeasesByContactCode,
 } from '@/services/api/leaseSearchService'
 import type { Lease, Tenant } from '@/services/types'
 
@@ -22,12 +23,18 @@ interface UnifiedSearchProps {
     tenant: Tenant | null,
     contracts: Lease[],
     searchValue: string,
-    type: 'pnr' | 'object'
+    type: 'pnr' | 'object' | 'contactCode'
   ) => void
 }
 
 const isValidPnr = (value: string) =>
   /^(?:\d{6}|\d{8})-?\d{4}$/.test(value.trim())
+
+const isContactCode = (value: string) => {
+  const trimmed = value.trim().toUpperCase()
+  // Contact codes start with P and contain only letters/numbers (no dashes or spaces)
+  return /^P[A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
+}
 
 const isObjectId = (value: string) => {
   const trimmed = value.trim()
@@ -55,7 +62,7 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     if (!value) {
       toast({
         title: 'Saknar värde',
-        description: 'Ange personnummer eller hyresobjekt.',
+        description: 'Ange personnummer, kundnummer eller hyresobjekt.',
         variant: 'destructive',
       })
       return
@@ -66,11 +73,13 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       await handleSearchByObjectId(value)
     } else if (isValidPnr(value)) {
       await handleSearchByPnr(value)
+    } else if (isContactCode(value)) {
+      await handleSearchByContactCode(value)
     } else {
       toast({
         title: 'Ogiltigt format',
         description:
-          'Ange personnummer (YYYYMMDD-XXXX) eller hyresobjekt (XXX-XXX-XX-XXX).',
+          'Ange personnummer (YYYYMMDD-XXXX), kundnummer (PXXXXXX) eller hyresobjekt (XXX-XXX-XX-XXX).',
         variant: 'destructive',
       })
     }
@@ -88,6 +97,9 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     if (tenantParam && isValidPnr(tenantParam)) {
       setSearchValue(tenantParam)
       handleSearchByPnr(tenantParam)
+    } else if (tenantParam && isContactCode(tenantParam)) {
+      setSearchValue(tenantParam)
+      handleSearchByContactCode(tenantParam)
     } else if (objectParam && objectParam.trim()) {
       setSearchValue(objectParam)
       handleSearchByObjectId(objectParam)
@@ -107,6 +119,33 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         return
       }
       onResultFound(result.tenant, result.contracts, pnr, 'pnr')
+    } catch (e: unknown) {
+      const message =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as any).message)
+          : 'Okänt fel'
+      toast({
+        title: 'Kunde inte söka',
+        description: message,
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearchByContactCode = async (contactCode: string) => {
+    setLoading(true)
+    try {
+      const result = await fetchTenantAndLeasesByContactCode(contactCode)
+      if (!result) {
+        toast({
+          title: 'Ingen träff',
+          description: 'Hittade ingen hyresgäst för angivet kundnummer.',
+        })
+        return
+      }
+      onResultFound(result.tenant, result.contracts, contactCode, 'contactCode')
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
@@ -164,13 +203,13 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
           Sök hyresgäst eller hyresobjekt
         </CardTitle>
         <CardDescription>
-          Ange personnummer eller hyresobjekt för att hitta kontrakt
+          Ange personnummer, kundnummer eller hyresobjekt för att hitta kontrakt
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Input
-            placeholder="Personnummer eller hyresobjekt"
+            placeholder="Personnummer, kundnummer eller hyresobjekt"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -183,6 +222,7 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         </div>
         <div className="text-sm text-muted-foreground space-y-1">
           <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
+          <p>Kundnummer: PXXXXXX (t.ex. P086589)</p>
           <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
         </div>
       </CardContent>
