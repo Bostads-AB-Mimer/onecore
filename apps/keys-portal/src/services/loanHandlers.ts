@@ -39,12 +39,11 @@ export async function handleLoanKeys({
   }
 
   try {
-    // Create the key loan
+    // Create the key loan in pending state (pickedUpAt will be set when receipt is signed)
     const created = await keyLoanService.create({
       keys: JSON.stringify(keyIds),
       contact,
       contact2,
-      pickedUpAt: new Date().toISOString(),
       createdBy: 'ui',
     })
 
@@ -64,7 +63,8 @@ export async function handleLoanKeys({
 
     return {
       success: true,
-      title: 'Nyckel utlånad - Kvitto måste signeras',
+      title: 'Nyckellån skapat - Kvitto måste signeras',
+      message: 'Nyckellånet aktiveras när det signerade kvittot laddas upp.',
       keyLoanId: created.id,
       receiptId,
     }
