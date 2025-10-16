@@ -395,6 +395,7 @@ export function LeaseKeyStatusList({
           {showAddKeyForm && (
             <AddKeyForm
               keys={keys}
+              selectedKeyIds={selectedKeys}
               rentalObjectCode={lease.rentalPropertyId}
               onKeyCreated={handleKeyCreated}
               onCancel={() => setShowAddKeyForm(false)}
