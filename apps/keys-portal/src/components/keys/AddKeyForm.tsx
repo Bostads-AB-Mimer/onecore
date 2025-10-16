@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSearch } from '@/hooks/useSearch'
 import { useDebounce } from '@/utils/debounce'
+import {
+  parseSequenceNumberInput,
+  checkForDuplicates,
+} from '@/utils/keySequenceValidation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +22,6 @@ import {
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
-import { keyService } from '@/services/api/keyService'
 import type { KeySystem } from '@/services/types'
 import { X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -114,143 +117,6 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
   useEffect(() => {
     updateDebouncedQuery(keySystemSearchQuery)
   }, [keySystemSearchQuery, updateDebouncedQuery])
-
-  // Parse and validate sequence number input
-  const parseSequenceNumberInput = (
-    input: string
-  ): { isValid: boolean; numbers: number[]; error?: string } => {
-    // Empty input is valid (optional field)
-    if (!input || input.trim() === '') {
-      return { isValid: true, numbers: [] }
-    }
-
-    const trimmed = input.trim()
-
-    // Check if it's a range (contains hyphen)
-    if (trimmed.includes('-')) {
-      const parts = trimmed.split('-')
-      if (parts.length !== 2) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: 'Ogiltigt format. Använd format: 1-10',
-        }
-      }
-
-      const start = parseInt(parts[0], 10)
-      const end = parseInt(parts[1], 10)
-
-      if (isNaN(start) || isNaN(end)) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: 'Ogiltiga nummer i intervallet',
-        }
-      }
-
-      if (start < 1) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: 'Startnummer måste vara minst 1',
-        }
-      }
-
-      if (start > end) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: 'Startnummer måste vara mindre än eller lika med slutnummer',
-        }
-      }
-
-      if (start === end) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: 'För samma nummer, skriv bara ett nummer (t.ex. 10)',
-        }
-      }
-
-      const count = end - start + 1
-      if (count > 10) {
-        return {
-          isValid: false,
-          numbers: [],
-          error: `Du kan bara skapa max 10 nycklar åt gången (du försökte skapa ${count} nycklar)`,
-        }
-      }
-
-      // Generate array of numbers
-      const numbers = Array.from({ length: count }, (_, i) => start + i)
-      return { isValid: true, numbers }
-    }
-
-    // Single number
-    const num = parseInt(trimmed, 10)
-    if (isNaN(num)) {
-      return {
-        isValid: false,
-        numbers: [],
-        error: 'Ogiltigt nummer',
-      }
-    }
-
-    if (num < 1) {
-      return {
-        isValid: false,
-        numbers: [],
-        error: 'Löpnummer måste vara minst 1',
-      }
-    }
-
-    return { isValid: true, numbers: [num] }
-  }
-
-  // Check for existing keys with same name, sequence number, and key system
-  const checkForDuplicates = async (
-    keyName: string,
-    sequenceNumbers: number[],
-    keySystemId: string | undefined
-  ): Promise<number[]> => {
-    // If no sequence numbers or no key system, can't have duplicates
-    if (sequenceNumbers.length === 0 || !keySystemId) {
-      return []
-    }
-
-    try {
-      // Search for existing keys with same name and key system
-      const response = await keyService.searchKeys(
-        {
-          keyName,
-          keySystemId,
-          disposed: 'false', // Only check non-disposed keys
-        },
-        1,
-        1000 // Get all matching keys
-      )
-
-      // Extract existing sequence numbers from non-disposed keys
-      const existingSequenceNumbers = response.content
-        .filter(
-          (key) =>
-            key.keySequenceNumber !== null &&
-            key.keySequenceNumber !== undefined
-        )
-        .map((key) => key.keySequenceNumber as number)
-
-      // Find duplicates - sequence numbers that already exist in non-disposed keys
-      const duplicates = sequenceNumbers.filter((seqNum) =>
-        existingSequenceNumbers.includes(seqNum)
-      )
-
-      return duplicates
-    } catch (error) {
-      console.error('Error checking for duplicates:', error)
-      // If error, return empty array to allow creation (fail open)
-      return []
-    }
-  }
 
   // Handle rental object input changes and trigger search
   const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
