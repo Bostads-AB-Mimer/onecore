@@ -1115,7 +1115,7 @@ export interface paths {
           /** @description Number of records per page */
           limit?: number;
           q?: string;
-          /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
+          /** @description Comma-separated list of fields for OR search. Defaults to objectId and userName. */
           fields?: string;
           id?: string;
           userName?: string;

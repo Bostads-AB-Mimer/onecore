@@ -38,6 +38,10 @@ function getLeaseContactNames(lease: Lease): string[] {
     .filter(Boolean)
 }
 
+function getLeaseContactCodes(lease: Lease): string[] {
+  return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
+}
+
 export function LeaseKeyStatusList({
   lease,
   onKeysLoaned,
@@ -73,11 +77,12 @@ export function LeaseKeyStatusList({
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
   const tenantNames = useMemo(() => getLeaseContactNames(lease), [lease])
+  const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
 
   // Compute key status - extracted to reuse after loan/return operations
   const computeKeyStatus = (key: Key): Promise<KeyWithStatus> => {
-    return computeKeyWithStatus(key, keys, tenantNames, getKeyLoanStatus)
+    return computeKeyWithStatus(key, keys, tenantContactCodes, getKeyLoanStatus)
   }
 
   // Fetch keys for the rental object
@@ -114,7 +119,7 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [keys, tenantNames])
+  }, [keys, tenantNames, tenantContactCodes])
 
   const refreshStatuses = async () => {
     // Refetch keys from backend to get updated key properties (e.g., disposed status)
@@ -133,7 +138,7 @@ export function LeaseKeyStatusList({
   const onRent = async (keyIds: string[]) => {
     // Check if there are existing active loans for these contacts on this object
     const existingLoans = await findExistingActiveLoansForTransfer(
-      tenantNames,
+      tenantContactCodes,
       lease.rentalPropertyId
     )
 
@@ -149,8 +154,8 @@ export function LeaseKeyStatusList({
     setIsProcessing(true)
     const result = await handleLoanKeys({
       keyIds,
-      contact: tenantNames[0],
-      contact2: tenantNames[1],
+      contact: tenantContactCodes[0],
+      contact2: tenantContactCodes[1],
     })
 
     if (result.success) {
@@ -379,8 +384,8 @@ export function LeaseKeyStatusList({
         onOpenChange={setShowTransferDialog}
         newKeys={keys.filter((k) => pendingLoanKeyIds.includes(k.id))}
         existingLoans={existingLoansForTransfer}
-        contact={tenantNames[0]}
-        contact2={tenantNames[1]}
+        contact={tenantContactCodes[0]}
+        contact2={tenantContactCodes[1]}
         onSuccess={async (receiptId) => {
           // Refresh and show receipt
           await refreshStatuses()
