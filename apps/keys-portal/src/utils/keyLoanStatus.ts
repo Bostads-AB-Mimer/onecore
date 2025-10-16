@@ -4,6 +4,8 @@ export type KeyLoanInfo = {
   isLoaned: boolean
   contact: string | null // The contact code from the loan
   matchesCurrentTenant: boolean // Whether this loan matches the current tenant
+  pickedUpAt?: string // When the key was picked up (for loaned keys)
+  availableToNextTenantFrom?: string // When the key becomes available (for returned keys)
 }
 
 /**
@@ -44,10 +46,12 @@ export async function getKeyLoanStatus(
         loanToCheck.contact2?.trim() === currentContactCode2.trim())) ||
     false
 
-  // Always return the contact code from the loan
+  // Always return the contact code from the loan along with dates
   return {
     isLoaned,
     contact: loanToCheck.contact ?? null,
     matchesCurrentTenant,
+    pickedUpAt: loanToCheck.pickedUpAt,
+    availableToNextTenantFrom: loanToCheck.availableToNextTenantFrom,
   }
 }
