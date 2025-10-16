@@ -125,12 +125,12 @@ export function ContractCard({
             // If key is not disposed, always show it
             if (!key.disposed) return key
 
-            // If key is disposed, check if it has any loan history
+            // If key is disposed, check if it has an active loan
             const loans = await keyLoanService.getByKeyId(key.id)
-            const hasAnyLoan = loans.length > 0
+            const hasActiveLoan = loans.some((loan) => !loan.returnedAt)
 
-            // Show disposed keys if they have any loan history (for historical tracking)
-            return hasAnyLoan ? key : null
+            // Only show disposed keys if they have an active loan
+            return hasActiveLoan ? key : null
           })
 
           const visibleKeys = await Promise.all(visibleKeysPromises)
