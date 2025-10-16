@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,10 +8,9 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { FileText, Printer, Upload, Download, AlertCircle } from 'lucide-react'
+import { FileText, Printer, AlertCircle } from 'lucide-react'
 
 import type { ReceiptData, Lease } from '@/services/types'
-import { receiptService } from '@/services/api/receiptService'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 import { fetchReceiptData } from '@/services/receiptHandlers'
 
@@ -20,28 +19,15 @@ export function ReceiptDialog({
   onClose,
   receiptId,
   lease,
-  enableUpload = true, // parent can hide upload UI (you use false)
 }: {
   isOpen: boolean
   onClose: () => void
   receiptId: string | null
   lease: Lease
-  enableUpload?: boolean
 }) {
   // Fetch receipt data when dialog opens
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [isLoadingReceipt, setIsLoadingReceipt] = useState(false)
-  // Upload state (only used if enableUpload)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadDone, setUploadDone] = useState(false)
-  const [uploadInfo, setUploadInfo] = useState<string>('')
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-  // Download state (only used if enableUpload)
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
   // Fetch receipt data when dialog opens or receiptId changes
   useEffect(() => {
@@ -80,67 +66,6 @@ export function ReceiptDialog({
     await openPdfInNewTab(receiptData, receiptId ?? undefined)
   }
 
-  // ---------- Upload helpers (only shown if enableUpload) ----------
-  function validateFile(file: File): string | null {
-    if (file.type !== 'application/pdf') return 'Endast PDF-filer tillåtna.'
-    if (file.size > MAX_SIZE) return 'Filen är för stor (max 10 MB).'
-    return null
-  }
-
-  async function doUpload(file: File) {
-    if (!receiptId) return
-    setUploadError(null)
-    setUploadDone(false)
-    setIsUploading(true)
-    try {
-      await receiptService.uploadFile(receiptId, file)
-      setUploadDone(true)
-      setUploadInfo('Uppladdning klar!')
-    } catch (e: any) {
-      setUploadError(e?.message ?? 'Kunde inte ladda upp filen.')
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  function onFileSelected(file: File | null) {
-    if (!file) return
-    const err = validateFile(file)
-    if (err) {
-      setUploadError(err)
-      return
-    }
-    void doUpload(file)
-  }
-
-  function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    onFileSelected(file)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function onDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    if (isUploading) return
-    const file = e.dataTransfer.files?.[0] ?? null
-    onFileSelected(file)
-  }
-
-  function onDragOver(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-  }
-
-  // ---------- Download uploaded file (only if enableUpload + upload done) ----------
-  async function handleDownload() {
-    if (!receiptId) return
-    setIsDownloading(true)
-    try {
-      await receiptService.downloadFile(receiptId) // opens presigned URL in new tab
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
   const actionText =
     receiptData?.receiptType === 'LOAN'
       ? 'Nycklar utlånade'
@@ -148,9 +73,7 @@ export function ReceiptDialog({
 
   const descriptionText =
     receiptData?.receiptType === 'LOAN'
-      ? enableUpload
-        ? 'Ett utlåningskvitto har skapats. Skriv ut och låt hyresgästen signera, ladda sedan upp den signerade PDF:en.'
-        : 'Ett utlåningskvitto har skapats. Skriv ut och låt hyresgästen signera.'
+      ? 'Ett utlåningskvitto har skapats. Skriv ut och låt hyresgästen signera.'
       : 'Ett återlämningskvitto har skapats. Du kan skriva ut det.'
 
   // Don't show dialog for return receipts - they're auto-generated for records only
@@ -193,72 +116,10 @@ export function ReceiptDialog({
             <Printer className="h-4 w-4" />
             {isLoadingReceipt ? 'Laddar kvitto...' : 'Skriv ut kvitto'}
           </Button>
-
-          {/* Optional upload section (hidden in your current usage) */}
-          {enableUpload && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Bifoga signerad PDF</p>
-              <div
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer
-                ${isUploading ? 'opacity-60' : 'hover:bg-muted/50'}
-              `}
-                onClick={() => fileInputRef.current?.click()}
-                aria-disabled={isUploading}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={onInputChange}
-                />
-                <div className="flex flex-col items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  <div className="text-xs text-muted-foreground">
-                    Dra & släpp en PDF här eller klicka för att välja fil
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Max 10 MB.
-                  </div>
-                </div>
-              </div>
-
-              {/* Upload status */}
-              <div className="min-h-[1.5rem]">
-                {isUploading && (
-                  <div className="text-xs">Laddar upp… {uploadInfo}</div>
-                )}
-                {uploadDone && (
-                  <div className="text-xs text-green-600 dark:text-green-400">
-                    {uploadInfo}
-                  </div>
-                )}
-                {uploadError && (
-                  <div className="text-xs text-destructive">{uploadError}</div>
-                )}
-              </div>
-
-              {/* Download button once upload is done */}
-              {uploadDone && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                >
-                  <Download className="h-4 w-4" />
-                  {isDownloading ? 'Öppnar kvitto…' : 'Ladda ner uppladdad PDF'}
-                </Button>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
+          <Button variant="outline" onClick={onClose}>
             Stäng
           </Button>
         </div>
