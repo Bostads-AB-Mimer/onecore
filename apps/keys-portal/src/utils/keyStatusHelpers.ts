@@ -144,19 +144,35 @@ export function getKeyDisplayStatus(
   }
 
   if (loanInfo.isLoaned) {
-    // Key is currently loaned - show pickup date
-    const formattedDate = formatSwedishDate(loanInfo.pickedUpAt)
-    const dateString = formattedDate ? `Hämtad: ${formattedDate}` : undefined
+    // Check if key has been picked up (has signed receipt OR pickedUpAt date)
+    const isPickedUp = loanInfo.hasSignedLoanReceipt || !!loanInfo.pickedUpAt
 
-    if (loanInfo.matchesCurrentTenant) {
-      return {
-        status: `Utlånat till den här hyresgästen`,
-        date: dateString,
+    if (isPickedUp) {
+      // Key is currently loaned and picked up - show pickup date
+      const formattedDate = formatSwedishDate(loanInfo.pickedUpAt)
+      const dateString = formattedDate ? `Hämtad: ${formattedDate}` : undefined
+
+      if (loanInfo.matchesCurrentTenant) {
+        return {
+          status: `Utlånat till den här hyresgästen`,
+          date: dateString,
+        }
+      } else {
+        return {
+          status: `Utlånad till ${loanInfo.contact ?? 'Okänd'}`,
+          date: dateString,
+        }
       }
     } else {
-      return {
-        status: `Utlånad till ${loanInfo.contact ?? 'Okänd'}`,
-        date: dateString,
+      // Key is loaned but not yet picked up - show "ready to pick up"
+      if (loanInfo.matchesCurrentTenant) {
+        return {
+          status: `Redo att hämtas`,
+        }
+      } else {
+        return {
+          status: `Redo att hämtas (${loanInfo.contact ?? 'Okänd'})`,
+        }
       }
     }
   } else {

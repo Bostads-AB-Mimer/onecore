@@ -222,7 +222,7 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         </div>
         <div className="text-sm text-muted-foreground space-y-1">
           <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
-          <p>Kundnummer: PXXXXXX (t.ex. P086589)</p>
+          <p>Kundnummer: PXXXXXX (t.ex. P053602)</p>
           <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
         </div>
       </CardContent>
