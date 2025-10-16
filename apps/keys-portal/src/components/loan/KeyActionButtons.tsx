@@ -11,7 +11,6 @@ import { DisposeKeysDialog } from './DisposeKeysDialog'
 type Props = {
   selectedKeys: string[]
   keysWithStatus: KeyWithStatus[]
-  tenantNames: string[]
   leaseIsNotPast: boolean
   isProcessing: boolean
   onRent: (keyIds: string[]) => void
@@ -24,7 +23,6 @@ type Props = {
 export function KeyActionButtons({
   selectedKeys,
   keysWithStatus,
-  tenantNames,
   leaseIsNotPast,
   isProcessing,
   onRent,

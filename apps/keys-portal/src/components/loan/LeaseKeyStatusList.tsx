@@ -32,12 +32,6 @@ function isLeaseNotPast(lease: Lease): boolean {
   return endDate >= now
 }
 
-function getLeaseContactNames(lease: Lease): string[] {
-  return (lease.tenants ?? [])
-    .map((t) => [t.firstName, t.lastName].filter(Boolean).join(' ').trim())
-    .filter(Boolean)
-}
-
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
 }
@@ -76,7 +70,6 @@ export function LeaseKeyStatusList({
   // Add key state
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
-  const tenantNames = useMemo(() => getLeaseContactNames(lease), [lease])
   const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
 
@@ -119,7 +112,7 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [keys, tenantNames, tenantContactCodes])
+  }, [keys, tenantContactCodes])
 
   const refreshStatuses = async () => {
     // Refetch keys from backend to get updated key properties (e.g., disposed status)
@@ -266,7 +259,6 @@ export function LeaseKeyStatusList({
             <KeyActionButtons
               selectedKeys={selectedKeys}
               keysWithStatus={keysWithStatus}
-              tenantNames={tenantNames}
               leaseIsNotPast={leaseIsNotPast}
               isProcessing={isProcessing}
               onRent={onRent}
