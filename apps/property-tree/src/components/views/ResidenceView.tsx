@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
 import { TenantInformation } from '../residence/TenantInformation'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 
 export function ResidenceView() {
   const { residenceId } = useParams()
@@ -88,15 +89,12 @@ export function ResidenceView() {
             </Card>
           </TabsContent>
           <TabsContent value="workorders">
-            <Card>
-              <CardContent className="p-4">
-                {residence.propertyObject.rentalId && (
-                  <ResidenceWorkOrders
-                    rentalId={residence.propertyObject.rentalId}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            {residence.propertyObject.rentalId && (
+              <WorkOrdersManagement
+                contextType="residence"
+                id={residence.propertyObject.rentalId}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
