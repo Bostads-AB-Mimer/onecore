@@ -217,7 +217,7 @@ export function LeaseKeyStatusList({
   }, [visibleKeys])
 
   if (loading) {
-    return <div className="text-xs text-muted-foreground">Loading keys...</div>
+    return <div className="text-sm text-muted-foreground">Loading keys...</div>
   }
 
   if (sortedKeys.length === 0) {
@@ -342,9 +342,15 @@ export function LeaseKeyStatusList({
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium ${statusColor}`}>
+                  <div className="flex items-center justify-end gap-2 text-sm">
+                    {key.displayDate && (
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {key.displayDate}
+                      </span>
+                    )}
+                    <span
+                      className={`font-medium whitespace-nowrap ${statusColor}`}
+                    >
                       {key.displayStatus}
                     </span>
                   </div>
@@ -366,7 +372,6 @@ export function LeaseKeyStatusList({
         }}
         receiptId={receiptId}
         lease={lease}
-        enableUpload={false}
       />
 
       <KeyLoanTransferDialog
