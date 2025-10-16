@@ -42,6 +42,7 @@ type XpandInvoiceRow = {
   reduction: number
   vat: number
   code: string
+  rowType: number
   printGroup: string | null
   invoiceRowType: string
   rentType: string | null
@@ -210,18 +211,20 @@ export const getInvoiceRows = async (
       'krfkr.reduction',
       'krfkr.vat',
       'krfkr.code',
-      'cmart.utskrgrupp AS printGroup',
+      'krfkr.rowtype AS rowType',
+      'krfkr.printgroup AS printGroup',
       'cmarg.caption AS invoiceRowType',
       'hysum.hysumben AS rentType'
     )
     .from('krfkh')
     .innerJoin('krfkr', 'krfkh.keykrfkh', 'krfkr.keykrfkh')
-    .innerJoin('cmart', 'krfkr.keycmart', 'cmart.keycmart')
-    .innerJoin('cmarg', 'cmart.keycmarg', 'cmarg.keycmarg')
+    .leftJoin('cmart', 'krfkr.keycmart', 'cmart.keycmart')
+    .leftJoin('cmarg', 'cmart.keycmarg', 'cmarg.keycmarg')
     .leftJoin('hysum', 'cmart.keyhysum', 'hysum.keyhysum')
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
   return invoiceRows.map((row): RentInvoiceRow => {
@@ -233,6 +236,8 @@ export const getInvoiceRows = async (
       vat: row.vat,
       type: row.invoiceRowType === 'Hyra/Inkasso' ? 'Rent' : 'Other',
       rentType: row.code === 'HEMFÖR' ? 'Hemförsäkring' : row.rentType,
+      code: row.code,
+      rowType: row.rowType,
       printGroup: row.printGroup,
     }
   })
