@@ -96,3 +96,31 @@ export async function fetchTenantAndLeasesByPnr(
 
   return { tenant: picked, contracts }
 }
+
+export async function fetchTenantAndLeasesByContactCode(
+  contactCode: string
+): Promise<{ tenant: Tenant; contracts: Lease[] } | null> {
+  const normalized = contactCode.trim().toUpperCase()
+
+  const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
+    params: { path: { contactCode: normalized } },
+  })
+  if (error || !data) return null
+
+  // API returns { content: Lease[] } similar to other endpoints
+  const raw = (data as any)?.content ?? []
+  const deduped = dedupeLeases(Array.isArray(raw) ? raw : [])
+  const contracts = deduped.filter((l) => !isMaculated(l)) // ⬅️ hide /..M
+  if (contracts.length === 0) return null
+
+  // Find the tenant with matching contact code
+  const picked: Tenant | undefined =
+    contracts
+      .flatMap((l) => l.tenants ?? [])
+      .find((t) => t?.contactCode === normalized) ??
+    (contracts[0].tenants ?? [])[0]
+
+  if (!picked) return null
+
+  return { tenant: picked, contracts }
+}

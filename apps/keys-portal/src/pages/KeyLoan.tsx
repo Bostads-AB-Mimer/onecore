@@ -21,7 +21,7 @@ export default function KeyLoan() {
     tenant: Tenant | null,
     contracts: Lease[],
     searchValue: string,
-    type: 'pnr' | 'object'
+    type: 'pnr' | 'object' | 'contactCode'
   ) => {
     setSelectedTenant(tenant)
     setTenantContracts(contracts)
@@ -29,6 +29,8 @@ export default function KeyLoan() {
 
     // Update URL params based on search type
     if (type === 'pnr') {
+      setSearchParams({ tenant: searchValue })
+    } else if (type === 'contactCode') {
       setSearchParams({ tenant: searchValue })
     } else {
       setSearchParams({ object: searchValue })
