@@ -4,6 +4,7 @@ import { WorkOrdersTableSkeleton } from '@/components/work-orders/WorkOrdersTabl
 import { TabLayout } from '@/components/ui/TabLayout'
 import { FilePlus } from 'lucide-react'
 import useWorkOrders from '../hooks/useWorkOrders'
+import { linkToOdooCreateMaintenanceRequest } from '@/utils/odooUtils'
 
 export interface WorkOrdersManagementProps {
   id: string
@@ -22,10 +23,9 @@ export function WorkOrdersManagement({
       <div className="space-y-4">
         <div className="flex items-center justify-start">
           <Button
-            disabled
             size={'default'}
             variant={'default'}
-            onClick={() => {}} // Placeholder action
+            onClick={linkToOdooCreateMaintenanceRequest}
           >
             <FilePlus className="mr-2 h-4 w-4" />
             Skapa ärende
