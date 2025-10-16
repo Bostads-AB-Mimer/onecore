@@ -173,7 +173,9 @@ export function getKeyDisplayStatus(
       }
     } else if (loanInfo.matchesCurrentTenant) {
       // Was returned by current tenant - show availability date
-      const formattedDate = formatSwedishDate(loanInfo.availableToNextTenantFrom)
+      const formattedDate = formatSwedishDate(
+        loanInfo.availableToNextTenantFrom
+      )
       const dateString = formattedDate
         ? `Tillgänglig fr.o.m: ${formattedDate}`
         : undefined
@@ -184,7 +186,9 @@ export function getKeyDisplayStatus(
       }
     } else {
       // Was returned by someone else - show availability date
-      const formattedDate = formatSwedishDate(loanInfo.availableToNextTenantFrom)
+      const formattedDate = formatSwedishDate(
+        loanInfo.availableToNextTenantFrom
+      )
       const dateString = formattedDate
         ? `Tillgänglig fr.o.m: ${formattedDate}`
         : undefined

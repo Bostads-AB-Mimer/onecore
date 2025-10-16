@@ -4,7 +4,15 @@ import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { keyService } from '@/services/api/keyService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyLoanStatus } from '@/utils/keyLoanStatus'
 import {
   sortKeysByTypeAndSequence,
@@ -21,6 +29,7 @@ import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './ReceiptDialog'
 import { KeyLoanTransferDialog } from './KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './ReturnKeysDialog'
+import { Pencil } from 'lucide-react'
 
 function isLeaseNotPast(lease: Lease): boolean {
   // If no end date, it's current or future
@@ -34,6 +43,101 @@ function isLeaseNotPast(lease: Lease): boolean {
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
+}
+
+// Component for editing the available date inline
+function EditableAvailableDate({
+  keyId,
+  currentDate,
+  onUpdate,
+}: {
+  keyId: string
+  currentDate?: string
+  onUpdate: () => void
+}) {
+  const { toast } = useToast()
+  const [open, setOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    currentDate ? new Date(currentDate) : undefined
+  )
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const handleUpdate = async () => {
+    setIsUpdating(true)
+    try {
+      // Get the loan for this key
+      const loans = await keyLoanService.getByKeyId(keyId)
+      const returnedLoan = loans.find((loan) => loan.returnedAt)
+
+      if (!returnedLoan) {
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte hitta återlämnad nyckel',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Update the loan with the new available date
+      await keyLoanService.update(returnedLoan.id, {
+        availableToNextTenantFrom: selectedDate?.toISOString(),
+      })
+
+      toast({
+        title: 'Uppdaterat',
+        description: 'Tillgänglighetsdatum har uppdaterats',
+      })
+
+      setOpen(false)
+      onUpdate()
+    } catch (error) {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte uppdatera datum',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-5 w-5 p-0 hover:bg-muted"
+          title="Ändra tillgänglighetsdatum"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <div className="p-3 space-y-3">
+          <div className="text-sm font-medium">Ändra tillgänglighetsdatum</div>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOpen(false)}
+              disabled={isUpdating}
+            >
+              Avbryt
+            </Button>
+            <Button size="sm" onClick={handleUpdate} disabled={isUpdating}>
+              {isUpdating ? 'Uppdaterar...' : 'Spara'}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export function LeaseKeyStatusList({
@@ -301,6 +405,11 @@ export function LeaseKeyStatusList({
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-muted-foreground'
 
+              // Check if this key has an available date that can be edited
+              const hasAvailableDate =
+                !key.loanInfo.isLoaned &&
+                key.loanInfo.availableToNextTenantFrom !== undefined
+
               return (
                 <div
                   key={key.id}
@@ -342,17 +451,37 @@ export function LeaseKeyStatusList({
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2 text-sm">
-                    {key.displayDate && (
-                      <span className="text-muted-foreground whitespace-nowrap">
-                        {key.displayDate}
-                      </span>
-                    )}
+
+                  {/* Right side: status first, then date with a subtle separator */}
+                  <div className="flex items-center justify-end gap-3 text-sm">
                     <span
                       className={`font-medium whitespace-nowrap ${statusColor}`}
                     >
                       {key.displayStatus}
                     </span>
+
+                    {key.displayDate && (
+                      <div className="flex items-center gap-2">
+                        <span aria-hidden className="opacity-30 select-none">
+                          •
+                        </span>
+                        <span className="text-muted-foreground tabular-nums sm:whitespace-nowrap">
+                          {key.displayDate}
+                        </span>
+
+                        {hasAvailableDate && (
+                          <div className="ml-1">
+                            <EditableAvailableDate
+                              keyId={key.id}
+                              currentDate={
+                                key.loanInfo.availableToNextTenantFrom
+                              }
+                              onUpdate={refreshStatuses}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )
