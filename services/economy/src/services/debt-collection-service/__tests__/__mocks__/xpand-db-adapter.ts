@@ -44,7 +44,7 @@ export const createMockRentInvoice = (
 export const createMockRentalProperty = (
   overrides: Partial<RentalProperty> = {}
 ): RentalProperty => ({
-  rentalId: 'RENTAL001',
+  rentalId: 'REN-TAL-00-1001',
   code: 'R001',
   address: 'Test Property Address 1',
   postalCode: '12345',
@@ -82,7 +82,21 @@ export const setupDefaultMocks = () => {
   getContacts.mockResolvedValue([createMockContact()])
   getInvoices.mockResolvedValue([createMockRentInvoice()])
   getRentalProperties.mockResolvedValue([createMockRentalProperty()])
-  getInvoiceRows.mockResolvedValue([createMockRentInvoiceRow()])
+  getInvoiceRows.mockResolvedValue([
+    // Header row with lease ID
+    createMockRentInvoiceRow({
+      rowType: 3,
+      text: 'REN-TAL-00-1001/01',
+      printGroup: null,
+    }),
+    // Rent row
+    createMockRentInvoiceRow({
+      printGroup: 'N',
+      text: 'Hyra bostad',
+      rentType: 'Hyra bostad',
+      type: 'Rent',
+    }),
+  ])
 }
 
 // Reset all mocks
