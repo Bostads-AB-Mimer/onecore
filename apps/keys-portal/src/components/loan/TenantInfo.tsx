@@ -137,6 +137,9 @@ export function TenantInfo({
                   <p className="text-sm text-muted-foreground">
                     Personnummer: {t.nationalRegistrationNumber}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    Kundnummer: {t.contactCode}
+                  </p>
                   {t.emailAddress && (
                     <p className="text-sm text-muted-foreground">
                       E-post: {t.emailAddress}

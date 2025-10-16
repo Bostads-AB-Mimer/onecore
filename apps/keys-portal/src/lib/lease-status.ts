@@ -7,8 +7,17 @@ const toMs = (d?: string) => (d ? new Date(d).getTime() : undefined)
 export const pickEndDate = (lease: Lease) => lease.lastDebitDate ?? undefined
 
 function normalizeBackendStatus(
-  s?: string
+  s?: string | number
 ): 'active' | 'upcoming' | 'ended' | 'abouttoend' | null {
+  // Handle numeric status codes (0 = Current, 1 = Upcoming, 2 = Ended, 3 = AboutToEnd)
+  if (typeof s === 'number') {
+    if (s === 0) return 'active'
+    if (s === 1) return 'upcoming'
+    if (s === 2) return 'ended'
+    if (s === 3) return 'abouttoend'
+    return null
+  }
+
   const v = (s ?? '').trim().toLowerCase()
   if (!v) return null
   if (v === 'current' || v === 'active' || v === 'ongoing') return 'active'
