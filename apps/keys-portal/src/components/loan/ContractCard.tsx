@@ -65,6 +65,7 @@ export function ContractCard({
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
   const [keys, setKeys] = useState<Key[]>([])
+  const [allKeysForLoans, setAllKeysForLoans] = useState<Key[]>([])
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
@@ -110,6 +111,9 @@ export function ContractCard({
         const list = await keyService.getKeysByRentalObjectCode(
           lease.rentalPropertyId
         )
+
+        // Always set all keys for loan history (including disposed keys)
+        if (!cancelled) setAllKeysForLoans(list)
 
         // If the keys section is not open, just show non-disposed keys (fast path)
         if (!open) {
@@ -324,7 +328,7 @@ export function ContractCard({
               lease={lease}
               refreshKey={keyLoansRefreshKey}
               onUnsignedLoansChange={handleUnsignedLoansChange}
-              preloadedKeys={keys}
+              preloadedKeys={allKeysForLoans}
             />
           </div>
         )}
