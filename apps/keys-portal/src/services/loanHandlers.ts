@@ -21,8 +21,8 @@ export type LoanKeysResult = {
 /**
  * Handler for loaning out keys
  * @param keyIds - Array of key IDs to loan (can be single key)
- * @param contact - Primary contact name
- * @param contact2 - Secondary contact name (optional)
+ * @param contact - Primary contact code
+ * @param contact2 - Secondary contact code (optional)
  * @returns Result with success status and keyLoanId
  */
 export async function handleLoanKeys({
