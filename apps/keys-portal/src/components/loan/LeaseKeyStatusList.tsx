@@ -376,6 +376,7 @@ export function LeaseKeyStatusList({
         }}
         receiptId={receiptId}
         lease={lease}
+        enableUpload={false}
       />
 
       <KeyLoanTransferDialog
