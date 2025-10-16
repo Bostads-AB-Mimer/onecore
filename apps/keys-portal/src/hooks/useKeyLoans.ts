@@ -5,6 +5,34 @@ import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 import { receiptService } from '@/services/api/receiptService'
 
+/**
+ * Lightweight function to check if a rental object has any unsigned active loan receipts
+ * Used for eagerly showing the yellow border indicator without loading full receipt data
+ */
+export async function checkHasUnsignedActiveLoans(
+  rentalObjectCode: string
+): Promise<boolean> {
+  try {
+    const { loaned } = await keyLoanService.listByLease(rentalObjectCode)
+
+    // Check each active loan for unsigned receipts
+    for (const loan of loaned) {
+      const receipts = await receiptService.getByKeyLoan(loan.id)
+      const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+
+      // If there's a loan receipt without a fileId, it's unsigned
+      if (loanReceipt && !loanReceipt.fileId) {
+        return true
+      }
+    }
+
+    return false
+  } catch (err) {
+    console.error('Failed to check unsigned loans:', err)
+    return false
+  }
+}
+
 export interface KeyLoanWithDetails {
   keyLoan: KeyLoan
   keys: Key[]

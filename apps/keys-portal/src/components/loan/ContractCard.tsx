@@ -24,6 +24,7 @@ import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { keyService } from '@/services/api/keyService'
+import { checkHasUnsignedActiveLoans } from '@/hooks/useKeyLoans'
 
 const getLeaseTypeIcon = (type: string) => {
   const t = (type ?? '').toLowerCase()
@@ -68,12 +69,22 @@ export function ContractCard({
   const [allKeysForLoans, setAllKeysForLoans] = useState<Key[]>([])
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
+  const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
   const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
 
   // Stabilize callback reference to prevent unnecessary re-renders in child components
   const handleUnsignedLoansChange = useCallback((hasUnsigned: boolean) => {
     setHasUnsignedLoans(hasUnsigned)
   }, [])
+
+  const handleReceiptUploaded = useCallback(() => {
+    // Trigger refresh of key statuses when a receipt is uploaded
+    setKeyStatusRefreshKey((prev) => prev + 1)
+    // Also re-check unsigned loan status
+    checkHasUnsignedActiveLoans(lease.rentalPropertyId).then((hasUnsigned) => {
+      setHasUnsignedLoans(hasUnsigned)
+    })
+  }, [lease.rentalPropertyId])
 
   const handleCopyObjectId = async () => {
     try {
@@ -103,6 +114,23 @@ export function ContractCard({
       cancelled = true
     }
   }, [lease.rentalPropertyId, rentalAddress])
+
+  // Eagerly check for unsigned loans to show yellow border indicator immediately
+  useEffect(() => {
+    let cancelled = false
+    async function checkUnsigned() {
+      const hasUnsigned = await checkHasUnsignedActiveLoans(
+        lease.rentalPropertyId
+      )
+      if (!cancelled) {
+        setHasUnsignedLoans(hasUnsigned)
+      }
+    }
+    checkUnsigned()
+    return () => {
+      cancelled = true
+    }
+  }, [lease.rentalPropertyId])
 
   useEffect(() => {
     let cancelled = false
@@ -328,6 +356,7 @@ export function ContractCard({
               lease={lease}
               refreshKey={keyLoansRefreshKey}
               onUnsignedLoansChange={handleUnsignedLoansChange}
+              onReceiptUploaded={handleReceiptUploaded}
               preloadedKeys={allKeysForLoans}
             />
           </div>
@@ -337,6 +366,7 @@ export function ContractCard({
           <div id={keysRegionId} className="pt-2">
             <LeaseKeyStatusList
               lease={lease}
+              refreshTrigger={keyStatusRefreshKey}
               onKeysLoaned={() => {
                 setKeyLoansOpen(true)
                 setOpen(false)
