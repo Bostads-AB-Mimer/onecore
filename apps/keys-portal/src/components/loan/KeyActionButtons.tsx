@@ -46,10 +46,7 @@ export function KeyActionButtons({
   )
 
   const returnableKeys = selectedKeysData.filter(
-    (k) =>
-      k.loanInfo.isLoaned &&
-      k.loanInfo.contact &&
-      tenantNames.includes(k.loanInfo.contact)
+    (k) => k.loanInfo.isLoaned && k.loanInfo.matchesCurrentTenant
   )
 
   // All available keys (excluding disposed keys)
@@ -59,10 +56,7 @@ export function KeyActionButtons({
 
   // All keys rented by this tenant
   const allRentedByTenant = keysWithStatus.filter(
-    (k) =>
-      k.loanInfo.isLoaned &&
-      k.loanInfo.contact &&
-      tenantNames.includes(k.loanInfo.contact)
+    (k) => k.loanInfo.isLoaned && k.loanInfo.matchesCurrentTenant
   )
 
   const newFlexKeys = selectedKeysData.filter((k) =>
