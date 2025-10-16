@@ -144,10 +144,12 @@ export function LeaseKeyStatusList({
   lease,
   onKeysLoaned,
   onKeysReturned,
+  refreshTrigger,
 }: {
   lease: Lease
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
+  refreshTrigger?: number
 }) {
   const { toast } = useToast()
   const [keys, setKeys] = useState<Key[]>([])
@@ -217,6 +219,14 @@ export function LeaseKeyStatusList({
       cancelled = true
     }
   }, [keys, tenantContactCodes])
+
+  // Refresh when external trigger changes (e.g., after receipt upload)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      refreshStatuses()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger])
 
   const refreshStatuses = async () => {
     // Refetch keys from backend to get updated key properties (e.g., disposed status)
