@@ -12,6 +12,7 @@ interface KeyLoansAccordionProps {
   lease: Lease
   refreshKey?: number
   onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
+  onReceiptUploaded?: () => void
   preloadedKeys?: Key[]
 }
 
@@ -19,6 +20,7 @@ export function KeyLoansAccordion({
   lease,
   refreshKey,
   onUnsignedLoansChange,
+  onReceiptUploaded,
   preloadedKeys,
 }: KeyLoansAccordionProps) {
   const {
@@ -203,6 +205,9 @@ export function KeyLoansAccordion({
 
       await receiptService.uploadFile(receiptId, file)
       await refresh()
+
+      // Notify parent that a receipt was uploaded (to refresh key statuses)
+      onReceiptUploaded?.()
     } catch (err: any) {
       setUploadError(err?.message ?? 'Kunde inte ladda upp filen')
     } finally {

@@ -1,4 +1,5 @@
 import { keyLoanService } from '@/services/api/keyLoanService'
+import { receiptService } from '@/services/api/receiptService'
 
 export type KeyLoanInfo = {
   isLoaned: boolean
@@ -6,6 +7,7 @@ export type KeyLoanInfo = {
   matchesCurrentTenant: boolean // Whether this loan matches the current tenant
   pickedUpAt?: string // When the key was picked up (for loaned keys)
   availableToNextTenantFrom?: string // When the key becomes available (for returned keys)
+  hasSignedLoanReceipt?: boolean // Whether the loan has a signed receipt uploaded
 }
 
 /**
@@ -46,6 +48,19 @@ export async function getKeyLoanStatus(
         loanToCheck.contact2?.trim() === currentContactCode2.trim())) ||
     false
 
+  // Check if the active loan has a signed receipt
+  let hasSignedLoanReceipt = false
+  if (activeLoan) {
+    try {
+      const receipts = await receiptService.getByKeyLoan(activeLoan.id)
+      const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+      hasSignedLoanReceipt = !!(loanReceipt && loanReceipt.fileId)
+    } catch {
+      // If we can't fetch receipts, assume no signed receipt
+      hasSignedLoanReceipt = false
+    }
+  }
+
   // Always return the contact code from the loan along with dates
   return {
     isLoaned,
@@ -53,5 +68,6 @@ export async function getKeyLoanStatus(
     matchesCurrentTenant,
     pickedUpAt: loanToCheck.pickedUpAt,
     availableToNextTenantFrom: loanToCheck.availableToNextTenantFrom,
+    hasSignedLoanReceipt,
   }
 }
