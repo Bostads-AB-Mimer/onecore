@@ -3,26 +3,24 @@ import { useQuery } from '@tanstack/react-query'
 
 const useWorkOrders = (
   id: string,
-  contextType: 'property' | 'tenant' | 'residence' | 'building'
+  contextType: 'property' | 'building' | 'residence'
 ) => {
   const getWorkOrdersFn = () => {
     switch (contextType) {
       case 'property':
         return workOrderService.getWorkOrderForProperty(id)
+      case 'building':
+        return workOrderService.getWorkOrdersForBuilding(id) // id = building code
       case 'residence':
         return workOrderService.getWorkOrdersForResidence(id)
-      case 'tenant':
-        // TODO: Implement getWorkOrdersForTenant in workOrderService
-        return Promise.resolve([])
-      case 'building':
-        // TODO: Implement getWorkOrdersForBuilding in workOrderService
-        return Promise.resolve([])
     }
   }
 
   // Only enable query for implemented context types
   const isImplemented =
-    contextType === 'property' || contextType === 'residence'
+    contextType === 'property' ||
+    contextType === 'building' ||
+    contextType === 'residence'
 
   const workOrdersQuery = useQuery({
     queryKey: ['workOrders', contextType, id],

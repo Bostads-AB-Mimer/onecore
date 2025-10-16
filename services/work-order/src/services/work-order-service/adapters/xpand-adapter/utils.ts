@@ -96,7 +96,7 @@ export function transformXpandDbWorkOrder(
       Priority: dbWorkOrder.priority,
       Registered: new Date(dbWorkOrder.createdAt),
       DueDate: dbWorkOrder.expiresAt,
-      RentalObjectCode: dbWorkOrder.residenceId,
+      RentalObjectCode: dbWorkOrder.residenceId ?? '', // Fallback on empty string - some entries have null residenceId when fetching on building id for example
       Status: xpandStatusToString(dbWorkOrder.status),
     }
   } catch (error) {

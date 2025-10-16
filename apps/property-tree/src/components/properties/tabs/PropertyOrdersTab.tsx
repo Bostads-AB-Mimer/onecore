@@ -12,7 +12,7 @@ export const PropertyOrdersTab = ({
   // Validate that property code exists
   if (!propertyDetail.code) {
     return (
-      <TabLayout title="Ärenden för fastighet" showCard={true}>
+      <TabLayout title="Ärenden för fastighet" showCard={false}>
         <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
           Fastighetskod saknas. Kunde inte hämta ärenden.
         </div>
@@ -21,7 +21,7 @@ export const PropertyOrdersTab = ({
   }
 
   return (
-    <TabLayout title="Ärenden för fastighet" showCard={true}>
+    <TabLayout title="Ärenden för fastighet" showCard={false}>
       <WorkOrdersManagement contextType="property" id={propertyDetail.code} />
     </TabLayout>
   )

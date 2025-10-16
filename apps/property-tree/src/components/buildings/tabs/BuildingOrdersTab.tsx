@@ -1,7 +1,6 @@
-//import { OrdersManagement } from '@/components/residence/OrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
-import { MessageSquare } from 'lucide-react'
 import type { Building } from '@/services/types'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 
 interface BuildingOrdersTabProps {
   building: Building
@@ -9,11 +8,8 @@ interface BuildingOrdersTabProps {
 
 export const BuildingOrdersTab = ({ building }: BuildingOrdersTabProps) => {
   return (
-    <TabLayout title="Ärenden för byggnad" showCard={true}>
-      <></>
-      {/*
-      <OrdersManagement contextType="building" residenceId={building.id} />
-      */}
+    <TabLayout title="Ärenden för byggnad" showCard={false}>
+      <WorkOrdersManagement contextType="building" id={building.code} />
     </TabLayout>
   )
 }

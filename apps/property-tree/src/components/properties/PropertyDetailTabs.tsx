@@ -73,15 +73,11 @@ export const PropertyDetailTabs = ({
 
       {features.showPropertyStatistics && (
         <TabsContent value="statistics">
-          <FeatureGatedContent
-            isEnabled={features.showPropertyStatistics}
-            fallbackMessage="För att se fastighetssammanställning, aktivera funktionen i inställningarna."
-          >
-            <PropertyStatisticsTab property={propertyDetail} />
-          </FeatureGatedContent>
+          <PropertyStatisticsTab property={propertyDetail} />
         </TabsContent>
       )}
 
+      {/*
       {features.showPropertyDocuments && (
         <TabsContent value="documents">
           <FeatureGatedContent
@@ -93,7 +89,7 @@ export const PropertyDetailTabs = ({
         </TabsContent>
       )}
 
-      {/*
+
       {features.showPropertyPlanning && (
         <TabsContent value="planning">
           <FeatureGatedContent
@@ -108,12 +104,7 @@ export const PropertyDetailTabs = ({
 
       {features.showPropertyBuildings && (
         <TabsContent value="buildings">
-          <FeatureGatedContent
-            isEnabled={features.showPropertyBuildings}
-            fallbackMessage="För att se byggnader, aktivera funktionen i inställningarna."
-          >
-            <PropertyBuildingsTab buildings={propertyDetail.buildings} />
-          </FeatureGatedContent>
+          <PropertyBuildingsTab buildings={propertyDetail.buildings} />
         </TabsContent>
       )}
 
@@ -134,12 +125,7 @@ export const PropertyDetailTabs = ({
 
       {features.showPropertyOrders && (
         <TabsContent value="orders">
-          <FeatureGatedContent
-            isEnabled={features.showPropertyOrders}
-            fallbackMessage="För att se ärenden, aktivera funktionen i inställningarna."
-          >
-            <PropertyOrdersTab propertyDetail={propertyDetail} />
-          </FeatureGatedContent>
+          <PropertyOrdersTab propertyDetail={propertyDetail} />
         </TabsContent>
       )}
 
