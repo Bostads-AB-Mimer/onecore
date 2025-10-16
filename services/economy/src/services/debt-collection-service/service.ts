@@ -321,6 +321,7 @@ export const addRoundoffToFirstRow = (
 export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
   const groups: RentInvoiceRow[][] = []
 
+  // We should rewrite this when we have time
   let i = 0
   while (i < rows.length) {
     const row = rows[i]
