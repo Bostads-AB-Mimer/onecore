@@ -9,6 +9,9 @@ export default function KeyLoan() {
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
   const [tenantContracts, setTenantContracts] = useState<Lease[]>([])
   const [showTenantCard, setShowTenantCard] = useState<boolean>(true)
+  const [searchType, setSearchType] = useState<
+    'pnr' | 'object' | 'contactCode' | null
+  >(null)
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
   const scrollToResults = () =>
@@ -26,6 +29,7 @@ export default function KeyLoan() {
     setSelectedTenant(tenant)
     setTenantContracts(contracts)
     setShowTenantCard(true)
+    setSearchType(type)
 
     // Update URL params based on search type
     if (type === 'pnr') {
@@ -42,6 +46,7 @@ export default function KeyLoan() {
   const handleClearSearch = () => {
     setSelectedTenant(null)
     setTenantContracts([])
+    setSearchType(null)
     setSearchParams({})
   }
 
@@ -59,6 +64,7 @@ export default function KeyLoan() {
             contracts={tenantContracts}
             onClearSearch={handleClearSearch}
             showTenantCard={showTenantCard}
+            searchType={searchType}
           />
         </div>
       )}
