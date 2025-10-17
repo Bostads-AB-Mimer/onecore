@@ -4,10 +4,12 @@ import { GET } from './core/base-api'
 
 function isMaculated(lease: Lease): boolean {
   const n = (lease.leaseNumber ?? '').trim()
-  if (n && /[Mm]$/.test(n)) return true
+  // Check if lease number contains 'M' or 'm' (e.g., "01M", "02M2", "07M")
+  if (n && /[Mm]/.test(n)) return true
 
   const idTail = (lease.leaseId ?? '').split('/').pop() ?? ''
-  if (idTail && /[Mm]$/.test(idTail.trim())) return true
+  // Check if lease ID tail contains 'M' or 'm'
+  if (idTail && /[Mm]/.test(idTail.trim())) return true
 
   return false
 }
