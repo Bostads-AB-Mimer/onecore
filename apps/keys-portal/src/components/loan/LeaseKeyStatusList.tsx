@@ -448,10 +448,11 @@ export function LeaseKeyStatusList({
                 key.loanInfo.isLoaned && key.loanInfo.matchesCurrentTenant
               const isSelectable = canRent || canReturn
 
-              const statusColor = key.loanInfo.isLoaned
-                ? 'text-destructive'
-                : canRent
-                  ? 'text-green-600 dark:text-green-400'
+              // Use isAvailable flag for color: green if available, red if blocked, muted otherwise
+              const statusColor = key.isAvailable
+                ? 'text-green-600 dark:text-green-400'
+                : key.loanInfo.isLoaned
+                  ? 'text-destructive'
                   : 'text-muted-foreground'
 
               // Check if this key has an available date that can be edited
