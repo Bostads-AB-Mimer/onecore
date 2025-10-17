@@ -86,12 +86,7 @@ export async function checkActiveKeyLoans(
     let query = dbConnection(TABLE)
       .select('id')
       .whereNotNull('pickedUpAt') // Only consider activated loans (not pending)
-      .where((builder) => {
-        // Active if: not returned yet OR not yet available to next tenant
-        builder
-          .whereNull('returnedAt')
-          .orWhere('availableToNextTenantFrom', '>', dbConnection.fn.now())
-      })
+      .whereNull('returnedAt') // Active if: not returned yet
       .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
 
     // Exclude specific loan ID if provided (for update scenarios)
