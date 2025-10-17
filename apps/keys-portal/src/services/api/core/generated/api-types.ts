@@ -4744,6 +4744,8 @@ export interface components {
       activeLoanAvailableFrom: string | null;
       /** Format: date-time */
       prevLoanAvailableFrom: string | null;
+      prevLoanContact: string | null;
+      prevLoanContact2: string | null;
     };
     KeyLoan: {
       /** Format: uuid */
