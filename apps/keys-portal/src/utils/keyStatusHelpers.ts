@@ -267,7 +267,7 @@ export function getKeyDisplayStatus(
         : undefined
 
       return {
-        status: `Återlämnad av ${key.activeLoanContact ?? 'okänd'}`,
+        status: `Återlämnad av ${key.prevLoanContact ?? 'okänd'}`,
         date: dateString,
         isAvailable,
       }
