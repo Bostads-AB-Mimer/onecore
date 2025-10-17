@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Key, Lease, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
@@ -157,6 +158,7 @@ export function LeaseKeyStatusList({
   refreshTrigger?: number
 }) {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [keys, setKeys] = useState<Key[]>([])
   const [keysWithStatus, setKeysWithStatus] = useState<KeyWithStatus[]>([])
   const [loading, setLoading] = useState(true)
@@ -245,6 +247,12 @@ export function LeaseKeyStatusList({
   const handleKeyCreated = async (newKey: Key) => {
     setKeys((prev) => [...prev, newKey])
     setShowAddKeyForm(false)
+  }
+
+  const handleEditKey = (keyId: string) => {
+    navigate(
+      `/Keys?rentalObjectCode=${lease.rentalPropertyId}&disposed=false&editKeyId=${keyId}`
+    )
   }
 
   const onRent = async (keyIds: string[]) => {
@@ -482,9 +490,12 @@ export function LeaseKeyStatusList({
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <span className="font-medium text-sm">
+                        <button
+                          onClick={() => handleEditKey(key.id)}
+                          className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        >
                           {key.keyName}
-                        </span>
+                        </button>
                         <span className="text-xs text-muted-foreground">
                           {KeyTypeLabels[key.keyType as KeyType]}
                         </span>

@@ -25,6 +25,9 @@ const Index = () => {
   const selectedDisposedFilter = pagination.searchParams.get('disposed') || null
   const createdAtAfter = pagination.searchParams.get('createdAtAfter') || null
   const createdAtBefore = pagination.searchParams.get('createdAtBefore') || null
+  const rentalObjectCode =
+    pagination.searchParams.get('rentalObjectCode') || null
+  const editKeyId = pagination.searchParams.get('editKeyId') || null
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
@@ -49,6 +52,9 @@ const Index = () => {
         }
         if (selectedDisposedFilter) {
           searchParams.disposed = selectedDisposedFilter
+        }
+        if (rentalObjectCode) {
+          searchParams.rentalObjectCode = rentalObjectCode
         }
 
         // Add date filters
@@ -112,6 +118,7 @@ const Index = () => {
       searchQuery,
       selectedTypeFilter,
       selectedDisposedFilter,
+      rentalObjectCode,
       createdAtAfter,
       createdAtBefore,
       toast,
@@ -129,6 +136,7 @@ const Index = () => {
     searchQuery,
     selectedTypeFilter,
     selectedDisposedFilter,
+    rentalObjectCode,
     createdAtAfter,
     createdAtBefore,
     // fetchKeys intentionally omitted to prevent infinite loop
@@ -138,6 +146,19 @@ const Index = () => {
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  // Handle auto-open edit form when editKeyId is in URL
+  useEffect(() => {
+    if (editKeyId && keys.length > 0 && !editingKey) {
+      const keyToEdit = keys.find((k) => k.id === editKeyId)
+
+      if (keyToEdit) {
+        handleEdit(keyToEdit)
+        // Clear the editKeyId from URL after handling
+        pagination.updateUrlParams({ editKeyId: null })
+      }
+    }
+  }, [editKeyId, keys, editingKey, pagination])
 
   // Filter update handlers
   const handleSearchChange = useCallback(
@@ -188,6 +209,13 @@ const Index = () => {
   const handleEdit = (key: Key) => {
     setEditingKey(key)
     setShowAddForm(true)
+    // Scroll to the edit form after a brief delay to ensure it's rendered
+    setTimeout(() => {
+      document.getElementById('edit-key-form')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 100)
   }
 
   const handleSave = async (
@@ -322,11 +350,13 @@ const Index = () => {
         />
 
         {showAddForm && (
-          <AddKeyForm
-            onSave={handleSave}
-            onCancel={handleCancel}
-            editingKey={editingKey}
-          />
+          <div id="edit-key-form">
+            <AddKeyForm
+              onSave={handleSave}
+              onCancel={handleCancel}
+              editingKey={editingKey}
+            />
+          </div>
         )}
 
         {loading && (
