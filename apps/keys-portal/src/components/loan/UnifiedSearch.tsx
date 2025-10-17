@@ -46,7 +46,11 @@ const isObjectId = (value: string) => {
 function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
   const isActive = (l: Lease) =>
     (l.status ?? '').toString().toLowerCase() === 'active'
-  const primaryLease = contracts.find(isActive) ?? contracts[0]
+
+  // For object searches, only return a tenant if there's an active lease
+  const primaryLease = contracts.find(isActive)
+  if (!primaryLease) return null
+
   const t = primaryLease?.tenants?.[0]
   return (t as Tenant) ?? null
 }
