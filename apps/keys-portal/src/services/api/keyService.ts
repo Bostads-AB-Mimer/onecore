@@ -1,5 +1,6 @@
 import type {
   Key,
+  KeyWithLoanStatus,
   KeySystem,
   CreateKeyRequest,
   UpdateKeyRequest,
@@ -88,6 +89,19 @@ export const keyService = {
     )
     if (error) throw error
     return (data?.content ?? []) as Key[]
+  },
+
+  async getKeysWithLoanStatus(
+    rentalObjectCode: string
+  ): Promise<KeyWithLoanStatus[]> {
+    const { data, error } = await GET(
+      '/keys/with-loan-status/{rentalObjectCode}',
+      {
+        params: { path: { rentalObjectCode } },
+      }
+    )
+    if (error) throw error
+    return (data?.content ?? []) as KeyWithLoanStatus[]
   },
 
   async bulkUpdateFlex(

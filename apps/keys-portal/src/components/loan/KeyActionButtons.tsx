@@ -38,21 +38,21 @@ export function KeyActionButtons({
     .filter((k): k is KeyWithStatus => k !== undefined)
 
   const rentableKeys = selectedKeysData.filter(
-    (k) => !k.loanInfo.isLoaned && leaseIsNotPast
+    (k) => !k.activeLoanId && leaseIsNotPast
   )
 
   const returnableKeys = selectedKeysData.filter(
-    (k) => k.loanInfo.isLoaned && k.loanInfo.matchesCurrentTenant
+    (k) => !!k.activeLoanId && k.matchesCurrentTenant
   )
 
   // All available keys (excluding disposed keys)
   const allAvailableKeys = keysWithStatus.filter(
-    (k) => !k.loanInfo.isLoaned && leaseIsNotPast && !k.disposed
+    (k) => !k.activeLoanId && leaseIsNotPast && !k.disposed
   )
 
   // All keys rented by this tenant
   const allRentedByTenant = keysWithStatus.filter(
-    (k) => k.loanInfo.isLoaned && k.loanInfo.matchesCurrentTenant
+    (k) => !!k.activeLoanId && k.matchesCurrentTenant
   )
 
   const newFlexKeys = selectedKeysData.filter((k) =>

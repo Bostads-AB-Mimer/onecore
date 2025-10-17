@@ -16,7 +16,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
-import type { Lease, Key, KeyType } from '@/services/types'
+import type { Lease, KeyWithLoanStatus, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { KeyLoansAccordion } from './KeyLoansAccordion'
@@ -65,8 +65,10 @@ export function ContractCard({
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
-  const [keys, setKeys] = useState<Key[]>([])
-  const [allKeysForLoans, setAllKeysForLoans] = useState<Key[]>([])
+  const [keys, setKeys] = useState<KeyWithLoanStatus[]>([])
+  const [allKeysForLoans, setAllKeysForLoans] = useState<KeyWithLoanStatus[]>(
+    []
+  )
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
@@ -136,41 +138,15 @@ export function ContractCard({
     let cancelled = false
     async function loadKeys() {
       try {
-        const list = await keyService.getKeysByRentalObjectCode(
+        // Single optimized call - no more N+1!
+        const keysWithStatus = await keyService.getKeysWithLoanStatus(
           lease.rentalPropertyId
         )
 
-        // Always set all keys for loan history (including disposed keys)
-        if (!cancelled) setAllKeysForLoans(list)
-
-        // If the keys section is not open, just show non-disposed keys (fast path)
-        if (!open) {
-          const visibleKeys = list.filter((key) => !key.disposed)
-          if (!cancelled) setKeys(visibleKeys)
-        } else {
-          // If keys section is open, check disposed keys for active loans (slow path)
-          const { keyLoanService } = await import(
-            '@/services/api/keyLoanService'
-          )
-
-          const visibleKeysPromises = list.map(async (key) => {
-            // If key is not disposed, always show it
-            if (!key.disposed) return key
-
-            // If key is disposed, check if it has an active loan
-            const loans = await keyLoanService.getByKeyId(key.id)
-            const hasActiveLoan = loans.some((loan) => !loan.returnedAt)
-
-            // Only show disposed keys if they have an active loan
-            return hasActiveLoan ? key : null
-          })
-
-          const visibleKeys = await Promise.all(visibleKeysPromises)
-          const filteredKeys = visibleKeys.filter(
-            (key): key is Key => key !== null
-          )
-
-          if (!cancelled) setKeys(filteredKeys)
+        if (!cancelled) {
+          // Set all keys for loan history (backend already filters: non-disposed + disposed with active loans)
+          setAllKeysForLoans(keysWithStatus)
+          setKeys(keysWithStatus)
         }
       } catch (err) {
         console.error('Failed to load keys:', err)

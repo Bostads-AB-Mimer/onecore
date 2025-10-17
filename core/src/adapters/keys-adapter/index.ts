@@ -6,6 +6,7 @@ import { AdapterResult } from '../types'
 
 // ---- Import types from @onecore/types ---------------------------------------
 type Key = keys.v1.Key
+type KeyWithLoanStatus = keys.v1.KeyWithLoanStatus
 type KeyLoan = keys.v1.KeyLoan
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
@@ -173,6 +174,15 @@ export const KeysApi = {
   ): Promise<AdapterResult<Key[], CommonErr>> => {
     const r = await getJSON<{ content: Key[] }>(
       `${BASE}/keys/by-rental-object/${rentalObjectCode}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getWithLoanStatus: async (
+    rentalObjectCode: string
+  ): Promise<AdapterResult<KeyWithLoanStatus[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyWithLoanStatus[] }>(
+      `${BASE}/keys/with-loan-status/${rentalObjectCode}`
     )
     return r.ok ? ok(r.data.content) : r
   },

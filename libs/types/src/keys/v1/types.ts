@@ -11,6 +11,7 @@ import {
   LogSchema,
   KeyNoteSchema,
   ReceiptSchema,
+  KeyWithLoanStatusSchema,
   // Request schemas
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
@@ -38,6 +39,7 @@ export type Key = z.infer<typeof KeySchema>
 export type KeyLoan = z.infer<typeof KeyLoanSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>
 export type Log = z.infer<typeof LogSchema>
+export type KeyWithLoanStatus = z.infer<typeof KeyWithLoanStatusSchema>
 
 // Request types for keys
 export type CreateKeyRequest = z.infer<typeof CreateKeyRequestSchema>
