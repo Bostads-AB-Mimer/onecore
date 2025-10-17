@@ -6,7 +6,7 @@ export type KeyLoanInfo = {
   contact: string | null // The contact code from the loan
   matchesCurrentTenant: boolean // Whether this loan matches the current tenant
   pickedUpAt?: string // When the key was picked up (for loaned keys)
-  availableToNextTenantFrom?: string // When the key becomes available (for returned keys)
+  availableToNextTenantFrom?: string // When the key becomes available (from current loan if returned, or from previous loan if current is not picked up)
   hasSignedLoanReceipt?: boolean // Whether the loan has a signed receipt uploaded
 }
 
@@ -61,13 +61,27 @@ export async function getKeyLoanStatus(
     }
   }
 
+  // Determine the availableToNextTenantFrom date
+  // If there's an active loan not yet picked up, get the date from the previous loan
+  // Otherwise, use the date from the current loan
+  let availableFromDate = loanToCheck.availableToNextTenantFrom
+  if (activeLoan && !activeLoan.pickedUpAt) {
+    // Active loan not picked up - find the previous returned loan
+    const previousLoan = keyLoans.find(
+      (loan) => loan.id !== activeLoan.id && loan.returnedAt
+    )
+    if (previousLoan) {
+      availableFromDate = previousLoan.availableToNextTenantFrom
+    }
+  }
+
   // Always return the contact code from the loan along with dates
   return {
     isLoaned,
     contact: loanToCheck.contact ?? null,
     matchesCurrentTenant,
     pickedUpAt: loanToCheck.pickedUpAt,
-    availableToNextTenantFrom: loanToCheck.availableToNextTenantFrom,
+    availableToNextTenantFrom: availableFromDate,
     hasSignedLoanReceipt,
   }
 }
