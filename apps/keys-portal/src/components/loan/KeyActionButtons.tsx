@@ -6,7 +6,6 @@ import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
 import { isNewFlexKey } from '@/utils/keyStatusHelpers'
 import { FlexMenu } from './FlexMenu'
 import { IncomingFlexMenu } from './IncomingFlexMenu'
-import { DisposeKeysDialog } from './DisposeKeysDialog'
 
 type Props = {
   selectedKeys: string[]
@@ -33,7 +32,6 @@ export function KeyActionButtons({
 }: Props) {
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
   const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
-  const [disposeDialogOpen, setDisposeDialogOpen] = useState(false)
 
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
@@ -117,7 +115,7 @@ export function KeyActionButtons({
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => setDisposeDialogOpen(true)}
+                onClick={() => onDispose(selectedKeys)}
                 disabled={isProcessing}
                 className="flex items-center gap-1"
               >
@@ -164,13 +162,6 @@ export function KeyActionButtons({
         selectedKeys={newFlexKeys}
         allKeys={allKeys || keysWithStatus}
         onSuccess={onRefresh}
-      />
-
-      <DisposeKeysDialog
-        open={disposeDialogOpen}
-        onOpenChange={setDisposeDialogOpen}
-        selectedKeys={selectedKeysData}
-        onConfirm={() => onDispose?.(selectedKeys)}
       />
     </>
   )
