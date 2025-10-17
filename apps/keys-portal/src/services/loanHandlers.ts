@@ -253,3 +253,49 @@ export async function handleDisposeKeys({
     }
   }
 }
+
+export type UndoDisposeKeysParams = {
+  keyIds: string[]
+}
+
+export type UndoDisposeKeysResult = {
+  success: boolean
+  title: string
+  message?: string
+}
+
+/**
+ * Handler for undoing key disposal
+ * @param keyIds - Array of key IDs to restore
+ * @returns Result with success status
+ */
+export async function handleUndoDisposeKeys({
+  keyIds,
+}: UndoDisposeKeysParams): Promise<UndoDisposeKeysResult> {
+  if (keyIds.length === 0) {
+    return {
+      success: false,
+      title: 'Fel',
+      message: 'Inga nycklar valda',
+    }
+  }
+
+  try {
+    // Update each key to set disposed = false
+    await Promise.all(
+      keyIds.map((keyId) => keyService.updateKey(keyId, { disposed: false }))
+    )
+
+    return {
+      success: true,
+      title: 'Ångrade kassering',
+      message: `${keyIds.length} ${keyIds.length === 1 ? 'nyckel har' : 'nycklar har'} återställts.`,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      title: 'Fel',
+      message: err?.message || 'Kunde inte återställa nycklar.',
+    }
+  }
+}
