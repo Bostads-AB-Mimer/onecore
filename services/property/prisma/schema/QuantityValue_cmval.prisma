@@ -8,6 +8,10 @@ model QuantityValue {
 
   quantityType    QuantityType @relation(fields: [quantityTypeId], references: [id])
 
+  // to be able to access quantity values from property object
+  propertyObject PropertyObject @relation("PropertyObjectToQuantityValue", fields: [code], references: [id], map: "fk_quantity_value_property_object")
+
+
   @@unique([quantityTypeId, code])
   @@index([quantityTypeId])
   @@index([code])

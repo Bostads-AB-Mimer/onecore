@@ -24,6 +24,7 @@ model PropertyObject {
   propertyArea       PropertyArea[] //@relation("PropertyObjectToPropertyArea")
   property           Property? //@relation("PropertyObjectToProperty") //todo: fix this relation
   rentalInformation  RentalInformation?  @relation("PropertyObjectToRentalInformation")
+  quantityValues     QuantityValue[]   @relation("PropertyObjectToQuantityValue")
 
   rentalObject RentalObject? //@relation("PropertyObjectToRentalObject")
   //company Company? @relation("PropertyObjectToCompany")
