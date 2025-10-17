@@ -1,5 +1,6 @@
 import { X, User, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
@@ -32,12 +33,14 @@ export function TenantInfo({
   contracts,
   onClearSearch,
   showTenantCard = true,
+  searchType = null,
 }: {
   tenant?: Tenant | null
   contracts: Lease[]
   onClearSearch: () => void
   /* hiding the tenant card for hyresobjekt flow */
   showTenantCard?: boolean
+  searchType?: 'pnr' | 'object' | 'contactCode' | null
 }) {
   // Get all tenants from the active lease for display
   const activeLease = useMemo(() => {
@@ -106,12 +109,41 @@ export function TenantInfo({
         </Button>
       </div>
 
+      {/* Show "No active tenant" message for object searches without active tenants */}
+      {searchType === 'object' &&
+        showTenantCard &&
+        tenantsToDisplay.length === 0 &&
+        activeContracts.length === 0 &&
+        upcomingContracts.length === 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Hyresgäst
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Ingen aktiv hyresgäst</p>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Show tenant card for PNR/contactCode searches, or object searches with active tenants */}
       {showTenantCard && tenantsToDisplay.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               Hyresgäst{tenantsToDisplay.length > 1 ? 'er' : ''}
+              {activeContracts.length === 0 &&
+                upcomingContracts.length === 0 && (
+                  <Badge
+                    variant="outline"
+                    className="ml-2 text-muted-foreground"
+                  >
+                    Ingen aktiv kontrakt
+                  </Badge>
+                )}
             </CardTitle>
           </CardHeader>
           <CardContent>
