@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Key, Lease, KeyType } from '@/services/types'
+import type { Lease, KeyWithLoanStatus, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,6 @@ import {
 import { ToastAction } from '@/components/ui/toast'
 import { keyService } from '@/services/api/keyService'
 import { keyLoanService } from '@/services/api/keyLoanService'
-import { getKeyLoanStatus } from '@/utils/keyLoanStatus'
 import {
   sortKeysByTypeAndSequence,
   computeKeyWithStatus,
@@ -159,7 +158,9 @@ export function LeaseKeyStatusList({
 }) {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const [keys, setKeys] = useState<Key[]>([])
+  const [keysWithLoanStatus, setKeysWithLoanStatus] = useState<
+    KeyWithLoanStatus[]
+  >([])
   const [keysWithStatus, setKeysWithStatus] = useState<KeyWithStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -186,21 +187,23 @@ export function LeaseKeyStatusList({
   const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
 
-  // Compute key status - extracted to reuse after loan/return operations
-  const computeKeyStatus = (key: Key): Promise<KeyWithStatus> => {
-    return computeKeyWithStatus(key, keys, tenantContactCodes, getKeyLoanStatus)
-  }
-
-  // Fetch keys for the rental object
+  // Fetch keys with loan status (single optimized call)
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       try {
-        const list = await keyService.searchKeys({
-          rentalObjectCode: lease.rentalPropertyId,
-        })
-        if (!cancelled) setKeys(list.content)
+        const keysData = await keyService.getKeysWithLoanStatus(
+          lease.rentalPropertyId
+        )
+        if (!cancelled) {
+          setKeysWithLoanStatus(keysData)
+          // Compute statuses synchronously
+          const withStatus = keysData.map((key) =>
+            computeKeyWithStatus(key, keysData, tenantContactCodes)
+          )
+          setKeysWithStatus(withStatus)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -208,24 +211,7 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId])
-
-  useEffect(() => {
-    if (keys.length === 0) {
-      setKeysWithStatus([])
-      return
-    }
-
-    let cancelled = false
-    ;(async () => {
-      const results = await Promise.all(keys.map(computeKeyStatus))
-      if (!cancelled) setKeysWithStatus(results)
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [keys, tenantContactCodes])
+  }, [lease.rentalPropertyId, tenantContactCodes])
 
   // Refresh when external trigger changes (e.g., after receipt upload)
   useEffect(() => {
@@ -237,15 +223,20 @@ export function LeaseKeyStatusList({
 
   const refreshStatuses = async () => {
     // Refetch keys from backend to get updated key properties (e.g., disposed status)
-    const list = await keyService.searchKeys({
-      rentalObjectCode: lease.rentalPropertyId,
-    })
-    setKeys(list.content)
-    // The useEffect will automatically recompute statuses when keys changes
+    const keysData = await keyService.getKeysWithLoanStatus(
+      lease.rentalPropertyId
+    )
+    setKeysWithLoanStatus(keysData)
+    // Recompute statuses synchronously
+    const withStatus = keysData.map((key) =>
+      computeKeyWithStatus(key, keysData, tenantContactCodes)
+    )
+    setKeysWithStatus(withStatus)
   }
 
-  const handleKeyCreated = async (newKey: Key) => {
-    setKeys((prev) => [...prev, newKey])
+  const handleKeyCreated = async (newKey: KeyWithLoanStatus) => {
+    // Refresh to get the key with loan status
+    await refreshStatuses()
     setShowAddKeyForm(false)
   }
 
@@ -426,10 +417,7 @@ export function LeaseKeyStatusList({
               onDispose={onDispose}
               onRefresh={async () => {
                 // Refresh keys and statuses after flex keys are created
-                const list = await keyService.searchKeys({
-                  rentalObjectCode: lease.rentalPropertyId,
-                })
-                setKeys(list.content)
+                await refreshStatuses()
               }}
             />
             {!showAddKeyForm && (
@@ -440,7 +428,7 @@ export function LeaseKeyStatusList({
           {/* Add key form */}
           {showAddKeyForm && (
             <AddKeyForm
-              keys={keys}
+              keys={keysWithLoanStatus}
               selectedKeyIds={selectedKeys}
               rentalObjectCode={lease.rentalPropertyId}
               onKeyCreated={handleKeyCreated}
@@ -451,22 +439,24 @@ export function LeaseKeyStatusList({
           {/* Keys list */}
           <div className="space-y-1">
             {sortedKeys.map((key, index) => {
-              const canRent = !key.loanInfo.isLoaned && leaseIsNotPast
-              const canReturn =
-                key.loanInfo.isLoaned && key.loanInfo.matchesCurrentTenant
+              const isLoaned = !!key.activeLoanId
+              const canRent = !isLoaned && leaseIsNotPast
+              const canReturn = isLoaned && key.matchesCurrentTenant
               const isSelectable = canRent || canReturn
 
               // Use isAvailable flag for color: green if available, red if blocked, muted otherwise
               const statusColor = key.isAvailable
                 ? 'text-green-600 dark:text-green-400'
-                : key.loanInfo.isLoaned
+                : isLoaned
                   ? 'text-destructive'
                   : 'text-muted-foreground'
 
               // Check if this key has an available date that can be edited
+              const availabilityDate = key.activeLoanPickedUpAt
+                ? key.activeLoanAvailableFrom
+                : key.prevLoanAvailableFrom
               const hasAvailableDate =
-                !key.loanInfo.isLoaned &&
-                key.loanInfo.availableToNextTenantFrom !== undefined
+                !isLoaned && availabilityDate !== undefined
 
               return (
                 <div
@@ -534,9 +524,7 @@ export function LeaseKeyStatusList({
                           <div className="ml-1">
                             <EditableAvailableDate
                               keyId={key.id}
-                              currentDate={
-                                key.loanInfo.availableToNextTenantFrom
-                              }
+                              currentDate={availabilityDate}
                               onUpdate={refreshStatuses}
                             />
                           </div>
@@ -567,7 +555,9 @@ export function LeaseKeyStatusList({
       <KeyLoanTransferDialog
         open={showTransferDialog}
         onOpenChange={setShowTransferDialog}
-        newKeys={keys.filter((k) => pendingLoanKeyIds.includes(k.id))}
+        newKeys={keysWithLoanStatus.filter((k) =>
+          pendingLoanKeyIds.includes(k.id)
+        )}
         existingLoans={existingLoansForTransfer}
         contact={tenantContactCodes[0]}
         contact2={tenantContactCodes[1]}
@@ -589,7 +579,7 @@ export function LeaseKeyStatusList({
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
         keyIds={pendingReturnKeyIds}
-        allKeys={keys}
+        allKeys={keysWithLoanStatus}
         lease={lease}
         onSuccess={async () => {
           // Refresh statuses and clear selection

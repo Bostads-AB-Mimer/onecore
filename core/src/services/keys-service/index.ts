@@ -14,6 +14,7 @@ import { registerSchema } from '../../utils/openapi'
 
 const {
   KeySchema,
+  KeyWithLoanStatusSchema,
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
@@ -69,6 +70,7 @@ const {
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('Key', KeySchema)
+  registerSchema('KeyWithLoanStatus', KeyWithLoanStatusSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('KeySystem', KeySystemSchema)
   registerSchema('Log', LogSchema)
@@ -936,6 +938,63 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching keys by rental object code'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /keys/with-loan-status/{rentalObjectCode}:
+   *   get:
+   *     summary: Get keys with active loan status enriched
+   *     description: |
+   *       Returns all relevant keys for a rental object with their active loan information
+   *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
+   *
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to filter keys by
+   *     responses:
+   *       200:
+   *         description: List of keys with enriched active loan data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyWithLoanStatus'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeysApi.getWithLoanStatus(ctx.params.rentalObjectCode)
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching keys with loan status'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

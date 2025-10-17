@@ -208,3 +208,15 @@ export const BulkUpdateFlexRequestSchema = z.object({
   rentalObjectCode: z.string(),
   flexNumber: z.number().int().min(1).max(3),
 })
+
+// Key with enriched active loan status (for optimized endpoint)
+export const KeyWithLoanStatusSchema = KeySchema.extend({
+  // Active loan fields (null if no active loan)
+  activeLoanId: z.string().uuid().nullable(),
+  activeLoanContact: z.string().nullable(),
+  activeLoanContact2: z.string().nullable(),
+  activeLoanPickedUpAt: z.coerce.date().nullable(),
+  activeLoanAvailableFrom: z.coerce.date().nullable(),
+  // Previous loan availability (for display when active loan not picked up)
+  prevLoanAvailableFrom: z.coerce.date().nullable(),
+})
