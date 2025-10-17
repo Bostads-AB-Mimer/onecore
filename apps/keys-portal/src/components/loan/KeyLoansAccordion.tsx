@@ -321,7 +321,7 @@ export function KeyLoansAccordion({
               {returnedLoading ? (
                 <>
                   <Clock className="h-3.5 w-3.5 animate-spin" />
-                  Laddar kvitton...
+                  Laddar kvittenser...
                 </>
               ) : showReturnedLoans ? (
                 <>

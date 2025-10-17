@@ -118,8 +118,10 @@ export function KeyLoanCard({
             <div className="flex items-start gap-1.5">
               <AlertCircle className="h-2.5 w-2.5 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="text-[10px] text-yellow-800 dark:text-yellow-200">
-                <p className="font-semibold">Utlåningskvitto ej signerat</p>
-                <p className="mt-0.5">Kvittot måste signeras och laddas upp.</p>
+                <p className="font-semibold">Utlåningskvittens ej signerat</p>
+                <p className="mt-0.5">
+                  Kvittensen måste signeras och laddas upp.
+                </p>
               </div>
             </div>
             <div className="flex gap-1">

@@ -26,7 +26,7 @@ export async function openPdfInNewTab(
 
   // Show loading message while PDF is being generated
   win.document.write(
-    '<!doctype html><title>Kvitto</title><body>Förbereder kvitto…</body>'
+    '<!doctype html><title>Kvittens</title><body>Förbereder kvittens…</body>'
   )
   win.document.close()
 
