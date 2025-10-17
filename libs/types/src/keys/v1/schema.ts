@@ -217,6 +217,8 @@ export const KeyWithLoanStatusSchema = KeySchema.extend({
   activeLoanContact2: z.string().nullable(),
   activeLoanPickedUpAt: z.coerce.date().nullable(),
   activeLoanAvailableFrom: z.coerce.date().nullable(),
-  // Previous loan availability (for display when active loan not picked up)
+  // Previous loan data (for returned keys - to show who returned it)
   prevLoanAvailableFrom: z.coerce.date().nullable(),
+  prevLoanContact: z.string().nullable(),
+  prevLoanContact2: z.string().nullable(),
 })
