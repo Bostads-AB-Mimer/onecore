@@ -57,8 +57,8 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
   // Title
   const title =
     receiptType === 'loan'
-      ? 'NYCKELUTLÅNING - KVITTO'
-      : 'NYCKELÅTERLÄMNING - KVITTO'
+      ? 'NYCKELUTLÅNING - KVITTENS'
+      : 'NYCKELÅTERLÄMNING - KVITTENS'
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
@@ -93,7 +93,7 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
   const metaY2 = metaY1 + 7
   const metaY3 = metaY2 + 7
   const when = new Date()
-  doc.text(`Kvittonummer: ${receiptNumber}`, MARGIN_X, metaY1)
+  doc.text(`Kvittensnummer: ${receiptNumber}`, MARGIN_X, metaY1)
   doc.text(
     `Datum: ${format(when, 'dd MMMM yyyy', { locale: sv })}`,
     MARGIN_X,
