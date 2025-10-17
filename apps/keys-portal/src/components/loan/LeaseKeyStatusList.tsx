@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { ToastAction } from '@/components/ui/toast'
 import { keyService } from '@/services/api/keyService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyLoanStatus } from '@/utils/keyLoanStatus'
@@ -21,7 +22,11 @@ import {
   type KeyWithStatus,
 } from '@/utils/keyStatusHelpers'
 import { useToast } from '@/hooks/use-toast'
-import { handleLoanKeys, handleDisposeKeys } from '@/services/loanHandlers'
+import {
+  handleLoanKeys,
+  handleDisposeKeys,
+  handleUndoDisposeKeys,
+} from '@/services/loanHandlers'
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { KeyActionButtons } from './KeyActionButtons'
@@ -301,13 +306,46 @@ export function LeaseKeyStatusList({
     if (result.success) {
       await refreshStatuses()
       setSelectedKeys([])
-    }
 
-    toast({
-      title: result.title,
-      description: result.message,
-      variant: result.success ? 'default' : 'destructive',
-    })
+      // Show toast with undo action - custom styling for prominence
+      toast({
+        title: result.title,
+        description: result.message,
+        duration: 10000, // 10 seconds
+        variant: 'destructive', // Make it stand out more
+        className: '!w-full !p-4 !shadow-xl',
+        action: (
+          <ToastAction
+            altText="Ångra kasseringen"
+            className="!px-3 !text-sm !font-semibold !opacity-100"
+            onClick={async () => {
+              // Undo the disposal
+              const undoResult = await handleUndoDisposeKeys({ keyIds })
+              await refreshStatuses()
+
+              // Show undo confirmation toast and manually dismiss after 3 seconds
+              const undoToast = toast({
+                title: undoResult.title,
+                description: undoResult.message,
+              })
+
+              setTimeout(() => {
+                undoToast.dismiss()
+              }, 3000)
+            }}
+          >
+            Ångra
+          </ToastAction>
+        ),
+      })
+    } else {
+      // Show error toast without undo action
+      toast({
+        title: result.title,
+        description: result.message,
+        variant: 'destructive',
+      })
+    }
 
     setIsProcessing(false)
   }
