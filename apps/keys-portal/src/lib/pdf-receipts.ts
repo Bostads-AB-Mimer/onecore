@@ -148,24 +148,6 @@ const addTenantInfo = async (
     }
   })
 
-  // Display rental property address
-  try {
-    const address = await rentalObjectSearchService.getAddressByRentalId(
-      lease.rentalPropertyId
-    )
-    if (address && address !== 'Okänd adress') {
-      doc.text(`Adress: ${address}`, leftCol, leftY)
-      leftY += 7
-    } else {
-      doc.text(`Adress: n/a`, leftCol, leftY)
-      leftY += 7
-    }
-  } catch (error) {
-    console.warn('Failed to fetch address for PDF receipt:', error)
-    doc.text(`Adress: n/a`, leftCol, leftY)
-    leftY += 7
-  }
-
   // Right column: Display AVTAL info
   doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, rightCol, rightY)
   rightY += 7
@@ -177,6 +159,24 @@ const addTenantInfo = async (
     ? (leaseIdLines as string[]).length * 7
     : 7
   rightY += leaseIdBlockHeight
+
+  // Display rental property address
+  try {
+    const address = await rentalObjectSearchService.getAddressByRentalId(
+      lease.rentalPropertyId
+    )
+    if (address && address !== 'Okänd adress') {
+      doc.text(`Adress: ${address}`, rightCol, rightY)
+      rightY += 7
+    } else {
+      doc.text(`Adress: n/a`, rightCol, rightY)
+      rightY += 7
+    }
+  } catch (error) {
+    console.warn('Failed to fetch address for PDF receipt:', error)
+    doc.text(`Adress: n/a`, rightCol, rightY)
+    rightY += 7
+  }
 
   // Return the max Y position from both columns + spacing
   return Math.max(leftY, rightY) + 7
