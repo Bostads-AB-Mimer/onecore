@@ -9,6 +9,7 @@ export type KeyWithStatus = Key & {
   loanInfo: KeyLoanInfo
   displayStatus: string
   displayDate?: string // Formatted date string to display (e.g., "Hämtad: 15/10/2025")
+  isAvailable?: boolean // True if key is ready to be picked up (green), false if blocked (red)
 }
 
 /**
@@ -127,13 +128,13 @@ export function isNewFlexKey(
  * @param loanInfo - The loan information for the key
  * @param key - The key itself
  * @param allKeys - All keys (needed to check if it's a flex key)
- * @returns Object with status text and optional formatted date string
+ * @returns Object with status text, optional formatted date string, and availability flag
  */
 export function getKeyDisplayStatus(
   loanInfo: KeyLoanInfo,
   key: Key,
   allKeys: Key[]
-): { status: string; date?: string } {
+): { status: string; date?: string; isAvailable?: boolean } {
   // Check if key is disposed - show special status
   if (key.disposed) {
     if (loanInfo.matchesCurrentTenant) {
@@ -164,40 +165,56 @@ export function getKeyDisplayStatus(
         }
       }
     } else {
-      // Key is loaned but not yet picked up - show "ready to pick up" with ready from date
+      // Key is loaned but not yet picked up - check if available date is in the future
+      const availableDate = loanInfo.availableToNextTenantFrom
+        ? new Date(loanInfo.availableToNextTenantFrom)
+        : null
+      const isInFuture = availableDate && availableDate > new Date()
+      const isAvailable = !isInFuture // Available (green) if date is in past or not set
+
       const formattedDate = formatSwedishDate(
         loanInfo.availableToNextTenantFrom
       )
       const dateString = formattedDate
-        ? `Redo fr.o.m: ${formattedDate}`
+        ? `${isInFuture ? 'Kan ej hämtas före' : 'Redo fr.o.m'}: ${formattedDate}`
         : undefined
+
+      const statusText = isInFuture ? 'Kan ej hämtas' : 'Redo att hämtas'
 
       if (loanInfo.matchesCurrentTenant) {
         return {
-          status: `Kan hämtas`,
+          status: statusText,
           date: dateString,
+          isAvailable,
         }
       } else {
         return {
-          status: `Kan hämtas (${loanInfo.contact ?? 'Okänd'})`,
+          status: `${statusText} (${loanInfo.contact ?? 'Okänd'})`,
           date: dateString,
+          isAvailable,
         }
       }
     }
   } else {
     // Key is not currently loaned
     if (loanInfo.contact === null) {
-      // Never been loaned - check flex status
+      // Never been loaned - check flex status - always available (green)
       const flexStatus = getFlexStatus(key, allKeys)
       if (flexStatus === 'FLEX_ORDERED') {
-        return { status: 'Ny beställd flex' }
+        return { status: 'Ny beställd flex', isAvailable: true }
       } else if (flexStatus === 'FLEX_INCOMING') {
-        return { status: 'Ny inkommen flex' }
+        return { status: 'Ny inkommen flex', isAvailable: true }
       } else {
-        return { status: 'Ny' }
+        return { status: 'Ny', isAvailable: true }
       }
     } else if (loanInfo.matchesCurrentTenant) {
-      // Was returned by current tenant - show availability date
+      // Was returned by current tenant - check if available date is in the future
+      const availableDate = loanInfo.availableToNextTenantFrom
+        ? new Date(loanInfo.availableToNextTenantFrom)
+        : null
+      const isInFuture = availableDate && availableDate > new Date()
+      const isAvailable = !isInFuture // Available (green) if date is in past or not set
+
       const formattedDate = formatSwedishDate(
         loanInfo.availableToNextTenantFrom
       )
@@ -208,9 +225,16 @@ export function getKeyDisplayStatus(
       return {
         status: `Återlämnad av den här hyresgästen`,
         date: dateString,
+        isAvailable,
       }
     } else {
-      // Was returned by someone else - show availability date
+      // Was returned by someone else - check if available date is in the future
+      const availableDate = loanInfo.availableToNextTenantFrom
+        ? new Date(loanInfo.availableToNextTenantFrom)
+        : null
+      const isInFuture = availableDate && availableDate > new Date()
+      const isAvailable = !isInFuture // Available (green) if date is in past or not set
+
       const formattedDate = formatSwedishDate(
         loanInfo.availableToNextTenantFrom
       )
@@ -221,6 +245,7 @@ export function getKeyDisplayStatus(
       return {
         status: `Återlämnad av ${loanInfo.contact}`,
         date: dateString,
+        isAvailable,
       }
     }
   }
@@ -252,13 +277,18 @@ export async function computeKeyWithStatus(
       tenantContactCodes[1]
     )
 
-    const { status, date } = getKeyDisplayStatus(loanInfo, key, allKeys)
+    const { status, date, isAvailable } = getKeyDisplayStatus(
+      loanInfo,
+      key,
+      allKeys
+    )
 
     return {
       ...key,
       loanInfo,
       displayStatus: status,
       displayDate: date,
+      isAvailable,
     }
   } catch {
     // Return key with unknown status on error
