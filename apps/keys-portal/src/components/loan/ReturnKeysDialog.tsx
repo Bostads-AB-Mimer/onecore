@@ -81,13 +81,7 @@ export function ReturnKeysDialog({
             if (!loansMap.has(activeLoan.id)) {
               // Parse all keys in this loan
               const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-              console.log('loanKeyIds:', loanKeyIds)
-              console.log(
-                'allKeys IDs:',
-                allKeys.map((k) => k.id)
-              )
               const loanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
-              console.log('matched loanKeys:', loanKeys)
 
               loansMap.set(activeLoan.id, {
                 loanId: activeLoan.id,
