@@ -164,14 +164,23 @@ export function getKeyDisplayStatus(
         }
       }
     } else {
-      // Key is loaned but not yet picked up - show "ready to pick up"
+      // Key is loaned but not yet picked up - show "ready to pick up" with ready from date
+      const formattedDate = formatSwedishDate(
+        loanInfo.availableToNextTenantFrom
+      )
+      const dateString = formattedDate
+        ? `Redo fr.o.m: ${formattedDate}`
+        : undefined
+
       if (loanInfo.matchesCurrentTenant) {
         return {
-          status: `Redo att hämtas`,
+          status: `Kan hämtas`,
+          date: dateString,
         }
       } else {
         return {
-          status: `Redo att hämtas (${loanInfo.contact ?? 'Okänd'})`,
+          status: `Kan hämtas (${loanInfo.contact ?? 'Okänd'})`,
+          date: dateString,
         }
       }
     }
