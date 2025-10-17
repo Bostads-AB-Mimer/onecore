@@ -105,8 +105,10 @@ export async function getKeysWithLoanStatus(
       kl.contact2 as activeLoanContact2,
       kl.pickedUpAt as activeLoanPickedUpAt,
       kl.availableToNextTenantFrom as activeLoanAvailableFrom,
-      -- Previous loan availability date (for when active loan not picked up)
-      prev.availableToNextTenantFrom as prevLoanAvailableFrom
+      -- Previous loan data (for returned keys)
+      prev.availableToNextTenantFrom as prevLoanAvailableFrom,
+      prev.contact as prevLoanContact,
+      prev.contact2 as prevLoanContact2
 
     FROM keys k
 
@@ -120,10 +122,13 @@ export async function getKeysWithLoanStatus(
       AND kl.returnedAt IS NULL
     )
 
-    -- OUTER APPLY for most recent returned loan's availability date
+    -- OUTER APPLY for most recent returned loan data
     -- OUTER APPLY is SQL Server's equivalent to Postgres LATERAL
     OUTER APPLY (
-      SELECT TOP 1 availableToNextTenantFrom
+      SELECT TOP 1
+        availableToNextTenantFrom,
+        contact,
+        contact2
       FROM key_loans kl2
       WHERE EXISTS (
         SELECT 1
