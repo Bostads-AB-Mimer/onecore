@@ -295,7 +295,7 @@ export function ReturnKeysDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Återlämna nycklar"
-      description="Välj vilka nycklar som ska visas på kvittot och när nycklarna blir tillgängliga för nästa hyresgäst."
+      description="Välj vilka nycklar som ska visas på kvittensen och när nycklarna blir tillgängliga för nästa hyresgäst."
       leftTitle="Nycklar som återlämnas"
       rightTitle="Tillgängligt från"
       leftContent={leftContent}

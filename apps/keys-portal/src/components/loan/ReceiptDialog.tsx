@@ -73,8 +73,8 @@ export function ReceiptDialog({
 
   const descriptionText =
     receiptData?.receiptType === 'LOAN'
-      ? 'Ett utlåningskvitto har skapats. Skriv ut och låt hyresgästen signera.'
-      : 'Ett återlämningskvitto har skapats. Du kan skriva ut det.'
+      ? 'Ett utlåningskvittens har skapats. Skriv ut och låt hyresgästen signera.'
+      : 'Ett återlämningskvittens har skapats. Du kan skriva ut det.'
 
   // Don't show dialog for return receipts - they're auto-generated for records only
   if (receiptData?.receiptType === 'RETURN') {
@@ -101,8 +101,8 @@ export function ReceiptDialog({
             >
               <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
               <AlertDescription className="text-yellow-800 dark:text-yellow-300">
-                <strong>Signering krävs:</strong> Utlåningskvittot ska signeras
-                av hyresgästen.
+                <strong>Signering krävs:</strong> Utlåningskvittensen ska
+                signeras av hyresgästen.
               </AlertDescription>
             </Alert>
           )}
@@ -114,7 +114,7 @@ export function ReceiptDialog({
             disabled={!receiptData || isLoadingReceipt}
           >
             <Printer className="h-4 w-4" />
-            {isLoadingReceipt ? 'Laddar kvitto...' : 'Skriv ut kvitto'}
+            {isLoadingReceipt ? 'Laddar kvittens...' : 'Skriv ut kvittens'}
           </Button>
         </div>
 

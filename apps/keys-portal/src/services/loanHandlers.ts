@@ -63,8 +63,8 @@ export async function handleLoanKeys({
 
     return {
       success: true,
-      title: 'Nyckellån skapat - Kvitto måste signeras',
-      message: 'Nyckellånet aktiveras när det signerade kvittot laddas upp.',
+      title: 'Nyckellån skapat - Kvittens måste signeras',
+      message: 'Nyckellånet aktiveras när det signerade kvittensen laddas upp.',
       keyLoanId: created.id,
       receiptId,
     }
