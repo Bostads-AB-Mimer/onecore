@@ -10,6 +10,7 @@ export type PaginationLinks = keys.v1.PaginationLinks
 
 // Tables/response types from the generated schemas
 export type Key = components['schemas']['Key']
+export type KeyWithLoanStatus = components['schemas']['KeyWithLoanStatus']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type Log = components['schemas']['Log']

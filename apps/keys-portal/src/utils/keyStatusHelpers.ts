@@ -1,15 +1,44 @@
-import type { Key, KeyType } from '@/services/types'
-
-import type { KeyLoanInfo } from './keyLoanStatus'
+import type { Key, KeyWithLoanStatus, KeyType } from '@/services/types'
 
 /**
- * Extended Key type with loan information and display status
+ * Extended Key type with computed loan information and display status
  */
-export type KeyWithStatus = Key & {
-  loanInfo: KeyLoanInfo
+export type KeyWithStatus = KeyWithLoanStatus & {
+  matchesCurrentTenant: boolean // Whether the active loan matches the current tenant
   displayStatus: string
   displayDate?: string // Formatted date string to display (e.g., "Hämtad: 15/10/2025")
   isAvailable?: boolean // True if key is ready to be picked up (green), false if blocked (red)
+}
+
+/**
+ * Helper to check if a key's active loan matches the current tenant contact codes
+ */
+function matchesCurrentTenant(
+  key: KeyWithLoanStatus,
+  currentContactCode?: string,
+  currentContactCode2?: string
+): boolean {
+  if (!key.activeLoanContact) return false
+
+  return (
+    (currentContactCode &&
+      (key.activeLoanContact?.trim() === currentContactCode.trim() ||
+        key.activeLoanContact2?.trim() === currentContactCode.trim())) ||
+    (currentContactCode2 &&
+      (key.activeLoanContact?.trim() === currentContactCode2.trim() ||
+        key.activeLoanContact2?.trim() === currentContactCode2.trim())) ||
+    false
+  )
+}
+
+/**
+ * Helper to get the availability date from the key
+ * Returns activeLoanAvailableFrom if picked up, otherwise prevLoanAvailableFrom
+ */
+function getAvailabilityDate(key: KeyWithLoanStatus): string | undefined {
+  return key.activeLoanPickedUpAt
+    ? key.activeLoanAvailableFrom
+    : key.prevLoanAvailableFrom
 }
 
 /**
@@ -107,7 +136,7 @@ export function sortKeysByTypeAndSequence<T extends Key>(keys: T[]): T[] {
 /**
  * Checks if a key is a "new flex" key (has the status "Ny beställd flex" or "Ny inkommen flex")
  * A key is "new flex" if it:
- * - Has never been loaned (loanInfo.contact === null)
+ * - Has never been loaned (activeLoanContact === null and prevLoanAvailableFrom === null)
  * - Is a flex key (has higher flex number than other keys with same name/type)
  * @param keyWithStatus - The key with status information
  * @param allKeys - All keys to compare against
@@ -119,69 +148,72 @@ export function isNewFlexKey(
 ): boolean {
   const flexStatus = getFlexStatus(keyWithStatus, allKeys)
   return (
-    keyWithStatus.loanInfo.contact === null && flexStatus === 'FLEX_ORDERED'
+    keyWithStatus.activeLoanContact === null &&
+    keyWithStatus.prevLoanAvailableFrom === undefined &&
+    flexStatus === 'FLEX_ORDERED'
   )
 }
 
 /**
  * Computes the display status text and date for a key based on its loan information
- * @param loanInfo - The loan information for the key
- * @param key - The key itself
+ * @param key - The key with pre-fetched loan data
  * @param allKeys - All keys (needed to check if it's a flex key)
+ * @param matchesTenant - Whether the active loan matches the current tenant
  * @returns Object with status text, optional formatted date string, and availability flag
  */
 export function getKeyDisplayStatus(
-  loanInfo: KeyLoanInfo,
-  key: Key,
-  allKeys: Key[]
+  key: KeyWithLoanStatus,
+  allKeys: KeyWithLoanStatus[],
+  matchesTenant: boolean
 ): { status: string; date?: string; isAvailable?: boolean } {
+  const isLoaned = !!key.activeLoanId
+  const availabilityDate = getAvailabilityDate(key)
+
   // Check if key is disposed - show special status
   if (key.disposed) {
-    if (loanInfo.matchesCurrentTenant) {
+    if (matchesTenant) {
       return { status: `Kasserad, utlånad till den här hyresgästen` }
     } else {
-      return { status: `Kasserad, utlånad till ${loanInfo.contact ?? 'Okänd'}` }
+      return {
+        status: `Kasserad, utlånad till ${key.activeLoanContact ?? 'Okänd'}`,
+      }
     }
   }
 
-  if (loanInfo.isLoaned) {
-    // Check if key has been picked up (has signed receipt OR pickedUpAt date)
-    const isPickedUp = loanInfo.hasSignedLoanReceipt || !!loanInfo.pickedUpAt
+  if (isLoaned) {
+    // Check if key has been picked up
+    const isPickedUp = !!key.activeLoanPickedUpAt
 
     if (isPickedUp) {
       // Key is currently loaned and picked up - show pickup date
-      const formattedDate = formatSwedishDate(loanInfo.pickedUpAt)
+      const formattedDate = formatSwedishDate(key.activeLoanPickedUpAt)
       const dateString = formattedDate ? `Hämtad: ${formattedDate}` : undefined
 
-      if (loanInfo.matchesCurrentTenant) {
+      if (matchesTenant) {
         return {
           status: `Utlånat till den här hyresgästen`,
           date: dateString,
         }
       } else {
         return {
-          status: `Utlånad till ${loanInfo.contact ?? 'Okänd'}`,
+          status: `Utlånad till ${key.activeLoanContact ?? 'Okänd'}`,
           date: dateString,
         }
       }
     } else {
       // Key is loaned but not yet picked up - check if available date is in the future
-      const availableDate = loanInfo.availableToNextTenantFrom
-        ? new Date(loanInfo.availableToNextTenantFrom)
-        : null
+      const availableDate = availabilityDate ? new Date(availabilityDate) : null
       const isInFuture = availableDate && availableDate > new Date()
       const isAvailable = !isInFuture // Available (green) if date is in past or not set
 
-      const formattedDate = formatSwedishDate(
-        loanInfo.availableToNextTenantFrom
-      )
+      const formattedDate = formatSwedishDate(availabilityDate)
       const dateString = formattedDate
         ? `${isInFuture ? 'Kan ej hämtas före' : 'Redo fr.o.m'}: ${formattedDate}`
         : undefined
 
       const statusText = isInFuture ? 'Kan ej hämtas' : 'Redo att hämtas'
 
-      if (loanInfo.matchesCurrentTenant) {
+      if (matchesTenant) {
         return {
           status: statusText,
           date: dateString,
@@ -189,7 +221,7 @@ export function getKeyDisplayStatus(
         }
       } else {
         return {
-          status: `${statusText} (${loanInfo.contact ?? 'Okänd'})`,
+          status: `${statusText} (${key.activeLoanContact ?? 'Okänd'})`,
           date: dateString,
           isAvailable,
         }
@@ -197,7 +229,7 @@ export function getKeyDisplayStatus(
     }
   } else {
     // Key is not currently loaned
-    if (loanInfo.contact === null) {
+    if (key.activeLoanContact === null && !availabilityDate) {
       // Never been loaned - check flex status - always available (green)
       const flexStatus = getFlexStatus(key, allKeys)
       if (flexStatus === 'FLEX_ORDERED') {
@@ -207,17 +239,13 @@ export function getKeyDisplayStatus(
       } else {
         return { status: 'Ny', isAvailable: true }
       }
-    } else if (loanInfo.matchesCurrentTenant) {
+    } else if (matchesTenant) {
       // Was returned by current tenant - check if available date is in the future
-      const availableDate = loanInfo.availableToNextTenantFrom
-        ? new Date(loanInfo.availableToNextTenantFrom)
-        : null
+      const availableDate = availabilityDate ? new Date(availabilityDate) : null
       const isInFuture = availableDate && availableDate > new Date()
       const isAvailable = !isInFuture // Available (green) if date is in past or not set
 
-      const formattedDate = formatSwedishDate(
-        loanInfo.availableToNextTenantFrom
-      )
+      const formattedDate = formatSwedishDate(availabilityDate)
       const dateString = formattedDate
         ? `Tillgänglig fr.o.m: ${formattedDate}`
         : undefined
@@ -229,21 +257,17 @@ export function getKeyDisplayStatus(
       }
     } else {
       // Was returned by someone else - check if available date is in the future
-      const availableDate = loanInfo.availableToNextTenantFrom
-        ? new Date(loanInfo.availableToNextTenantFrom)
-        : null
+      const availableDate = availabilityDate ? new Date(availabilityDate) : null
       const isInFuture = availableDate && availableDate > new Date()
       const isAvailable = !isInFuture // Available (green) if date is in past or not set
 
-      const formattedDate = formatSwedishDate(
-        loanInfo.availableToNextTenantFrom
-      )
+      const formattedDate = formatSwedishDate(availabilityDate)
       const dateString = formattedDate
         ? `Tillgänglig fr.o.m: ${formattedDate}`
         : undefined
 
       return {
-        status: `Återlämnad av ${loanInfo.contact}`,
+        status: `Återlämnad av ${key.activeLoanContact ?? 'okänd'}`,
         date: dateString,
         isAvailable,
       }
@@ -252,51 +276,37 @@ export function getKeyDisplayStatus(
 }
 
 /**
- * Computes the full KeyWithStatus for a key by fetching loan info and determining display status
- * Handles errors gracefully by returning a KeyWithStatus with unknown status
- * @param key - The key to compute status for
+ * Computes the full KeyWithStatus for a key with pre-fetched loan data and determines display status.
+ * This is now a SYNCHRONOUS function - no async calls!
+ *
+ * @param key - The key with pre-fetched active loan data
  * @param allKeys - All keys (needed for flex key detection)
  * @param tenantContactCodes - Contact codes of the current tenant(s) (used for matching against DB)
- * @param getKeyLoanStatusFn - Function to fetch loan status (injected for testability)
- * @returns Promise resolving to KeyWithStatus
+ * @returns KeyWithStatus
  */
-export async function computeKeyWithStatus(
-  key: Key,
-  allKeys: Key[],
-  tenantContactCodes: string[],
-  getKeyLoanStatusFn: (
-    keyId: string,
-    contactCode1?: string,
-    contactCode2?: string
-  ) => Promise<KeyLoanInfo>
-): Promise<KeyWithStatus> {
-  try {
-    const loanInfo = await getKeyLoanStatusFn(
-      key.id,
-      tenantContactCodes[0],
-      tenantContactCodes[1]
-    )
+export function computeKeyWithStatus(
+  key: KeyWithLoanStatus,
+  allKeys: KeyWithLoanStatus[],
+  tenantContactCodes: string[]
+): KeyWithStatus {
+  const matchesTenant = matchesCurrentTenant(
+    key,
+    tenantContactCodes[0],
+    tenantContactCodes[1]
+  )
 
-    const { status, date, isAvailable } = getKeyDisplayStatus(
-      loanInfo,
-      key,
-      allKeys
-    )
+  const { status, date, isAvailable } = getKeyDisplayStatus(
+    key,
+    allKeys,
+    matchesTenant
+  )
 
-    return {
-      ...key,
-      loanInfo,
-      displayStatus: status,
-      displayDate: date,
-      isAvailable,
-    }
-  } catch {
-    // Return key with unknown status on error
-    return {
-      ...key,
-      loanInfo: { isLoaned: false, contact: null, matchesCurrentTenant: false },
-      displayStatus: 'Okänd status',
-    }
+  return {
+    ...key,
+    matchesCurrentTenant: matchesTenant,
+    displayStatus: status,
+    displayDate: date,
+    isAvailable,
   }
 }
 
@@ -318,6 +328,6 @@ export function filterVisibleKeys(
     // Show key if it's not disposed
     if (!key.disposed) return true
     // Show disposed key only if it's currently loaned
-    return key.loanInfo.isLoaned
+    return !!key.activeLoanId
   })
 }
