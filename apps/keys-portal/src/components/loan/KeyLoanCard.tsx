@@ -160,7 +160,7 @@ export function KeyLoanCard({
           <div className="pt-1 space-y-0.5 border-t">
             <div className="flex items-center justify-between gap-1">
               <div className="text-[10px] font-medium text-muted-foreground">
-                Kvitton
+                Kvittenser
               </div>
               <div className="flex gap-0.5">
                 <Button
