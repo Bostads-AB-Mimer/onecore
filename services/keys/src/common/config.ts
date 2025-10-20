@@ -22,7 +22,7 @@ export interface Config {
 
 const config = configPackage({
   defaults: {
-    port: 5080,
+    port: 5090,
     keysDatabase: {
       host: 'localhost',
       user: 'sa',
