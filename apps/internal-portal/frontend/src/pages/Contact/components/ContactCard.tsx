@@ -194,6 +194,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         onClick={() => setOpen((prev) => !prev)}
         sx={{
           cursor: 'pointer',
+          backgroundColor: open ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
         }}
         role="button"
         tabIndex={0}
@@ -226,7 +227,12 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
       </TableRow>
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-          <Collapse in={open} timeout={0} unmountOnExit>
+          <Collapse
+            in={open}
+            timeout={0}
+            unmountOnExit
+            sx={{ backgroundColor: open ? 'rgba(0, 0, 0, 0.04)' : 'inherit' }}
+          >
             <InvoiceDetails invoice={invoice} />
           </Collapse>
         </TableCell>
@@ -252,6 +258,7 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Beskrivning</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Avdrag</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
               </TableRow>
@@ -264,6 +271,11 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
                     {row.rowType === 3
                       ? null
                       : moneyFormatter.format(row.amount)}
+                  </TableCell>
+                  <TableCell>
+                    {row.rowType === 3
+                      ? null
+                      : moneyFormatter.format(row.deduction)}
                   </TableCell>
                   <TableCell>
                     {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
@@ -298,9 +310,18 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
     <Table size="small" stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
         <TableRow>
-          <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Text</TableCell>
+          <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'inherit' }}>
+            Källa
+          </TableCell>
+          <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'inherit' }}>
+            Belopp
+          </TableCell>
+          <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'inherit' }}>
+            Text
+          </TableCell>
+          <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'inherit' }}>
+            Betaldatum
+          </TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -322,6 +343,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
               <TableCell>{event.transactionSourceCode}</TableCell>
               <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
               <TableCell>{event.text}</TableCell>
+              <TableCell>{yyyymmdd(new Date(event.paymentDate))}</TableCell>
             </TableRow>
           ))
         )}
