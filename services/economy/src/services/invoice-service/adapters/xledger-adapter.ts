@@ -404,13 +404,19 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
 
   try {
     const result = await makeXledgerRequest(q)
-    console.log('result: ', result)
 
     if (!result.data.arTransactions?.edges) {
       return null
     }
 
-    return result.data?.arTransactions?.edges?.[0].node.matchId
+    const matchId = result.data?.arTransactions?.edges?.[0].node.matchId
+    // If matchId is 0, invoice has not been paired correctly with events in xledger.
+    // Return null in this scenario.
+    if (matchId == null || matchId === 0) {
+      return null
+    } else {
+      return matchId
+    }
   } catch (err) {
     logger.error(err, 'Error getting invoice match id from Xledger')
     throw err
