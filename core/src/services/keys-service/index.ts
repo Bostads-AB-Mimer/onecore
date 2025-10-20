@@ -2984,6 +2984,149 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /receipts/{id}/upload-base64:
+   *   post:
+   *     summary: Upload PDF file for a receipt (base64 encoded - for Power Automate)
+   *     description: Upload a PDF file as base64 encoded JSON to attach to an existing receipt
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fileContent
+   *             properties:
+   *               fileContent:
+   *                 type: string
+   *                 description: Base64 encoded PDF file content
+   *               fileName:
+   *                 type: string
+   *                 description: Optional file name (defaults to receipt-id-timestamp.pdf)
+   *               metadata:
+   *                 type: object
+   *                 additionalProperties:
+   *                   type: string
+   *                 description: Optional metadata for Power Automate workflow tracking
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     fileId:
+   *                       type: string
+   *                     fileName:
+   *                       type: string
+   *                     size:
+   *                       type: number
+   *                     source:
+   *                       type: string
+   *       400:
+   *         description: Invalid base64 content or receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BadRequestResponse'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       413:
+   *         description: File too large (max 10MB)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/receipts/:id/upload-base64', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const {
+        fileContent,
+        fileName,
+        metadata: uploadMetadata,
+      } = ctx.request.body as {
+        fileContent: string
+        fileName?: string
+        metadata?: Record<string, string>
+      }
+
+      // Validate that fileContent is provided
+      if (!fileContent) {
+        ctx.status = 400
+        ctx.body = { reason: 'File content is required', ...metadata }
+        return
+      }
+
+      // Forward the base64 content to microservice
+      const result = await ReceiptsApi.uploadFileBase64(
+        ctx.params.id,
+        fileContent,
+        fileName,
+        uploadMetadata
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { reason: 'Receipt not found', ...metadata }
+          return
+        }
+        if (result.err === 'bad-request') {
+          ctx.status = 400
+          ctx.body = {
+            reason: 'Invalid base64 content or PDF file',
+            ...metadata,
+          }
+          return
+        }
+
+        logger.error(
+          { err: result.err, metadata },
+          'Error uploading base64 file'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (err) {
+      logger.error({ err }, 'Error uploading base64 file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /receipts/{id}/download:
    *   get:
    *     summary: Get presigned download URL for receipt PDF

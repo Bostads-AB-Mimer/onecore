@@ -1548,6 +1548,39 @@ export interface paths {
       };
     };
   };
+  "/receipts/{id}/upload-base64": {
+    /** Upload PDF file for a receipt (base64 encoded - for Power Automate) */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UploadBase64Request"];
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid base64 content or receipt not found */
+        400: {
+          content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: never;
+        };
+        /** @description File too large (max 10MB) */
+        413: {
+          content: never;
+        };
+      };
+    };
+  };
   "/receipts/{id}/download": {
     /** Get presigned download URL for receipt PDF */
     get: {
@@ -1712,6 +1745,13 @@ export interface components {
     };
     UpdateReceiptRequest: {
       fileId?: string;
+    };
+    UploadBase64Request: {
+      fileContent: string;
+      fileName?: string;
+      metadata?: {
+        [key: string]: string;
+      };
     };
     Receipt: {
       /** Format: uuid */

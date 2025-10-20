@@ -564,6 +564,33 @@ export const ReceiptsApi = {
     }>(`${BASE}/receipts/${receiptId}/download`)
     return r.ok ? ok(r.data.content) : r
   },
+
+  // <-- Upload file as base64 JSON (for Power Automate)
+  uploadFileBase64: async (
+    receiptId: string,
+    base64Content: string,
+    fileName?: string,
+    metadata?: Record<string, string>
+  ): Promise<
+    AdapterResult<
+      { fileId: string; fileName: string; size: number; source: string },
+      'bad-request' | 'not-found' | CommonErr
+    >
+  > => {
+    const r = await postJSON<{
+      content: {
+        fileId: string
+        fileName: string
+        size: number
+        source: string
+      }
+    }>(`${BASE}/receipts/${receiptId}/upload-base64`, {
+      fileContent: base64Content,
+      fileName,
+      metadata,
+    })
+    return r.ok ? ok(r.data.content) : r
+  },
 }
 
 /**

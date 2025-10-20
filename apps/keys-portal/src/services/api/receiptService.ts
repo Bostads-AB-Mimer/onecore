@@ -101,6 +101,56 @@ export const receiptService = {
   },
 
   /**
+   * Upload a PDF file to a receipt using base64 encoding (for Power Automate integration)
+   */
+  async uploadFileBase64(
+    receiptId: string,
+    base64Content: string,
+    fileName?: string,
+    metadata?: Record<string, string>
+  ): Promise<UploadFileResponse> {
+    const { data, error } = await POST('/receipts/{id}/upload-base64', {
+      params: { path: { id: receiptId } },
+      body: {
+        fileContent: base64Content,
+        fileName,
+        metadata,
+      },
+    })
+    if (error) throw error
+    return data?.content as UploadFileResponse
+  },
+
+  /**
+   * Helper: Convert a Blob to base64 string
+   */
+  blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64 = reader.result as string
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        const base64String = base64.split(',')[1]
+        resolve(base64String)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  },
+
+  /**
+   * Helper: Convert a File to base64 string and upload
+   */
+  async uploadFileAsBase64(
+    receiptId: string,
+    file: File,
+    metadata?: Record<string, string>
+  ): Promise<UploadFileResponse> {
+    const base64Content = await this.blobToBase64(file)
+    return this.uploadFileBase64(receiptId, base64Content, file.name, metadata)
+  },
+
+  /**
    * Get all receipts for a specific lease's rental object
    * Fetches keyLoans for the rental object, then fetches receipts for each keyLoan
    */
