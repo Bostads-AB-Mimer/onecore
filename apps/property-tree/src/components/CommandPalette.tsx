@@ -101,7 +101,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.1 }}
-            className="fixed left-[calc(50%-350px)] top-[20%] w-[700px] border border-gray-200 bg-white dark:bg-gray-800 rounded-xl shadow-2xl dark:border-gray-700 overflow-hidden z-50"
+            className="fixed left-4 right-4 top-[20%] sm:left-[calc(50%-350px)] sm:right-auto sm:w-[700px] border border-gray-200 bg-white dark:bg-gray-800 rounded-xl shadow-2xl dark:border-gray-700 overflow-hidden z-50"
           >
             <div className="p-4 border-b dark:border-gray-700 flex items-center space-x-3">
               <Command className="h-5 w-5 text-gray-400" />
