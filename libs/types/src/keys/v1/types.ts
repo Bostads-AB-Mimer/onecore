@@ -25,6 +25,7 @@ import {
   CreateLogRequestSchema,
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
+  UploadBase64RequestSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
   CreateKeyEventRequestSchema,
@@ -74,6 +75,7 @@ export type ReceiptFormat = z.infer<typeof ReceiptFormatSchema>
 export type Receipt = z.infer<typeof ReceiptSchema>
 export type CreateReceiptRequest = z.infer<typeof CreateReceiptRequestSchema>
 export type UpdateReceiptRequest = z.infer<typeof UpdateReceiptRequestSchema>
+export type UploadBase64Request = z.infer<typeof UploadBase64RequestSchema>
 
 // Request types for key notes
 export type KeyNote = z.infer<typeof KeyNoteSchema>

@@ -205,6 +205,12 @@ export const UpdateReceiptRequestSchema = z.object({
   fileId: z.string().optional(),
 })
 
+export const UploadBase64RequestSchema = z.object({
+  fileContent: z.string().min(1, 'File content is required'),
+  fileName: z.string().optional(),
+  metadata: z.record(z.string()).optional(),
+})
+
 // Request schemas for key notes
 
 export const CreateKeyNoteRequestSchema = z.object({
