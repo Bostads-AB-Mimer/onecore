@@ -1,6 +1,6 @@
 import config from '../../../common/config'
 import axios from 'axios'
-import { AuthAdapter, AuthOptions, KoaContext, KoaMiddleware } from './types'
+import { AuthAdapter, AuthOptions } from './types'
 
 const redirectUri = config.auth.core.redirectUri
 const postLogoutRedirectUri = config.auth.core.postLogoutRedirectUri
