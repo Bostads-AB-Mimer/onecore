@@ -28,14 +28,14 @@ export const generateBreadcrumbs = (
     if (building) {
       breadcrumbs.push({
         label: building.name,
-        path: `/building/${building.id}`,
+        path: `/properties/${property.id}/buildings/${building.id}`,
       })
 
       // Add residence breadcrumb if provided
       if (residence) {
         breadcrumbs.push({
           label: residence.name,
-          path: `/residence/${residence.id}`,
+          path: `/properties/${property.id}/buildings/${building.id}/residences/${residence.id}`,
         })
       }
     }

@@ -23,7 +23,9 @@ export function PropertyNavigation({
   const isInHierarchy = isPropertyInHierarchy(property.id)
   const isDirectlySelected =
     selectionState.selectedPropertyId === property.id &&
-    location.pathname.startsWith('/properties/')
+    location.pathname === `/properties/${property.id}` &&
+    !selectionState.selectedBuildingId &&
+    !selectionState.selectedResidenceId
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)

@@ -8,9 +8,8 @@ import { BuildingDetailTabs } from '@/components/buildings/BuildingDetailTabs'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const BuildingDetailPage = () => {
-  const { buildingId } = useParams()
+  const { buildingId, propertyId } = useParams()
   const { state } = useLocation()
-  const propertyId = state?.propertyId
   const companyId = state?.companyId
 
   //const { toast } = useToast()
@@ -19,10 +18,10 @@ const BuildingDetailPage = () => {
   //const propertyKey = property
 
   // Fetch building data
-  const { data, isLoading, error } = useBuildingDetail(propertyId, buildingId)
+  const { data, isLoading, error } = useBuildingDetail(propertyId!, buildingId)
 
   // Base path for apartment links
-  const basePath = `/residences`
+  const basePath = `/properties/${propertyId}/buildings/${buildingId}/residences`
 
   useEffect(() => {
     if (error) {

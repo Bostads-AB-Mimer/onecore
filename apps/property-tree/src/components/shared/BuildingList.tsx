@@ -6,12 +6,14 @@ import { Card } from '@/components/ui/Card'
 
 interface BuildingListProps {
   buildings: Building[]
+  propertyId: string
   title?: string
   icon?: LucideIcon
 }
 
 export function BuildingList({
   buildings,
+  propertyId,
   title = 'Byggnader',
   icon,
 }: BuildingListProps) {
@@ -28,7 +30,9 @@ export function BuildingList({
             whileHover={{ scale: 1.02 }}
             className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
             onClick={() =>
-              navigate(`/buildings/${building.id}`, { state: { companyId } })
+              navigate(`/properties/${propertyId}/buildings/${building.id}`, {
+                state: { companyId },
+              })
             }
           >
             <div>

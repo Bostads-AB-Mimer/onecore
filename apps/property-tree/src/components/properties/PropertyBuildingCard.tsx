@@ -10,10 +10,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 interface PropertyBuildingCardProps {
   building: Building
+  propertyId: string
 }
 
 export const PropertyBuildingCard = ({
   building,
+  propertyId,
 }: PropertyBuildingCardProps) => {
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -21,7 +23,9 @@ export const PropertyBuildingCard = ({
 
   const handleOpenBuilding = () => {
     // Create a URL-friendly building name
-    navigate(`/buildings/${building.id}`, { state: { companyId } })
+    navigate(`/properties/${propertyId}/buildings/${building.id}`, {
+      state: { companyId },
+    })
   }
 
   return (

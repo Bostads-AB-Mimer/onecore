@@ -112,7 +112,10 @@ export const PropertyDetailTabs = ({
             isEnabled={features.showPropertyBuildings}
             fallbackMessage="För att se byggnader, aktivera funktionen i inställningarna."
           >
-            <PropertyBuildingsTab buildings={propertyDetail.buildings} />
+            <PropertyBuildingsTab
+              buildings={propertyDetail.buildings}
+              propertyId={propertyDetail.id}
+            />
           </FeatureGatedContent>
         </TabsContent>
       )}

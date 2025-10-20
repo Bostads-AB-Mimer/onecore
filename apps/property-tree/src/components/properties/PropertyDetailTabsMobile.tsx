@@ -53,7 +53,12 @@ export const PropertyDetailTabsMobile = ({
       id: 'buildings',
       icon: Building,
       title: 'Byggnader',
-      content: <PropertyBuildingsTab buildings={propertyDetail.buildings} />,
+      content: (
+        <PropertyBuildingsTab
+          buildings={propertyDetail.buildings}
+          propertyId={propertyDetail.id}
+        />
+      ),
     },
     /*
     features.showPropertyMaintenance && {

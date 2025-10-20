@@ -7,6 +7,7 @@ import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
 
 interface ResidenceNavigationProps {
   residence: Residence
+  buildingId: string
   buildingCode: string
   staircaseCode: string
   propertyId?: string
@@ -15,6 +16,7 @@ interface ResidenceNavigationProps {
 
 export function ResidenceNavigation({
   residence,
+  buildingId,
   buildingCode,
   staircaseCode,
   propertyId,
@@ -34,14 +36,29 @@ export function ResidenceNavigation({
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
         onClick={() => {
-          navigate(`/residences/${residence.id}`, {
-            state: {
-              buildingCode,
-              staircaseCode,
-              propertyId: propertyId,
-              companyId: companyId,
-            },
-          })
+          if (propertyId && buildingId) {
+            navigate(
+              `/properties/${propertyId}/buildings/${buildingId}/residences/${residence.id}`,
+              {
+                state: {
+                  buildingCode,
+                  staircaseCode,
+                  propertyId: propertyId,
+                  companyId: companyId,
+                },
+              }
+            )
+          } else {
+            // Fallback to old URL structure if IDs are missing
+            navigate(`/residences/${residence.id}`, {
+              state: {
+                buildingCode,
+                staircaseCode,
+                propertyId: propertyId,
+                companyId: companyId,
+              },
+            })
+          }
         }}
         tooltip={residence.name}
         isActive={isSelected}

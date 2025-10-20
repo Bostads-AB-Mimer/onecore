@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
@@ -10,9 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
 import { TenantInformation } from '../residence/TenantInformation'
+import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 export function ResidenceView() {
-  const { residenceId } = useParams()
+  const { residenceId, propertyId, buildingId } = useParams()
+  const { state } = useLocation()
+  const companyId = state?.companyId
 
   const residenceQuery = useQuery({
     queryKey: ['residence', residenceId],
@@ -39,10 +42,26 @@ export function ResidenceView() {
   }
 
   return (
-    <div className="p-8 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-3 space-y-6">
-        <ResidenceBasicInfo residence={residence} />
-      </div>
+    <div className="py-4 space-y-4 sm:space-y-6 lg:space-y-8">
+      {/*<div className="lg:col-span-3 space-y-6"> */}
+      <PropertyBreadcrumb
+        property={{
+          id: propertyId || '',
+          name: residence.property?.name || 'Fastighet',
+        }}
+        building={{
+          id: buildingId || '',
+          name: residence.building?.name || 'Byggnad',
+        }}
+        residence={{
+          id: residence.id,
+          name:
+            residence.propertyObject?.rentalId || `Lägenhet ${residence.code}`,
+        }}
+        companyId={companyId}
+      />
+      <ResidenceBasicInfo residence={residence} />
+      {/*</div>*/}
 
       <div className="lg:col-span-3 space-y-6">
         <Tabs defaultValue="rooms" className="w-full">
@@ -106,7 +125,7 @@ export function ResidenceView() {
 
 function LoadingSkeleton() {
   return (
-    <div className="p-8 animate-in">
+    <div className="py-4 space-y-4 sm:space-y-6 lg:space-y-8 animate-in">
       <div className="mb-8">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-2" />
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />

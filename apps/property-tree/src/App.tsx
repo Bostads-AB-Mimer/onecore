@@ -51,13 +51,16 @@ export default function App() {
               <Route path="companies/:companyId" element={<CompanyView />} />
               <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
-              <Route path="buildings/:buildingId" element={<BuildingView />} />
               <Route
-                path="staircases/:buildingId/:staircaseId"
+                path="properties/:propertyId/buildings/:buildingId"
+                element={<BuildingView />}
+              />
+              <Route
+                path="properties/:propertyId/buildings/:buildingId/staircases/:staircaseId"
                 element={<StaircaseView />}
               />
               <Route
-                path="residences/:residenceId"
+                path="properties/:propertyId/buildings/:buildingId/residences/:residenceId"
                 element={<ResidenceView />}
               />
               <Route

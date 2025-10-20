@@ -53,6 +53,7 @@ export function ResidenceList({
           <ResidenceNavigation
             key={residence.id}
             residence={residence}
+            buildingId={building.id}
             buildingCode={building.code}
             staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
             propertyId={propertyId}

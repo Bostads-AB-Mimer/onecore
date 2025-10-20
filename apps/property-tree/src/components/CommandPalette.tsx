@@ -150,7 +150,14 @@ export function CommandPalette() {
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                           onClick={() => {
-                            navigate(`${routeMap.building}/${v.id}`)
+                            if (v.property?.id) {
+                              navigate(
+                                `/properties/${v.property.id}/buildings/${v.id}`
+                              )
+                            } else {
+                              // Fallback if property is missing
+                              navigate(`${routeMap.building}/${v.id}`)
+                            }
                             close()
                           }}
                         />

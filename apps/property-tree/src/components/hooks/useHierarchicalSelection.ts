@@ -18,31 +18,43 @@ export function useHierarchicalSelection() {
   const { data: selectedResidence } = useQuery({
     queryKey: ['residence', params.residenceId],
     queryFn: () => residenceService.getById(params.residenceId!),
-    enabled:
-      !!params.residenceId && location.pathname.startsWith('/residences/'),
+    enabled: !!params.residenceId && location.pathname.includes('/residences/'),
   })
 
   const getSelectionState = (): SelectionState => {
     const path = location.pathname
+    const state = location.state as any
 
-    // Check for residence selection: /residences/:residenceId
-    if (path.startsWith('/residences/') && params.residenceId) {
-      // Extract building and property info from location state if available, or from residence data
-      const state = location.state as any
+    // Check for residence selection: /properties/:propertyId/buildings/:buildingId/residences/:residenceId
+    if (path.includes('/residences/') && params.residenceId) {
+      // Extract building and property info from URL params or location state, or from residence data
       return {
         selectedResidenceId: params.residenceId,
-        selectedBuildingId: null,
+        selectedBuildingId: params.buildingId || null,
         selectedBuildingCode:
           state?.buildingCode || selectedResidence?.building?.code || null,
         selectedPropertyId:
-          state?.propertyId || selectedResidence?.property?.code || null,
+          params.propertyId ||
+          state?.propertyId ||
+          selectedResidence?.property?.code ||
+          null,
+        selectedCompanyId: state?.companyId || null,
+      }
+    }
+
+    // Check for building selection: /properties/:propertyId/buildings/:buildingId
+    if (path.includes('/buildings/') && params.buildingId) {
+      return {
+        selectedResidenceId: null,
+        selectedBuildingId: params.buildingId,
+        selectedBuildingCode: state?.buildingCode || null,
+        selectedPropertyId: params.propertyId || state?.propertyId || null,
         selectedCompanyId: state?.companyId || null,
       }
     }
 
     // Check for property selection: /properties/:propertyId
     if (path.startsWith('/properties/') && params.propertyId) {
-      const state = location.state as any
       return {
         selectedResidenceId: null,
         selectedBuildingId: null,
@@ -60,18 +72,6 @@ export function useHierarchicalSelection() {
         selectedBuildingCode: null,
         selectedPropertyId: null,
         selectedCompanyId: params.companyId,
-      }
-    }
-
-    // Check for building selection: /buildings/:buildingId
-    if (path.startsWith('/buildings/') && params.buildingId) {
-      const state = location.state as any
-      return {
-        selectedResidenceId: null,
-        selectedBuildingId: params.buildingId,
-        selectedBuildingCode: state?.buildingCode || null,
-        selectedPropertyId: state?.propertyId || null,
-        selectedCompanyId: state?.companyId || null,
       }
     }
 

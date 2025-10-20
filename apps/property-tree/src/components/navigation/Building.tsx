@@ -29,7 +29,8 @@ export function BuildingNavigation({
   )
   const isDirectlySelected =
     selectionState.selectedBuildingId === building.id &&
-    location.pathname.startsWith('/buildings/')
+    location.pathname === `/properties/${property.id}/buildings/${building.id}` &&
+    !selectionState.selectedResidenceId
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
@@ -52,7 +53,7 @@ export function BuildingNavigation({
         <SidebarMenuButton
           onClick={() => {
             setIsExpanded(!isExpanded)
-            navigate(`/buildings/${building.id}`, {
+            navigate(`/properties/${property.id}/buildings/${building.id}`, {
               state: {
                 propertyId: property.id,
                 buildingCode: building.code,
