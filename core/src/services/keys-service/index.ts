@@ -37,6 +37,9 @@ const {
   UpdateReceiptRequestSchema,
   ReceiptTypeSchema,
   ReceiptFormatSchema,
+  ErrorResponseSchema,
+  NotFoundResponseSchema,
+  BadRequestResponseSchema,
 } = keys.v1
 
 /**
@@ -90,6 +93,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
   registerSchema('ReceiptType', ReceiptTypeSchema)
   registerSchema('ReceiptFormat', ReceiptFormatSchema)
+  registerSchema('ErrorResponse', ErrorResponseSchema)
+  registerSchema('NotFoundResponse', NotFoundResponseSchema)
+  registerSchema('BadRequestResponse', BadRequestResponseSchema)
 
   // Helper function to create log entries
   const createLogEntry = async (
