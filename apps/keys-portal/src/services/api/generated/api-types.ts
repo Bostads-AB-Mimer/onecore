@@ -5,6 +5,164 @@
 
 
 export interface paths {
+  "/key-events": {
+    /**
+     * Get all key events
+     * @description Returns all key events ordered by creation date.
+     */
+    get: {
+      responses: {
+        /** @description List of key events. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a key event
+     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyEventRequest"];
+        };
+      };
+      responses: {
+        /** @description Key event created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Conflict - one or more keys have incomplete events. */
+        409: {
+          content: never;
+        };
+        /** @description An error occurred while creating the key event. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-events/by-key/{keyId}": {
+    /**
+     * Get all key events for a specific key
+     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
+          limit?: number;
+        };
+        path: {
+          /** @description The key ID to filter events by. */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description List of key events for the key. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-events/{id}": {
+    /**
+     * Get key event by ID
+     * @description Fetch a specific key event by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key event object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Key event not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while fetching the key event. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a key event
+     * @description Update an existing key event.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyEventRequest"];
+        };
+      };
+      responses: {
+        /** @description Key event updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Key event not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while updating the key event. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-loans": {
     /**
      * List all key loans
@@ -1573,6 +1731,9 @@ export interface components {
     CreateKeyNoteRequest: components["schemas"]["CreateKeyNoteRequest"];
     UpdateKeyNoteRequest: components["schemas"]["UpdateKeyNoteRequest"];
     KeyNote: components["schemas"]["KeyNote"];
+    CreateKeyEventRequest: components["schemas"]["CreateKeyEventRequest"];
+    UpdateKeyEventRequest: components["schemas"]["UpdateKeyEventRequest"];
+    KeyEvent: components["schemas"]["KeyEvent"];
   };
   responses: never;
   parameters: never;

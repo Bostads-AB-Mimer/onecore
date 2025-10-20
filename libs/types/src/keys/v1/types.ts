@@ -4,12 +4,15 @@ import {
   KeySystemTypeSchema,
   ReceiptTypeSchema,
   ReceiptFormatSchema,
+  KeyEventTypeSchema,
+  KeyEventStatusSchema,
   // Main entity schemas
   KeySchema,
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
+  KeyEventSchema,
   ReceiptSchema,
   KeyWithLoanStatusSchema,
   // Request schemas
@@ -24,6 +27,8 @@ import {
   UpdateReceiptRequestSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
+  CreateKeyEventRequestSchema,
+  UpdateKeyEventRequestSchema,
   BulkUpdateFlexRequestSchema,
   // Pagination schemas
   PaginationMetaSchema,
@@ -33,12 +38,15 @@ import {
 // Enum types
 export type KeyType = z.infer<typeof KeyTypeSchema>
 export type KeySystemType = z.infer<typeof KeySystemTypeSchema>
+export type KeyEventType = z.infer<typeof KeyEventTypeSchema>
+export type KeyEventStatus = z.infer<typeof KeyEventStatusSchema>
 
 // Main entity types
 export type Key = z.infer<typeof KeySchema>
 export type KeyLoan = z.infer<typeof KeyLoanSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>
 export type Log = z.infer<typeof LogSchema>
+export type KeyEvent = z.infer<typeof KeyEventSchema>
 export type KeyWithLoanStatus = z.infer<typeof KeyWithLoanStatusSchema>
 
 // Request types for keys
@@ -71,6 +79,10 @@ export type UpdateReceiptRequest = z.infer<typeof UpdateReceiptRequestSchema>
 export type KeyNote = z.infer<typeof KeyNoteSchema>
 export type CreateKeyNoteRequest = z.infer<typeof CreateKeyNoteRequestSchema>
 export type UpdateKeyNoteRequest = z.infer<typeof UpdateKeyNoteRequestSchema>
+
+// Request types for key events
+export type CreateKeyEventRequest = z.infer<typeof CreateKeyEventRequestSchema>
+export type UpdateKeyEventRequest = z.infer<typeof UpdateKeyEventRequestSchema>
 
 // Bulk update request types
 export type BulkUpdateFlexRequest = z.infer<typeof BulkUpdateFlexRequestSchema>

@@ -89,6 +89,20 @@ export const KeyNoteSchema = z.object({
   description: z.string(),
 })
 
+// Key Event schemas
+export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
+export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
+
+export const KeyEventSchema = z.object({
+  id: z.string().uuid(),
+  keys: z.string(),
+  type: KeyEventTypeSchema,
+  status: KeyEventStatusSchema,
+  workOrderId: z.string().uuid().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
 // Request schemas for API endpoints
 export const CreateKeyRequestSchema = z.object({
   keyName: z.string(),
@@ -201,6 +215,22 @@ export const CreateKeyNoteRequestSchema = z.object({
 export const UpdateKeyNoteRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   description: z.string().optional(),
+})
+
+// Request schemas for key events
+
+export const CreateKeyEventRequestSchema = z.object({
+  keys: z.string(),
+  type: KeyEventTypeSchema,
+  status: KeyEventStatusSchema,
+  workOrderId: z.string().uuid().nullable().optional(),
+})
+
+export const UpdateKeyEventRequestSchema = z.object({
+  keys: z.string().optional(),
+  type: KeyEventTypeSchema.optional(),
+  status: KeyEventStatusSchema.optional(),
+  workOrderId: z.string().uuid().nullable().optional(),
 })
 
 // Bulk flex update request schema
