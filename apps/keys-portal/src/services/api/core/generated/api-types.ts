@@ -4172,6 +4172,73 @@ export interface paths {
       };
     };
   };
+  "/receipts/{id}/upload-base64": {
+    /**
+     * Upload PDF file for a receipt (base64 encoded - for Power Automate)
+     * @description Upload a PDF file as base64 encoded JSON to attach to an existing receipt
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded PDF file content */
+            fileContent: string;
+            /** @description Optional file name (defaults to receipt-id-timestamp.pdf) */
+            fileName?: string;
+            /** @description Optional metadata for Power Automate workflow tracking */
+            metadata?: {
+              [key: string]: string;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+                fileName?: string;
+                size?: number;
+                source?: string;
+              };
+            };
+          };
+        };
+        /** @description Invalid base64 content or receipt not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["BadRequestResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large (max 10MB) */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/receipts/{id}/download": {
     /**
      * Get presigned download URL for receipt PDF

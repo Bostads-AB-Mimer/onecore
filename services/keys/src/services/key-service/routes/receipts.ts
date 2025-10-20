@@ -14,10 +14,12 @@ const TABLE = 'receipts'
 const {
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
+  UploadBase64RequestSchema,
   ReceiptSchema,
 } = keys.v1
 type CreateReceiptRequest = keys.v1.CreateReceiptRequest
 type UpdateReceiptRequest = keys.v1.UpdateReceiptRequest
+type UploadBase64Request = keys.v1.UploadBase64Request
 type Receipt = keys.v1.Receipt
 
 // Configure multer for in-memory storage (we'll upload to MinIO)
@@ -36,6 +38,7 @@ const KeyLoanParamSchema = z.object({ keyLoanId: z.string().uuid() })
 export const routes = (router: KoaRouter) => {
   registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
   registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
+  registerSchema('UploadBase64Request', UploadBase64RequestSchema)
   registerSchema('Receipt', ReceiptSchema)
 
   /**
@@ -293,6 +296,143 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /receipts/{id}/upload-base64:
+   *   post:
+   *     summary: Upload PDF file for a receipt (base64 encoded - for Power Automate)
+   *     tags: [Receipts]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UploadBase64Request'
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *       400:
+   *         description: Invalid base64 content or receipt not found
+   *       404:
+   *         description: Receipt not found
+   *       413:
+   *         description: File too large (max 10MB)
+   */
+  router.post(
+    '/receipts/:id/upload-base64',
+    parseRequestBody(UploadBase64RequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+        if (!parse.success) {
+          ctx.status = 400
+          ctx.body = { reason: 'Invalid receipt id', ...metadata }
+          return
+        }
+
+        const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+        if (!receipt) {
+          ctx.status = 404
+          ctx.body = { reason: 'Receipt not found', ...metadata }
+          return
+        }
+
+        const payload: UploadBase64Request = ctx.request.body
+
+        // Decode base64 to Buffer
+        let fileBuffer: Buffer
+        try {
+          fileBuffer = Buffer.from(payload.fileContent, 'base64')
+        } catch (_err) {
+          ctx.status = 400
+          ctx.body = { reason: 'Invalid base64 content', ...metadata }
+          return
+        }
+
+        // Validate file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024
+        if (fileBuffer.length > maxSize) {
+          ctx.status = 413
+          ctx.body = {
+            reason: `File too large. Maximum size is 10MB, got ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB`,
+            ...metadata,
+          }
+          return
+        }
+
+        // Validate PDF header (PDF files start with %PDF-)
+        const pdfHeader = fileBuffer.slice(0, 5).toString('utf-8')
+        if (pdfHeader !== '%PDF-') {
+          ctx.status = 400
+          ctx.body = {
+            reason: 'Invalid PDF file. File must be a valid PDF document.',
+            ...metadata,
+          }
+          return
+        }
+
+        const fileName =
+          payload.fileName || `${parse.data.id}-${Date.now()}.pdf`
+        const uploadMetadata = {
+          'receipt-id': parse.data.id,
+          'receipt-type': receipt.receiptType,
+          'key-loan-id': receipt.keyLoanId,
+          ...(payload.metadata || {}),
+        }
+
+        const fileId = await uploadFile(fileBuffer, fileName, uploadMetadata)
+
+        // Update receipt with fileId (fileId presence indicates signed status)
+        await db(TABLE).where({ id: parse.data.id }).update({
+          fileId,
+          updatedAt: db.fn.now(),
+        })
+
+        // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
+        if (receipt.receiptType === 'LOAN') {
+          const keyLoanAlreadyActivated = await db('key_loans')
+            .where({ id: receipt.keyLoanId })
+            .whereNotNull('pickedUpAt')
+            .first()
+
+          if (!keyLoanAlreadyActivated) {
+            await db('key_loans')
+              .where({ id: receipt.keyLoanId })
+              .update({ pickedUpAt: db.fn.now() })
+
+            logger.info(
+              { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
+              'Key loan activated after signed receipt uploaded via base64'
+            )
+          }
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            fileId,
+            fileName,
+            size: fileBuffer.length,
+            source: 'base64',
+          },
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'Error uploading base64 file')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
