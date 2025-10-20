@@ -156,7 +156,7 @@ export function ContractCard({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId, open])
+  }, [lease.rentalPropertyId])
 
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
