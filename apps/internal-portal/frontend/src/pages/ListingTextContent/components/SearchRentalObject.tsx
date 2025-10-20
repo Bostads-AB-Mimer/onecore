@@ -8,7 +8,10 @@ import {
 import { useState, useMemo, useCallback } from 'react'
 
 import * as utils from '../../../utils'
-import { useSearchRentalObjects, RentalObjectSearchData } from '../hooks/useSearchRentalObjects'
+import {
+  useSearchRentalObjects,
+  RentalObjectSearchData,
+} from '../hooks/useSearchRentalObjects'
 import { mdTheme } from '../../../theme'
 
 type SearchRentalObjectProps = {
@@ -34,9 +37,12 @@ export const SearchRentalObject = ({
     []
   )
 
-  const handleSearch = useCallback((value: string) => {
-    onSetSearchString(value.trim())
-  }, [onSetSearchString])
+  const handleSearch = useCallback(
+    (value: string) => {
+      onSetSearchString(value.trim())
+    },
+    [onSetSearchString]
+  )
 
   const options = rentalObjectsQuery.data ? [rentalObjectsQuery.data] : []
 

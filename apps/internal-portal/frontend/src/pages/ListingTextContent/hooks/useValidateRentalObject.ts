@@ -9,13 +9,16 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) =>
     enabled: Boolean(rentalObjectCode && rentalObjectCode.trim().length > 0),
     queryFn: async () => {
       try {
-        await axios.get(`${backendUrl}/rental-objects/by-code/${rentalObjectCode}`, {
-          headers: {
-            Accept: 'application/json',
-            'Access-Control-Allow-Credentials': true,
-          },
-          withCredentials: true,
-        })
+        await axios.get(
+          `${backendUrl}/rental-objects/by-code/${rentalObjectCode}`,
+          {
+            headers: {
+              Accept: 'application/json',
+              'Access-Control-Allow-Credentials': true,
+            },
+            withCredentials: true,
+          }
+        )
         return true
       } catch (err) {
         if (err instanceof AxiosError && err.response?.status === 404) {

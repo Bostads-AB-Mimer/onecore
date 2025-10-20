@@ -159,10 +159,7 @@ const ListingTextContentForm = () => {
         <Typography color="error" gutterBottom>
           Kunde inte ladda annonsinnehåll
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/annonsinnehall')}
-        >
+        <Button variant="contained" onClick={() => navigate('/annonsinnehall')}>
           Tillbaka
         </Button>
       </Box>
@@ -250,19 +247,23 @@ const ListingTextContentForm = () => {
                   onChange={(e) => setObjectCode(e.target.value)}
                   placeholder="Ange hyresid..."
                   disabled={isEditMode}
-                  error={!isEditMode && objectCode.trim().length > 0 && validationQuery.data === false}
+                  error={
+                    !isEditMode &&
+                    objectCode.trim().length > 0 &&
+                    validationQuery.data === false
+                  }
                   helperText={
                     isEditMode
                       ? 'Hyresid kan inte ändras efter att innehållet har skapats'
                       : !objectCode.trim()
-                      ? 'Ange ett hyresid'
-                      : validationQuery.isLoading
-                      ? 'Verifierar hyresid...'
-                      : validationQuery.data === false
-                      ? 'Hyresidt hittas inte'
-                      : validationQuery.data === true
-                      ? 'Hyresidt är giltigt'
-                      : 'Ange ett hyresid'
+                        ? 'Ange ett hyresid'
+                        : validationQuery.isLoading
+                          ? 'Verifierar hyresid...'
+                          : validationQuery.data === false
+                            ? 'Hyresidt hittas inte'
+                            : validationQuery.data === true
+                              ? 'Hyresidt är giltigt'
+                              : 'Ange ett hyresid'
                   }
                 />
               </Box>

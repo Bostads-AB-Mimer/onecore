@@ -64,15 +64,28 @@ export const ListingPreview = ({
           .filter((line: string) => line.trim() !== '')
 
         return items.length > 0 ? (
-          <Box key={index} component="ul" sx={{ marginBottom: 2, paddingLeft: 3 }}>
+          <Box
+            key={index}
+            component="ul"
+            sx={{ marginBottom: 2, paddingLeft: 3 }}
+          >
             {items.map((item: string, i: number) => (
-              <Typography key={i} component="li" variant="body1" sx={{ marginBottom: 0.5 }}>
+              <Typography
+                key={i}
+                component="li"
+                variant="body1"
+                sx={{ marginBottom: 0.5 }}
+              >
                 {item.trim()}
               </Typography>
             ))}
           </Box>
         ) : (
-          <Box key={index} component="ul" sx={{ marginBottom: 2, paddingLeft: 3 }}>
+          <Box
+            key={index}
+            component="ul"
+            sx={{ marginBottom: 2, paddingLeft: 3 }}
+          >
             <Typography component="li" variant="body1" color="text.secondary">
               Punktlista...
             </Typography>
@@ -132,7 +145,11 @@ export const ListingPreview = ({
         )}
       </Paper>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', marginTop: 1 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: 'block', marginTop: 1 }}
+      >
         Så här kommer annonsen att visas för användare
       </Typography>
     </Box>

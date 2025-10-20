@@ -12,6 +12,9 @@
   "bugs": {
     "url": "https://github.com/Bostads-AB-Mimer/onecore-utilities/issues"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "author": "Anders Norrback Bornholm",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

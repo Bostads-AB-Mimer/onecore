@@ -115,15 +115,14 @@ const ListingTextContent = () => {
                   <Link
                     to={`/annonsinnehall/${data.rentalObjectCode}/redigera`}
                   >
-                    <Button variant="contained">
-                      Visa och redigera
-                    </Button>
+                    <Button variant="contained">Visa och redigera</Button>
                   </Link>
                 </Box>
 
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Antal textelement: <strong>{data.contentBlocks.length}</strong>
+                    Antal textelement:{' '}
+                    <strong>{data.contentBlocks.length}</strong>
                   </Typography>
                 </Box>
 

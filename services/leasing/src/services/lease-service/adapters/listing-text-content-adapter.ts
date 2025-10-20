@@ -157,7 +157,9 @@ const update = async (
       )
       return {
         ok: false,
-        err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
+        err: new Error(
+          `Listing text content for rental object code ${rentalObjectCode} not found`
+        ),
       }
     }
 
@@ -204,7 +206,9 @@ const remove = async (
       )
       return {
         ok: false,
-        err: new Error(`Listing text content for rental object code ${rentalObjectCode} not found`),
+        err: new Error(
+          `Listing text content for rental object code ${rentalObjectCode} not found`
+        ),
       }
     }
 
