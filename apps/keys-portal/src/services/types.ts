@@ -16,6 +16,7 @@ export type KeyLoan = components['schemas']['KeyLoan']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']
+export type KeyEvent = components['schemas']['KeyEvent']
 
 // Tables/respopnse types from core API generated schemas
 export type Property = components['schemas']['Property']
@@ -39,6 +40,10 @@ export type RentalPropertyResponse =
 export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
 export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
 export type CreateReceiptRequest = components['schemas']['CreateReceiptRequest']
+export type CreateKeyEventRequest =
+  components['schemas']['CreateKeyEventRequest']
+export type UpdateKeyEventRequest =
+  components['schemas']['UpdateKeyEventRequest']
 
 // Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
 export type ReceiptByKeyLoan = NonNullable<
@@ -163,6 +168,25 @@ export interface GroupedLog {
   latestLog: Log
   logs: Log[]
 }
+
+// ----- Key Events (UI/domain) -----
+// Key event type labels in Swedish
+export const KeyEventTypeLabels = {
+  FLEX: 'Flex',
+  ORDER: 'Beställning',
+  LOST: 'Förlorad',
+} as const
+
+export type KeyEventType = keyof typeof KeyEventTypeLabels
+
+// Key event status labels in Swedish
+export const KeyEventStatusLabels = {
+  ORDERED: 'Beställd',
+  RECEIVED: 'Inkommen',
+  COMPLETED: 'Klar',
+} as const
+
+export type KeyEventStatus = keyof typeof KeyEventStatusLabels
 
 // Filter parameters for log search
 export interface LogFilterParams {
