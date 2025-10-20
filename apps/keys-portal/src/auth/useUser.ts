@@ -19,7 +19,7 @@ export function useUser() {
   const q = useQuery<User, 'unauthenticated' | 'unknown'>({
     queryKey: ['auth', 'user'],
     retry: false,
-    refetchInterval: 300000,
+    refetchInterval: 5000,
     queryFn: () =>
       fetch(`${authConfig.apiUrl}/auth/profile`, {
         credentials: 'include',
