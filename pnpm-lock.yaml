@@ -52,6 +52,9 @@ importers:
       globals:
         specifier: ^15.9.0
         version: 15.15.0
+      launch-goblin:
+        specifier: ^0.1.1
+        version: 0.1.3(d99895b9cd767c19fda862dbc305a969)
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -197,6 +200,9 @@ importers:
       '@emotion/styled':
         specifier: ^11.11.0
         version: 11.14.1(@emotion/react@11.14.0(@types/react@18.3.24)(react@18.3.1))(@types/react@18.3.24)(react@18.3.1)
+      '@hookform/resolvers':
+        specifier: ^5.2.1
+        version: 5.2.2(react-hook-form@7.62.0(react@18.3.1))
       '@mui/icons-material':
         specifier: ^5.15.6
         version: 5.18.0(@mui/material@5.18.0(@emotion/react@11.14.0(@types/react@18.3.24)(react@18.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.24)(react@18.3.1))(@types/react@18.3.24)(react@18.3.1))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.24)(react@18.3.1)
@@ -595,6 +601,9 @@ importers:
       '@radix-ui/react-label':
         specifier: ^2.1.1
         version: 2.1.7(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-select':
+        specifier: ^2.1.1
+        version: 2.2.6(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-separator':
         specifier: ^1.1.1
         version: 1.1.7(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1006,10 +1015,10 @@ importers:
         version: 11.1.0(eslint@9.35.0(jiti@1.21.7))
       jest:
         specifier: ^29.7.0
-        version: 29.7.0(babel-plugin-macros@3.1.0)
+        version: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)
       ts-jest:
         specifier: ^29.2.5
-        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2)
+        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(esbuild@0.25.9)(jest-util@29.7.0)(jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2)
       tsup:
         specifier: ^8.0.2
         version: 8.5.0(jiti@1.21.7)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
@@ -1221,6 +1230,9 @@ importers:
       tedious:
         specifier: ^18.6.1
         version: 18.6.1
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@iteam/sanity-check':
         specifier: ^1.0.1
@@ -5357,6 +5369,132 @@ packages:
   '@webcomponents/shadycss@1.11.2':
     resolution: {integrity: sha512-vRq+GniJAYSBmTRnhCYPAPq6THYqovJ/gzGThWbgEZUQaBccndGTi1hdiUP15HzEco0I6t4RCtXyX0rsSmwgPw==}
 
+  '@whimbrel/actor@0.0.6':
+    resolution: {integrity: sha512-FyVlh+CzgdJLY0FaGZj6IRV+S1XMfwTlFrELVyKdOGnkRho63jWxjGpAqjd7m5wiy5FKp6w4W5H0/tkyec1nxw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/project': ^0.0.6
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/array@0.0.6':
+    resolution: {integrity: sha512-Y80xr0nPsgFSKvYEMiL1frs5Cc0Jl2DlFvuoY2PbTDthORTcHRpofJp/+Vd5qmDaZqLBaw5hHUr8rncrfjSzmg==}
+    peerDependencies:
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/core-api@0.0.6':
+    resolution: {integrity: sha512-r63ndk/kLboMF2M/uOLzzTNhlTODZlnq1K4nJYpGcWD5qLdFzy7Fp3nNjzB1SZhws/jI2dQwKENcmVTGGrxJRA==}
+
+  '@whimbrel/core@0.0.6':
+    resolution: {integrity: sha512-MoIY5kAsXYbblQjhw3lF+NSdw+LieZ5OfV2qf1oKWmPcvcYnPbHj0DhzNnwoJvQxCCS7sHYXzXFfNGR7J7o3hg==}
+    peerDependencies:
+      '@whimbrel/actor': ^0.0.6
+      '@whimbrel/array': ^0.0.6
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/filesystem': ^0.0.6
+      '@whimbrel/project': ^0.0.6
+      '@whimbrel/source': ^0.0.6
+      '@whimbrel/target': ^0.0.6
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/docker-compose@0.0.6':
+    resolution: {integrity: sha512-EmaThOonSyU8L97nyKhlr6bcDMmPLrNuAXsZw9cOm8B43Mjf46TJPB13fUQUAUrJ3MFVhShgQDPndwYyqmPfHA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/struct-file': ^0.0.6
+
+  '@whimbrel/facet@0.0.6':
+    resolution: {integrity: sha512-RLVbT1XQlsgBtqMQjNTA0YLKJ+IWs4vabXQi1fbc0p1v59z8YPFUeG3jxlh5Vd5vJYcj/BPhuqBpS2dyUBCO5g==}
+    peerDependencies:
+      '@whimbrel/array': ^0.0.6
+      '@whimbrel/core-api': ^0.0.6
+
+  '@whimbrel/filesystem@0.0.6':
+    resolution: {integrity: sha512-GADsyTgaI9h/jnFAL6AhaAIxH43I9q28KgNgbnhPb4E24QjpgxPusT6gB0CpNKazgHreRiXrN8PbRGjVkwdRdw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+
+  '@whimbrel/flow@0.0.6':
+    resolution: {integrity: sha512-vPccHAf8bR4NoEbfIG8YHc0Tg+6KY0QWjNS+w50zq8jVBnsWKA1LO0zS061U8m7VxftGzW47aWs8dupiszGHJw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+
+  '@whimbrel/node@0.0.6':
+    resolution: {integrity: sha512-v/rjbXpz+lVl3Qqplu/BJqGYbU+7b9iOF8MDa2PQvVwU0laYTJ1Jz1tmOBCzlknxbsUeLh0iVBY/FZq9rNU1cw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+
+  '@whimbrel/npm@0.0.6':
+    resolution: {integrity: sha512-LlQ3nniDKKC1VNROSgmeu8hcua6TU+JrU68CI2AAzo2Tptv4/PAtzpHgUtXnKEhMPzPXsAZN5ixmEBXBDxf1Ug==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/package-json': ^0.0.6
+      '@whimbrel/project': ^0.0.6
+
+  '@whimbrel/package-json@0.0.6':
+    resolution: {integrity: sha512-KlTtMyx0UUORiL3QOiGr+Hv6ryE3SjvoLxS4HxHN7Ib+a6K3furzkYDZ3ZXpMeyCjCN+VTvKOtJJokjVy1jLjw==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/filesystem': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/struct-file': ^0.0.6
+
+  '@whimbrel/pnpm@0.0.6':
+    resolution: {integrity: sha512-Im5HYkXygaIjAC5572tQwUVs5i5M8vG3v+3q1/ZLnbTo1+7DrwmuaRhIEWpXz++BTR/x6EvwQN/aDHGP0bM5oA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/package-json': ^0.0.6
+      '@whimbrel/project': ^0.0.6
+
+  '@whimbrel/project@0.0.6':
+    resolution: {integrity: sha512-Fmt38uvtCo8BEALYYkQhIA5Rxc3PiJd3FQirPd58v2RZsic9d+9+KBZs4Q1Z0pyhexD243F8eQQRahlwB+tU9A==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+
+  '@whimbrel/source@0.0.6':
+    resolution: {integrity: sha512-wOot/Y1I3lJJ5NqW22AIgJt/zCnR5mHqgptW9fssD/TTAmXB8Hy6emctNpOBtuXzNl0iM5vRkyq6HuEMTDROaA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/struct-file@0.0.6':
+    resolution: {integrity: sha512-tsY9KFB0wl9GMQGbObJZBGk7QgJawse6oPcup2rJ1x36QTC9dcd9oyr52Jf7gXC3Dtkk2BTOnZcIXh6U+Tk1rw==}
+    peerDependencies:
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/target@0.0.6':
+    resolution: {integrity: sha512-d2M6vcV+jTtjjxBSvkABuLvqBx/GGztdnIHfvVtDfUxUKOVMOFAKLbZpfQZNnZSww5ySbgkyrW8dg7OcE0i0pA==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/flow': ^0.0.6
+      '@whimbrel/walk': ^0.0.6
+
+  '@whimbrel/turborepo@0.0.6':
+    resolution: {integrity: sha512-ykQ5mggL9aLwTb/wB4yaKylaHERA4LhfFRUOK5IKrHBtvSI2KE2Rau6OCpwE2nrb2cUff8h6yS6b6lyVzXr+4A==}
+    peerDependencies:
+      '@whimbrel/core-api': ^0.0.6
+      '@whimbrel/facet': ^0.0.6
+      '@whimbrel/package-json': ^0.0.6
+      '@whimbrel/struct-file': ^0.0.6
+
+  '@whimbrel/walk@0.0.6':
+    resolution: {integrity: sha512-33TRxbHOU3ZwlPGzWhz1UD//MGW6guqBzrKHfrvsBAfdcltGyIlZh7Gd07QPZBZGL3nYbp0gd6cRhK603kBr+Q==}
+
   '@xmldom/xmldom@0.8.11':
     resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
     engines: {node: '>=10.0.0'}
@@ -6030,6 +6168,10 @@ packages:
   commander@13.1.0:
     resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
     engines: {node: '>=18'}
+
+  commander@14.0.1:
+    resolution: {integrity: sha512-2JkV3gUZUVrbNA+1sjBOYLsMZ5cEEl8GTFP2a4AVz5hvasAMCQ1D2l2le/cX+pV4N6ZU17zjUahLpIXRrnWL8A==}
+    engines: {node: '>=20'}
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
@@ -7895,6 +8037,10 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  isexe@3.1.1:
+    resolution: {integrity: sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ==}
+    engines: {node: '>=16'}
+
   isobject@3.0.1:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
@@ -8286,6 +8432,11 @@ packages:
   language-tags@1.0.9:
     resolution: {integrity: sha512-MbjN408fEndfiQXbFQ1vnd+1NoLDsnQW41410oQBXiyXDMYH5z505juWa4KUE1LqxRC7DgOgZDbKLxHIwm27hA==}
     engines: {node: '>=0.10'}
+
+  launch-goblin@0.1.3:
+    resolution: {integrity: sha512-4W+V7Gaw1ELmO6ySmA2vvfHSXKwgqrXGvCI9P7QppJjehhKk0NsqjvUSEhutIT5pfUwhZcx3mBdCvwHQHG1pQQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   lazystream@1.0.1:
     resolution: {integrity: sha512-b94GiNHQNy6JNTrt5w6zNyffMrNkXZb3KTkCZJb2V1xaEGCk093vkZ2jk3tpaeP33/OiXC+WvK9AxUebnf5nbw==}
@@ -8714,6 +8865,11 @@ packages:
 
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
+
+  neo-blessed@0.2.0:
+    resolution: {integrity: sha512-C2kC4K+G2QnNQFXUIxTQvqmrdSIzGTX1ZRKeDW6ChmvPRw8rTkTEJzbEQHiHy06d36PCl/yMOCjquCRV8SpSQw==}
+    engines: {node: '>= 8.0.0'}
+    hasBin: true
 
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
@@ -10020,6 +10176,10 @@ packages:
     resolution: {integrity: sha512-tjLPs7dVyqgItVFirHYqe2T+MfWc2VOBQ8QFKKbWTA3PU7liZR8zoSpAi/C1k1ilm9RsXIKYf197oap9wXGVYg==}
     engines: {node: '>=14.18.0'}
 
+  supports-color@10.2.0:
+    resolution: {integrity: sha512-5eG9FQjEjDbAlI5+kdpdyPIBMRH4GfTVDGREVupaZHmVoppknhM29b/S9BkQz7cathp85BVgRi/As3Siln7e0Q==}
+    engines: {node: '>=18'}
+
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
     engines: {node: '>=4'}
@@ -10807,6 +10967,11 @@ packages:
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
+    hasBin: true
+
+  which@5.0.0:
+    resolution: {integrity: sha512-JEdGzHwwkrbWoGOlIHqQ5gtprKGOenpDHpxE9zVR1bWbOtYRyPPHMe9FaP6x61CmNaTThSkb0DAJte5jD+DmzQ==}
+    engines: {node: ^18.17.0 || >=20.5.0}
     hasBin: true
 
   wonka@6.3.5:
@@ -12145,7 +12310,7 @@ snapshots:
       '@typescript-eslint/parser': 8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
       eslint: 9.35.0(jiti@1.21.7)
       eslint-config-prettier: 10.1.8(eslint@9.35.0(jiti@1.21.7))
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint@9.35.0(jiti@1.21.7))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.35.0(jiti@1.21.7))
       eslint-plugin-react: 7.37.5(eslint@9.35.0(jiti@1.21.7))
       eslint-plugin-react-hooks: 5.2.0(eslint@9.35.0(jiti@1.21.7))
@@ -12163,41 +12328,6 @@ snapshots:
       jest-message-util: 29.7.0
       jest-util: 29.7.0
       slash: 3.0.0
-
-  '@jest/core@29.7.0(babel-plugin-macros@3.1.0)':
-    dependencies:
-      '@jest/console': 29.7.0
-      '@jest/reporters': 29.7.0
-      '@jest/test-result': 29.7.0
-      '@jest/transform': 29.7.0
-      '@jest/types': 29.6.3
-      '@types/node': 20.19.14
-      ansi-escapes: 4.3.2
-      chalk: 4.1.2
-      ci-info: 3.9.0
-      exit: 0.1.2
-      graceful-fs: 4.2.11
-      jest-changed-files: 29.7.0
-      jest-config: 29.7.0(@types/node@20.19.14)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.14)(typescript@5.9.2))
-      jest-haste-map: 29.7.0
-      jest-message-util: 29.7.0
-      jest-regex-util: 29.6.3
-      jest-resolve: 29.7.0
-      jest-resolve-dependencies: 29.7.0
-      jest-runner: 29.7.0
-      jest-runtime: 29.7.0
-      jest-snapshot: 29.7.0
-      jest-util: 29.7.0
-      jest-validate: 29.7.0
-      jest-watcher: 29.7.0
-      micromatch: 4.0.8
-      pretty-format: 29.7.0
-      slash: 3.0.0
-      strip-ansi: 6.0.1
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
 
   '@jest/core@29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.14)(typescript@5.9.2))':
     dependencies:
@@ -15114,6 +15244,118 @@ snapshots:
 
   '@webcomponents/shadycss@1.11.2': {}
 
+  '@whimbrel/actor@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))(@whimbrel/walk@0.0.6)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/project': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))
+      '@whimbrel/walk': 0.0.6
+
+  '@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6)':
+    dependencies:
+      '@whimbrel/walk': 0.0.6
+      fast-deep-equal: 3.1.3
+
+  '@whimbrel/core-api@0.0.6': {}
+
+  '@whimbrel/core@0.0.6(d3ac82e613b5b948c5c832f56478bfa4)':
+    dependencies:
+      '@whimbrel/actor': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))(@whimbrel/walk@0.0.6)
+      '@whimbrel/array': 0.0.6(@whimbrel/walk@0.0.6)
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/filesystem': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/project': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))
+      '@whimbrel/source': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/walk@0.0.6)
+      '@whimbrel/target': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/walk@0.0.6)
+      '@whimbrel/walk': 0.0.6
+
+  '@whimbrel/docker-compose@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/struct-file': 0.0.6(@whimbrel/walk@0.0.6)
+
+  '@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)':
+    dependencies:
+      '@whimbrel/array': 0.0.6(@whimbrel/walk@0.0.6)
+      '@whimbrel/core-api': 0.0.6
+
+  '@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      jsonc-parser: 3.3.1
+
+  '@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+
+  '@whimbrel/node@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+
+  '@whimbrel/npm@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/package-json': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/project': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))
+
+  '@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/filesystem': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/struct-file': 0.0.6(@whimbrel/walk@0.0.6)
+
+  '@whimbrel/pnpm@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/package-json': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/project': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))
+
+  '@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+
+  '@whimbrel/source@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/walk@0.0.6)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/walk': 0.0.6
+
+  '@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)':
+    dependencies:
+      '@whimbrel/walk': 0.0.6
+      fast-deep-equal: 3.1.3
+      yaml: 2.8.1
+
+  '@whimbrel/target@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/walk@0.0.6)':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/flow': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/walk': 0.0.6
+
+  '@whimbrel/turborepo@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))':
+    dependencies:
+      '@whimbrel/core-api': 0.0.6
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/package-json': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/struct-file': 0.0.6(@whimbrel/walk@0.0.6)
+
+  '@whimbrel/walk@0.0.6': {}
+
   '@xmldom/xmldom@0.8.11': {}
 
   '@zip.js/zip.js@2.7.73': {}
@@ -15862,6 +16104,8 @@ snapshots:
 
   commander@13.1.0: {}
 
+  commander@14.0.1: {}
+
   commander@2.20.3: {}
 
   commander@4.1.1: {}
@@ -16010,21 +16254,6 @@ snapshots:
       - ts-node
 
   create-jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2)):
-    dependencies:
-      '@jest/types': 29.6.3
-      chalk: 4.1.2
-      exit: 0.1.2
-      graceful-fs: 4.2.11
-      jest-config: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
-      jest-util: 29.7.0
-      prompts: 2.4.2
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
-
-  create-jest@29.7.0(babel-plugin-macros@3.1.0):
     dependencies:
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -16793,21 +17022,9 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7))
     transitivePeerDependencies:
       - supports-color
-
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7)):
-    dependencies:
-      debug: 3.2.7
-    optionalDependencies:
-      '@typescript-eslint/parser': 8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
-      eslint: 9.35.0(jiti@1.21.7)
-      eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 4.4.4(eslint-plugin-import@2.32.0)(eslint@9.35.0(jiti@1.21.7))
-    transitivePeerDependencies:
-      - supports-color
-    optional: true
 
   eslint-module-utils@2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7)):
     dependencies:
@@ -16833,66 +17050,7 @@ snapshots:
       eslint-utils: 2.1.0
       regexpp: 3.2.0
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7)):
-    dependencies:
-      '@rtsao/scc': 1.1.0
-      array-includes: 3.1.9
-      array.prototype.findlastindex: 1.2.6
-      array.prototype.flat: 1.3.3
-      array.prototype.flatmap: 1.3.3
-      debug: 3.2.7
-      doctrine: 2.1.0
-      eslint: 9.35.0(jiti@1.21.7)
-      eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7))
-      hasown: 2.0.2
-      is-core-module: 2.16.1
-      is-glob: 4.0.3
-      minimatch: 3.1.2
-      object.fromentries: 2.0.8
-      object.groupby: 1.0.3
-      object.values: 1.2.1
-      semver: 6.3.1
-      string.prototype.trimend: 1.0.9
-      tsconfig-paths: 3.15.0
-    optionalDependencies:
-      '@typescript-eslint/parser': 8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
-    transitivePeerDependencies:
-      - eslint-import-resolver-typescript
-      - eslint-import-resolver-webpack
-      - supports-color
-    optional: true
-
   eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7)):
-    dependencies:
-      '@rtsao/scc': 1.1.0
-      array-includes: 3.1.9
-      array.prototype.findlastindex: 1.2.6
-      array.prototype.flat: 1.3.3
-      array.prototype.flatmap: 1.3.3
-      debug: 3.2.7
-      doctrine: 2.1.0
-      eslint: 9.35.0(jiti@1.21.7)
-      eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0(jiti@1.21.7))
-      hasown: 2.0.2
-      is-core-module: 2.16.1
-      is-glob: 4.0.3
-      minimatch: 3.1.2
-      object.fromentries: 2.0.8
-      object.groupby: 1.0.3
-      object.values: 1.2.1
-      semver: 6.3.1
-      string.prototype.trimend: 1.0.9
-      tsconfig-paths: 3.15.0
-    optionalDependencies:
-      '@typescript-eslint/parser': 8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
-    transitivePeerDependencies:
-      - eslint-import-resolver-typescript
-      - eslint-import-resolver-webpack
-      - supports-color
-
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2))(eslint@9.35.0(jiti@1.21.7)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -17938,6 +18096,8 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  isexe@3.1.1: {}
+
   isobject@3.0.1: {}
 
   isstream@0.1.2: {}
@@ -18051,9 +18211,9 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2)):
+  jest-cli@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.14)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -18070,13 +18230,13 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(babel-plugin-macros@3.1.0):
+  jest-cli@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
-      create-jest: 29.7.0(babel-plugin-macros@3.1.0)
+      create-jest: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
       exit: 0.1.2
       import-local: 3.2.0
       jest-config: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
@@ -18409,24 +18569,24 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2)):
+  jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.14)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
+      jest-cli: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
       - supports-color
       - ts-node
 
-  jest@29.7.0(babel-plugin-macros@3.1.0):
+  jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(babel-plugin-macros@3.1.0)
+      jest-cli: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -18719,6 +18879,33 @@ snapshots:
   language-tags@1.0.9:
     dependencies:
       language-subtag-registry: 0.3.23
+
+  launch-goblin@0.1.3(d99895b9cd767c19fda862dbc305a969):
+    dependencies:
+      '@whimbrel/array': 0.0.6(@whimbrel/walk@0.0.6)
+      '@whimbrel/core': 0.0.6(d3ac82e613b5b948c5c832f56478bfa4)
+      '@whimbrel/docker-compose': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/facet': 0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)
+      '@whimbrel/filesystem': 0.0.6(@whimbrel/core-api@0.0.6)
+      '@whimbrel/node': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))
+      '@whimbrel/npm': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))
+      '@whimbrel/package-json': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/pnpm': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/project@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6)))
+      '@whimbrel/turborepo': 0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/package-json@0.0.6(@whimbrel/core-api@0.0.6)(@whimbrel/facet@0.0.6(@whimbrel/array@0.0.6(@whimbrel/walk@0.0.6))(@whimbrel/core-api@0.0.6))(@whimbrel/filesystem@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/flow@0.0.6(@whimbrel/core-api@0.0.6))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6)))(@whimbrel/struct-file@0.0.6(@whimbrel/walk@0.0.6))
+      '@whimbrel/walk': 0.0.6
+      commander: 14.0.1
+      fast-deep-equal: 3.1.3
+      neo-blessed: 0.2.0
+      supports-color: 10.2.0
+      which: 5.0.0
+    transitivePeerDependencies:
+      - '@whimbrel/actor'
+      - '@whimbrel/core-api'
+      - '@whimbrel/flow'
+      - '@whimbrel/project'
+      - '@whimbrel/source'
+      - '@whimbrel/struct-file'
+      - '@whimbrel/target'
 
   lazystream@1.0.1:
     dependencies:
@@ -19147,6 +19334,8 @@ snapshots:
   negotiator@0.6.3: {}
 
   neo-async@2.6.2: {}
+
+  neo-blessed@0.2.0: {}
 
   next-themes@0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
@@ -20619,6 +20808,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  supports-color@10.2.0: {}
+
   supports-color@5.5.0:
     dependencies:
       has-flag: 3.0.0
@@ -20883,6 +21074,27 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
+  ts-jest@29.4.1(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(esbuild@0.25.9)(jest-util@29.7.0)(jest@29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2):
+    dependencies:
+      bs-logger: 0.2.6
+      fast-json-stable-stringify: 2.1.0
+      handlebars: 4.7.8
+      jest: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)
+      json5: 2.2.3
+      lodash.memoize: 4.1.2
+      make-error: 1.3.6
+      semver: 7.7.2
+      type-fest: 4.41.0
+      typescript: 5.9.2
+      yargs-parser: 21.1.1
+    optionalDependencies:
+      '@babel/core': 7.28.4
+      '@jest/transform': 29.7.0
+      '@jest/types': 29.6.3
+      babel-jest: 29.7.0(@babel/core@7.28.4)
+      esbuild: 0.25.9
+      jest-util: 29.7.0
+
   ts-jest@29.4.1(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.14)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.14)(typescript@5.9.2)))(typescript@5.9.2):
     dependencies:
       bs-logger: 0.2.6
@@ -20909,26 +21121,6 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
       jest: 29.7.0(@types/node@24.4.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.4.0)(typescript@5.9.2))
-      json5: 2.2.3
-      lodash.memoize: 4.1.2
-      make-error: 1.3.6
-      semver: 7.7.2
-      type-fest: 4.41.0
-      typescript: 5.9.2
-      yargs-parser: 21.1.1
-    optionalDependencies:
-      '@babel/core': 7.28.4
-      '@jest/transform': 29.7.0
-      '@jest/types': 29.6.3
-      babel-jest: 29.7.0(@babel/core@7.28.4)
-      jest-util: 29.7.0
-
-  ts-jest@29.4.1(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2):
-    dependencies:
-      bs-logger: 0.2.6
-      fast-json-stable-stringify: 2.1.0
-      handlebars: 4.7.8
-      jest: 29.7.0(babel-plugin-macros@3.1.0)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
@@ -21529,6 +21721,10 @@ snapshots:
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
+
+  which@5.0.0:
+    dependencies:
+      isexe: 3.1.1
 
   wonka@6.3.5: {}
 

@@ -42,15 +42,7 @@
     "@azure/msal-node": "^2.9.2"
   },
   "devDependencies": {
-<<<<<<< HEAD
-<<<<<<< HEAD
     "cross-env": "10.0.0",
-    "eslint": "^9.31.0",
-=======
->>>>>>> d2d87ecc (added cross-env)
-=======
-    "cross-env": "10.0.0",
->>>>>>> de65642b (added pnpx before cross env and knex scripts)
     "@eslint/js": "9.32.0",
     "@iteam/eslint-config-react": "^0.4.0",
     "eslint": "^9.31.0",
