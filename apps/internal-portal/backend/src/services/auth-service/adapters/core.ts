@@ -27,7 +27,7 @@ const coreAdapter = (options: AuthOptions = defaultOptions): AuthAdapter => {
   return {
     /**
      * Sends a login request to the ONECore Core Service, which is expected to respond
-     * to respond will respond with a redirect to where the authentication flow begins.
+     * with a redirect to where the authentication flow begins.
      *
      * If the Core Service responds with a redirect to an `auth/redirect` URL, this
      * method will follow that redirect without informing the requesting browser, as this
