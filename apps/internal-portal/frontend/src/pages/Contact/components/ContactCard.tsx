@@ -282,7 +282,7 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
       {invoice.source === 'next' && (
         <>
           <Typography variant="h2" sx={{ mt: 2, mb: 1, fontSize: 18 }}>
-            Betalhändelser
+            Betalningshändelser
           </Typography>
           <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
         </>
