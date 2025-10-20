@@ -1,27 +1,38 @@
 import { Outlet } from 'react-router-dom'
 import { CommandPalette } from '../CommandPalette'
 import SidebarNavigation from '../navigation/SidebarNavigation'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/Sidebar'
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from '../ui/Sidebar'
 
 import { NavigationBar } from '../NavigationBar'
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-secondary">
+    <SidebarProvider>
+      <AppLayoutContent />
+    </SidebarProvider>
+  )
+}
+
+function AppLayoutContent() {
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <div className="flex-1 min-h-screen bg-gradient-to-b from-white to-secondary">
       {/* Header */}
-      <NavigationBar
-        onMenuClick={() => console.log('todo: handle menu click')}
-      />
+      <NavigationBar onMenuClick={toggleSidebar} />
       <div className="flex h-[calc(100vh-3.5rem)] mt-14 relative">
-        <SidebarProvider>
-          <CommandPalette />
-          <SidebarNavigation />
-          <SidebarInset>
-            <div className="w-full">
-              <Outlet />
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
+        <CommandPalette />
+        <SidebarNavigation />
+        <SidebarInset>
+          <div className="w-full">
+            <Outlet />
+          </div>
+        </SidebarInset>
       </div>
     </div>
   )
