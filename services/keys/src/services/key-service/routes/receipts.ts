@@ -15,6 +15,9 @@ const {
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
   UploadBase64RequestSchema,
+  ErrorResponseSchema,
+  NotFoundResponseSchema,
+  BadRequestResponseSchema,
   ReceiptSchema,
 } = keys.v1
 type CreateReceiptRequest = keys.v1.CreateReceiptRequest
@@ -39,6 +42,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
   registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
   registerSchema('UploadBase64Request', UploadBase64RequestSchema)
+  registerSchema('ErrorResponse', ErrorResponseSchema)
+  registerSchema('NotFoundResponse', NotFoundResponseSchema)
+  registerSchema('BadRequestResponse', BadRequestResponseSchema)
   registerSchema('Receipt', ReceiptSchema)
 
   /**
