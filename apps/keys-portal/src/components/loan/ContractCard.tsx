@@ -117,8 +117,10 @@ export function ContractCard({
     }
   }, [lease.rentalPropertyId, rentalAddress])
 
-  // Eagerly check for unsigned loans to show yellow border indicator immediately
+  // Only check for unsigned loans when the key loans accordion is opened
   useEffect(() => {
+    if (!keyLoansOpen) return
+
     let cancelled = false
     async function checkUnsigned() {
       const hasUnsigned = await checkHasUnsignedActiveLoans(
@@ -132,7 +134,7 @@ export function ContractCard({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId])
+  }, [lease.rentalPropertyId, keyLoansOpen])
 
   useEffect(() => {
     let cancelled = false
