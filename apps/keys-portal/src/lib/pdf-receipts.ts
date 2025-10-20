@@ -397,9 +397,10 @@ const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
   doc.text(contact, MARGIN_X, h - 10)
 
   if (receiptId) {
-    doc.setTextColor(128, 128, 128)
-    doc.text(`${receiptId}`, MARGIN_X, h - 4)
     doc.setTextColor(0, 0, 0)
+    doc.setFontSize(10)
+    doc.text(`${receiptId}`, MARGIN_X, h - 4)
+    doc.setFontSize(8)
   }
 
   doc.text('Sida 1', 190, h - 4, { align: 'right' })
