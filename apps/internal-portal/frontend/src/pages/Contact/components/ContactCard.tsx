@@ -337,7 +337,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
               <Skeleton variant="text" height="25px" />
             </TableCell>
           </TableRow>
-        ) : (
+        ) : eventsQuery.data?.length ? (
           eventsQuery.data?.map((event, index) => (
             <TableRow key={index}>
               <TableCell>{event.transactionSourceCode}</TableCell>
@@ -346,6 +346,14 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
               <TableCell>{yyyymmdd(new Date(event.paymentDate))}</TableCell>
             </TableRow>
           ))
+        ) : (
+          <TableRow>
+            <TableCell>
+              <Typography fontStyle="italic">
+                Inga betalningshändelser hittades
+              </Typography>
+            </TableCell>
+          </TableRow>
         )}
       </TableBody>
     </Table>
