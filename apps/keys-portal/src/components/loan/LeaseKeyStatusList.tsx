@@ -198,9 +198,9 @@ export function LeaseKeyStatusList({
         )
         if (!cancelled) {
           setKeysWithLoanStatus(keysData)
-          // Compute statuses synchronously
-          const withStatus = keysData.map((key) =>
-            computeKeyWithStatus(key, keysData, tenantContactCodes)
+          // Compute statuses with events
+          const withStatus = await Promise.all(
+            keysData.map((key) => computeKeyWithStatus(key, tenantContactCodes))
           )
           setKeysWithStatus(withStatus)
         }
@@ -227,9 +227,9 @@ export function LeaseKeyStatusList({
       lease.rentalPropertyId
     )
     setKeysWithLoanStatus(keysData)
-    // Recompute statuses synchronously
-    const withStatus = keysData.map((key) =>
-      computeKeyWithStatus(key, keysData, tenantContactCodes)
+    // Recompute statuses with events
+    const withStatus = await Promise.all(
+      keysData.map((key) => computeKeyWithStatus(key, tenantContactCodes))
     )
     setKeysWithStatus(withStatus)
   }
@@ -349,7 +349,7 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  // Filter out disposed keys that don't have active loans
+  // Filter out disposed keys (synchronous)
   const visibleKeys = useMemo(
     () => filterVisibleKeys(keysWithStatus),
     [keysWithStatus]

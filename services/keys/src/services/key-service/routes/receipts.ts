@@ -288,6 +288,34 @@ export const routes = (router: KoaRouter) => {
             { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
             'Key loan activated after signed receipt uploaded'
           )
+
+          // Complete any incomplete events for the keys in this loan
+          const keyLoan = await db('key_loans')
+            .where({ id: receipt.keyLoanId })
+            .first()
+
+          if (keyLoan?.keys) {
+            let keyIds: string[] = []
+            try {
+              keyIds = JSON.parse(keyLoan.keys)
+            } catch {
+              // Fallback if not JSON
+              keyIds = []
+            }
+
+            // For each key, find and complete any incomplete events
+            for (const keyId of keyIds) {
+              await db('key_events')
+                .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+                .whereIn('status', ['ORDERED', 'RECEIVED'])
+                .update({ status: 'COMPLETED', updatedAt: db.fn.now() })
+            }
+
+            logger.info(
+              { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
+              'Completed key events for picked up keys'
+            )
+          }
         }
       }
 
@@ -419,6 +447,34 @@ export const routes = (router: KoaRouter) => {
               { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
               'Key loan activated after signed receipt uploaded via base64'
             )
+
+            // Complete any incomplete events for the keys in this loan
+            const keyLoan = await db('key_loans')
+              .where({ id: receipt.keyLoanId })
+              .first()
+
+            if (keyLoan?.keys) {
+              let keyIds: string[] = []
+              try {
+                keyIds = JSON.parse(keyLoan.keys)
+              } catch {
+                // Fallback if not JSON
+                keyIds = []
+              }
+
+              // For each key, find and complete any incomplete events
+              for (const keyId of keyIds) {
+                await db('key_events')
+                  .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+                  .whereIn('status', ['ORDERED', 'RECEIVED'])
+                  .update({ status: 'COMPLETED', updatedAt: db.fn.now() })
+              }
+
+              logger.info(
+                { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
+                'Completed key events for picked up keys (base64 upload)'
+              )
+            }
           }
         }
 

@@ -13,6 +13,9 @@ type Log = keys.v1.Log
 type KeyNote = keys.v1.KeyNote
 type Receipt = keys.v1.Receipt
 type CreateReceiptRequest = keys.v1.CreateReceiptRequest
+type KeyEvent = keys.v1.KeyEvent
+type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
+type UpdateKeyEventRequest = keys.v1.UpdateKeyEventRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 
 const BASE = Config.keysService.url
@@ -589,6 +592,65 @@ export const ReceiptsApi = {
       fileName,
       metadata,
     })
+    return r.ok ? ok(r.data.content) : r
+  },
+}
+
+/**
+ * ---- KEY EVENTS -------------------------------------------------------------
+ */
+
+export const KeyEventsApi = {
+  list: async (): Promise<AdapterResult<KeyEvent[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyEvent[] }>(`${BASE}/key-events`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByKey: async (
+    keyId: string,
+    limit?: number
+  ): Promise<AdapterResult<KeyEvent[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-events/by-key/${keyId}?${queryString}`
+      : `${BASE}/key-events/by-key/${keyId}`
+
+    const r = await getJSON<{ content: KeyEvent[] }>(url)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  get: async (
+    id: string
+  ): Promise<AdapterResult<KeyEvent, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: KeyEvent }>(`${BASE}/key-events/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  create: async (
+    payload: CreateKeyEventRequest
+  ): Promise<
+    AdapterResult<KeyEvent, 'bad-request' | 'conflict' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: KeyEvent }>(
+      `${BASE}/key-events`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  update: async (
+    id: string,
+    payload: UpdateKeyEventRequest
+  ): Promise<
+    AdapterResult<KeyEvent, 'not-found' | 'bad-request' | CommonErr>
+  > => {
+    const r = await patchJSON<{ content: KeyEvent }>(
+      `${BASE}/key-events/${id}`,
+      payload
+    )
     return r.ok ? ok(r.data.content) : r
   },
 }
