@@ -245,7 +245,7 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
   const { invoice } = props
 
   return (
-    <Box margin={1}>
+    <Box padding={2}>
       {invoice.type === 'Other' ? (
         <p>Text: {invoice.description}</p>
       ) : (
