@@ -8,10 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Plus, Minus, Loader2, AlertCircle } from 'lucide-react'
+import { Plus, Minus, Loader2 } from 'lucide-react'
 import type { Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
+import { keyEventService } from '@/services/api/keyEventService'
 import { useToast } from '@/hooks/use-toast'
 
 type KeyGroup = {
@@ -103,50 +104,37 @@ export function FlexMenu({
   }
 
   const handleCreate = async () => {
-    // Check for flex conflicts before creating
-    const hasAnyConflict = Array.from(keyGroups.values()).some(
-      (group) => group.hasFlexConflict
-    )
-
-    if (hasAnyConflict) {
-      toast({
-        title: 'Fel: Olika flex-nummer',
-        description:
-          'Valda nycklar med samma namn och typ har olika flex-nummer. Vänligen välj nycklar med samma flex-nummer.',
-        variant: 'destructive',
-      })
-      return
-    }
-
     setIsCreating(true)
     try {
-      const createPromises: Promise<Key>[] = []
+      const createdKeys: Key[] = []
 
       // Create keys for each group
-      keyGroups.forEach((group) => {
-        // New flex number is current + 1 (same for all keys in this group)
-        const newFlexNumber = group.currentFlexNumber + 1
+      for (const group of keyGroups.values()) {
+        // Calculate the new flex number (current + 1)
+        const currentFlexNumber = group.sampleKey.flexNumber ?? 0
+        const newFlexNumber = currentFlexNumber + 1
 
         // Create 'count' number of keys with sequence numbers 1, 2, 3, etc.
         for (let i = 1; i <= group.count; i++) {
-          createPromises.push(
-            keyService.createKey({
-              keyName: group.keyName,
-              keyType: group.keyType,
-              flexNumber: newFlexNumber,
-              keySequenceNumber: i, // Sequence number: 1, 2, 3, etc.
-              rentalObjectCode: group.sampleKey.rentalObjectCode,
-              keySystemId: group.sampleKey.keySystemId,
-            })
-          )
+          const newKey = await keyService.createKey({
+            keyName: group.keyName,
+            keyType: group.keyType,
+            keySequenceNumber: i, // Sequence number: 1, 2, 3, etc.
+            flexNumber: newFlexNumber,
+            rentalObjectCode: group.sampleKey.rentalObjectCode,
+            keySystemId: group.sampleKey.keySystemId,
+          })
+          createdKeys.push(newKey)
         }
-      })
+      }
 
-      await Promise.all(createPromises)
+      // Create a single FLEX event for all created keys with ORDERED status
+      const keyIds = createdKeys.map((k) => k.id)
+      await keyEventService.createFlexOrder(keyIds)
 
       toast({
-        title: 'Nycklar skapade',
-        description: `${createPromises.length} flex-nycklar har skapats.`,
+        title: 'Flex-nycklar skapade',
+        description: `${createdKeys.length} flex-nycklar har beställts.`,
       })
 
       onOpenChange(false)
@@ -154,7 +142,7 @@ export function FlexMenu({
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Okänt fel'
       toast({
-        title: 'Kunde inte skapa nycklar',
+        title: 'Kunde inte skapa flex-nycklar',
         description: msg,
         variant: 'destructive',
       })
@@ -174,7 +162,7 @@ export function FlexMenu({
         <DialogHeader>
           <DialogTitle>Skapa Flex-nycklar</DialogTitle>
           <DialogDescription>
-            Skapa nya nycklar med högre flex-nummer för de valda nycklarna.
+            Skapa nya flex-nycklar för de valda nycklarna.
           </DialogDescription>
         </DialogHeader>
 
@@ -194,7 +182,7 @@ export function FlexMenu({
                   <div className="text-muted-foreground">
                     {KeyTypeLabels[key.keyType]}
                     {key.flexNumber !== undefined &&
-                      ` • Flex: ${key.flexNumber}`}
+                      ` • Flex ${key.flexNumber}`}
                     {key.keySequenceNumber !== undefined &&
                       ` • Sekv: ${key.keySequenceNumber}`}
                   </div>
@@ -211,62 +199,53 @@ export function FlexMenu({
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {Array.from(keyGroups.entries()).map(([groupKey, group]) => {
                 const newFlexNumber = group.currentFlexNumber + 1
-
                 return (
                   <div
                     key={groupKey}
-                    className={`p-3 border rounded-lg space-y-2 ${
-                      group.hasFlexConflict
-                        ? 'bg-destructive/10 border-destructive'
-                        : 'bg-card'
-                    }`}
+                    className="p-3 border rounded-lg space-y-2 bg-card"
                   >
                     <div>
                       <div className="font-medium text-sm">{group.keyName}</div>
                       <div className="text-xs text-muted-foreground">
                         {KeyTypeLabels[group.keyType]}
                       </div>
+                      {group.hasFlexConflict && (
+                        <div className="text-xs text-destructive mt-1">
+                          ⚠️ Varning: Valda nycklar har olika flex-nummer
+                        </div>
+                      )}
                     </div>
 
-                    {group.hasFlexConflict ? (
-                      <div className="flex items-center gap-2 text-xs text-destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>Olika flex-nummer i valda nycklar</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Flex {newFlexNumber} • Sekvens 1-{group.count}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          onClick={() => decrementCount(groupKey)}
+                          disabled={group.count === 0 || isCreating}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-8 text-center font-medium">
+                          {group.count}
+                        </span>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          onClick={() => incrementCount(groupKey)}
+                          disabled={isCreating}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Flex {newFlexNumber} • Sekvens 1-{group.count}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              className="h-7 w-7"
-                              onClick={() => decrementCount(groupKey)}
-                              disabled={group.count === 0 || isCreating}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">
-                              {group.count}
-                            </span>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              className="h-7 w-7"
-                              onClick={() => incrementCount(groupKey)}
-                              disabled={isCreating}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    </div>
                   </div>
                 )
               })}

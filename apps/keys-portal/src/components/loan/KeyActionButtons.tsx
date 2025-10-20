@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
-import { isNewFlexKey } from '@/utils/keyStatusHelpers'
 import { FlexMenu } from './FlexMenu'
 import { IncomingFlexMenu } from './IncomingFlexMenu'
 
@@ -55,10 +54,6 @@ export function KeyActionButtons({
     (k) => !!k.activeLoanId && k.matchesCurrentTenant
   )
 
-  const newFlexKeys = selectedKeysData.filter((k) =>
-    isNewFlexKey(k, allKeys || keysWithStatus)
-  )
-
   const hasSelectedKeys = selectedKeys.length > 0
 
   return (
@@ -89,18 +84,16 @@ export function KeyActionButtons({
                 Återlämna valda ({returnableKeys.length})
               </Button>
             )}
-            {newFlexKeys.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIncomingFlexMenuOpen(true)}
-                disabled={isProcessing}
-                className="flex items-center gap-1"
-              >
-                <Copy className="h-3 w-3" />
-                Inkommen flex ({newFlexKeys.length})
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIncomingFlexMenuOpen(true)}
+              disabled={isProcessing}
+              className="flex items-center gap-1"
+            >
+              <Copy className="h-3 w-3" />
+              Inkommen flex
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -159,7 +152,7 @@ export function KeyActionButtons({
       <IncomingFlexMenu
         open={incomingFlexMenuOpen}
         onOpenChange={setIncomingFlexMenuOpen}
-        selectedKeys={newFlexKeys}
+        selectedKeys={selectedKeysData}
         allKeys={allKeys || keysWithStatus}
         onSuccess={onRefresh}
       />

@@ -1,4 +1,11 @@
-import type { Key, KeyWithLoanStatus, KeyType } from '@/services/types'
+import type {
+  Key,
+  KeyWithLoanStatus,
+  KeyType,
+  KeyEvent,
+} from '@/services/types'
+import { KeyEventStatusLabels, KeyEventTypeLabels } from '@/services/types'
+import { keyEventService } from '@/services/api/keyEventService'
 
 /**
  * Extended Key type with computed loan information and display status
@@ -75,35 +82,24 @@ function formatSwedishDate(isoDateString?: string): string | undefined {
 }
 
 /**
- * Checks the flex status of a key relative to other keys with the same name/type
- * @param key - The key to check
- * @param allKeys - All keys to compare against
- * @returns 'NOT_FLEX' if not a flex key, 'FLEX_ORDERED' if lower flex keys exist and are not disposed, 'FLEX_INCOMING' if all lower flex keys are disposed
+ * Gets the latest event for a key (async)
+ * @param keyId - The key ID
+ * @returns The latest KeyEvent or undefined if no events exist
  */
-function getFlexStatus(
-  key: Key,
-  allKeys: Key[]
-): 'NOT_FLEX' | 'FLEX_ORDERED' | 'FLEX_INCOMING' {
-  // Key must have a flex number
-  if (key.flexNumber === undefined) return 'NOT_FLEX'
+export async function getLatestEventForKey(
+  keyId: string
+): Promise<KeyEvent | undefined> {
+  return await keyEventService.getLatestForKey(keyId)
+}
 
-  // Find keys with same name/type and lower flex numbers
-  const lowerFlexKeys = allKeys.filter(
-    (k) =>
-      k.keyName === key.keyName &&
-      k.keyType === key.keyType &&
-      k.id !== key.id &&
-      k.flexNumber !== undefined &&
-      k.flexNumber < key.flexNumber
-  )
-
-  // If no lower flex keys, not a flex key
-  if (lowerFlexKeys.length === 0) return 'NOT_FLEX'
-
-  // Check if any lower flex keys are NOT disposed
-  const hasActiveLowerFlexKeys = lowerFlexKeys.some((k) => !k.disposed)
-
-  return hasActiveLowerFlexKeys ? 'FLEX_ORDERED' : 'FLEX_INCOMING'
+/**
+ * Checks if a key has an incomplete event (status is not COMPLETED)
+ * @param keyId - The key ID
+ * @returns true if the key has an incomplete event
+ */
+export async function hasIncompleteEvent(keyId: string): Promise<boolean> {
+  const latestEvent = await getLatestEventForKey(keyId)
+  return latestEvent !== undefined && latestEvent.status !== 'COMPLETED'
 }
 
 /**
@@ -134,38 +130,32 @@ export function sortKeysByTypeAndSequence<T extends Key>(keys: T[]): T[] {
 }
 
 /**
- * Checks if a key is a "new flex" key (has the status "Ny beställd flex" or "Ny inkommen flex")
- * A key is "new flex" if it:
- * - Has never been loaned (activeLoanContact === null and prevLoanAvailableFrom === null)
- * - Is a flex key (has higher flex number than other keys with same name/type)
- * @param keyWithStatus - The key with status information
- * @param allKeys - All keys to compare against
- * @returns true if the key is a new flex key
- */
-export function isNewFlexKey(
-  keyWithStatus: KeyWithStatus,
-  allKeys: Key[]
-): boolean {
-  const flexStatus = getFlexStatus(keyWithStatus, allKeys)
-  return (
-    keyWithStatus.activeLoanContact === null &&
-    keyWithStatus.prevLoanAvailableFrom === undefined &&
-    flexStatus === 'FLEX_ORDERED'
-  )
-}
-
-/**
- * Computes the display status text and date for a key based on its loan information
+ * Computes the display status text and date for a key based on its loan information and events
  * @param key - The key with pre-fetched loan data
- * @param allKeys - All keys (needed to check if it's a flex key)
  * @param matchesTenant - Whether the active loan matches the current tenant
+ * @param latestEvent - Optional latest event for the key
  * @returns Object with status text, optional formatted date string, and availability flag
  */
 export function getKeyDisplayStatus(
   key: KeyWithLoanStatus,
-  allKeys: KeyWithLoanStatus[],
-  matchesTenant: boolean
+  matchesTenant: boolean,
+  latestEvent?: KeyEvent
 ): { status: string; date?: string; isAvailable?: boolean } {
+  // If there's an incomplete event, show event status
+  if (latestEvent && latestEvent.status !== 'COMPLETED') {
+    const statusText =
+      KeyEventStatusLabels[
+        latestEvent.status as keyof typeof KeyEventStatusLabels
+      ] || latestEvent.status
+    const eventType =
+      KeyEventTypeLabels[latestEvent.type as keyof typeof KeyEventTypeLabels] ||
+      latestEvent.type
+
+    return {
+      status: `${eventType} ${statusText.toLowerCase()}`,
+      isAvailable: false, // Keys with incomplete events are not available
+    }
+  }
   const isLoaned = !!key.activeLoanId
   const availabilityDate = getAvailabilityDate(key)
 
@@ -230,15 +220,8 @@ export function getKeyDisplayStatus(
   } else {
     // Key is not currently loaned
     if (key.activeLoanContact === null && !availabilityDate) {
-      // Never been loaned - check flex status - always available (green)
-      const flexStatus = getFlexStatus(key, allKeys)
-      if (flexStatus === 'FLEX_ORDERED') {
-        return { status: 'Ny beställd flex', isAvailable: true }
-      } else if (flexStatus === 'FLEX_INCOMING') {
-        return { status: 'Ny inkommen flex', isAvailable: true }
-      } else {
-        return { status: 'Ny', isAvailable: true }
-      }
+      // Never been loaned - always available (green)
+      return { status: 'Ny', isAvailable: true }
     } else if (matchesTenant) {
       // Was returned by current tenant - check if available date is in the future
       const availableDate = availabilityDate ? new Date(availabilityDate) : null
@@ -277,28 +260,29 @@ export function getKeyDisplayStatus(
 
 /**
  * Computes the full KeyWithStatus for a key with pre-fetched loan data and determines display status.
- * This is now a SYNCHRONOUS function - no async calls!
+ * Fetches the latest event for the key to determine if it should show event status.
  *
  * @param key - The key with pre-fetched active loan data
- * @param allKeys - All keys (needed for flex key detection)
  * @param tenantContactCodes - Contact codes of the current tenant(s) (used for matching against DB)
  * @returns KeyWithStatus
  */
-export function computeKeyWithStatus(
+export async function computeKeyWithStatus(
   key: KeyWithLoanStatus,
-  allKeys: KeyWithLoanStatus[],
   tenantContactCodes: string[]
-): KeyWithStatus {
+): Promise<KeyWithStatus> {
   const matchesTenant = matchesCurrentTenant(
     key,
     tenantContactCodes[0],
     tenantContactCodes[1]
   )
 
+  // Fetch the latest event for this key
+  const latestEvent = await getLatestEventForKey(key.id)
+
   const { status, date, isAvailable } = getKeyDisplayStatus(
     key,
-    allKeys,
-    matchesTenant
+    matchesTenant,
+    latestEvent
   )
 
   return {
@@ -311,12 +295,11 @@ export function computeKeyWithStatus(
 }
 
 /**
- * Filters out disposed keys that don't have active loans.
- * A key should be visible if:
- * - It's not disposed, OR
- * - It's disposed but currently loaned out
+ * Filters out keys that should not be visible in the main list.
+ * A key should be hidden if:
+ * - It's disposed AND not currently loaned out
  *
- * This ensures disposed keys remain visible until they are returned.
+ * Keys with events are always shown (the event status is displayed but keys are visible)
  *
  * @param keysWithStatus - Array of keys with status information
  * @returns Filtered array containing only visible keys
