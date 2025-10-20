@@ -74,6 +74,7 @@ export function GlobalSearchBar({
           )}
 
           {/* Filter button */}
+          {/*
           <Button
             variant="ghost"
             size="sm"
@@ -85,8 +86,9 @@ export function GlobalSearchBar({
           >
             <Filter className="h-3 w-3" />
           </Button>
-
+          */}
           {/* Favorites button */}
+          {/*}
           <Button
             variant="ghost"
             size="sm"
@@ -97,7 +99,7 @@ export function GlobalSearchBar({
           >
             <Star className="h-3 w-3" />
           </Button>
-
+          */}
           {/* Clear button */}
           {query && (
             <Button
