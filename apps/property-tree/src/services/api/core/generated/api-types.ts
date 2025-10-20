@@ -4996,6 +4996,18 @@ export interface components {
     ReceiptType: "LOAN" | "RETURN";
     /** @enum {string} */
     ReceiptFormat: "DIGITAL" | "PHYSICAL";
+    ErrorResponse: {
+      /** @example Internal server error */
+      error?: string;
+      reason?: string;
+    };
+    NotFoundResponse: {
+      /** @example Resource not found */
+      reason: string;
+    };
+    BadRequestResponse: {
+      reason: string;
+    };
     PaginationMeta: {
       totalRecords: number;
       page: number;
@@ -5236,14 +5248,6 @@ export interface components {
           templated?: boolean;
         };
       };
-    };
-    ErrorResponse: {
-      /** @example Internal server error */
-      error?: string;
-    };
-    NotFoundResponse: {
-      /** @example Resource not found */
-      reason?: string;
     };
   };
   responses: never;
