@@ -2,7 +2,7 @@ import app from './app'
 import { logger } from '@onecore/utilities'
 import { ensureBucketExists } from './services/key-service/adapters/minio'
 
-const PORT = process.env.PORT || 5080
+const PORT = process.env.PORT || 5090
 
 ensureBucketExists()
   .then(() => {

@@ -113,7 +113,7 @@ const config = configPackage({
       url: 'http://localhost:5080',
     },
     keysService: {
-      url: 'http://localhost:5080',
+      url: 'http://localhost:5090',
     },
     auth: {
       secret: 'very secret. replace this',

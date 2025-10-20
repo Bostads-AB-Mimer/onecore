@@ -13,10 +13,10 @@
   ],
   "scripts": {
     "build": "vite build",
-    "dev": "wait-on http://localhost:5080/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
+    "dev": "wait-on http://localhost:5090/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
     "dev:init": "pnpm run prepare:dotenv",
     "format": "prettier --write .",
-    "generate-api-types": "npx openapi-typescript http://localhost:5080/swagger.json -o ./src/services/api/generated/api-types.ts",
+    "generate-api-types": "npx openapi-typescript http://localhost:5090/swagger.json -o ./src/services/api/generated/api-types.ts",
     "generate-api-types:core": "npx openapi-typescript http://localhost:5010/swagger.json -o ./src/services/api/core/generated/api-types.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
