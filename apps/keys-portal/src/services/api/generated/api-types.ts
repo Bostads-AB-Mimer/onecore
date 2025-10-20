@@ -1753,6 +1753,16 @@ export interface components {
         [key: string]: string;
       };
     };
+    ErrorResponse: {
+      error?: string;
+      reason?: string;
+    };
+    NotFoundResponse: {
+      reason: string;
+    };
+    BadRequestResponse: {
+      reason: string;
+    };
     Receipt: {
       /** Format: uuid */
       id: string;
