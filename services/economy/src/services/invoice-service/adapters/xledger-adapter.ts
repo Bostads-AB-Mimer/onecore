@@ -297,6 +297,7 @@ export async function getInvoicePaymentEvents(
           }
         }
       }
+        
      }`,
   }
 
@@ -305,9 +306,12 @@ export async function getInvoicePaymentEvents(
     return []
   }
 
-  return result.data.arTransactions.edges.map((edge: any) =>
-    mapToInvoicePaymentEvent(edge.node)
-  )
+  return result.data.arTransactions.edges
+    .filter(
+      // AR transactions are the original "encreditment" of the invoice. We don't want those.
+      (edge: any) => edge.node.transactionHeader.transactionSource.code !== 'AR'
+    )
+    .map((edge: any) => mapToInvoicePaymentEvent(edge.node))
 }
 
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
