@@ -103,7 +103,12 @@ export async function hasIncompleteEvent(keyId: string): Promise<boolean> {
 }
 
 /**
- * Sorts keys by type (using KEY_TYPE_ORDER), then by sequence number, then by name
+ * Sorts keys hierarchically:
+ * 1. By type (using KEY_TYPE_ORDER) - outer grouping
+ * 2. Within type, by name
+ * 3. Within name, by flex number
+ * 4. Within flex, by sequence number
+ *
  * @param keys - Array of keys to sort
  * @returns New sorted array of keys
  */
@@ -113,19 +118,26 @@ export function sortKeysByTypeAndSequence<T extends Key>(keys: T[]): T[] {
     k.keySequenceNumber == null
       ? Number.POSITIVE_INFINITY
       : Number(k.keySequenceNumber)
+  const getFlex = (k: T) =>
+    k.flexNumber == null ? Number.POSITIVE_INFINITY : Number(k.flexNumber)
 
   return [...keys].sort((a, b) => {
-    // First: sort by type
+    // First: sort by type (outer grouping)
     const typeCmp =
       getTypeRank(a.keyType as KeyType) - getTypeRank(b.keyType as KeyType)
     if (typeCmp !== 0) return typeCmp
 
-    // Second: sort by sequence number
-    const seqCmp = getSeq(a) - getSeq(b)
-    if (seqCmp !== 0) return seqCmp
+    // Second: sort by name (within type)
+    const nameCmp = (a.keyName || '').localeCompare(b.keyName || '')
+    if (nameCmp !== 0) return nameCmp
 
-    // Third: sort by name
-    return (a.keyName || '').localeCompare(b.keyName || '')
+    // Third: sort by flex number (within name)
+    const flexCmp = getFlex(a) - getFlex(b)
+    if (flexCmp !== 0) return flexCmp
+
+    // Fourth: sort by sequence number (within flex)
+    const seqCmp = getSeq(a) - getSeq(b)
+    return seqCmp
   })
 }
 
