@@ -11,7 +11,7 @@ services:
     networks:
       - onecore
     ports:
-      - '1438:1433'
+      - '1433:1433'
     volumes:
       - sql:/var/opt/mssql
 
