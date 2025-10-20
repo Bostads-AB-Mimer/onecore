@@ -10,6 +10,7 @@ import {
   TableHead,
   CircularProgress,
   Collapse,
+  Skeleton,
 } from '@mui/material'
 import { useState } from 'react'
 import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
@@ -224,7 +225,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
           <Collapse in={open} timeout={0} unmountOnExit>
             <InvoiceDetails invoice={invoice} />
           </Collapse>
@@ -293,12 +294,8 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
 function InvoicePaymentEvents(props: { invoiceId: string }) {
   const eventsQuery = useInvoicePaymentEvents(props.invoiceId)
 
-  if (eventsQuery.isLoading) {
-    return <CircularProgress />
-  }
-
   return (
-    <Table size="small">
+    <Table size="small" stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
         <TableRow>
           <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
@@ -307,13 +304,27 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
         </TableRow>
       </TableHead>
       <TableBody>
-        {eventsQuery.data?.map((event, index) => (
-          <TableRow key={index}>
-            <TableCell>{event.transactionSourceCode}</TableCell>
-            <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
-            <TableCell>{event.text}</TableCell>
+        {eventsQuery.isLoading ? (
+          <TableRow>
+            <TableCell>
+              <Skeleton variant="text" width="40%" height="25px" />
+            </TableCell>
+            <TableCell>
+              <Skeleton variant="text" width="30%" height="25px" />
+            </TableCell>
+            <TableCell>
+              <Skeleton variant="text" height="25px" />
+            </TableCell>
           </TableRow>
-        ))}
+        ) : (
+          eventsQuery.data?.map((event, index) => (
+            <TableRow key={index}>
+              <TableCell>{event.transactionSourceCode}</TableCell>
+              <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
+              <TableCell>{event.text}</TableCell>
+            </TableRow>
+          ))
+        )}
       </TableBody>
     </Table>
   )

@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy, InvoicePaymentEvent } from '@onecore/types'
-import { z } from 'zod'
 
 import {
   getInvoiceByInvoiceNumber,
