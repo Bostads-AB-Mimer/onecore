@@ -211,6 +211,20 @@ export const UploadBase64RequestSchema = z.object({
   metadata: z.record(z.string()).optional(),
 })
 
+// Error response schemas (for OpenAPI/Swagger documentation)
+export const ErrorResponseSchema = z.object({
+  error: z.string().optional(),
+  reason: z.string().optional(),
+})
+
+export const NotFoundResponseSchema = z.object({
+  reason: z.string(),
+})
+
+export const BadRequestResponseSchema = z.object({
+  reason: z.string(),
+})
+
 // Request schemas for key notes
 
 export const CreateKeyNoteRequestSchema = z.object({

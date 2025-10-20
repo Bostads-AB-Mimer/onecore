@@ -26,6 +26,9 @@ import {
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
   UploadBase64RequestSchema,
+  ErrorResponseSchema,
+  NotFoundResponseSchema,
+  BadRequestResponseSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
   CreateKeyEventRequestSchema,
@@ -76,6 +79,11 @@ export type Receipt = z.infer<typeof ReceiptSchema>
 export type CreateReceiptRequest = z.infer<typeof CreateReceiptRequestSchema>
 export type UpdateReceiptRequest = z.infer<typeof UpdateReceiptRequestSchema>
 export type UploadBase64Request = z.infer<typeof UploadBase64RequestSchema>
+
+// Error response types
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
+export type NotFoundResponse = z.infer<typeof NotFoundResponseSchema>
+export type BadRequestResponse = z.infer<typeof BadRequestResponseSchema>
 
 // Request types for key notes
 export type KeyNote = z.infer<typeof KeyNoteSchema>
