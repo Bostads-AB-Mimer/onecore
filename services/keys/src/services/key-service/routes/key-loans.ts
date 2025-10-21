@@ -9,8 +9,6 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
 
-const TABLE = 'key_loans'
-
 const {
   KeyLoanSchema,
   CreateKeyLoanRequestSchema,
