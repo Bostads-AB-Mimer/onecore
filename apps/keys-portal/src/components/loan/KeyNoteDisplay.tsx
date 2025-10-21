@@ -67,6 +67,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     new Map()
   )
   const [minHeight, setMinHeight] = useState<number | null>(null)
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
 
   // Group leases by status and filter to unique objects
   const statusGroups = useMemo<GroupedLeases[]>(() => {
@@ -178,6 +179,9 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         const note = notes.get(objectId)
         if (!note?.description) continue
 
+        // Skip notes that user has manually expanded
+        if (expandedNotes.has(objectId)) continue
+
         const noteElement = Array.from(noteElements).find(
           (el) => el.getAttribute('data-object-id') === objectId
         ) as HTMLElement | undefined
@@ -217,9 +221,10 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     return () => clearTimeout(timer)
   }, [currentGroup, notes, loadingObjects.size, minHeight, lineClamps])
 
-  // Reset line clamps when navigating to a new group
+  // Reset line clamps and expanded notes when navigating to a new group
   useEffect(() => {
     setLineClamps(new Map())
+    setExpandedNotes(new Set())
   }, [currentGroupIndex])
 
   // Load notes for all objects in the current group
@@ -266,6 +271,8 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
       lineClamps.has(objectId) && lineClamps.get(objectId) !== null
 
     if (isTruncated) {
+      // User is expanding - mark as manually expanded to prevent re-truncation
+      setExpandedNotes((prev) => new Set(prev).add(objectId))
       setLineClamps((prev) => {
         const next = new Map(prev)
         next.delete(objectId)
