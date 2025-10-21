@@ -40,12 +40,21 @@ const getListingsWithApplicants = async (
       url: url,
     })
 
+    const listings = listingsResponse.data?.content
+
+    console.log('sorting')
+    listings.sort((a, b) => {
+      const dateA = new Date(a.publishedFrom).getTime()
+      const dateB = new Date(b.publishedFrom).getTime()
+      return dateB - dateA
+    })
+
     if (querystring !== 'type=offered') {
-      return { ok: true, data: listingsResponse.data.content }
+      return { ok: true, data: listings }
     }
 
     const withOffers = await Promise.all(
-      listingsResponse.data.content.map(async (listing) => {
+      listings.map(async (listing) => {
         const offer = await getActiveOfferByListingId(listing.id)
         if (!offer.ok) {
           throw new Error('Failed to get offer')
