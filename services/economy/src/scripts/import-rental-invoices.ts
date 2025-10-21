@@ -11,10 +11,12 @@ import {
 import fs from 'fs/promises'
 import config from '../common/config'
 import { sep } from 'node:path'
+import { sendEmail } from '../common/adapters/infobip-adapter'
 
 const importRentalInvoicesScript = async () => {
-  const companyIds = ['001' /*, '006'*/]
+  const companyIds = ['001' /* '006'*/]
   const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
+  const notification: string[] = []
 
   const startDate = new Date(
     Math.max(
@@ -25,11 +27,19 @@ const importRentalInvoicesScript = async () => {
   const endDate = new Date(new Date().setDate(startDate.getDate() + 180))
 
   for (const companyId of companyIds) {
+    notification.push(
+      `Körning startad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n`
+    )
+    notification.push(`Hanterar hyresavier för företag ${companyId}\n`)
     logger.info({ startDate, endDate }, 'Processing interval')
     const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
     if (result.batchId) {
+      notification.push(`
+Importerade avier: ${result.processedInvoices}
+Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
+        `)
       logger.info({ batchId }, 'Creating contact file for batch')
       const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
       const contactsCsv = await getBatchContactsCsv(batchId)
@@ -67,8 +77,23 @@ const importRentalInvoicesScript = async () => {
       logger.info({ ledgerFilename }, 'Uploaded file')
 
       await markBatchAsProcessed(parseInt(batchId))
+
+      notification.push('Filer uppladdade till Xledger för import')
     } else {
+      notification.push('Inga nya avier hittade sen senaste importen')
       logger.info({ companyId }, 'No new invoices found')
+    }
+
+    notification.push(
+      `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
+    )
+
+    if (config.scriptNotificationEmailAddresses) {
+      await sendEmail(
+        config.scriptNotificationEmailAddresses,
+        'Körning: import av hyresavier till Xledger',
+        notification.join('\n')
+      )
     }
   }
 

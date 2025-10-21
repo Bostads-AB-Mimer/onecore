@@ -19,7 +19,6 @@ export const importSftpConfig: SftpClient.ConnectOptions = {
         serverHostKey: ['ssh-dss'],
       }
     : undefined,
-  debug: console.log,
 }
 
 export const exportSftpConfig: SftpClient.ConnectOptions = {
@@ -27,7 +26,6 @@ export const exportSftpConfig: SftpClient.ConnectOptions = {
   username: config.debtCollection.sergel.sftp.username,
   password: config.debtCollection.sergel.sftp.password,
   port: config.debtCollection.sergel.sftp.port ?? 22,
-  debug: console.log,
 }
 
 if (!config.debtCollection.xledger.rentInvoicesDirectory) {

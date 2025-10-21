@@ -3,8 +3,6 @@ import {
   addAccountInformation,
   getAggregatedInvoiceRows,
   getCounterPartCustomers,
-  getInvoiceRows,
-  getInvoices,
   saveInvoiceRows,
   saveContacts,
   getContacts as getInvoiceContacts,
@@ -176,7 +174,7 @@ export const createLedgerTotalRow = (
     posting4: '',
     posting5: '',
     periodStart: ledgerRows[0].periodStart,
-    noOfPeriods: '',
+    noOfPeriods: ledgerRows[0].noOfPeriods,
     subledgerNo: '',
     invoiceDate: '',
     invoiceNo: '',
@@ -198,7 +196,7 @@ export const createLedgerTotalRow = (
   return totalRow
 }
 
-export const createLedgerRowsNew = async (
+export const createLedgerRows = async (
   batchId: string
 ): Promise<InvoiceDataRow[]> => {
   const transactionRows: InvoiceDataRow[] = []
@@ -269,7 +267,6 @@ export const createLedgerRowsNew = async (
     currentStart += currentInvoices.length
 
     for (const invoice of currentInvoices) {
-      //const invoiceRows = await getInvoiceRows(invoice.invoiceNumber, batchId)
       const invoiceRows = rowsByInvoiceNumber[invoice.invoiceNumber]
 
       const counterPart = counterPartCustomers.find(
@@ -295,100 +292,6 @@ export const createLedgerRowsNew = async (
         )
         throw new Error('Invoice total does not match ledger total')
       }
-      chunkInvoiceRows.push(customerLedgerRow)
-    }
-
-    transactionRows.push(...chunkInvoiceRows)
-
-    const totalRow = createLedgerTotalRow(chunkInvoiceRows)
-    transactionRows.push(totalRow)
-
-    let ledgerChunkRowsTotal = chunkInvoiceRows.reduce((sum: number, row) => {
-      sum += row.amount as number
-      return sum
-    }, 0)
-
-    ledgerChunkRowsTotal =
-      Math.round(((ledgerChunkRowsTotal as number) + Number.EPSILON) * 100) /
-      100
-
-    logger.info(
-      {
-        difference: ledgerChunkRowsTotal + (totalRow.amount as number),
-      },
-      'Ledger chunk created'
-    )
-
-    chunkNum++
-  }
-
-  return transactionRows
-}
-
-export const createLedgerRows = async (
-  batchId: string
-): Promise<InvoiceDataRow[]> => {
-  const transactionRows: InvoiceDataRow[] = []
-
-  // Do transaction rows in chunks of invoices to get different
-  // voucher numbers.
-  const invoices = await getInvoices(batchId)
-  const CHUNK_SIZE = 500
-  let currentStart = 0
-  let chunkNum = 0
-  const counterPartCustomers = await getCounterPartCustomers()
-
-  while (currentStart < invoices.length) {
-    const currentInvoices: LedgerInvoice[] = []
-    const ledgerAccount = invoices[currentStart].ledgerAccount
-    const invoiceDate = invoices[currentStart].invoiceDate
-    const chunkInvoiceRows: InvoiceDataRow[] = []
-    const startTime = Date.now()
-
-    for (
-      let currentInvoiceIndex = currentStart;
-      currentInvoiceIndex < CHUNK_SIZE + currentStart &&
-      currentInvoiceIndex < invoices.length;
-      currentInvoiceIndex++
-    ) {
-      const currentInvoice = invoices[currentInvoiceIndex]
-
-      if (
-        currentInvoice.ledgerAccount === ledgerAccount &&
-        currentInvoice.invoiceDate === invoiceDate
-      ) {
-        currentInvoices.push(invoices[currentInvoiceIndex])
-      } else {
-        break
-      }
-    }
-
-    logger.info(
-      {
-        startNum: currentStart,
-        endNum: currentInvoices.length + currentStart - 1,
-        elapsed: Date.now() - startTime,
-      },
-      'Creating ledger chunk'
-    )
-
-    currentStart += currentInvoices.length
-
-    for (const invoice of currentInvoices) {
-      const invoiceRows = await getInvoiceRows(invoice.invoiceNumber, batchId)
-
-      const counterPart = counterPartCustomers.find(
-        counterPartCustomers.customers,
-        invoiceRows[0].TenantName as string
-      )
-
-      const customerLedgerRow = await createCustomerLedgerRow(
-        invoiceRows,
-        batchId,
-        chunkNum,
-        counterPart ? counterPart.counterPartCode : ''
-      )
-
       chunkInvoiceRows.push(customerLedgerRow)
     }
 
@@ -615,7 +518,7 @@ export const getBatchAggregatedRowsCsv = async (batchId: string) => {
 }
 
 export const getBatchLedgerRowsCsv = async (batchId: string) => {
-  const transactionRows = await createLedgerRowsNew(batchId)
+  const transactionRows = await createLedgerRows(batchId)
 
   const csvContent: string[] = []
 
@@ -673,10 +576,13 @@ const getContractCode = (invoiceRow: InvoiceDataRow) => {
 
 const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
   const cleanedInvoiceRows: InvoiceDataRow[] = []
-  let currentContractCode = getContractCode(invoiceRows[0])
+  let currentContractCode = ''
 
   invoiceRows.forEach((invoiceRow) => {
-    if ((invoiceRow.rowType as number) === 3) {
+    if (
+      (invoiceRow.rowType as number) === 3 &&
+      /^\d/.test(invoiceRow.invoiceRowText as string)
+    ) {
       currentContractCode = getContractCode(invoiceRow)
     } else {
       invoiceRow.contractCode = currentContractCode
@@ -713,10 +619,14 @@ export const importInvoiceRows = async (
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
     )
 
+    /*const rentalInvoiceNumbers = []
+    const invoicesToImport = ['552511356128155K']*/
+
     if (!invoicesToImport || invoicesToImport.length === 0) {
       return {
         batchId: null,
-        errors: null,
+        processedInvoices: 0,
+        errorInvoices: null,
       }
     }
 
@@ -748,7 +658,8 @@ export const importInvoiceRows = async (
 
     if (invoiceRows.length === 0) {
       return {
-        batchId: -1,
+        batchId: null,
+        processedInvoices: 0,
         errors: null,
       }
     }
@@ -798,6 +709,7 @@ export const importInvoiceRows = async (
     return {
       batchId,
       errors,
+      processedInvoices: invoicesToImport.length,
     }
   } catch (error: any) {
     logger.error(error, 'Error importing invoices - batch could not be created')
@@ -854,7 +766,7 @@ const verifyAccountTotals = (
     return (sum += batchAccountTotals[account])
   }, 0)
 
-  if (Math.abs(batchTotal - debtAccountTotal) > 0.01) {
+  if (Math.abs(batchTotal - debtAccountTotal) > 1) {
     logger.error(
       {
         batchTotal,
@@ -863,7 +775,9 @@ const verifyAccountTotals = (
       },
       'Debt account total not matching batch account totals'
     )
-    throw new Error('Debt account total not matching batch account totals')
+    throw new Error(
+      'Debt account total ${debAccountTotal} not matching batch account totals ${batchTotal}'
+    )
   }
 
   return true

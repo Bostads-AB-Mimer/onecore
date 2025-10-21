@@ -332,4 +332,6 @@ export const markProcurementFilesAsImported = async () => {
     await fs.unlink(path.join(config.procurementInvoices.importDirectory, file))
     await markAsImportedSftp(file)
   }
+
+  return files.length
 }
