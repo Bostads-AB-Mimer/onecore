@@ -1,16 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
-import { TabLayout } from '@/components/ui/TabLayout'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
 import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
-//import { Notes } from '@/components/shared/Notes'
-import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
-import { MessageSquare } from 'lucide-react'
 
-import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { useIsMobile } from '@/components/hooks/useMobile'
-import { useEffect } from 'react'
-import { Building, Residence, Staircase } from '@/services/types'
+import { Building, Staircase } from '@/services/types'
 import { useResidenceStaircaseLookupMap } from '../hooks/useResidenceStaircaseLookupMap'
 
 interface BuildingDetailTabsProps {
@@ -24,7 +18,6 @@ export const BuildingDetailTabs = ({
   staircases,
   basePath,
 }: BuildingDetailTabsProps) => {
-  const { features } = useFeatureToggles()
   const isMobile = useIsMobile()
 
   const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
