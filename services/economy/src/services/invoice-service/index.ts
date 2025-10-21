@@ -52,16 +52,29 @@ export const routes = (router: KoaRouter) => {
         (invoice) => invoice.invoiceId
       )
 
-      const invoices = [
-        ...xledgerInvoices,
-        ...xpandInvoices.filter(
-          (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-        ),
-      ]
+      // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
+      // Otherwise use period from xledger invoice
+      const invoices = xledgerInvoices
+        .map((invoice) => {
+          const xpandInvoice = xpandInvoices.find(
+            (v) => v.invoiceId === invoice.invoiceId
+          )
+
+          return {
+            ...invoice,
+            fromDate: xpandInvoice?.fromDate ?? invoice.fromDate,
+            toDate: xpandInvoice?.toDate ?? invoice.toDate,
+          }
+        })
+        .concat(
+          xpandInvoices.filter(
+            (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
+          )
+        )
 
       const invoiceRows = await getInvoiceRows(
         new Date().getFullYear(),
-        '001',
+        '001', // Mimer company id.
         invoices.map((v) => v.invoiceId)
       )
 
