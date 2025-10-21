@@ -1,8 +1,7 @@
 import { Button } from './ui/Button'
 import { useState } from 'react'
 import { GlobalSearchBar } from './search/GlobalSearchBar'
-import { Link } from 'react-router-dom'
-import { Settings, Menu, Search } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useUser } from '@/auth/useUser'
 
@@ -81,19 +80,6 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
               </button>
             </div>
           )}
-          {/*
-          <Link to="/settings">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-2 min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
-            >
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Inställningar</span>
-            </Button>
-          </Link>
-          */}
         </div>
       </div>
 
