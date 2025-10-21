@@ -50,7 +50,6 @@ export const BuildingBasicInfo = ({
   // All building information fields
   const allInfoContent = (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-      {/* Grupp 1 - Identifiering */}
       <div>
         <p className="text-sm text-muted-foreground">Objektsnummer</p>
         <p className="font-medium">{building.code}</p>
@@ -69,8 +68,6 @@ export const BuildingBasicInfo = ({
           <p className="font-medium">{address}</p>
         </div>
       )}
-
-      {/* Grupp 2 - Byggnadsegenskaper */}
       <div>
         <p className="text-sm text-muted-foreground">Byggnadstyp</p>
         <p className="font-medium">{building.buildingType.name}</p>
@@ -95,7 +92,6 @@ export const BuildingBasicInfo = ({
         <p className="font-medium">{buildingArea}</p>
       </div>
 
-      {/* Grupp 3 - Innehåll/Kapacitet */}
       <div>
         <p className="text-sm text-muted-foreground">Antal lägenheter</p>
         <p className="font-medium">{residenceCount}</p>
