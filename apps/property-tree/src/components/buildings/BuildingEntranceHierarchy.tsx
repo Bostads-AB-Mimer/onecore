@@ -1,6 +1,4 @@
-import { Residence, Staircase } from '@/services/types'
 import { Button } from '@/components/ui/v2/Button'
-import { Badge } from '@/components/ui/v2/Badge'
 import {
   Accordion,
   AccordionContent,
@@ -11,7 +9,6 @@ import { ChevronRight, Home } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { UseQueryResult } from '@tanstack/react-query'
 import { ResidenceSummary } from '@/services/types'
-import { useEffect } from 'react'
 
 interface BuildingEntranceHierarchyProps {
   isLoading: boolean
@@ -21,38 +18,6 @@ interface BuildingEntranceHierarchyProps {
   >
   basePath: string
 }
-
-// Helper function to get status badge color
-const getStatusBadge = (status?: string) => {
-  if (!status) return null
-
-  const variant =
-    status === 'Aktiv'
-      ? 'default'
-      : status === 'Under underhåll'
-        ? 'secondary'
-        : 'destructive'
-
-  return (
-    <Badge variant={variant} className="text-xs">
-      {status}
-    </Badge>
-  )
-}
-
-// Helper function to get apartment type styling
-/*
-const getApartmentTypeStyle = (type?: ApartmentType) => {
-  switch (type) {
-    case 'Övernattning':
-      return 'border-l-4 border-blue-500 bg-blue-50'
-    case 'Korttidsboende':
-      return 'border-l-4 border-yellow-500 bg-yellow-50'
-    default:
-      return ''
-  }
-}
-*/
 
 export const BuildingEntranceHierarchy = ({
   isLoading,
@@ -138,12 +103,6 @@ export const BuildingEntranceHierarchy = ({
                                   <span className="font-medium text-foreground">
                                     {residence.rentalId}
                                   </span>
-                                  {/*
-                            {residence.apartmentType && residence.apartmentType !== "Standard" && (
-                              <Badge variant="outline" className="text-xs">
-                                {residence.apartmentType}
-                              </Badge>
-                              */}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-muted-foreground">
