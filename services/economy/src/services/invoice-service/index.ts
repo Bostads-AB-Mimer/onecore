@@ -60,10 +60,14 @@ export const routes = (router: KoaRouter) => {
             (v) => v.invoiceId === invoice.invoiceId
           )
 
-          return {
-            ...invoice,
-            fromDate: xpandInvoice?.fromDate ?? invoice.fromDate,
-            toDate: xpandInvoice?.toDate ?? invoice.toDate,
+          if (xpandInvoice?.fromDate && xpandInvoice.toDate) {
+            return {
+              ...invoice,
+              fromDate: xpandInvoice.fromDate,
+              toDate: xpandInvoice.toDate,
+            }
+          } else {
+            return invoice
           }
         })
         .concat(
