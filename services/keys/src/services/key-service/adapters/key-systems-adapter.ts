@@ -48,3 +48,23 @@ export async function getKeySystemBySystemCode(
 ): Promise<KeySystem | undefined> {
   return await dbConnection(TABLE).where({ systemCode }).first()
 }
+
+/**
+ * Get all key systems query builder for pagination
+ * Returns a query builder that can be used with paginate()
+ */
+export function getAllKeySystemsQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*').orderBy('createdAt', 'desc')
+}
+
+/**
+ * Get key systems search query builder for pagination
+ * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ */
+export function getKeySystemsSearchQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*')
+}

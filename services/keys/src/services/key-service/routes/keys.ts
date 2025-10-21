@@ -94,7 +94,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const query = db(TABLE).select('*').orderBy('createdAt', 'desc')
+      const query = keysAdapter.getAllKeysQuery(db)
       const paginatedResult = await paginate(query, ctx)
 
       ctx.status = 200
@@ -210,7 +210,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
-      const query = db(TABLE).select('*')
+      const query = keysAdapter.getKeysSearchQuery(db)
 
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['keyName'],
