@@ -27,7 +27,7 @@ const config = configPackage({
       host: 'localhost',
       user: 'sa',
       password: '',
-      port: 1433,
+      port: 1438,
       database: 'keys-management',
     },
     minio: {
