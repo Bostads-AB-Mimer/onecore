@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
+  getAllVacantApartments,
   getAllVacantParkingSpaces,
   getParkingSpace,
   getParkingSpaces,
@@ -204,5 +205,59 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /vacant-apartments:
+   *   get:
+   *     summary: Get all vacant apartments
+   *     description: Fetches a list of all vacant apartments available in the system.
+   *     tags:
+   *       - Listings
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the list of vacant apartments.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalObject'
+   *       '500':
+   *         description: Internal server error. Failed to fetch vacant apartments.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('/vacant-apartments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(metadata, 'Fetching all vacant apartments')
+
+    const vacantApartments = await getAllVacantApartments()
+
+    if (!vacantApartments.ok) {
+      logger.error(
+        { err: vacantApartments.err },
+        'Error fetching vacant apartments:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching vacant apartments.',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: vacantApartments.data, ...metadata }
   })
 }
