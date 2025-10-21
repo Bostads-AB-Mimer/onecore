@@ -97,7 +97,7 @@ export const BuildingDocumentsTab = () => {
 
   return (
     <TabLayout title="Dokument" count={documents.length} showCard={true}>
-      {/* Upload sektion */}
+      {/* Upload section */}
       <div className="border-2 border-dashed border-gray-200 rounded-lg p-6">
         <div className="text-center space-y-4">
           <Upload className="h-8 w-8 text-gray-400 mx-auto" />
@@ -124,7 +124,7 @@ export const BuildingDocumentsTab = () => {
         </div>
       </div>
 
-      {/* Dokumentlista */}
+      {/* Document list */}
       <div className="space-y-3">
         {documents.map((document) => (
           <Card key={document.id} className="p-4">
