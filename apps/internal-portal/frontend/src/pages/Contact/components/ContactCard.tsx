@@ -254,6 +254,38 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
     return <p>Text: {invoice.description}</p>
   }
 
+  const renderInvoiceRows = () => {
+    if (!invoice.invoiceRows.length) {
+      return (
+        <TableRow>
+          <TableCell colSpan={9}>
+            <Typography fontStyle="italic">
+              Inga fakturarader hittades
+            </Typography>
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    return invoice.invoiceRows.map((row, index) => (
+      <TableRow key={index}>
+        <TableCell colSpan={2}>{row.invoiceRowText}</TableCell>
+        <TableCell>
+          {row.rowType === 3 ? null : moneyFormatter.format(row.amount)}
+        </TableCell>
+        <TableCell>
+          {row.rowType === 3 ? null : moneyFormatter.format(row.deduction)}
+        </TableCell>
+        <TableCell>
+          {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
+        </TableCell>
+        <TableCell>
+          {row.rowType === 3 ? null : moneyFormatter.format(row.totalAmount)}
+        </TableCell>
+      </TableRow>
+    ))
+  }
+
   return (
     <Box padding={2}>
       <Typography variant="h2" sx={{ mt: 1, mb: 1, fontSize: 18 }}>
@@ -271,29 +303,7 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
             <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
           </TableRow>
         </TableHead>
-        <TableBody>
-          {invoice.invoiceRows.map((row, index) => (
-            <TableRow key={index}>
-              <TableCell colSpan={2}>{row.invoiceRowText}</TableCell>
-              <TableCell>
-                {row.rowType === 3 ? null : moneyFormatter.format(row.amount)}
-              </TableCell>
-              <TableCell>
-                {row.rowType === 3
-                  ? null
-                  : moneyFormatter.format(row.deduction)}
-              </TableCell>
-              <TableCell>
-                {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
-              </TableCell>
-              <TableCell>
-                {row.rowType === 3
-                  ? null
-                  : moneyFormatter.format(row.totalAmount)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
+        <TableBody>{renderInvoiceRows()}</TableBody>
       </Table>
       {invoice.source === 'next' && (
         <>
