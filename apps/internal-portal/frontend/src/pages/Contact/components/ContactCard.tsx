@@ -153,9 +153,7 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>
-            Skickad till inkasso
-          </TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Inkasso</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Källa</TableCell>
         </TableRow>
       </TableHead>
@@ -227,14 +225,14 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
         <TableCell>
           {invoice.sentToDebtCollection
             ? new Date(invoice.sentToDebtCollection).toLocaleDateString()
-            : '-'}
+            : 'Nej'}
         </TableCell>
         <TableCell>
           {invoice.source === 'legacy' ? 'xpand' : 'xledger'}
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
           <Collapse
             in={open}
             timeout={0}
@@ -261,10 +259,12 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
       <Typography variant="h2" sx={{ mt: 1, mb: 1, fontSize: 18 }}>
         Fakturarader
       </Typography>
-      <Table size="small">
+      <Table size="small" sx={{ tableLayout: 'fixed' }}>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: 'bold' }}>Beskrivning</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }} colSpan={2}>
+              Beskrivning
+            </TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Avdrag</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
@@ -274,7 +274,7 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
         <TableBody>
           {invoice.invoiceRows.map((row, index) => (
             <TableRow key={index}>
-              <TableCell>{row.invoiceRowText}</TableCell>
+              <TableCell colSpan={2}>{row.invoiceRowText}</TableCell>
               <TableCell>
                 {row.rowType === 3 ? null : moneyFormatter.format(row.amount)}
               </TableCell>
@@ -348,6 +348,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
           <TableCell>{event.transactionSourceCode}</TableCell>
           <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
           <TableCell>{event.text}</TableCell>
+          <TableCell>{yyyymmdd(new Date(event.paymentDate))}</TableCell>
         </TableRow>
       ))
     }
@@ -364,7 +365,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
   }
 
   return (
-    <Table size="small" stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
+    <Table size="small" sx={{ tableLayout: 'fixed' }}>
       <TableHead>
         <TableRow>
           <TableCell sx={{ fontWeight: 'bold', backgroundColor: 'inherit' }}>
