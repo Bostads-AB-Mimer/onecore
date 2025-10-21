@@ -114,7 +114,7 @@ const config = configPackage({
       },
     },
     xpandDatabase: {
-      port: 1433,
+      port: 1438,
     },
     economyDatabase: {
       port: 1438,
