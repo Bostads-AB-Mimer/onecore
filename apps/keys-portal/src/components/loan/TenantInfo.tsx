@@ -1,13 +1,7 @@
 import { X, User, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Accordion,
   AccordionContent,
@@ -135,7 +129,7 @@ export function TenantInfo({
 
           {/* Show tenant card for PNR/contactCode searches, or object searches with active tenants */}
           {showTenantCard && tenantsToDisplay.length > 0 && (
-            <Card>
+            <Card id="tenant-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
