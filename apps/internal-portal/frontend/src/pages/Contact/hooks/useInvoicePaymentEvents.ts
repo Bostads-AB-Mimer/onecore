@@ -34,7 +34,7 @@ export const useInvoicePaymentEvents = (invoiceId: string) => {
         )
         .then((res) => res.data.content),
     refetchOnWindowFocus: false,
-    retry: (failureCount, error) => {
+    retry: (failureCount: number, error: AxiosError) => {
       if (error.response?.status === 401) {
         return false
       } else {
