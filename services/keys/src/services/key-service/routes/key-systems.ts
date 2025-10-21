@@ -8,8 +8,6 @@ import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
 
-const TABLE = 'key_systems'
-
 const {
   KeySystemSchema,
   CreateKeySystemRequestSchema,

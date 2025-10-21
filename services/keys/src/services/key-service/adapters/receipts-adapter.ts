@@ -95,7 +95,9 @@ export async function updateReceiptFileId(
 export async function getKeyLoanById(
   keyLoanId: string,
   dbConnection: Knex | Knex.Transaction = db
-): Promise<{ id: string; keys: string; pickedUpAt: string | null } | undefined> {
+): Promise<
+  { id: string; keys: string; pickedUpAt: string | null } | undefined
+> {
   return await dbConnection('key_loans').where({ id: keyLoanId }).first()
 }
 

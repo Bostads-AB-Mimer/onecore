@@ -9,8 +9,6 @@ import { uploadFile, getFileUrl, deleteFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
 
-const TABLE = 'receipts'
-
 const {
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
