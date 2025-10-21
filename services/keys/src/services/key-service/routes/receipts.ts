@@ -246,7 +246,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
       if (!receipt) {
         ctx.status = 404
         ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -267,22 +267,15 @@ export const routes = (router: KoaRouter) => {
       })
 
       // Update receipt with fileId (fileId presence indicates signed status)
-      await db(TABLE).where({ id: parse.data.id }).update({
-        fileId,
-        updatedAt: db.fn.now(),
-      })
+      await receiptsAdapter.updateReceiptFileId(parse.data.id, fileId, db)
 
       // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
       if (receipt.receiptType === 'LOAN') {
-        const keyLoanAlreadyActivated = await db('key_loans')
-          .where({ id: receipt.keyLoanId })
-          .whereNotNull('pickedUpAt')
-          .first()
+        const keyLoanAlreadyActivated =
+          await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
 
         if (!keyLoanAlreadyActivated) {
-          await db('key_loans')
-            .where({ id: receipt.keyLoanId })
-            .update({ pickedUpAt: db.fn.now() })
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
 
           logger.info(
             { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
@@ -290,9 +283,10 @@ export const routes = (router: KoaRouter) => {
           )
 
           // Complete any incomplete events for the keys in this loan
-          const keyLoan = await db('key_loans')
-            .where({ id: receipt.keyLoanId })
-            .first()
+          const keyLoan = await receiptsAdapter.getKeyLoanById(
+            receipt.keyLoanId,
+            db
+          )
 
           if (keyLoan?.keys) {
             let keyIds: string[] = []
@@ -304,12 +298,7 @@ export const routes = (router: KoaRouter) => {
             }
 
             // For each key, find and complete any incomplete events
-            for (const keyId of keyIds) {
-              await db('key_events')
-                .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-                .whereIn('status', ['ORDERED', 'RECEIVED'])
-                .update({ status: 'COMPLETED', updatedAt: db.fn.now() })
-            }
+            await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
 
             logger.info(
               { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
@@ -373,7 +362,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+        const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
         if (!receipt) {
           ctx.status = 404
           ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -426,22 +415,15 @@ export const routes = (router: KoaRouter) => {
         const fileId = await uploadFile(fileBuffer, fileName, uploadMetadata)
 
         // Update receipt with fileId (fileId presence indicates signed status)
-        await db(TABLE).where({ id: parse.data.id }).update({
-          fileId,
-          updatedAt: db.fn.now(),
-        })
+        await receiptsAdapter.updateReceiptFileId(parse.data.id, fileId, db)
 
         // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
         if (receipt.receiptType === 'LOAN') {
-          const keyLoanAlreadyActivated = await db('key_loans')
-            .where({ id: receipt.keyLoanId })
-            .whereNotNull('pickedUpAt')
-            .first()
+          const keyLoanAlreadyActivated =
+            await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
 
           if (!keyLoanAlreadyActivated) {
-            await db('key_loans')
-              .where({ id: receipt.keyLoanId })
-              .update({ pickedUpAt: db.fn.now() })
+            await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
 
             logger.info(
               { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
@@ -449,9 +431,10 @@ export const routes = (router: KoaRouter) => {
             )
 
             // Complete any incomplete events for the keys in this loan
-            const keyLoan = await db('key_loans')
-              .where({ id: receipt.keyLoanId })
-              .first()
+            const keyLoan = await receiptsAdapter.getKeyLoanById(
+              receipt.keyLoanId,
+              db
+            )
 
             if (keyLoan?.keys) {
               let keyIds: string[] = []
@@ -463,12 +446,7 @@ export const routes = (router: KoaRouter) => {
               }
 
               // For each key, find and complete any incomplete events
-              for (const keyId of keyIds) {
-                await db('key_events')
-                  .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-                  .whereIn('status', ['ORDERED', 'RECEIVED'])
-                  .update({ status: 'COMPLETED', updatedAt: db.fn.now() })
-              }
+              await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
 
               logger.info(
                 { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
@@ -534,7 +512,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
       if (!receipt) {
         ctx.status = 404
         ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -607,7 +585,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+        const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
         if (!receipt) {
           ctx.status = 404
           ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -615,14 +593,12 @@ export const routes = (router: KoaRouter) => {
         }
 
         const payload: UpdateReceiptRequest = ctx.request.body
-        await db(TABLE)
-          .where({ id: parse.data.id })
-          .update({
-            ...payload,
-            updatedAt: db.fn.now(),
-          })
+        const updated = await receiptsAdapter.updateReceipt(
+          parse.data.id,
+          payload,
+          db
+        )
 
-        const updated = await db(TABLE).where({ id: parse.data.id }).first()
         ctx.status = 200
         ctx.body = { content: updated as Receipt, ...metadata }
       } catch (err) {
@@ -662,7 +638,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const receipt = await db(TABLE).where({ id: parse.data.id }).first()
+      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
       if (!receipt) {
         ctx.status = 404
         ctx.body = { reason: 'Receipt not found', ...metadata }
@@ -681,7 +657,7 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-      await db(TABLE).where({ id: parse.data.id }).del()
+      await receiptsAdapter.deleteReceipt(parse.data.id, db)
       ctx.status = 204
     } catch (err) {
       logger.error(err, 'Error deleting receipt')

@@ -152,3 +152,23 @@ export async function getKeysWithLoanStatus(
 
   return result as KeyWithLoanStatus[]
 }
+
+/**
+ * Get all keys query builder for pagination
+ * Returns a query builder that can be used with paginate()
+ */
+export function getAllKeysQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*').orderBy('createdAt', 'desc')
+}
+
+/**
+ * Get keys search query builder for pagination
+ * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ */
+export function getKeysSearchQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*')
+}

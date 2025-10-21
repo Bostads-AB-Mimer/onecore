@@ -203,7 +203,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
-      const query = db(TABLE).select('*')
+      const query = keyLoansAdapter.getKeyLoansSearchQuery(db)
 
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['contact', 'contact2'],

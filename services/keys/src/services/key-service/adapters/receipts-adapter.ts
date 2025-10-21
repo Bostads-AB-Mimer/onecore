@@ -74,3 +74,69 @@ export async function keyLoanExists(
   const loan = await dbConnection('key_loans').where({ id: keyLoanId }).first()
   return !!loan
 }
+
+/**
+ * Update receipt with fileId after upload
+ */
+export async function updateReceiptFileId(
+  id: string,
+  fileId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<void> {
+  await dbConnection(TABLE).where({ id }).update({
+    fileId,
+    updatedAt: dbConnection.fn.now(),
+  })
+}
+
+/**
+ * Get key loan by ID with keys field
+ */
+export async function getKeyLoanById(
+  keyLoanId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<{ id: string; keys: string; pickedUpAt: string | null } | undefined> {
+  return await dbConnection('key_loans').where({ id: keyLoanId }).first()
+}
+
+/**
+ * Check if a key loan has already been activated (has pickedUpAt set)
+ */
+export async function isKeyLoanActivated(
+  keyLoanId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<boolean> {
+  const loan = await dbConnection('key_loans')
+    .where({ id: keyLoanId })
+    .whereNotNull('pickedUpAt')
+    .first()
+  return !!loan
+}
+
+/**
+ * Activate a key loan by setting pickedUpAt timestamp
+ */
+export async function activateKeyLoan(
+  keyLoanId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<void> {
+  await dbConnection('key_loans')
+    .where({ id: keyLoanId })
+    .update({ pickedUpAt: dbConnection.fn.now() })
+}
+
+/**
+ * Complete key events for the given key IDs
+ * Changes status from ORDERED or RECEIVED to COMPLETED
+ */
+export async function completeKeyEventsForKeys(
+  keyIds: string[],
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<void> {
+  for (const keyId of keyIds) {
+    await dbConnection('key_events')
+      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+      .whereIn('status', ['ORDERED', 'RECEIVED'])
+      .update({ status: 'COMPLETED', updatedAt: dbConnection.fn.now() })
+  }
+}

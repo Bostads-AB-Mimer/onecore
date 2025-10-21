@@ -106,3 +106,13 @@ export async function checkActiveKeyLoans(
     conflictingKeys,
   }
 }
+
+/**
+ * Get key loans search query builder for pagination
+ * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ */
+export function getKeyLoansSearchQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*')
+}
