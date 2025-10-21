@@ -228,6 +228,8 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
           {invoice.sentToDebtCollection
             ? new Date(invoice.sentToDebtCollection).toLocaleDateString()
             : '-'}
+        </TableCell>
+        <TableCell>
           {invoice.source === 'legacy' ? 'xpand' : 'xledger'}
         </TableCell>
       </TableRow>
@@ -319,7 +321,10 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
             <Skeleton variant="text" width="30%" height="25px" />
           </TableCell>
           <TableCell>
-            <Skeleton variant="text" height="25px" />
+            <Skeleton variant="text" width="30%" height="25px" />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width="30%" height="25px" />
           </TableCell>
         </TableRow>
       )
