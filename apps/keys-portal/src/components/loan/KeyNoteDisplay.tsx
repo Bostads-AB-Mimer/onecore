@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,13 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { keyNoteService } from '@/services/api/keyNoteService'
 import type { KeyNote, Lease } from '@/services/types'
@@ -69,6 +63,13 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null)
   const [editedDescription, setEditedDescription] = useState('')
   const [savingObjects, setSavingObjects] = useState<Set<string>>(new Set())
+  const contentRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  // Map of objectId -> line count to clamp to (null = fully expanded)
+  const [lineClamps, setLineClamps] = useState<Map<string, number | null>>(
+    new Map()
+  )
+  const [minHeight, setMinHeight] = useState<number | null>(null)
 
   // Group leases by status and filter to unique objects
   const statusGroups = useMemo<GroupedLeases[]>(() => {
@@ -136,6 +137,197 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const currentGroup = statusGroups[currentGroupIndex]
   const hasMultipleGroups = statusGroups.length > 1
 
+  // Set minimum height to match tenant card
+  useEffect(() => {
+    const tenantCard = document.getElementById('tenant-card')
+    if (!tenantCard) return
+
+    const updateMinHeight = () => {
+      const height = tenantCard.getBoundingClientRect().height
+      setMinHeight(height)
+    }
+
+    updateMinHeight()
+
+    // Update on window resize
+    const resizeObserver = new ResizeObserver(updateMinHeight)
+    resizeObserver.observe(tenantCard)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  // Dynamically calculate line-clamp to fit within tenant card height
+  useEffect(() => {
+    console.log('Truncation effect running', {
+      cardRef: !!cardRef.current,
+      loadingSize: loadingObjects.size,
+      currentGroup: !!currentGroup,
+      minHeight,
+    })
+
+    if (!cardRef.current) {
+      console.log('No cardRef')
+      return
+    }
+    if (loadingObjects.size > 0) {
+      console.log('Still loading objects')
+      return
+    }
+    // Removed isCheckingHeight check - let the timeout handle multiple calls
+    if (!currentGroup) {
+      console.log('No current group')
+      return
+    }
+
+    const tenantCard = document.getElementById('tenant-card')
+    if (!tenantCard) {
+      console.log('No tenant card found')
+      return
+    }
+
+    console.log('Starting height check...')
+
+    // Wait for DOM to settle (debounce multiple calls)
+    const timer = setTimeout(() => {
+      if (!cardRef.current || !tenantCard) {
+        return
+      }
+
+      // Check if tenant card has been properly rendered (has non-zero height)
+      const tenantCardInitialHeight = tenantCard.getBoundingClientRect().height
+      if (tenantCardInitialHeight === 0) {
+        // Tenant card not ready yet, will retry on next render
+        console.log('Tenant card height is 0, will retry')
+        return
+      }
+
+      // IMPORTANT: We need to measure with ALL truncation removed to get true heights
+      // First, temporarily remove all line-clamps to measure natural heights
+      const noteElements = cardRef.current.querySelectorAll('[data-object-id]')
+      const originalStyles = new Map<Element, string>()
+
+      noteElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        originalStyles.set(el, htmlEl.style.cssText)
+        htmlEl.style.display = ''
+        htmlEl.style.webkitLineClamp = ''
+        htmlEl.style.webkitBoxOrient = ''
+        htmlEl.style.overflow = ''
+      })
+
+      // Force reflow to get accurate measurements
+      void cardRef.current.offsetHeight
+
+      const tenantCardHeight = tenantCard.getBoundingClientRect().height
+      const notesCardHeight = cardRef.current.getBoundingClientRect().height
+
+      // If we fit without any truncation, no truncation needed
+      if (notesCardHeight <= tenantCardHeight + 10) {
+        // Restore original styles
+        noteElements.forEach((el) => {
+          const htmlEl = el as HTMLElement
+          htmlEl.style.cssText = originalStyles.get(el) || ''
+        })
+
+        // Only clear if there were clamps before
+        if (lineClamps.size > 0) {
+          setLineClamps(new Map())
+        }
+        return
+      }
+
+      // We're overflowing - need to truncate
+      const overflow = notesCardHeight - tenantCardHeight
+
+      // Strategy: Truncate notes from bottom up, calculating exact lines for each
+      const newLineClamps = new Map<string, number | null>()
+      let remainingOverflow = overflow
+
+      // Get all note elements (already queried above)
+      const objectIds = currentGroup.leases.map((l) => l.rentalPropertyId)
+
+      // Go through notes from bottom to top
+      for (let i = objectIds.length - 1; i >= 0 && remainingOverflow > 5; i--) {
+        const objectId = objectIds[i]
+        const note = notes.get(objectId)
+
+        if (!note?.description) continue
+
+        // Find the note element in DOM (from noteElements already queried)
+        const noteElement = Array.from(noteElements).find(
+          (el) => el.getAttribute('data-object-id') === objectId
+        ) as HTMLElement | undefined
+
+        if (!noteElement) {
+          console.log('Could not find element for:', objectId)
+          continue
+        }
+
+        // Get line height from computed styles
+        const computedStyle = window.getComputedStyle(noteElement)
+        const lineHeight = parseFloat(computedStyle.lineHeight)
+
+        if (!lineHeight || isNaN(lineHeight)) {
+          console.log('Invalid line height for:', objectId, lineHeight)
+          continue
+        }
+
+        // Calculate how many lines we can show for this note
+        const currentHeight = noteElement.getBoundingClientRect().height
+        const targetHeight = Math.max(
+          lineHeight,
+          currentHeight - remainingOverflow
+        )
+        const linesToShow = Math.max(1, Math.floor(targetHeight / lineHeight))
+
+        console.log('Truncating', objectId, {
+          currentHeight,
+          targetHeight,
+          lineHeight,
+          linesToShow,
+          remainingOverflow,
+        })
+
+        newLineClamps.set(objectId, linesToShow)
+        remainingOverflow -= currentHeight - targetHeight
+      }
+
+      console.log('Final lineClamps:', newLineClamps)
+
+      // Check if lineClamps actually changed
+      const clampsChanged =
+        newLineClamps.size !== lineClamps.size ||
+        Array.from(newLineClamps.entries()).some(
+          ([id, lines]) => lineClamps.get(id) !== lines
+        )
+
+      // Restore original styles before applying new truncation
+      noteElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        htmlEl.style.cssText = originalStyles.get(el) || ''
+      })
+
+      if (clampsChanged) {
+        console.log('Clamps changed, applying new truncation')
+        setLineClamps(newLineClamps)
+      } else {
+        console.log('Clamps unchanged, done')
+      }
+    }, 100)
+
+    return () => {
+      console.log('Cleanup: clearing timeout')
+      clearTimeout(timer)
+    }
+  }, [currentGroup, notes, loadingObjects.size, minHeight, lineClamps])
+
+  // Reset line clamps when navigating to a new group
+  useEffect(() => {
+    setLineClamps(new Map())
+  }, [currentGroupIndex])
+
   // Load notes for all objects in the current group
   useEffect(() => {
     if (!currentGroup) return
@@ -190,6 +382,23 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     setEditingObjectId(null) // Exit edit mode when navigating
   }
 
+  const handleToggleExpand = (objectId: string) => {
+    const isTruncated =
+      lineClamps.has(objectId) && lineClamps.get(objectId) !== null
+
+    if (isTruncated) {
+      // Truncated - expand it fully
+      setLineClamps((prev) => {
+        const next = new Map(prev)
+        next.delete(objectId)
+        return next
+      })
+    } else {
+      // Already expanded - enter edit mode
+      handleStartEdit(objectId)
+    }
+  }
+
   const handleStartEdit = (objectId: string) => {
     const note = notes.get(objectId)
     setEditedDescription(note?.description ?? '')
@@ -238,8 +447,12 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card
+      ref={cardRef}
+      className="flex flex-col"
+      style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+    >
+      <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-5 w-5" />
@@ -272,13 +485,19 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col space-y-3">
+      <CardContent
+        ref={contentRef}
+        className="flex-1 overflow-y-auto space-y-3 min-h-0"
+      >
         {currentGroup.leases.map((lease) => {
           const objectId = lease.rentalPropertyId
           const note = notes.get(objectId)
           const isLoading = loadingObjects.has(objectId)
           const isEditing = editingObjectId === objectId
           const isSaving = savingObjects.has(objectId)
+          const lineClamp = lineClamps.get(objectId)
+          const isTruncated = lineClamp !== undefined && lineClamp !== null
+          const hasTruncatedNotes = lineClamps.size > 0
 
           return (
             <div key={objectId} className="space-y-1">
@@ -330,26 +549,52 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                   </div>
                 </div>
               ) : (
-                <div
-                  className="group cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
-                  onClick={() => handleStartEdit(objectId)}
-                >
-                  {note?.description ? (
-                    <div className="text-sm whitespace-pre-wrap">
-                      {note.description}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Inga anteckningar - klicka för att lägga till
-                    </p>
-                  )}
-                  <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Edit className="h-3 w-3" />
-                      Klicka för att redigera
-                    </span>
+                <>
+                  {/* Note display - click to expand if truncated, or edit if not */}
+                  <div
+                    className={`cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors ${!isTruncated && !hasTruncatedNotes ? 'group' : ''}`}
+                    onClick={() =>
+                      isTruncated
+                        ? handleToggleExpand(objectId)
+                        : handleStartEdit(objectId)
+                    }
+                  >
+                    {note?.description ? (
+                      <div
+                        data-object-id={objectId}
+                        className="text-sm whitespace-pre-wrap"
+                        style={
+                          isTruncated
+                            ? {
+                                display: '-webkit-box',
+                                WebkitLineClamp: lineClamp,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }
+                            : undefined
+                        }
+                      >
+                        {note.description}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        {hasTruncatedNotes
+                          ? 'Inga anteckningar'
+                          : 'Inga anteckningar - klicka för att lägga till'}
+                      </p>
+                    )}
+                    {!isTruncated &&
+                      !hasTruncatedNotes &&
+                      note?.description && (
+                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Edit className="h-3 w-3" />
+                            Klicka för att redigera
+                          </span>
+                        </div>
+                      )}
                   </div>
-                </div>
+                </>
               )}
             </div>
           )
