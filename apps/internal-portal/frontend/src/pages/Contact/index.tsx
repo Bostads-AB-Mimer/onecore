@@ -17,6 +17,9 @@ export function Contact() {
 
   const { handleSubmit, register, formState } = useForm({
     resolver: zodResolver(FormSchema),
+    defaultValues: {
+      contactCode: contactCode ?? '',
+    },
   })
 
   const onSubmit = (data: z.infer<typeof FormSchema>) =>
