@@ -155,7 +155,7 @@ export function TenantInfo({
                 <div
                   className={
                     tenantsToDisplay.length > 1
-                      ? 'grid grid-cols-1 gap-6'
+                      ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
                       : ''
                   }
                 >
