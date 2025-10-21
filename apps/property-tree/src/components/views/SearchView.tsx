@@ -32,7 +32,7 @@ const SearchView = () => {
   } = usePropertyFilters()
 
   return (
-    <div className="p-8 animate-in">
+    <div className="py-4 animate-in">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Fastigheter</h1>
         <p className="text-muted-foreground">
