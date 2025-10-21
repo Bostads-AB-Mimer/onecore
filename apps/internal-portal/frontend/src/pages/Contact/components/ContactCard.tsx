@@ -244,53 +244,49 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
 function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
   const { invoice } = props
 
+  if (invoice.type === 'Other') {
+    return <p>Text: {invoice.description}</p>
+  }
+
   return (
     <Box padding={2}>
-      {invoice.type === 'Other' ? (
-        <p>Text: {invoice.description}</p>
-      ) : (
-        <>
-          <Typography variant="h2" sx={{ mt: 1, mb: 1, fontSize: 18 }}>
-            Fakturarader
-          </Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Beskrivning</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Avdrag</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoice.invoiceRows.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell>{row.invoiceRowText}</TableCell>
-                  <TableCell>
-                    {row.rowType === 3
-                      ? null
-                      : moneyFormatter.format(row.amount)}
-                  </TableCell>
-                  <TableCell>
-                    {row.rowType === 3
-                      ? null
-                      : moneyFormatter.format(row.deduction)}
-                  </TableCell>
-                  <TableCell>
-                    {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
-                  </TableCell>
-                  <TableCell>
-                    {row.rowType === 3
-                      ? null
-                      : moneyFormatter.format(row.totalAmount)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </>
-      )}
+      <Typography variant="h2" sx={{ mt: 1, mb: 1, fontSize: 18 }}>
+        Fakturarader
+      </Typography>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 'bold' }}>Beskrivning</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Avdrag</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Moms</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Totalt</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {invoice.invoiceRows.map((row, index) => (
+            <TableRow key={index}>
+              <TableCell>{row.invoiceRowText}</TableCell>
+              <TableCell>
+                {row.rowType === 3 ? null : moneyFormatter.format(row.amount)}
+              </TableCell>
+              <TableCell>
+                {row.rowType === 3
+                  ? null
+                  : moneyFormatter.format(row.deduction)}
+              </TableCell>
+              <TableCell>
+                {row.rowType === 3 ? null : moneyFormatter.format(row.vat)}
+              </TableCell>
+              <TableCell>
+                {row.rowType === 3
+                  ? null
+                  : moneyFormatter.format(row.totalAmount)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       {invoice.source === 'next' && (
         <>
           <Typography variant="h2" sx={{ mt: 2, mb: 1, fontSize: 18 }}>
@@ -305,6 +301,56 @@ function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
 
 function InvoicePaymentEvents(props: { invoiceId: string }) {
   const eventsQuery = useInvoicePaymentEvents(props.invoiceId)
+
+  const render = () => {
+    if (eventsQuery.isLoading) {
+      return (
+        <TableRow>
+          <TableCell>
+            <Skeleton variant="text" width="40%" height="25px" />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width="30%" height="25px" />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" height="25px" />
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    if (eventsQuery.error) {
+      return (
+        <TableRow>
+          <TableCell>
+            <Typography fontStyle="italic">
+              Ett fel uppstod när betalningshändelser hämtades
+            </Typography>
+          </TableCell>
+        </TableRow>
+      )
+    }
+
+    if (eventsQuery.data?.length) {
+      return eventsQuery.data.map((event, index) => (
+        <TableRow key={index}>
+          <TableCell>{event.transactionSourceCode}</TableCell>
+          <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
+          <TableCell>{event.text}</TableCell>
+        </TableRow>
+      ))
+    }
+
+    return (
+      <TableRow>
+        <TableCell>
+          <Typography fontStyle="italic">
+            Inga betalningshändelser hittades
+          </Typography>
+        </TableCell>
+      </TableRow>
+    )
+  }
 
   return (
     <Table size="small" stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
@@ -324,38 +370,7 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
           </TableCell>
         </TableRow>
       </TableHead>
-      <TableBody>
-        {eventsQuery.isLoading ? (
-          <TableRow>
-            <TableCell>
-              <Skeleton variant="text" width="40%" height="25px" />
-            </TableCell>
-            <TableCell>
-              <Skeleton variant="text" width="30%" height="25px" />
-            </TableCell>
-            <TableCell>
-              <Skeleton variant="text" height="25px" />
-            </TableCell>
-          </TableRow>
-        ) : eventsQuery.data?.length ? (
-          eventsQuery.data?.map((event, index) => (
-            <TableRow key={index}>
-              <TableCell>{event.transactionSourceCode}</TableCell>
-              <TableCell>{moneyFormatter.format(event.amount)}</TableCell>
-              <TableCell>{event.text}</TableCell>
-              <TableCell>{yyyymmdd(new Date(event.paymentDate))}</TableCell>
-            </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell>
-              <Typography fontStyle="italic">
-                Inga betalningshändelser hittades
-              </Typography>
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
+      <TableBody>{render()}</TableBody>
     </Table>
   )
 }
