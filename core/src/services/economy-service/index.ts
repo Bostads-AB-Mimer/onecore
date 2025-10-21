@@ -30,7 +30,7 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      ctx.status = 500
+      ctx.status = result.statusCode ?? 500
       return
     } else {
       ctx.status = 200

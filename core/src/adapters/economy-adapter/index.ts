@@ -25,7 +25,7 @@ export async function getInvoiceByInvoiceId(
 
 export async function getInvoicePaymentEvents(
   invoiceId: string
-): Promise<AdapterResult<InvoicePaymentEvent[], 'unknown'>> {
+): Promise<AdapterResult<InvoicePaymentEvent[], 'unknown' | 'not-found'>> {
   const response = await axios.get(
     `${config.economyService.url}/invoices/${invoiceId}/payment-events`
   )
@@ -33,9 +33,12 @@ export async function getInvoicePaymentEvents(
   if (response.status === 200) {
     return { ok: true, data: response.data.content }
   }
+  if (response.status === 404) {
+    return { ok: false, err: 'not-found', statusCode: 404 }
+  }
 
   logger.error(response.data, 'economy-adapter.getInvoicePaymentEvents')
-  return { ok: false, err: 'unknown' }
+  return { ok: false, err: 'unknown', statusCode: 500 }
 }
 
 export async function getInvoicesByContactCode(
