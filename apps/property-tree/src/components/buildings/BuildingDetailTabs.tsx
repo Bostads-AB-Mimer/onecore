@@ -45,32 +45,19 @@ export const BuildingDetailTabs = ({
     <Tabs defaultValue="entrances" className="space-y-6">
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
-
-        <TabsTrigger disabled={true} value="orders">
-          Ärenden
-        </TabsTrigger>
+        <TabsTrigger value="orders">Ärenden</TabsTrigger>
       </TabsList>
 
       <TabsContent value="entrances">
-        <FeatureGatedContent
-          isEnabled={features.showBuildingEntrances}
-          fallbackMessage="Uppgångsfunktionen är inte aktiverad. Aktivera den i betainställningarna för att se innehållet."
-        >
-          <BuildingEntrances
-            isLoading={isStaircasesLoading}
-            residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-            basePath={basePath}
-          />
-        </FeatureGatedContent>
+        <BuildingEntrances
+          isLoading={isStaircasesLoading}
+          residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+          basePath={basePath}
+        />
       </TabsContent>
 
       <TabsContent value="orders">
-        <FeatureGatedContent
-          isEnabled={true}
-          fallbackMessage="Ärendefunktionen är inte aktiverad."
-        >
-          <BuildingOrdersTab building={building} />
-        </FeatureGatedContent>
+        <BuildingOrdersTab building={building} />
       </TabsContent>
     </Tabs>
   )
