@@ -114,8 +114,9 @@ export interface KeyLoanWithDetails extends KeyLoan {
   // additional computed properties
 }
 
-// TODO: Needs to be added to api-types
-export const leaseTypeLabels = {
+// Lease type constant values - matches services/leasing/src/constants/leaseTypes.ts
+// String values taken from Xpand
+export const leaseTypes = {
   housingContract: 'Bostadskontrakt',
   campusContract: 'Campuskontrakt',
   garageContract: 'Garagekontrakt',
@@ -124,23 +125,9 @@ export const leaseTypeLabels = {
   renegotiationContract: 'Omförhandlingskontrakt',
   otherContract: 'Övrigt',
   parkingspaceContract: 'P-Platskontrakt',
-  unknown: 'Okänd kontraktstyp',
 } as const
 
-export type LeaseType = keyof typeof leaseTypeLabels
-
-export function mapLeaseTypeKeyFromRaw(raw?: string): LeaseType {
-  const s = (raw ?? '').trim().toLowerCase()
-  if (s.startsWith('bostadskontrakt')) return 'housingContract'
-  if (s.startsWith('campuskontrakt')) return 'campusContract'
-  if (s.startsWith('garagekontrakt')) return 'garageContract'
-  if (s.startsWith('kooperativ')) return 'cooperativeTenancyContract'
-  if (s.startsWith('lokalkontrakt')) return 'commercialTenantContract'
-  if (s.startsWith('omförhandlingskontrakt')) return 'renegotiationContract'
-  if (s.startsWith('p-platskontrakt')) return 'parkingspaceContract'
-  if (s.startsWith('övrigt')) return 'otherContract'
-  return 'unknown'
-}
+export type LeaseType = keyof typeof leaseTypes
 
 // ----- Logs (UI/domain) -----
 // Event type labels in Swedish
