@@ -19,12 +19,46 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { keyNoteService } from '@/services/api/keyNoteService'
 import type { KeyNote, Lease } from '@/services/types'
+import { leaseTypes } from '@/services/types'
+import { deriveDisplayStatus } from '@/lib/lease-status'
 
 interface KeyNoteDisplayProps {
   /** Array of leases to show notes for. If multiple, shows carousel navigation. */
   leases: Lease[]
   /** The type of search that was performed */
   searchType: 'pnr' | 'object' | 'contactCode' | null
+}
+
+/**
+ * Get property type priority for sorting.
+ * Lower numbers = higher priority (shown first in carousel)
+ * Priority order: apartments/cooperative > garage > parking > others
+ */
+function getPropertyTypePriority(leaseType?: string): number {
+  const type = leaseType?.trim() ?? ''
+  // Apartments and cooperative tenancy (highest priority)
+  if (type === leaseTypes.housingContract) return 1
+  if (type === leaseTypes.cooperativeTenancyContract) return 2
+  if (type === leaseTypes.campusContract) return 3
+  // Garages (medium priority)
+  if (type === leaseTypes.garageContract) return 4
+  // Parking spaces (lower priority)
+  if (type === leaseTypes.parkingspaceContract) return 5
+  // Everything else (lowest priority: commercial, renegotiation, other)
+  return 6
+}
+
+/**
+ * Get lease status priority for sorting.
+ * Lower numbers = higher priority
+ * Priority order: active/upcoming > ended
+ */
+function getStatusPriority(lease: Lease): number {
+  const status = deriveDisplayStatus(lease)
+  if (status === 'active') return 1
+  if (status === 'upcoming') return 2
+  if (status === 'ended') return 3
+  return 4
 }
 
 /**
