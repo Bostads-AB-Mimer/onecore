@@ -177,6 +177,7 @@ export const getWorkOrdersByPropertyId = async (
       Messages: transformMessages(
         messagesById[workOrder.id] satisfies OdooWorkOrderMessage[]
       ),
+      Url: WorkOrderUrl(workOrder.id),
     }))
 
     return workOrders
