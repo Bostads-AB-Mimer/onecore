@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -31,7 +31,7 @@ interface KeyNoteDisplayProps {
 
 /**
  * Get property type priority for sorting.
- * Lower numbers = higher priority (shown first in carousel)
+ * Lower numbers = higher priority (shown first in list)
  * Priority order: apartments/cooperative > garage > parking > others
  */
 function getPropertyTypePriority(leaseType?: string): number {
@@ -48,159 +48,194 @@ function getPropertyTypePriority(leaseType?: string): number {
   return 6
 }
 
-/**
- * Get lease status priority for sorting.
- * Lower numbers = higher priority
- * Priority order: active/upcoming > ended
- */
-function getStatusPriority(lease: Lease): number {
-  const status = deriveDisplayStatus(lease)
-  if (status === 'active') return 1
-  if (status === 'upcoming') return 2
-  if (status === 'ended') return 3
-  return 4
+type StatusGroup = 'active' | 'upcoming' | 'ended'
+
+interface GroupedLeases {
+  status: StatusGroup
+  label: string
+  leases: Lease[]
 }
 
 /**
- * Displays key notes for rental objects.
- * - For object searches (single object): Shows note for that object
- * - For person searches (multiple objects): Shows carousel to navigate between objects
+ * Displays key notes for rental objects grouped by lease status.
+ * - Groups objects by status (active, upcoming, ended)
+ * - Shows all notes for a status group on one page
+ * - Use arrows to navigate between status groups
  */
-export function KeyNoteDisplay({ leases, searchType }: KeyNoteDisplayProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
+  const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
   const [notes, setNotes] = useState<Map<string, KeyNote | null>>(new Map())
-  const [loading, setLoading] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  const [loadingObjects, setLoadingObjects] = useState<Set<string>>(new Set())
+  const [editingObjectId, setEditingObjectId] = useState<string | null>(null)
   const [editedDescription, setEditedDescription] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [savingObjects, setSavingObjects] = useState<Set<string>>(new Set())
 
-  // Get active leases (where we expect notes to be most relevant)
-  const activeLeases = leases.filter((lease) => {
-    const now = new Date()
-    const start = new Date(lease.leaseStartDate)
-    const end = lease.leaseEndDate ? new Date(lease.leaseEndDate) : null
-    return start <= now && (!end || end >= now)
-  })
-
-  // Use active leases if available, otherwise all leases
-  const allRelevantLeases = activeLeases.length > 0 ? activeLeases : leases
-
-  // Filter to unique rental objects (avoid showing multiple leases for same object)
-  const uniqueObjectsMap = new Map<string, Lease>()
-  allRelevantLeases.forEach((lease) => {
-    const objectId = lease.rentalPropertyId
-    // Keep the most recent lease for each unique object
-    if (!uniqueObjectsMap.has(objectId)) {
-      uniqueObjectsMap.set(objectId, lease)
-    } else {
-      const existing = uniqueObjectsMap.get(objectId)!
-      // Replace if this lease is more recent
-      if (new Date(lease.leaseStartDate) > new Date(existing.leaseStartDate)) {
+  // Group leases by status and filter to unique objects
+  const statusGroups = useMemo<GroupedLeases[]>(() => {
+    // First, get unique objects across all leases
+    const uniqueObjectsMap = new Map<string, Lease>()
+    leases.forEach((lease) => {
+      const objectId = lease.rentalPropertyId
+      if (!uniqueObjectsMap.has(objectId)) {
         uniqueObjectsMap.set(objectId, lease)
+      } else {
+        const existing = uniqueObjectsMap.get(objectId)!
+        // Keep the most recent lease for each unique object
+        if (
+          new Date(lease.leaseStartDate) > new Date(existing.leaseStartDate)
+        ) {
+          uniqueObjectsMap.set(objectId, lease)
+        }
       }
+    })
+
+    const uniqueLeases = Array.from(uniqueObjectsMap.values())
+
+    // Group by status
+    const activeLeases: Lease[] = []
+    const upcomingLeases: Lease[] = []
+    const endedLeases: Lease[] = []
+
+    uniqueLeases.forEach((lease) => {
+      const status = deriveDisplayStatus(lease)
+      if (status === 'active') activeLeases.push(lease)
+      else if (status === 'upcoming') upcomingLeases.push(lease)
+      else endedLeases.push(lease)
+    })
+
+    // Sort each group by property type priority
+    const sortByPriority = (a: Lease, b: Lease) => {
+      const priorityA = getPropertyTypePriority(a.type)
+      const priorityB = getPropertyTypePriority(b.type)
+      return priorityA - priorityB
     }
-  })
 
-  const displayLeases = Array.from(uniqueObjectsMap.values())
+    activeLeases.sort(sortByPriority)
+    upcomingLeases.sort(sortByPriority)
+    endedLeases.sort(sortByPriority)
 
-  const currentLease = displayLeases[currentIndex]
-  const hasMultiple = displayLeases.length > 1
+    // Build groups array (only include non-empty groups)
+    const groups: GroupedLeases[] = []
+    if (activeLeases.length > 0) {
+      groups.push({ status: 'active', label: 'Aktiva', leases: activeLeases })
+    }
+    if (upcomingLeases.length > 0) {
+      groups.push({
+        status: 'upcoming',
+        label: 'Kommande',
+        leases: upcomingLeases,
+      })
+    }
+    if (endedLeases.length > 0) {
+      groups.push({ status: 'ended', label: 'Avslutade', leases: endedLeases })
+    }
 
-  // Load note for current lease
+    return groups
+  }, [leases])
+
+  const currentGroup = statusGroups[currentGroupIndex]
+  const hasMultipleGroups = statusGroups.length > 1
+
+  // Load notes for all objects in the current group
   useEffect(() => {
-    if (!currentLease) return
+    if (!currentGroup) return
 
-    const rentalObjectCode = currentLease.rentalPropertyId
+    currentGroup.leases.forEach((lease) => {
+      const rentalObjectCode = lease.rentalPropertyId
 
-    // Check if we already have this note cached
-    if (notes.has(rentalObjectCode)) return
+      // Check if we already have this note cached
+      if (notes.has(rentalObjectCode)) return
 
-    let cancelled = false
+      let cancelled = false
 
-    async function loadNote() {
-      setLoading(true)
-      try {
-        const fetchedNotes =
-          await keyNoteService.getKeyNotesByRentalObjectCode(rentalObjectCode)
-        if (!cancelled) {
-          // Assume one note per rental object
-          const note = fetchedNotes[0] ?? null
-          setNotes((prev) => new Map(prev).set(rentalObjectCode, note))
+      async function loadNote() {
+        setLoadingObjects((prev) => new Set(prev).add(rentalObjectCode))
+        try {
+          const fetchedNotes =
+            await keyNoteService.getKeyNotesByRentalObjectCode(rentalObjectCode)
+          if (!cancelled) {
+            // Assume one note per rental object
+            const note = fetchedNotes[0] ?? null
+            setNotes((prev) => new Map(prev).set(rentalObjectCode, note))
+          }
+        } catch (err) {
+          console.error('Failed to load note:', err)
+          if (!cancelled) {
+            setNotes((prev) => new Map(prev).set(rentalObjectCode, null))
+          }
+        } finally {
+          if (!cancelled) {
+            setLoadingObjects((prev) => {
+              const next = new Set(prev)
+              next.delete(rentalObjectCode)
+              return next
+            })
+          }
         }
-      } catch (err) {
-        console.error('Failed to load note:', err)
-        if (!cancelled) {
-          setNotes((prev) => new Map(prev).set(rentalObjectCode, null))
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
       }
-    }
 
-    loadNote()
-
-    return () => {
-      cancelled = true
-    }
-  }, [currentLease, notes])
+      loadNote()
+    })
+  }, [currentGroup, notes])
 
   const handlePrevious = () => {
-    setCurrentIndex(
-      (prev) => (prev - 1 + displayLeases.length) % displayLeases.length
+    setCurrentGroupIndex(
+      (prev) => (prev - 1 + statusGroups.length) % statusGroups.length
     )
-    setIsEditing(false) // Exit edit mode when navigating
+    setEditingObjectId(null) // Exit edit mode when navigating
   }
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % displayLeases.length)
-    setIsEditing(false) // Exit edit mode when navigating
+    setCurrentGroupIndex((prev) => (prev + 1) % statusGroups.length)
+    setEditingObjectId(null) // Exit edit mode when navigating
   }
 
-  const handleStartEdit = () => {
-    setEditedDescription(currentNote?.description ?? '')
-    setIsEditing(true)
+  const handleStartEdit = (objectId: string) => {
+    const note = notes.get(objectId)
+    setEditedDescription(note?.description ?? '')
+    setEditingObjectId(objectId)
   }
 
   const handleCancelEdit = () => {
-    setIsEditing(false)
+    setEditingObjectId(null)
     setEditedDescription('')
   }
 
-  const handleSave = async () => {
-    if (!currentLease) return
-
-    setSaving(true)
+  const handleSave = async (objectId: string) => {
+    setSavingObjects((prev) => new Set(prev).add(objectId))
     try {
-      const rentalObjectCode = currentLease.rentalPropertyId
+      const currentNote = notes.get(objectId)
 
       if (currentNote) {
         // Update existing note
         const updated = await keyNoteService.updateKeyNote(currentNote.id, {
           description: editedDescription,
         })
-        setNotes((prev) => new Map(prev).set(rentalObjectCode, updated))
+        setNotes((prev) => new Map(prev).set(objectId, updated))
       } else {
         // Create new note
         const created = await keyNoteService.createKeyNote({
-          rentalObjectCode,
+          rentalObjectCode: objectId,
           description: editedDescription,
         })
-        setNotes((prev) => new Map(prev).set(rentalObjectCode, created))
+        setNotes((prev) => new Map(prev).set(objectId, created))
       }
-      setIsEditing(false)
+      setEditingObjectId(null)
     } catch (err) {
       console.error('Failed to save note:', err)
       alert('Misslyckades med att spara anteckningen')
     } finally {
-      setSaving(false)
+      setSavingObjects((prev) => {
+        const next = new Set(prev)
+        next.delete(objectId)
+        return next
+      })
     }
   }
 
-  if (!currentLease) {
+  if (!currentGroup) {
     return null
   }
-
-  const currentNote = notes.get(currentLease.rentalPropertyId)
 
   return (
     <Card className="h-full flex flex-col">
@@ -210,98 +245,115 @@ export function KeyNoteDisplay({ leases, searchType }: KeyNoteDisplayProps) {
             <FileText className="h-5 w-5" />
             Anteckningar på objekt
           </CardTitle>
-          {hasMultiple && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {hasMultipleGroups && (
               <Button
                 variant="outline"
                 size="icon"
                 className="h-7 w-7"
                 onClick={handlePrevious}
-                disabled={loading}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {currentIndex + 1} / {displayLeases.length}
-              </span>
+            )}
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {currentGroup.label}
+            </span>
+            {hasMultipleGroups && (
               <Button
                 variant="outline"
                 size="icon"
                 className="h-7 w-7"
                 onClick={handleNext}
-                disabled={loading}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          )}
-        </div>
-        <CardDescription className="text-xs">
-          Objekt-ID: {currentLease.rentalPropertyId}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : isEditing ? (
-          <div className="space-y-4 flex-1 flex flex-col">
-            <Textarea
-              value={editedDescription}
-              onChange={(e) => setEditedDescription(e.target.value)}
-              placeholder="Skriv dina anteckningar här..."
-              rows={8}
-              className="resize-none flex-1"
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelEdit}
-                disabled={saving}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Avbryt
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sparar...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-1" />
-                    Spara
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="group cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-md transition-colors"
-            onClick={handleStartEdit}
-          >
-            {currentNote?.description ? (
-              <div className="text-sm whitespace-pre-wrap">
-                {currentNote.description}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">
-                Inga anteckningar för detta objekt - klicka för att lägga till
-              </p>
             )}
-            <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Edit className="h-3 w-3" />
-                Klicka för att redigera
-              </span>
-            </div>
           </div>
-        )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col space-y-3">
+        {currentGroup.leases.map((lease) => {
+          const objectId = lease.rentalPropertyId
+          const note = notes.get(objectId)
+          const isLoading = loadingObjects.has(objectId)
+          const isEditing = editingObjectId === objectId
+          const isSaving = savingObjects.has(objectId)
+
+          return (
+            <div key={objectId} className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">
+                Objekt-ID: {objectId}
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : isEditing ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    placeholder="Skriv dina anteckningar här..."
+                    rows={6}
+                    className="resize-none text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={isSaving}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Avbryt
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSave(objectId)}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sparar...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 mr-1" />
+                          Spara
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="group cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
+                  onClick={() => handleStartEdit(objectId)}
+                >
+                  {note?.description ? (
+                    <div className="text-sm whitespace-pre-wrap">
+                      {note.description}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Inga anteckningar - klicka för att lägga till
+                    </p>
+                  )}
+                  <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Edit className="h-3 w-3" />
+                      Klicka för att redigera
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </CardContent>
     </Card>
   )
