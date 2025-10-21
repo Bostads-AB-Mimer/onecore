@@ -1,9 +1,8 @@
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
-import { InternalWorkOrder, WorkOrder } from '@/services/api/core'
+import { WorkOrder } from '@/services/api/core'
 import { useState } from 'react'
-import { resolve } from '@/utils/env'
 
 interface WorkOrdersTableProps {
   orders: WorkOrder[]
@@ -51,8 +50,8 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
     }
   }
 
-  const handleOpenOrder = (order: InternalWorkOrder) => {
-    window.open(order.url, '_blank')
+  const handleOpenOrder = (url: string) => {
+    window.open(url, '_blank')
   }
 
   return (
@@ -105,19 +104,17 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
           {
             key: 'action',
             label: 'Åtgärd',
-            render: (order: WorkOrder) => (
-              <Button
-                disabled={order._tag === 'external'}
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  // Only internal orders can be opened
-                  order._tag === 'internal' && handleOpenOrder(order)
-                }
-              >
-                Öppna
-              </Button>
-            ),
+            render: (order: WorkOrder) =>
+              order._tag === 'internal' &&
+              order.url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenOrder(order.url ?? '')}
+                >
+                  Öppna
+                </Button>
+              ),
           },
         ]}
         keyExtractor={(order) => order.id}
@@ -131,17 +128,15 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
               {getStatusBadge(order.status)}
             </div>
             <div className="flex justify-end">
-              <Button
-                disabled={order._tag === 'external'}
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  // Only internal orders can be opened
-                  order._tag === 'internal' && handleOpenOrder(order)
-                }
-              >
-                Öppna
-              </Button>
+              {order._tag === 'internal' && order.url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenOrder(order.url ?? '')}
+                >
+                  Öppna
+                </Button>
+              )}
             </div>
           </div>
         )}
