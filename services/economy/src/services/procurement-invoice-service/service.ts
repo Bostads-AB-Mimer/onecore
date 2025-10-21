@@ -83,7 +83,7 @@ export const importNewFiles = async () => {
   )
 
   if (importedInvoiceRows.length === 0) {
-    return null
+    return { errors: null, csvLines: null }
   }
 
   const enrichedInvoiceRows =
@@ -95,12 +95,15 @@ export const importNewFiles = async () => {
   )
 
   if (enrichedInvoiceRows.missingFacilities) {
-    console.log('Missing facilities', enrichedInvoiceRows.missingFacilities)
+    logger.error(
+      { missingFacilities: enrichedInvoiceRows.missingFacilities },
+      'Missing facilities'
+    )
   }
 
-  const csvLines = convertInvoiceRowsToCsv(batchedInvoiceRows)
+  const csvLines = await convertInvoiceRowsToCsv(batchedInvoiceRows)
 
-  return csvLines
+  return { errors: enrichedInvoiceRows.missingFacilities, csvLines }
 }
 
 export const closeDatabases = () => {
