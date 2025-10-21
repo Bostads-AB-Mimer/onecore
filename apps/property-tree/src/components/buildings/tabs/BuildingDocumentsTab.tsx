@@ -1,6 +1,6 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/v2/Card'
+import { Card } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
@@ -12,7 +12,6 @@ import {
   User,
   Trash2,
 } from 'lucide-react'
-//import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from '@/components/hooks/useMobile'
 
 interface Document {
@@ -58,7 +57,6 @@ const mockDocuments: Document[] = [
 export const BuildingDocumentsTab = () => {
   const [documents, setDocuments] = useState<Document[]>(mockDocuments)
   const [isUploading, setIsUploading] = useState(false)
-  //const { toast } = useToast()
   const isMobile = useIsMobile()
 
   const handleFileUpload = async (
@@ -69,7 +67,7 @@ export const BuildingDocumentsTab = () => {
 
     setIsUploading(true)
 
-    // Simulera upload
+    // Simulate file upload delay
     setTimeout(() => {
       const newDocument: Document = {
         id: Date.now().toString(),
@@ -87,37 +85,14 @@ export const BuildingDocumentsTab = () => {
 
       setDocuments((prev) => [newDocument, ...prev])
       setIsUploading(false)
-
-      /*
-      toast({
-        title: 'Dokument uppladdat',
-        description: `${file.name} har laddats upp framgångsrikt.`,
-      })
-        */
-
-      // Rensa input
       event.target.value = ''
     }, 2000)
   }
 
-  const handleDownload = (document: Document) => {
-    /*
-    toast({
-      title: 'Laddar ner',
-      description: `${document.name} laddas ner...`,
-    })
-      */
-  }
+  const handleDownload = (document: Document) => {}
 
   const handleDelete = (documentId: string) => {
     setDocuments((prev) => prev.filter((doc) => doc.id !== documentId))
-    /*
-    toast({
-      title: 'Dokument borttaget',
-      description: 'Dokumentet har tagits bort.',
-      variant: 'destructive',
-    })
-    */
   }
 
   return (
