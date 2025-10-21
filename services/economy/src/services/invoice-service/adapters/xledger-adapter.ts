@@ -1,11 +1,16 @@
+import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
-import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  InvoiceTransactionType,
+  PaymentStatus,
+} from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
-import { randomUUID } from 'crypto'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -141,6 +146,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
       description: invoiceData.node.text,
       sentToDebtCollection,
+      source: 'next',
     }
 
     if (invoice.paidAmount === invoice.amount) {
@@ -290,6 +296,55 @@ const invoiceNodeFragment = `
   }
 `
 
+export async function getInvoicePaymentEvents(
+  invoiceMatchId: string
+): Promise<InvoicePaymentEvent[]> {
+  const query = {
+    query: `{
+      arTransactions(first: 25, filter: { matchId: ${invoiceMatchId} }) {
+        edges {
+          node {
+            invoiceNumber
+            amount
+            text
+            paymentDate
+            transactionHeader {
+              postedDate
+              transactionSource {
+                code
+              }
+            }
+          }
+        }
+      }
+        
+     }`,
+  }
+
+  const result = await makeXledgerRequest(query)
+  if (!result.data?.arTransactions?.edges) {
+    return []
+  }
+
+  return result.data.arTransactions.edges
+    .filter(
+      // AR transactions are the original "encreditment" of the invoice. We don't want those.
+      (edge: any) => edge.node.transactionHeader.transactionSource.code !== 'AR'
+    )
+    .map((edge: any) => mapToInvoicePaymentEvent(edge.node))
+}
+
+function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
+  return {
+    type: event.type,
+    invoiceId: event.invoiceNumber,
+    amount: event.amount,
+    paymentDate: event.transactionHeader.postedDate ?? event.paymentDate,
+    text: event.text,
+    transactionSourceCode: event.transactionHeader.transactionSource.code,
+  }
+}
+
 export const getInvoicesByContactCode = async (contactCode: string) => {
   const xledgerId = await getContactDbId(contactCode)
 
@@ -314,6 +369,7 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
   }
 
   const result = await makeXledgerRequest(query)
+
   return transformToInvoice(result.data?.arTransactions?.edges ?? [])
 }
 
@@ -348,6 +404,45 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
     return invoice
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
+    throw err
+  }
+}
+
+export async function getInvoiceMatchId(invoiceNumber: string) {
+  const q = {
+    query: `query {
+      arTransactions(
+        first: 1
+        filter: {
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
+        }
+      ) {
+          edges {
+            node {
+              matchId
+            }
+          }
+        }
+    }`,
+  }
+
+  try {
+    const result = await makeXledgerRequest(q)
+
+    if (!result.data.arTransactions?.edges) {
+      return null
+    }
+
+    const matchId = result.data?.arTransactions?.edges?.[0].node.matchId
+    // If matchId is 0, invoice has not been paired correctly with events in xledger.
+    // Return null in this scenario.
+    if (matchId == null || matchId === 0) {
+      return null
+    } else {
+      return matchId
+    }
+  } catch (err) {
+    logger.error(err, 'Error getting invoice match id from Xledger')
     throw err
   }
 }

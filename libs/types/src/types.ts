@@ -17,8 +17,9 @@ import {
   CommentTypeSchema,
   CommentSchema,
   CommentThreadSchema,
+  InvoiceRowSchema,
+  InvoicePaymentEventSchema,
 } from './schemas/v1'
-import { InvoiceRowSchema } from './schemas/v1/invoice'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -215,6 +216,7 @@ interface Invoice {
   description?: string
   sentToDebtCollection?: Date
   type: 'Regular' | 'Other'
+  source: 'legacy' | 'next'
 }
 
 interface WaitingList {
@@ -380,6 +382,7 @@ type CommentType = z.infer<typeof CommentTypeSchema>
 type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
+type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 
 export type {
   Contact,
@@ -397,6 +400,7 @@ export type {
   Invoices,
   Invoice,
   InvoiceRow,
+  InvoicePaymentEvent,
   RentalObject,
   ParkingSpace,
   Email,

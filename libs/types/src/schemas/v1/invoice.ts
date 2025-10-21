@@ -24,3 +24,13 @@ export const InvoiceRowSchema = z.object({
   printGroupLabel: z.string().nullable(),
   rowType: z.number(),
 })
+
+export const InvoicePaymentEventSchema = z.object({
+  type: z.string(),
+  invoiceId: z.string(),
+  amount: z.number().min(0),
+  paymentDate: z.coerce.date(),
+  text: z.string().nullable(),
+  // TODO: type these when we know what they are
+  transactionSourceCode: z.string(),
+})

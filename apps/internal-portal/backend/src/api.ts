@@ -4,6 +4,7 @@ import { routes as commentsRoutes } from './services/leasing-service/comments'
 import { routes as contactsRoutes } from './services/leasing-service/contacts'
 import { routes as offersRoutes } from './services/leasing-service/offers'
 import { routes as listingsRoutes } from './services/leasing-service/listings'
+import { routes as invoicesRoutes } from './services/invoices/invoices'
 
 const router = new KoaRouter()
 
@@ -12,5 +13,6 @@ contactsRoutes(router)
 offersRoutes(router)
 listingsRoutes(router)
 propertyInfoRoutes(router)
+invoicesRoutes(router)
 
 export default router
