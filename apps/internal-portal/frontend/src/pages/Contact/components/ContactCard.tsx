@@ -335,7 +335,9 @@ function InvoicePaymentEvents(props: { invoiceId: string }) {
         <TableRow>
           <TableCell>
             <Typography fontStyle="italic">
-              Ett fel uppstod när betalningshändelser hämtades
+              {eventsQuery.error.status === 404
+                ? 'Inga betalningshändelser hittades'
+                : 'Ett fel uppstod när betalningshändelser hämtades'}
             </Typography>
           </TableCell>
         </TableRow>

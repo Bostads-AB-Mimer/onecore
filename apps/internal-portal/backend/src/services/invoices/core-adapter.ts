@@ -11,7 +11,7 @@ const coreBaseUrl = Config.core.url
 
 export async function getInvoicePaymentEvents(
   invoiceId: string
-): Promise<AdapterResult<Array<InvoicePaymentEvent>, 'unknown'>> {
+): Promise<AdapterResult<Array<InvoicePaymentEvent>, 'unknown' | 'not-found'>> {
   try {
     const url = `${coreBaseUrl}/invoices/${invoiceId}/payment-events`
     const response = await getFromCore<{
@@ -27,6 +27,14 @@ export async function getInvoicePaymentEvents(
       { err: err instanceof AxiosError ? err.message : err },
       'Failed to fetch invoice payment events'
     )
+
+    if (err instanceof AxiosError) {
+      return {
+        ok: false,
+        err: err.status === 404 ? 'not-found' : 'unknown',
+        statusCode: err.status ?? 500,
+      }
+    }
 
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
