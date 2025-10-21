@@ -108,7 +108,7 @@ export type InvoiceDataRow = Record<string, string | number>
 
 export type Invoice = Record<string, string | number | Date>
 
-export type LedgerInvoice = {
+/*export type LedgerInvoice = {
   contractCode: string
   invoiceNumber: string
   invoiceFromDate: string
@@ -117,7 +117,7 @@ export type LedgerInvoice = {
   ledgerAccount: string
   totalAccount: string
   tenantName: string
-}
+}*/
 
 export type InvoiceContract = {
   invoiceNumber: string
