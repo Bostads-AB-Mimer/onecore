@@ -17,29 +17,8 @@ import { leaseTypes } from '@/services/types'
 import { deriveDisplayStatus } from '@/lib/lease-status'
 
 interface KeyNoteDisplayProps {
-  /** Array of leases to show notes for. If multiple, shows carousel navigation. */
   leases: Lease[]
-  /** The type of search that was performed */
   searchType: 'pnr' | 'object' | 'contactCode' | null
-}
-
-/**
- * Get property type priority for sorting.
- * Lower numbers = higher priority (shown first in list)
- * Priority order: apartments/cooperative > garage > parking > others
- */
-function getPropertyTypePriority(leaseType?: string): number {
-  const type = leaseType?.trim() ?? ''
-  // Apartments and cooperative tenancy (highest priority)
-  if (type === leaseTypes.housingContract) return 1
-  if (type === leaseTypes.cooperativeTenancyContract) return 2
-  if (type === leaseTypes.campusContract) return 3
-  // Garages (medium priority)
-  if (type === leaseTypes.garageContract) return 4
-  // Parking spaces (lower priority)
-  if (type === leaseTypes.parkingspaceContract) return 5
-  // Everything else (lowest priority: commercial, renegotiation, other)
-  return 6
 }
 
 type StatusGroup = 'active' | 'upcoming' | 'ended'
@@ -50,11 +29,30 @@ interface GroupedLeases {
   leases: Lease[]
 }
 
+// Helper: Get property type priority for sorting
+function getPropertyTypePriority(leaseType?: string): number {
+  const type = leaseType?.trim() ?? ''
+  if (type === leaseTypes.housingContract) return 1
+  if (type === leaseTypes.cooperativeTenancyContract) return 2
+  if (type === leaseTypes.campusContract) return 3
+  if (type === leaseTypes.garageContract) return 4
+  if (type === leaseTypes.parkingspaceContract) return 5
+  return 6
+}
+
+// Helper: Restore element styles from original state
+function restoreStyles(
+  elements: NodeListOf<Element>,
+  originalStyles: Map<Element, string>
+) {
+  elements.forEach((el) => {
+    ;(el as HTMLElement).style.cssText = originalStyles.get(el) || ''
+  })
+}
+
 /**
  * Displays key notes for rental objects grouped by lease status.
- * - Groups objects by status (active, upcoming, ended)
- * - Shows all notes for a status group on one page
- * - Use arrows to navigate between status groups
+ * Groups objects by status (active, upcoming, ended) and shows all notes for a status group on one page.
  */
 export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
@@ -65,7 +63,6 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const [savingObjects, setSavingObjects] = useState<Set<string>>(new Set())
   const contentRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  // Map of objectId -> line count to clamp to (null = fully expanded)
   const [lineClamps, setLineClamps] = useState<Map<string, number | null>>(
     new Map()
   )
@@ -73,65 +70,48 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
   // Group leases by status and filter to unique objects
   const statusGroups = useMemo<GroupedLeases[]>(() => {
-    // First, get unique objects across all leases
+    // Get unique objects (keep most recent lease per object)
     const uniqueObjectsMap = new Map<string, Lease>()
     leases.forEach((lease) => {
       const objectId = lease.rentalPropertyId
-      if (!uniqueObjectsMap.has(objectId)) {
+      const existing = uniqueObjectsMap.get(objectId)
+      if (
+        !existing ||
+        new Date(lease.leaseStartDate) > new Date(existing.leaseStartDate)
+      ) {
         uniqueObjectsMap.set(objectId, lease)
-      } else {
-        const existing = uniqueObjectsMap.get(objectId)!
-        // Keep the most recent lease for each unique object
-        if (
-          new Date(lease.leaseStartDate) > new Date(existing.leaseStartDate)
-        ) {
-          uniqueObjectsMap.set(objectId, lease)
-        }
       }
     })
 
-    const uniqueLeases = Array.from(uniqueObjectsMap.values())
+    // Group by status and sort by priority
+    const sortByPriority = (a: Lease, b: Lease) =>
+      getPropertyTypePriority(a.type) - getPropertyTypePriority(b.type)
 
-    // Group by status
-    const activeLeases: Lease[] = []
-    const upcomingLeases: Lease[] = []
-    const endedLeases: Lease[] = []
+    const grouped = Array.from(uniqueObjectsMap.values()).reduce(
+      (acc, lease) => {
+        const status = deriveDisplayStatus(lease)
+        if (status === 'active') acc.active.push(lease)
+        else if (status === 'upcoming') acc.upcoming.push(lease)
+        else acc.ended.push(lease)
+        return acc
+      },
+      { active: [] as Lease[], upcoming: [] as Lease[], ended: [] as Lease[] }
+    )
 
-    uniqueLeases.forEach((lease) => {
-      const status = deriveDisplayStatus(lease)
-      if (status === 'active') activeLeases.push(lease)
-      else if (status === 'upcoming') upcomingLeases.push(lease)
-      else endedLeases.push(lease)
-    })
-
-    // Sort each group by property type priority
-    const sortByPriority = (a: Lease, b: Lease) => {
-      const priorityA = getPropertyTypePriority(a.type)
-      const priorityB = getPropertyTypePriority(b.type)
-      return priorityA - priorityB
-    }
-
-    activeLeases.sort(sortByPriority)
-    upcomingLeases.sort(sortByPriority)
-    endedLeases.sort(sortByPriority)
+    ;[grouped.active, grouped.upcoming, grouped.ended].forEach((arr) =>
+      arr.sort(sortByPriority)
+    )
 
     // Build groups array (only include non-empty groups)
-    const groups: GroupedLeases[] = []
-    if (activeLeases.length > 0) {
-      groups.push({ status: 'active', label: 'Aktiva', leases: activeLeases })
-    }
-    if (upcomingLeases.length > 0) {
-      groups.push({
-        status: 'upcoming',
+    return [
+      { status: 'active' as const, label: 'Aktiva', leases: grouped.active },
+      {
+        status: 'upcoming' as const,
         label: 'Kommande',
-        leases: upcomingLeases,
-      })
-    }
-    if (endedLeases.length > 0) {
-      groups.push({ status: 'ended', label: 'Avslutade', leases: endedLeases })
-    }
-
-    return groups
+        leases: grouped.upcoming,
+      },
+      { status: 'ended' as const, label: 'Avslutade', leases: grouped.ended },
+    ].filter((group) => group.leases.length > 0)
   }, [leases])
 
   const currentGroup = statusGroups[currentGroupIndex]
@@ -142,69 +122,29 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     const tenantCard = document.getElementById('tenant-card')
     if (!tenantCard) return
 
-    const updateMinHeight = () => {
-      const height = tenantCard.getBoundingClientRect().height
-      setMinHeight(height)
-    }
-
+    const updateMinHeight = () =>
+      setMinHeight(tenantCard.getBoundingClientRect().height)
     updateMinHeight()
 
-    // Update on window resize
     const resizeObserver = new ResizeObserver(updateMinHeight)
     resizeObserver.observe(tenantCard)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
+    return () => resizeObserver.disconnect()
   }, [])
 
   // Dynamically calculate line-clamp to fit within tenant card height
   useEffect(() => {
-    console.log('Truncation effect running', {
-      cardRef: !!cardRef.current,
-      loadingSize: loadingObjects.size,
-      currentGroup: !!currentGroup,
-      minHeight,
-    })
-
-    if (!cardRef.current) {
-      console.log('No cardRef')
-      return
-    }
-    if (loadingObjects.size > 0) {
-      console.log('Still loading objects')
-      return
-    }
-    // Removed isCheckingHeight check - let the timeout handle multiple calls
-    if (!currentGroup) {
-      console.log('No current group')
-      return
-    }
+    if (!cardRef.current || loadingObjects.size > 0 || !currentGroup) return
 
     const tenantCard = document.getElementById('tenant-card')
-    if (!tenantCard) {
-      console.log('No tenant card found')
-      return
-    }
+    if (!tenantCard) return
 
-    console.log('Starting height check...')
-
-    // Wait for DOM to settle (debounce multiple calls)
     const timer = setTimeout(() => {
-      if (!cardRef.current || !tenantCard) {
-        return
-      }
+      if (!cardRef.current || !tenantCard) return
 
-      // Check if tenant card has been properly rendered (has non-zero height)
-      const tenantCardInitialHeight = tenantCard.getBoundingClientRect().height
-      if (tenantCardInitialHeight === 0) {
-        // Tenant card not ready yet, will retry on next render
-        console.log('Tenant card height is 0, will retry')
-        return
-      }
+      const tenantCardHeight = tenantCard.getBoundingClientRect().height
+      if (tenantCardHeight === 0) return
 
-      // IMPORTANT: We need to measure with ALL truncation removed to get true heights
-      // First, temporarily remove all line-clamps to measure natural heights
+      // Temporarily remove all line-clamps to measure natural heights
       const noteElements = cardRef.current.querySelectorAll('[data-object-id]')
       const originalStyles = new Map<Element, string>()
 
@@ -217,64 +157,38 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         htmlEl.style.overflow = ''
       })
 
-      // Force reflow to get accurate measurements
-      void cardRef.current.offsetHeight
+      void cardRef.current.offsetHeight // Force reflow
 
-      const tenantCardHeight = tenantCard.getBoundingClientRect().height
       const notesCardHeight = cardRef.current.getBoundingClientRect().height
 
-      // If we fit without any truncation, no truncation needed
+      // If we fit without truncation, clear any existing clamps
       if (notesCardHeight <= tenantCardHeight + 10) {
-        // Restore original styles
-        noteElements.forEach((el) => {
-          const htmlEl = el as HTMLElement
-          htmlEl.style.cssText = originalStyles.get(el) || ''
-        })
-
-        // Only clear if there were clamps before
-        if (lineClamps.size > 0) {
-          setLineClamps(new Map())
-        }
+        restoreStyles(noteElements, originalStyles)
+        if (lineClamps.size > 0) setLineClamps(new Map())
         return
       }
 
-      // We're overflowing - need to truncate
-      const overflow = notesCardHeight - tenantCardHeight
-
-      // Strategy: Truncate notes from bottom up, calculating exact lines for each
+      // Calculate truncation: bottom-up, exact line counts
       const newLineClamps = new Map<string, number | null>()
-      let remainingOverflow = overflow
-
-      // Get all note elements (already queried above)
+      let remainingOverflow = notesCardHeight - tenantCardHeight
       const objectIds = currentGroup.leases.map((l) => l.rentalPropertyId)
 
-      // Go through notes from bottom to top
       for (let i = objectIds.length - 1; i >= 0 && remainingOverflow > 5; i--) {
         const objectId = objectIds[i]
         const note = notes.get(objectId)
-
         if (!note?.description) continue
 
-        // Find the note element in DOM (from noteElements already queried)
         const noteElement = Array.from(noteElements).find(
           (el) => el.getAttribute('data-object-id') === objectId
         ) as HTMLElement | undefined
 
-        if (!noteElement) {
-          console.log('Could not find element for:', objectId)
-          continue
-        }
+        if (!noteElement) continue
 
-        // Get line height from computed styles
-        const computedStyle = window.getComputedStyle(noteElement)
-        const lineHeight = parseFloat(computedStyle.lineHeight)
+        const lineHeight = parseFloat(
+          window.getComputedStyle(noteElement).lineHeight
+        )
+        if (!lineHeight || isNaN(lineHeight)) continue
 
-        if (!lineHeight || isNaN(lineHeight)) {
-          console.log('Invalid line height for:', objectId, lineHeight)
-          continue
-        }
-
-        // Calculate how many lines we can show for this note
         const currentHeight = noteElement.getBoundingClientRect().height
         const targetHeight = Math.max(
           lineHeight,
@@ -282,19 +196,9 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         )
         const linesToShow = Math.max(1, Math.floor(targetHeight / lineHeight))
 
-        console.log('Truncating', objectId, {
-          currentHeight,
-          targetHeight,
-          lineHeight,
-          linesToShow,
-          remainingOverflow,
-        })
-
         newLineClamps.set(objectId, linesToShow)
         remainingOverflow -= currentHeight - targetHeight
       }
-
-      console.log('Final lineClamps:', newLineClamps)
 
       // Check if lineClamps actually changed
       const clampsChanged =
@@ -303,24 +207,14 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
           ([id, lines]) => lineClamps.get(id) !== lines
         )
 
-      // Restore original styles before applying new truncation
-      noteElements.forEach((el) => {
-        const htmlEl = el as HTMLElement
-        htmlEl.style.cssText = originalStyles.get(el) || ''
-      })
+      restoreStyles(noteElements, originalStyles)
 
       if (clampsChanged) {
-        console.log('Clamps changed, applying new truncation')
         setLineClamps(newLineClamps)
-      } else {
-        console.log('Clamps unchanged, done')
       }
     }, 100)
 
-    return () => {
-      console.log('Cleanup: clearing timeout')
-      clearTimeout(timer)
-    }
+    return () => clearTimeout(timer)
   }, [currentGroup, notes, loadingObjects.size, minHeight, lineClamps])
 
   // Reset line clamps when navigating to a new group
@@ -334,27 +228,24 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
     currentGroup.leases.forEach((lease) => {
       const rentalObjectCode = lease.rentalPropertyId
-
-      // Check if we already have this note cached
       if (notes.has(rentalObjectCode)) return
 
       let cancelled = false
 
-      async function loadNote() {
+      const loadNote = async () => {
         setLoadingObjects((prev) => new Set(prev).add(rentalObjectCode))
         try {
           const fetchedNotes =
             await keyNoteService.getKeyNotesByRentalObjectCode(rentalObjectCode)
           if (!cancelled) {
-            // Assume one note per rental object
-            const note = fetchedNotes[0] ?? null
-            setNotes((prev) => new Map(prev).set(rentalObjectCode, note))
+            setNotes((prev) =>
+              new Map(prev).set(rentalObjectCode, fetchedNotes[0] ?? null)
+            )
           }
         } catch (err) {
           console.error('Failed to load note:', err)
-          if (!cancelled) {
+          if (!cancelled)
             setNotes((prev) => new Map(prev).set(rentalObjectCode, null))
-          }
         } finally {
           if (!cancelled) {
             setLoadingObjects((prev) => {
@@ -370,44 +261,21 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     })
   }, [currentGroup, notes])
 
-  const handlePrevious = () => {
-    setCurrentGroupIndex(
-      (prev) => (prev - 1 + statusGroups.length) % statusGroups.length
-    )
-    setEditingObjectId(null) // Exit edit mode when navigating
-  }
-
-  const handleNext = () => {
-    setCurrentGroupIndex((prev) => (prev + 1) % statusGroups.length)
-    setEditingObjectId(null) // Exit edit mode when navigating
-  }
-
   const handleToggleExpand = (objectId: string) => {
     const isTruncated =
       lineClamps.has(objectId) && lineClamps.get(objectId) !== null
 
     if (isTruncated) {
-      // Truncated - expand it fully
       setLineClamps((prev) => {
         const next = new Map(prev)
         next.delete(objectId)
         return next
       })
     } else {
-      // Already expanded - enter edit mode
-      handleStartEdit(objectId)
+      const note = notes.get(objectId)
+      setEditedDescription(note?.description ?? '')
+      setEditingObjectId(objectId)
     }
-  }
-
-  const handleStartEdit = (objectId: string) => {
-    const note = notes.get(objectId)
-    setEditedDescription(note?.description ?? '')
-    setEditingObjectId(objectId)
-  }
-
-  const handleCancelEdit = () => {
-    setEditingObjectId(null)
-    setEditedDescription('')
   }
 
   const handleSave = async (objectId: string) => {
@@ -416,13 +284,11 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
       const currentNote = notes.get(objectId)
 
       if (currentNote) {
-        // Update existing note
         const updated = await keyNoteService.updateKeyNote(currentNote.id, {
           description: editedDescription,
         })
         setNotes((prev) => new Map(prev).set(objectId, updated))
       } else {
-        // Create new note
         const created = await keyNoteService.createKeyNote({
           rentalObjectCode: objectId,
           description: editedDescription,
@@ -442,9 +308,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     }
   }
 
-  if (!currentGroup) {
-    return null
-  }
+  if (!currentGroup) return null
 
   return (
     <Card
@@ -464,7 +328,13 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                 variant="outline"
                 size="icon"
                 className="h-7 w-7"
-                onClick={handlePrevious}
+                onClick={() => {
+                  setCurrentGroupIndex(
+                    (prev) =>
+                      (prev - 1 + statusGroups.length) % statusGroups.length
+                  )
+                  setEditingObjectId(null)
+                }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -477,7 +347,12 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                 variant="outline"
                 size="icon"
                 className="h-7 w-7"
-                onClick={handleNext}
+                onClick={() => {
+                  setCurrentGroupIndex(
+                    (prev) => (prev + 1) % statusGroups.length
+                  )
+                  setEditingObjectId(null)
+                }}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -523,7 +398,10 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleCancelEdit}
+                      onClick={() => {
+                        setEditingObjectId(null)
+                        setEditedDescription('')
+                      }}
                       disabled={isSaving}
                     >
                       <X className="h-4 w-4 mr-1" />
@@ -549,52 +427,43 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                   </div>
                 </div>
               ) : (
-                <>
-                  {/* Note display - click to expand if truncated, or edit if not */}
-                  <div
-                    className={`cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors ${!isTruncated && !hasTruncatedNotes ? 'group' : ''}`}
-                    onClick={() =>
-                      isTruncated
-                        ? handleToggleExpand(objectId)
-                        : handleStartEdit(objectId)
-                    }
-                  >
-                    {note?.description ? (
-                      <div
-                        data-object-id={objectId}
-                        className="text-sm whitespace-pre-wrap"
-                        style={
-                          isTruncated
-                            ? {
-                                display: '-webkit-box',
-                                WebkitLineClamp: lineClamp,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                              }
-                            : undefined
-                        }
-                      >
-                        {note.description}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        {hasTruncatedNotes
-                          ? 'Inga anteckningar'
-                          : 'Inga anteckningar - klicka för att lägga till'}
-                      </p>
-                    )}
-                    {!isTruncated &&
-                      !hasTruncatedNotes &&
-                      note?.description && (
-                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Edit className="h-3 w-3" />
-                            Klicka för att redigera
-                          </span>
-                        </div>
-                      )}
-                  </div>
-                </>
+                <div
+                  className={`cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors ${!isTruncated && !hasTruncatedNotes ? 'group' : ''}`}
+                  onClick={() => handleToggleExpand(objectId)}
+                >
+                  {note?.description ? (
+                    <div
+                      data-object-id={objectId}
+                      className="text-sm whitespace-pre-wrap"
+                      style={
+                        isTruncated
+                          ? {
+                              display: '-webkit-box',
+                              WebkitLineClamp: lineClamp,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }
+                          : undefined
+                      }
+                    >
+                      {note.description}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      {hasTruncatedNotes
+                        ? 'Inga anteckningar'
+                        : 'Inga anteckningar - klicka för att lägga till'}
+                    </p>
+                  )}
+                  {!isTruncated && !hasTruncatedNotes && note?.description && (
+                    <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Edit className="h-3 w-3" />
+                        Klicka för att redigera
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )
