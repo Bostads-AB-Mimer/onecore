@@ -17,6 +17,7 @@ import {
 import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
 import { useMemo } from 'react'
 import { ContractCard } from './ContractCard'
+import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 
 function formatAddress(addr?: Address): string {
@@ -109,91 +110,104 @@ export function TenantInfo({
         </Button>
       </div>
 
-      {/* Show "No active tenant" message for object searches without active tenants */}
-      {searchType === 'object' &&
-        showTenantCard &&
-        tenantsToDisplay.length === 0 &&
-        activeContracts.length === 0 &&
-        upcomingContracts.length === 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Hyresgäst
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Ingen aktiv hyresgäst</p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Two-column layout: Tenant info on left, Notes on right */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Tenant card */}
+        <div>
+          {/* Show "No active tenant" message for object searches without active tenants */}
+          {searchType === 'object' &&
+            showTenantCard &&
+            tenantsToDisplay.length === 0 &&
+            activeContracts.length === 0 &&
+            upcomingContracts.length === 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Hyresgäst
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Ingen aktiv hyresgäst</p>
+                </CardContent>
+              </Card>
+            )}
 
-      {/* Show tenant card for PNR/contactCode searches, or object searches with active tenants */}
-      {showTenantCard && tenantsToDisplay.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Hyresgäst{tenantsToDisplay.length > 1 ? 'er' : ''}
-              {activeContracts.length === 0 &&
-                upcomingContracts.length === 0 && (
-                  <Badge
-                    variant="outline"
-                    className="ml-2 text-muted-foreground"
-                  >
-                    Ingen aktiv kontrakt
-                  </Badge>
-                )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={
-                tenantsToDisplay.length > 1
-                  ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
-                  : ''
-              }
-            >
-              {tenantsToDisplay.map((t, idx) => (
-                <div key={t.contactKey || idx} className="space-y-2">
-                  {tenantsToDisplay.length > 1 && (
-                    <h3 className="font-semibold text-sm">
-                      Kontakt {idx + 1}: {t.firstName} {t.lastName}
-                    </h3>
-                  )}
-                  {tenantsToDisplay.length === 1 && (
-                    <h3 className="font-semibold">
-                      {t.firstName} {t.lastName}
-                    </h3>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    Personnummer: {t.nationalRegistrationNumber}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Kundnummer: {t.contactCode}
-                  </p>
-                  {t.emailAddress && (
-                    <p className="text-sm text-muted-foreground">
-                      E-post: {t.emailAddress}
-                    </p>
-                  )}
-                  {t.phoneNumbers?.[0]?.phoneNumber && (
-                    <p className="text-sm text-muted-foreground">
-                      Telefon: {t.phoneNumbers[0].phoneNumber}
-                    </p>
-                  )}
-                  {t.address && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {formatAddress(t.address as Address)}
-                    </p>
-                  )}
+          {/* Show tenant card for PNR/contactCode searches, or object searches with active tenants */}
+          {showTenantCard && tenantsToDisplay.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Hyresgäst{tenantsToDisplay.length > 1 ? 'er' : ''}
+                  {activeContracts.length === 0 &&
+                    upcomingContracts.length === 0 && (
+                      <Badge
+                        variant="outline"
+                        className="ml-2 text-muted-foreground"
+                      >
+                        Ingen aktiv kontrakt
+                      </Badge>
+                    )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className={
+                    tenantsToDisplay.length > 1
+                      ? 'grid grid-cols-1 gap-6'
+                      : ''
+                  }
+                >
+                  {tenantsToDisplay.map((t, idx) => (
+                    <div key={t.contactKey || idx} className="space-y-2">
+                      {tenantsToDisplay.length > 1 && (
+                        <h3 className="font-semibold text-sm">
+                          Kontakt {idx + 1}: {t.firstName} {t.lastName}
+                        </h3>
+                      )}
+                      {tenantsToDisplay.length === 1 && (
+                        <h3 className="font-semibold">
+                          {t.firstName} {t.lastName}
+                        </h3>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        Personnummer: {t.nationalRegistrationNumber}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Kundnummer: {t.contactCode}
+                      </p>
+                      {t.emailAddress && (
+                        <p className="text-sm text-muted-foreground">
+                          E-post: {t.emailAddress}
+                        </p>
+                      )}
+                      {t.phoneNumbers?.[0]?.phoneNumber && (
+                        <p className="text-sm text-muted-foreground">
+                          Telefon: {t.phoneNumbers[0].phoneNumber}
+                        </p>
+                      )}
+                      {t.address && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {formatAddress(t.address as Address)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right column: Notes display */}
+        <div>
+          {contracts.length > 0 && (
+            <KeyNoteDisplay leases={contracts} searchType={searchType} />
+          )}
+        </div>
+      </div>
 
       <div className="space-y-4">
         {activeContracts.length > 0 && (
