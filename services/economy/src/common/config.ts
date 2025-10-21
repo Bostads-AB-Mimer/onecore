@@ -15,6 +15,7 @@ type SftpConfig = {
 
 export interface Config {
   port: number
+  scriptNotificationEmailAddresses: string
   xpandDatabase: {
     host: string
     user: string
@@ -56,6 +57,10 @@ export interface Config {
       directory: string
     }
   }
+  infobip: {
+    baseUrl: string
+    apiKey: string
+  }
   health: {
     xledger: {
       systemName: string
@@ -76,6 +81,7 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5080,
+    scriptNotificationEmailAddresses: '',
     rentalInvoices: {
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
@@ -136,6 +142,10 @@ const config = configPackage({
         useSshDss: true,
       },
     },
+    infobip: {
+      baseUrl: '',
+      apiKey: '',
+    },
     health: {
       xledger: {
         systemName: 'xledger',
@@ -161,5 +171,9 @@ export default {
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
   debtCollection: config.get('debtCollection'),
+  scriptNotificationEmailAddresses: config.get(
+    'scriptNotificationEmailAddresses'
+  ),
+  infobip: config.get('infobip'),
   health: config.get('health'),
 } as Config

@@ -46,12 +46,15 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
+    console.log(result)
+    logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
     return await makeXledgerRequest(query)
   } else {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
+    console.log(result)
     logger.error(
       result.data,
       `Error making Xledger request (${getCallerFromError(error)})`
@@ -610,15 +613,23 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
 }
 
 export const getPeriodInformation = (
-  invoiceRow: InvoiceDataRow
+  invoiceDate: Date | null,
+  fromDate: Date,
+  toDate: Date
 ): { periodStart: string; periods: string } => {
-  const from = dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string)
-  const to = dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  const interval = to.getMonth() - from.getMonth()
+  if (!invoiceDate) {
+    invoiceDate = fromDate
+  }
+
+  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
+  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
 
   const periodInformation = {
-    periodStart: interval == 0 ? '' : '0',
-    periods: interval == 0 ? '' : (interval + 1).toString(),
+    periodStart: toStart == 0 ? '' : toStart.toString(),
+    periods:
+      invoiceInterval == 0 && toStart == 0
+        ? ''
+        : (invoiceInterval + 1).toString(),
   }
 
   return periodInformation
@@ -628,7 +639,11 @@ export const transformAggregatedInvoiceRow = (
   invoiceRow: InvoiceDataRow,
   chunkNumber: number
 ): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(invoiceRow)
+  const periodInformation = getPeriodInformation(
+    null,
+    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
+    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
+  )
 
   const transformedRow = {
     voucherType: 'AR',

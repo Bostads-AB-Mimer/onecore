@@ -3,7 +3,6 @@ import {
   CustomerGroup,
   CounterPartCustomer,
   CUSTOMER_LEDGER_ACCOUNT,
-  LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
   TOTAL_ACCOUNT,
@@ -180,7 +179,7 @@ export const getContacts = async (batchId: string) => {
     .whereNull('importStatus')
 }
 
-export const getInvoices = async (
+/*export const getInvoices = async (
   batchId: string
 ): Promise<LedgerInvoice[]> => {
   const invoices = await db('invoice_data')
@@ -214,7 +213,7 @@ export const getInvoices = async (
   })
 
   return ledgerInvoices
-}
+}*/
 
 /**
  * Gets all invoices for a batch, sorted by invoice from date
@@ -245,14 +244,14 @@ export const getInvoicesByChunks = async (
     ])
 }
 
-export const getInvoiceRows = async (
+/*export const getInvoiceRows = async (
   invoiceNumber: string,
   batchId: string
 ) => {
   return await db('invoice_data')
     .where('batchId', batchId)
     .where('invoiceNumber', invoiceNumber)
-}
+}*/
 
 export const getAggregatedInvoiceRows = async (
   batchId: string,
@@ -462,7 +461,9 @@ export const verifyImport = async (
       { batchTotalAmount, xpandTotalAmount: xpandBatchTotal },
       'Xpand total amount does not match batch row totals'
     )
-    throw new Error('Xpand total amount does not match batch row totals')
+    throw new Error(
+      `Xpand total amount ${xpandBatchTotal} does not match batch row totals ${batchTotalAmount}`
+    )
   }
 
   return missedInvoices.length === 0 && batchTotalDiff > 1
