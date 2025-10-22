@@ -31,9 +31,9 @@ import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpe
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
-import { ReceiptDialog } from './ReceiptDialog'
-import { KeyLoanTransferDialog } from './KeyLoanTransferDialog'
-import { ReturnKeysDialog } from './ReturnKeysDialog'
+import { ReceiptDialog } from './dialogs/ReceiptDialog'
+import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
+import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
 import { Pencil } from 'lucide-react'
 
 function isLeaseNotPast(lease: Lease): boolean {
