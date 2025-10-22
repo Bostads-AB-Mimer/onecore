@@ -1025,9 +1025,15 @@ export interface paths {
      * pre-fetched in a single optimized query. This eliminates N+1 query problems.
      *
      * **Performance**: ~95% faster than fetching keys then looping for loan status.
+     *
+     * Optionally include the latest key event for each key by setting includeLatestEvent=true.
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Include the latest key event for each key in the response. */
+          includeLatestEvent?: boolean;
+        };
         path: {
           /** @description The rental object code to filter keys by. */
           rentalObjectCode: string;
@@ -1648,6 +1654,21 @@ export interface components {
       prevLoanAvailableFrom: string | null;
       prevLoanContact: string | null;
       prevLoanContact2: string | null;
+      latestEvent?: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
     };
     PaginationMeta: {
       totalRecords: number;

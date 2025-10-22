@@ -1001,8 +1001,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
 
-    const result = await KeysApi.getWithLoanStatus(ctx.params.rentalObjectCode)
+    const result = await KeysApi.getWithLoanStatus(
+      ctx.params.rentalObjectCode,
+      includeLatestEvent
+    )
 
     if (!result.ok) {
       logger.error(

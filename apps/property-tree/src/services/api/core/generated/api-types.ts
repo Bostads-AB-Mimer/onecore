@@ -5023,6 +5023,21 @@ export interface components {
       prevLoanAvailableFrom: string | null;
       prevLoanContact: string | null;
       prevLoanContact2: string | null;
+      latestEvent?: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
     };
     KeyLoan: {
       /** Format: uuid */

@@ -182,10 +182,12 @@ export const KeysApi = {
   },
 
   getWithLoanStatus: async (
-    rentalObjectCode: string
+    rentalObjectCode: string,
+    includeLatestEvent?: boolean
   ): Promise<AdapterResult<KeyWithLoanStatus[], CommonErr>> => {
+    const queryParams = includeLatestEvent ? '?includeLatestEvent=true' : ''
     const r = await getJSON<{ content: KeyWithLoanStatus[] }>(
-      `${BASE}/keys/with-loan-status/${rentalObjectCode}`
+      `${BASE}/keys/with-loan-status/${rentalObjectCode}${queryParams}`
     )
     return r.ok ? ok(r.data.content) : r
   },
