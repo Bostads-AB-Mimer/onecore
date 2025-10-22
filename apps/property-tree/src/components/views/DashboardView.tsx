@@ -116,16 +116,17 @@ export function DashboardView() {
       isExternal: true,
       isDisabled: false,
     },
-    // Disabled cards (not yet implemented)
     {
       id: 'tenants',
       title: 'Kunder',
       icon: Contact,
       description: 'Kundregister och hyresgästinformation',
-      path: '/tenants/all',
-      isExternal: false,
-      isDisabled: true,
+      path: resolve('VITE_TENANTS_URL', ''),
+      isExternal: true,
+      isDisabled: false,
     },
+
+    // Disabled cards (not yet implemented)
     {
       id: 'barriers',
       title: 'Spärrar',
