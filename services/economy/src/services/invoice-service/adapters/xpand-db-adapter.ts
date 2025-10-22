@@ -163,16 +163,20 @@ const getRentalRowSpecificRule = async (
     })
 
     if (rowIndex === -1) {
-      console.log(
-        'multiple results row specific for article',
-        row.rentArticle,
-        row.contractCode,
-        row.invoiceNumber,
-        row.invoiceRowText,
-        rowSpecificRuleResult
+      logger.error(
+        {
+          rentArticle: row.rentArticle,
+          contractCode: row.contractCode,
+          invoiceNumber: row.invoiceNumber,
+          invoiceRowText: row.invoiceRowText,
+          rowSpecificRuleResult,
+        },
+        'Multiple results row specific accounting for article'
       )
 
-      throw new Error('Stop!')
+      throw new Error(
+        `Accounting for rent article ${row.rentArticle} on invoice ${row.invoiceNumber} could not be determined (multiple accounting rules found)`
+      )
     }
   }
 
@@ -526,7 +530,10 @@ export const getRentalInvoices = async (
   const keycodes =
     companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_INTHYRA', 'FADBT_HYRA']
 
-  console.log(keycodes, companyId, fromDate, toDate)
+  logger.info(
+    { keycodes, companyId, fromDate, toDate },
+    'Getting new invoices for company'
+  )
 
   const rentalInvoiceQuery = db.raw(
     'select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \

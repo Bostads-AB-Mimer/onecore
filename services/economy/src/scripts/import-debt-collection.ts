@@ -7,6 +7,7 @@ import {
   enrichRentInvoices,
   EnrichResponse,
 } from '../services/debt-collection-service/service'
+import { sendEmail } from '../common/adapters/infobip-adapter'
 import SftpClient, { FileInfo } from 'ssh2-sftp-client'
 
 export const importSftpConfig: SftpClient.ConnectOptions = {
@@ -151,6 +152,10 @@ export const processDebtCollectionFiles = async () => {
   const importClient = new SftpClient()
   const exportClient = new SftpClient()
   const errors: string[] = []
+  const notification: string[] = [
+    `Körning startad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n`,
+  ]
+  const resultFiles: { data: any; name: string }[] = []
 
   try {
     await importClient.connect(importSftpConfig)
@@ -180,6 +185,9 @@ export const processDebtCollectionFiles = async () => {
           `Failed to process file ${debtCollectionFile}`
         )
         errors.push(debtCollectionFile.fileName)
+        notification.push(
+          'Kunde inte hantera filen ' + debtCollectionFile.fileName
+        )
         continue
       }
 
@@ -193,6 +201,11 @@ export const processDebtCollectionFiles = async () => {
         },
       })
 
+      resultFiles.push({
+        data: buffer,
+        name: debtCollectionFile.fileName,
+      })
+
       await markCsvFileAsCompleted(
         importClient,
         path.join(debtCollectionFile.directory, debtCollectionFile.fileName)
@@ -200,10 +213,27 @@ export const processDebtCollectionFiles = async () => {
     }
 
     logger.info(`${debtCollectionFiles.length} files processed.`)
+    notification.push(`Bearbetade ${debtCollectionFiles.length} filer`)
 
     if (errors.length > 0) {
       logger.error(
         `${errors.length} errors: ${JSON.stringify(errors, null, 2)}`
+      )
+      notification.push(
+        `${errors.length} errors: ${JSON.stringify(errors, null, 2)}`
+      )
+    }
+
+    notification.push(
+      `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
+    )
+
+    if (config.scriptNotificationEmailAddresses) {
+      await sendEmail(
+        config.scriptNotificationEmailAddresses,
+        'Körning: export av inkassofiler till Sergel',
+        notification.join('\n'),
+        resultFiles
       )
     }
   } catch (err) {

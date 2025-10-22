@@ -46,7 +46,6 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
-    console.log(result)
     logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
     return await makeXledgerRequest(query)
@@ -54,7 +53,6 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
-    console.log(result)
     logger.error(
       result.data,
       `Error making Xledger request (${getCallerFromError(error)})`

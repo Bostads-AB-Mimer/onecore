@@ -610,7 +610,7 @@ export const importInvoiceRows = async (
         const invoiceNumber = invoice.invoice.trimEnd()
         return invoiceNumber
       } catch (err) {
-        console.log('Error getting invoice number', invoice, err)
+        logger.error({ invoice, err }, 'Error getting invoice number')
       }
     })
 
