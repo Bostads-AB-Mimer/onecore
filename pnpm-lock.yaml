@@ -507,10 +507,10 @@ importers:
         version: 12.0.2
       '@onecore/types':
         specifier: workspace:*
-        version: link:../libs/types
+        version: file:libs/types(zod@4.1.12)
       '@onecore/utilities':
         specifier: workspace:*
-        version: link:../libs/utilities
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(swagger-jsdoc@6.2.8(openapi-types@12.1.3))(zod@4.1.12)
       '@types/lodash':
         specifier: ^4.17.13
         version: 4.17.20
@@ -586,9 +586,6 @@ importers:
       zod:
         specifier: ^4.0.15
         version: 4.1.12
-      zod-to-json-schema:
-        specifier: ^3.24.5
-        version: 3.24.6(zod@4.1.12)
     devDependencies:
       '@types/http-errors':
         specifier: ^2.0.0
@@ -1272,7 +1269,7 @@ importers:
         version: 12.0.2
       '@onecore/utilities':
         specifier: workspace:*
-        version: link:../../libs/utilities
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(swagger-jsdoc@6.2.8(openapi-types@12.1.3))(zod@4.1.12)
       '@prisma/client':
         specifier: ^5.20.0
         version: 5.22.0(prisma@5.22.0)
@@ -1315,9 +1312,6 @@ importers:
       zod-prisma-types:
         specifier: ^3.2.1
         version: 3.2.4(@prisma/client@5.22.0(prisma@5.22.0))(prisma@5.22.0)
-      zod-to-json-schema:
-        specifier: ^3.24.5
-        version: 3.24.6(zod@4.1.12)
     devDependencies:
       '@eslint/js':
         specifier: ^9.32.0
@@ -1529,10 +1523,10 @@ importers:
         version: 12.0.2
       '@onecore/types':
         specifier: workspace:*
-        version: link:../../libs/types
+        version: file:libs/types(zod@4.1.12)
       '@onecore/utilities':
         specifier: workspace:*
-        version: link:../../libs/utilities
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(swagger-jsdoc@6.2.8(openapi-types@12.1.3))(zod@4.1.12)
       '@types/swagger-jsdoc':
         specifier: ^6.0.4
         version: 6.0.4
@@ -1578,9 +1572,6 @@ importers:
       zod:
         specifier: ^4.0.15
         version: 4.1.12
-      zod-to-json-schema:
-        specifier: ^3.24.5
-        version: 3.24.6(zod@4.1.12)
     devDependencies:
       '@eslint/compat':
         specifier: ^1.1.1
@@ -3184,6 +3175,19 @@ packages:
 
   '@octokit/types@9.3.2':
     resolution: {integrity: sha512-D4iHGTdAnEEVsB8fl95m1hiz7D5YiRdQ9b/OEb3BYRVwbLsGHcRVPz+u+BgRLNk0Q0/4iZCBqDN96j2XNxfXrA==}
+
+  '@onecore/types@file:libs/types':
+    resolution: {directory: libs/types, type: directory}
+    peerDependencies:
+      zod: ^4.0.15
+
+  '@onecore/utilities@file:libs/utilities':
+    resolution: {directory: libs/utilities, type: directory}
+    peerDependencies:
+      '@elastic/elasticsearch': ^8.0.0
+      '@elastic/transport': ^8.0.0
+      swagger-jsdoc: ^6.2.8
+      zod: ^4.0.15
 
   '@open-draft/deferred-promise@2.2.0':
     resolution: {integrity: sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA==}
@@ -10106,11 +10110,6 @@ packages:
       '@prisma/client': ^4.x.x || ^5.x.x || ^6.x.x
       prisma: ^4.x.x || ^5.x.x || ^6.x.x
 
-  zod-to-json-schema@3.24.6:
-    resolution: {integrity: sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg==}
-    peerDependencies:
-      zod: ^3.24.1
-
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
@@ -12168,6 +12167,34 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 18.1.1
 
+  '@onecore/types@file:libs/types(zod@4.1.12)':
+    dependencies:
+      release-please: 16.18.0
+      zod: 4.1.12
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(swagger-jsdoc@6.2.8(openapi-types@12.1.3))(zod@4.1.12)':
+    dependencies:
+      '@elastic/elasticsearch': 8.19.1
+      '@elastic/transport': 8.10.0
+      axios: 1.11.0
+      koa: 2.16.2
+      pino: 9.9.1
+      pino-elasticsearch: 8.1.0
+      pino-multi-stream: 6.0.0
+      pino-pretty: 11.3.0
+      prettier: 3.6.2
+      release-please: 16.18.0
+      swagger-jsdoc: 6.2.8(openapi-types@12.1.3)
+      zod: 4.1.12
+    transitivePeerDependencies:
+      - '@75lb/nature'
+      - debug
+      - encoding
+      - supports-color
+
   '@open-draft/deferred-promise@2.2.0': {}
 
   '@open-draft/logger@0.3.0':
@@ -14150,7 +14177,7 @@ snapshots:
 
   axios@1.11.0:
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.1)
+      follow-redirects: 1.15.11
       form-data: 4.0.4
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -15848,6 +15875,8 @@ snapshots:
   focus-trap@7.6.5:
     dependencies:
       tabbable: 6.2.0
+
+  follow-redirects@1.15.11: {}
 
   follow-redirects@1.15.11(debug@4.4.1):
     optionalDependencies:
@@ -20041,10 +20070,6 @@ snapshots:
       lodash: 4.17.21
       prisma: 5.22.0
       zod: 3.25.76
-
-  zod-to-json-schema@3.24.6(zod@4.1.12):
-    dependencies:
-      zod: 4.1.12
 
   zod@3.25.76: {}
 
