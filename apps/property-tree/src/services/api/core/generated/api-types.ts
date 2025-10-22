@@ -2979,6 +2979,44 @@ export interface paths {
       };
     };
   };
+  "/key-loans/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get key loans by rental object code
+     * @description Returns all key loans for a specific rental object with keys and optional receipts
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by contact code */
+          contact?: string;
+          /** @description Filter by second contact code */
+          contact2?: string;
+          /** @description Include receipts in the response */
+          includeReceipts?: boolean;
+        };
+        path: {
+          /** @description The rental object code */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description A list of key loans with details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/key-loans/{id}": {
     /**
      * Get key loan by ID
@@ -5023,6 +5061,21 @@ export interface components {
       prevLoanAvailableFrom: string | null;
       prevLoanContact: string | null;
       prevLoanContact2: string | null;
+      latestEvent?: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
     };
     KeyLoan: {
       /** Format: uuid */
@@ -5042,6 +5095,58 @@ export interface components {
       updatedAt: string;
       createdBy?: string | null;
       updatedBy?: string | null;
+    };
+    KeyLoanWithDetails: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      contact?: string;
+      contact2?: string;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+      keysArray: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "LGH" | "PB" | "FS" | "HN";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+      receipts: ({
+          /** Format: uuid */
+          id: string;
+          /** Format: uuid */
+          keyLoanId: string;
+          /** @enum {string} */
+          receiptType: "LOAN" | "RETURN";
+          /** @enum {string} */
+          type: "DIGITAL" | "PHYSICAL";
+          fileId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
     };
     KeySystem: {
       /** Format: uuid */
