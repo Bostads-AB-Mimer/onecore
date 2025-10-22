@@ -81,7 +81,7 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
       logoH + platePadY * 2,
       'F'
     )
-    doc.addImage(img, 'PNG', logoX, logoY, logoW, logoH)
+    doc.addImage(img, 'JPEG', logoX, logoY, logoW, logoH, undefined, 'FAST')
   }
 
   // Meta
