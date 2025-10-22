@@ -4,6 +4,7 @@ import { Plus, Minus, Trash2 } from 'lucide-react'
 import type { Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
+import { keyEventService } from '@/services/api/keyEventService'
 import { useToast } from '@/hooks/use-toast'
 
 type AddKeyButtonProps = {
@@ -265,12 +266,24 @@ export function AddKeyForm({
         }
       }
 
-      // Create all keys
+      // Create all keys and collect their IDs
+      const createdKeyIds: string[] = []
       let createdCount = 0
       for (const keyPayload of keysToCreate) {
         const created = await keyService.createKey(keyPayload)
+        createdKeyIds.push(created.id)
         onKeyCreated(created)
         createdCount++
+      }
+
+      // Create ORDER event for all created keys
+      if (createdKeyIds.length > 0) {
+        try {
+          await keyEventService.createKeyOrder(createdKeyIds)
+        } catch (eventError) {
+          console.error('Failed to create key order event:', eventError)
+          // Don't fail the entire operation - event creation is supplementary
+        }
       }
 
       toast({
