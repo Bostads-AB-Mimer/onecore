@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -28,11 +29,20 @@ import { useToast } from '@/hooks/use-toast'
 
 interface AddKeyFormProps {
   onSave: (key: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onBatchSave: (batch: {
+    keys: Array<Omit<Key, 'id' | 'createdAt' | 'updatedAt'>>
+    createEvent: boolean
+  }) => Promise<void>
   onCancel: () => void
   editingKey?: Key | null
 }
 
-export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
+export function AddKeyForm({
+  onSave,
+  onBatchSave,
+  onCancel,
+  editingKey,
+}: AddKeyFormProps) {
   const { toast } = useToast()
 
   // Form state management with initial values from editingKey if provided
@@ -43,6 +53,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     rentalObject: editingKey?.rentalObjectCode || '',
     keyType: editingKey?.keyType || ('LGH' as KeyType),
     keySystemId: editingKey?.keySystemId || '',
+    disposed: editingKey?.disposed || false,
   })
 
   // Search functionality state
@@ -59,6 +70,9 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
 
   // Sequence number validation error
   const [sequenceNumberError, setSequenceNumberError] = useState<string>('')
+
+  // Order event creation checkbox (only for create mode, not edit mode)
+  const [shouldCreateEvent, setShouldCreateEvent] = useState(false)
 
   // Debounce key system search query (500ms delay like internal portal)
   const updateDebouncedQuery = useDebounce((query: string) => {
@@ -166,9 +180,30 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     // Clear any previous errors
     setSequenceNumberError('')
 
-    // If no sequence numbers specified, create a single key without sequence number
-    if (sequenceValidation.numbers.length === 0) {
+    // EDIT MODE: Use existing onSave (no changes to edit behavior)
+    if (editingKey) {
       onSave({
+        keyName: formData.keyName,
+        keySequenceNumber: formData.keySequenceNumber
+          ? Number(formData.keySequenceNumber)
+          : undefined,
+        flexNumber: formData.flexNumber
+          ? Number(formData.flexNumber)
+          : undefined,
+        rentalObjectCode: formData.rentalObject || undefined,
+        keyType: formData.keyType,
+        keySystemId: formData.keySystemId || undefined,
+        disposed: formData.disposed,
+      })
+      return
+    }
+
+    // CREATE MODE: Collect all keys into batch
+    const keysToCreate: Array<Omit<Key, 'id' | 'createdAt' | 'updatedAt'>> = []
+
+    if (sequenceValidation.numbers.length === 0) {
+      // Single key without sequence number
+      keysToCreate.push({
         keyName: formData.keyName,
         keySequenceNumber: undefined,
         flexNumber: formData.flexNumber
@@ -191,9 +226,28 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
         (seqNum) => !duplicates.includes(seqNum)
       )
 
-      // Create keys for non-duplicate sequence numbers
+      // Show toast about duplicates if any
+      if (numbersToCreate.length > 0 && duplicates.length > 0) {
+        const eventNote = shouldCreateEvent
+          ? ` Extranycklar beställs för löpnummer ${numbersToCreate.sort((a, b) => a - b).join(', ')}.`
+          : ''
+
+        toast({
+          title: `${numbersToCreate.length} ${numbersToCreate.length === 1 ? 'nyckel' : 'nycklar'} kommer skapas`,
+          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan och hoppas över.${eventNote}`,
+        })
+      } else if (numbersToCreate.length === 0 && duplicates.length > 0) {
+        toast({
+          title: 'Inga nycklar att skapa',
+          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan.`,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Collect all non-duplicate keys
       numbersToCreate.forEach((seqNum) => {
-        onSave({
+        keysToCreate.push({
           keyName: formData.keyName,
           keySequenceNumber: seqNum,
           flexNumber: formData.flexNumber
@@ -204,24 +258,13 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
           keySystemId: formData.keySystemId || undefined,
         })
       })
-
-      // Show toast message about results
-      if (numbersToCreate.length > 0 && duplicates.length > 0) {
-        // Some created, some skipped
-        toast({
-          title: `${numbersToCreate.length} ${numbersToCreate.length === 1 ? 'nyckel' : 'nycklar'} skapades`,
-          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan och hoppades över.`,
-        })
-      } else if (numbersToCreate.length === 0 && duplicates.length > 0) {
-        // None created, all duplicates
-        toast({
-          title: 'Inga nycklar skapades',
-          description: `Nycklar med löpnummer ${duplicates.sort((a, b) => a - b).join(', ')} finns redan.`,
-          variant: 'destructive',
-        })
-      }
-      // If all created successfully (no duplicates), let the parent component show success toast
     }
+
+    // Call batch save with checkbox state
+    await onBatchSave({
+      keys: keysToCreate,
+      createEvent: shouldCreateEvent,
+    })
 
     // Reset form after successful save
     setFormData({
@@ -231,6 +274,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',
+      disposed: false,
     })
     setSearchResults([])
     setSearchQuery('')
@@ -238,6 +282,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setKeySystemSearchQuery('')
     setDebouncedKeySystemQuery('')
     setSequenceNumberError('')
+    setShouldCreateEvent(false)
   }
 
   // Handle form cancellation and reset form state
@@ -251,6 +296,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',
+      disposed: false,
     })
     setSearchResults([])
     setSearchQuery('')
@@ -258,6 +304,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     setKeySystemSearchQuery('')
     setDebouncedKeySystemQuery('')
     setSequenceNumberError('')
+    setShouldCreateEvent(false)
   }
 
   return (
@@ -453,8 +500,47 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                 placeholder="1"
               />
             </div>
+
+            {editingKey && (
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox
+                    id="disposed"
+                    checked={formData.disposed}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        disposed: checked === true,
+                      }))
+                    }
+                  />
+                  <Label
+                    htmlFor="disposed"
+                    className="text-xs font-normal cursor-pointer"
+                  >
+                    Kasserad
+                  </Label>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Order event checkbox - only visible when creating (not editing) */}
+        {!editingKey && (
+          <div className="flex items-center space-x-2 pt-3 pb-2">
+            <Checkbox
+              id="createEvent"
+              checked={shouldCreateEvent}
+              onCheckedChange={(checked) =>
+                setShouldCreateEvent(checked === true)
+              }
+            />
+            <Label htmlFor="createEvent" className="text-sm cursor-pointer">
+              Beställ extranyckel
+            </Label>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="outline" size="sm" onClick={handleCancel}>

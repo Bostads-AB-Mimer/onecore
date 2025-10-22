@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { Key } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
+import { keyEventService } from '@/services/api/keyEventService'
 
 const Index = () => {
   const pagination = useUrlPagination()
@@ -308,6 +309,118 @@ const Index = () => {
     }
   }
 
+  const handleBatchSave = async (batch: {
+    keys: Array<Omit<Key, 'id' | 'createdAt' | 'updatedAt'>>
+    createEvent: boolean
+  }) => {
+    const createdKeyIds: string[] = []
+    let failedCount = 0
+    let eventCreated = false
+    let eventFailed = false
+
+    try {
+      // Create all keys (best effort - continue on individual failures)
+      for (const keyData of batch.keys) {
+        try {
+          const created = await keyService.createKey(keyData)
+          createdKeyIds.push(created.id)
+          setKeys((prev) => [...prev, created])
+        } catch (keyError) {
+          console.error('Failed to create key:', keyError)
+          failedCount++
+          // Continue with remaining keys
+        }
+      }
+
+      // Create ORDER event if requested and at least one key was created
+      if (batch.createEvent && createdKeyIds.length > 0) {
+        try {
+          await keyEventService.createKeyOrder(createdKeyIds)
+          eventCreated = true
+        } catch (eventError) {
+          console.error('Failed to create key order event:', eventError)
+          eventFailed = true
+        }
+      }
+
+      // Build success message based on outcomes
+      if (createdKeyIds.length > 0) {
+        const keyCount = createdKeyIds.length
+        const isSingle = keyCount === 1
+
+        let title = ''
+        let description = ''
+        let variant: 'default' | 'destructive' = 'default'
+
+        // Determine title based on outcome
+        if (failedCount > 0) {
+          title = 'Delvis lyckades'
+        } else if (eventCreated) {
+          title = isSingle
+            ? 'Nyckel tillagd och beställd'
+            : 'Nycklar tillagda och beställda'
+        } else {
+          title = isSingle ? 'Nyckel tillagd' : 'Nycklar tillagda'
+        }
+
+        // Determine description - handle different combinations
+        if (isSingle) {
+          // Single key scenarios - keep it simple and natural
+          if (failedCount > 0 && eventCreated) {
+            description =
+              'Nyckel har lagts till och extranyckel har beställts. 1 nyckel misslyckades att skapas.'
+          } else if (failedCount > 0 && eventFailed) {
+            description =
+              'Nyckel har lagts till, men beställningen kunde inte registreras. 1 nyckel misslyckades att skapas.'
+          } else if (failedCount > 0) {
+            description = '1 nyckel skapad. 1 misslyckades.'
+            variant = 'destructive'
+          } else if (eventCreated) {
+            description = 'Nyckel har lagts till och extranyckel har beställts.'
+          } else if (eventFailed) {
+            description =
+              'Nyckel har lagts till, men beställningen kunde inte registreras. Kontakta support om du behöver spåra denna beställning.'
+          } else {
+            description = 'Nyckel har lagts till.'
+          }
+        } else {
+          // Batch scenarios - include counts
+          if (failedCount > 0 && eventCreated) {
+            description = `${keyCount} nycklar har lagts till och extranycklar har beställts. ${failedCount} nycklar misslyckades att skapas.`
+          } else if (failedCount > 0 && eventFailed) {
+            description = `${keyCount} nycklar har lagts till, men beställningen kunde inte registreras. ${failedCount} nycklar misslyckades att skapas.`
+          } else if (failedCount > 0) {
+            description = `${keyCount} nycklar skapade. ${failedCount} misslyckades.`
+            variant = 'destructive'
+          } else if (eventCreated) {
+            description = `${keyCount} nycklar har lagts till och extranycklar har beställts.`
+          } else if (eventFailed) {
+            description = `${keyCount} nycklar har lagts till, men beställningen kunde inte registreras. Kontakta support om du behöver spåra denna beställning.`
+          } else {
+            description = `${keyCount} nycklar har lagts till.`
+          }
+        }
+
+        toast({ title, description, variant })
+        setShowAddForm(false)
+      } else {
+        // All keys failed
+        toast({
+          title: 'Kunde inte skapa nycklar',
+          description: 'Alla nycklar misslyckades att skapas.',
+          variant: 'destructive',
+        })
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Okänt fel vid skapande'
+      toast({
+        title: 'Kunde inte skapa nycklar',
+        description: msg,
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleDelete = async (keyId: string) => {
     const key = keys.find((k) => k.id === keyId)
     if (!key) return
@@ -353,6 +466,7 @@ const Index = () => {
           <div id="edit-key-form">
             <AddKeyForm
               onSave={handleSave}
+              onBatchSave={handleBatchSave}
               onCancel={handleCancel}
               editingKey={editingKey}
             />

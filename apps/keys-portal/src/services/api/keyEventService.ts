@@ -109,6 +109,21 @@ export const keyEventService = {
   },
 
   /**
+   * Helper to create an ORDER event with ORDERED status
+   */
+  async createKeyOrder(
+    keyIds: string[],
+    workOrderId?: string
+  ): Promise<KeyEvent> {
+    return this.create({
+      keys: JSON.stringify(keyIds),
+      type: 'ORDER',
+      status: 'ORDERED',
+      workOrderId: workOrderId ?? null,
+    })
+  },
+
+  /**
    * Helper to update an event status
    */
   async updateStatus(
