@@ -18,6 +18,15 @@ import { requireAuth } from './middlewares/keycloak-auth'
 
 const app = new Koa()
 
+// Enable proxy trust so koa picks upp forwarded headers from k8s ingress
+app.proxy = true
+
+app.use(
+  cors({
+    credentials: true,
+  })
+)
+
 app.use(
   koaSwagger({
     routePrefix: '/swagger',
@@ -40,15 +49,6 @@ app.use(
       `${__dirname}/services/search-service/*.{ts,js}`,
       `${__dirname}/services/economy-service/*.{ts,js}`,
     ],
-  })
-)
-
-// Enable proxy trust so koa picks upp forwarded headers from k8s ingress
-app.proxy = true
-
-app.use(
-  cors({
-    credentials: true,
   })
 )
 
