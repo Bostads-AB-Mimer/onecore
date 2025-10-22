@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -43,6 +44,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
     rentalObject: editingKey?.rentalObjectCode || '',
     keyType: editingKey?.keyType || ('LGH' as KeyType),
     keySystemId: editingKey?.keySystemId || '',
+    disposed: editingKey?.disposed || false,
   })
 
   // Search functionality state
@@ -177,6 +179,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
         rentalObjectCode: formData.rentalObject || undefined,
         keyType: formData.keyType,
         keySystemId: formData.keySystemId || undefined,
+        ...(editingKey && { disposed: formData.disposed }),
       })
     } else {
       // Check for duplicate keys before creating
@@ -202,6 +205,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
           rentalObjectCode: formData.rentalObject || undefined,
           keyType: formData.keyType,
           keySystemId: formData.keySystemId || undefined,
+          ...(editingKey && { disposed: formData.disposed }),
         })
       })
 
@@ -231,6 +235,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',
+      disposed: false,
     })
     setSearchResults([])
     setSearchQuery('')
@@ -251,6 +256,7 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',
+      disposed: false,
     })
     setSearchResults([])
     setSearchQuery('')
@@ -453,6 +459,29 @@ export function AddKeyForm({ onSave, onCancel, editingKey }: AddKeyFormProps) {
                 placeholder="1"
               />
             </div>
+
+            {editingKey && (
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox
+                    id="disposed"
+                    checked={formData.disposed}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        disposed: checked === true,
+                      }))
+                    }
+                  />
+                  <Label
+                    htmlFor="disposed"
+                    className="text-xs font-normal cursor-pointer"
+                  >
+                    Kasserad
+                  </Label>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

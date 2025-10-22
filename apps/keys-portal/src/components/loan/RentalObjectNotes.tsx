@@ -97,7 +97,6 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1">
           <FileText className="h-3.5 w-3.5" />
-          Anteckningar
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
