@@ -44,7 +44,7 @@
     "react-toastify": "^10.0.5",
     "react-transition-group": "^4.4.5",
     "styled-components": "^6.1.8",
-    "zod": "^3.25.67"
+    "zod": "^4.0.15"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.0",
