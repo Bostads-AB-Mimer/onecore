@@ -103,10 +103,12 @@ jest.mock('@onecore/utilities', () => {
 
 ### Requirements
 
+We use pnpm as our package manager: https://pnpm.io/installation
+
 This application requires the following to be installed on your system:
 
 - **nvm**
-- **npm**
+- **pnpm**
 - **Node.js**
 
 ### Install Instructions
@@ -130,7 +132,7 @@ $ nvm use
 Install dependencies
 
 ```sh
-$ npm run install
+$ pnpm run install
 ```
 
 ## License

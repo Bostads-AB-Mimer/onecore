@@ -13,10 +13,12 @@ JSDoc comments and tags for comprehensive documentation. The Swagger document is
 
 ### Requirements
 
+We use pnpm as our package manager: https://pnpm.io/installation
+
 This application requires the following to be installed on your system:
 
 - **nvm**
-- **npm**
+- **pnpm**
 - **Node.js**
 - **Docker**
 
@@ -27,7 +29,7 @@ This application requires the following to be installed on your system:
 Run the `dev:init` script to create a file called `.env`, or manually make a copy of `.env.template`:
 
 ```sh
-$ npm run dev:init
+$ pnpm run dev:init
 ```
 
 Or:
@@ -55,7 +57,7 @@ $ nvm use
 Install dependencies
 
 ```sh
-$ npm run install
+$ pnpm run install
 ```
 
 #### Configure services
@@ -73,7 +75,7 @@ This will start the required services inside a Docker container. This is a share
 Initialize the database:
 
 ```sh
-<monorepo root> $ npm run db:init
+<monorepo root> $ pnpm run db:init
 ```
 
 #### Prepare database
@@ -81,7 +83,7 @@ Initialize the database:
 Create the database schema by applying the `knex` migrations:
 
 ```sh
-$ npm run migrate:up
+$ pnpm run migrate:up
 ```
 
 ### Running in Development Mode
@@ -89,13 +91,13 @@ $ npm run migrate:up
 When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
 
 ```sh
-$ npm run dev
+$ pnpm run dev
 ```
 
 ### Testing
 
 The test suite requires a dedicated database for our database unit tests to run.
-If you've run the db:init npm script, this test db has already been created.
+If you've run the db:init pnpm script, this test db has already been created.
 
 Make a copy of `.env.test.template` called `.env.test` and supply
 the credentials to your database.

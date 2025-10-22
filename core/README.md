@@ -16,10 +16,12 @@ We utilize `koa2-swagger-ui` and `swagger-jsdoc` for documenting our API. Each e
 
 ### Requirements
 
+We use pnpm as our package manager: https://pnpm.io/installation
+
 This application requires the following to be installed on your system:
 
 - **nvm**
-- **npm**
+- **pnpm**
 - **Node.js**
 - **Docker**
 
@@ -30,7 +32,7 @@ This application requires the following to be installed on your system:
 Run the `dev:init` script to create a file called `.env`, or manually make a copy of `.env.template`:
 
 ```sh
-$ npm run dev:init
+$ pnpm run dev:init
 ```
 
 Or:
@@ -58,7 +60,7 @@ $ nvm use
 Install dependencies
 
 ```sh
-$ npm run install
+$ pnpm run install
 ```
 
 #### Configure services
@@ -76,7 +78,7 @@ This will start the required services inside a Docker container. This is a share
 Initialize the databases for all services:
 
 ```sh
-<monorepo root> $ npm run db:init
+<monorepo root> $ pnpm run db:init
 ```
 
 ### Running in Development Mode
@@ -84,7 +86,7 @@ Initialize the databases for all services:
 When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
 
 ```sh
-$ npm run dev
+$ pnpm run dev
 ```
 
 ## License
