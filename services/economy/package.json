@@ -25,6 +25,7 @@
     "dev:script:import-rental-invoices": "ts-node src/scripts/import-rental-invoices",
     "script:import-procurement-invoices": "node build/scripts/import-procurement-invoices",
     "dev:script:import-procurement-invoices": "ts-node src/scripts/import-procurement-invoices",
+    "dev:script:import-debt-collection": "ts-node src/scripts/import-debt-collection",
     "dev:script:get-contact-details": "ts-node src/scripts/get-contact-details",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",

@@ -13,22 +13,27 @@ const infobip = new Infobip({
 export const sendEmail = async (
   recipient: string,
   subject: string,
-  body: string
+  body: string,
+  attachments?: any[]
 ) => {
   logger.info({ to: recipient, subject: subject }, 'Sending email')
 
   try {
-    const response = await infobip.channels.email.send({
-      to: recipient.split(';'),
-      from: 'Bostads Mimer AB <noreply@mimer.nu>',
-      subject: subject,
-      text: body,
-    })
-    if (response.status === 200) {
-      logger.info({ to: recipient, subject: subject }, 'Sending email complete')
-      return response.data
-    } else {
-      throw new Error(response.body)
+    const recipients = recipient.split(';')
+
+    for (const to of recipients) {
+      const response = await infobip.channels.email.send({
+        to,
+        from: 'Bostads Mimer AB <noreply@mimer.nu>',
+        subject: subject,
+        text: body,
+        attachment: attachments,
+      })
+      if (response.status === 200) {
+        logger.info({ to, subject: subject }, 'Sending email complete')
+      } else {
+        throw new Error(response.body)
+      }
     }
   } catch (error) {
     logger.error(error, 'Could not send email')
