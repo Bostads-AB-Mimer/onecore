@@ -1,6 +1,7 @@
 // services/api/keyLoanService.ts
 import type {
   KeyLoan,
+  KeyLoanWithDetails,
   CreateKeyLoanRequest,
   UpdateKeyLoanRequest,
 } from '@/services/types'
@@ -99,11 +100,39 @@ export const keyLoanService = {
   },
 
   /**
+   * Get key loans by rental object code with keys and optional receipts (OPTIMIZED)
+   * This uses a single optimized endpoint that eliminates N+1 queries
+   * @param rentalObjectCode - The rental object code
+   * @param contact - Optional contact code to filter by
+   * @param contact2 - Optional second contact code to filter by
+   * @param includeReceipts - Whether to include receipts in the response
+   */
+  async getByRentalObject(
+    rentalObjectCode: string,
+    contact?: string,
+    contact2?: string,
+    includeReceipts?: boolean
+  ): Promise<KeyLoanWithDetails[]> {
+    const { data, error } = await GET(
+      '/key-loans/by-rental-object/{rentalObjectCode}',
+      {
+        params: {
+          path: { rentalObjectCode },
+          query: { contact, contact2, includeReceipts },
+        },
+      }
+    )
+    if (error) throw error
+    return data?.content ?? []
+  },
+
+  /**
    * Get all key loans associated with a lease by fetching loans for each key
    * in the lease's rental object
    * Optimized to avoid duplicate API calls for keys that belong to the same loan
    * @param rentalObjectCode - The rental object code to fetch loans for
    * @param preloadedKeys - Optional pre-fetched keys to avoid duplicate fetches
+   * @deprecated Use getByRentalObject instead for better performance
    */
   async listByLease(
     rentalObjectCode: string,

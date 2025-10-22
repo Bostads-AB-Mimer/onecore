@@ -17,6 +17,7 @@ const {
   KeySchema,
   KeyWithLoanStatusSchema,
   KeyLoanSchema,
+  KeyLoanWithDetailsSchema,
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
@@ -79,6 +80,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Key', KeySchema)
   registerSchema('KeyWithLoanStatus', KeyWithLoanStatusSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
+  registerSchema('KeyLoanWithDetails', KeyLoanWithDetailsSchema)
   registerSchema('KeySystem', KeySystemSchema)
   registerSchema('Log', LogSchema)
   registerSchema('KeyNote', KeyNoteSchema)
@@ -394,6 +396,88 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching loans by key ID'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get key loans by rental object code
+   *     description: Returns all key loans for a specific rental object with keys and optional receipts
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code
+   *       - in: query
+   *         name: contact
+   *         schema:
+   *           type: string
+   *         description: Filter by contact code
+   *       - in: query
+   *         name: contact2
+   *         schema:
+   *           type: string
+   *         description: Filter by second contact code
+   *       - in: query
+   *         name: includeReceipts
+   *         schema:
+   *           type: boolean
+   *         description: Include receipts in the response
+   *     responses:
+   *       200:
+   *         description: A list of key loans with details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'contact',
+      'contact2',
+      'includeReceipts',
+    ])
+
+    const contact = ctx.query.contact as string | undefined
+    const contact2 = ctx.query.contact2 as string | undefined
+    const includeReceipts = ctx.query.includeReceipts === 'true'
+
+    const result = await KeyLoansApi.getByRentalObject(
+      ctx.params.rentalObjectCode,
+      contact,
+      contact2,
+      includeReceipts
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key loans by rental object'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
