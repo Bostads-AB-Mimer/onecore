@@ -53,7 +53,6 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
-    console.log(result)
     logger.error(
       result.data,
       `Error making Xledger request (${getCallerFromError(error)})`
