@@ -271,4 +271,6 @@ export const KeyWithLoanStatusSchema = KeySchema.extend({
   prevLoanAvailableFrom: z.coerce.date().nullable(),
   prevLoanContact: z.string().nullable(),
   prevLoanContact2: z.string().nullable(),
+  // Optional latest key event (included when includeLatestEvent=true query param is set)
+  latestEvent: KeyEventSchema.nullable().optional(),
 })

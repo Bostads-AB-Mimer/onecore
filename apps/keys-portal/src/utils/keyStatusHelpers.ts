@@ -5,7 +5,6 @@ import type {
   KeyEvent,
 } from '@/services/types'
 import { KeyEventStatusLabels, KeyEventTypeLabels } from '@/services/types'
-import { keyEventService } from '@/services/api/keyEventService'
 
 /**
  * Extended Key type with computed loan information and display status
@@ -79,27 +78,6 @@ function formatSwedishDate(isoDateString?: string): string | undefined {
   } catch {
     return undefined
   }
-}
-
-/**
- * Gets the latest event for a key (async)
- * @param keyId - The key ID
- * @returns The latest KeyEvent or undefined if no events exist
- */
-export async function getLatestEventForKey(
-  keyId: string
-): Promise<KeyEvent | undefined> {
-  return await keyEventService.getLatestForKey(keyId)
-}
-
-/**
- * Checks if a key has an incomplete event (status is not COMPLETED)
- * @param keyId - The key ID
- * @returns true if the key has an incomplete event
- */
-export async function hasIncompleteEvent(keyId: string): Promise<boolean> {
-  const latestEvent = await getLatestEventForKey(keyId)
-  return latestEvent !== undefined && latestEvent.status !== 'COMPLETED'
 }
 
 /**
@@ -278,23 +256,20 @@ export function getKeyDisplayStatus(
  * @param tenantContactCodes - Contact codes of the current tenant(s) (used for matching against DB)
  * @returns KeyWithStatus
  */
-export async function computeKeyWithStatus(
+export function computeKeyWithStatus(
   key: KeyWithLoanStatus,
   tenantContactCodes: string[]
-): Promise<KeyWithStatus> {
+): KeyWithStatus {
   const matchesTenant = matchesCurrentTenant(
     key,
     tenantContactCodes[0],
     tenantContactCodes[1]
   )
 
-  // Fetch the latest event for this key
-  const latestEvent = await getLatestEventForKey(key.id)
-
   const { status, date, isAvailable } = getKeyDisplayStatus(
     key,
     matchesTenant,
-    latestEvent
+    key.latestEvent
   )
 
   return {
