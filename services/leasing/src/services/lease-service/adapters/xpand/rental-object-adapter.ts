@@ -438,18 +438,22 @@ const getParkingSpaces = async (
       return { ok: false, err: 'parking-spaces-not-found' }
     }
 
-    if (
-      includeRentalObjectCodes &&
-      results.length < includeRentalObjectCodes.length
-    ) {
-      logger.error(
-        {
-          includeRentalObjectCodes: includeRentalObjectCodes.filter(
-            (code) => !results.some((row) => row.rentalObjectCode === code)
-          ),
-        },
-        `Some rental object codes could not be found (the rest will be returned)`
-      )
+    // Calculate if any codes were not found and write an error log
+    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
+      const uniqueIncludeCodes = [...new Set(includeRentalObjectCodes)]
+      const foundCodes = results.map((row) => row.rentalObjectCode)
+
+      if (foundCodes.length < uniqueIncludeCodes.length) {
+        const missingCodes = uniqueIncludeCodes.filter(
+          (code) => !foundCodes.includes(code)
+        )
+        if (missingCodes.length > 0) {
+          logger.error(
+            { includeRentalObjectCodes: missingCodes },
+            `${missingCodes.length} rental object codes could not be found (the rest will be returned)`
+          )
+        }
+      }
     }
 
     const rentalObjects = results.map((row) =>
