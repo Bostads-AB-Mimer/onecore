@@ -71,6 +71,18 @@ const getLeasesWithRelatedEntitiesForPnrIncludingAllLeases = async (
   return leases
 }
 
+const getLeasesWithRelatedEntitiesForContactCodeIncludingAllLeases = async (
+  contactCode: string
+) => {
+  const leases = await leasingAdapter.getLeasesForContactCode(contactCode, {
+    includeUpcomingLeases: true,
+    includeTerminatedLeases: true,
+    includeContacts: true,
+  })
+
+  return leases
+}
+
 /**
  * @swagger
  * openapi: 3.0.0
@@ -312,6 +324,56 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /leases/by-contact-code/{contactCode}/includingAllLeases:
+   *   get:
+   *     summary: Get all leases (active, upcoming, and terminated) for a contact code
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves lease information along with related entities (tenants, properties, etc.) for the specified contact code. Includes **active**, **upcoming**, and **terminated** leases.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Contact code of the individual to fetch leases for.
+   *     responses:
+   *       '200':
+   *         description: Successful response with leases and related entities.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *               additionalProperties: true  # accounts for generateRouteMetadata fields
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/leases/by-contact-code/:contactCode/includingAllLeases',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const responseData =
+        await getLeasesWithRelatedEntitiesForContactCodeIncludingAllLeases(
+          ctx.params.contactCode
+        )
+
+      ctx.status = 200
+      ctx.body = {
+        content: responseData.map(mapLease),
+        ...metadata,
+      }
+    }
+  )
 
   /**
    * @swagger

@@ -288,6 +288,35 @@ export interface paths {
       };
     };
   };
+  "/leases/by-contact-code/{contactCode}/includingAllLeases": {
+    /**
+     * Get all leases (active, upcoming, and terminated) for a contact code
+     * @description Retrieves lease information along with related entities (tenants, properties, etc.) for the specified contact code. Includes **active**, **upcoming**, and **terminated** leases.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+              [key: string]: unknown;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/consumer-reports/by-pnr/{pnr}": {
     /**
      * Get consumer report for a specific Personal Number (PNR)
