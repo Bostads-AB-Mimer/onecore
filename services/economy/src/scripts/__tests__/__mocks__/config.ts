@@ -22,4 +22,8 @@ export default {
       directory: '/test/sergel-export',
     },
   },
+  infobip: {
+    baseUrl: 'http://localhost',
+    apiKey: 'abc123',
+  },
 }
