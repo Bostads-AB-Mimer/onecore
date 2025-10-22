@@ -3,6 +3,12 @@
   "compilerOptions": {
     "rootDirs": ["./src", "./test"],
     "outDir": "./build",
-    "types": ["koa-body", "jest"]
+    "types": ["koa-body", "jest"],
+    // TODO: Make sure this app builds and runs correctly with paths added
+    "paths": {
+      "@test/*": ["./test/*"],
+      "@src/*": ["./src/*"]
+    }
   }
+
 }
