@@ -71,6 +71,8 @@ const PropertyView = () => {
 
     return (
       <div className="py-4 space-y-6">
+        {/* Hide for now */}
+        {/*
         <PropertyBreadcrumb
           property={{
             id: propertyDetail.id,
@@ -78,15 +80,14 @@ const PropertyView = () => {
           }}
           companyId={companyId}
         />
+        */}
         <PropertyHeader propertyDetail={propertyDetail} />
 
-        {/* Grundläggande information always visible above tabs */}
         <PropertyBasicInfo
           propertyDetail={propertyDetail}
           showBasicInfoOnly={true}
         />
 
-        {/* Tabs with detailed info only in PropertyInfoTab */}
         <PropertyDetailTabs propertyDetail={propertyDetail} />
       </div>
     )

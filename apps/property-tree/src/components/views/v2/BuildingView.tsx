@@ -63,6 +63,8 @@ const BuildingDetailPage = () => {
 
     return (
       <div className="py-4 space-y-4 sm:space-y-6 lg:space-y-8">
+        {/* Hide for now */}
+        {/*
         <PropertyBreadcrumb
           property={{
             id: data.property?.id,
@@ -74,6 +76,7 @@ const BuildingDetailPage = () => {
           }}
           companyId={companyId}
         />
+        */}
         <BuildingHeader
           building={data.building}
           propertyName={data.property?.designation}
