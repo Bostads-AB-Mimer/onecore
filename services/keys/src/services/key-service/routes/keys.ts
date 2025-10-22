@@ -301,6 +301,8 @@ export const routes = (router: KoaRouter) => {
    *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
    *
    *       **Performance**: ~95% faster than fetching keys then looping for loan status.
+   *
+   *       Optionally include the latest key event for each key by setting includeLatestEvent=true.
    *     tags: [Keys]
    *     parameters:
    *       - in: path
@@ -309,6 +311,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental object code to filter keys by.
+   *       - in: query
+   *         name: includeLatestEvent
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include the latest key event for each key in the response.
    *     responses:
    *       200:
    *         description: List of keys with enriched active loan data.
@@ -335,9 +344,11 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
+      const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
       const rows = await keysAdapter.getKeysWithLoanStatus(
         ctx.params.rentalObjectCode,
-        db
+        db,
+        includeLatestEvent
       )
 
       ctx.status = 200

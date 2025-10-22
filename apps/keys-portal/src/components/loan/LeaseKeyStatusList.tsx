@@ -187,20 +187,21 @@ export function LeaseKeyStatusList({
   const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
   const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
 
-  // Fetch keys with loan status (single optimized call)
+  // Fetch keys with loan status (single optimized call with events included)
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       try {
         const keysData = await keyService.getKeysWithLoanStatus(
-          lease.rentalPropertyId
+          lease.rentalPropertyId,
+          true // Include latest event to avoid N+1 queries
         )
         if (!cancelled) {
           setKeysWithLoanStatus(keysData)
-          // Compute statuses with events
-          const withStatus = await Promise.all(
-            keysData.map((key) => computeKeyWithStatus(key, tenantContactCodes))
+          // Compute statuses with events (events already included in keysData)
+          const withStatus = keysData.map((key) =>
+            computeKeyWithStatus(key, tenantContactCodes)
           )
           setKeysWithStatus(withStatus)
         }

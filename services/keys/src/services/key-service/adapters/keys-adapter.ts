@@ -86,15 +86,48 @@ export async function bulkUpdateFlexNumber(
  * - Disposed keys that have an active loan
  * - Active loan details (contact, picked up date, available from date)
  * - Previous loan availability date (for when active loan not picked up)
+ * - Optionally includes latest key event data
  *
  * @param rentalObjectCode - The rental object code to filter keys by
  * @param dbConnection - Database connection (optional, defaults to db)
+ * @param includeLatestEvent - Whether to include the latest key event for each key
  * @returns Promise<KeyWithLoanStatus[]> - Keys with enriched loan data
  */
 export async function getKeysWithLoanStatus(
   rentalObjectCode: string,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex | Knex.Transaction = db,
+  includeLatestEvent = false
 ): Promise<KeyWithLoanStatus[]> {
+  const eventFields = includeLatestEvent
+    ? `,
+      -- Latest key event data
+      event.id as eventId,
+      event.keys as eventKeys,
+      event.type as eventType,
+      event.status as eventStatus,
+      event.workOrderId as eventWorkOrderId,
+      event.createdAt as eventCreatedAt,
+      event.updatedAt as eventUpdatedAt`
+    : ''
+
+  const eventJoin = includeLatestEvent
+    ? `
+    -- OUTER APPLY for most recent key event
+    OUTER APPLY (
+      SELECT TOP 1
+        id,
+        keys,
+        type,
+        status,
+        workOrderId,
+        createdAt,
+        updatedAt
+      FROM key_events ke
+      WHERE ke.keys LIKE '%"' + CAST(k.id AS NVARCHAR(36)) + '"%'
+      ORDER BY ke.createdAt DESC
+    ) event`
+    : ''
+
   const result = await dbConnection.raw(
     `
     SELECT
@@ -108,7 +141,7 @@ export async function getKeysWithLoanStatus(
       -- Previous loan data (for returned keys)
       prev.availableToNextTenantFrom as prevLoanAvailableFrom,
       prev.contact as prevLoanContact,
-      prev.contact2 as prevLoanContact2
+      prev.contact2 as prevLoanContact2${eventFields}
 
     FROM keys k
 
@@ -138,6 +171,7 @@ export async function getKeysWithLoanStatus(
       AND kl2.returnedAt IS NOT NULL
       ORDER BY kl2.createdAt DESC
     ) prev
+    ${eventJoin}
 
     WHERE k.rentalObjectCode = ?
       AND (
@@ -149,6 +183,38 @@ export async function getKeysWithLoanStatus(
     `,
     [rentalObjectCode]
   )
+
+  // Transform the result to nest the event data if included
+  if (includeLatestEvent) {
+    return result.map((row: any) => {
+      const {
+        eventId,
+        eventKeys,
+        eventType,
+        eventStatus,
+        eventWorkOrderId,
+        eventCreatedAt,
+        eventUpdatedAt,
+        ...keyData
+      } = row
+
+      return {
+        ...keyData,
+        latestEvent:
+          eventId !== null
+            ? {
+                id: eventId,
+                keys: eventKeys,
+                type: eventType,
+                status: eventStatus,
+                workOrderId: eventWorkOrderId,
+                createdAt: eventCreatedAt,
+                updatedAt: eventUpdatedAt,
+              }
+            : null,
+      }
+    })
+  }
 
   return result as KeyWithLoanStatus[]
 }
