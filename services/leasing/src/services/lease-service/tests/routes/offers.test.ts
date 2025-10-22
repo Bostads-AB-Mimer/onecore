@@ -36,7 +36,7 @@ describe('offers', () => {
       expect(res.status).toBe(400)
       expect(res.body.data).toEqual([
         {
-          message: "Invalid enum value. Expected 1 | 2 | 3 | 4, received 'foo'",
+          message: 'Invalid option: expected one of 1|2|3|4',
           path: ['status'],
         },
       ])
