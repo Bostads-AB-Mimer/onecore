@@ -3002,13 +3002,28 @@ export interface components {
       rentalObjectCode: string;
       contentBlocks: ({
           /** @enum {string} */
-          type: "headline" | "subtitle" | "text" | "bullet_list";
+          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    CreateListingTextContentRequest: {
+      rentalObjectCode: string;
+      contentBlocks: ({
+          /** @enum {string} */
+          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
+          content: string;
+        })[];
+    };
+    UpdateListingTextContentRequest: {
+      contentBlocks?: ({
+          /** @enum {string} */
+          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
+          content: string;
+        })[];
     };
     WorkOrder: {
       accessCaption: string;
