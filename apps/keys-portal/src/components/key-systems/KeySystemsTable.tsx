@@ -33,7 +33,7 @@ import {
 } from '@/services/types'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
@@ -222,8 +222,8 @@ export function KeySystemsTable({
               const isExpanded = expandedSystemId === KeySystem.id
 
               return (
-                <>
-                  <TableRow key={KeySystem.id}>
+                <React.Fragment key={KeySystem.id}>
+                  <TableRow>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -373,7 +373,7 @@ export function KeySystemsTable({
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               )
             })
           )}
