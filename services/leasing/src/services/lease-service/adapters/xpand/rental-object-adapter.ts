@@ -172,15 +172,7 @@ const buildMainQuery = (queries: {
         'ac.keycmobj',
         'ps.keycmobj'
       )
-  }
-
-  if (queries.rentalBlockDatesQuery) {
-    query = query
-      .select('orb.blockstartdate', 'orb.blockenddate')
-      .leftJoin(queries.rentalBlockDatesQuery, 'orb.keycmobj', 'ps.keycmobj')
-  }
-
-  if (queries.contractsWithLastDebitDate) {
+  } else if (queries.contractsWithLastDebitDate) {
     query = query
       .select(
         'ac.contractid',
@@ -191,10 +183,16 @@ const buildMainQuery = (queries: {
         'cmvalbar.value as braarea'
       )
       .leftJoin(
-        queries.contractsWithLastDebitDate.as('ac'),
+        queries.contractsWithLastDebitDate,
         'ac.keycmobj',
         'ps.keycmobj'
       )
+  }
+
+  if (queries.rentalBlockDatesQuery) {
+    query = query
+      .select('orb.blockstartdate', 'orb.blockenddate')
+      .leftJoin(queries.rentalBlockDatesQuery, 'orb.keycmobj', 'ps.keycmobj')
   }
 
   return query
@@ -282,42 +280,32 @@ const buildSubQueries = () => {
     .whereNull('hyobj.sistadeb')
 
   //query that gets contracts with lastdebitdate
-  const contractsWithLastDebitDate = xpandDb
-    .from('hyobj')
-    .select(
-      'hyinf.keycmobj',
-      'hyobj.hyobjben as contractid',
-      'hyobj.avtalsdat as contractdate',
-      'hyobj.fdate as fromdate',
-      'hyobj.tdate as todate',
-      'hyobj.sistadeb as lastdebitdate'
-    )
-    .innerJoin('hykop', function () {
-      this.on('hykop.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
-        'hykop.ordning',
-        '=',
-        xpandDb.raw('?', [1])
-      )
-    })
-    .innerJoin('hyinf', 'hyinf.keycmobj', 'hykop.keycmobj')
-    //contract types to include
-    .whereIn('hyobj.keyhyobt', ['3', '5', '_1WP0JXVK8', '_1WP0KDMOO'])
-    .whereNull('hyobj.makuldatum')
-    .andWhere('hyobj.deletemark', '=', 0)
-    //pick the last debit date from the contracts
-    .whereRaw(
-      `hyobj.sistadeb = (
-    SELECT MAX(h2.sistadeb)
-    FROM hyobj h2
-    INNER JOIN hykop h2kop ON h2kop.keyhyobj = h2.keyhyobj AND h2kop.ordning = ?
-    INNER JOIN hyinf h2inf ON h2inf.keycmobj = h2kop.keycmobj
-    WHERE h2inf.keycmobj = hyinf.keycmobj
-      AND h2.keyhyobt IN (?, ?, ?, ?)
-      AND h2.makuldatum IS NULL
-      AND h2.deletemark = 0
-  )`,
-      [1, '3', '5', '_1WP0JXVK8', '_1WP0KDMOO']
-    )
+  const contractsWithLastDebitDate = xpandDb.raw(`
+  (
+    SELECT sub.keycmobj, sub.contractid, sub.contractdate, sub.fromdate, sub.todate, sub.lastdebitdate
+    FROM (
+      SELECT
+        hyinf.keycmobj,
+        hyobj.hyobjben as contractid,
+        hyobj.avtalsdat as contractdate,
+        hyobj.fdate as fromdate,
+        hyobj.tdate as todate,
+        hyobj.sistadeb as lastdebitdate,
+        ROW_NUMBER() OVER (
+          PARTITION BY hyinf.keycmobj
+          ORDER BY hyobj.sistadeb DESC
+        ) as rn
+      FROM hyobj
+      INNER JOIN hykop ON hykop.keyhyobj = hyobj.keyhyobj AND hykop.ordning = 1
+      INNER JOIN hyinf ON hyinf.keycmobj = hykop.keycmobj
+      WHERE hyobj.keyhyobt IN ('3', '5', '_1WP0JXVK8', '_1WP0KDMOO')
+        AND hyobj.makuldatum IS NULL
+        AND hyobj.deletemark = 0
+        AND hyobj.sistadeb IS NOT NULL
+    ) AS sub
+    WHERE sub.rn = 1
+  ) AS ac
+`)
 
   //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
   const rentalBlockDatesQuery = xpandDb.raw(`
