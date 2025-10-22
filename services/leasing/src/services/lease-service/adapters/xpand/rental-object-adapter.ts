@@ -114,6 +114,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
 
+  //TODO: Lägg till rentalObjectTypeCode och rentalObjectTypeCaption i transformeringen för lägenheter när vi uppdaterat modellen
+
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
@@ -124,8 +126,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     residentialAreaCaption: row.residentialareacaption,
     objectTypeCaption: row.vehiclespacetypecaption ?? row.apartmenttypecaption,
     objectTypeCode: row.vehiclespacetypecode ?? row.apartmenttypecode,
-    // rentalObjectTypeCode: row.rentalobjecttypecode, //TODO: lägg till detta på något vis..
-    // rentalObjectTypeCaption: row.rentalobjecttypecaption,
     vacantFrom: vacantFrom,
     districtCaption: district,
     districtCode: districtCode,
@@ -150,7 +150,6 @@ const buildMainQuery = (queries: {
     'ps.zipcode',
     'ps.city',
     'ps.scegcaption',
-    'ps.scegcode',
     'ps.residentialareacode',
     'ps.residentialareacaption',
     'ps.rentalobjecttypecode',
@@ -249,7 +248,6 @@ const buildSubQueries = () => {
     .select(
       'babps.keycmobj',
       'babuf.hyresid as rentalObjectCode',
-      'babuf.fencode as scegcode',
       'babuf.fencaption as scegcaption',
       'babuf.fstcode as estatecode',
       'babuf.fstcaption as estatecaption',
@@ -278,8 +276,7 @@ const buildSubQueries = () => {
     .select(
       'balgh.keycmobj',
       'babuf.hyresid as rentalObjectCode',
-      'babuf.fencode as scegcode',
-      'babuf.fencaption as scegcaption',
+      'babuf.fencaption as scegcaption', //used for district extraction
       'babuf.fstcode as estatecode',
       'babuf.fstcaption as estatecaption',
       'balgt.code as apartmenttypecode',
