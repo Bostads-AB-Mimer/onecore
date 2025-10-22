@@ -92,12 +92,16 @@ export const keyService = {
   },
 
   async getKeysWithLoanStatus(
-    rentalObjectCode: string
+    rentalObjectCode: string,
+    includeLatestEvent?: boolean
   ): Promise<KeyWithLoanStatus[]> {
     const { data, error } = await GET(
       '/keys/with-loan-status/{rentalObjectCode}',
       {
-        params: { path: { rentalObjectCode } },
+        params: {
+          path: { rentalObjectCode },
+          query: includeLatestEvent ? { includeLatestEvent: true } : {},
+        },
       }
     )
     if (error) throw error
