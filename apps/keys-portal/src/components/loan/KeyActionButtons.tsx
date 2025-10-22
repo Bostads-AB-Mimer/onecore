@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
-import { FlexMenu } from './FlexMenu'
-import { IncomingFlexMenu } from './IncomingFlexMenu'
+import { FlexMenu } from './dialogs/FlexMenu'
+import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
 
 type Props = {
   selectedKeys: string[]
