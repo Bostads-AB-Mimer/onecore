@@ -406,11 +406,7 @@ const getAllVacantApartments = async (): Promise<
       .whereNull('ac.keycmobj')
       .orderBy('ps.rentalObjectCode', 'asc')
 
-    console.log('query: ', query.toString()) // Log the generated SQL query for debugging
-
     const results = await query
-
-    console.log('results', results.length)
 
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
@@ -442,8 +438,6 @@ const getAllVacantParkingSpaces = async (): Promise<
       //exclude parking spaces with active contracts
       .whereNull('ac.keycmobj')
       .orderBy('ps.rentalObjectCode', 'asc')
-
-    console.log('query: ', query.toString()) // Log the generated SQL query for debugging
 
     const results = await query
     const listings: RentalObject[] = results.map((row) =>
