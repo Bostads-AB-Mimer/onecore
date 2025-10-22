@@ -152,8 +152,6 @@ const buildMainQuery = (queries: {
     'ps.scegcaption',
     'ps.residentialareacode',
     'ps.residentialareacaption',
-    'ps.rentalobjecttypecode',
-    'ps.rentalobjecttypecaption',
   ]
 
   const isParkingSpacesQuery =
@@ -169,6 +167,10 @@ const buildMainQuery = (queries: {
 
   if (isApartmentQuery) {
     rentalObjectColumns.push('ps.apartmenttypecode', 'ps.apartmenttypecaption')
+    rentalObjectColumns.push(
+      'ps.rentalobjecttypecode',
+      'ps.rentalobjecttypecaption'
+    )
   }
 
   let query = xpandDb
@@ -178,9 +180,6 @@ const buildMainQuery = (queries: {
   if (queries.activeContractsQuery) {
     query = query
       .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
         'ac.lastdebitdate',
         'rent.yearrentrows',
         'cmvalbar.value as braarea'
@@ -193,9 +192,6 @@ const buildMainQuery = (queries: {
   } else if (queries.contractsWithLastDebitDate) {
     query = query
       .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
         'ac.lastdebitdate',
         'rent.yearrentrows',
         'cmvalbar.value as braarea'
@@ -309,7 +305,6 @@ const buildSubQueries = () => {
     .from('hyobj')
     .select(
       'hyinf.keycmobj',
-      'hyobj.hyobjben as contractid',
       'hyobj.avtalsdat as contractdate',
       'hyobj.fdate as fromdate',
       'hyobj.tdate as todate',
@@ -332,11 +327,10 @@ const buildSubQueries = () => {
   //query that gets contracts with lastdebitdate
   const contractsWithLastDebitDate = xpandDb.raw(`
   (
-    SELECT sub.keycmobj, sub.contractid, sub.contractdate, sub.fromdate, sub.todate, sub.lastdebitdate
+    SELECT sub.keycmobj, sub.contractdate, sub.fromdate, sub.todate, sub.lastdebitdate
     FROM (
       SELECT
         hyinf.keycmobj,
-        hyobj.hyobjben as contractid,
         hyobj.avtalsdat as contractdate,
         hyobj.fdate as fromdate,
         hyobj.tdate as todate,
@@ -554,10 +548,50 @@ const getParkingSpaces = async (
   }
 }
 
+const getApartment = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<RentalObject, 'unknown' | 'apartment-not-found'>> => {
+  try {
+    const {
+      apartmentQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    } = buildSubQueries()
+
+    const mainQuery = buildMainQuery({
+      rentalObjectQuery: apartmentQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    })
+      .where('ps.rentalObjectCode', '=', rentalObjectCode)
+      .first()
+
+    const result = await mainQuery
+
+    if (!result) {
+      logger.error(
+        { rentalObjectCode },
+        'Apartment not found by Rental Object Code'
+      )
+      return { ok: false, err: 'apartment-not-found' }
+    }
+
+    const rentalObject = trimRow(transformFromXpandRentalObject(result))
+    return { ok: true, data: rentalObject }
+  } catch (err) {
+    logger.error(
+      { err, rentalObjectCode },
+      'Unknown error in rentalObjectAdapter.getRentalObject'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getAllVacantParkingSpaces,
   getAllVacantApartments,
   getParkingSpace,
   getParkingSpaces,
+  getApartment,
   transformFromXpandRentalObject,
 }
