@@ -80,30 +80,58 @@ export function AddKeySystemForm({
   }, [propertySearchQuery, updateDebouncedQuery])
 
   useEffect(() => {
-    if (editingKeySystem) {
-      setFormData({
-        systemCode: editingKeySystem.systemCode,
-        name: editingKeySystem.name,
-        manufacturer: editingKeySystem.manufacturer || '',
-        managingSupplier: editingKeySystem.managingSupplier || '',
-        type: editingKeySystem.type,
-        installationDate: editingKeySystem.installationDate
-          ? new Date(editingKeySystem.installationDate)
-              .toISOString()
-              .split('T')[0]
-          : '',
-        isActive: editingKeySystem.isActive || false,
-        description: editingKeySystem.description || '',
-        propertyIds: editingKeySystem.propertyIds
-          ? typeof editingKeySystem.propertyIds === 'string'
-            ? JSON.parse(editingKeySystem.propertyIds)
-            : editingKeySystem.propertyIds
-          : [],
-      })
-    } else {
-      setFormData(emptyFormData)
-      setSelectedProperties([])
+    const loadEditingData = async () => {
+      if (editingKeySystem) {
+        // Parse propertyIds to get array of IDs
+        let propertyIdArray: string[] = []
+        if (editingKeySystem.propertyIds) {
+          try {
+            const parsed =
+              typeof editingKeySystem.propertyIds === 'string'
+                ? JSON.parse(editingKeySystem.propertyIds)
+                : editingKeySystem.propertyIds
+            propertyIdArray = Array.isArray(parsed) ? parsed : []
+          } catch (e) {
+            console.error('Failed to parse propertyIds:', e)
+          }
+        }
+
+        // Fetch full Property objects for the IDs
+        if (propertyIdArray.length > 0) {
+          try {
+            const properties =
+              await propertySearchService.getByIds(propertyIdArray)
+            setSelectedProperties(properties)
+          } catch (error) {
+            console.error('Failed to fetch properties:', error)
+            setSelectedProperties([])
+          }
+        } else {
+          setSelectedProperties([])
+        }
+
+        setFormData({
+          systemCode: editingKeySystem.systemCode,
+          name: editingKeySystem.name,
+          manufacturer: editingKeySystem.manufacturer || '',
+          managingSupplier: editingKeySystem.managingSupplier || '',
+          type: editingKeySystem.type,
+          installationDate: editingKeySystem.installationDate
+            ? new Date(editingKeySystem.installationDate)
+                .toISOString()
+                .split('T')[0]
+            : '',
+          isActive: editingKeySystem.isActive || false,
+          description: editingKeySystem.description || '',
+          propertyIds: editingKeySystem.propertyIds || '',
+        })
+      } else {
+        setFormData(emptyFormData)
+        setSelectedProperties([])
+      }
     }
+
+    loadEditingData()
   }, [editingKeySystem])
 
   // Handle property input changes and trigger search
@@ -143,13 +171,20 @@ export function AddKeySystemForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Ensure propertyIds is a JSON string, not an array
+    // Use selectedProperties as the source of truth for what should be saved
+    const propertyIdsValue =
+      selectedProperties.length > 0
+        ? JSON.stringify(selectedProperties.map((p) => p.id))
+        : '[]' // Send empty array to clear properties
+
     const KeySystemData = {
       ...formData,
       installationDate: formData.installationDate || undefined,
       manufacturer: formData.manufacturer || undefined,
       managingSupplier: formData.managingSupplier || undefined,
       description: formData.description || undefined,
-      propertyIds: formData.propertyIds || undefined,
+      propertyIds: propertyIdsValue,
     }
 
     onSave(KeySystemData)
