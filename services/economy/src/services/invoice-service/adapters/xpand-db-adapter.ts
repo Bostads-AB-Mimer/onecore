@@ -163,7 +163,6 @@ const getRentalRowSpecificRule = async (
     })
 
     if (rowIndex === -1) {
-<<<<<<< HEAD
       logger.error(
         {
           rentArticle: row.rentArticle,
@@ -178,18 +177,6 @@ const getRentalRowSpecificRule = async (
       throw new Error(
         `Accounting for rent article ${row.rentArticle} on invoice ${row.invoiceNumber} could not be determined (multiple accounting rules found)`
       )
-=======
-      console.log(
-        'multiple results row specific for article',
-        row.rentArticle,
-        row.contractCode,
-        row.invoiceNumber,
-        row.invoiceRowText,
-        rowSpecificRuleResult
-      )
-
-      throw new Error('Stop!')
->>>>>>> 1e48dfd6 (EKO-41: Invoice events (#100) (#101))
     }
   }
 
