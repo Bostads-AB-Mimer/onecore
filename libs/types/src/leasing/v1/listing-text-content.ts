@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const ContentBlockTypeSchema = z.enum([
+  'preamble',
   'headline',
   'subtitle',
   'text',

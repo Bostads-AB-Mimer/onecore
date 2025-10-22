@@ -22,6 +22,8 @@ import { registerSchema } from '../../utils/openapi'
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('ListingTextContent', leasing.v1.ListingTextContentSchema)
+  registerSchema('CreateListingTextContentRequest', leasing.v1.CreateListingTextContentRequestSchema)
+  registerSchema('UpdateListingTextContentRequest', leasing.v1.UpdateListingTextContentRequestSchema)
 
   /**
    * @swagger
