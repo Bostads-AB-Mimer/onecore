@@ -33,7 +33,7 @@ export const KeySchema = z.object({
   id: z.string().uuid(),
   keyName: z.string(),
   keySequenceNumber: z.number().optional(),
-  flexNumber: z.number().optional(),
+  flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
@@ -107,7 +107,7 @@ export const KeyEventSchema = z.object({
 export const CreateKeyRequestSchema = z.object({
   keyName: z.string(),
   keySequenceNumber: z.number().optional(),
-  flexNumber: z.number().optional(),
+  flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
@@ -116,7 +116,7 @@ export const CreateKeyRequestSchema = z.object({
 export const UpdateKeyRequestSchema = z.object({
   keyName: z.string().optional(),
   keySequenceNumber: z.number().optional(),
-  flexNumber: z.number().optional(),
+  flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema.optional(),
   keySystemId: z.string().uuid().nullable().optional(),

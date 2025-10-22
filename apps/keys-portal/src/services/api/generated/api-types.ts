@@ -1624,7 +1624,7 @@ export interface components {
       id: string;
       keyName: string;
       keySequenceNumber?: number;
-      flexNumber?: number;
+      flexNumber?: number | null;
       rentalObjectCode?: string;
       /** @enum {string} */
       keyType: "LGH" | "PB" | "FS" | "HN";
@@ -1666,7 +1666,7 @@ export interface components {
           id: string;
           keyName: string;
           keySequenceNumber?: number;
-          flexNumber?: number;
+          flexNumber?: number | null;
           rentalObjectCode?: string;
           /** @enum {string} */
           keyType: "LGH" | "PB" | "FS" | "HN";
