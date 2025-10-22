@@ -44,3 +44,12 @@ export { StaircaseFactory as staircase } from './staircase'
 export { ResidenceSearchResultFactory as residenceSearchResult } from './residence-search-result'
 export { RoomFactory as room } from './room'
 export { FacilityDetailsFactory as facilityDetails } from './facility'
+
+// Keyfactories
+export { KeyFactory as key } from './key'
+export { KeyLoanFactory as keyLoan } from './key-loan'
+export { KeySystemFactory as keySystem } from './key-system'
+export { KeyNoteFactory as keyNote } from './key-note'
+export { ReceiptFactory as receipt } from './receipt'
+export { LogFactory as log } from './log'
+export { KeyEventFactory as keyEvent } from './key-event'

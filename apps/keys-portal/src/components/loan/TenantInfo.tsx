@@ -122,7 +122,9 @@ export function TenantInfo({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Ingen aktiv hyresgäst</p>
+                  <p className="text-muted-foreground">
+                    Inget aktivt hyresgäst
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -140,7 +142,7 @@ export function TenantInfo({
                         variant="outline"
                         className="ml-2 text-muted-foreground"
                       >
-                        Ingen aktiv kontrakt
+                        Inget aktivt kontrakt
                       </Badge>
                     )}
                 </CardTitle>
