@@ -136,7 +136,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Redirect to Keycloak login
    */
   router.get('(.*)/auth/login', async (ctx) => {
-    const redirectUri = `${ctx.protocol}://${ctx.host}/auth/callback`
+    const redirectUri =
+      typeof ctx.request.query?.redirectUri === 'string'
+        ? ctx.request.query?.redirectUri
+        : `${ctx.protocol}://${ctx.host}/auth/callback`
     const keycloakLoginUrl = `${auth.keycloakUrl}/protocol/openid-connect/auth?client_id=${auth.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid`
 
     ctx.redirect(keycloakLoginUrl)
