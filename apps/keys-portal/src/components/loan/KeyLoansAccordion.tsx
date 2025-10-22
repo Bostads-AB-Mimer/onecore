@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { KeyRound, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-import type { Lease, Receipt, ReceiptData, Key } from '@/services/types'
+import type { Lease, Receipt, ReceiptData } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 import { KeyLoanCard } from './KeyLoanCard'
@@ -13,7 +13,6 @@ interface KeyLoansAccordionProps {
   refreshKey?: number
   onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
   onReceiptUploaded?: () => void
-  preloadedKeys?: Key[]
 }
 
 export function KeyLoansAccordion({
@@ -21,22 +20,17 @@ export function KeyLoansAccordion({
   refreshKey,
   onUnsignedLoansChange,
   onReceiptUploaded,
-  preloadedKeys,
 }: KeyLoansAccordionProps) {
-  const {
-    activeLoans,
-    returnedLoans,
-    loading,
-    refresh,
-    fetchReturnedLoansReceipts,
-  } = useKeyLoans(lease, onUnsignedLoansChange, preloadedKeys)
+  const { activeLoans, returnedLoans, loading, refresh } = useKeyLoans(
+    lease,
+    onUnsignedLoansChange
+  )
 
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(
     null
   )
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showReturnedLoans, setShowReturnedLoans] = useState(false)
-  const [returnedLoading, setReturnedLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const pendingUploadReceiptIdRef = useRef<string | null>(null)
 
@@ -52,26 +46,10 @@ export function KeyLoansAccordion({
 
   /**
    * Handles toggling the returned loans accordion
-   * Lazy-loads receipts for returned loans on first expand
+   * Receipts are already loaded from the optimized endpoint
    */
-  const handleToggleReturnedLoans = async () => {
-    const willShow = !showReturnedLoans
-
-    // If we're about to show returned loans, check if we need to fetch receipts
-    if (willShow) {
-      // Check if any returned loan needs receipts
-      const needsReceipts = returnedLoans.some(
-        (loan) => loan.receipts.length === 0
-      )
-
-      if (needsReceipts) {
-        setReturnedLoading(true)
-        await fetchReturnedLoansReceipts()
-        setReturnedLoading(false)
-      }
-    }
-
-    setShowReturnedLoans(willShow)
+  const handleToggleReturnedLoans = () => {
+    setShowReturnedLoans(!showReturnedLoans)
   }
 
   /**
@@ -315,15 +293,9 @@ export function KeyLoansAccordion({
               size="sm"
               variant="outline"
               onClick={handleToggleReturnedLoans}
-              disabled={returnedLoading}
               className="w-full h-8 text-xs gap-2"
             >
-              {returnedLoading ? (
-                <>
-                  <Clock className="h-3.5 w-3.5 animate-spin" />
-                  Laddar kvittenser...
-                </>
-              ) : showReturnedLoans ? (
+              {showReturnedLoans ? (
                 <>
                   <ChevronUp className="h-3.5 w-3.5" />
                   Dölj återlämnade lån ({returnedLoans.length})

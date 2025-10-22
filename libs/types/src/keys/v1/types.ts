@@ -15,6 +15,7 @@ import {
   KeyEventSchema,
   ReceiptSchema,
   KeyWithLoanStatusSchema,
+  KeyLoanWithDetailsSchema,
   // Request schemas
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
@@ -48,6 +49,7 @@ export type KeyEventStatus = z.infer<typeof KeyEventStatusSchema>
 // Main entity types
 export type Key = z.infer<typeof KeySchema>
 export type KeyLoan = z.infer<typeof KeyLoanSchema>
+export type KeyLoanWithDetails = z.infer<typeof KeyLoanWithDetailsSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>
 export type Log = z.infer<typeof LogSchema>
 export type KeyEvent = z.infer<typeof KeyEventSchema>
