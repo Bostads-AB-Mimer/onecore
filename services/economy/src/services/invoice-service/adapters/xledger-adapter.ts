@@ -118,6 +118,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     797: 'Regular',
     3536: 'Regular',
   }
+  const debtCollectionRegex = /Sergel Inkasso (?<date>\d{8})/
 
   // Match "Sergel Inkasso" and optionally a space followed by an 8-digit date string
   const debtCollectionRegex = /Sergel Inkasso(?: (?<date>\d{8}))?/
