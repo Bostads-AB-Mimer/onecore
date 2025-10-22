@@ -31,6 +31,7 @@ interface ContentBlockEditorProps {
 }
 
 const blockTypeLabels: Record<ContentBlockType, string> = {
+  preamble: 'Ingress',
   headline: 'Rubrik',
   subtitle: 'Underrubrik',
   text: 'Text',
@@ -100,6 +101,7 @@ export const ContentBlockEditor = ({
                 onUpdate(block.id, 'type', e.target.value as ContentBlockType)
               }
             >
+              <MenuItem value="preamble">{blockTypeLabels.preamble}</MenuItem>
               <MenuItem value="headline">{blockTypeLabels.headline}</MenuItem>
               <MenuItem value="subtitle">{blockTypeLabels.subtitle}</MenuItem>
               <MenuItem value="text">{blockTypeLabels.text}</MenuItem>

@@ -86,7 +86,7 @@ export const routes = (router: KoaRouter) => {
    *                   properties:
    *                     type:
    *                       type: string
-   *                       enum: [headline, subtitle, text, bullet_list]
+   *                       enum: [preamble, headline, subtitle, text, bullet_list]
    *                     content:
    *                       type: string
    *     responses:
@@ -175,7 +175,7 @@ export const routes = (router: KoaRouter) => {
    *                   properties:
    *                     type:
    *                       type: string
-   *                       enum: [headline, subtitle, text, bullet_list]
+   *                       enum: [preamble, headline, subtitle, text, bullet_list]
    *                     content:
    *                       type: string
    *     responses:

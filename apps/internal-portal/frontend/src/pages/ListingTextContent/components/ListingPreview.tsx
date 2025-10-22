@@ -20,6 +20,18 @@ export const ListingPreview = ({
 }: ListingPreviewProps) => {
   const renderBlock = (block: ContentBlockBase, index: number) => {
     switch (block.type) {
+      case 'preamble':
+        return (
+          <Typography
+            key={index}
+            variant="body2"
+            paragraph
+            sx={{ marginBottom: 2, fontWeight: 'bold', lineHeight: 1.6 }}
+          >
+            {block.content || 'Ingress...'}
+          </Typography>
+        )
+
       case 'headline':
         return (
           <Typography
