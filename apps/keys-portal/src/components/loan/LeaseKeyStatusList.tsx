@@ -225,7 +225,8 @@ export function LeaseKeyStatusList({
   const refreshStatuses = async () => {
     // Refetch keys from backend to get updated key properties (e.g., disposed status)
     const keysData = await keyService.getKeysWithLoanStatus(
-      lease.rentalPropertyId
+      lease.rentalPropertyId,
+      true // Include latest event to show flex order status
     )
     setKeysWithLoanStatus(keysData)
     // Recompute statuses with events
