@@ -1,8 +1,7 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, registerSchema } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { registerSchema } from '../../utils/openapi'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 

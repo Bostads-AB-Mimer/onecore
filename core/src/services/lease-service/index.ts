@@ -11,7 +11,11 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
 } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  registerSchema,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -28,7 +32,6 @@ import { routes as listings } from './listings'
 import { routes as commentsRoutes } from './comments'
 import { routes as rentalObjectsRoutes } from './rental-objects'
 
-import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
   Lease,

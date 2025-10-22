@@ -4,8 +4,11 @@ import { z } from 'zod'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 
-import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { registerSchema } from '../../utils/openapi'
+import {
+  logger,
+  generateRouteMetadata,
+  registerSchema,
+} from '@onecore/utilities'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
 

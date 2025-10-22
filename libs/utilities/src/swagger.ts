@@ -1,15 +1,25 @@
 import KoaRouter from '@koa/router'
-import { z } from 'zod'
 import swaggerJSDoc from 'swagger-jsdoc'
+import { z } from 'zod'
 
 const schemaRegistry: Record<string, z.core.JSONSchema.BaseSchema> = {}
 
-export function registerSchema(name: string, schema: z.ZodObject) {
+export function registerSchema(name: string, schema: z.ZodType) {
   if (schemaRegistry[name]) {
     throw new Error(`Schema with name ${name} already exists`)
   }
 
-  schemaRegistry[name] = z.toJSONSchema(schema, { unrepresentable: 'any' })
+  schemaRegistry[name] = z.toJSONSchema(schema, {
+    unrepresentable: 'any',
+    target: 'openapi-3.0',
+    override: (ctx) => {
+      const def = ctx.zodSchema._zod.def
+      if (def.type === 'date') {
+        ctx.jsonSchema.type = 'string'
+        ctx.jsonSchema.format = 'date-time'
+      }
+    },
+  })
 }
 
 export function swaggerMiddleware({

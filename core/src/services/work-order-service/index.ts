@@ -5,10 +5,13 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import * as workOrderAdapter from '../../adapters/work-order-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as schemas from './schemas'
-import { registerSchema } from '../../utils/openapi'
 
 import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  registerSchema,
+} from '@onecore/utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
