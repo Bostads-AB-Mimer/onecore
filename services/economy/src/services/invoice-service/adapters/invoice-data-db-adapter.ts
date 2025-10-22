@@ -75,11 +75,15 @@ export const saveInvoiceRows = async (
     try {
       await db('invoice_data').insert(dbRow)
     } catch (error: any) {
-      logger.error({
-        error,
-        contractCode: dbRow['contractCode'],
-        article: dbRow['rentArticle'],
-      })
+      logger.error(
+        {
+          error,
+          contractCode: dbRow['contractCode'],
+          article: dbRow['rentArticle'],
+          invoiceNumber: dbRow['invoiceNumber'],
+        },
+        'Could not save invoice row to invoice db'
+      )
     }
   }
 

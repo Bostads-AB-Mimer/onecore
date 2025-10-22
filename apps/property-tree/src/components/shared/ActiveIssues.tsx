@@ -24,7 +24,7 @@ export function ActiveIssues({ issues }: ActiveIssuesProps) {
   if (!issues.length) return null
 
   return (
-    <Card title="Pågående ärenden" icon={AlertCircle}>
+    <Card title="Pågående ärenden">
       <div className="space-y-4">
         {issues.map((issue) => (
           <motion.div

@@ -199,12 +199,23 @@ const getRentalRowSpecificRule = async (
     .innerJoin('hyobj', 'hyrad.keyhyobj', 'hyobj.keyhyobj')
     .where('repsk.year', '2025')
     .andWhere('keyrektk', 'INTAKT')
+    .andWhere('hyrad.keycmuni', 'year')
     .andWhere('repst.name', 'Hyresrad')
     .andWhere('hyobj.hyobjben', row.contractCode)
     .andWhere('cmart.code', row.rentArticle)
+    .andWhere('hyrad.avitext', row.invoiceRowText)
 
   if (rowSpecificRuleResult.length > 1) {
-    console.log('multiple results', rowSpecificRuleResult)
+    console.log(
+      'multiple results row specific for article',
+      row.rentArticle,
+      row.contractCode,
+      row.invoiceNumber,
+      row.invoiceRowText,
+      rowSpecificRuleResult
+    )
+
+    throw new Error('Stop!')
   }
 
   if (rowSpecificRuleResult && rowSpecificRuleResult.length > 0) {
@@ -239,7 +250,7 @@ const getAdditionalColumns = async (
         row,
         'Could not find cost code and property for normal rent row'
       )
-      return null
+      return {}
     }
   } else if (row.company === '006') {
     specificRule = await getRentalRowSpecificRule(row)
@@ -541,28 +552,28 @@ export const getRentalInvoices = async (
   toDate: Date,
   companyId: string
 ) => {
-  /*return [
-    { invoice: '552509353737655' },
-    { invoice: '552509353737655K' },
-    { invoice: '552509353956750' },
-  ]*/
-  const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
+  const keycodes =
+    companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_INTHYRA', 'FADBT_HYRA']
 
-  console.log(keycode, companyId, fromDate, toDate)
+  console.log(keycodes, companyId, fromDate, toDate)
 
-  const rentalInvoiceNumbers = await db.raw(
+  const rentalInvoiceQuery = db.raw(
     'select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \
   		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
 	    inner join cmart on cmart.code = krfkr.code \
 	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
       inner Join repsk on cmart.keycmart = repsk.keycode \
       inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where (repsr.keycode = ?) \
+      where repsr.keycode IN (' +
+      keycodes.map((_) => "'" + _ + "'").join(',') +
+      ') \
       and cmcmp.code = ? \
       and krfkh.fromdate >= ? AND krfkh.fromdate < ? \
       and not invoice is null',
-    [keycode, companyId, fromDate, toDate]
+    [companyId, fromDate, toDate]
   )
+
+  const rentalInvoiceNumbers = await rentalInvoiceQuery
 
   return rentalInvoiceNumbers
 }
@@ -591,12 +602,14 @@ export const getInvoiceRows = async (
     return []
   }
 
-  const keycode = companyId === '001' ? 'FADBT_HYRA' : 'FADBT_INTHYRA'
+  const keycodes =
+    companyId === '001' ? ['FADBT_HYRA'] : [/*'FADBT_INTHYRA',*/ 'FADBT_HYRA']
   const invoiceRowsQuery = db.raw(
     `
     SELECT
       cmart.code AS rentArticle,
       cmart.utskrgrupp AS printGroup,
+      krfkr.printgroup AS printGroupLabel,
       krfkr.reduction AS rowReduction,
       krfkr.amount AS rowAmount,
       krfkr.vat AS rowVat,
@@ -616,15 +629,16 @@ export const getInvoiceRows = async (
     LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
     WHERE
       (
-        (repsr.keycode = ? AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
-        (repsr.keycode IS NULL AND keyrektk IS NULL AND repsk.year IS NULL)
+        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
+        (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
+        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = ?) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
       )
       AND cmcmp.code = ?
       AND (krfkh.type = 1 OR krfkh.type = 2)
       AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
     ORDER BY invoice ASC, krfkr.printsort ASC
     `,
-    [keycode, year, companyId]
+    [year, year, companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery
@@ -685,6 +699,7 @@ export const getInvoiceRows = async (
           fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
           toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
           printGroup: trim(invoiceRow['printGroup']),
+          printGroupLabel: trim(invoiceRow['printGroupLabel']),
           invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           rowType: sumColumns(invoiceRow['rowtype']),
         }

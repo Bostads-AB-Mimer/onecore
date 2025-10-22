@@ -1809,6 +1809,78 @@ export interface paths {
       };
     };
   };
+  "/work-orders/by-property-id/{propertyId}": {
+    /**
+     * Get work orders by property id
+     * @description Retrieves work orders based on the provided property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property id used to fetch work orders. */
+          propertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/work-orders/by-building-id/{buildingId}": {
+    /**
+     * Get work orders by building id
+     * @description Retrieves work orders based on the provided building id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The building id used to fetch work orders. */
+          buildingId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/work-orders/xpand/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id from xpand
@@ -1819,6 +1891,78 @@ export interface paths {
         path: {
           /** @description The rental property id used to fetch work orders. */
           rentalPropertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/work-orders/xpand/by-property-id/{propertyId}": {
+    /**
+     * Get work orders by property id from xpand
+     * @description Retrieves work orders based on the provided property id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property id used to fetch work orders. */
+          propertyId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/work-orders/xpand/by-building-id/{buildingId}": {
+    /**
+     * Get work orders by building id from xpand
+     * @description Retrieves work orders based on the provided building id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The building id used to fetch work orders. */
+          buildingId: string;
         };
       };
       responses: {
@@ -2127,6 +2271,84 @@ export interface paths {
             "application/json": {
               /** @example Failed to send email to {to}, status: {statusCode} */
               text?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/buildings": {
+    /**
+     * Get all buildings for a specific property
+     * @description Retrieves all buildings associated with a given property code.
+     * Returns detailed information about each building including its code, name,
+     * construction details, and associated property information.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The code of the property. */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the buildings. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/buildings/{id}": {
+    /**
+     * Get detailed information about a specific building
+     * @description Retrieves comprehensive information about a building using its unique building id.
+     * Returns details including construction year, renovation history, insurance information,
+     * and associated property data.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique id of the building */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved building information */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"];
+            };
+          };
+        };
+        /** @description Building not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Building not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
             };
           };
         };
@@ -2442,6 +2664,42 @@ export interface paths {
               error?: string;
             };
           };
+        };
+      };
+    };
+  };
+  "/residences/summary/by-building-code/{buildingCode}": {
+    /**
+     * Get residences by building code, optionally filtered by staircase code.
+     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
+        };
+        path: {
+          /** @description The building code of the building. */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the residences. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
         };
       };
     };
@@ -2882,26 +3140,37 @@ export interface components {
     Building: {
       id: string;
       code: string;
-      name: string;
+      name: string | null;
       buildingType: {
-        id: string;
-        code: string;
-        name: string;
+        id: string | null;
+        code: string | null;
+        name: string | null;
       };
       construction: {
-        constructionYear: number;
-        renovationYear: number;
+        constructionYear: number | null;
+        renovationYear: number | null;
         valueYear: number | null;
       };
       features: {
-        heating: string | null;
-        fireRating: string | null;
+        heating?: string | null;
+        fireRating?: string | null;
       };
       insurance: {
         class: string | null;
         value: number | null;
       };
+      quantityValues?: ({
+          id: string;
+          value: number;
+          name: string;
+          unitId: string | null;
+        })[];
       deleted: boolean;
+      property?: ({
+        name: string | null;
+        code: string;
+        id: string;
+      }) | null;
     };
     Company: {
       id: string;
@@ -2913,9 +3182,9 @@ export interface components {
     Property: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -2924,10 +3193,10 @@ export interface components {
       block: string;
       sector: string | null;
       propertyIndexNumber: string | null;
-      congregation: string;
+      congregation: string | null;
       builtStatus: number;
       separateAssessmentUnit: number;
-      consolidationNumber: string;
+      consolidationNumber: string | null;
       ownershipType: string;
       registrationDate: string | null;
       acquisitionDate: string | null;
@@ -3044,8 +3313,44 @@ export interface components {
       malarEnergiFacilityId: string | null;
       size: number | null;
     };
+    ResidenceSummary: {
+      id: string;
+      code: string;
+      name: string | null;
+      deleted: boolean;
+      rentalId: string;
+      buildingCode: string;
+      buildingName: string;
+      staircaseCode: string;
+      staircaseName: string;
+      elevator: number | null;
+      floor: string;
+      hygieneFacility: string | null;
+      wheelchairAccessible: number;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string | null;
+        /** Format: date-time */
+        toDate: string | null;
+      };
+      residenceType: {
+        code: string;
+        name: string;
+        roomCount: number;
+        kitchen: number;
+      };
+      quantityValues: ({
+          value: number;
+          quantityTypeId: string;
+          quantityType: {
+            name: string;
+            unitId: string | null;
+          };
+        })[];
+    };
     Staircase: {
       id: string;
+      buildingCode: string;
       code: string;
       name: string | null;
       features: {

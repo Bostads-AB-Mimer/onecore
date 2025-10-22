@@ -366,6 +366,139 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('GET /work-orders/by-property-id/:propertyId', () => {
+    const propertyId = '123'
+
+    it('should return work orders by property id', async () => {
+      const getWorkOrdersByPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByPropertyId')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            {
+              AccessCaption: 'accesscaption',
+              Caption: 'caption',
+              Code: 'code',
+              ContactCode: 'contactCode',
+              Description: 'description',
+              DetailsCaption: 'detailsCaption',
+              ExternalResource: false,
+              Id: 'id',
+              LastChanged: new Date().toISOString(),
+              Priority: 'priority',
+              Registered: new Date().toISOString(),
+              RentalObjectCode: 'rentalObjectCode',
+              Status: 'status',
+              WorkOrderRows: [
+                {
+                  Description: 'description',
+                  LocationCode: 'locationCode',
+                  EquipmentCode: 'equipmentCode',
+                },
+              ],
+              UseMasterKey: false,
+              Messages: [],
+              DueDate: null,
+              Url: 'http://example.com',
+            },
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        `/work-orders/by-property-id/${propertyId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(1)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(1)
+      expect(getWorkOrdersByPropertyIdSpy).toHaveBeenCalledWith(propertyId)
+    })
+
+    it('should return 500 if error', async () => {
+      const getWorkOrdersByPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByPropertyId')
+        .mockRejectedValue(new Error('error'))
+
+      const res = await request(app.callback()).get(
+        `/work-orders/by-property-id/${propertyId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getWorkOrdersByPropertyIdSpy).toHaveBeenCalledWith(propertyId)
+    })
+  })
+
+  describe('GET /work-orders/xpand/by-property-id/:propertyId', () => {
+    const propertyId = '123'
+
+    it('should return work orders by propertyId', async () => {
+      const getXpandWorkOrdersByPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getXpandWorkOrdersByPropertyId')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            {
+              AccessCaption: 'test',
+              Caption: 'test',
+              Code: 'test',
+              ContactCode: 'test',
+              Id: '1',
+              LastChanged: new Date().toISOString(),
+              Priority: 'test',
+              Registered: new Date().toISOString(),
+              DueDate: null,
+              RentalObjectCode: 'test',
+              Status: 'test',
+            },
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-property-id/${propertyId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(1)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(1)
+      expect(getXpandWorkOrdersByPropertyIdSpy).toHaveBeenCalledWith(
+        propertyId,
+        { limit: undefined, skip: undefined, sortAscending: undefined }
+      )
+    })
+
+    it('should return 400 on invalid query params', async () => {
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-property-id/${propertyId}?skip=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if error', async () => {
+      const getXpandWorkOrdersByPropertyIdSpy = jest
+        .spyOn(workOrderAdapter, 'getXpandWorkOrdersByPropertyId')
+        .mockRejectedValue(new Error('error'))
+
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-property-id/${propertyId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getXpandWorkOrdersByPropertyIdSpy).toHaveBeenCalledWith(
+        propertyId,
+        { limit: undefined, skip: undefined, sortAscending: undefined }
+      )
+    })
+  })
+
   describe('POST /work-orders', () => {
     const rentalPropertyInfoMock = factory.rentalPropertyInfo.build()
     const tenantMock = factory.tenant.build()
@@ -630,6 +763,139 @@ describe('work-order-service index', () => {
       expect(resMissingSubject.status).toBe(400)
       expect(resMissingSubject.body.reason).toBeDefined()
       expect(sendWorkOrderEmailSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /work-orders/by-building-id/:buildingId', () => {
+    const buildingId = '789-012'
+
+    it('should return work orders by building id', async () => {
+      const getWorkOrdersByBuildingIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByBuildingId')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            {
+              AccessCaption: 'accesscaption',
+              Caption: 'caption',
+              Code: 'code',
+              ContactCode: 'contactCode',
+              Description: 'description',
+              DetailsCaption: 'detailsCaption',
+              ExternalResource: false,
+              Id: 'id',
+              LastChanged: new Date().toISOString(),
+              Priority: 'priority',
+              Registered: new Date().toISOString(),
+              RentalObjectCode: 'rentalObjectCode',
+              Status: 'status',
+              WorkOrderRows: [
+                {
+                  Description: 'description',
+                  LocationCode: 'locationCode',
+                  EquipmentCode: 'equipmentCode',
+                },
+              ],
+              UseMasterKey: false,
+              Messages: [],
+              DueDate: null,
+              Url: 'http://example.com',
+            },
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        `/work-orders/by-building-id/${buildingId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(1)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(1)
+      expect(getWorkOrdersByBuildingIdSpy).toHaveBeenCalledWith(buildingId)
+    })
+
+    it('should return 500 if error', async () => {
+      const getWorkOrdersByBuildingIdSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByBuildingId')
+        .mockRejectedValue(new Error('error'))
+
+      const res = await request(app.callback()).get(
+        `/work-orders/by-building-id/${buildingId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getWorkOrdersByBuildingIdSpy).toHaveBeenCalledWith(buildingId)
+    })
+  })
+
+  describe('GET /work-orders/xpand/by-building-id/:buildingId', () => {
+    const buildingId = '789-012'
+
+    it('should return work orders by buildingId', async () => {
+      const getXpandWorkOrdersByBuildingIdSpy = jest
+        .spyOn(workOrderAdapter, 'getXpandWorkOrdersByBuildingId')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            {
+              AccessCaption: 'test',
+              Caption: 'test',
+              Code: 'test',
+              ContactCode: 'test',
+              Id: '1',
+              LastChanged: new Date().toISOString(),
+              Priority: 'test',
+              Registered: new Date().toISOString(),
+              DueDate: null,
+              RentalObjectCode: 'test',
+              Status: 'test',
+            },
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-building-id/${buildingId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('totalCount')
+      expect(res.body.content.totalCount).toBe(1)
+      expect(res.body.content).toHaveProperty('workOrders')
+      expect(res.body.content.workOrders).toHaveLength(1)
+      expect(getXpandWorkOrdersByBuildingIdSpy).toHaveBeenCalledWith(
+        buildingId,
+        { limit: undefined, skip: undefined, sortAscending: undefined }
+      )
+    })
+
+    it('should return 400 on invalid query params', async () => {
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-building-id/${buildingId}?limit=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if error', async () => {
+      const getXpandWorkOrdersByBuildingIdSpy = jest
+        .spyOn(workOrderAdapter, 'getXpandWorkOrdersByBuildingId')
+        .mockRejectedValue(new Error('error'))
+
+      const res = await request(app.callback()).get(
+        `/work-orders/xpand/by-building-id/${buildingId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getXpandWorkOrdersByBuildingIdSpy).toHaveBeenCalledWith(
+        buildingId,
+        { limit: undefined, skip: undefined, sortAscending: undefined }
+      )
     })
   })
 })

@@ -104,9 +104,25 @@ export const getDebtCollectionFiles = async (client: SftpClient) => {
   ]
 }
 
-export const readFile = async (client: SftpClient, filePath: string) => {
+export const readFile = async (
+  client: SftpClient,
+  filePath: string,
+  encoding?:
+    | 'ascii'
+    | 'utf8'
+    | 'utf-8'
+    | 'utf16le'
+    | 'utf-16le'
+    | 'ucs2'
+    | 'ucs-2'
+    | 'base64'
+    | 'base64url'
+    | 'latin1'
+    | 'binary'
+    | 'hex'
+) => {
   const contents = await client.get(filePath)
-  return contents.toString()
+  return contents.toString(encoding)
 }
 
 export const markCsvFileAsCompleted = async (
@@ -154,7 +170,8 @@ export const processDebtCollectionFiles = async () => {
     for (const debtCollectionFile of debtCollectionFiles) {
       const fileContents = await readFile(
         importClient,
-        path.join(debtCollectionFile.directory, debtCollectionFile.fileName)
+        path.join(debtCollectionFile.directory, debtCollectionFile.fileName),
+        'latin1'
       )
 
       const response = await enrichers[debtCollectionFile.type](fileContents)

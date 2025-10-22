@@ -83,6 +83,42 @@ export interface paths {
       };
     };
   };
+  "/residences/summary/by-building-code/{buildingCode}": {
+    /**
+     * Get residences by building code, optionally filtered by staircase code.
+     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
+        };
+        path: {
+          /** @description The building code of the building. */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the residences. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences
@@ -908,6 +944,12 @@ export interface components {
         class: string | null;
         value: number | null;
       };
+      quantityValues?: ({
+          id: string;
+          value: number;
+          name: string;
+          unitId: string | null;
+        })[];
       deleted: boolean;
       property?: ({
         name: string | null;
@@ -948,9 +990,9 @@ export interface components {
     Property: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -960,10 +1002,10 @@ export interface components {
       block: string;
       sector: string | null;
       propertyIndexNumber: string | null;
-      congregation: string;
+      congregation: string | null;
       builtStatus: number;
       separateAssessmentUnit: number;
-      consolidationNumber: string;
+      consolidationNumber: string | null;
       ownershipType: string;
       registrationDate: string | null;
       acquisitionDate: string | null;
@@ -986,9 +1028,9 @@ export interface components {
     PropertyDetails: {
       id: string;
       propertyObjectId: string;
-      marketAreaId: string;
-      districtId: string;
-      propertyDesignationId: string;
+      marketAreaId: string | null;
+      districtId: string | null;
+      propertyDesignationId: string | null;
       valueAreaId: string | null;
       code: string;
       designation: string;
@@ -998,11 +1040,12 @@ export interface components {
       block: string;
       sector: string | null;
       propertyIndexNumber: string | null;
-      congregation: string;
+      congregation: string | null;
       builtStatus: number;
       separateAssessmentUnit: number;
-      consolidationNumber: string;
+      consolidationNumber: string | null;
       ownershipType: string;
+      /** Format: date-time */
       registrationDate: string | null;
       acquisitionDate: string | null;
       isLeasehold: number;
@@ -1020,6 +1063,16 @@ export interface components {
       /** Format: date-time */
       toDate: string;
       timestamp: string;
+      marketArea: {
+        id: string;
+        code: string;
+        name: string;
+      } | null;
+      district: {
+        id: string;
+        code: string;
+        caption: string;
+      } | null;
       propertyObject: {
         id: string;
         deleteMark: number;
@@ -1036,9 +1089,15 @@ export interface components {
         energyIndex: string | null;
         heatingNature: number;
       };
+      propertyValues: ({
+          value: number | null;
+          name: string;
+          unitId: string;
+        })[];
     };
     Staircase: {
       id: string;
+      buildingCode: string;
       code: string;
       name: string | null;
       features: {
@@ -1180,6 +1239,41 @@ export interface components {
         code: string | null;
       };
       areaSize: number | null;
+    };
+    ResidenceSummary: {
+      id: string;
+      code: string;
+      name: string | null;
+      deleted: boolean;
+      rentalId: string;
+      buildingCode: string;
+      buildingName: string;
+      staircaseCode: string;
+      staircaseName: string;
+      elevator: number | null;
+      floor: string;
+      hygieneFacility: string | null;
+      wheelchairAccessible: number;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string | null;
+        /** Format: date-time */
+        toDate: string | null;
+      };
+      residenceType: {
+        code: string;
+        name: string;
+        roomCount: number;
+        kitchen: number;
+      };
+      quantityValues: ({
+          value: number;
+          quantityTypeId: string;
+          quantityType: {
+            name: string;
+            unitId: string | null;
+          };
+        })[];
     };
     GetResidenceByRentalIdResponse: {
       content: {

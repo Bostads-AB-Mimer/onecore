@@ -12,11 +12,11 @@ app.use(cors())
 app.use(koaBody({ multipart: true, patchKoa: true }))
 
 app.on('error', (err) => {
-  logger.error(err)
+  logger.error(err, 'Uncaught error')
 })
 
 app.on('timeout', (err) => {
-  logger.error(err)
+  logger.error(err, 'Timeout')
 })
 
 app.use(loggerMiddlewares.pre)

@@ -448,6 +448,212 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /work-orders/by-property-id/{propertyId}:
+   *   get:
+   *     summary: Get work orders by property id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided property id.
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/by-property-id/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await workOrderAdapter.getWorkOrdersByPropertyId(
+        ctx.params.propertyId
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            totalCount: result.data.length,
+            workOrders: result.data.map(
+              (v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                url: v.Url,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+              })
+            ),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting workOrders by property id'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting workOrders by property id')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /work-orders/by-building-id/{buildingId}:
+   *   get:
+   *     summary: Get work orders by building id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided building id.
+   *     parameters:
+   *       - in: path
+   *         name: buildingId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/by-building-id/:buildingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await workOrderAdapter.getWorkOrdersByBuildingId(
+        ctx.params.buildingId
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            totalCount: result.data.length,
+            workOrders: result.data.map(
+              (v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                url: v.Url,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+              })
+            ),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting workOrders by building id'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting workOrders by building id')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
    * /work-orders/xpand/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get work orders by rental property id from xpand
@@ -561,6 +767,224 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /work-orders/xpand/by-property-id/{propertyId}:
+   *   get:
+   *     summary: Get work orders by property id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided property id.
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/xpand/by-property-id/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedParams.data
+
+    try {
+      const result = await workOrderAdapter.getXpandWorkOrdersByPropertyId(
+        ctx.params.propertyId,
+        { skip, limit, sortAscending }
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            totalCount: result.data.length,
+            workOrders: result.data.map(
+              (v): schemas.CoreXpandWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+              })
+            ),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting workOrders by property id from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting workOrders by property id from xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /work-orders/xpand/by-building-id/{buildingId}:
+   *   get:
+   *     summary: Get work orders by building id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided building id.
+   *     parameters:
+   *       - in: path
+   *         name: buildingId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building id used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/xpand/by-building-id/:buildingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedParams.data
+
+    try {
+      const result = await workOrderAdapter.getXpandWorkOrdersByBuildingId(
+        ctx.params.buildingId,
+        { skip, limit, sortAscending }
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            totalCount: result.data.length,
+            workOrders: result.data.map(
+              (v): schemas.CoreXpandWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+              })
+            ),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting workOrders by building id from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting workOrders by building id from xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
 
   /**
    * @swagger

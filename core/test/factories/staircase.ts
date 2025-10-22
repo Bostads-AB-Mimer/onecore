@@ -5,6 +5,7 @@ export const StaircaseFactory = Factory.define<
   components['schemas']['Staircase']
 >(({ sequence }) => ({
   id: `_0J415BS4${sequence}`,
+  buildingCode: `1234567${sequence}`,
   code: `010${sequence}`,
   name: 'Adressgatan 123',
   deleted: false,

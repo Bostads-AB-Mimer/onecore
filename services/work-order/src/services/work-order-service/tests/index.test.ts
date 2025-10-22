@@ -278,4 +278,160 @@ describe('work-order-service index', () => {
       expect(closeWorkOrderSpy).toHaveBeenCalled()
     })
   })
+
+  describe('GET /workOrders/propertyId/{propertyId}', () => {
+    const propertyId = '123-456'
+    const workOrderMock = factory.workOrder.buildList(4)
+
+    beforeEach(() => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrdersByPropertyId')
+        .mockResolvedValue(workOrderMock)
+    })
+
+    it('should return work orders for the given property id', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/propertyId/${propertyId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(workOrderMock)
+      )
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrdersByPropertyId')
+        .mockRejectedValue(new Error('Internal server error'))
+
+      const res = await request(app.callback()).get(
+        `/workOrders/propertyId/${propertyId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('GET /workOrders/xpand/propertyId/{propertyId}', () => {
+    const propertyId = '123-456'
+    const xpandWorkOrdersMock = factory.xpandWorkOrder.buildList(4)
+
+    it('should return work orders for the given property id', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByPropertyId')
+        .mockResolvedValue({ ok: true, data: xpandWorkOrdersMock })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/propertyId/${propertyId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(xpandWorkOrdersMock)
+      )
+    })
+
+    it('should return 400 on invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/propertyId/${propertyId}?skip=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByPropertyId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/propertyId/${propertyId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'Failed to fetch work orders from Xpand: unknown'
+      )
+    })
+  })
+
+  describe('GET /workOrders/buildingId/{buildingId}', () => {
+    const buildingId = '789-012'
+    const workOrderMock = factory.workOrder.buildList(4)
+
+    beforeEach(() => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrdersByBuildingId')
+        .mockResolvedValue(workOrderMock)
+    })
+
+    it('should return work orders for the given building id', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/buildingId/${buildingId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(workOrderMock)
+      )
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrdersByBuildingId')
+        .mockRejectedValue(new Error('Internal server error'))
+
+      const res = await request(app.callback()).get(
+        `/workOrders/buildingId/${buildingId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('GET /workOrders/xpand/buildingId/{buildingId}', () => {
+    const buildingId = '789-012'
+    const xpandWorkOrdersMock = factory.xpandWorkOrder.buildList(4)
+
+    it('should return work orders for the given building id', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByBuildingId')
+        .mockResolvedValue({ ok: true, data: xpandWorkOrdersMock })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/buildingId/${buildingId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(xpandWorkOrdersMock)
+      )
+    })
+
+    it('should return 400 on invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/buildingId/${buildingId}?limit=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByBuildingId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/buildingId/${buildingId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'Failed to fetch work orders from Xpand: unknown'
+      )
+    })
+  })
 })

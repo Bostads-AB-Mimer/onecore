@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building, DoorClosed, Home, Users, ArrowRight } from 'lucide-react'
-import { buildingService } from '../../services/api'
+import { buildingService } from '../../services/api/core'
 import {
   propertyService,
   residenceService,
@@ -136,8 +136,8 @@ export function BuildingView() {
       >
         <div className="lg:col-span-2">
           <div className="space-y-6">
-            <Card title="Uppgångar" icon={DoorClosed}>
-              <Grid cols={2}>
+            <Card title="Uppgångar">
+              <Grid cols={2} className="p-4">
                 {staircasesQuery.data?.map((staircase) => (
                   <motion.div
                     key={staircase.id}
@@ -166,7 +166,7 @@ export function BuildingView() {
               </Grid>
             </Card>
 
-            <Card title="Lägenheter" icon={Home}>
+            <Card title="Lägenheter" className="p-4">
               <Grid cols={2}>
                 {residencesQuery.data?.map((residence) => (
                   <motion.div

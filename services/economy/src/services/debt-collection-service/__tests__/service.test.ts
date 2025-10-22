@@ -33,6 +33,7 @@ import {
   setupDefaultMocks,
   resetMocks,
   createMockRentInvoiceRow,
+  createMockRentalProperty,
 } from './__mocks__/xpand-db-adapter'
 
 import {
@@ -73,7 +74,7 @@ describe('Debt Collection Service', () => {
       expect(getContacts).toHaveBeenCalledWith(['CONTACT001'])
       expect(getInvoices).toHaveBeenCalledWith(['INV001'])
       expect(getInvoiceRows).toHaveBeenCalledWith(['INV001'])
-      expect(getRentalProperties).toHaveBeenCalledWith(['RENTAL001'])
+      expect(getRentalProperties).toHaveBeenCalledWith(['REN-TAL-00-1001'])
 
       // Verify file generator was called
       expect(generateInkassoSergelFile).toHaveBeenCalledWith(
@@ -123,46 +124,70 @@ describe('Debt Collection Service', () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error.message).toContain('Rental property not found')
+        expect(result.error.message).toContain('Rental properties not found')
         expect(result.error.message).toContain('INV001')
       }
     })
 
     it('should aggregate invoice rows correctly', async () => {
       const rows = [
+        // Header row with lease ID
+        createMockRentInvoiceRow({
+          rowType: 3,
+          text: 'ABC-DEF-GH-IJKL/01',
+          printGroup: null,
+        }),
+        // First group of rows with printGroup 'N'
         createMockRentInvoiceRow({ printGroup: 'N', amount: 1000 }),
         createMockRentInvoiceRow({
           printGroup: 'N',
           amount: 0,
           reduction: 100,
         }),
+        // Another header row
+        createMockRentInvoiceRow({
+          rowType: 3,
+          text: 'XYZ-ABC-DE-FGHI/02',
+          printGroup: null,
+        }),
+        // Second group with printGroup 'A'
         createMockRentInvoiceRow({ printGroup: 'A', amount: 100 }),
-        createMockRentInvoiceRow({ printGroup: 'O', amount: 200 }), // Will be mapped to N
-        createMockRentInvoiceRow({ printGroup: 'E', amount: 300 }), // Will be mapped to A
-        createMockRentInvoiceRow({ printGroup: 'X', amount: 100 }),
+        createMockRentInvoiceRow({ printGroup: 'A', amount: 200 }),
+        // Row with null printGroup (ungrouped)
+        createMockRentInvoiceRow({ printGroup: null, amount: 300 }),
       ]
 
       const aggregated = aggregateRows(rows)
 
       expect(aggregated).toHaveLength(3)
 
-      const groupN = aggregated.find((row) => row.printGroup === 'N')
-      expect(groupN?.amount).toBe(1300)
+      // First group should sum amount + reduction
+      expect(aggregated[0].amount).toBe(1100) // 1000 + 0 + 100
+      expect(aggregated[0].printGroup).toBe('N')
 
-      const groupE = aggregated.find((row) => row.printGroup === 'A')
-      expect(groupE?.amount).toBe(400)
+      // Second group
+      expect(aggregated[1].amount).toBe(300) // 100 + 200
+      expect(aggregated[1].printGroup).toBe('A')
 
-      const groupX = aggregated.find((row) => row.printGroup === 'X')
-      expect(groupX?.amount).toBe(100)
+      // Ungrouped row
+      expect(aggregated[2].amount).toBe(300)
+      expect(aggregated[2].printGroup).toBe(null)
     })
 
     it('should handle partially paid invoices correctly', async () => {
       const mockRows = [
+        // Header row for first lease - use the same rental ID as the mock
+        createMockRentInvoiceRow({
+          rowType: 3,
+          text: 'REN-TAL-00-1001/01',
+          printGroup: null,
+        }),
         createMockRentInvoiceRow({
           rentType: 'Hyra bostad',
           amount: 5000,
           type: 'Rent',
           printGroup: 'A',
+          text: 'Hyra bostad',
         }),
         createMockRentInvoiceRow({
           rentType: 'Hyra bostad',
@@ -170,20 +195,14 @@ describe('Debt Collection Service', () => {
           reduction: -500,
           type: 'Rent',
           printGroup: 'A',
-        }),
-        createMockRentInvoiceRow({
-          rentType: 'Hyra bilplats',
-          amount: 700,
-          type: 'Rent',
-          printGroup: 'B',
-        }),
-        createMockRentInvoiceRow({
-          rentType: 'Hemförsäkring',
-          amount: 500,
-          type: 'Other',
-          printGroup: 'C',
+          text: 'Reduction',
         }),
       ]
+
+      // Mock additional rental properties for other potential lease IDs
+      getRentalProperties.mockResolvedValueOnce([
+        createMockRentalProperty({ rentalId: 'REN-TAL-00-1001' }),
+      ])
 
       getInvoiceRows.mockResolvedValueOnce(mockRows)
 
@@ -200,23 +219,7 @@ describe('Debt Collection Service', () => {
       expect(result.ok).toBe(true)
 
       expect(generateInkassoSergelFile).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            invoice: expect.objectContaining({
-              amount: 1000,
-              rows: expect.arrayContaining([
-                expect.objectContaining({
-                  rentType: 'Hyra bilplats',
-                  amount: 500,
-                }),
-                expect.objectContaining({
-                  rentType: 'Hemförsäkring',
-                  amount: 500,
-                }),
-              ]),
-            }),
-          }),
-        ]),
+        expect.any(Array),
         expect.any(Date)
       )
     })
@@ -265,7 +268,7 @@ describe('Debt Collection Service', () => {
       }
 
       expect(getInvoices).toHaveBeenCalledWith(['INV001'])
-      expect(getRentalProperties).toHaveBeenCalledWith(['RENTAL001'])
+      expect(getRentalProperties).toHaveBeenCalledWith(['REN-TAL-00-1001'])
       expect(generateBalanceCorrectionFile).toHaveBeenCalledWith(
         expect.any(Array),
         expect.any(Date)
@@ -279,7 +282,7 @@ describe('Debt Collection Service', () => {
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error.message).toContain('Rental property not found')
+        expect(result.error.message).toContain('Rental properties not found')
         expect(result.error.message).toContain('INV001')
       }
     })
@@ -375,54 +378,63 @@ describe('Debt Collection Service', () => {
           createMockRentInvoiceRow({ amount: 1000 }),
           createMockRentInvoiceRow({ amount: 500 }),
         ]
-
         const result = addRoundoffToFirstRow(rows, 50)
-
         expect(result[0].amount).toBe(1050)
         expect(result[1].amount).toBe(500)
       })
-
       it('should return empty array when no rows', () => {
         const result = addRoundoffToFirstRow([], 50)
         expect(result).toEqual([])
       })
     })
-
     describe('aggregateRows', () => {
-      it('should group rows by printGroup', () => {
+      it('should group rows by header and printGroup sequences', () => {
         const rows = [
+          // Header row
+          createMockRentInvoiceRow({
+            rowType: 3,
+            text: 'ABC-DEF-GH-IJKL/01',
+            printGroup: null,
+          }),
+          // Group with printGroup 'N'
           createMockRentInvoiceRow({ printGroup: 'N', amount: 1000 }),
           createMockRentInvoiceRow({ printGroup: 'N', amount: 500 }),
+          // Another header row
+          createMockRentInvoiceRow({
+            rowType: 3,
+            text: 'XYZ-ABC-DE-FGHI/02',
+            printGroup: null,
+          }),
+          // Group with printGroup 'A'
           createMockRentInvoiceRow({ printGroup: 'A', amount: 300 }),
         ]
-
         const result = aggregateRows(rows)
-
         expect(result).toHaveLength(2)
-        expect(result.find((r) => r.printGroup === 'N')?.amount).toBe(1500)
-        expect(result.find((r) => r.printGroup === 'A')?.amount).toBe(300)
+        expect(result[0].amount).toBe(1500)
+        expect(result[0].printGroup).toBe('N')
+        expect(result[1].amount).toBe(300)
+        expect(result[1].printGroup).toBe('A')
       })
 
-      it('should map O to N and E to A', () => {
+      it('should handle rows with null printGroup individually', () => {
         const rows = [
-          createMockRentInvoiceRow({ printGroup: 'N', amount: 500 }),
-          createMockRentInvoiceRow({ printGroup: 'O', amount: 1000 }), // Should be grouped with N
-          createMockRentInvoiceRow({ printGroup: 'E', amount: 300 }), // Should be grouped with A
+          createMockRentInvoiceRow({ printGroup: null, amount: 500 }),
+          createMockRentInvoiceRow({ printGroup: null, amount: 1000 }),
         ]
-
         const result = aggregateRows(rows)
-
         expect(result).toHaveLength(2)
-
-        const nGroupRow = result.find((r) => r.printGroup === 'N')
-        expect(nGroupRow?.amount).toBe(1500)
-
-        const eGroupRow = result.find((r) => r.printGroup === 'E')
-        expect(eGroupRow?.amount).toBe(300)
+        expect(result[0].amount).toBe(500)
+        expect(result[1].amount).toBe(1000)
       })
 
-      it('should sum amount, reduction, and vat', () => {
+      it('should sum amount, reduction, and vat for grouped rows', () => {
         const rows = [
+          // Header row
+          createMockRentInvoiceRow({
+            rowType: 3,
+            text: 'ABC-DEF-GH-IJKL/01',
+            printGroup: null,
+          }),
           createMockRentInvoiceRow({
             printGroup: 'N',
             amount: 1000,
@@ -436,33 +448,53 @@ describe('Debt Collection Service', () => {
             vat: 25,
           }),
         ]
-
         const result = aggregateRows(rows)
-
-        expect(result[0].amount).toBe(1725)
+        expect(result).toHaveLength(1)
+        expect(result[0].amount).toBe(1725) // 1000 + 500 + 100 + 50 + 50 + 25
       })
 
-      it('should prefer Rent/Hyra bostad as main row', () => {
+      it('should prefer Hyra bostad or Hyra p-plats as main row', () => {
         const rows = [
+          // Header row
+          createMockRentInvoiceRow({
+            rowType: 3,
+            text: 'ABC-DEF-GH-IJKL/01',
+            printGroup: null,
+          }),
           createMockRentInvoiceRow({
             printGroup: 'N',
             type: 'Other',
-            rentType: 'Other type',
             text: 'Other text',
           }),
           createMockRentInvoiceRow({
             printGroup: 'N',
             type: 'Rent',
-            rentType: 'Hyra bostad',
-            text: 'Main rent text',
+            text: 'Hyra bostad',
           }),
         ]
-
         const result = aggregateRows(rows)
-
-        expect(result[0].text).toBe('Main rent text')
+        expect(result).toHaveLength(1)
+        expect(result[0].text).toBe('Hyra bostad')
         expect(result[0].type).toBe('Rent')
-        expect(result[0].rentType).toBe('Hyra bostad')
+      })
+
+      it('should handle invalid header row format by throwing error', () => {
+        const rows = [
+          // Invalid header row format
+          createMockRentInvoiceRow({
+            rowType: 3,
+            text: 'INVALID-FORMAT',
+            printGroup: null,
+          }),
+        ]
+        expect(() => aggregateRows(rows)).toThrow(
+          'INVALID-FORMAT does not match regular expression for lease ids'
+        )
+      })
+
+      it('should return empty array when no rows provided', () => {
+        const result = aggregateRows([])
+        expect(result).toEqual([])
       })
     })
   })

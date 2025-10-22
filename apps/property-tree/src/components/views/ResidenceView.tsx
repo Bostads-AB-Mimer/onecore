@@ -4,12 +4,12 @@ import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
 import { residenceService } from '@/services/api/core'
-import { ResidenceWorkOrders } from '../shared/ResidenceWorkOrders'
 import { ResidenceBasicInfo } from '../residence/ResidenceBasicInfo'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
 import { TenantInformation } from '../residence/TenantInformation'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 
 export function ResidenceView() {
   const { residenceId } = useParams()
@@ -30,7 +30,7 @@ export function ResidenceView() {
 
   if (error || !residence) {
     return (
-      <div className="p-8 text-center">
+      <div className="py-4 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Bostad hittades inte
         </h2>
@@ -39,7 +39,7 @@ export function ResidenceView() {
   }
 
   return (
-    <div className="p-8 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="py-4 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-3 space-y-6">
         <ResidenceBasicInfo residence={residence} />
       </div>
@@ -88,15 +88,12 @@ export function ResidenceView() {
             </Card>
           </TabsContent>
           <TabsContent value="workorders">
-            <Card>
-              <CardContent className="p-4">
-                {residence.propertyObject.rentalId && (
-                  <ResidenceWorkOrders
-                    rentalId={residence.propertyObject.rentalId}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            {residence.propertyObject.rentalId && (
+              <WorkOrdersManagement
+                contextType="residence"
+                id={residence.propertyObject.rentalId}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -106,7 +103,7 @@ export function ResidenceView() {
 
 function LoadingSkeleton() {
   return (
-    <div className="p-8 animate-in">
+    <div className="py-4 animate-in">
       <div className="mb-8">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-2" />
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />

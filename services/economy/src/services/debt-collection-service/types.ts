@@ -56,6 +56,8 @@ export type RentInvoiceRow = {
   invoiceNumber: string
   text: string
   rentType: string | null
+  code: string | null
+  rowType: number
   amount: number
   reduction: number
   vat: number
@@ -106,7 +108,7 @@ export type Invoice = {
   reference?: string
   fromDate?: Date
   toDate?: Date
-  rentalProperty?: RentalProperty
+  rentalProperties: RentalProperty[]
   lastDebitDate?: Date
   careOf?: string
 }

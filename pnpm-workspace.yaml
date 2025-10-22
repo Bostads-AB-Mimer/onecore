@@ -5,5 +5,5 @@ packages:
  - libs/*
  - services/*
 
-minimumReleaseAge: 20160
+minimumReleaseAge: 5760
 injectWorkspacePackages: true
