@@ -16,22 +16,30 @@ export const sendEmail = async (
   body: string,
   attachments?: any[]
 ) => {
-  logger.info({ to: recipient, subject: subject }, 'Sending email')
-
   try {
     const recipients = recipient.split(';')
 
     for (const to of recipients) {
-      const response = await infobip.channels.email.send({
+      const infobipOptions = {
         to,
         from: 'Bostads Mimer AB <noreply@mimer.nu>',
         subject: subject,
         text: body,
         attachment: attachments,
-      })
+      }
+
+      if (!attachments) {
+        delete infobipOptions.attachment
+      }
+
+      const response = await infobip.channels.email.send(infobipOptions)
       if (response.status === 200) {
-        logger.info({ to, subject: subject }, 'Sending email complete')
+        logger.info({ to, subject }, 'Sending email complete')
       } else {
+        logger.error(
+          { to, subject, body: response.body },
+          'Error sending email'
+        )
         throw new Error(response.body)
       }
     }

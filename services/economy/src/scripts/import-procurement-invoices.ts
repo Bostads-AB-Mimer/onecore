@@ -2,11 +2,11 @@ import { logger } from '@onecore/utilities'
 import config from '../common/config'
 import fs from 'fs/promises'
 import path from 'path'
-import { importNewFiles } from '../services/procurement-invoice-service/service'
 import {
+  importNewFiles,
   closeDatabases,
-  uploadInvoiceFile,
-} from '../services/invoice-service/service'
+} from '../services/procurement-invoice-service/service'
+import { uploadInvoiceFile } from '../services/invoice-service/service'
 import { sendEmail } from '../common/adapters/infobip-adapter'
 import { markProcurementFilesAsImported } from '../services/procurement-invoice-service/adapters/procurement-file-adapter'
 
@@ -32,7 +32,7 @@ const importProcurementInvoicesScript = async () => {
     await uploadInvoiceFile(exportedFilename, csvContent)
     logger.info({ filename: exportedFilename }, 'Uploaded file to Xledger')
 
-    const invoiceCount = markProcurementFilesAsImported()
+    const invoiceCount = await markProcurementFilesAsImported()
 
     logger.info('Marked all files as processed.')
     notification.push(`Importerade fakturor: ${invoiceCount}`)
@@ -49,11 +49,15 @@ const importProcurementInvoicesScript = async () => {
   )
 
   if (config.scriptNotificationEmailAddresses) {
-    await sendEmail(
-      config.scriptNotificationEmailAddresses,
-      'Körning: import av hyresavier till Xledger',
-      notification.join('\n')
-    )
+    try {
+      await sendEmail(
+        config.scriptNotificationEmailAddresses,
+        'Körning: import av hyresavier till Xledger',
+        notification.join('\n')
+      )
+    } catch {
+      // Do not fail script even if email fails
+    }
   }
 
   closeDatabases()
