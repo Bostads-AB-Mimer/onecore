@@ -46,10 +46,6 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
-<<<<<<< HEAD
-=======
-    console.log(result)
->>>>>>> 1e48dfd6 (EKO-41: Invoice events (#100) (#101))
     logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
     return await makeXledgerRequest(query)
