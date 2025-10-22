@@ -104,9 +104,12 @@ export async function fetchTenantAndLeasesByContactCode(
 ): Promise<{ tenant: Tenant; contracts: Lease[] } | null> {
   const normalized = contactCode.trim().toUpperCase()
 
-  const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
-    params: { path: { contactCode: normalized } },
-  })
+  const { data, error } = await GET(
+    '/leases/by-contact-code/{contactCode}/includingAllLeases',
+    {
+      params: { path: { contactCode: normalized } },
+    }
+  )
   if (error || !data) return null
 
   // API returns { content: Lease[] } similar to other endpoints
