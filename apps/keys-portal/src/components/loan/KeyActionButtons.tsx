@@ -44,6 +44,14 @@ export function KeyActionButtons({
     (k) => !!k.activeLoanId && k.matchesCurrentTenant
   )
 
+  // Keys that have "beställd flex" status (latest event is FLEX type with ORDERED status)
+  const incomingFlexKeys = selectedKeysData.filter(
+    (k) =>
+      k.latestEvent &&
+      k.latestEvent.type === 'FLEX' &&
+      k.latestEvent.status === 'ORDERED'
+  )
+
   // All available keys (excluding disposed keys)
   const allAvailableKeys = keysWithStatus.filter(
     (k) => !k.activeLoanId && leaseIsNotPast && !k.disposed
@@ -84,16 +92,18 @@ export function KeyActionButtons({
                 Återlämna valda ({returnableKeys.length})
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIncomingFlexMenuOpen(true)}
-              disabled={isProcessing}
-              className="flex items-center gap-1"
-            >
-              <Copy className="h-3 w-3" />
-              Inkommen flex
-            </Button>
+            {incomingFlexKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIncomingFlexMenuOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <Copy className="h-3 w-3" />
+                Inkommen flex ({incomingFlexKeys.length})
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
