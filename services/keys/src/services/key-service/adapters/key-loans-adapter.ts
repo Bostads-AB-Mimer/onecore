@@ -3,6 +3,7 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 
 type KeyLoan = keys.v1.KeyLoan
+type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 
@@ -115,4 +116,125 @@ export function getKeyLoansSearchQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
   return dbConnection(TABLE).select('*')
+}
+
+/**
+ * Get enriched key loans for a rental object with keys and optionally receipts in a single optimized query.
+ * This eliminates N+1 queries by fetching all data in one go.
+ *
+ * @param rentalObjectCode - The rental object code to filter by
+ * @param contact - Optional first contact code to filter by
+ * @param contact2 - Optional second contact code to filter by
+ * @param includeReceipts - Whether to include receipts (default: false)
+ * @param dbConnection - Database connection (optional, defaults to db)
+ * @returns Promise<KeyLoanWithDetails[]> - Key loans with enriched keys and optionally receipts data
+ */
+export async function getKeyLoansByRentalObject(
+  rentalObjectCode: string,
+  contact?: string,
+  contact2?: string,
+  includeReceipts = false,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoanWithDetails[]> {
+  // Step 1: Get all key loans for the rental object (filtered by contacts if provided)
+  let loansQuery = dbConnection('key_loans as kl')
+    .select('kl.*')
+    .whereExists(function () {
+      this.select(dbConnection.raw('1'))
+        .from('keys as k')
+        .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
+        .where('k.rentalObjectCode', rentalObjectCode)
+    })
+    .orderBy('kl.createdAt', 'desc')
+
+  // Filter by contacts: match if ANY provided contact matches EITHER kl.contact OR kl.contact2
+  if (contact || contact2) {
+    loansQuery = loansQuery.where(function () {
+      if (contact && contact2) {
+        // Both contacts provided: (kl.contact IN (c1,c2)) OR (kl.contact2 IN (c1,c2))
+        this.whereIn('kl.contact', [contact, contact2]).orWhereIn(
+          'kl.contact2',
+          [contact, contact2]
+        )
+      } else if (contact) {
+        // Only contact provided
+        this.where('kl.contact', contact).orWhere('kl.contact2', contact)
+      } else if (contact2) {
+        // Only contact2 provided
+        this.where('kl.contact', contact2).orWhere('kl.contact2', contact2)
+      }
+    })
+  }
+
+  const loans = await loansQuery
+
+  if (loans.length === 0) {
+    return []
+  }
+
+  const loanIds = loans.map((l) => l.id)
+
+  // Step 2: Get all keys for these loans
+  const allKeyIds = new Set<string>()
+  loans.forEach((loan) => {
+    try {
+      const keyIds: string[] = JSON.parse(loan.keys || '[]')
+      keyIds.forEach((id) => allKeyIds.add(id))
+    } catch {
+      // Skip malformed JSON
+    }
+  })
+
+  const keys =
+    allKeyIds.size > 0
+      ? await dbConnection('keys')
+          .whereIn('id', Array.from(allKeyIds))
+          .select('*')
+      : []
+
+  const keyMap = new Map(keys.map((k) => [k.id, k]))
+
+  // Step 3: Get receipts for these loans (max 2 per loan: LOAN and RETURN) - only if requested
+  const receiptsByLoan = new Map<string, any[]>()
+  if (includeReceipts) {
+    const receiptsResult = await dbConnection.raw(
+      `
+      SELECT r.*
+      FROM receipts r
+      INNER JOIN (
+        SELECT keyLoanId, receiptType, MAX(createdAt) as latestCreated
+        FROM receipts
+        WHERE keyLoanId IN (${loanIds.map(() => '?').join(',')})
+        GROUP BY keyLoanId, receiptType
+      ) latest ON r.keyLoanId = latest.keyLoanId
+        AND r.receiptType = latest.receiptType
+        AND r.createdAt = latest.latestCreated
+      ORDER BY r.createdAt DESC
+      `,
+      loanIds
+    )
+
+    const receipts = receiptsResult as any[]
+    receipts.forEach((receipt) => {
+      if (!receiptsByLoan.has(receipt.keyLoanId)) {
+        receiptsByLoan.set(receipt.keyLoanId, [])
+      }
+      receiptsByLoan.get(receipt.keyLoanId)!.push(receipt)
+    })
+  }
+
+  // Step 4: Combine everything
+  return loans.map((loan) => {
+    const keyIds: string[] = JSON.parse(loan.keys || '[]')
+    const keysArray = keyIds
+      .map((id) => keyMap.get(id))
+      .filter((k): k is (typeof keys)[0] => k !== undefined)
+    const loanReceipts = receiptsByLoan.get(loan.id) || []
+
+    return {
+      ...loan,
+      keysArray,
+      receipts: loanReceipts,
+    }
+  })
 }

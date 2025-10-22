@@ -8,6 +8,7 @@ import { AdapterResult } from '../types'
 type Key = keys.v1.Key
 type KeyWithLoanStatus = keys.v1.KeyWithLoanStatus
 type KeyLoan = keys.v1.KeyLoan
+type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
 type KeyNote = keys.v1.KeyNote
@@ -271,6 +272,26 @@ export const KeyLoansApi = {
     const r = await getJSON<{ content: KeyLoan[] }>(
       `${BASE}/key-loans/by-key/${keyId}`
     )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByRentalObject: async (
+    rentalObjectCode: string,
+    contact?: string,
+    contact2?: string,
+    includeReceipts?: boolean
+  ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (contact) params.append('contact', contact)
+    if (contact2) params.append('contact2', contact2)
+    if (includeReceipts) params.append('includeReceipts', 'true')
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-loans/by-rental-object/${rentalObjectCode}?${queryString}`
+      : `${BASE}/key-loans/by-rental-object/${rentalObjectCode}`
+
+    const r = await getJSON<{ content: KeyLoanWithDetails[] }>(url)
     return r.ok ? ok(r.data.content) : r
   },
 

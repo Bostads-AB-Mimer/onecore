@@ -24,7 +24,6 @@ import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { keyService } from '@/services/api/keyService'
-import { checkHasUnsignedActiveLoans } from '@/hooks/useKeyLoans'
 
 const getLeaseTypeIcon = (type: string) => {
   const t = (type ?? '').toLowerCase()
@@ -66,9 +65,6 @@ export function ContractCard({
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
   const [keys, setKeys] = useState<KeyWithLoanStatus[]>([])
-  const [allKeysForLoans, setAllKeysForLoans] = useState<KeyWithLoanStatus[]>(
-    []
-  )
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
@@ -82,11 +78,9 @@ export function ContractCard({
   const handleReceiptUploaded = useCallback(() => {
     // Trigger refresh of key statuses when a receipt is uploaded
     setKeyStatusRefreshKey((prev) => prev + 1)
-    // Also re-check unsigned loan status
-    checkHasUnsignedActiveLoans(lease.rentalPropertyId).then((hasUnsigned) => {
-      setHasUnsignedLoans(hasUnsigned)
-    })
-  }, [lease.rentalPropertyId])
+    // Trigger refresh of key loans which will update unsigned status via callback
+    setKeyLoansRefreshKey((prev) => prev + 1)
+  }, [])
 
   const handleCopyObjectId = async () => {
     try {
@@ -117,24 +111,7 @@ export function ContractCard({
     }
   }, [lease.rentalPropertyId, rentalAddress])
 
-  // Only check for unsigned loans when the key loans accordion is opened
-  useEffect(() => {
-    if (!keyLoansOpen) return
-
-    let cancelled = false
-    async function checkUnsigned() {
-      const hasUnsigned = await checkHasUnsignedActiveLoans(
-        lease.rentalPropertyId
-      )
-      if (!cancelled) {
-        setHasUnsignedLoans(hasUnsigned)
-      }
-    }
-    checkUnsigned()
-    return () => {
-      cancelled = true
-    }
-  }, [lease.rentalPropertyId, keyLoansOpen])
+  // Unsigned loan status is managed by KeyLoansAccordion via handleUnsignedLoansChange callback
 
   useEffect(() => {
     let cancelled = false
@@ -146,8 +123,6 @@ export function ContractCard({
         )
 
         if (!cancelled) {
-          // Set all keys for loan history (backend already filters: non-disposed + disposed with active loans)
-          setAllKeysForLoans(keysWithStatus)
           setKeys(keysWithStatus)
         }
       } catch (err) {
@@ -335,7 +310,6 @@ export function ContractCard({
               refreshKey={keyLoansRefreshKey}
               onUnsignedLoansChange={handleUnsignedLoansChange}
               onReceiptUploaded={handleReceiptUploaded}
-              preloadedKeys={allKeysForLoans}
             />
           </div>
         )}
