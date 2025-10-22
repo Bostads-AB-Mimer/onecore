@@ -229,12 +229,16 @@ export const processDebtCollectionFiles = async () => {
     )
 
     if (config.scriptNotificationEmailAddresses) {
-      await sendEmail(
-        config.scriptNotificationEmailAddresses,
-        'Körning: export av inkassofiler till Sergel',
-        notification.join('\n'),
-        resultFiles
-      )
+      try {
+        await sendEmail(
+          config.scriptNotificationEmailAddresses,
+          'Körning: export av inkassofiler till Sergel',
+          notification.join('\n'),
+          resultFiles
+        )
+      } catch {
+        // Do not fail script even if email fails
+      }
     }
   } catch (err) {
     logger.error(err)

@@ -15,7 +15,7 @@ import { sendEmail } from '../common/adapters/infobip-adapter'
 
 const importRentalInvoicesScript = async () => {
   const companyIds = ['001' /* '006'*/]
-  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
+  const earliestStartDate = new Date('2025-11-06T00:00:00.000Z')
   const notification: string[] = []
 
   const startDate = new Date(
@@ -89,11 +89,15 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
     )
 
     if (config.scriptNotificationEmailAddresses) {
-      await sendEmail(
-        config.scriptNotificationEmailAddresses,
-        'Körning: import av hyresavier till Xledger',
-        notification.join('\n')
-      )
+      try {
+        await sendEmail(
+          config.scriptNotificationEmailAddresses,
+          'Körning: import av hyresavier till Xledger',
+          notification.join('\n')
+        )
+      } catch {
+        // Do not fail script based on failed email.
+      }
     }
   }
 
