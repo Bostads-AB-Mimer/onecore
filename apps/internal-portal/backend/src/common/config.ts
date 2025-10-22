@@ -17,12 +17,27 @@ export interface Config {
     password: string
   }
   auth: {
+    adapter: string
     secret: string
     expiresIn: string
     maxFailedLoginAttempts: number
     cookieDomain: string
     testAccount: Account
+    msal: {
+      clientId: string
+      cloudInstance: string
+      tenantId: string
+      clientSecret: string
+      redirectUri: string
+      graphApiEndpoint: string
+      postLogoutRedirectUri: string
+    }
+    core: {
+      redirectUri: string
+      postLogoutRedirectUri: string
+    }
   }
+  /* This is deprecated, but kept around for compatibility... until one day */
   msal: {
     clientId: string
     cloudInstance: string
@@ -42,11 +57,21 @@ const config = configPackage({
       url: 'http://localhost:5010',
     },
     auth: {
+      adapter: 'core',
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
       maxFailedLoginAttempts: 3,
       cookieDomain: 'localhost',
+      msal: {
+        clientId: '',
+        cloudInstance: 'https://login.microsoftonline.com/',
+        tenantId: '',
+        clientSecret: '',
+        graphApiEndpoint: 'https://graph.microsoft.com/',
+      },
+      core: {},
     },
+    /* This is deprecated, but kept around for compatibility... until one day */
     msal: {
       clientId: '',
       cloudInstance: 'https://login.microsoftonline.com/',
