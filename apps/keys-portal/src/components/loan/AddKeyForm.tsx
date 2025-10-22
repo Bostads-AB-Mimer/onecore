@@ -30,7 +30,7 @@ type KeyRow = {
   id: string
   keyType: KeyType
   keyName: string
-  flexNumber: number
+  flexNumber: number | null
   quantity: number
   startingSequenceNumber: number
 }
@@ -57,7 +57,7 @@ export function AddKeyForm({
   // Calculate next sequence number for a given type/name/flex combination
   // Uses the keys prop which contains all keys for this rental object
   const calculateNextSequenceNumber = useCallback(
-    (keyType: KeyType, keyName: string, flexNumber: number): number => {
+    (keyType: KeyType, keyName: string, flexNumber: number | null): number => {
       const matchingKeys = keys.filter(
         (k) =>
           k.keyType === keyType &&
@@ -82,7 +82,7 @@ export function AddKeyForm({
       // No keys selected, add one empty row
       const defaultFlexNumber =
         keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
-        1
+        null
 
       const defaultKeyType: KeyType = 'LGH'
       const defaultKeyName = `${defaultKeyType}-1`
@@ -121,12 +121,12 @@ export function AddKeyForm({
         id: crypto.randomUUID(),
         keyType: firstKey.keyType as KeyType,
         keyName: firstKey.keyName,
-        flexNumber: firstKey.flexNumber ?? 1,
+        flexNumber: firstKey.flexNumber,
         quantity: 1, // Always start with quantity 1
         startingSequenceNumber: calculateNextSequenceNumber(
           firstKey.keyType as KeyType,
           firstKey.keyName,
-          firstKey.flexNumber ?? 1
+          firstKey.flexNumber
         ),
       }
     })
@@ -152,7 +152,8 @@ export function AddKeyForm({
 
   const handleAddRow = () => {
     const defaultFlexNumber =
-      keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ?? 1
+      keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
+      null
 
     const defaultKeyType: KeyType = 'LGH'
     const defaultKeyName = `${defaultKeyType}-1`
@@ -193,7 +194,7 @@ export function AddKeyForm({
   const handleRowChange = (
     id: string,
     field: keyof KeyRow,
-    value: string | number
+    value: string | number | null
   ) => {
     setRows(
       rows.map((r) => {
@@ -240,7 +241,7 @@ export function AddKeyForm({
         keyName: string
         keyType: KeyType
         keySequenceNumber: number
-        flexNumber: number
+        flexNumber: number | null
         rentalObjectCode: string
         keySystemId?: string
       }> = []
@@ -338,12 +339,14 @@ export function AddKeyForm({
               <input
                 type="number"
                 className="h-8 w-full border rounded px-2 bg-background text-sm"
-                value={row.flexNumber}
+                value={row.flexNumber ?? ''}
                 onChange={(e) =>
                   handleRowChange(
                     row.id,
                     'flexNumber',
-                    parseInt(e.target.value) || 1
+                    e.target.value === ''
+                      ? null
+                      : parseInt(e.target.value) || null
                   )
                 }
                 disabled={isSubmitting}
