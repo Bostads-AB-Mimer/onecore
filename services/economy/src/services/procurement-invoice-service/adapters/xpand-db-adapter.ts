@@ -81,7 +81,7 @@ const getDistributions = async (
   })
 
   // If distributionPercentage is 0, there is no distribution. Set to 1.
-  for (const [propertyId, distribution] of Object.entries(distributions)) {
+  for (const [_propertyId, distribution] of Object.entries(distributions)) {
     if (distribution.distributionPercentage === 0) {
       distribution.distributionPercentage = 1
     }
