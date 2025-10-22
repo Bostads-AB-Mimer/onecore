@@ -160,8 +160,8 @@ export interface GroupedLog {
 // Key event type labels in Swedish
 export const KeyEventTypeLabels = {
   FLEX: 'Flex',
-  ORDER: 'Beställning',
-  LOST: 'Förlorad',
+  ORDER: 'Extranyckel',
+  LOST: 'Bortappad',
 } as const
 
 export type KeyEventType = keyof typeof KeyEventTypeLabels
