@@ -282,6 +282,69 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get key loans with enriched keys and receipts
+   *     description: |
+   *       Returns all key loans for a rental object with their keys and receipts
+   *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
+   *       Optionally filter by contact code.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to filter key loans by.
+   *       - in: query
+   *         name: contact
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Optional contact code to filter by (checks contact or contact2).
+   *     responses:
+   *       200:
+   *         description: List of key loans with enriched keys and receipts data.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: An error occurred while fetching key loans.
+   */
+  router.get('/key-loans/by-rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const { rentalObjectCode } = ctx.params
+      const contact = ctx.query.contact as string | undefined
+      const contact2 = ctx.query.contact2 as string | undefined
+      const includeReceipts = ctx.query.includeReceipts === 'true'
+
+      const rows = await keyLoansAdapter.getKeyLoansByRentalObject(
+        rentalObjectCode,
+        contact,
+        contact2,
+        includeReceipts,
+        db
+      )
+
+      ctx.status = 200
+      ctx.body = { content: rows, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching key loans by rental object')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID

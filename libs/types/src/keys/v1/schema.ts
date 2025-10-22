@@ -274,3 +274,11 @@ export const KeyWithLoanStatusSchema = KeySchema.extend({
   // Optional latest key event (included when includeLatestEvent=true query param is set)
   latestEvent: KeyEventSchema.nullable().optional(),
 })
+
+// Key loan with enriched keys and receipts data (for optimized endpoint)
+export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
+  // Array of full key objects instead of just IDs
+  keysArray: z.array(KeySchema),
+  // Array of receipts for this loan
+  receipts: z.array(ReceiptSchema),
+})

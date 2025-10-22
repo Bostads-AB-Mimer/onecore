@@ -13,6 +13,7 @@ export type Key = components['schemas']['Key']
 export type KeyWithLoanStatus = components['schemas']['KeyWithLoanStatus']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
+export type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']
@@ -110,9 +111,6 @@ export function getKeyTypeFilterOptions() {
 }
 
 // Custom types that aren't in the API (if needed)
-export interface KeyLoanWithDetails extends KeyLoan {
-  // additional computed properties
-}
 
 // Lease type constant values - matches services/leasing/src/constants/leaseTypes.ts
 // String values taken from Xpand

@@ -338,6 +338,40 @@ export interface paths {
       };
     };
   };
+  "/key-loans/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get key loans with enriched keys and receipts
+     * @description Returns all key loans for a rental object with their keys and receipts
+     * pre-fetched in a single optimized query. This eliminates N+1 query problems.
+     * Optionally filter by contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional contact code to filter by (checks contact or contact2). */
+          contact?: string;
+        };
+        path: {
+          /** @description The rental object code to filter key loans by. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description List of key loans with enriched keys and receipts data. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key loans. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-loans/{id}": {
     /**
      * Get key loan by ID
