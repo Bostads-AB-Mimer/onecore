@@ -135,6 +135,24 @@ export interface paths {
       };
     };
   };
+  "/auth/refresh": {
+    /**
+     * Refresh access token
+     * @description Uses refresh_token cookie to get new access_token
+     */
+    post: {
+      responses: {
+        /** @description Token refreshed successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid or expired refresh token */
+        401: {
+          content: never;
+        };
+      };
+    };
+  };
   "openapi": {
   };
   "/health": {
