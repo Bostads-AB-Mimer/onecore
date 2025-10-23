@@ -349,3 +349,55 @@ export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
   // Array of receipts for this loan
   receipts: z.array(ReceiptSchema),
 })
+
+// Signature schemas (polymorphic - supports any document type)
+
+export const SignatureResourceTypeSchema = z.enum([
+  'receipt',
+  // Future: 'lease_agreement', 'work_order', 'inspection_report'
+])
+
+export const SignatureSchema = z.object({
+  id: z.string().uuid(),
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  simpleSignDocumentId: z.number().int(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().nullable().optional(),
+  status: z.string(),
+  sentAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable().optional(),
+  lastSyncedAt: z.coerce.date().nullable().optional(),
+})
+
+export const CreateSignatureRequestSchema = z.object({
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  simpleSignDocumentId: z.number().int(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().nullable().optional(),
+  status: z.string().default('sent'),
+})
+
+export const UpdateSignatureRequestSchema = z.object({
+  status: z.string().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+  lastSyncedAt: z.coerce.date().nullable().optional(),
+})
+
+// SimpleSign API request schema
+export const SendSignatureRequestSchema = z.object({
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().optional(),
+  pdfBase64: z.string().min(1, 'PDF content is required'),
+})
+
+// SimpleSign webhook payload schema (minimal - we only need key fields)
+export const SimpleSignWebhookPayloadSchema = z.object({
+  id: z.number().int(), // SimpleSign document ID
+  status: z.string(),
+  status_updated_at: z.string(),
+  // Other fields can be added as needed
+})
