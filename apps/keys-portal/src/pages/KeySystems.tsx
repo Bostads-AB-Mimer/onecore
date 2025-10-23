@@ -241,9 +241,13 @@ export default function KeySystems() {
             await keySystemSchemaService.uploadFile(newKeySystem.id, schemaFile)
 
             // Fetch the updated key system with schemaFileId to sync UI
-            const updatedKeySystem = await keyService.getKeySystem(newKeySystem.id)
+            const updatedKeySystem = await keyService.getKeySystem(
+              newKeySystem.id
+            )
             setKeySystems((prev) =>
-              prev.map((ls) => (ls.id === newKeySystem.id ? updatedKeySystem : ls))
+              prev.map((ls) =>
+                ls.id === newKeySystem.id ? updatedKeySystem : ls
+              )
             )
 
             toast({
