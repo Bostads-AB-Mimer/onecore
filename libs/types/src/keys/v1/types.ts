@@ -6,6 +6,7 @@ import {
   ReceiptFormatSchema,
   KeyEventTypeSchema,
   KeyEventStatusSchema,
+  SignatureResourceTypeSchema,
   // Main entity schemas
   KeySchema,
   KeyLoanSchema,
@@ -18,6 +19,7 @@ import {
   ReceiptSchema,
   KeyWithLoanStatusSchema,
   KeyLoanWithDetailsSchema,
+  SignatureSchema,
   // Request schemas
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
@@ -41,6 +43,10 @@ import {
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   BulkUpdateFlexRequestSchema,
+  CreateSignatureRequestSchema,
+  UpdateSignatureRequestSchema,
+  SendSignatureRequestSchema,
+  SimpleSignWebhookPayloadSchema,
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
@@ -124,6 +130,20 @@ export type UpdateKeyEventRequest = z.infer<typeof UpdateKeyEventRequestSchema>
 
 // Bulk update request types
 export type BulkUpdateFlexRequest = z.infer<typeof BulkUpdateFlexRequestSchema>
+
+// Signature types
+export type SignatureResourceType = z.infer<typeof SignatureResourceTypeSchema>
+export type Signature = z.infer<typeof SignatureSchema>
+export type CreateSignatureRequest = z.infer<
+  typeof CreateSignatureRequestSchema
+>
+export type UpdateSignatureRequest = z.infer<
+  typeof UpdateSignatureRequestSchema
+>
+export type SendSignatureRequest = z.infer<typeof SendSignatureRequestSchema>
+export type SimpleSignWebhookPayload = z.infer<
+  typeof SimpleSignWebhookPayloadSchema
+>
 
 // Pagination types
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
