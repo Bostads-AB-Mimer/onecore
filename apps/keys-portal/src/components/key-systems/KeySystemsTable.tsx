@@ -21,6 +21,9 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  Upload,
+  Download,
+  FileText,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -55,6 +58,9 @@ interface KeySystemsTableProps {
   installationDateAfter: string | null
   installationDateBefore: string | null
   onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
+  onSchemaUpload: (keySystemId: string, file: File) => Promise<void>
+  onSchemaDownload: (keySystemId: string) => Promise<void>
+  uploadingSchemaId: string | null
 }
 
 export function KeySystemsTable({
@@ -73,10 +79,28 @@ export function KeySystemsTable({
   installationDateAfter,
   installationDateBefore,
   onDatesChange,
+  onSchemaUpload,
+  onSchemaDownload,
+  uploadingSchemaId,
 }: KeySystemsTableProps) {
   const navigate = useNavigate()
   const [addressMap, setAddressMap] = useState<Record<string, string>>({})
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false)
+  const fileInputRefs = useState<Record<string, HTMLInputElement | null>>(
+    () => ({})
+  )[0]
+
+  const handleFileSelect = async (
+    keySystemId: string,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      await onSchemaUpload(keySystemId, file)
+      // Clear the input so the same file can be selected again if needed
+      event.target.value = ''
+    }
+  }
 
   // Fetch addresses when keys change
   useEffect(() => {
@@ -176,6 +200,7 @@ export function KeySystemsTable({
                 />
               </div>
             </TableHead>
+            <TableHead>Schema</TableHead>
             <TableHead>
               <div className="flex items-center gap-1">
                 Installationsdatum
@@ -193,7 +218,7 @@ export function KeySystemsTable({
           {KeySystems.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={9}
+                colSpan={10}
                 className="text-center text-muted-foreground py-8"
               >
                 Inga låssystem hittades
@@ -275,6 +300,50 @@ export function KeySystemsTable({
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center gap-1">
+                        {KeySystem.schemaFileId ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2"
+                            onClick={() => onSchemaDownload(KeySystem.id)}
+                            disabled={uploadingSchemaId === KeySystem.id}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <>
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              className="hidden"
+                              ref={(el) => {
+                                fileInputRefs[KeySystem.id] = el
+                              }}
+                              onChange={(e) =>
+                                handleFileSelect(KeySystem.id, e)
+                              }
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2"
+                              onClick={() =>
+                                fileInputRefs[KeySystem.id]?.click()
+                              }
+                              disabled={uploadingSchemaId === KeySystem.id}
+                            >
+                              {uploadingSchemaId === KeySystem.id ? (
+                                <span className="text-xs">Laddar...</span>
+                              ) : (
+                                <Upload className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {KeySystem.installationDate
                         ? formatDate(KeySystem.installationDate.toString())
                         : '-'}
@@ -312,7 +381,7 @@ export function KeySystemsTable({
                   </TableRow>
                   {isExpanded && (
                     <TableRow>
-                      <TableCell colSpan={9} className="bg-muted/50 p-4">
+                      <TableCell colSpan={10} className="bg-muted/50 p-4">
                         {isLoadingKeys ? (
                           <div className="text-center py-4 text-muted-foreground">
                             Laddar nycklar...

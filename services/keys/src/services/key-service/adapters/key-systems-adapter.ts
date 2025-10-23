@@ -68,3 +68,30 @@ export function getKeySystemsSearchQuery(
 ): Knex.QueryBuilder {
   return dbConnection(TABLE).select('*')
 }
+
+/**
+ * Update key system with schema fileId after upload
+ */
+export async function updateKeySystemSchemaFileId(
+  id: string,
+  fileId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<void> {
+  await dbConnection(TABLE).where({ id }).update({
+    schemaFileId: fileId,
+    updatedAt: dbConnection.fn.now(),
+  })
+}
+
+/**
+ * Clear schema fileId from key system
+ */
+export async function clearKeySystemSchemaFileId(
+  id: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<void> {
+  await dbConnection(TABLE).where({ id }).update({
+    schemaFileId: null,
+    updatedAt: dbConnection.fn.now(),
+  })
+}
