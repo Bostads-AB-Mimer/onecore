@@ -6,6 +6,7 @@ import { routes as logRoutes } from './routes/logs'
 import { routes as receiptRoutes } from './routes/receipts'
 import { routes as keyNoteRoutes } from './routes/key-notes'
 import { routes as keyEventRoutes } from './routes/key-events'
+import { routes as signatureRoutes } from './routes/signatures'
 
 export const routes = (router: KoaRouter) => {
   keyRoutes(router)
@@ -15,4 +16,5 @@ export const routes = (router: KoaRouter) => {
   receiptRoutes(router)
   keyNoteRoutes(router)
   keyEventRoutes(router)
+  signatureRoutes(router)
 }
