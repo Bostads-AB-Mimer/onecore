@@ -80,7 +80,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
       setOpen(false)
     } catch (err) {
       console.error('Failed to save note:', err)
-      alert('Misslyckades med att spara anteckningen')
+      alert('Misslyckades med att spara noteringen')
     } finally {
       setSaving(false)
     }
@@ -101,9 +101,9 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Anteckningar för objekt {rentalObjectCode}</DialogTitle>
+          <DialogTitle>Noteringar för objekt {rentalObjectCode}</DialogTitle>
           <DialogDescription>
-            Lägg till eller redigera anteckningar för detta hyresobjekt.
+            Lägg till eller redigera Noteringar.
           </DialogDescription>
         </DialogHeader>
 
@@ -116,7 +116,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Skriv dina anteckningar här..."
+              placeholder="Skriv dina noteringar här..."
               rows={8}
               className="resize-none"
             />

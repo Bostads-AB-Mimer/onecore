@@ -305,7 +305,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
       setEditingObjectId(null)
     } catch (err) {
       console.error('Failed to save note:', err)
-      alert('Misslyckades med att spara anteckningen')
+      alert('Misslyckades med att spara din notering')
     } finally {
       setSavingObjects((prev) => {
         const next = new Set(prev)
@@ -327,7 +327,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-5 w-5" />
-            Anteckningar på objekt
+            Noteringar Nycklar
           </CardTitle>
           <div className="flex items-center gap-2">
             {hasMultipleGroups && (
@@ -384,7 +384,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
           return (
             <div key={objectId} className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">
-                Objekt-ID: {objectId}
+                Hyresobjekt: {objectId}
               </div>
 
               {isLoading ? (
@@ -396,7 +396,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                   <Textarea
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
-                    placeholder="Skriv dina anteckningar här..."
+                    placeholder="Skriv dina noteringar här..."
                     rows={6}
                     className="resize-none text-sm"
                     autoFocus
@@ -458,8 +458,8 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                   ) : (
                     <p className="text-sm text-muted-foreground italic">
                       {hasTruncatedNotes
-                        ? 'Inga anteckningar'
-                        : 'Inga anteckningar - klicka för att lägga till'}
+                        ? 'Inga noteringar'
+                        : 'Inga noteringar - klicka för att lägga till'}
                     </p>
                   )}
                   {!isTruncated && !hasTruncatedNotes && note?.description && (
