@@ -67,6 +67,16 @@ export type DownloadUrlResponse = NonNullable<
   >['content']
 >
 
+// Key System Schema API types
+// Note: These differ from receipt types because the backend APIs have inconsistent response structures
+// - Receipts API: Returns { content: { url, expiresIn, fileId } } (nested content wrapper)
+// - Schema API: Returns { url, expiresIn } (no content wrapper)
+
+// Presigned download URL (GET /key-systems/{id}/download-schema)
+export type KeySystemSchemaDownloadUrlResponse = NonNullable<
+  paths['/key-systems/{id}/download-schema']['get']['responses']['200']['content']['application/json']
+>
+
 // Key type definitions aligned with database enum
 export const KeyTypeLabels = {
   LGH: 'Lägenhet',

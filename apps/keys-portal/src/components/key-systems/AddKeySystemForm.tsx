@@ -24,14 +24,20 @@ import {
   propertySearchService,
   type PropertySearchResult,
 } from '@/services/api/propertySearchService'
-import { X } from 'lucide-react'
+import { X, FileText, Download, Trash2 } from 'lucide-react'
 
 type KeySystemFormData = Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>
 
 interface AddKeySystemFormProps {
-  onSave: (keySystem: KeySystemFormData) => void
+  onSave: (
+    keySystem: KeySystemFormData,
+    schemaFile?: File | null
+  ) => void | Promise<void>
   onCancel: () => void
   editingKeySystem?: KeySystem | null
+  onSchemaUpload?: (keySystemId: string, file: File) => Promise<void>
+  onSchemaDelete?: (keySystemId: string) => Promise<void>
+  onSchemaDownload?: (keySystemId: string) => Promise<void>
 }
 
 const emptyFormData: KeySystemFormData = {
@@ -50,8 +56,15 @@ export function AddKeySystemForm({
   onSave,
   onCancel,
   editingKeySystem,
+  onSchemaUpload,
+  onSchemaDelete,
+  onSchemaDownload,
 }: AddKeySystemFormProps) {
   const [formData, setFormData] = useState<KeySystemFormData>(emptyFormData)
+  const [selectedSchemaFile, setSelectedSchemaFile] = useState<File | null>(
+    null
+  )
+  const [isUploadingSchema, setIsUploadingSchema] = useState(false)
 
   // Property search functionality state with debouncing
   const [propertySearchQuery, setPropertySearchQuery] = useState('')
@@ -187,7 +200,8 @@ export function AddKeySystemForm({
       propertyIds: propertyIdsValue,
     }
 
-    onSave(KeySystemData)
+    // Pass the schema file along with the form data
+    onSave(KeySystemData, selectedSchemaFile)
   }
 
   return (
@@ -301,15 +315,132 @@ export function AddKeySystemForm({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="is_active"
-              checked={formData.isActive}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, isActive: checked }))
-              }
-            />
-            <Label htmlFor="is_active">Aktivt system</Label>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Aktivt system toggle */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.isActive}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
+              <Label htmlFor="is_active">Aktivt system</Label>
+            </div>
+
+            {/* Schema Upload Section */}
+            <div className="space-y-2">
+              {/* Show current schema if exists and no new file selected */}
+              {editingKeySystem?.schemaFileId && !selectedSchemaFile && (
+                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
+                  <FileText className="h-4 w-4" />
+                  <span className="flex-1 text-xs">Schema uppladdad</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => onSchemaDownload?.(editingKeySystem.id)}
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Ladda ner
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={async () => {
+                      if (
+                        confirm('Är du säker på att du vill ta bort schemat?')
+                      ) {
+                        await onSchemaDelete?.(editingKeySystem.id)
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* File input for new upload/replace */}
+              <div className="flex items-center gap-2">
+                <Label className="text-sm whitespace-nowrap">
+                  Schema (PDF)
+                </Label>
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  className="text-sm flex-1"
+                  onChange={(e) =>
+                    setSelectedSchemaFile(e.target.files?.[0] || null)
+                  }
+                />
+              </div>
+
+              {selectedSchemaFile && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600 flex-1 truncate">
+                      {selectedSchemaFile.name}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setSelectedSchemaFile(null)}
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  {/* Warning when replacing existing schema */}
+                  {editingKeySystem?.schemaFileId && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
+                      <p className="font-medium text-yellow-800">
+                        Obs! Det befintliga schemat kommer att raderas
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Upload button - only show if editing and file selected */}
+              {editingKeySystem && selectedSchemaFile && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full text-xs h-7"
+                  onClick={async () => {
+                    setIsUploadingSchema(true)
+                    try {
+                      await onSchemaUpload?.(
+                        editingKeySystem.id,
+                        selectedSchemaFile
+                      )
+                      setSelectedSchemaFile(null)
+                    } finally {
+                      setIsUploadingSchema(false)
+                    }
+                  }}
+                  disabled={isUploadingSchema}
+                >
+                  {isUploadingSchema
+                    ? 'Laddar upp...'
+                    : editingKeySystem.schemaFileId
+                      ? 'Ersätt schema'
+                      : 'Ladda upp schema'}
+                </Button>
+              )}
+
+              {/* Info text for create mode */}
+              {!editingKeySystem && selectedSchemaFile && (
+                <p className="text-xs text-gray-600">
+                  Schemat kommer att laddas upp efter att låssystemet skapats.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

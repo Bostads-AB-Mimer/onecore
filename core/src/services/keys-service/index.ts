@@ -45,6 +45,7 @@ const {
   ErrorResponseSchema,
   NotFoundResponseSchema,
   BadRequestResponseSchema,
+  SchemaDownloadUrlResponseSchema,
 } = keys.v1
 
 /**
@@ -105,6 +106,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ErrorResponse', ErrorResponseSchema)
   registerSchema('NotFoundResponse', NotFoundResponseSchema)
   registerSchema('BadRequestResponse', BadRequestResponseSchema)
+  registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
 
   // Helper function to create log entries
   const createLogEntry = async (
@@ -2967,6 +2969,240 @@ export const routes = (router: KoaRouter) => {
       }
     },
   })
+
+  // ==================== KEY SYSTEMS SCHEMA ROUTES ====================
+
+  /**
+   * @swagger
+   * /key-systems/{id}/upload-schema:
+   *   post:
+   *     summary: Upload PDF schema file for a key system
+   *     description: Upload a PDF schema file to attach to a key system
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *       400:
+   *         description: Invalid file or key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BadRequestResponse'
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       413:
+   *         description: File too large
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/key-systems/:id/upload-schema',
+    upload.single('file'),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        // Check if file was provided
+        if (!ctx.file || !ctx.file.buffer) {
+          ctx.status = 400
+          ctx.body = { reason: 'No file provided', ...metadata }
+          return
+        }
+
+        // Forward the file buffer to microservice
+        const result = await KeySystemsApi.uploadSchemaFile(
+          ctx.params.id,
+          ctx.file.buffer,
+          ctx.file.originalname,
+          ctx.file.mimetype
+        )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { reason: 'Key system not found', ...metadata }
+            return
+          }
+          if (result.err === 'bad-request') {
+            ctx.status = 400
+            ctx.body = { reason: 'Invalid file or key system', ...metadata }
+            return
+          }
+
+          logger.error(
+            { err: result.err, metadata },
+            'Error uploading schema file'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error uploading schema file')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /key-systems/{id}/download-schema:
+   *   get:
+   *     summary: Get presigned download URL for key system schema PDF
+   *     description: Returns a presigned URL to download the schema PDF file
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system
+   *     responses:
+   *       200:
+   *         description: Download URL generated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SchemaDownloadUrlResponse'
+   *       404:
+   *         description: Key system or file not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-systems/:id/download-schema', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeySystemsApi.getSchemaDownloadUrl(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'Key system or schema file not found',
+          ...metadata,
+        }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error generating schema download URL'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-systems/{id}/schema:
+   *   delete:
+   *     summary: Delete schema file for a key system
+   *     description: Deletes the schema PDF file associated with a key system
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system
+   *     responses:
+   *       204:
+   *         description: Schema file deleted successfully
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('/key-systems/:id/schema', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeySystemsApi.deleteSchemaFile(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error deleting schema file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 204
+  })
+
+  // ==================== RECEIPTS ROUTES ====================
 
   /**
    * @swagger
