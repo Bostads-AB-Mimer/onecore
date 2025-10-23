@@ -2,7 +2,11 @@ import { Context, Next } from 'koa'
 import { Knex } from 'knex'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { uploadFile, getFileUrl, deleteFile } from '../services/key-service/adapters/minio'
+import {
+  uploadFile,
+  getFileUrl,
+  deleteFile,
+} from '../services/key-service/adapters/minio'
 
 /**
  * Generic File Upload/Download Route Factory
@@ -88,7 +92,10 @@ export interface FileUploadConfig<TEntity> {
    * @param entityId - Entity ID
    * @returns Key-value metadata object
    */
-  getFileMetadata?: (entity: TEntity, entityId: string) => Record<string, string>
+  getFileMetadata?: (
+    entity: TEntity,
+    entityId: string
+  ) => Record<string, string>
 
   /**
    * Hook called after successful file upload and fileId update
@@ -153,7 +160,10 @@ export function createFileUploadHandler<TEntity>(
       const entity = await config.getEntityById(entityId, db)
       if (!entity) {
         ctx.status = 404
-        ctx.body = { reason: `${capitalize(config.entityName)} not found`, ...metadata }
+        ctx.body = {
+          reason: `${capitalize(config.entityName)} not found`,
+          ...metadata,
+        }
         return
       }
 
@@ -247,7 +257,10 @@ export function createFileDownloadHandler<TEntity>(
       const entity = await config.getEntityById(entityId, db)
       if (!entity) {
         ctx.status = 404
-        ctx.body = { reason: `${capitalize(config.entityName)} not found`, ...metadata }
+        ctx.body = {
+          reason: `${capitalize(config.entityName)} not found`,
+          ...metadata,
+        }
         return
       }
 
@@ -272,7 +285,10 @@ export function createFileDownloadHandler<TEntity>(
         ...metadata,
       }
     } catch (err) {
-      logger.error({ err }, `Error generating ${config.filePrefix} download URL`)
+      logger.error(
+        { err },
+        `Error generating ${config.filePrefix} download URL`
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -313,7 +329,10 @@ export function createFileDeleteHandler<TEntity>(
       const entity = await config.getEntityById(entityId, db)
       if (!entity) {
         ctx.status = 404
-        ctx.body = { reason: `${capitalize(config.entityName)} not found`, ...metadata }
+        ctx.body = {
+          reason: `${capitalize(config.entityName)} not found`,
+          ...metadata,
+        }
         return
       }
 
