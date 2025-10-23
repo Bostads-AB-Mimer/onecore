@@ -239,6 +239,13 @@ export default function KeySystems() {
         if (schemaFile) {
           try {
             await keySystemSchemaService.uploadFile(newKeySystem.id, schemaFile)
+
+            // Fetch the updated key system with schemaFileId to sync UI
+            const updatedKeySystem = await keyService.getKeySystem(newKeySystem.id)
+            setKeySystems((prev) =>
+              prev.map((ls) => (ls.id === newKeySystem.id ? updatedKeySystem : ls))
+            )
+
             toast({
               title: 'Låssystem och schema skapat',
               description: `${KeySystemData.name} och dess schema har skapats framgångsrikt.`,
