@@ -327,7 +327,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-5 w-5" />
-            Noteringar Nycklar
+            Noteringar nycklar
           </CardTitle>
           <div className="flex items-center gap-2">
             {hasMultipleGroups && (
