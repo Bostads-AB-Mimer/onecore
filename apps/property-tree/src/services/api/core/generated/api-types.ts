@@ -4484,6 +4484,148 @@ export interface paths {
       };
     };
   };
+  "/signatures/send": {
+    /**
+     * Send a document for digital signature via SimpleSign
+     * @description Send a PDF document to SimpleSign for digital signature
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            resourceType: "receipt";
+            /** Format: uuid */
+            resourceId: string;
+            /** Format: email */
+            recipientEmail: string;
+            recipientName?: string;
+            pdfBase64: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Signature request sent successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Resource not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/signatures/{id}": {
+    /**
+     * Get a signature by ID
+     * @description Retrieve a specific signature by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Signature details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Signature not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/signatures/resource/{resourceType}/{resourceId}": {
+    /**
+     * Get all signatures for a resource
+     * @description Retrieve all signatures associated with a specific resource
+     */
+    get: {
+      parameters: {
+        path: {
+          resourceType: "receipt";
+          resourceId: string;
+        };
+      };
+      responses: {
+        /** @description List of signatures */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/webhooks/simplesign": {
+    /**
+     * Webhook endpoint for SimpleSign status updates
+     * @description Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SimpleSignWebhookPayload"];
+        };
+      };
+      responses: {
+        /** @description Webhook processed successfully */
+        200: {
+          content: never;
+        };
+        /** @description Signature not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-events": {
     /**
      * Get all key events
@@ -5833,6 +5975,25 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    Signature: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      status: string;
+      /** Format: date-time */
+      sentAt: string;
+      /** Format: date-time */
+      completedAt?: string | null;
+      /** Format: date-time */
+      lastSyncedAt?: string | null;
+    };
     CreateKeyRequest: {
       keyName: string;
       keySequenceNumber?: number;
@@ -5984,6 +6145,40 @@ export interface components {
       status?: "ORDERED" | "RECEIVED" | "COMPLETED";
       /** Format: uuid */
       workOrderId?: string | null;
+    };
+    CreateSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      /** @default sent */
+      status?: string;
+    };
+    UpdateSignatureRequest: {
+      status?: string;
+      /** Format: date-time */
+      completedAt?: string | null;
+      /** Format: date-time */
+      lastSyncedAt?: string | null;
+    };
+    SendSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string;
+      pdfBase64: string;
+    };
+    SimpleSignWebhookPayload: {
+      id: number;
+      status: string;
+      status_updated_at: string;
     };
     CreateReceiptRequest: {
       /** Format: uuid */
