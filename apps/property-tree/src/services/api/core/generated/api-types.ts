@@ -4179,6 +4179,126 @@ export interface paths {
       };
     };
   };
+  "/key-systems/{id}/upload-schema": {
+    /**
+     * Upload PDF schema file for a key system
+     * @description Upload a PDF schema file to attach to a key system
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid file or key system not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["BadRequestResponse"];
+          };
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/download-schema": {
+    /**
+     * Get presigned download URL for key system schema PDF
+     * @description Returns a presigned URL to download the schema PDF file
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["SchemaDownloadUrlResponse"];
+            };
+          };
+        };
+        /** @description Key system or file not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/schema": {
+    /**
+     * Delete schema file for a key system
+     * @description Deletes the schema PDF file associated with a key system
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Schema file deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/receipts/{id}/upload": {
     /**
      * Upload PDF file for a receipt
@@ -5162,6 +5282,7 @@ export interface components {
       installationDate?: string | null;
       isActive?: boolean;
       description?: string | null;
+      schemaFileId?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -5356,6 +5477,10 @@ export interface components {
     BadRequestResponse: {
       reason: string;
     };
+    SchemaDownloadUrlResponse: {
+      url: string;
+      expiresIn: number;
+    };
     PaginationMeta: {
       totalRecords: number;
       page: number;
@@ -5413,6 +5538,7 @@ export interface components {
           installationDate?: string | null;
           isActive?: boolean;
           description?: string | null;
+          schemaFileId?: string | null;
           /** Format: date-time */
           createdAt: string;
           /** Format: date-time */

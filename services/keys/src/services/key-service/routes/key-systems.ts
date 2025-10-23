@@ -7,6 +7,9 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import multer from '@koa/multer'
+import { z } from 'zod'
+import { uploadFile, getFileUrl, deleteFile } from '../adapters/minio'
 
 const {
   KeySystemSchema,
@@ -19,6 +22,18 @@ const {
 type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
 type KeySystem = keys.v1.KeySystem
+
+// Configure multer for in-memory storage (we'll upload to MinIO)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true)
+    else cb(new Error('Only PDF files are allowed'), false)
+  },
+})
+
+const IdParamSchema = z.object({ id: z.string().uuid() })
 
 /**
  * @swagger
@@ -472,6 +487,249 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { ...metadata }
     } catch (err) {
       logger.error(err, 'Error deleting key system')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /key-systems/{id}/upload-schema:
+   *   post:
+   *     summary: Upload PDF schema file for a key system
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *       400:
+   *         description: Invalid file or key system not found
+   *       404:
+   *         description: Key system not found
+   *       413:
+   *         description: File too large
+   */
+  router.post(
+    '/key-systems/:id/upload-schema',
+    upload.single('file'),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+        if (!parse.success) {
+          ctx.status = 400
+          ctx.body = { reason: 'Invalid key system id', ...metadata }
+          return
+        }
+
+        const keySystem = await keySystemsAdapter.getKeySystemById(
+          parse.data.id,
+          db
+        )
+        if (!keySystem) {
+          ctx.status = 404
+          ctx.body = { reason: 'Key system not found', ...metadata }
+          return
+        }
+
+        if (!ctx.file || !ctx.file.buffer) {
+          ctx.status = 400
+          ctx.body = { reason: 'No file provided', ...metadata }
+          return
+        }
+
+        // Delete old schema file if it exists
+        if (keySystem.schemaFileId) {
+          try {
+            await deleteFile(keySystem.schemaFileId)
+            logger.info(
+              { fileId: keySystem.schemaFileId },
+              'Old schema file deleted'
+            )
+          } catch (err) {
+            logger.warn(
+              { err, fileId: keySystem.schemaFileId },
+              'Failed to delete old schema file'
+            )
+          }
+        }
+
+        const fileName = `schema-${parse.data.id}-${Date.now()}.pdf`
+        const fileId = await uploadFile(ctx.file.buffer, fileName, {
+          'key-system-id': parse.data.id,
+          'file-type': 'schema',
+        })
+
+        // Update key system with fileId
+        await keySystemsAdapter.updateKeySystemSchemaFileId(
+          parse.data.id,
+          fileId,
+          db
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: { fileId, fileName, size: ctx.file.size },
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'Error uploading schema file')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /key-systems/{id}/download-schema:
+   *   get:
+   *     summary: Get presigned download URL for key system schema PDF
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Download URL generated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 url:
+   *                   type: string
+   *                 expiresIn:
+   *                   type: number
+   *       404:
+   *         description: Key system or file not found
+   */
+  router.get('/key-systems/:id/download-schema', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+      if (!parse.success) {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid key system id', ...metadata }
+        return
+      }
+
+      const keySystem = await keySystemsAdapter.getKeySystemById(
+        parse.data.id,
+        db
+      )
+      if (!keySystem) {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      if (!keySystem.schemaFileId) {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'No schema file attached to this key system',
+          ...metadata,
+        }
+        return
+      }
+
+      const expirySeconds = 60 * 60 // 1 hour
+      const url = await getFileUrl(keySystem.schemaFileId, expirySeconds)
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          url,
+          expiresIn: expirySeconds,
+          fileId: keySystem.schemaFileId,
+        },
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err }, 'Error generating schema download URL')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /key-systems/{id}/schema:
+   *   delete:
+   *     summary: Delete schema file for a key system
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Schema file deleted successfully
+   *       404:
+   *         description: Key system not found
+   */
+  router.delete('/key-systems/:id/schema', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+      if (!parse.success) {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid id', ...metadata }
+        return
+      }
+
+      const keySystem = await keySystemsAdapter.getKeySystemById(
+        parse.data.id,
+        db
+      )
+      if (!keySystem) {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      if (keySystem.schemaFileId) {
+        try {
+          await deleteFile(keySystem.schemaFileId)
+          logger.info(
+            { fileId: keySystem.schemaFileId },
+            'Schema file deleted from MinIO'
+          )
+        } catch (err) {
+          logger.warn(
+            { err, fileId: keySystem.schemaFileId },
+            'Failed to delete schema file from MinIO'
+          )
+        }
+      }
+
+      await keySystemsAdapter.clearKeySystemSchemaFileId(parse.data.id, db)
+      ctx.status = 204
+    } catch (err) {
+      logger.error(err, 'Error deleting schema file')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

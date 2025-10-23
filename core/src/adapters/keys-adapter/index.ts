@@ -416,6 +416,68 @@ export const KeySystemsApi = {
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-systems/${id}`)
   },
+
+  uploadSchemaFile: async (
+    id: string,
+    fileBuffer: Buffer,
+    fileName: string,
+    mimeType: string
+  ): Promise<
+    AdapterResult<
+      { fileId: string; fileName: string; size: number },
+      'not-found' | 'bad-request' | CommonErr
+    >
+  > => {
+    try {
+      // Create FormData to forward to microservice
+      const FormData = (await import('form-data')).default
+      const formData = new FormData()
+      formData.append('file', fileBuffer, {
+        filename: fileName,
+        contentType: mimeType,
+      })
+
+      const res = await axios.post<{
+        content: { fileId: string; fileName: string; size: number }
+      }>(`${BASE}/key-systems/${id}/upload-schema`, formData as any, {
+        headers: formData.getHeaders(),
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      })
+
+      return ok(res.data.content)
+    } catch (e) {
+      const err = mapAxiosError(e)
+      logger.error(
+        {
+          err: e,
+          response: (e as AxiosError)?.response?.data,
+        },
+        `POST ${BASE}/key-systems/${id}/upload-schema failed -> ${err}`
+      )
+      return fail(err)
+    }
+  },
+
+  getSchemaDownloadUrl: async (
+    id: string
+  ): Promise<
+    AdapterResult<
+      { url: string; expiresIn: number; fileId: string },
+      'not-found' | CommonErr
+    >
+  > => {
+    const r = await getJSON<{
+      content: { url: string; expiresIn: number; fileId: string }
+    }>(`${BASE}/key-systems/${id}/download-schema`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  deleteSchemaFile: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+    return deleteJSON(`${BASE}/key-systems/${id}/schema`)
+  },
 }
 
 /**
