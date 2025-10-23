@@ -1,8 +1,7 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, registerSchema } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { registerSchema } from '../../utils/openapi'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 
@@ -71,7 +70,7 @@ export const routes = (router: KoaRouter) => {
 
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { errors: queryParams.error.errors }
+      ctx.body = { errors: queryParams.error.issues }
       return
     }
 

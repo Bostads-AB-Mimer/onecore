@@ -34,7 +34,7 @@ describe(service.parseInternalParkingSpacesToInsertableListings, () => {
       invalid: [
         {
           rentalObjectCode: invalid.RentalObjectCode,
-          errors: [{ code: 'invalid_date', path: 'PublishedTo' }],
+          errors: [{ code: 'invalid_type', path: 'PublishedTo' }],
         },
       ],
     })
@@ -145,7 +145,7 @@ describe(service.syncInternalParkingSpaces, () => {
           invalid: [
             expect.objectContaining({
               rentalObjectCode: '3',
-              errors: [{ code: 'invalid_date', path: 'PublishedTo' }],
+              errors: [{ code: 'invalid_type', path: 'PublishedTo' }],
             }),
           ],
           insertions: {
