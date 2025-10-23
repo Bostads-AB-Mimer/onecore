@@ -1381,4 +1381,148 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /propertyBase/facilities/by-property-code/{propertyCode}:
+   *   get:
+   *     summary: Get facilities by property code.
+   *     description: Returns all facilities belonging to a property.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: propertyCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the property for which to retrieve facilities.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the facilities.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       404:
+   *         description: Facilities not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/facilities/by-property-code/:propertyCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { propertyCode } = ctx.params
+
+    logger.info(`GET /facilities/by-property-code/${propertyCode}`, metadata)
+
+    try {
+      const result =
+        await propertyBaseAdapter.getFacilitiesByPropertyCode(propertyCode)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Facilities not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          result.err,
+          'Error getting facilities from property-base',
+          metadata
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.FacilityDetails>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /propertyBase/facilities/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get facilities by building code.
+   *     description: Returns all facilities belonging to a building.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the building for which to retrieve facilities.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the facilities.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       404:
+   *         description: Facilities not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/facilities/by-building-code/:buildingCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { buildingCode } = ctx.params
+
+    logger.info(`GET /facilities/by-building-code/${buildingCode}`, metadata)
+
+    try {
+      const result =
+        await propertyBaseAdapter.getFacilitiesByBuildingCode(buildingCode)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Facilities not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          result.err,
+          'Error getting facilities from property-base',
+          metadata
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.FacilityDetails>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Internal server error', metadata)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }
