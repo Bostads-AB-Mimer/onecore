@@ -5,6 +5,7 @@ import { logger } from '@onecore/utilities'
 import hash from './hash'
 import { createToken } from './jwt'
 import auth from './keycloak'
+import { requireAuth } from '../../middlewares/keycloak-auth'
 
 /**
  * @swagger
@@ -231,11 +232,43 @@ export const routes = (router: KoaRouter) => {
    *       '401':
    *         description: Unauthorized
    */
-  router.get(
-    '(.*)/auth/profile',
-    auth.middleware.extractJwtToken,
-    async (ctx) => {
-      ctx.body = ctx.state.user
+  router.get('(.*)/auth/profile', requireAuth, async (ctx) => {
+    ctx.body = ctx.state.user
+  })
+
+  /**
+   * @swagger
+   * /auth/refresh:
+   *   post:
+   *     summary: Refresh access token
+   *     description: Uses refresh_token cookie to get new access_token
+   *     tags:
+   *       - Auth
+   *     responses:
+   *       '200':
+   *         description: Token refreshed successfully
+   *       '401':
+   *         description: Invalid or expired refresh token
+   */
+  router.post('(.*)/auth/refresh', async (ctx) => {
+    try {
+      const refreshToken = ctx.cookies.get('refresh_token')
+
+      if (!refreshToken) {
+        ctx.status = 401
+        ctx.body = { error: 'No refresh token available' }
+        return
+      }
+
+      const newTokens = await auth.refreshAccessToken(refreshToken)
+      auth.tokenService.setCookies(ctx, newTokens)
+
+      ctx.status = 200
+      ctx.body = { message: 'Token refreshed successfully' }
+    } catch (error) {
+      logger.error(error, 'Token refresh failed in /auth/refresh endpoint')
+      ctx.status = 401
+      ctx.body = { error: 'Token refresh failed' }
     }
-  )
+  })
 }
