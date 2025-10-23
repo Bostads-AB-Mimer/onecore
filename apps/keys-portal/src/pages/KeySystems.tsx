@@ -9,6 +9,7 @@ import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyService } from '@/services/api/keyService'
 import { propertySearchService } from '@/services/api/propertySearchService'
+import { keySystemSchemaService } from '@/services/api/keySystemSchemaService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 
 export default function KeySystems() {
@@ -25,6 +26,9 @@ export default function KeySystems() {
   const [expandedSystemId, setExpandedSystemId] = useState<string | null>(null)
   const [keysForExpandedSystem, setKeysForExpandedSystem] = useState<Key[]>([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
+  const [uploadingSchemaId, setUploadingSchemaId] = useState<string | null>(
+    null
+  )
   const { toast } = useToast()
 
   // Read all filters from URL
@@ -209,7 +213,8 @@ export default function KeySystems() {
   }
 
   const handleSave = async (
-    KeySystemData: Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>
+    KeySystemData: Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>,
+    schemaFile?: File | null
   ) => {
     try {
       if (editingKeySystem) {
@@ -229,10 +234,29 @@ export default function KeySystems() {
         // Create new key system
         const newKeySystem = await keyService.createKeySystem(KeySystemData)
         setKeySystems((prev) => [...prev, newKeySystem])
-        toast({
-          title: 'Låssystem skapat',
-          description: `${KeySystemData.name} har skapats framgångsrikt.`,
-        })
+
+        // Upload schema file if one was selected
+        if (schemaFile) {
+          try {
+            await keySystemSchemaService.uploadFile(newKeySystem.id, schemaFile)
+            toast({
+              title: 'Låssystem och schema skapat',
+              description: `${KeySystemData.name} och dess schema har skapats framgångsrikt.`,
+            })
+          } catch (uploadError) {
+            console.error('Failed to upload schema:', uploadError)
+            toast({
+              title: 'Låssystem skapat, men schema misslyckades',
+              description: `${KeySystemData.name} har skapats, men schemat kunde inte laddas upp. Du kan försöka igen genom att redigera låssystemet.`,
+              variant: 'destructive',
+            })
+          }
+        } else {
+          toast({
+            title: 'Låssystem skapat',
+            description: `${KeySystemData.name} har skapats framgångsrikt.`,
+          })
+        }
       }
       setShowAddForm(false)
     } catch (error: any) {
@@ -311,6 +335,60 @@ export default function KeySystems() {
     }
   }
 
+  const handleSchemaUpload = async (keySystemId: string, file: File) => {
+    setUploadingSchemaId(keySystemId)
+    try {
+      await keySystemSchemaService.uploadFile(keySystemId, file)
+      toast({
+        title: 'Framgång',
+        description: 'Schema uppladdad.',
+      })
+      // Refresh the key systems list to show the new schema
+      await loadKeySystems(pagination.currentPage, pagination.currentLimit)
+    } catch (error) {
+      console.error('Failed to upload schema:', error)
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte ladda upp schema.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingSchemaId(null)
+    }
+  }
+
+  const handleSchemaDownload = async (keySystemId: string) => {
+    try {
+      await keySystemSchemaService.downloadFile(keySystemId)
+    } catch (error) {
+      console.error('Failed to download schema:', error)
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte ladda ner schema.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleSchemaDelete = async (keySystemId: string) => {
+    try {
+      await keySystemSchemaService.deleteFile(keySystemId)
+      toast({
+        title: 'Framgång',
+        description: 'Schema raderad.',
+      })
+      // Refresh the key systems list
+      await loadKeySystems(pagination.currentPage, pagination.currentLimit)
+    } catch (error) {
+      console.error('Failed to delete schema:', error)
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte radera schema.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <KeySystemsHeader
@@ -329,6 +407,9 @@ export default function KeySystems() {
           onSave={handleSave}
           onCancel={handleCancel}
           editingKeySystem={editingKeySystem}
+          onSchemaUpload={handleSchemaUpload}
+          onSchemaDownload={handleSchemaDownload}
+          onSchemaDelete={handleSchemaDelete}
         />
       )}
 
@@ -349,6 +430,9 @@ export default function KeySystems() {
         installationDateAfter={installationDateAfter}
         installationDateBefore={installationDateBefore}
         onDatesChange={handleInstallationDatesChange}
+        onSchemaUpload={handleSchemaUpload}
+        onSchemaDownload={handleSchemaDownload}
+        uploadingSchemaId={uploadingSchemaId}
       />
 
       <PaginationControls
