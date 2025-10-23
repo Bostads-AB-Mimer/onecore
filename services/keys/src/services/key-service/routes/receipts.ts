@@ -5,7 +5,11 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
-import { uploadFile, getFileUrl, deleteFile } from '../adapters/minio'
+import {
+  createFileUploadHandler,
+  createFileDownloadHandler,
+} from '../../../utils/file-upload-routes'
+import { uploadFile, deleteFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
 
@@ -33,7 +37,7 @@ const upload = multer({
   },
 })
 
-const IdParamSchema = z.object({ id: z.string().uuid() })
+const IdParamSchema = z.object({ id: z.string().uuid() }) // Used by upload-base64 endpoint
 const KeyLoanParamSchema = z.object({ keyLoanId: z.string().uuid() })
 
 export const routes = (router: KoaRouter) => {
@@ -234,89 +238,63 @@ export const routes = (router: KoaRouter) => {
    *       413:
    *         description: File too large
    */
-  router.post('/receipts/:id/upload', upload.single('file'), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
-      if (!parse.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid receipt id', ...metadata }
-        return
-      }
-
-      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
-      if (!receipt) {
-        ctx.status = 404
-        ctx.body = { reason: 'Receipt not found', ...metadata }
-        return
-      }
-
-      if (!ctx.file || !ctx.file.buffer) {
-        ctx.status = 400
-        ctx.body = { reason: 'No file provided', ...metadata }
-        return
-      }
-
-      const fileName = `${parse.data.id}-${Date.now()}.pdf`
-      const fileId = await uploadFile(ctx.file.buffer, fileName, {
-        'receipt-id': parse.data.id,
+  router.post(
+    '/receipts/:id/upload',
+    upload.single('file'),
+    createFileUploadHandler({
+      entityName: 'receipt',
+      filePrefix: 'receipt',
+      getEntityById: receiptsAdapter.getReceiptById,
+      getFileId: (receipt) => receipt.fileId,
+      updateFileId: receiptsAdapter.updateReceiptFileId,
+      getFileMetadata: (receipt, entityId) => ({
+        'receipt-id': entityId,
         'receipt-type': receipt.receiptType,
         'key-loan-id': receipt.keyLoanId,
-      })
+      }),
+      // Business logic: If this is a LOAN receipt, activate the key loan
+      onUploadSuccess: async (receipt, _fileId, db) => {
+        if (receipt.receiptType === 'LOAN') {
+          const keyLoanAlreadyActivated =
+            await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
 
-      // Update receipt with fileId (fileId presence indicates signed status)
-      await receiptsAdapter.updateReceiptFileId(parse.data.id, fileId, db)
-
-      // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
-      if (receipt.receiptType === 'LOAN') {
-        const keyLoanAlreadyActivated =
-          await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
-
-        if (!keyLoanAlreadyActivated) {
-          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
-
-          logger.info(
-            { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
-            'Key loan activated after signed receipt uploaded'
-          )
-
-          // Complete any incomplete events for the keys in this loan
-          const keyLoan = await receiptsAdapter.getKeyLoanById(
-            receipt.keyLoanId,
-            db
-          )
-
-          if (keyLoan?.keys) {
-            let keyIds: string[] = []
-            try {
-              keyIds = JSON.parse(keyLoan.keys)
-            } catch {
-              // Fallback if not JSON
-              keyIds = []
-            }
-
-            // For each key, find and complete any incomplete events
-            await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
+          if (!keyLoanAlreadyActivated) {
+            await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
 
             logger.info(
-              { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
-              'Completed key events for picked up keys'
+              { keyLoanId: receipt.keyLoanId, receiptId: receipt.id },
+              'Key loan activated after signed receipt uploaded'
             )
+
+            // Complete any incomplete events for the keys in this loan
+            const keyLoan = await receiptsAdapter.getKeyLoanById(
+              receipt.keyLoanId,
+              db
+            )
+
+            if (keyLoan?.keys) {
+              let keyIds: string[] = []
+              try {
+                keyIds = JSON.parse(keyLoan.keys)
+              } catch {
+                // Fallback if not JSON
+                keyIds = []
+              }
+
+              // For each key, find and complete any incomplete events
+              await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
+
+              logger.info(
+                { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
+                'Completed key events for picked up keys'
+              )
+            }
           }
         }
-      }
-
-      ctx.status = 200
-      ctx.body = {
-        content: { fileId, fileName, size: ctx.file.size },
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error({ err }, 'Error uploading file')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
+      },
+      downloadUrlExpirySeconds: 7 * 24 * 60 * 60, // 7 days
+    })(db)
+  )
 
   /**
    * @swagger
@@ -500,43 +478,17 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Receipt or file not found
    */
-  router.get('/receipts/:id/download', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
-      if (!parse.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid receipt id', ...metadata }
-        return
-      }
-
-      const receipt = await receiptsAdapter.getReceiptById(parse.data.id, db)
-      if (!receipt) {
-        ctx.status = 404
-        ctx.body = { reason: 'Receipt not found', ...metadata }
-        return
-      }
-
-      if (!receipt.fileId) {
-        ctx.status = 404
-        ctx.body = { reason: 'No file attached to this receipt', ...metadata }
-        return
-      }
-
-      const expirySeconds = 7 * 24 * 60 * 60 // 7 days
-      const url = await getFileUrl(receipt.fileId, expirySeconds)
-
-      ctx.status = 200
-      ctx.body = {
-        content: { url, expiresIn: expirySeconds, fileId: receipt.fileId },
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error({ err }, 'Error generating download URL')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
+  router.get(
+    '/receipts/:id/download',
+    createFileDownloadHandler({
+      entityName: 'receipt',
+      filePrefix: 'receipt',
+      getEntityById: receiptsAdapter.getReceiptById,
+      getFileId: (receipt) => receipt.fileId,
+      updateFileId: receiptsAdapter.updateReceiptFileId,
+      downloadUrlExpirySeconds: 7 * 24 * 60 * 60, // 7 days
+    })(db)
+  )
 
   /**
    * @swagger

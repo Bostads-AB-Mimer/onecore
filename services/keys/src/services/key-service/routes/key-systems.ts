@@ -7,9 +7,12 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import {
+  createFileUploadHandler,
+  createFileDownloadHandler,
+  createFileDeleteHandler,
+} from '../../../utils/file-upload-routes'
 import multer from '@koa/multer'
-import { z } from 'zod'
-import { uploadFile, getFileUrl, deleteFile } from '../adapters/minio'
 
 const {
   KeySystemSchema,
@@ -32,8 +35,6 @@ const upload = multer({
     else cb(new Error('Only PDF files are allowed'), false)
   },
 })
-
-const IdParamSchema = z.object({ id: z.string().uuid() })
 
 /**
  * @swagger
@@ -528,72 +529,18 @@ export const routes = (router: KoaRouter) => {
   router.post(
     '/key-systems/:id/upload-schema',
     upload.single('file'),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      try {
-        const parse = IdParamSchema.safeParse({ id: ctx.params.id })
-        if (!parse.success) {
-          ctx.status = 400
-          ctx.body = { reason: 'Invalid key system id', ...metadata }
-          return
-        }
-
-        const keySystem = await keySystemsAdapter.getKeySystemById(
-          parse.data.id,
-          db
-        )
-        if (!keySystem) {
-          ctx.status = 404
-          ctx.body = { reason: 'Key system not found', ...metadata }
-          return
-        }
-
-        if (!ctx.file || !ctx.file.buffer) {
-          ctx.status = 400
-          ctx.body = { reason: 'No file provided', ...metadata }
-          return
-        }
-
-        // Delete old schema file if it exists
-        if (keySystem.schemaFileId) {
-          try {
-            await deleteFile(keySystem.schemaFileId)
-            logger.info(
-              { fileId: keySystem.schemaFileId },
-              'Old schema file deleted'
-            )
-          } catch (err) {
-            logger.warn(
-              { err, fileId: keySystem.schemaFileId },
-              'Failed to delete old schema file'
-            )
-          }
-        }
-
-        const fileName = `schema-${parse.data.id}-${Date.now()}.pdf`
-        const fileId = await uploadFile(ctx.file.buffer, fileName, {
-          'key-system-id': parse.data.id,
-          'file-type': 'schema',
-        })
-
-        // Update key system with fileId
-        await keySystemsAdapter.updateKeySystemSchemaFileId(
-          parse.data.id,
-          fileId,
-          db
-        )
-
-        ctx.status = 200
-        ctx.body = {
-          content: { fileId, fileName, size: ctx.file.size },
-          ...metadata,
-        }
-      } catch (err) {
-        logger.error({ err }, 'Error uploading schema file')
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-      }
-    }
+    createFileUploadHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      getFileMetadata: (_keySystem, entityId) => ({
+        'key-system-id': entityId,
+        'file-type': 'schema',
+      }),
+      downloadUrlExpirySeconds: 60 * 60, // 1 hour
+    })(db)
   )
 
   /**
@@ -624,53 +571,17 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Key system or file not found
    */
-  router.get('/key-systems/:id/download-schema', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
-      if (!parse.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid key system id', ...metadata }
-        return
-      }
-
-      const keySystem = await keySystemsAdapter.getKeySystemById(
-        parse.data.id,
-        db
-      )
-      if (!keySystem) {
-        ctx.status = 404
-        ctx.body = { reason: 'Key system not found', ...metadata }
-        return
-      }
-
-      if (!keySystem.schemaFileId) {
-        ctx.status = 404
-        ctx.body = {
-          reason: 'No schema file attached to this key system',
-          ...metadata,
-        }
-        return
-      }
-
-      const expirySeconds = 60 * 60 // 1 hour
-      const url = await getFileUrl(keySystem.schemaFileId, expirySeconds)
-
-      ctx.status = 200
-      ctx.body = {
-        content: {
-          url,
-          expiresIn: expirySeconds,
-          fileId: keySystem.schemaFileId,
-        },
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error({ err }, 'Error generating schema download URL')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
+  router.get(
+    '/key-systems/:id/download-schema',
+    createFileDownloadHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      downloadUrlExpirySeconds: 60 * 60, // 1 hour
+    })(db)
+  )
 
   /**
    * @swagger
@@ -691,47 +602,15 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Key system not found
    */
-  router.delete('/key-systems/:id/schema', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
-      if (!parse.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid id', ...metadata }
-        return
-      }
-
-      const keySystem = await keySystemsAdapter.getKeySystemById(
-        parse.data.id,
-        db
-      )
-      if (!keySystem) {
-        ctx.status = 404
-        ctx.body = { reason: 'Key system not found', ...metadata }
-        return
-      }
-
-      if (keySystem.schemaFileId) {
-        try {
-          await deleteFile(keySystem.schemaFileId)
-          logger.info(
-            { fileId: keySystem.schemaFileId },
-            'Schema file deleted from MinIO'
-          )
-        } catch (err) {
-          logger.warn(
-            { err, fileId: keySystem.schemaFileId },
-            'Failed to delete schema file from MinIO'
-          )
-        }
-      }
-
-      await keySystemsAdapter.clearKeySystemSchemaFileId(parse.data.id, db)
-      ctx.status = 204
-    } catch (err) {
-      logger.error(err, 'Error deleting schema file')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
+  router.delete(
+    '/key-systems/:id/schema',
+    createFileDeleteHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      clearFileId: keySystemsAdapter.clearKeySystemSchemaFileId,
+    })(db)
+  )
 }
