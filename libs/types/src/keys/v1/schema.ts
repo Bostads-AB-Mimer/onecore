@@ -67,6 +67,7 @@ export const KeySystemSchema = z.object({
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
   description: z.string().nullable().optional(),
+  schemaFileId: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   createdBy: z.string().nullable().optional(),
@@ -223,6 +224,12 @@ export const NotFoundResponseSchema = z.object({
 
 export const BadRequestResponseSchema = z.object({
   reason: z.string(),
+})
+
+// File operation response schemas
+export const SchemaDownloadUrlResponseSchema = z.object({
+  url: z.string(),
+  expiresIn: z.number(),
 })
 
 // Request schemas for key notes
