@@ -7,7 +7,6 @@ function parseDbDateToLocal(date: string | Date): Date {
   if (/[TZz]|[+-]\d{2}:\d{2}$/.test(date)) return new Date(date)
 
   // Handle SQL-style: "YYYY-MM-DD HH:mm:ss.SSSSSSS"
-  // -> treat as local time (Swedish time zone, same as database server)
   const [ymd, hms] = date.trim().split(' ')
   if (ymd && hms) {
     // Trim fractional seconds to 3 digits for JS Date
@@ -17,8 +16,7 @@ function parseDbDateToLocal(date: string | Date): Date {
       const frac = (fracMatch[1] + '000').slice(0, 3) // keep ms
       hmsFixed = hms.replace(/\.(\d+)/, `.${frac}`)
     }
-    // Parse as local time (no 'Z' suffix)
-    const iso = `${ymd}T${hmsFixed}`
+    const iso = `${ymd}T${hmsFixed}Z`
     return new Date(iso)
   }
 
