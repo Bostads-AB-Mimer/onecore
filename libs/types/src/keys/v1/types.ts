@@ -12,6 +12,8 @@ import {
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
+  KeyBundleSchema,
+  KeyLoanMaintenanceKeysSchema,
   KeyEventSchema,
   ReceiptSchema,
   KeyWithLoanStatusSchema,
@@ -32,6 +34,10 @@ import {
   BadRequestResponseSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
+  CreateKeyBundleRequestSchema,
+  UpdateKeyBundleRequestSchema,
+  CreateKeyLoanMaintenanceKeysRequestSchema,
+  UpdateKeyLoanMaintenanceKeysRequestSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   BulkUpdateFlexRequestSchema,
@@ -91,6 +97,26 @@ export type BadRequestResponse = z.infer<typeof BadRequestResponseSchema>
 export type KeyNote = z.infer<typeof KeyNoteSchema>
 export type CreateKeyNoteRequest = z.infer<typeof CreateKeyNoteRequestSchema>
 export type UpdateKeyNoteRequest = z.infer<typeof UpdateKeyNoteRequestSchema>
+
+// Request types for key bundles
+export type KeyBundle = z.infer<typeof KeyBundleSchema>
+export type CreateKeyBundleRequest = z.infer<
+  typeof CreateKeyBundleRequestSchema
+>
+export type UpdateKeyBundleRequest = z.infer<
+  typeof UpdateKeyBundleRequestSchema
+>
+
+// Request types for key loan maintenance keys
+export type KeyLoanMaintenanceKeys = z.infer<
+  typeof KeyLoanMaintenanceKeysSchema
+>
+export type CreateKeyLoanMaintenanceKeysRequest = z.infer<
+  typeof CreateKeyLoanMaintenanceKeysRequestSchema
+>
+export type UpdateKeyLoanMaintenanceKeysRequest = z.infer<
+  typeof UpdateKeyLoanMaintenanceKeysRequestSchema
+>
 
 // Request types for key events
 export type CreateKeyEventRequest = z.infer<typeof CreateKeyEventRequestSchema>
