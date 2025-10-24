@@ -18,6 +18,8 @@ type KeyEvent = keys.v1.KeyEvent
 type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
 type UpdateKeyEventRequest = keys.v1.UpdateKeyEventRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
+type KeyBundle = keys.v1.KeyBundle
+type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
 
 const BASE = Config.keysService.url
 
@@ -779,5 +781,187 @@ export const KeyNotesApi = {
       payload
     )
     return r.ok ? ok(r.data.content) : r
+  },
+}
+
+/**
+ * ---- Key Bundles API --------------------------------------------------------
+ */
+
+export const KeyBundlesApi = {
+  list: async (): Promise<AdapterResult<KeyBundle[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyBundle[] }>(`${BASE}/key-bundles`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  search: async (
+    searchParams: Record<string, string | string[] | undefined>
+  ): Promise<AdapterResult<KeyBundle[], 'bad-request' | CommonErr>> => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          value.forEach((v) => params.append(key, v))
+        } else {
+          params.append(key, value)
+        }
+      }
+    }
+    const r = await getJSON<{ content: KeyBundle[] }>(
+      `${BASE}/key-bundles/search?${params.toString()}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByKey: async (
+    keyId: string
+  ): Promise<AdapterResult<KeyBundle[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyBundle[] }>(
+      `${BASE}/key-bundles/by-key/${keyId}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  get: async (
+    id: string
+  ): Promise<AdapterResult<KeyBundle, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: KeyBundle }>(`${BASE}/key-bundles/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  create: async (
+    payload: Partial<KeyBundle>
+  ): Promise<
+    AdapterResult<KeyBundle, 'bad-request' | 'conflict' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: KeyBundle }>(
+      `${BASE}/key-bundles`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  update: async (
+    id: string,
+    payload: Partial<KeyBundle>
+  ): Promise<
+    AdapterResult<
+      KeyBundle,
+      'not-found' | 'bad-request' | 'conflict' | CommonErr
+    >
+  > => {
+    const r = await patchJSON<{ content: KeyBundle }>(
+      `${BASE}/key-bundles/${id}`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+    return deleteJSON(`${BASE}/key-bundles/${id}`)
+  },
+}
+
+/**
+ * ---- Key Loan Maintenance Keys API ------------------------------------------
+ */
+
+export const KeyLoanMaintenanceKeysApi = {
+  list: async (): Promise<
+    AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>
+  > => {
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
+      `${BASE}/key-loan-maintenance-keys`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  search: async (
+    searchParams: Record<string, string | string[] | undefined>
+  ): Promise<
+    AdapterResult<KeyLoanMaintenanceKeys[], 'bad-request' | CommonErr>
+  > => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          params.append(key, value.join(','))
+        } else {
+          params.append(key, value)
+        }
+      }
+    }
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
+      `${BASE}/key-loan-maintenance-keys/search?${params.toString()}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByKey: async (
+    keyId: string
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
+      `${BASE}/key-loan-maintenance-keys/by-key/${keyId}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByCompany: async (
+    company: string
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
+      `${BASE}/key-loan-maintenance-keys/by-company/${company}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  get: async (
+    id: string
+  ): Promise<
+    AdapterResult<KeyLoanMaintenanceKeys, 'not-found' | CommonErr>
+  > => {
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeys }>(
+      `${BASE}/key-loan-maintenance-keys/${id}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  create: async (
+    payload: Partial<KeyLoanMaintenanceKeys>
+  ): Promise<
+    AdapterResult<
+      KeyLoanMaintenanceKeys,
+      'bad-request' | 'conflict' | CommonErr
+    >
+  > => {
+    const r = await postJSON<{ content: KeyLoanMaintenanceKeys }>(
+      `${BASE}/key-loan-maintenance-keys`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  update: async (
+    id: string,
+    payload: Partial<KeyLoanMaintenanceKeys>
+  ): Promise<
+    AdapterResult<
+      KeyLoanMaintenanceKeys,
+      'not-found' | 'bad-request' | 'conflict' | CommonErr
+    >
+  > => {
+    const r = await patchJSON<{ content: KeyLoanMaintenanceKeys }>(
+      `${BASE}/key-loan-maintenance-keys/${id}`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  remove: async (
+    id: string
+  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+    return deleteJSON(`${BASE}/key-loan-maintenance-keys/${id}`)
   },
 }
