@@ -29,22 +29,13 @@ import {
 } from '@/services/loanHandlers'
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
+import { deriveDisplayStatus } from '@/lib/lease-status'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
 import { Pencil } from 'lucide-react'
-
-function isLeaseNotPast(lease: Lease): boolean {
-  // If no end date, it's current or future
-  if (!lease.leaseEndDate) return true
-
-  // If has end date, check if it's in the future
-  const now = new Date()
-  const endDate = new Date(lease.leaseEndDate)
-  return endDate >= now
-}
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
@@ -185,7 +176,7 @@ export function LeaseKeyStatusList({
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
   const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
-  const leaseIsNotPast = useMemo(() => isLeaseNotPast(lease), [lease])
+  const leaseIsNotPast = useMemo(() => deriveDisplayStatus(lease) !== 'ended', [lease])
 
   // Fetch keys with loan status (single optimized call with events included)
   useEffect(() => {
