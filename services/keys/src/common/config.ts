@@ -18,6 +18,10 @@ export interface Config {
     secretKey: string
     bucketName: string
   }
+  simpleSign: {
+    apiUrl: string
+    accessToken: string
+  }
 }
 
 const config = configPackage({
@@ -38,6 +42,10 @@ const config = configPackage({
       secretKey: '',
       bucketName: 'receipts',
     },
+    simpleSign: {
+      apiUrl: '',
+      accessToken: '',
+    },
   },
 })
 
@@ -45,4 +53,5 @@ export default {
   port: config.get('port'),
   keysDatabase: config.get('keysDatabase'),
   minio: config.get('minio'),
+  simpleSign: config.get('simplesign'),
 } as Config
