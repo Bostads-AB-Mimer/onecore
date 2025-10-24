@@ -176,7 +176,10 @@ export function LeaseKeyStatusList({
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
   const tenantContactCodes = useMemo(() => getLeaseContactCodes(lease), [lease])
-  const leaseIsNotPast = useMemo(() => deriveDisplayStatus(lease) !== 'ended', [lease])
+  const leaseIsNotPast = useMemo(
+    () => deriveDisplayStatus(lease) !== 'ended',
+    [lease]
+  )
 
   // Fetch keys with loan status (single optimized call with events included)
   useEffect(() => {
