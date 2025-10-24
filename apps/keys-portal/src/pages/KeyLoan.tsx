@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { UnifiedSearch } from '@/components/loan/UnifiedSearch'
+import { useUnifiedSearch } from '@/components/loan/UnifiedSearch'
+import { SearchInput } from '@/components/loan/SearchInput'
 import { TenantInfo } from '@/components/loan/TenantInfo'
 import type { Tenant, Lease } from '@/services/types'
 
@@ -50,10 +51,32 @@ export default function KeyLoan() {
     setSearchParams({})
   }
 
+  const { searchValue, setSearchValue, handleSearch, loading } =
+    useUnifiedSearch({
+      onResultFound: handleResultFound,
+    })
+
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="max-w-2xl mx-auto">
-        <UnifiedSearch onResultFound={handleResultFound} />
+        <SearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={handleSearch}
+          loading={loading}
+          placeholder="Personnummer, kundnummer eller hyresobjekt"
+          title="Sök hyresgäst eller hyresobjekt"
+          description="Ange personnummer, kundnummer eller hyresobjekt för att hitta kontrakt"
+          helpText={
+            <>
+              <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
+              <p>
+                Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)
+              </p>
+              <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
+            </>
+          }
+        />
       </div>
 
       {/* Show results even when tenant is null (property search) */}
