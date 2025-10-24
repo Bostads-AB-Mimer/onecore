@@ -126,11 +126,15 @@ const addTenantInfo = async (
 
   // Left column: Display all tenants
   tenants.forEach((tenant, index) => {
-    const fullName = `${tenant.firstName} ${tenant.lastName}`.trim()
+    const name = `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim()
+    const fullName = name || tenant.fullName || 'Okänt namn'
+    const isCompany = tenant.contactCode?.toUpperCase().startsWith('F')
+    const idLabel = isCompany ? 'Organisationsnummer' : 'Personnummer'
+
     if (index === 0) {
       doc.text(`Namn: ${fullName}`, leftCol, leftY)
       doc.text(
-        `Personnummer: ${tenant.nationalRegistrationNumber}`,
+        `${idLabel}: ${tenant.nationalRegistrationNumber}`,
         leftCol,
         leftY + 7
       )
@@ -139,7 +143,7 @@ const addTenantInfo = async (
     } else {
       doc.text(`Namn: ${fullName}`, leftCol, leftY)
       doc.text(
-        `Personnummer: ${tenant.nationalRegistrationNumber}`,
+        `${idLabel}: ${tenant.nationalRegistrationNumber}`,
         leftCol,
         leftY + 7
       )
