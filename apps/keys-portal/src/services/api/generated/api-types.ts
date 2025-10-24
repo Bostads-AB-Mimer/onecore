@@ -5,6 +5,219 @@
 
 
 export interface paths {
+  "/key-bundles": {
+    /**
+     * List all key bundles
+     * @description Fetches a list of all key bundles ordered by name.
+     */
+    get: {
+      responses: {
+        /** @description A list of key bundles. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description An error occurred while listing key bundles. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new key bundle
+     * @description Create a new key bundle record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyBundleRequest"];
+        };
+      };
+      responses: {
+        /** @description Key bundle created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description An error occurred while creating the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/search": {
+    /**
+     * Search key bundles
+     * @description Search key bundles with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any KeyBundle field parameter for filtering
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. Defaults to name and description. */
+          fields?: string;
+        };
+      };
+      responses: {
+        /** @description Search results */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description Invalid search parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/by-key/{keyId}": {
+    /**
+     * Get all bundles containing a specific key
+     * @description Returns all bundle records containing the specified key ID, ordered by name
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key ID to search for */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description Array of bundles containing this key */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/{id}": {
+    /**
+     * Get key bundle by ID
+     * @description Fetch a specific key bundle by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key bundle object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Key bundle not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while fetching the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a key bundle
+     * @description Delete a key bundle by ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to delete. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Key bundle deleted successfully. */
+        204: {
+          content: never;
+        };
+        /** @description An error occurred while deleting the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a key bundle
+     * @description Partially update an existing key bundle.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyBundleRequest"];
+        };
+      };
+      responses: {
+        /** @description Key bundle updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Key bundle not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while updating the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-events": {
     /**
      * Get all key events
@@ -157,6 +370,246 @@ export interface paths {
           content: never;
         };
         /** @description An error occurred while updating the key event. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys": {
+    /**
+     * List all maintenance key loans
+     * @description Fetches a list of all maintenance key loans ordered by creation date.
+     */
+    get: {
+      responses: {
+        /** @description A list of maintenance key loans. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
+            };
+          };
+        };
+        /** @description An error occurred while listing maintenance key loans. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new maintenance key loan
+     * @description Create a new maintenance key loan record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
+        };
+      };
+      responses: {
+        /** @description Maintenance key loan created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description An error occurred while creating the maintenance key loan. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/search": {
+    /**
+     * Search maintenance key loans
+     * @description Search maintenance key loans with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any field parameter for filtering
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. Defaults to company and contactPerson. */
+          fields?: string;
+        };
+      };
+      responses: {
+        /** @description Search results */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
+            };
+          };
+        };
+        /** @description Invalid search parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/by-key/{keyId}": {
+    /**
+     * Get all maintenance key loans for a specific key
+     * @description Returns all maintenance key loan records for the specified key ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key ID to search for */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans containing this key */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/by-company/{company}": {
+    /**
+     * Get all maintenance key loans for a specific company
+     * @description Returns all maintenance key loan records for the specified company
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The company name to filter by */
+          company: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this company */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/{id}": {
+    /**
+     * Get maintenance key loan by ID
+     * @description Fetch a specific maintenance key loan by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the maintenance key loan to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A maintenance key loan object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
+            };
+          };
+        };
+        /** @description Maintenance key loan not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while fetching the maintenance key loan. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a maintenance key loan
+     * @description Delete a maintenance key loan by ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the maintenance key loan to delete. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Maintenance key loan deleted successfully. */
+        204: {
+          content: never;
+        };
+        /** @description An error occurred while deleting the maintenance key loan. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a maintenance key loan
+     * @description Partially update an existing maintenance key loan.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the maintenance key loan to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
+        };
+      };
+      responses: {
+        /** @description Maintenance key loan updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Maintenance key loan not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while updating the maintenance key loan. */
         500: {
           content: never;
         };
@@ -1921,6 +2374,12 @@ export interface components {
     CreateKeyEventRequest: components["schemas"]["CreateKeyEventRequest"];
     UpdateKeyEventRequest: components["schemas"]["UpdateKeyEventRequest"];
     KeyEvent: components["schemas"]["KeyEvent"];
+    CreateKeyBundleRequest: components["schemas"]["CreateKeyBundleRequest"];
+    UpdateKeyBundleRequest: components["schemas"]["UpdateKeyBundleRequest"];
+    KeyBundle: components["schemas"]["KeyBundle"];
+    CreateKeyLoanMaintenanceKeysRequest: components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
+    UpdateKeyLoanMaintenanceKeysRequest: components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
+    KeyLoanMaintenanceKeys: components["schemas"]["KeyLoanMaintenanceKeys"];
   };
   responses: never;
   parameters: never;

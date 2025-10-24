@@ -78,7 +78,13 @@ export const LogSchema = z.object({
   id: z.string().uuid(),
   userName: z.string(),
   eventType: z.enum(['creation', 'update', 'delete']),
-  objectType: z.enum(['key', 'keySystem', 'keyLoan']),
+  objectType: z.enum([
+    'key',
+    'keySystem',
+    'keyLoan',
+    'keyBundle',
+    'keyLoanMaintenanceKeys',
+  ]),
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
@@ -88,6 +94,22 @@ export const KeyNoteSchema = z.object({
   id: z.string().uuid(),
   rentalObjectCode: z.string(),
   description: z.string(),
+})
+
+export const KeyBundleSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  keys: z.string(),
+  description: z.string().nullable().optional(),
+})
+
+export const KeyLoanMaintenanceKeysSchema = z.object({
+  id: z.string().uuid(),
+  keys: z.string(),
+  company: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  description: z.string().nullable().optional(),
 })
 
 // Key Event schemas
@@ -175,7 +197,13 @@ export const UpdateKeyLoanRequestSchema = z.object({
 export const CreateLogRequestSchema = z.object({
   userName: z.string(),
   eventType: z.enum(['creation', 'update', 'delete']),
-  objectType: z.enum(['key', 'keySystem', 'keyLoan']),
+  objectType: z.enum([
+    'key',
+    'keySystem',
+    'keyLoan',
+    'keyBundle',
+    'keyLoanMaintenanceKeys',
+  ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
 })
@@ -242,6 +270,38 @@ export const CreateKeyNoteRequestSchema = z.object({
 export const UpdateKeyNoteRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   description: z.string().optional(),
+})
+
+// Request schemas for key bundles
+
+export const CreateKeyBundleRequestSchema = z.object({
+  name: z.string(),
+  keys: z.string(),
+  description: z.string().nullable().optional(),
+})
+
+export const UpdateKeyBundleRequestSchema = z.object({
+  name: z.string().optional(),
+  keys: z.string().optional(),
+  description: z.string().nullable().optional(),
+})
+
+// Request schemas for key loan maintenance keys
+
+export const CreateKeyLoanMaintenanceKeysRequestSchema = z.object({
+  keys: z.string(),
+  company: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  description: z.string().nullable().optional(),
+})
+
+export const UpdateKeyLoanMaintenanceKeysRequestSchema = z.object({
+  keys: z.string().optional(),
+  company: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  description: z.string().nullable().optional(),
 })
 
 // Request schemas for key events
