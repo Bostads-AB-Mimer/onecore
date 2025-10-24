@@ -265,6 +265,7 @@ export function KeyLoansAccordion({
                   hasUnsignedLoanReceipt={hasUnsignedLoanReceipt}
                   uploadingReceiptId={uploadingReceiptId}
                   uploadError={uploadError}
+                  lease={lease}
                   onGenerateLoanReceipt={() =>
                     handleGenerateLoanReceipt(loanWithDetails)
                   }
@@ -273,6 +274,7 @@ export function KeyLoansAccordion({
                   }
                   onUploadReceipt={onPickFile}
                   onDownloadReceipt={handleDownloadReceipt}
+                  onRefresh={refresh}
                 />
               )
             })}
@@ -328,6 +330,7 @@ export function KeyLoansAccordion({
                       hasUnsignedLoanReceipt={hasUnsignedLoanReceipt}
                       uploadingReceiptId={uploadingReceiptId}
                       uploadError={uploadError}
+                      lease={lease}
                       onGenerateLoanReceipt={() =>
                         handleGenerateLoanReceipt(loanWithDetails)
                       }
@@ -336,6 +339,7 @@ export function KeyLoansAccordion({
                       }
                       onUploadReceipt={onPickFile}
                       onDownloadReceipt={handleDownloadReceipt}
+                      onRefresh={refresh}
                     />
                   )
                 })}

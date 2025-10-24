@@ -1,11 +1,20 @@
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, FileText, Upload, Printer, Download } from 'lucide-react'
+import {
+  AlertCircle,
+  FileText,
+  Upload,
+  Printer,
+  Download,
+  PenLine,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { KeyLoan, Key, Receipt } from '@/services/types'
+import type { KeyLoan, Key, Receipt, Lease } from '@/services/types'
+import { handleSendForDigitalSignature } from './signatureHandlers'
 
 interface KeyLoanCardProps {
   keyLoan: KeyLoan
@@ -17,10 +26,12 @@ interface KeyLoanCardProps {
   hasUnsignedLoanReceipt: boolean
   uploadingReceiptId: string | null
   uploadError: string | null
+  lease: Lease
   onGenerateLoanReceipt: () => void
   onGenerateReturnReceipt?: () => void
   onUploadReceipt: (receiptId: string) => void
   onDownloadReceipt: (receipt: Receipt) => void
+  onRefresh: () => Promise<void>
 }
 
 export function KeyLoanCard({
@@ -33,11 +44,40 @@ export function KeyLoanCard({
   hasUnsignedLoanReceipt,
   uploadingReceiptId,
   uploadError,
+  lease,
   onGenerateLoanReceipt,
   onGenerateReturnReceipt,
   onUploadReceipt,
   onDownloadReceipt,
+  onRefresh,
 }: KeyLoanCardProps) {
+  const [signingReceiptId, setSigningReceiptId] = useState<string | null>(null)
+  const [signError, setSignError] = useState<string | null>(null)
+
+  const handleDigitalSign = async () => {
+    if (!loanReceipt) {
+      setSignError('Ingen kvittens att signera')
+      return
+    }
+
+    setSignError(null)
+    setSigningReceiptId(loanReceipt.id)
+
+    const result = await handleSendForDigitalSignature({
+      loanReceipt,
+      lease,
+      keys,
+      keyLoan,
+      onSuccess: onRefresh,
+    })
+
+    if (!result.success) {
+      setSignError(result.error || 'Ett fel uppstod')
+    }
+
+    setSigningReceiptId(null)
+  }
+
   return (
     <Card
       className={`border rounded-lg ${
@@ -139,6 +179,18 @@ export function KeyLoanCard({
               </Button>
               <Button
                 size="sm"
+                variant="outline"
+                className="text-[10px] h-6 border-yellow-600 hover:bg-yellow-100 px-1.5"
+                onClick={handleDigitalSign}
+                disabled={signingReceiptId === loanReceipt.id}
+              >
+                <PenLine className="h-2 w-2 mr-0.5" />
+                {signingReceiptId === loanReceipt.id
+                  ? 'Skickar...'
+                  : 'Digital Sign'}
+              </Button>
+              <Button
+                size="sm"
                 variant="ghost"
                 className="text-[10px] h-6 px-1.5"
                 onClick={onGenerateLoanReceipt}
@@ -150,6 +202,11 @@ export function KeyLoanCard({
             {uploadError && (
               <div className="text-[10px] text-red-600 dark:text-red-400">
                 {uploadError}
+              </div>
+            )}
+            {signError && (
+              <div className="text-[10px] text-red-600 dark:text-red-400">
+                {signError}
               </div>
             )}
           </div>
