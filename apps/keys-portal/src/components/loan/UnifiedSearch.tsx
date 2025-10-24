@@ -1,15 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import {
   fetchTenantAndLeasesByPnr,
@@ -55,7 +45,7 @@ function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
   return (t as Tenant) ?? null
 }
 
-export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
+export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
   const [searchParams] = useSearchParams()
   const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
@@ -87,10 +77,6 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         variant: 'destructive',
       })
     }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch()
   }
 
   // Trigger search when URL parameters are present
@@ -199,37 +185,10 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Search className="h-5 w-5" />
-          Sök hyresgäst eller hyresobjekt
-        </CardTitle>
-        <CardDescription>
-          Ange personnummer, kundnummer eller hyresobjekt för att hitta kontrakt
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Personnummer, kundnummer eller hyresobjekt"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1"
-          />
-          <Button onClick={handleSearch} className="gap-2" disabled={loading}>
-            <Search className="h-4 w-4" />
-            {loading ? 'Söker…' : 'Sök'}
-          </Button>
-        </div>
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
-          <p>Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)</p>
-          <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  return {
+    searchValue,
+    setSearchValue,
+    handleSearch,
+    loading,
+  }
 }
