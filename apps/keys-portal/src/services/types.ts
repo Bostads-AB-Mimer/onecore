@@ -27,6 +27,9 @@ export type TenantAddress = NonNullable<
   components['schemas']['Lease']['tenants'][number]['address']
 >
 
+// Contact type from registered Contact schema in OpenAPI
+export type Contact = components['schemas']['Contact']
+
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
 export type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
