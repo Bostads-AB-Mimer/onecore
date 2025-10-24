@@ -1384,7 +1384,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/facilities/by-property-code/{propertyCode}:
+   * /facilities/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get facilities by property code.
    *     description: Returns all facilities belonging to a property.
@@ -1420,7 +1420,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { propertyCode } = ctx.params
 
-    logger.info(`GET /facilities/by-property-code/${propertyCode}`, metadata)
+    logger.info(metadata, `GET /facilities/by-property-code/${propertyCode}`)
 
     try {
       const result =
@@ -1434,9 +1434,8 @@ export const routes = (router: KoaRouter) => {
         }
 
         logger.error(
-          result.err,
-          'Error getting facilities from property-base',
-          metadata
+          { err: result.err, metadata },
+          'Error getting facilities from property-base'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -1448,7 +1447,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -1456,7 +1455,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /propertyBase/facilities/by-building-code/{buildingCode}:
+   * /facilities/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get facilities by building code.
    *     description: Returns all facilities belonging to a building.
@@ -1492,7 +1491,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { buildingCode } = ctx.params
 
-    logger.info(`GET /facilities/by-building-code/${buildingCode}`, metadata)
+    logger.info(metadata, `GET /facilities/by-building-code/${buildingCode}`)
 
     try {
       const result =
@@ -1506,9 +1505,8 @@ export const routes = (router: KoaRouter) => {
         }
 
         logger.error(
-          result.err,
-          'Error getting facilities from property-base',
-          metadata
+          { err: result.err, metadata },
+          'Error getting facilities from property-base'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -1520,7 +1518,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Internal server error', metadata)
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
