@@ -161,6 +161,9 @@ export function TenantInfo({
                       .filter(Boolean)
                       .join(' ')
                     const displayName = name || t.fullName || 'Okänt namn'
+                    const isCompany = t.contactCode
+                      ?.toUpperCase()
+                      .startsWith('F')
                     return (
                       <div key={t.contactKey || idx} className="space-y-2">
                         {tenantsToDisplay.length > 1 && (
@@ -172,7 +175,8 @@ export function TenantInfo({
                           <h3 className="font-semibold">{displayName}</h3>
                         )}
                         <p className="text-sm text-muted-foreground">
-                          Personnummer: {t.nationalRegistrationNumber}
+                          {isCompany ? 'Organisationsnummer' : 'Personnummer'}:{' '}
+                          {t.nationalRegistrationNumber}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Kundnummer: {t.contactCode}
