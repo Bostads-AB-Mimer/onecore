@@ -32,8 +32,8 @@ const isValidPnr = (value: string) =>
 
 const isContactCode = (value: string) => {
   const trimmed = value.trim().toUpperCase()
-  // Contact codes start with P and contain only letters/numbers (no dashes or spaces)
-  return /^P[A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
+  // Contact codes start with P or F and contain only letters/numbers (no dashes or spaces)
+  return /^[PF][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
 }
 
 const isObjectId = (value: string) => {
@@ -83,7 +83,7 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       toast({
         title: 'Ogiltigt format',
         description:
-          'Ange personnummer (YYYYMMDD-XXXX), kundnummer (PXXXXXX) eller hyresobjekt (XXX-XXX-XX-XXX).',
+          'Ange personnummer (YYYYMMDD-XXXX), kundnummer (PXXXXXX/FXXXXXX) eller hyresobjekt (XXX-XXX-XX-XXX).',
         variant: 'destructive',
       })
     }
@@ -226,7 +226,7 @@ export function UnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         </div>
         <div className="text-sm text-muted-foreground space-y-1">
           <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
-          <p>Kundnummer: PXXXXXX (t.ex. P053602)</p>
+          <p>Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)</p>
           <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
         </div>
       </CardContent>
