@@ -32,6 +32,7 @@ import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
   Lease,
+  Contact,
   mapLease,
 } from './schemas/lease'
 
@@ -101,6 +102,7 @@ const getLeasesWithRelatedEntitiesForContactCodeIncludingAllLeases = async (
 
 export const routes = (router: KoaRouter) => {
   registerSchema('Lease', Lease)
+  registerSchema('Contact', Contact)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -711,7 +713,7 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
+   *               $ref: '#/components/schemas/Contact'
    *     security:
    *       - bearerAuth: []
    */
