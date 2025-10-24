@@ -41,9 +41,7 @@ export async function getKeyLoanMaintenanceKeysByCompany(
   company: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanMaintenanceKeys[]> {
-  return await dbConnection(TABLE)
-    .where({ company })
-    .orderBy('id', 'desc')
+  return await dbConnection(TABLE).where({ company }).orderBy('id', 'desc')
 }
 
 export async function createKeyLoanMaintenanceKey(
