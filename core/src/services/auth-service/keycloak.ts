@@ -76,6 +76,7 @@ const refreshAccessToken = async (refreshToken: string): Promise<TokenData> => {
 
       const response = await axios.post<TokenData>(tokenEndpoint, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 10000, // 10 second timeout to prevent indefinite hangs
       })
 
       return response.data
