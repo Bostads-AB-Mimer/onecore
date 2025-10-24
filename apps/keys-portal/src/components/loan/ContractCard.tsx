@@ -243,9 +243,12 @@ export function ContractCard({
               <div className="text-muted-foreground mt-1">
                 Hyresgäst{lease.tenants.length > 1 ? 'er' : ''}:{' '}
                 {lease.tenants
-                  .map((t) =>
-                    [t.firstName, t.lastName].filter(Boolean).join(' ')
-                  )
+                  .map((t) => {
+                    const name = [t.firstName, t.lastName]
+                      .filter(Boolean)
+                      .join(' ')
+                    return name || t.fullName || 'Okänt namn'
+                  })
                   .filter(Boolean)
                   .join(' & ')}
               </div>
