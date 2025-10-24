@@ -155,42 +155,47 @@ export function TenantInfo({
                       : ''
                   }
                 >
-                  {tenantsToDisplay.map((t, idx) => (
-                    <div key={t.contactKey || idx} className="space-y-2">
-                      {tenantsToDisplay.length > 1 && (
-                        <h3 className="font-semibold text-sm">
-                          Kontakt {idx + 1}: {t.firstName} {t.lastName}
-                        </h3>
-                      )}
-                      {tenantsToDisplay.length === 1 && (
-                        <h3 className="font-semibold">
-                          {t.firstName} {t.lastName}
-                        </h3>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        Personnummer: {t.nationalRegistrationNumber}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Kundnummer: {t.contactCode}
-                      </p>
-                      {t.emailAddress && (
+                  {tenantsToDisplay.map((t, idx) => {
+                    // Use firstName+lastName if available, otherwise fallback to fullName
+                    const name = [t.firstName, t.lastName]
+                      .filter(Boolean)
+                      .join(' ')
+                    const displayName = name || t.fullName || 'Okänt namn'
+                    return (
+                      <div key={t.contactKey || idx} className="space-y-2">
+                        {tenantsToDisplay.length > 1 && (
+                          <h3 className="font-semibold text-sm">
+                            Kontakt {idx + 1}: {displayName}
+                          </h3>
+                        )}
+                        {tenantsToDisplay.length === 1 && (
+                          <h3 className="font-semibold">{displayName}</h3>
+                        )}
                         <p className="text-sm text-muted-foreground">
-                          E-post: {t.emailAddress}
+                          Personnummer: {t.nationalRegistrationNumber}
                         </p>
-                      )}
-                      {t.phoneNumbers?.[0]?.phoneNumber && (
                         <p className="text-sm text-muted-foreground">
-                          Telefon: {t.phoneNumbers[0].phoneNumber}
+                          Kundnummer: {t.contactCode}
                         </p>
-                      )}
-                      {t.address && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {formatAddress(t.address as Address)}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                        {t.emailAddress && (
+                          <p className="text-sm text-muted-foreground">
+                            E-post: {t.emailAddress}
+                          </p>
+                        )}
+                        {t.phoneNumbers?.[0]?.phoneNumber && (
+                          <p className="text-sm text-muted-foreground">
+                            Telefon: {t.phoneNumbers[0].phoneNumber}
+                          </p>
+                        )}
+                        {t.address && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {formatAddress(t.address as Address)}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
