@@ -3,7 +3,13 @@ import Config from '../../../common/config'
 
 export const db = knex({
   client: 'mssql',
-  connection: Config.keysDatabase,
+  connection: {
+    ...Config.keysDatabase,
+    options: {
+      useUTC: true, // Database now stores timestamps in UTC via GETUTCDATE()
+      enableArithAbort: true,
+    },
+  },
   pool: {
     min: 0,
     max: 20,
