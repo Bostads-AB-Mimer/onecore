@@ -44,7 +44,7 @@ describe('Invoice Service', () => {
 
       expect(res.status).toBe(200)
       expect(() =>
-        schemas.v1.InvoiceSchema.array().parse(res.body)
+        schemas.v1.InvoiceSchema.array().parse(res.body.content)
       ).not.toThrow()
     })
 
@@ -76,13 +76,12 @@ describe('Invoice Service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual(expect.any(Array))
 
-      const invoice_1_response = res.body.find(
+      const invoice_1_response = res.body.content.find(
         (invoice: any) => invoice.invoiceId === invoice_1.invoiceId
       )
 
-      const invoice_2_response = res.body.find(
+      const invoice_2_response = res.body.content.find(
         (invoice: any) => invoice.invoiceId === invoice_2.invoiceId
       )
 
@@ -127,7 +126,7 @@ describe('Invoice Service', () => {
         `/invoices/bycontactcode/P123456`
       )
 
-      expect(res.body).toEqual(
+      expect(res.body.content).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             fromDate: xpandInvoice.fromDate.toISOString(),
@@ -159,7 +158,7 @@ describe('Invoice Service', () => {
         `/invoices/bycontactcode/P123456`
       )
 
-      expect(res.body).toEqual(
+      expect(res.body.content).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             fromDate: xledgerInvoice.fromDate.toISOString(),

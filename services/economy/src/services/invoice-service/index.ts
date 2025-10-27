@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, InvoicePaymentEvent } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import {
   getInvoiceByInvoiceNumber,
@@ -19,6 +19,7 @@ import {
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
       ctx.query
     )
@@ -80,7 +81,7 @@ export const routes = (router: KoaRouter) => {
       })
 
       ctx.status = 200
-      ctx.body = invoicesWithRows
+      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
     } catch (error: any) {
       logger.error(
         { error, contactCode: contactCode },
@@ -124,10 +125,7 @@ export const routes = (router: KoaRouter) => {
       const events = await getInvoicePaymentEvents(matchId)
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody<InvoicePaymentEvent[]>(
-        events,
-        metadata
-      )
+      ctx.body = makeSuccessResponseBody(events, metadata)
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
