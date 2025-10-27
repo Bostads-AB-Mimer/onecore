@@ -21,6 +21,8 @@ export interface Config {
   simpleSign: {
     apiUrl: string
     accessToken: string
+    webhookUrl: string
+    webhookSecret: string
   }
 }
 
@@ -45,6 +47,8 @@ const config = configPackage({
     simpleSign: {
       apiUrl: '',
       accessToken: '',
+      webhookUrl: '',
+      webhookSecret: '',
     },
   },
 })

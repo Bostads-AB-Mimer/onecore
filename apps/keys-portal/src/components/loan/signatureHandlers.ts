@@ -59,11 +59,24 @@ export async function handleSendForDigitalSignature({
     const base64 = await receiptService.blobToBase64(blob)
 
     // Send to SimpleSign
-    // TODO: Temporary hardcoded email for testing (original: primaryTenant.emailAddress)
+    // For testing: prompt for email if tenant email is missing or redacted
+    let recipientEmail = primaryTenant.emailAddress
+    if (
+      !recipientEmail ||
+      recipientEmail.includes('redacted') ||
+      recipientEmail.includes('example')
+    ) {
+      recipientEmail =
+        window.prompt(
+          'Tenant email is missing. Enter email for testing:',
+          ''
+        ) || primaryTenant.emailAddress
+    }
+
     await simpleSignService.sendForSignature({
       resourceType: 'receipt',
       resourceId: loanReceipt.id,
-      recipientEmail: '', // primaryTenant.emailAddress,
+      recipientEmail: recipientEmail,
       recipientName: `${primaryTenant.firstName} ${primaryTenant.lastName}`,
       pdfBase64: base64,
     })
@@ -85,14 +98,62 @@ export async function handleSendForDigitalSignature({
 /**
  * Get signature status display information
  */
-export function getSignatureStatus(receipt: Receipt): {
+export async function getSignatureStatus(receiptId: string): Promise<{
   hasPendingSignature: boolean
   statusText?: string
   statusVariant?: 'default' | 'secondary' | 'outline' | 'destructive'
-} {
-  // TODO: Fetch signature status from API when needed
-  // For now, we'll rely on whether receipt has a fileId
-  return {
-    hasPendingSignature: false,
+  signature?: any
+}> {
+  try {
+    const signature = await simpleSignService.getLatestForResource(
+      'receipt',
+      receiptId
+    )
+
+    if (!signature) {
+      return { hasPendingSignature: false }
+    }
+
+    // Map signature status to display information
+    switch (signature.status) {
+      case 'sent':
+        return {
+          hasPendingSignature: true,
+          statusText: 'Väntar på signering',
+          statusVariant: 'default',
+          signature,
+        }
+      case 'signed':
+        return {
+          hasPendingSignature: false,
+          statusText: 'Signerad',
+          statusVariant: 'secondary',
+          signature,
+        }
+      case 'rejected':
+        return {
+          hasPendingSignature: false,
+          statusText: 'Nekad',
+          statusVariant: 'destructive',
+          signature,
+        }
+      case 'superseded':
+        return {
+          hasPendingSignature: false,
+          statusText: 'Ersatt',
+          statusVariant: 'outline',
+          signature,
+        }
+      default:
+        return {
+          hasPendingSignature: false,
+          statusText: signature.status,
+          statusVariant: 'outline',
+          signature,
+        }
+    }
+  } catch (err) {
+    console.error('Failed to fetch signature status:', err)
+    return { hasPendingSignature: false }
   }
 }
