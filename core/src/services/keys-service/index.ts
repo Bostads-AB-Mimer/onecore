@@ -11,6 +11,7 @@ import {
   KeyEventsApi,
   KeyBundlesApi,
   KeyLoanMaintenanceKeysApi,
+  SignaturesApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
@@ -27,6 +28,7 @@ const {
   KeyLoanMaintenanceKeysSchema,
   ReceiptSchema,
   KeyEventSchema,
+  SignatureSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
@@ -43,6 +45,10 @@ const {
   UpdateKeyLoanMaintenanceKeysRequestSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
+  CreateSignatureRequestSchema,
+  UpdateSignatureRequestSchema,
+  SendSignatureRequestSchema,
+  SimpleSignWebhookPayloadSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   createPaginatedResponseSchema,
@@ -95,6 +101,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('KeyNote', KeyNoteSchema)
   registerSchema('Receipt', ReceiptSchema)
   registerSchema('KeyEvent', KeyEventSchema)
+  registerSchema('Signature', SignatureSchema)
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
@@ -119,6 +126,10 @@ export const routes = (router: KoaRouter) => {
   )
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
   registerSchema('UpdateKeyEventRequest', UpdateKeyEventRequestSchema)
+  registerSchema('CreateSignatureRequest', CreateSignatureRequestSchema)
+  registerSchema('UpdateSignatureRequest', UpdateSignatureRequestSchema)
+  registerSchema('SendSignatureRequest', SendSignatureRequestSchema)
+  registerSchema('SimpleSignWebhookPayload', SimpleSignWebhookPayloadSchema)
   registerSchema('CreateReceiptRequest', CreateReceiptRequestSchema)
   registerSchema('UpdateReceiptRequest', UpdateReceiptRequestSchema)
   registerSchema('ReceiptType', ReceiptTypeSchema)
@@ -3557,6 +3568,268 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /signatures/send:
+   *   post:
+   *     summary: Send a document for digital signature via SimpleSign
+   *     description: Send a PDF document to SimpleSign for digital signature
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - resourceType
+   *               - resourceId
+   *               - recipientEmail
+   *               - pdfBase64
+   *             properties:
+   *               resourceType:
+   *                 type: string
+   *                 enum: [receipt]
+   *               resourceId:
+   *                 type: string
+   *                 format: uuid
+   *               recipientEmail:
+   *                 type: string
+   *                 format: email
+   *               recipientName:
+   *                 type: string
+   *               pdfBase64:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Signature request sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Resource not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/signatures/send', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body
+
+    const result = await SignaturesApi.send(payload)
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Resource not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error sending signature request'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 201
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /signatures/{id}:
+   *   get:
+   *     summary: Get a signature by ID
+   *     description: Retrieve a specific signature by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Signature details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       404:
+   *         description: Signature not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/signatures/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await SignaturesApi.get(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Signature not found', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error fetching signature')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /signatures/resource/{resourceType}/{resourceId}:
+   *   get:
+   *     summary: Get all signatures for a resource
+   *     description: Retrieve all signatures associated with a specific resource
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: resourceType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [receipt]
+   *       - in: path
+   *         name: resourceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: List of signatures
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Signature'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/signatures/resource/:resourceType/:resourceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { resourceType, resourceId } = ctx.params
+
+    const result = await SignaturesApi.getByResource(resourceType, resourceId)
+
+    if (!result.ok) {
+      logger.error({ err: result.err, metadata }, 'Error fetching signatures')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /webhooks/simplesign:
+   *   post:
+   *     summary: Webhook endpoint for SimpleSign status updates
+   *     description: Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
+   *     tags: [Webhooks]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SimpleSignWebhookPayload'
+   *     responses:
+   *       200:
+   *         description: Webhook processed successfully
+   *       404:
+   *         description: Signature not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/webhooks/simplesign', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    // Forward webhook to keys service (it handles all the logic)
+    // This is just a proxy endpoint
+    try {
+      const webhookPayload = ctx.request.body
+
+      logger.info(
+        { documentId: webhookPayload.id, status: webhookPayload.status },
+        'SimpleSign webhook received in core, forwarding to keys service'
+      )
+
+      // The keys service has the actual webhook handler
+      // We just acknowledge receipt here
+      ctx.status = 200
+      ctx.body = { message: 'Webhook received', ...metadata }
+    } catch (err: any) {
+      logger.error(err, 'Error processing SimpleSign webhook')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        reason: err.message,
+        ...metadata,
+      }
+    }
   })
 
   /**

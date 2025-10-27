@@ -1342,87 +1342,6 @@ export interface paths {
       };
     };
   };
-  "/key-systems/{id}/upload-schema": {
-    /** Upload PDF schema file for a key system */
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Invalid file or key system not found */
-        400: {
-          content: never;
-        };
-        /** @description Key system not found */
-        404: {
-          content: never;
-        };
-        /** @description File too large */
-        413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}/download-schema": {
-    /** Get presigned download URL for key system schema PDF */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Download URL generated */
-        200: {
-          content: {
-            "application/json": {
-              url?: string;
-              expiresIn?: number;
-            };
-          };
-        };
-        /** @description Key system or file not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}/schema": {
-    /** Delete schema file for a key system */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Schema file deleted successfully */
-        204: {
-          content: never;
-        };
-        /** @description Key system not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
   "/keys": {
     /**
      * List keys with pagination
@@ -2180,6 +2099,95 @@ export interface paths {
       };
     };
   };
+  "/signatures/send": {
+    /** Send a document for digital signature via SimpleSign */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SendSignatureRequest"];
+        };
+      };
+      responses: {
+        /** @description Signature request sent successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Resource not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/signatures/{id}": {
+    /** Get a signature by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Signature details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Signature not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/signatures/resource/{resourceType}/{resourceId}": {
+    /** Get all signatures for a resource */
+    get: {
+      parameters: {
+        path: {
+          resourceType: string;
+          resourceId: string;
+        };
+      };
+      responses: {
+        /** @description List of signatures */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/webhooks/simplesign": {
+    /** Webhook endpoint for SimpleSign status updates */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SimpleSignWebhookPayload"];
+        };
+      };
+      responses: {
+        /** @description Webhook processed successfully */
+        200: {
+          content: never;
+        };
+        /** @description Signature not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -2380,6 +2388,52 @@ export interface components {
     CreateKeyLoanMaintenanceKeysRequest: components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
     UpdateKeyLoanMaintenanceKeysRequest: components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
     KeyLoanMaintenanceKeys: components["schemas"]["KeyLoanMaintenanceKeys"];
+    Signature: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      status: string;
+      /** Format: date-time */
+      sentAt: string;
+      /** Format: date-time */
+      completedAt?: string | null;
+      /** Format: date-time */
+      lastSyncedAt?: string | null;
+    };
+    CreateSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      /** @default sent */
+      status?: string;
+    };
+    SendSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string;
+      pdfBase64: string;
+    };
+    SimpleSignWebhookPayload: {
+      id: number;
+      status: string;
+      status_updated_at: string;
+    };
   };
   responses: never;
   parameters: never;

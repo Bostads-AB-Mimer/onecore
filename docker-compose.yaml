@@ -1,13 +1,10 @@
 services:
   sql:
     image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/azure-sql-edge}
-    platform: ${SQLSERVER_PLATFORM:-}
     container_name: onecore-sql
-    user: '${SQLSERVER_USER:-root}'
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=s3cr3t_p455w0rd
-      - MSSQL_PID=Developer
     networks:
       - onecore
     ports:

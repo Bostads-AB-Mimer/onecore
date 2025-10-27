@@ -17,6 +17,8 @@ type CreateReceiptRequest = keys.v1.CreateReceiptRequest
 type KeyEvent = keys.v1.KeyEvent
 type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
 type UpdateKeyEventRequest = keys.v1.UpdateKeyEventRequest
+type Signature = keys.v1.Signature
+type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
@@ -963,5 +965,39 @@ export const KeyLoanMaintenanceKeysApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-loan-maintenance-keys/${id}`)
+  },
+}
+
+/**
+ * ---- Signatures API --------------------------------------------------------
+ */
+export const SignaturesApi = {
+  send: async (
+    payload: SendSignatureRequest
+  ): Promise<
+    AdapterResult<Signature, 'bad-request' | 'not-found' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: Signature }>(
+      `${BASE}/signatures/send`,
+      payload
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  get: async (
+    id: string
+  ): Promise<AdapterResult<Signature, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: Signature }>(`${BASE}/signatures/${id}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByResource: async (
+    resourceType: string,
+    resourceId: string
+  ): Promise<AdapterResult<Signature[], CommonErr>> => {
+    const r = await getJSON<{ content: Signature[] }>(
+      `${BASE}/signatures/resource/${resourceType}/${resourceId}`
+    )
+    return r.ok ? ok(r.data.content) : r
   },
 }
