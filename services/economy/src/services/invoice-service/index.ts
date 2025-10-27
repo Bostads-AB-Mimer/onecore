@@ -22,6 +22,7 @@ export const routes = (router: KoaRouter) => {
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
       ctx.query
     )
+
     if (!queryParams.success) {
       ctx.status = 400
       return
@@ -93,6 +94,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
     try {
       const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
       if (!result) {
@@ -101,7 +103,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = result
+      ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {

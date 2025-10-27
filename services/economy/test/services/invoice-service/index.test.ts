@@ -43,7 +43,9 @@ describe('Invoice Service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body).toEqual(expect.any(Array))
+      expect(() =>
+        schemas.v1.InvoiceSchema.array().parse(res.body)
+      ).not.toThrow()
     })
 
     it('maps invoice rows to invoices', async () => {
@@ -165,6 +167,31 @@ describe('Invoice Service', () => {
           }),
         ])
       )
+    })
+  })
+
+  describe('GET /invoices/:invoiceNumber', () => {
+    it('responds with 404 if invoice not found', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
+        .mockResolvedValueOnce(null)
+
+      const res = await request(app.callback()).get(`/invoices/12345`)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with invoice', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
+        .mockResolvedValueOnce(factory.invoice.build())
+
+      const res = await request(app.callback()).get(`/invoices/12345`)
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.v1.InvoiceSchema.parse(res.body.content)
+      ).not.toThrow()
     })
   })
 
