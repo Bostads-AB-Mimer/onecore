@@ -9,6 +9,7 @@ import { keys } from '@onecore/types'
 import * as signaturesAdapter from '../adapters/signatures-adapter'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
 import * as simpleSignApi from '../adapters/simplesign-adapter'
+import Config from '../../../common/config'
 
 const {
   SignatureSchema,
@@ -242,6 +243,21 @@ export const routes = (router: KoaRouter) => {
   router.post('/webhooks/simplesign', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
+      // Validate webhook secret
+      const webhookSecret = ctx.get('webhookSecret')
+      if (
+        Config.simpleSign.webhookSecret &&
+        webhookSecret !== Config.simpleSign.webhookSecret
+      ) {
+        logger.warn(
+          { providedSecret: webhookSecret ? 'provided' : 'missing' },
+          'Invalid webhook secret'
+        )
+        ctx.status = 401
+        ctx.body = { reason: 'Unauthorized', ...metadata }
+        return
+      }
+
       const webhookPayload = ctx.request.body as SimpleSignWebhookPayload
 
       logger.info(
