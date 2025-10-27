@@ -1140,6 +1140,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.39.0
         version: 0.39.0
+      '@infobip-api/sdk':
+        specifier: ^0.3.2
+        version: 0.3.2
       '@iteam/config':
         specifier: ^12.1.2
         version: 12.1.2
