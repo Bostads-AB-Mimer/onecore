@@ -4,7 +4,6 @@ import * as adapter from '@src/services/invoice-service/adapters/xledger-adapter
 import config from '@src/common/config'
 import { schemas } from '@onecore/types'
 
-beforeAll(nock.disableNetConnect)
 afterEach(nock.cleanAll)
 
 const { origin, pathname } = new URL(config.xledger.url)
