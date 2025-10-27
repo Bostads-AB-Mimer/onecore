@@ -694,7 +694,10 @@ export const getInvoiceRows = async (
 
         return invoice
       } catch (err) {
-        logger.error({ invoiceRow, err }, 'Error converting row')
+        logger.error(
+          { invoiceRow: JSON.stringify(invoiceRow), err },
+          'Error converting row'
+        )
         throw new Error('Error converting row')
       }
     }

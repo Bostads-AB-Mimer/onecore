@@ -15,8 +15,9 @@ import { sendEmail } from '../common/adapters/infobip-adapter'
 
 const importRentalInvoicesScript = async () => {
   const companyIds = ['001' /* '006'*/]
-  const earliestStartDate = new Date('2025-11-06T00:00:00.000Z')
+  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
   const notification: string[] = []
+  let hasErrors = false
 
   const startDate = new Date(
     Math.max(
@@ -36,6 +37,9 @@ const importRentalInvoicesScript = async () => {
     const batchId = result.batchId
 
     if (result.batchId) {
+      if (result.errors?.length && result.errors?.length > 0) {
+        hasErrors = true
+      }
       notification.push(`
 Importerade avier: ${result.processedInvoices}
 Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
@@ -92,7 +96,9 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
       try {
         await sendEmail(
           config.scriptNotificationEmailAddresses,
-          'Körning: import av hyresavier till Xledger',
+          hasErrors
+            ? 'Fel i körning: import av hyresavier till Xledger'
+            : 'Körning: import av hyresavier till Xledger',
           notification.join('\n')
         )
       } catch {
