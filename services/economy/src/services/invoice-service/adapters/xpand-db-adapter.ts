@@ -497,7 +497,7 @@ export const getInvoicesByContactCode = async (
     .orderBy('krfkh.fromdate', 'desc')
 
   if (filters?.from) {
-    query = query.andWhere('krfkh.fromdate', '>=', filters.from)
+    query = query.andWhere('krfkh.fromdate', '>=', filters.from) // TODO filter by expiration date
   }
 
   const rows = await query
