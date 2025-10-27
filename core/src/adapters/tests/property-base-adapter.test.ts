@@ -569,7 +569,7 @@ describe('@onecore/property-adapter', () => {
     it('returns not-found if facility is not found', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json(null, { status: 404 })
         )
       )
@@ -583,7 +583,7 @@ describe('@onecore/property-adapter', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => new HttpResponse(null, { status: 500 })
         )
       )
@@ -598,7 +598,7 @@ describe('@onecore/property-adapter', () => {
       const facilityMock = factory.facilityDetails.build()
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json({ content: facilityMock }, { status: 200 })
         )
       )
