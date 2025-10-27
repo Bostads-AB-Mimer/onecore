@@ -1,0 +1,2 @@
+# Migrations directory
+# Create new migrations with: pnpm run migrate:make <migration_name>
