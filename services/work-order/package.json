@@ -27,6 +27,8 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui": "^3.52.4",
     "dotenv": "^16.4.5",
@@ -41,10 +43,7 @@
     "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "tedious": "^18.6.1",
-    "zod": "^3.25.67",
-    "zod-to-json-schema": "^3.24.5",
-    "@onecore/types": "workspace:*",
-    "@onecore/utilities": "workspace:*"
+    "zod": "^4.0.15"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",

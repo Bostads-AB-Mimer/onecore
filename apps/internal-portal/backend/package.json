@@ -38,7 +38,7 @@
     "koa-jwt": "^4.0.4",
     "koa-pino-logger": "^4.0.0",
     "koa-session": "^6.4.0",
-    "zod": "^3.25.67"
+    "zod": "^4.0.15"
   },
   "devDependencies": {
     "@eslint/js": "9.32.0",

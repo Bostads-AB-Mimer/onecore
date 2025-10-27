@@ -5,16 +5,12 @@ export async function withContext(
   callback: (ctx: { db: Knex.Transaction }) => Promise<unknown>
 ) {
   const db = createDbClient()
+  const trx = await db.transaction()
   try {
-    await db.transaction(async (trx) => {
-      await callback({
-        db: trx,
-      })
-
-      throw 'rollback'
-    })
-  } catch (e: unknown) {
-    if (e === 'rollback') return e
+    await callback({ db: trx })
+    await trx.rollback()
+  } catch (e) {
+    await trx.rollback()
     throw e
   } finally {
     await db.destroy()

@@ -4,8 +4,10 @@ import { createGenericResponseSchema } from './response'
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
     .string({
-      required_error: 'buildingCode query parameter is required',
-      invalid_type_error: 'buildingCode must be a string',
+      error: (issue) =>
+        issue.input === undefined
+          ? 'buildingCode query parameter is required'
+          : 'buildingCode must be a string',
     })
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
   staircaseCode: z.string().optional(),

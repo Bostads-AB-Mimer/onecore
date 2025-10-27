@@ -1,17 +1,19 @@
-import Koa from 'koa'
-import KoaRouter from '@koa/router'
-import bodyParser from 'koa-body'
 import cors from '@koa/cors'
+import KoaRouter from '@koa/router'
+import {
+  logger,
+  loggerMiddlewares,
+  swaggerMiddleware,
+} from '@onecore/utilities'
+import Koa from 'koa'
+import bodyParser from 'koa-body'
 import jwt from 'koa-jwt'
-import config from './common/config'
+import { koaSwagger } from 'koa2-swagger-ui'
 
 import api from './api'
+import config from './common/config'
 import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
-
-import { logger, loggerMiddlewares } from '@onecore/utilities'
-import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
 
 const app = new Koa()
@@ -34,6 +36,22 @@ app.use(
   })
 )
 
+app.use(
+  swaggerMiddleware({
+    serviceName: '@onecore/core',
+    routes: [
+      `${__dirname}/services/auth-service/*.{ts,js}`,
+      `${__dirname}/services/health-service/*.{ts,js}`,
+      `${__dirname}/services/lease-service/*.{ts,js}`,
+      `${__dirname}/services/property-management-service/*.{ts,js}`,
+      `${__dirname}/services/work-order-service/*.{ts,js}`,
+      `${__dirname}/services/property-base-service/*.{ts,js}`,
+      `${__dirname}/services/search-service/*.{ts,js}`,
+      `${__dirname}/services/economy-service/*.{ts,js}`,
+    ],
+  })
+)
+
 app.on('error', (err) => {
   logger.error(err)
 })
@@ -48,7 +66,6 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swagggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // JWT middleware with multiple options
