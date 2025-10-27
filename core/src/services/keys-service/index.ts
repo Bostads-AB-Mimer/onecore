@@ -9,12 +9,9 @@ import {
   KeyNotesApi,
   ReceiptsApi,
   KeyEventsApi,
-<<<<<<< HEAD
   KeyBundlesApi,
   KeyLoanMaintenanceKeysApi,
-=======
   SignaturesApi,
->>>>>>> f5d49e240 (routes and adapters for simplesign and signatures)
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
