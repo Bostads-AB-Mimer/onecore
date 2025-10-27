@@ -39,25 +39,25 @@ const importProcurementInvoicesScript = async () => {
     notification.push(
       `Fakturor med fel: ${Object.keys(invoiceLinesResult.errors).length > 0 ? JSON.stringify(invoiceLinesResult.errors) : 'Inga'}`
     )
+
+    notification.push(
+      `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
+    )
+
+    if (config.scriptNotificationEmailAddresses) {
+      try {
+        await sendEmail(
+          config.scriptNotificationEmailAddresses,
+          'Körning: import av fakturor från Mälarenergi',
+          notification.join('\n')
+        )
+      } catch {
+        // Do not fail script even if email fails
+      }
+    }
   } else {
     notification.push('Inga ohanterade fakturafiler hittade')
     logger.info('No files to process')
-  }
-
-  notification.push(
-    `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
-  )
-
-  if (config.scriptNotificationEmailAddresses) {
-    try {
-      await sendEmail(
-        config.scriptNotificationEmailAddresses,
-        'Körning: import av hyresavier till Xledger',
-        notification.join('\n')
-      )
-    } catch {
-      // Do not fail script even if email fails
-    }
   }
 
   closeDatabases()

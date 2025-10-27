@@ -287,7 +287,7 @@ export const createLedgerRows = async (
         1
       ) {
         logger.error(
-          { customerLedgerRow, invoiceRow: invoiceRows[0] },
+          { customerLedgerRow, invoice: invoiceRows[0].invoiceNumber },
           'Invoice total does not match ledger total'
         )
         throw new Error('Invoice total does not match ledger total')
