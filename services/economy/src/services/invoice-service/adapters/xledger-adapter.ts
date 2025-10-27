@@ -53,7 +53,6 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
-    console.log(result)
     logger.error(
       result.data,
       `Error making Xledger request (${getCallerFromError(error)})`
@@ -146,7 +145,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
       type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
-      description: invoiceData.node.text,
+      description: invoiceData.node.text ?? undefined,
       sentToDebtCollection,
       source: 'next',
     }
@@ -436,11 +435,11 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   try {
     const result = await makeXledgerRequest(q)
 
-    if (!result.data.arTransactions?.edges) {
+    if (!result.data?.arTransactions?.edges) {
       return null
     }
 
-    const matchId = result.data?.arTransactions?.edges?.[0].node.matchId
+    const matchId = result.data.arTransactions.edges[0]?.node.matchId
     // If matchId is 0, invoice has not been paired correctly with events in xledger.
     // Return null in this scenario.
     if (matchId == null || matchId === 0) {
