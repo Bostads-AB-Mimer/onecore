@@ -1,6 +1,11 @@
 import { Factory } from 'fishery'
 
-import { Invoice, InvoiceRow, InvoiceTransactionType } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  InvoiceRow,
+  InvoiceTransactionType,
+} from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>(() => {
   return {
@@ -47,3 +52,14 @@ export const InvoiceRowFactory = Factory.define<InvoiceRow>(() => {
     rowType: 1,
   }
 })
+
+export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
+  () => ({
+    amount: 100,
+    invoiceId: '552303315030452',
+    paymentDate: new Date('2023-03-01T00:00:00.000Z'),
+    text: null,
+    transactionSourceCode: 'foo',
+    type: 'OCR',
+  })
+)

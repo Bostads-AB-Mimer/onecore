@@ -5,9 +5,10 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/invoice-service/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
-
 import { routes } from '@src/services/invoice-service'
+
 import * as factory from '@test/factories'
+import { schemas } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -164,6 +165,39 @@ describe('Invoice Service', () => {
           }),
         ])
       )
+    })
+  })
+
+  describe('GET /invoices/:invoiceNumber/payment-events', () => {
+    it('responds with 404 if matchId not found', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceMatchId')
+        .mockResolvedValueOnce(null)
+
+      const res = await request(app.callback()).get(
+        `/invoices/12345/payment-events`
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with payment events', async () => {
+      const invoicePaymentEvents = factory.invoicePaymentEvent.buildList(2)
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceMatchId')
+        .mockResolvedValueOnce('match-123')
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicePaymentEvents')
+        .mockResolvedValueOnce(invoicePaymentEvents)
+
+      const res = await request(app.callback()).get(
+        `/invoices/12345/payment-events`
+      )
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.v1.InvoicePaymentEventSchema.array().parse(res.body.content)
+      ).not.toThrow()
     })
   })
 })
