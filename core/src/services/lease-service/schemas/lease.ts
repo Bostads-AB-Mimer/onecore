@@ -10,6 +10,39 @@ import { z } from 'zod'
  * Lease.roomtype has a list of material choices, which also has circular references.
  */
 
+/**
+ * Contact schema for Swagger OpenAPI generation
+ * Matches the response from GET /contacts/{contactCode}
+ */
+export const Contact = z.object({
+  contactCode: z.string(),
+  contactKey: z.string(),
+  leaseIds: z.array(z.string()).optional(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  fullName: z.string().nullable(),
+  nationalRegistrationNumber: z.string(),
+  birthDate: z.coerce.date().nullable(),
+  address: z
+    .object({
+      street: z.string(),
+      number: z.string(),
+      postalCode: z.string(),
+      city: z.string(),
+    })
+    .nullable(),
+  phoneNumbers: z.array(
+    z.object({
+      phoneNumber: z.string(),
+      type: z.string(),
+      isMainNumber: z.number(),
+    })
+  ),
+  emailAddress: z.string().nullable(),
+  isTenant: z.boolean(),
+  specialAttention: z.boolean().optional(),
+})
+
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),

@@ -539,7 +539,7 @@ export interface paths {
         /** @description Successful response with the requested contact */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": components["schemas"]["Contact"];
           };
         };
       };
@@ -5223,6 +5223,31 @@ export interface components {
           };
           specialAttention?: boolean;
         }[];
+    };
+    Contact: {
+      contactCode: string;
+      contactKey: string;
+      leaseIds?: string[];
+      firstName: string | null;
+      lastName: string | null;
+      fullName: string | null;
+      nationalRegistrationNumber: string;
+      /** Format: date-time */
+      birthDate: string | null;
+      address: {
+        street: string;
+        number: string;
+        postalCode: string;
+        city: string;
+      } | null;
+      phoneNumbers: {
+          phoneNumber: string;
+          type: string;
+          isMainNumber: number;
+        }[];
+      emailAddress: string | null;
+      isTenant: boolean;
+      specialAttention?: boolean;
     };
     WorkOrder: {
       accessCaption: string;
