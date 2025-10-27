@@ -38,10 +38,12 @@ Apart from the core orchestration service, packages belong to one of three categ
 
 #### Requirements
 
+We use pnpm as our package manager: https://pnpm.io/installation
+
 After cloning the repository, make sure that you have the following installed on your system:
 
 - **nvm**
-- **npm**
+- **pnpm**
 - **Node.js**
 - **Docker**
 
@@ -64,7 +66,7 @@ nvm use
 Install dependencies. This may take 1-2 minutes, as it will resolve and download all packages required by all ONECore modules, as well as check for version conflicts.
 
 ```sh
-npm install
+pnpm install
 ```
 
 #### Run dev:init
@@ -74,7 +76,7 @@ Nearly all modules use dotenv/.env-files that are required to run with a local c
 Some of these still require manual attention after running this script, as some applications depend on non-public resources.
 
 ```sh
-npm run dev:init
+pnpm run dev:init
 ```
 
 #### Run generate:static
@@ -82,7 +84,7 @@ npm run dev:init
 This will generate required code that is not subject to version control.
 
 ```sh
-npm run generate:static
+pnpm run generate:static
 ```
 
 #### Build libs
@@ -90,7 +92,7 @@ npm run generate:static
 Most projects rely on the projects under libs/ and will not run or build unless they are built in your local project tree.
 
 ```sh
-npm run build:libs
+pnpm run build:libs
 ```
 
 #### Dockerized services
@@ -106,7 +108,7 @@ These services will apply schema migrations/updates as needed on startup, but th
 Once the SQL container is running, you can create these by running:
 
 ```sh
-npm run db:init
+pnpm run db:init
 ```
 
 ### Local development
@@ -114,9 +116,9 @@ npm run db:init
 [Turborepo](https://turborepo.com/) lets us run multiple packages simultaneously in a tidy manner using its "tui" configuration.
 
 ```sh
-npm run dev # runs everything
-npm run dev -- --filter='!@onecore/property' # runs everything except for @onecore/property
-npm run dev -- --filter='@onecore/property' # runs only @onecore/property
+pnpm run dev # runs everything
+pnpm run dev -- --filter='!@onecore/property' # runs everything except for @onecore/property
+pnpm run dev -- --filter='@onecore/property' # runs only @onecore/property
 ```
 
 Furthermore, turborepo handles different packages dependencies. If we run @onecore/leasing, which uses libs/types and libs/utilities, both of these packages will be built before leasing starts.

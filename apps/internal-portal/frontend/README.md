@@ -4,13 +4,14 @@
 
 ### Requirements
 
+We use pnpm as our package manager: https://pnpm.io/installation
+
 This application requires the following to be installed on your system:
 
-
- * **nvm**
- * **npm**
- * **Node.js**
- * **Docker**
+- **nvm**
+- **pnpm**
+- **Node.js**
+- **Docker**
 
 ### Install Instructions
 
@@ -18,13 +19,11 @@ This application requires the following to be installed on your system:
 
 Run the `dev:init` script to create a file called `.env`, or manually make a copy of ``:
 
-
 ```sh
-$ npm run dev:init
+$ pnpm run dev:init
 ```
 
 Or:
-
 
 ```sh
 $ cp .env.template .env
@@ -34,13 +33,11 @@ $ cp .env.template .env
 
 Install the required node version, if not already installed.
 
-
 ```sh
 $ nvm install
 ```
 
 Activate the required node version.
-
 
 ```sh
 $ nvm use
@@ -50,21 +47,18 @@ $ nvm use
 
 Install dependencies
 
-
 ```sh
-$ npm run install
+$ pnpm run install
 ```
 
 ### Running in Development Mode
 
 When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
 
-
 ```sh
-$ npm run dev
+$ pnpm run dev
 ```
 
 ## License
 
 © 2025 Bostads AB Mimer. [AGPL-3.0-only Licensed](./LICENSE)
-
