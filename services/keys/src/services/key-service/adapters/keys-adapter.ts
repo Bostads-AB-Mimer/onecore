@@ -40,7 +40,9 @@ export async function createKey(
   keyData: CreateKeyRequest,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<Key> {
-  const [row] = await dbConnection(TABLE).insert(keyData).returning('*')
+  // Exclude batchId from database insert - it's only for logging purposes
+  const { batchId, ...dbFields } = keyData
+  const [row] = await dbConnection(TABLE).insert(dbFields).returning('*')
   return row
 }
 
@@ -49,9 +51,11 @@ export async function updateKey(
   keyData: UpdateKeyRequest,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<Key | undefined> {
+  // Exclude batchId from database update - it's only for logging purposes
+  const { batchId, ...dbFields } = keyData
   const [row] = await dbConnection(TABLE)
     .where({ id })
-    .update({ ...keyData, updatedAt: dbConnection.fn.now() })
+    .update({ ...dbFields, updatedAt: dbConnection.fn.now() })
     .returning('*')
 
   return row
