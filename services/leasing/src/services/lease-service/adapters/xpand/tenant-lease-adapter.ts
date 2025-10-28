@@ -271,17 +271,22 @@ const getContactsDataBySearchQuery = async (
   q: string
 ): Promise<
   AdapterResult<
-    Array<{ contactCode: string; fullName: string }>,
+    Array<{ contactCode: string; fullName: string; nationalRegistrationNumber: string }>,
     'internal-error'
   >
 > => {
   try {
     const rows = await xpandDb
       .from('cmctc')
-      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .select(
+        'cmctc.cmctckod as contactCode',
+        'cmctc.cmctcben as fullName',
+        'cmctc.persorgnr as nationalRegistrationNumber'
+      )
       .where('cmctc.cmctckod', 'like', `%${q}%`)
       .orWhere('cmctc.persorgnr', 'like', `%${q}%`)
-      .limit(5)
+      .orWhere('cmctc.cmctcben', 'like', `%${q}%`)
+      .limit(10)
 
     return {
       ok: true,

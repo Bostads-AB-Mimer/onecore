@@ -42,7 +42,7 @@ describe('GET /contacts/search', () => {
       .spyOn(tenantLeaseAdapter, 'getContactsDataBySearchQuery')
       .mockResolvedValueOnce({
         ok: true,
-        data: [{ contactCode: 'foo', fullName: 'Foo Bar' }],
+        data: [{ contactCode: 'foo', fullName: 'Foo Bar', nationalRegistrationNumber: '123456789' }],
       })
 
     const res = await request(app.callback()).get('/contacts/search?q=foo')
@@ -50,7 +50,7 @@ describe('GET /contacts/search', () => {
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       content: expect.arrayContaining([
-        expect.objectContaining({ contactCode: 'foo', fullName: 'Foo Bar' }),
+        expect.objectContaining({ contactCode: 'foo', fullName: 'Foo Bar', nationalRegistrationNumber: '123456789' }),
       ]),
     })
   })

@@ -648,17 +648,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /contacts/search:
    *   get:
-   *     summary: Search contacts by PNR or contact code
+   *     summary: Search contacts by name, contact code, PNR, or organization number
    *     tags:
    *       - Lease service
-   *     description: Retrieves contacts based on the provided search query.
+   *     description: Searches contacts by full name, contact code (PXXXXXX/FXXXXXX), national registration number (PNR), or organization number. Returns matching contacts with their basic information including contact code, full name, and national registration number.
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query to filter contacts.
+   *         description: Search query. Can be a full name (e.g., "Certego AB"), contact code (e.g., "F088710"), personal number, or organization number (e.g., "5565295911"). Minimum 3 characters.
    *     responses:
    *       '200':
    *         description: Successful response with search results
@@ -666,6 +666,11 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Contact'
    *       '400':
    *         description: Bad request. The query parameter 'q' must be a string.
    *       '500':
