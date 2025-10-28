@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Collapse,
   Skeleton,
+  Link,
 } from '@mui/material'
 import { useState } from 'react'
 import {
@@ -156,7 +157,7 @@ function Invoices(props: { invoices: Invoice[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturadatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Förfallodatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Återstående belopp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Inkasso</TableCell>
@@ -221,7 +222,11 @@ function InvoiceTableRow(props: { invoice: Invoice }) {
             : '-'}
         </TableCell>
         <TableCell>{moneyFormatter.format(invoice.amount)}</TableCell>
-        <TableCell>{invoice.reference}</TableCell>
+        <TableCell>
+          {invoice.remainingAmount
+            ? moneyFormatter.format(invoice.remainingAmount)
+            : '-'}
+        </TableCell>
         <TableCell>
           {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
         </TableCell>
@@ -257,7 +262,16 @@ function InvoiceDetails(props: { invoice: Invoice }) {
   const { invoice } = props
 
   if (invoice.type === 'Other') {
-    return <p>Text: {invoice.description}</p>
+    return (
+      <Box>
+        <Typography>Text: {invoice.description}</Typography>
+        {invoice.invoiceFileUrl && (
+          <Link target="_blank" href={invoice.invoiceFileUrl}>
+            Länk till faktura
+          </Link>
+        )}
+      </Box>
+    )
   }
 
   const renderInvoiceRows = () => {

@@ -144,11 +144,13 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
+      remainingAmount: parseFloat(invoiceData.node.invoiceRemaining),
       type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
       description: invoiceData.node.text ?? undefined,
       sentToDebtCollection,
       source: 'next',
       invoiceRows: [],
+      invoiceFileUrl: invoiceData.node.invoiceFile?.url,
     }
 
     if (invoice.paidAmount === invoice.amount) {

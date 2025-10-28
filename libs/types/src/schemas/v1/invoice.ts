@@ -60,4 +60,6 @@ export const InvoiceSchema = z.object({
   type: z.enum(['Regular', 'Other']),
   source: z.enum(['legacy', 'next']),
   invoiceRows: z.array(InvoiceRowSchema),
+  invoiceFileUrl: z.string().optional(),
+  remainingAmount: z.number().optional(),
 })
