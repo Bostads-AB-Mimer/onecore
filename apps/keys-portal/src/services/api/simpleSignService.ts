@@ -36,6 +36,7 @@ export const simpleSignService = {
       contactId: recipient.contactCode || null, // Save contactCode as contactId
       recipientEmail,
       recipientName,
+      personalNumber: recipient.nationalRegistrationNumber || undefined, // For BankID
       pdfBase64,
     }
 

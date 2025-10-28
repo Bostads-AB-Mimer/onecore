@@ -82,6 +82,7 @@ export const routes = (router: KoaRouter) => {
           pdfBase64: payload.pdfBase64,
           recipientEmail: payload.recipientEmail,
           recipientName: payload.recipientName,
+          personalNumber: payload.personalNumber,
         })
 
         // Create signature record
@@ -257,10 +258,8 @@ export const routes = (router: KoaRouter) => {
       }
 
       // Use adapter to sync signature from SimpleSign
-      const updatedSignature = await signaturesAdapter.syncSignatureFromSimpleSign(
-        parse.data.id,
-        db
-      )
+      const updatedSignature =
+        await signaturesAdapter.syncSignatureFromSimpleSign(parse.data.id, db)
 
       ctx.status = 200
       ctx.body = { content: updatedSignature, ...metadata }

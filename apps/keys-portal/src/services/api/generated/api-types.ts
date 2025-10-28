@@ -2456,6 +2456,7 @@ export interface components {
       /** Format: email */
       recipientEmail: string;
       recipientName?: string;
+      personalNumber?: string;
       pdfBase64: string;
     };
     SimpleSignWebhookPayload: {

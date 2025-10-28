@@ -12,6 +12,7 @@ interface SendPdfForSignatureParams {
   pdfBase64: string
   recipientEmail: string
   recipientName?: string
+  personalNumber?: string // For BankID authentication
 }
 
 interface SendPdfForSignatureResponse {
@@ -64,17 +65,26 @@ export async function sendPdfForSignature(
           address: '',
           city: '',
           zipcode: '',
-          persnol_no: '',
+          persnol_no: params.personalNumber || '',
         },
         details: {
           recipient_role: 'Tenant',
-          authentication: 'e_signature',
+          authentication: 'BankID',
           invitation_type: 'email',
           invitation_order: '1',
           confirmation: 'email',
         },
       },
     ]
+
+    logger.info(
+      {
+        recipients,
+        hasPersonalNumber: !!params.personalNumber,
+        authentication: 'BankID',
+      },
+      'Sending signature request to SimpleSign'
+    )
 
     formData.append('recipients', JSON.stringify(recipients))
     formData.append('language', 'swedish')

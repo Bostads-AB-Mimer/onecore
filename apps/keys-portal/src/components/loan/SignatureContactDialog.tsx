@@ -28,13 +28,18 @@ export function SignatureContactDialog({
   contact2,
   onConfirm,
 }: SignatureContactDialogProps) {
-  const [selectedContact, setSelectedContact] = useState<'contact1' | 'contact2' | 'custom'>(
-    contact1?.emailAddress && !contact1.emailAddress.includes('redacted') && !contact1.emailAddress.includes('example')
+  const [selectedContact, setSelectedContact] = useState<
+    'contact1' | 'contact2' | 'custom'
+  >(
+    contact1?.emailAddress &&
+      !contact1.emailAddress.includes('redacted') &&
+      !contact1.emailAddress.includes('example')
       ? 'contact1'
       : 'custom'
   )
   const [customEmail, setCustomEmail] = useState('')
   const [customName, setCustomName] = useState('')
+  const [customPersonalNumber, setCustomPersonalNumber] = useState('')
 
   const getContactName = (contact?: Contact) => {
     if (!contact) return ''
@@ -46,13 +51,26 @@ export function SignatureContactDialog({
   const handleConfirm = () => {
     if (selectedContact === 'custom') {
       if (!customEmail) return
-      // Use contact1 as base, override email
+      // Use contact1 as base, override email, name, and nationalRegistrationNumber
       const baseContact = contact1 || contact2
       if (!baseContact) return
-      onConfirm({
+
+      const customContact = {
         ...baseContact,
         emailAddress: customEmail,
-      })
+        nationalRegistrationNumber:
+          customPersonalNumber || baseContact.nationalRegistrationNumber,
+      }
+
+      // Override name fields if customName is provided
+      if (customName) {
+        const nameParts = customName.split(' ')
+        customContact.firstName = nameParts[0] || null
+        customContact.lastName = nameParts.slice(1).join(' ') || null
+        customContact.fullName = customName
+      }
+
+      onConfirm(customContact)
     } else if (selectedContact === 'contact1' && contact1) {
       onConfirm(contact1)
     } else if (selectedContact === 'contact2' && contact2) {
@@ -82,13 +100,18 @@ export function SignatureContactDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <RadioGroup value={selectedContact} onValueChange={(v) => setSelectedContact(v as any)}>
+          <RadioGroup
+            value={selectedContact}
+            onValueChange={(v) => setSelectedContact(v as any)}
+          >
             {contact1 && (
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="contact1" id="contact1" />
                 <Label htmlFor="contact1" className="flex-1 cursor-pointer">
                   <div className="font-medium">{getContactName(contact1)}</div>
-                  <div className="text-sm text-muted-foreground">{contact1.emailAddress}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {contact1.emailAddress}
+                  </div>
                 </Label>
               </div>
             )}
@@ -98,7 +121,9 @@ export function SignatureContactDialog({
                 <RadioGroupItem value="contact2" id="contact2" />
                 <Label htmlFor="contact2" className="flex-1 cursor-pointer">
                   <div className="font-medium">{getContactName(contact2)}</div>
-                  <div className="text-sm text-muted-foreground">{contact2.emailAddress}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {contact2.emailAddress}
+                  </div>
                 </Label>
               </div>
             )}
@@ -121,6 +146,20 @@ export function SignatureContactDialog({
                         placeholder="email@example.com"
                         value={customEmail}
                         onChange={(e) => setCustomEmail(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="customPersonalNumber" className="text-xs">
+                        Personnummer (för BankID test)
+                      </Label>
+                      <Input
+                        id="customPersonalNumber"
+                        placeholder="YYYYMMDDXXXX"
+                        value={customPersonalNumber}
+                        onChange={(e) =>
+                          setCustomPersonalNumber(e.target.value)
+                        }
                         className="mt-1"
                       />
                     </div>

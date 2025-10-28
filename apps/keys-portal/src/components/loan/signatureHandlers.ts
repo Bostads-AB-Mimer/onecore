@@ -7,7 +7,10 @@ import type {
   Contact,
 } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
-import { simpleSignService, type Signature } from '@/services/api/simpleSignService'
+import {
+  simpleSignService,
+  type Signature,
+} from '@/services/api/simpleSignService'
 import { generateLoanReceiptBlob } from '@/lib/pdf-receipts'
 
 export interface SignatureHandlerParams {

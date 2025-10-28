@@ -390,6 +390,7 @@ export const SendSignatureRequestSchema = z.object({
   contactId: z.string().nullable().optional(), // Optional contactId to save
   recipientEmail: z.string().email(), // Email to send to SimpleSign
   recipientName: z.string().optional(), // Name to send to SimpleSign
+  personalNumber: z.string().optional(), // Personal number for BankID authentication
   pdfBase64: z.string().min(1, 'PDF content is required'),
 })
 
