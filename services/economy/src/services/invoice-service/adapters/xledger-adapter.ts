@@ -148,6 +148,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       description: invoiceData.node.text ?? undefined,
       sentToDebtCollection,
       source: 'next',
+      invoiceRows: [],
     }
 
     if (invoice.paidAmount === invoice.amount) {

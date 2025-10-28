@@ -438,10 +438,7 @@ export const getContacts = async (
   return contacts
 }
 
-function transformFromDbInvoice(
-  row: any,
-  contactCode: string
-): Omit<Invoice, 'invoiceRows'> {
+function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
     (sum, value) => sum + value,
     0
@@ -462,13 +459,14 @@ function transformFromDbInvoice(
     transactionTypeName: row.transactionTypeName.trim(),
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   }
 }
 
 export const getInvoicesByContactCode = async (
   contactKey: string,
   filters?: { from?: Date }
-): Promise<Omit<Invoice, 'invoiceRows'>[] | undefined> => {
+): Promise<Invoice[] | undefined> => {
   logger.info(
     { contactCode: contactKey },
     'Getting invoices by contact code from Xpand DB'
@@ -505,7 +503,7 @@ export const getInvoicesByContactCode = async (
   const rows = await query
 
   if (rows && rows.length > 0) {
-    const invoices: Omit<Invoice, 'invoiceRows'>[] = rows
+    const invoices: Invoice[] = rows
       .filter((row) => {
         // Only include invoices with invoiceIds
         // that have not been deleted (debitStatus 6 = makulerad)
