@@ -8,9 +8,9 @@
   "packageManager": "pnpm@10.6.1",
   "main": "./src/index.ts",
   "scripts": {
-    "test": "jest",
+    "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test jest",
+    "test:watch": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test TZ=UTC jest --watch",
     "build": "tsc -p tsconfig.build.json",
-    "test:watch": "TZ=UTC jest --watch",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
     "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "dev:init": "pnpm prepare:dotenv",
@@ -29,7 +29,7 @@
     "dev:script:get-contact-details": "ts-node src/scripts/get-contact-details",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",
-    "ts:ci": "tsc --noEmit",
+    "ts:ci": " tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
