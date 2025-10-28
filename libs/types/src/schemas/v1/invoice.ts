@@ -5,27 +5,6 @@ import { InvoiceTransactionType, PaymentStatus } from '../../enums'
 const InvoiceTransactionTypeSchema = z.nativeEnum(InvoiceTransactionType)
 const PaymentStatusSchema = z.nativeEnum(PaymentStatus)
 
-export const InvoiceSchema = z.object({
-  invoiceId: z.string(),
-  leaseId: z.string(),
-  amount: z.number(),
-  reference: z.string(),
-  fromDate: z.coerce.date(),
-  toDate: z.coerce.date(),
-  invoiceDate: z.coerce.date(),
-  expirationDate: z.coerce.date().optional(),
-  debitStatus: z.number(),
-  paymentStatus: PaymentStatusSchema,
-  transactionType: InvoiceTransactionTypeSchema,
-  transactionTypeName: z.string(),
-  paidAmount: z.number().optional(),
-  daysSinceLastDebitDate: z.number().optional(),
-  description: z.string().optional(),
-  sentToDebtCollection: z.coerce.date().optional(),
-  type: z.enum(['Regular', 'Other']),
-  source: z.enum(['legacy', 'next']),
-})
-
 export const InvoiceRowSchema = z.object({
   account: z.string(),
   amount: z.number(),
@@ -59,4 +38,26 @@ export const InvoicePaymentEventSchema = z.object({
   text: z.string().nullable(),
   // TODO: type these when we know what they are
   transactionSourceCode: z.string(),
+})
+
+export const InvoiceSchema = z.object({
+  invoiceId: z.string(),
+  leaseId: z.string(),
+  amount: z.number(),
+  reference: z.string(),
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date(),
+  invoiceDate: z.coerce.date(),
+  expirationDate: z.coerce.date().optional(),
+  debitStatus: z.number(),
+  paymentStatus: PaymentStatusSchema,
+  transactionType: InvoiceTransactionTypeSchema,
+  transactionTypeName: z.string(),
+  paidAmount: z.number().optional(),
+  daysSinceLastDebitDate: z.number().optional(),
+  description: z.string().optional(),
+  sentToDebtCollection: z.coerce.date().optional(),
+  type: z.enum(['Regular', 'Other']),
+  source: z.enum(['legacy', 'next']),
+  invoiceRows: z.array(InvoiceRowSchema),
 })

@@ -1,11 +1,4 @@
 import knex from 'knex'
-import config from '../../../common/config'
-import {
-  InvoiceDataRow,
-  Invoice as InvoiceRecord,
-  InvoiceDeliveryMethod,
-  xledgerDateString,
-} from '../../../common/types'
 import {
   Address,
   Invoice,
@@ -15,7 +8,15 @@ import {
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
-import { XpandContact } from '../../../common/types'
+
+import config from '@src/common/config'
+import {
+  InvoiceDataRow,
+  Invoice as InvoiceRecord,
+  InvoiceDeliveryMethod,
+  xledgerDateString,
+  XpandContact,
+} from '@src/common/types'
 
 type RentalSpecificRule = {
   costCode: string
@@ -437,7 +438,10 @@ export const getContacts = async (
   return contacts
 }
 
-function transformFromDbInvoice(row: any, contactCode: string): Invoice {
+function transformFromDbInvoice(
+  row: any,
+  contactCode: string
+): Omit<Invoice, 'invoiceRows'> {
   const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
     (sum, value) => sum + value,
     0
@@ -464,7 +468,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
 export const getInvoicesByContactCode = async (
   contactKey: string,
   filters?: { from?: Date }
-): Promise<Invoice[] | undefined> => {
+): Promise<Omit<Invoice, 'invoiceRows'>[] | undefined> => {
   logger.info(
     { contactCode: contactKey },
     'Getting invoices by contact code from Xpand DB'
@@ -501,7 +505,7 @@ export const getInvoicesByContactCode = async (
   const rows = await query
 
   if (rows && rows.length > 0) {
-    const invoices: Invoice[] = rows
+    const invoices: Omit<Invoice, 'invoiceRows'>[] = rows
       .filter((row) => {
         // Only include invoices with invoiceIds
         // that have not been deleted (debitStatus 6 = makulerad)
@@ -646,12 +650,12 @@ export const getInvoiceRows = async (
     return column ? (column as string).trimEnd() : column
   }
 
-  const convertedInvoiceRows = invoiceRows.map(
-    (invoiceRow: any): InvoiceDataRow => {
+  const convertedInvoiceRows: InvoiceRow[] = invoiceRows.map(
+    (invoiceRow: any) => {
       try {
         const type = invoiceRow['type'] as number
 
-        const invoice = {
+        const invoice: InvoiceRow = {
           account: trim(invoiceRow['p1']),
           amount: sumColumns(invoiceRow['rowAmount']),
           company: trim(invoiceRow['company']),
