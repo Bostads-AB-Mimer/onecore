@@ -82,10 +82,17 @@ export type KeySystemSchemaDownloadUrlResponse = NonNullable<
 
 // Key type definitions aligned with database enum
 export const KeyTypeLabels = {
+  HN: 'Huvudnyckel',
+  FS: 'Fastighet',
+  MV: 'Motorvärmarnyckel',
   LGH: 'Lägenhet',
   PB: 'Postbox',
-  FS: 'Fastighet',
-  HN: 'Huvudnyckel',
+  GAR: 'Garagenyckel',
+  LOK: 'Lokalnyckel',
+  HL: 'Hänglås',
+  FÖR: 'Förrådsnyckel',
+  SOP: 'Sopsug',
+  ÖVR: 'Övrigt',
 } as const
 
 export type KeyType = keyof typeof KeyTypeLabels

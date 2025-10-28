@@ -22,7 +22,7 @@ export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
     _links: z.array(PaginationLinksSchema),
   })
 
-export const KeyTypeSchema = z.enum(['LGH', 'PB', 'FS', 'HN'])
+export const KeyTypeSchema = z.enum(['HN', 'FS', 'MV', 'LGH', 'PB', 'GAR', 'LOK', 'HL', 'FÖR', 'SOP', 'ÖVR'])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
   'ELECTRONIC',
