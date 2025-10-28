@@ -2209,7 +2209,7 @@ export interface components {
       flexNumber?: number | null;
       rentalObjectCode?: string;
       /** @enum {string} */
-      keyType: "LGH" | "PB" | "FS" | "HN";
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
       /** Format: uuid */
       keySystemId?: string | null;
       /** @default false */
@@ -2266,7 +2266,7 @@ export interface components {
           flexNumber?: number | null;
           rentalObjectCode?: string;
           /** @enum {string} */
-          keyType: "LGH" | "PB" | "FS" | "HN";
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
           /** Format: uuid */
           keySystemId?: string | null;
           /** @default false */
