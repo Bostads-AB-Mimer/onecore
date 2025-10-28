@@ -7,8 +7,7 @@ import { economy } from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
 import z from 'zod'
-
-type KoaContext = KoaRouter.RouterContext
+import { Context } from 'koa'
 
 export type RouteSpecInput = {
   body?: z.ZodTypeAny
@@ -16,13 +15,12 @@ export type RouteSpecInput = {
   query?: z.ZodTypeAny
 }
 
+type RouteSpec = {
+  input?: RouteSpecInput
+  output: RouteSpecOutput
+}
+
 export type RouteSpecOutput = { [key: number]: z.ZodTypeAny }
-
-type HandlerResult<O extends RouteSpecOutput> = {
-  [S in keyof O & number]: { status: S; data: z.infer<O[S]> }
-}[Extract<keyof O, number>]
-
-type HandlerResult2<O extends RouteSpecOutput> = O[keyof O & number]
 
 export function createRouteSpec<
   I extends RouteSpecInput = RouteSpecInput,
@@ -31,32 +29,29 @@ export function createRouteSpec<
   return spec
 }
 
-export function routeWrapper<
-  I extends RouteSpecInput = RouteSpecInput,
-  O extends RouteSpecOutput = RouteSpecOutput,
->(
-  spec: { input?: I; output: O },
-  handler: (ctx: KoaContext) => Promise<HandlerResult<O>>
+type ExpectedReturnType<O extends RouteSpecOutput> = {
+  [K in keyof O & number]: { status: K; data: z.infer<O[K]> }
+}
+
+type HandlerResult<O extends RouteSpecOutput> = ExpectedReturnType<O>[keyof O &
+  number]
+
+function routeWrapper<S extends RouteSpec>(
+  spec: S,
+  handler: (ctx: Context) => Promise<HandlerResult<S['output']>>
 ) {
-  return async (ctx: KoaContext) => {
+  return async (ctx: Context) => {
     const metadata = generateRouteMetadata(ctx)
-
     const result = await Promise.resolve(handler(ctx))
-
     const schema = spec.output[result.status]
-
-    const parsed = schema.safeParse(result)
-
+    const parsed = schema.safeParse(result.data)
     if (!parsed.success) {
       ctx.status = 500
-      ctx.body = {
-        error: 'Response validation failed',
-      }
+      ctx.body = { error: 'Response validation failed' }
       return
     }
-
     ctx.status = result.status
-    ctx.body = makeSuccessResponseBody(parsed.data, metadata)
+    ctx.body = makeSuccessResponseBody(result.data, metadata)
   }
 }
 
@@ -91,25 +86,14 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '/invoices/example/:invoiceId',
     routeWrapper(ok, async (ctx) => {
-      return { status: 200, data: { bar: 'foo' } }
+      return {
+        status: 200 as const,
+        data: {
+          bar: 'foo',
+        },
+      }
     })
   )
-
-  router.get('/invoices/:invoiceId/payment-events', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await economyAdapter.getInvoicePaymentEvents(
-      ctx.params.invoiceId
-    )
-
-    if (!result.ok) {
-      ctx.status = result.statusCode ?? 500
-      return
-    } else {
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(result.data, metadata)
-    }
-  })
-
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(
