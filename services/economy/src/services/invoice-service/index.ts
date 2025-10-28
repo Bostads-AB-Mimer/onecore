@@ -94,6 +94,8 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  // TODO: This route doesn't take xpand into account
+  // Also doesn't get invoice rows
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
