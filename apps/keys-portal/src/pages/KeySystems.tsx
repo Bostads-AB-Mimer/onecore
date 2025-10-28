@@ -329,7 +329,7 @@ export default function KeySystems() {
         const response = await keyService.getAllKeys(1, 1000) // Get up to 1000 keys for this system
         // Filter keys that belong to this key system
         const filteredKeys = response.content.filter(
-          (key) => key.keySystemId === systemId
+          (key) => key.keySystemId === systemId && !key.disposed
         )
         setKeysForExpandedSystem(filteredKeys)
       } catch (error) {
