@@ -179,7 +179,12 @@ const getContactForPnr = async (
 const getContactsDataBySearchQuery = async (
   q: string
 ): Promise<
-  AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode' | 'nationalRegistrationNumber'>>, unknown>
+  AdapterResult<
+    Array<
+      Pick<Contact, 'fullName' | 'contactCode' | 'nationalRegistrationNumber'>
+    >,
+    unknown
+  >
 > => {
   try {
     const response = await axios.get<{ content: Array<Contact> }>(

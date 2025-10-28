@@ -39,10 +39,7 @@ export default function MaintenanceKeys() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="max-w-2xl mx-auto">
-        <ContactAutocomplete
-          onSelect={handleContactSelect}
-          loading={loading}
-        />
+        <ContactAutocomplete onSelect={handleContactSelect} loading={loading} />
       </div>
 
       {/* Show results when contact is found */}
