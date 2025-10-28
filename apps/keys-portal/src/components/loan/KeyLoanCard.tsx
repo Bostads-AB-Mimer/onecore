@@ -15,12 +15,13 @@ import {
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { KeyLoan, Key, Receipt, Lease } from '@/services/types'
+import type { KeyLoan, Key, Receipt, Lease, Contact } from '@/services/types'
 import {
   handleSendForDigitalSignature,
   getSignatureStatus,
   handleSyncSignatureStatus,
 } from './signatureHandlers'
+import { SignatureContactDialog } from './SignatureContactDialog'
 
 interface KeyLoanCardProps {
   keyLoan: KeyLoan
@@ -66,6 +67,7 @@ export function KeyLoanCard({
     statusText?: string
     statusVariant?: 'default' | 'secondary' | 'outline' | 'destructive'
   } | null>(null)
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
 
   // Fetch signature status when loanReceipt changes
   useEffect(() => {
@@ -76,12 +78,13 @@ export function KeyLoanCard({
     }
   }, [loanReceipt])
 
-  const handleDigitalSign = async () => {
+  const handleContactConfirm = async (recipient: Contact) => {
     if (!loanReceipt) {
       setSignError('Ingen kvittens att signera')
       return
     }
 
+    setContactDialogOpen(false)
     setSignError(null)
     setSigningReceiptId(loanReceipt.id)
 
@@ -90,6 +93,7 @@ export function KeyLoanCard({
       lease,
       keys,
       keyLoan,
+      recipient,
       onSuccess: onRefresh,
     })
 
@@ -102,6 +106,14 @@ export function KeyLoanCard({
     }
 
     setSigningReceiptId(null)
+  }
+
+  const openContactDialog = () => {
+    if (!loanReceipt) {
+      setSignError('Ingen kvittens att signera')
+      return
+    }
+    setContactDialogOpen(true)
   }
 
   const handleSyncStatus = async () => {
@@ -257,7 +269,7 @@ export function KeyLoanCard({
                 size="sm"
                 variant="outline"
                 className="text-[10px] h-6 border-yellow-600 hover:bg-yellow-100 px-1.5"
-                onClick={handleDigitalSign}
+                onClick={openContactDialog}
                 disabled={signingReceiptId === loanReceipt.id}
               >
                 <PenLine className="h-2 w-2 mr-0.5" />
@@ -393,6 +405,14 @@ export function KeyLoanCard({
           </div>
         )}
       </CardContent>
+
+      <SignatureContactDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        contact1={lease.tenants?.[0]}
+        contact2={lease.tenants?.[1]}
+        onConfirm={handleContactConfirm}
+      />
     </Card>
   )
 }

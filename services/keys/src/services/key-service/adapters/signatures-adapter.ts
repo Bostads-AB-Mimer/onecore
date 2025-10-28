@@ -50,8 +50,7 @@ export async function createSignature(
       resourceType: signatureData.resourceType,
       resourceId: signatureData.resourceId,
       simpleSignDocumentId: signatureData.simpleSignDocumentId,
-      recipientEmail: signatureData.recipientEmail,
-      recipientName: signatureData.recipientName ?? null,
+      contactId: signatureData.contactId ?? null,
       status: signatureData.status ?? 'sent',
     })
     .returning('*')

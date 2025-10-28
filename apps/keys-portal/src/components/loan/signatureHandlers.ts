@@ -4,9 +4,10 @@ import type {
   Lease,
   ReceiptData,
   Receipt,
+  Contact,
 } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
-import { simpleSignService } from '@/services/api/simpleSignService'
+import { simpleSignService, type Signature } from '@/services/api/simpleSignService'
 import { generateLoanReceiptBlob } from '@/lib/pdf-receipts'
 
 export interface SignatureHandlerParams {
@@ -14,6 +15,7 @@ export interface SignatureHandlerParams {
   lease: Lease
   keys: Key[]
   keyLoan: KeyLoan
+  recipient: Contact
   onSuccess?: () => Promise<void>
 }
 
@@ -30,18 +32,10 @@ export async function handleSendForDigitalSignature({
   lease,
   keys,
   keyLoan,
+  recipient,
   onSuccess,
 }: SignatureHandlerParams): Promise<SignatureHandlerResult> {
   try {
-    // Get the primary tenant's email
-    const primaryTenant = lease.tenants?.[0]
-    if (!primaryTenant?.emailAddress) {
-      return {
-        success: false,
-        error: 'Ingen e-postadress hittades för hyresgästen',
-      }
-    }
-
     // Generate the PDF blob
     const receiptData: ReceiptData = {
       lease,
@@ -58,32 +52,11 @@ export async function handleSendForDigitalSignature({
     // Convert blob to base64
     const base64 = await receiptService.blobToBase64(blob)
 
-    // Send to SimpleSign
-    // For testing: prompt for email if tenant email is missing or redacted
-    let recipientEmail = primaryTenant.emailAddress
-    if (
-      !recipientEmail ||
-      recipientEmail.includes('redacted') ||
-      recipientEmail.includes('example')
-    ) {
-      recipientEmail =
-        window.prompt(
-          'Tenant email is missing. Enter email for testing:',
-          ''
-        ) || primaryTenant.emailAddress
-    }
-
-    // Use fullName if firstName or lastName is missing
-    const recipientName =
-      primaryTenant.firstName && primaryTenant.lastName
-        ? `${primaryTenant.firstName} ${primaryTenant.lastName}`
-        : primaryTenant.fullName || 'Tenant'
-
+    // Send for signature - service handles name/email extraction
     await simpleSignService.sendForSignature({
+      recipient,
       resourceType: 'receipt',
       resourceId: loanReceipt.id,
-      recipientEmail: recipientEmail,
-      recipientName: recipientName,
       pdfBase64: base64,
     })
 
@@ -108,7 +81,7 @@ export async function getSignatureStatus(receiptId: string): Promise<{
   hasPendingSignature: boolean
   statusText?: string
   statusVariant?: 'default' | 'secondary' | 'outline' | 'destructive'
-  signature?: any
+  signature?: Signature
 }> {
   try {
     const signature = await simpleSignService.getLatestForResource(

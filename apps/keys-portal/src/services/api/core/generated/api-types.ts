@@ -5412,18 +5412,18 @@ export interface components {
       nationalRegistrationNumber: string;
       /** Format: date-time */
       birthDate: string | null;
-      address: {
+      address?: {
         street: string;
         number: string;
         postalCode: string;
         city: string;
-      } | null;
-      phoneNumbers: {
+      };
+      phoneNumbers?: {
           phoneNumber: string;
           type: string;
-          isMainNumber: number;
+          isMainNumber: boolean;
         }[];
-      emailAddress: string | null;
+      emailAddress?: string;
       isTenant: boolean;
       specialAttention?: boolean;
     };
@@ -6019,9 +6019,7 @@ export interface components {
       /** Format: uuid */
       resourceId: string;
       simpleSignDocumentId: number;
-      /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
+      contactId?: string | null;
       status: string;
       /** Format: date-time */
       sentAt: string;
@@ -6188,9 +6186,7 @@ export interface components {
       /** Format: uuid */
       resourceId: string;
       simpleSignDocumentId: number;
-      /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
+      contactId?: string | null;
       /** @default sent */
       status?: string;
     };
@@ -6206,6 +6202,7 @@ export interface components {
       resourceType: "receipt";
       /** Format: uuid */
       resourceId: string;
+      contactId?: string | null;
       /** Format: email */
       recipientEmail: string;
       recipientName?: string;

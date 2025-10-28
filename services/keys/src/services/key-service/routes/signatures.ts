@@ -90,8 +90,7 @@ export const routes = (router: KoaRouter) => {
             resourceType: payload.resourceType,
             resourceId: payload.resourceId,
             simpleSignDocumentId: simpleSignResponse.id,
-            recipientEmail: payload.recipientEmail,
-            recipientName: payload.recipientName || null,
+            contactId: payload.contactId || null,
             status: 'sent',
           },
           db

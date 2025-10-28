@@ -30,15 +30,17 @@ export const Contact = z.object({
       postalCode: z.string(),
       city: z.string(),
     })
-    .nullable(),
-  phoneNumbers: z.array(
-    z.object({
-      phoneNumber: z.string(),
-      type: z.string(),
-      isMainNumber: z.number(),
-    })
-  ),
-  emailAddress: z.string().nullable(),
+    .optional(),
+  phoneNumbers: z
+    .array(
+      z.object({
+        phoneNumber: z.string(),
+        type: z.string(),
+        isMainNumber: z.boolean(),
+      })
+    )
+    .optional(),
+  emailAddress: z.string().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
 })

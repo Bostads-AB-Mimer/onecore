@@ -362,8 +362,7 @@ export const SignatureSchema = z.object({
   resourceType: SignatureResourceTypeSchema,
   resourceId: z.string().uuid(),
   simpleSignDocumentId: z.number().int(),
-  recipientEmail: z.string().email(),
-  recipientName: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(), // Reference to Contact, null for custom recipients
   status: z.string(),
   sentAt: z.coerce.date(),
   completedAt: z.coerce.date().nullable().optional(),
@@ -374,8 +373,7 @@ export const CreateSignatureRequestSchema = z.object({
   resourceType: SignatureResourceTypeSchema,
   resourceId: z.string().uuid(),
   simpleSignDocumentId: z.number().int(),
-  recipientEmail: z.string().email(),
-  recipientName: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(), // Optional contactId
   status: z.string().default('sent'),
 })
 
@@ -389,8 +387,9 @@ export const UpdateSignatureRequestSchema = z.object({
 export const SendSignatureRequestSchema = z.object({
   resourceType: SignatureResourceTypeSchema,
   resourceId: z.string().uuid(),
-  recipientEmail: z.string().email(),
-  recipientName: z.string().optional(),
+  contactId: z.string().nullable().optional(), // Optional contactId to save
+  recipientEmail: z.string().email(), // Email to send to SimpleSign
+  recipientName: z.string().optional(), // Name to send to SimpleSign
   pdfBase64: z.string().min(1, 'PDF content is required'),
 })
 

@@ -1,4 +1,5 @@
 import type { components } from './core/generated/api-types'
+import type { Contact } from '../types'
 import { POST, GET } from './core/base-api'
 
 export type Signature = components['schemas']['Signature']
@@ -8,7 +9,36 @@ export const simpleSignService = {
   /**
    * Send a PDF document for digital signature via SimpleSign
    */
-  async sendForSignature(payload: SendSignatureRequest): Promise<Signature> {
+  async sendForSignature(params: {
+    recipient: Contact
+    resourceType: 'receipt'
+    resourceId: string
+    pdfBase64: string
+  }): Promise<Signature> {
+    const { recipient, resourceType, resourceId, pdfBase64 } = params
+
+    // Extract name from contact, preferring firstName/lastName combination
+    const recipientName =
+      recipient.firstName && recipient.lastName
+        ? `${recipient.firstName} ${recipient.lastName}`
+        : recipient.fullName || 'Mottagare'
+
+    // Extract email from contact
+    const recipientEmail = recipient.emailAddress
+
+    if (!recipientEmail) {
+      throw new Error('Recipient must have an email address')
+    }
+
+    const payload: SendSignatureRequest = {
+      resourceType,
+      resourceId,
+      contactId: recipient.contactCode || null, // Save contactCode as contactId
+      recipientEmail,
+      recipientName,
+      pdfBase64,
+    }
+
     const { data, error } = await POST('/signatures/send', { body: payload })
     if (error) throw error
     return data?.content as Signature

@@ -2428,9 +2428,7 @@ export interface components {
       /** Format: uuid */
       resourceId: string;
       simpleSignDocumentId: number;
-      /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
+      contactId?: string | null;
       status: string;
       /** Format: date-time */
       sentAt: string;
@@ -2445,9 +2443,7 @@ export interface components {
       /** Format: uuid */
       resourceId: string;
       simpleSignDocumentId: number;
-      /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
+      contactId?: string | null;
       /** @default sent */
       status?: string;
     };
@@ -2456,6 +2452,7 @@ export interface components {
       resourceType: "receipt";
       /** Format: uuid */
       resourceId: string;
+      contactId?: string | null;
       /** Format: email */
       recipientEmail: string;
       recipientName?: string;
