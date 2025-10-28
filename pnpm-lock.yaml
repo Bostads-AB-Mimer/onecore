@@ -904,10 +904,10 @@ importers:
         version: 12.0.2
       '@onecore/types':
         specifier: workspace:*
-        version: file:libs/types(zod@3.25.76)
+        version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
-        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)
+        version: link:../../libs/utilities
       '@urql/core':
         specifier: ^5.1.0
         version: 5.2.0(graphql@16.11.0)
@@ -1050,6 +1050,9 @@ importers:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.11)(typescript@5.9.2)
+      tsconfig-paths:
+        specifier: ^4.2.0
+        version: 4.2.0
       typescript:
         specifier: ^5.6.2
         version: 5.9.2
@@ -3141,17 +3144,6 @@ packages:
 
   '@octokit/types@9.3.2':
     resolution: {integrity: sha512-D4iHGTdAnEEVsB8fl95m1hiz7D5YiRdQ9b/OEb3BYRVwbLsGHcRVPz+u+BgRLNk0Q0/4iZCBqDN96j2XNxfXrA==}
-
-  '@onecore/types@file:libs/types':
-    resolution: {directory: libs/types, type: directory}
-    peerDependencies:
-      zod: ^3.23.8
-
-  '@onecore/utilities@file:libs/utilities':
-    resolution: {directory: libs/utilities, type: directory}
-    peerDependencies:
-      '@elastic/elasticsearch': ^8.0.0
-      '@elastic/transport': ^8.0.0
 
   '@open-draft/deferred-promise@2.2.0':
     resolution: {integrity: sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA==}
@@ -12089,32 +12081,6 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 18.1.1
 
-  '@onecore/types@file:libs/types(zod@3.25.76)':
-    dependencies:
-      release-please: 16.18.0
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
-
-  '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)':
-    dependencies:
-      '@elastic/elasticsearch': 8.19.1
-      '@elastic/transport': 8.10.0
-      axios: 1.11.0
-      koa: 2.16.2
-      pino: 9.9.1
-      pino-elasticsearch: 8.1.0
-      pino-multi-stream: 6.0.0
-      pino-pretty: 11.3.0
-      prettier: 3.6.2
-      release-please: 16.18.0
-    transitivePeerDependencies:
-      - '@75lb/nature'
-      - debug
-      - encoding
-      - supports-color
-
   '@open-draft/deferred-promise@2.2.0': {}
 
   '@open-draft/logger@0.3.0':
@@ -14088,7 +14054,7 @@ snapshots:
 
   axios@1.11.0:
     dependencies:
-      follow-redirects: 1.15.11
+      follow-redirects: 1.15.11(debug@4.4.1)
       form-data: 4.0.4
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -15786,8 +15752,6 @@ snapshots:
   focus-trap@7.6.5:
     dependencies:
       tabbable: 6.2.0
-
-  follow-redirects@1.15.11: {}
 
   follow-redirects@1.15.11(debug@4.4.1):
     optionalDependencies:

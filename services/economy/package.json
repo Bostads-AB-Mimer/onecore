@@ -12,7 +12,7 @@
     "test:watch": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test TZ=UTC jest --watch",
     "build": "tsc -p tsconfig.build.json",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
-    "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
+    "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node -r tsconfig-paths/register src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
@@ -55,6 +55,7 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.2"
   },
   "dependencies": {
