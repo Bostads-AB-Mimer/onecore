@@ -1000,4 +1000,14 @@ export const SignaturesApi = {
     )
     return r.ok ? ok(r.data.content) : r
   },
+
+  sync: async (
+    id: string
+  ): Promise<AdapterResult<Signature, 'not-found' | CommonErr>> => {
+    const r = await postJSON<{ content: Signature }>(
+      `${BASE}/signatures/${id}/sync`,
+      {}
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
 }

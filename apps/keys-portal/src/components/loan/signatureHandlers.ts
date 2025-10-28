@@ -73,11 +73,17 @@ export async function handleSendForDigitalSignature({
         ) || primaryTenant.emailAddress
     }
 
+    // Use fullName if firstName or lastName is missing
+    const recipientName =
+      primaryTenant.firstName && primaryTenant.lastName
+        ? `${primaryTenant.firstName} ${primaryTenant.lastName}`
+        : primaryTenant.fullName || 'Tenant'
+
     await simpleSignService.sendForSignature({
       resourceType: 'receipt',
       resourceId: loanReceipt.id,
       recipientEmail: recipientEmail,
-      recipientName: `${primaryTenant.firstName} ${primaryTenant.lastName}`,
+      recipientName: recipientName,
       pdfBase64: base64,
     })
 
@@ -155,5 +161,43 @@ export async function getSignatureStatus(receiptId: string): Promise<{
   } catch (err) {
     console.error('Failed to fetch signature status:', err)
     return { hasPendingSignature: false }
+  }
+}
+
+/**
+ * Manually sync signature status from SimpleSign
+ */
+export async function handleSyncSignatureStatus(
+  receiptId: string,
+  onSuccess?: () => Promise<void>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get the latest signature for this receipt
+    const signature = await simpleSignService.getLatestForResource(
+      'receipt',
+      receiptId
+    )
+
+    if (!signature) {
+      return {
+        success: false,
+        error: 'Ingen signaturförfrågan hittades',
+      }
+    }
+
+    // Sync status from SimpleSign
+    await simpleSignService.syncSignature(signature.id)
+
+    // Call success callback (e.g., refresh data)
+    if (onSuccess) {
+      await onSuccess()
+    }
+
+    return { success: true }
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message ?? 'Kunde inte synkronisera signaturstatus',
+    }
   }
 }

@@ -29,7 +29,7 @@ export const simpleSignService = {
    * Get all signatures for a resource (e.g., receipt)
    */
   async getByResource(
-    resourceType: string,
+    resourceType: 'receipt',
     resourceId: string
   ): Promise<Signature[]> {
     const { data, error } = await GET(
@@ -49,7 +49,7 @@ export const simpleSignService = {
    * Helper: Get the latest signature for a resource
    */
   async getLatestForResource(
-    resourceType: string,
+    resourceType: 'receipt',
     resourceId: string
   ): Promise<Signature | undefined> {
     const signatures = await this.getByResource(resourceType, resourceId)
@@ -59,5 +59,16 @@ export const simpleSignService = {
     return signatures.sort(
       (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
     )[0]
+  },
+
+  /**
+   * Manually sync signature status from SimpleSign
+   */
+  async syncSignature(signatureId: string): Promise<Signature> {
+    const { data, error } = await POST('/signatures/{id}/sync', {
+      params: { path: { id: signatureId } },
+    })
+    if (error) throw error
+    return data?.content as Signature
   },
 }

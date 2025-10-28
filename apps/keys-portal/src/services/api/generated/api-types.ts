@@ -2168,6 +2168,38 @@ export interface paths {
       };
     };
   };
+  "/signatures/{id}/sync": {
+    /**
+     * Manually sync signature status from SimpleSign
+     * @description Fetches the latest status from SimpleSign API and processes the document if signed
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Signature ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Signature synced successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Signature not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/webhooks/simplesign": {
     /** Webhook endpoint for SimpleSign status updates */
     post: {

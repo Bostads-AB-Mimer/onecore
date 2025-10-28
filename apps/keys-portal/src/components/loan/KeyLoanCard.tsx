@@ -10,6 +10,7 @@ import {
   Download,
   PenLine,
   Clock,
+  RefreshCw,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -18,6 +19,7 @@ import type { KeyLoan, Key, Receipt, Lease } from '@/services/types'
 import {
   handleSendForDigitalSignature,
   getSignatureStatus,
+  handleSyncSignatureStatus,
 } from './signatureHandlers'
 
 interface KeyLoanCardProps {
@@ -57,6 +59,8 @@ export function KeyLoanCard({
 }: KeyLoanCardProps) {
   const [signingReceiptId, setSigningReceiptId] = useState<string | null>(null)
   const [signError, setSignError] = useState<string | null>(null)
+  const [syncingReceiptId, setSyncingReceiptId] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
   const [signatureStatus, setSignatureStatus] = useState<{
     hasPendingSignature: boolean
     statusText?: string
@@ -98,6 +102,28 @@ export function KeyLoanCard({
     }
 
     setSigningReceiptId(null)
+  }
+
+  const handleSyncStatus = async () => {
+    if (!loanReceipt) {
+      setSyncError('Ingen kvittens att synkronisera')
+      return
+    }
+
+    setSyncError(null)
+    setSyncingReceiptId(loanReceipt.id)
+
+    const result = await handleSyncSignatureStatus(loanReceipt.id, onRefresh)
+
+    if (!result.success) {
+      setSyncError(result.error || 'Ett fel uppstod')
+    } else {
+      // Refresh signature status after syncing
+      const status = await getSignatureStatus(loanReceipt.id)
+      setSignatureStatus(status)
+    }
+
+    setSyncingReceiptId(null)
   }
 
   return (
@@ -241,6 +267,20 @@ export function KeyLoanCard({
                     ? 'Skicka igen'
                     : 'Digital Sign'}
               </Button>
+              {signatureStatus?.hasPendingSignature && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-[10px] h-6 border-blue-600 hover:bg-blue-100 px-1.5"
+                  onClick={handleSyncStatus}
+                  disabled={syncingReceiptId === loanReceipt.id}
+                >
+                  <RefreshCw className="h-2 w-2 mr-0.5" />
+                  {syncingReceiptId === loanReceipt.id
+                    ? 'Synkar...'
+                    : 'Uppdatera'}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -251,6 +291,11 @@ export function KeyLoanCard({
                 Generera
               </Button>
             </div>
+            {syncError && (
+              <div className="text-[10px] text-red-600 dark:text-red-400">
+                {syncError}
+              </div>
+            )}
             {uploadError && (
               <div className="text-[10px] text-red-600 dark:text-red-400">
                 {uploadError}

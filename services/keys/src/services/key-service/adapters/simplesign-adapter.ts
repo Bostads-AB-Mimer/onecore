@@ -107,7 +107,7 @@ export async function sendPdfForSignature(
 
 /**
  * Get document details from SimpleSign
- * GET /document/details?documentId={id}
+ * GET /document/details?document_id={id}
  */
 export async function getDocumentDetails(
   documentId: number
@@ -116,14 +116,20 @@ export async function getDocumentDetails(
     const response = await axios.get(
       `${Config.simpleSign.apiUrl}/document/details`,
       {
-        params: { documentId },
+        params: { document_id: documentId },
         headers: {
           Authorization: `Bearer ${Config.simpleSign.accessToken}`,
         },
       }
     )
 
-    return response.data as DocumentDetails
+    // SimpleSign returns an array of documents, get the first one
+    const documents = response.data as DocumentDetails[]
+    if (!documents || documents.length === 0) {
+      throw new Error('Document not found in SimpleSign response')
+    }
+
+    return documents[0]
   } catch (error: any) {
     logger.error(
       { error: error.response?.data || error.message },
@@ -137,12 +143,12 @@ export async function getDocumentDetails(
 
 /**
  * Download signed PDF from SimpleSign
- * GET /documents/{documentId}/download-pdf
+ * GET /documents/{documentId}/download/pdf
  */
 export async function downloadSignedPdf(documentId: number): Promise<Buffer> {
   try {
     const response = await axios.get(
-      `${Config.simpleSign.apiUrl}/documents/${documentId}/download-pdf`,
+      `${Config.simpleSign.apiUrl}/documents/${documentId}/download/pdf`,
       {
         headers: {
           Authorization: `Bearer ${Config.simpleSign.accessToken}`,

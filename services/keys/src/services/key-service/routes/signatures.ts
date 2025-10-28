@@ -4,7 +4,6 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
-import { uploadFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
 import * as signaturesAdapter from '../adapters/signatures-adapter'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
@@ -16,12 +15,8 @@ const {
   CreateSignatureRequestSchema,
   SendSignatureRequestSchema,
   SimpleSignWebhookPayloadSchema,
-  ErrorResponseSchema,
-  NotFoundResponseSchema,
-  BadRequestResponseSchema,
 } = keys.v1
 
-type Signature = keys.v1.Signature
 type SendSignatureRequest = keys.v1.SendSignatureRequest
 type SimpleSignWebhookPayload = keys.v1.SimpleSignWebhookPayload
 
@@ -224,6 +219,71 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /signatures/{id}/sync:
+   *   post:
+   *     summary: Manually sync signature status from SimpleSign
+   *     description: Fetches the latest status from SimpleSign API and processes the document if signed
+   *     tags: [Signatures]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Signature ID
+   *     responses:
+   *       200:
+   *         description: Signature synced successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       404:
+   *         description: Signature not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/signatures/:id/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const parse = IdParamSchema.safeParse({ id: ctx.params.id })
+      if (!parse.success) {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid signature id', ...metadata }
+        return
+      }
+
+      // Use adapter to sync signature from SimpleSign
+      const updatedSignature = await signaturesAdapter.syncSignatureFromSimpleSign(
+        parse.data.id,
+        db
+      )
+
+      ctx.status = 200
+      ctx.body = { content: updatedSignature, ...metadata }
+    } catch (err: any) {
+      logger.error(err, 'Error syncing signature status')
+
+      if (err.message.includes('not found')) {
+        ctx.status = 404
+        ctx.body = { reason: err.message, ...metadata }
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to sync signature status',
+          reason: err.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /webhooks/simplesign:
    *   post:
    *     summary: Webhook endpoint for SimpleSign status updates
@@ -282,70 +342,16 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // Update signature status
+      // Process the signature using adapter business logic
       await db.transaction(async (trx) => {
-        await signaturesAdapter.updateSignatureStatus(
-          webhookPayload.id,
+        await signaturesAdapter.processSignedDocument(
+          signature,
           webhookPayload.status,
           webhookPayload.status === 'signed'
             ? new Date(webhookPayload.status_updated_at)
-            : undefined,
+            : new Date(),
           trx
         )
-
-        // If signed, download PDF and upload to MinIO
-        if (webhookPayload.status === 'signed') {
-          // Check if resource already has a file (race condition check)
-          if (signature.resourceType === 'receipt') {
-            const receipt = await receiptsAdapter.getReceiptById(
-              signature.resourceId,
-              trx
-            )
-
-            if (receipt && !receipt.fileId) {
-              // Download signed PDF from SimpleSign
-              const pdfBuffer = await simpleSignApi.downloadSignedPdf(
-                webhookPayload.id
-              )
-
-              // Upload to MinIO
-              const minioFileId = await uploadFile(
-                pdfBuffer,
-                `receipt-${signature.resourceId}-signed.pdf`,
-                {
-                  'Content-Type': 'application/pdf',
-                  'x-amz-meta-signed': 'true',
-                  'x-amz-meta-signature-id': signature.id,
-                }
-              )
-
-              // Update receipt with fileId
-              await receiptsAdapter.updateReceipt(
-                signature.resourceId,
-                { fileId: minioFileId },
-                trx
-              )
-
-              // Mark other pending signatures as superseded
-              await signaturesAdapter.supersedePendingSignatures(
-                signature.resourceType,
-                signature.resourceId,
-                signature.id,
-                trx
-              )
-
-              logger.info(
-                { receiptId: signature.resourceId, fileId: minioFileId },
-                'Signed PDF uploaded to MinIO'
-              )
-            } else {
-              logger.info(
-                { receiptId: signature.resourceId },
-                'Receipt already has fileId, skipping upload'
-              )
-            }
-          }
-        }
       })
 
       ctx.status = 200

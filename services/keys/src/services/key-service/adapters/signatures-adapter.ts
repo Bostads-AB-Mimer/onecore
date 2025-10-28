@@ -1,6 +1,10 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
+import { logger } from '@onecore/utilities'
+import * as simpleSignApi from './simplesign-adapter'
+import * as receiptsAdapter from './receipts-adapter'
+import { uploadFile } from './minio'
 
 type Signature = keys.v1.Signature
 type CreateSignatureRequest = keys.v1.CreateSignatureRequest
@@ -130,4 +134,125 @@ export async function deleteOldSignatures(
     .whereIn('status', statuses)
     .where('sentAt', '<', cutoffDate)
     .del()
+}
+
+/**
+ * Process a signed document - download PDF, upload to MinIO, update receipt
+ * This is shared business logic used by both webhooks and manual sync
+ */
+export async function processSignedDocument(
+  signature: Signature,
+  status: string,
+  completedAt: Date | undefined,
+  dbConnection: Knex | Knex.Transaction
+): Promise<void> {
+  // Update signature status
+  await updateSignatureStatus(
+    signature.simpleSignDocumentId,
+    status,
+    completedAt,
+    dbConnection
+  )
+
+  // Only process signed documents for receipts
+  if (status === 'signed' && signature.resourceType === 'receipt') {
+    const receipt = await receiptsAdapter.getReceiptById(
+      signature.resourceId,
+      dbConnection
+    )
+
+    // Only download and upload if receipt doesn't have a file yet
+    if (receipt && !receipt.fileId) {
+      logger.info(
+        { receiptId: receipt.id, signatureId: signature.id },
+        'Downloading signed PDF from SimpleSign'
+      )
+
+      // Download signed PDF from SimpleSign
+      const pdfBuffer = await simpleSignApi.downloadSignedPdf(
+        signature.simpleSignDocumentId
+      )
+
+      // Upload to MinIO
+      const minioFileId = await uploadFile(
+        pdfBuffer,
+        `receipt-${signature.resourceId}-signed.pdf`,
+        {
+          'Content-Type': 'application/pdf',
+          'x-amz-meta-signed': 'true',
+          'x-amz-meta-signature-id': signature.id,
+        }
+      )
+
+      // Update receipt with fileId
+      await receiptsAdapter.updateReceipt(
+        signature.resourceId,
+        { fileId: minioFileId },
+        dbConnection
+      )
+
+      // Mark other pending signatures as superseded
+      await supersedePendingSignatures(
+        signature.resourceType,
+        signature.resourceId,
+        signature.id,
+        dbConnection
+      )
+
+      logger.info(
+        { receiptId: signature.resourceId, fileId: minioFileId },
+        'Signed PDF uploaded to MinIO'
+      )
+    } else if (receipt && receipt.fileId) {
+      logger.info(
+        { receiptId: signature.resourceId },
+        'Receipt already has fileId, skipping upload'
+      )
+    }
+  }
+}
+
+/**
+ * Sync signature status from SimpleSign API and process if signed
+ * Used for manual status refresh
+ */
+export async function syncSignatureFromSimpleSign(
+  signatureId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<Signature> {
+  const signature = await getSignatureById(signatureId, dbConnection)
+
+  if (!signature) {
+    throw new Error(`Signature not found: ${signatureId}`)
+  }
+
+  // Fetch latest status from SimpleSign
+  const documentDetails = await simpleSignApi.getDocumentDetails(
+    signature.simpleSignDocumentId
+  )
+
+  logger.info(
+    { signatureId: signature.id, status: documentDetails.status },
+    'Fetched signature status from SimpleSign'
+  )
+
+  // Process the document in a transaction
+  await dbConnection.transaction(async (trx) => {
+    await processSignedDocument(
+      signature,
+      documentDetails.status,
+      documentDetails.status === 'signed'
+        ? new Date(documentDetails.status_updated_at)
+        : undefined,
+      trx
+    )
+  })
+
+  // Return updated signature
+  const updatedSignature = await getSignatureById(signatureId, dbConnection)
+  if (!updatedSignature) {
+    throw new Error(`Failed to retrieve updated signature: ${signatureId}`)
+  }
+
+  return updatedSignature
 }

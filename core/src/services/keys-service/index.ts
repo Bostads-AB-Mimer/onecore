@@ -3785,6 +3785,67 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /signatures/{id}/sync:
+   *   post:
+   *     summary: Manually sync signature status from SimpleSign
+   *     description: Fetches the latest status from SimpleSign API and processes the document if signed
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Signature ID
+   *     responses:
+   *       200:
+   *         description: Signature synced successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       404:
+   *         description: Signature not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/signatures/:id/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await SignaturesApi.sync(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Signature not found', ...metadata }
+      } else {
+        logger.error({ err: result.err, metadata }, 'Error syncing signature')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /webhooks/simplesign:
    *   post:
    *     summary: Webhook endpoint for SimpleSign status updates
