@@ -21,6 +21,7 @@ export const mockedInvoices: Invoice[] = [
     transactionTypeName: 'HYRA',
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   },
   {
     amount: 456,
@@ -37,6 +38,7 @@ export const mockedInvoices: Invoice[] = [
     transactionTypeName: 'HYRA',
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   },
   {
     amount: 789,
@@ -53,6 +55,7 @@ export const mockedInvoices: Invoice[] = [
     transactionTypeName: 'INKASSOBYRÅ',
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   },
   {
     amount: 456,
@@ -69,6 +72,7 @@ export const mockedInvoices: Invoice[] = [
     transactionTypeName: 'HYRA',
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   },
 ]
 
