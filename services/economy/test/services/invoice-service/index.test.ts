@@ -49,7 +49,7 @@ describe('Invoice Service', () => {
       ).not.toThrow()
     })
 
-    it('maps invoice rows to invoices', async () => {
+    it('maps and includes invoices rows to corresponding invoices', async () => {
       const [invoice_1, invoice_2] = [
         factory.invoice.build({ invoiceId: 'foo' }),
         factory.invoice.build({ invoiceId: 'bar' }),
@@ -97,6 +97,10 @@ describe('Invoice Service', () => {
           expect.objectContaining({ invoiceNumber: invoice_2.invoiceId }),
         ])
       )
+
+      expect(() =>
+        schemas.v1.InvoiceSchema.array().parse(res.body.content)
+      ).not.toThrow()
     })
 
     it('uses fromDate and toDate from Xpand if available', async () => {
