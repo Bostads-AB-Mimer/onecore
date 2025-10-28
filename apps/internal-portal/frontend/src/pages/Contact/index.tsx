@@ -1,4 +1,5 @@
 import { Box, Button, TextField, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -6,24 +7,64 @@ import z from 'zod'
 
 import { mdTheme } from '../../theme'
 import { ContactCard } from './components/ContactCard'
+import apiClient from '../../utils/api-client'
+import { Contact } from '@onecore/types'
 
 const FormSchema = z.object({
-  contactCode: z.string().nonempty('Kundnummer saknas'),
+  searchInput: z.string().nonempty('Kundnummer eller personnummer saknas'),
 })
 
-export function Contact() {
+export function ContactPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const contactCode = searchParams.get('contact_code')
+  const searchValue = searchParams.get('search')
+  const [contactCode, setContactCode] = useState<string | null>(null)
 
-  const { handleSubmit, register, formState } = useForm({
+  const { handleSubmit, register, formState, setError } = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      contactCode: contactCode ?? '',
+      searchInput: searchValue ?? '',
     },
   })
 
-  const onSubmit = (data: z.infer<typeof FormSchema>) =>
-    setSearchParams({ contact_code: data.contactCode })
+  useEffect(() => {
+    if (searchValue) {
+      resolveContactCode(searchValue)
+    }
+  }, [searchValue])
+
+  const isContactCode = (query: string) => {
+    const queryLower = query.toLowerCase()
+    return queryLower.startsWith('p') || queryLower.startsWith('f')
+  }
+
+  const resolveContactCode = async (query: string) => {
+    if (isContactCode(query)) {
+      setContactCode(query)
+      return
+    }
+
+    try {
+      const contactResponse = await apiClient.get<{ content: Contact }>(
+        `/contacts/by-pnr/${query}`
+      )
+
+      if (contactResponse.data.content?.contactCode) {
+        setContactCode(contactResponse.data.content.contactCode)
+      } else {
+        setError('searchInput', {
+          message: `Hittade ingen användare med personnummer ${query}`,
+        })
+      }
+    } catch (error) {
+      setError('searchInput', {
+        message: `Hittade ingen användare med personnummer ${query}`,
+      })
+    }
+  }
+
+  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+    setSearchParams({ search: data.searchInput })
+  }
 
   return (
     <>
@@ -35,17 +76,17 @@ export function Contact() {
               <TextField
                 size="small"
                 variant="outlined"
-                placeholder="Sök kundnummer..."
+                placeholder="Sök kundnummer eller personnummer..."
                 sx={formSx}
-                {...register('contactCode')}
+                {...register('searchInput')}
               />
               <Button variant="dark" type="submit">
                 Sök
               </Button>
             </Box>
-            {formState.errors.contactCode && (
+            {formState.errors.searchInput && (
               <Typography color="error">
-                {formState.errors.contactCode.message}
+                {formState.errors.searchInput.message}
               </Typography>
             )}
           </Box>
