@@ -9,7 +9,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "test": "jest",
-    "build": "holidays2json --pick SE --min && tsc",
+    "build": "holidays2json --pick SE --min && tsc -p tsconfig.build.json",
     "test:watch": "TZ=UTC jest --watch",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
     "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
