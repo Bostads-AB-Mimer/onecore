@@ -187,14 +187,14 @@ const addTenantInfo = async (
 }
 
 /**
- * Helper function to render keys in table format
+ * Helper function to render keys in table format with multi-page support
  * @param doc - jsPDF document
  * @param keys - Keys to render
  * @param y - Starting Y position
  * @param headerText - Section header text
  * @param headerColor - RGB color for header (optional, defaults to black)
  * @param reserveAfter - Space to reserve after the table (only for final section)
- * @returns New Y position after rendering, or null if we need a new page
+ * @returns New Y position after rendering
  */
 const renderKeysTable = (
   doc: jsPDF,
@@ -215,6 +215,22 @@ const renderKeysTable = (
     y = 20 // Start from top of new page
   }
 
+  // Helper function to render table header
+  const renderTableHeader = (yPos: number) => {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text('Nyckelnamn', MARGIN_X, yPos)
+    doc.text('Typ', 80, yPos)
+    doc.text('Sek.nr', 120, yPos)
+    doc.text('Flex.nr', 150, yPos)
+
+    doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
+    doc.setLineWidth(0.4)
+    doc.line(MARGIN_X, yPos + 2, 180, yPos + 2)
+
+    return yPos + 7 // Return Y position after header
+  }
+
   // Section header
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
@@ -228,29 +244,41 @@ const renderKeysTable = (
 
   // Table header
   const top = y + 8
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8.5)
-  doc.text('Nyckelnamn', MARGIN_X, top)
-  doc.text('Typ', 80, top)
-  doc.text('Sek.nr', 120, top)
-  doc.text('Flex.nr', 150, top)
+  let cy = renderTableHeader(top)
 
-  doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
-  doc.setLineWidth(0.4)
-  doc.line(MARGIN_X, top + 2, 180, top + 2)
-
-  // Table rows - only apply reserveAfter if this is the final section
-  const rowStartY = top + 7
+  // Table rows with multi-page support
   const rowH = 6
-  const spaceForRows = bottom - reserveAfter - rowStartY
-  const rowsAllowed = Math.max(1, Math.floor(spaceForRows / rowH)) // At least 1 row
-
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
 
-  let cy = rowStartY
-  const visible = keys.slice(0, rowsAllowed)
-  visible.forEach((k) => {
+  keys.forEach((k, index) => {
+    // Check if we need a new page (reserve space only on last page)
+    const isLastKey = index === keys.length - 1
+    const spaceNeeded = isLastKey ? reserveAfter + 20 : rowH + 5 // Extra space for summary on last key
+
+    if (cy + spaceNeeded > bottom) {
+      // Draw bottom line before page break
+      doc.line(MARGIN_X, cy, 180, cy)
+
+      // Add new page and render table header again
+      doc.addPage()
+      cy = 20
+
+      // Re-render section header on new page
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      if (headerColor) {
+        doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      }
+      doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
+      doc.setTextColor(0, 0, 0)
+
+      cy = renderTableHeader(cy + 8)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+    }
+
+    // Render the key row
     doc.text(k.keyName, MARGIN_X, cy)
     const labelForType =
       (KeyTypeLabels as Record<string, string>)[
@@ -264,19 +292,11 @@ const renderKeysTable = (
 
   // Bottom rule
   doc.line(MARGIN_X, cy, 180, cy)
-
-  // "+X fler" if truncated
-  const extra = keys.length - visible.length
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  if (extra > 0) {
-    doc.text(`… +${extra} fler`, MARGIN_X, cy + 6)
-    cy += 12
-  } else {
-    cy += 8
-  }
+  cy += 8
 
   // Summary
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
   doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
   cy += 6
 
@@ -333,12 +353,18 @@ const addKeysTable = (
   return cy
 }
 
-const addSignatureSection = (doc: jsPDF, y: number) => {
+const addSignatureSection = (
+  doc: jsPDF,
+  y: number,
+  tenants: ReceiptData['tenants']
+) => {
   const bottom = contentBottom(doc)
+  const tenantCount = tenants.length
 
-  // Full-height block wants ~45mm
-  const fullNeed = 45
-  const compactNeed = 24 // minimal
+  // Calculate space needed based on number of tenants
+  // Each additional tenant needs ~18mm more space
+  const fullNeed = 45 + (tenantCount - 1) * 18
+  const compactNeed = 24 + (tenantCount - 1) * 18
 
   if (y + compactNeed > bottom) return y
 
@@ -354,7 +380,9 @@ const addSignatureSection = (doc: jsPDF, y: number) => {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     const text =
-      'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem enligt hyresavtalet.'
+      tenantCount > 1
+        ? 'Vi bekräftar att vi har mottagit ovanstående nycklar och att vi är ansvariga för dem enligt hyresavtalet.'
+        : 'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem enligt hyresavtalet.'
     const lines = doc.splitTextToSize(text, 170)
     lines.forEach((line) => {
       doc.text(line, MARGIN_X, cy)
@@ -365,49 +393,74 @@ const addSignatureSection = (doc: jsPDF, y: number) => {
     cy += 4
   }
 
-  doc.line(MARGIN_X, cy, 100, cy)
-  doc.text('Hyresgästens signatur', MARGIN_X, cy + 8)
-  doc.line(120, cy, 180, cy)
-  doc.text('Datum', 120, cy + 8)
-  return cy + 20
+  // Add signature lines for each tenant
+  tenants.forEach((tenant, index) => {
+    const name = `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim()
+    const fullName = name || tenant.fullName || 'Hyresgäst'
+
+    // First signature line with date on the right
+    doc.line(MARGIN_X, cy, 100, cy)
+    doc.text(`${fullName} - Signatur`, MARGIN_X, cy + 8)
+
+    // Add date field only for the first tenant
+    if (index === 0) {
+      doc.line(120, cy, 180, cy)
+      doc.text('Datum', 120, cy + 8)
+    }
+
+    cy += 18
+  })
+
+  return cy + 2
 }
 
 const addFooter = (doc: jsPDF, kind: 'loan' | 'return', receiptId?: string) => {
   const h = doc.internal.pageSize.height as number
+  const totalPages = doc.getNumberOfPages()
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  // Add footer to each page
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
 
-  const disclaimerTop = h - FOOTER_TEXT_TOP_OFFSET
-  if (kind === 'loan') {
-    const text =
-      'Nycklar ska återlämnas enligt hyresavtalets villkor. Vid förlust eller skada debiteras kostnad för byte av lås.'
-    const lines = doc.splitTextToSize(text, 170)
-    let cy = disclaimerTop
-    lines.forEach((line) => {
-      doc.text(line, MARGIN_X, cy)
-      cy += 4
-    })
-  } else {
-    doc.text(
-      'Nycklar har återlämnats och kontrollerats.',
-      MARGIN_X,
-      disclaimerTop
-    )
-  }
-
-  const contact =
-    'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besöksadress: Gasverksgatan 7 Tel: 021-39 70 00 • mimer.nu'
-  doc.text(contact, MARGIN_X, h - 10)
-
-  if (receiptId) {
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(10)
-    doc.text(`${receiptId}`, MARGIN_X, h - 4)
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-  }
 
-  doc.text('Sida 1', 190, h - 4, { align: 'right' })
+    const disclaimerTop = h - FOOTER_TEXT_TOP_OFFSET
+    if (kind === 'loan') {
+      const text =
+        'Nycklar ska återlämnas enligt hyresavtalets villkor. Vid förlust eller skada debiteras kostnad för byte av lås.'
+      const lines = doc.splitTextToSize(text, 170)
+      let cy = disclaimerTop
+      lines.forEach((line) => {
+        doc.text(line, MARGIN_X, cy)
+        cy += 4
+      })
+    } else {
+      doc.text(
+        'Nycklar har återlämnats och kontrollerats.',
+        MARGIN_X,
+        disclaimerTop
+      )
+    }
+
+    const contact =
+      'Bostads AB Mimer • Box 1170, 721 29 Västerås • Besöksadress: Gasverksgatan 7 Tel: 021-39 70 00 • mimer.nu'
+    doc.text(contact, MARGIN_X, h - 10)
+
+    if (receiptId) {
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.text(`${receiptId}`, MARGIN_X, h - 4)
+      doc.setFontSize(8)
+    }
+
+    // Page numbering
+    if (totalPages > 1) {
+      doc.text(`Sida ${i} av ${totalPages}`, 190, h - 4, { align: 'right' })
+    } else {
+      doc.text('Sida 1', 190, h - 4, { align: 'right' })
+    }
+  }
 }
 
 /* ---------------- Internal builders that DO NOT trigger download ---------------- */
@@ -417,7 +470,7 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   let y = await addHeader(doc, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
   y = addKeysTable(doc, data.keys, y, 42, data.missingKeys)
-  addSignatureSection(doc, y)
+  addSignatureSection(doc, y, data.tenants)
   addFooter(doc, 'loan', receiptId)
   const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
     new Date(),
