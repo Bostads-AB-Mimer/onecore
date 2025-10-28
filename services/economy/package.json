@@ -9,7 +9,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "test": "jest",
-    "build": "holidays2json --pick SE --min && tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "test:watch": "TZ=UTC jest --watch",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
     "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
@@ -33,7 +33,6 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@iteam/sanity-check": "^1.0.1",
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/koa": "2.15.0",
@@ -59,7 +58,6 @@
     "typescript": "^5.6.2"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "@infobip-api/sdk": "^0.3.2",
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
@@ -69,7 +67,6 @@
     "@urql/core": "^5.1.0",
     "axios": "^1.7.2",
     "axios-logger": "^2.8.0",
-    "date-holidays": "^3.23.12",
     "dayjs": "^1.11.10",
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
