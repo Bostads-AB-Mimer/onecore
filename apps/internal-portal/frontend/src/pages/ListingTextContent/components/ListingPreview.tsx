@@ -24,9 +24,18 @@ export const ListingPreview = ({
         return (
           <Typography
             key={index}
-            variant="body2"
+            variant="body1"
             paragraph
-            sx={{ marginBottom: 2, fontWeight: 'bold', lineHeight: 1.6 }}
+            sx={{
+              width: '100%',
+              fontSize: '1rem',
+              fontFamily: 'graphikRegular',
+              fontWeight: 700,
+              marginBottom: 4,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-line',
+              '&:first-of-type': { paddingTop: 0 }
+            }}
           >
             {block.content || 'Ingress...'}
           </Typography>
@@ -36,10 +45,18 @@ export const ListingPreview = ({
         return (
           <Typography
             key={index}
-            variant="h2"
-            component="h2"
+            variant="h1"
+            component="h1"
             gutterBottom
-            sx={{ marginBottom: 2 }}
+            sx={{
+              fontSize: '3rem',
+              fontFamily: 'bisonBold',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              color: '#00a4b3',
+              marginBottom: 2,
+              whiteSpace: 'pre-line'
+            }}
           >
             {block.content || 'Rubrik...'}
           </Typography>
@@ -49,10 +66,17 @@ export const ListingPreview = ({
         return (
           <Typography
             key={index}
-            variant="h4"
+            variant="h3"
             component="h3"
             gutterBottom
-            sx={{ fontWeight: 600, marginBottom: 1.5, color: 'text.secondary' }}
+            sx={{
+              fontSize: '1.5rem',
+              fontFamily: 'bisonBold',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              marginBottom: 4,
+              whiteSpace: 'pre-line'
+            }}
           >
             {block.content || 'Underrubrik...'}
           </Typography>
@@ -64,7 +88,15 @@ export const ListingPreview = ({
             key={index}
             variant="body1"
             paragraph
-            sx={{ marginBottom: 2, lineHeight: 1.7 }}
+            sx={{
+              width: '100%',
+              fontSize: '1rem',
+              fontFamily: 'graphikRegular',
+              marginBottom: 4,
+              lineHeight: 1.7,
+              whiteSpace: 'pre-line',
+              '&:first-of-type': { paddingTop: 0 }
+            }}
           >
             {block.content || 'Text...'}
           </Typography>
@@ -76,16 +108,55 @@ export const ListingPreview = ({
           .filter((line: string) => line.trim() !== '')
 
         return items.length > 0 ? (
-          <Box key={index} component="ul" sx={{ marginBottom: 2, paddingLeft: 3 }}>
+          <Box
+            key={index}
+            component="ul"
+            sx={{
+              width: '100%',
+              fontSize: '1rem',
+              fontFamily: 'graphikRegular',
+              marginBottom: 4,
+              paddingLeft: 3,
+              '&:first-of-type': { paddingTop: 0 }
+            }}
+          >
             {items.map((item: string, i: number) => (
-              <Typography key={i} component="li" variant="body1" sx={{ marginBottom: 0.5 }}>
+              <Typography
+                key={i}
+                component="li"
+                variant="body1"
+                sx={{
+                  fontFamily: 'graphikRegular',
+                  fontSize: '1rem',
+                  marginBottom: 0.5
+                }}
+              >
                 {item.trim()}
               </Typography>
             ))}
           </Box>
         ) : (
-          <Box key={index} component="ul" sx={{ marginBottom: 2, paddingLeft: 3 }}>
-            <Typography component="li" variant="body1" color="text.secondary">
+          <Box
+            key={index}
+            component="ul"
+            sx={{
+              width: '100%',
+              fontSize: '1rem',
+              fontFamily: 'graphikRegular',
+              marginBottom: 4,
+              paddingLeft: 3,
+              '&:first-of-type': { paddingTop: 0 }
+            }}
+          >
+            <Typography
+              component="li"
+              variant="body1"
+              color="text.secondary"
+              sx={{
+                fontFamily: 'graphikRegular',
+                fontSize: '1rem'
+              }}
+            >
               Punktlista...
             </Typography>
           </Box>
