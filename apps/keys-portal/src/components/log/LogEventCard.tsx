@@ -77,11 +77,28 @@ export function LogEventCard({ log }: { log: Log }) {
                 </p>
               )}
 
-              {log.objectId && (
-                <p className="text-xs text-muted-foreground mt-2 font-mono">
-                  Objekt-ID: {log.objectId}
-                </p>
-              )}
+              <div className="mt-2 space-y-1">
+                {log.objectId && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Objekt-ID: {log.objectId}
+                  </p>
+                )}
+                {log.rentalObjectCode && (
+                  <p className="text-xs text-muted-foreground">
+                    Lägenhet: {log.rentalObjectCode}
+                  </p>
+                )}
+                {log.contactId && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Kontakt-ID: {log.contactId}
+                  </p>
+                )}
+                {log.batchId && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Batch-ID: {log.batchId}
+                  </p>
+                )}
+              </div>
 
               {log.objectId && (
                 <CollapsibleTrigger asChild>
@@ -138,6 +155,24 @@ export function LogEventCard({ log }: { log: Log }) {
                         {eventLog.description}
                       </p>
                     )}
+
+                    <div className="space-y-0.5">
+                      {eventLog.rentalObjectCode && (
+                        <p className="text-xs text-muted-foreground">
+                          Lägenhet: {eventLog.rentalObjectCode}
+                        </p>
+                      )}
+                      {eventLog.contactId && (
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Kontakt-ID: {eventLog.contactId}
+                        </p>
+                      )}
+                      {eventLog.batchId && (
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Batch-ID: {eventLog.batchId}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </CollapsibleContent>

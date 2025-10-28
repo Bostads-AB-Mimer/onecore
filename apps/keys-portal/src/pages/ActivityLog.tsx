@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { logService } from '@/services/api/logService'
 import { LogFilters } from '@/components/log/LogFilters'
 import { LogEventCard } from '@/components/log/LogEventCard'
+import { BatchLogCard } from '@/components/log/BatchLogCard'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import type { LogEventType, LogObjectType, Log } from '@/services/types'
@@ -127,6 +128,59 @@ export default function ActivityLog() {
     [updateUrlParams]
   )
 
+  // Group logs by batchId for display
+  const groupedLogs = useMemo(() => {
+    const batchGroups = new Map<string, Log[]>()
+    const individualLogs: Log[] = []
+
+    // Separate logs into batches and individual logs
+    for (const log of logs) {
+      if (log.batchId) {
+        const existing = batchGroups.get(log.batchId)
+        if (existing) {
+          existing.push(log)
+        } else {
+          batchGroups.set(log.batchId, [log])
+        }
+      } else {
+        individualLogs.push(log)
+      }
+    }
+
+    // Create display items: batches (if multiple logs) or individual logs
+    const displayItems: Array<{ type: 'batch' | 'individual'; logs: Log[] }> =
+      []
+
+    // Add batches (only group if 2+ logs share the same batchId)
+    for (const [batchId, batchLogs] of batchGroups.entries()) {
+      if (batchLogs.length > 1) {
+        // Sort by eventTime (newest first within batch)
+        batchLogs.sort(
+          (a, b) =>
+            new Date(b.eventTime).getTime() - new Date(a.eventTime).getTime()
+        )
+        displayItems.push({ type: 'batch', logs: batchLogs })
+      } else {
+        // Single log with batchId - treat as individual
+        displayItems.push({ type: 'individual', logs: batchLogs })
+      }
+    }
+
+    // Add individual logs (no batchId)
+    for (const log of individualLogs) {
+      displayItems.push({ type: 'individual', logs: [log] })
+    }
+
+    // Sort all display items by the first log's eventTime (to maintain chronological order)
+    displayItems.sort(
+      (a, b) =>
+        new Date(b.logs[0].eventTime).getTime() -
+        new Date(a.logs[0].eventTime).getTime()
+    )
+
+    return displayItems
+  }, [logs])
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -159,16 +213,23 @@ export default function ActivityLog() {
               <div className="text-center py-12 text-muted-foreground">
                 Laddar händelser...
               </div>
-            ) : logs.length === 0 ? (
+            ) : groupedLogs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 Inga händelser hittades
               </div>
             ) : (
               <>
                 <div className="space-y-4">
-                  {logs.map((log) => (
-                    <LogEventCard key={log.id} log={log} />
-                  ))}
+                  {groupedLogs.map((item, index) =>
+                    item.type === 'batch' ? (
+                      <BatchLogCard
+                        key={`batch-${item.logs[0].batchId}-${index}`}
+                        logs={item.logs}
+                      />
+                    ) : (
+                      <LogEventCard key={item.logs[0].id} log={item.logs[0]} />
+                    )
+                  )}
                 </div>
 
                 <PaginationControls

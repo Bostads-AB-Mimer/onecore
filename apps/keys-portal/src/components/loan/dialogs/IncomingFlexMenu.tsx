@@ -179,10 +179,14 @@ export function IncomingFlexMenu({
 
       // If there are disposable keys, update them
       if (allDisposableKeyIds.length > 0) {
-        // Update all selected keys to disposed = true
+        // Generate batchId if disposing multiple keys
+        const batchId =
+          allDisposableKeyIds.length > 1 ? crypto.randomUUID() : null
+
+        // Update all selected keys to disposed = true with shared batchId
         await Promise.all(
           allDisposableKeyIds.map((keyId) =>
-            keyService.updateKey(keyId, { disposed: true })
+            keyService.updateKey(keyId, { disposed: true, batchId })
           )
         )
 
