@@ -20,10 +20,17 @@ export type KeySystem = coreComponents['schemas']['KeySystem']
 
 // Key type definitions aligned with keys-portal
 export const KeyTypeLabels = {
+  HN: 'Huvudnyckel',
+  FS: 'Fastighet',
+  MV: 'Motorvärmarnyckel',
   LGH: 'Lägenhet',
   PB: 'Postbox',
-  FS: 'Fastighet',
-  HN: 'Huvudnyckel',
+  GAR: 'Garagenyckel',
+  LOK: 'Lokalnyckel',
+  HL: 'Hänglås',
+  FÖR: 'Förrådsnyckel',
+  SOP: 'Sopsug',
+  ÖVR: 'Övrigt',
 } as const
 
 export type KeyType = keyof typeof KeyTypeLabels

@@ -112,6 +112,20 @@ export function TenantKeyLoans({ rentalPropertyId }: TenantKeyLoansProps) {
         return 'outline'
       case 'HN':
         return 'destructive'
+      case 'MV':
+        return 'default'
+      case 'GAR':
+        return 'secondary'
+      case 'LOK':
+        return 'outline'
+      case 'HL':
+        return 'secondary'
+      case 'FÖR':
+        return 'default'
+      case 'SOP':
+        return 'outline'
+      case 'ÖVR':
+        return 'secondary'
       default:
         return 'default'
     }
