@@ -4,58 +4,24 @@ import { useToast } from '@/hooks/use-toast'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import type { Contact } from '@/services/types'
 
-interface ContactCodeSearchProps {
+interface ContactSearchProps {
   onResultFound: (contact: Contact | null, searchValue: string) => void
 }
 
-const isContactCode = (value: string) => {
-  const trimmed = value.trim().toUpperCase()
-  // Contact codes start with P or F and contain only letters/numbers (no dashes or spaces)
-  return /^[PF][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
-}
-
 /**
- * Hook for contact code search logic (PXXXXXX/FXXXXXX).
- * Returns search state and handlers to be used with SearchInput component.
+ * Hook for contact search logic.
+ * Handles fetching contact details after user selects from autocomplete.
  */
-export function useContactCodeSearch({
-  onResultFound,
-}: ContactCodeSearchProps) {
+export function useContactCodeSearch({ onResultFound }: ContactSearchProps) {
   const [searchParams] = useSearchParams()
-  const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-
-  const handleSearch = async () => {
-    const value = searchValue.trim()
-    if (!value) {
-      toast({
-        title: 'Saknar värde',
-        description: 'Ange ett kundnummer.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!isContactCode(value)) {
-      toast({
-        title: 'Ogiltigt format',
-        description:
-          'Ange ett giltigt kundnummer (PXXXXXX eller FXXXXXX, t.ex. P053602 eller F123456).',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    await handleSearchByContactCode(value)
-  }
 
   // Trigger search when URL parameters are present
   useEffect(() => {
     const contactParam = searchParams.get('contact')
 
-    if (contactParam && isContactCode(contactParam)) {
-      setSearchValue(contactParam)
+    if (contactParam) {
       handleSearchByContactCode(contactParam)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +34,7 @@ export function useContactCodeSearch({
       if (!contact) {
         toast({
           title: 'Ingen träff',
-          description: 'Hittade ingen kontakt för angivet kundnummer.',
+          description: 'Hittade ingen kontakt för angivet kontaktnummer.',
         })
         return
       }
@@ -89,9 +55,7 @@ export function useContactCodeSearch({
   }
 
   return {
-    searchValue,
-    setSearchValue,
-    handleSearch,
+    handleContactSelect: handleSearchByContactCode,
     loading,
   }
 }

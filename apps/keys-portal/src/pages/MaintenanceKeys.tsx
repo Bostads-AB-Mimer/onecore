@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useContactCodeSearch } from '@/components/maintenance/ContactCodeSearch'
-import { SearchInput } from '@/components/loan/SearchInput'
+import { ContactAutocomplete } from '@/components/maintenance/ContactAutocomplete'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { Button } from '@/components/ui/button'
 import type { Contact } from '@/services/types'
@@ -32,30 +32,14 @@ export default function MaintenanceKeys() {
     setSearchParams({})
   }
 
-  const { searchValue, setSearchValue, handleSearch, loading } =
-    useContactCodeSearch({
-      onResultFound: handleResultFound,
-    })
+  const { handleContactSelect, loading } = useContactCodeSearch({
+    onResultFound: handleResultFound,
+  })
 
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="max-w-2xl mx-auto">
-        <SearchInput
-          value={searchValue}
-          onChange={setSearchValue}
-          onSearch={handleSearch}
-          loading={loading}
-          placeholder="Kontaktnummer (PXXXXXX eller FXXXXXX)"
-          title="Sök kontakt"
-          description="Ange kontaktnummer för att hitta kontakt"
-          helpText={
-            <>
-              <p>
-                Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)
-              </p>
-            </>
-          }
-        />
+        <ContactAutocomplete onSelect={handleContactSelect} loading={loading} />
       </div>
 
       {/* Show results when contact is found */}
