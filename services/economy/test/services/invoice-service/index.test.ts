@@ -43,6 +43,7 @@ describe('Invoice Service', () => {
       )
 
       expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(3)
       expect(() =>
         schemas.v1.InvoiceSchema.array().parse(res.body.content)
       ).not.toThrow()

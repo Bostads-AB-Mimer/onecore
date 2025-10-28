@@ -652,34 +652,34 @@ export const getInvoiceRows = async (
         const type = invoiceRow['type'] as number
 
         const invoice = {
-          rentArticle: trim(invoiceRow['rentArticle']),
-          invoiceRowText: trim(invoiceRow['text']),
-          totalAmount: sumColumns(
-            invoiceRow['rowAmount'],
-            invoiceRow['rowReduction'],
-            invoiceRow['rowVat']
-          ),
+          account: trim(invoiceRow['p1']),
           amount: sumColumns(invoiceRow['rowAmount']),
-          vat: sumColumns(invoiceRow['rowVat']),
-          deduction: sumColumns(invoiceRow['rowReduction']),
           company: trim(invoiceRow['company']),
+          contactCode: trim(invoiceRow['cmctckod']),
+          deduction: sumColumns(invoiceRow['rowReduction']),
+          freeCode: trim(invoiceRow['p5']),
+          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
             invoiceRow['expirationDate'] as Date
           ),
           invoiceNumber: trim(invoiceRow['invoice']),
-          contactCode: trim(invoiceRow['cmctckod']),
-          tenantName: trim(invoiceRow['cmctcben']),
-          account: trim(invoiceRow['p1']),
-          projectCode: trim(invoiceRow['p4']),
-          freeCode: trim(invoiceRow['p5']),
-          roundoff: sumColumns(invoiceRow['roundoff']),
-          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
-          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          invoiceRowText: trim(invoiceRow['text']),
+          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           printGroup: trim(invoiceRow['printGroup']),
           printGroupLabel: trim(invoiceRow['printGroupLabel']),
-          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
+          projectCode: trim(invoiceRow['p4']),
+          rentArticle: trim(invoiceRow['rentArticle']),
+          roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
+          tenantName: trim(invoiceRow['cmctcben']),
+          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          totalAmount: sumColumns(
+            invoiceRow['rowAmount'],
+            invoiceRow['rowReduction'],
+            invoiceRow['rowVat']
+          ),
+          vat: sumColumns(invoiceRow['rowVat']),
         }
 
         if (type === 2) {
