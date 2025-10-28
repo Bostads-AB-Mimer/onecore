@@ -162,6 +162,12 @@ export const LogObjectTypeLabels = {
   key: 'Nyckel',
   keySystem: 'Nyckelsystem',
   keyLoan: 'Nyckellån',
+  keyBundle: 'Nyckelknippe',
+  keyLoanMaintenanceKeys: 'Servicenycklar',
+  receipt: 'Kvitto',
+  keyEvent: 'Nyckelhändelse',
+  signature: 'Signatur',
+  keyNote: 'Nyckelanteckning',
 } as const
 
 export type LogObjectType = keyof typeof LogObjectTypeLabels

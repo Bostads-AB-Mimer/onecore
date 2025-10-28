@@ -352,4 +352,183 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /logs/rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get all logs for a specific rental object
+   *     description: Returns all log entries for a given rental object code, ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code (e.g., apartment code)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the rental object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const query = logsAdapter.getLogsByRentalObjectCodeQuery(
+        ctx.params.rentalObjectCode,
+        db
+      )
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error fetching logs for rental object')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /logs/contact/{contactId}:
+   *   get:
+   *     summary: Get all logs for a specific contact
+   *     description: Returns all log entries for a given contact ID, ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: contactId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The contact ID (person/tenant)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the contact
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/contact/:contactId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const query = logsAdapter.getLogsByContactIdQuery(
+        ctx.params.contactId,
+        db
+      )
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error fetching logs for contact')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /logs/batch/{batchId}:
+   *   get:
+   *     summary: Get all logs for a specific batch operation
+   *     description: Returns all log entries for a given batch ID (grouped operations), ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: batchId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The batch ID for grouped operations
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the batch
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/batch/:batchId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const query = logsAdapter.getLogsByBatchIdQuery(ctx.params.batchId, db)
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error fetching logs for batch')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }

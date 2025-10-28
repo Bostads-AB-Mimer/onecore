@@ -84,10 +84,18 @@ export const LogSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
+  // Context fields for better filtering and grouping
+  batchId: z.string().uuid().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
 })
 
 export const KeyNoteSchema = z.object({
@@ -134,6 +142,7 @@ export const CreateKeyRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
+  batchId: z.string().uuid().nullable().optional(), // For grouping related key creations in logs
 })
 
 export const UpdateKeyRequestSchema = z.object({
@@ -144,6 +153,7 @@ export const UpdateKeyRequestSchema = z.object({
   keyType: KeyTypeSchema.optional(),
   keySystemId: z.string().uuid().nullable().optional(),
   disposed: z.boolean().optional(),
+  batchId: z.string().uuid().nullable().optional(), // For grouping related key updates in logs
 })
 
 // Request schemas for key systems
@@ -203,9 +213,17 @@ export const CreateLogRequestSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
+  // Optional context fields for filtering and grouping
+  batchId: z.string().uuid().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
 })
 
 // Receipt schemas

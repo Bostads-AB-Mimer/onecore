@@ -139,6 +139,11 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BadRequestResponse', BadRequestResponseSchema)
   registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
 
+  // Helper function to generate batch IDs for grouping related operations
+  const generateBatchId = (): string => {
+    return crypto.randomUUID()
+  }
+
   // Helper function to create log entries
   const createLogEntry = async (
     user: any,
@@ -148,9 +153,18 @@ export const routes = (router: KoaRouter) => {
       | 'keySystem'
       | 'keyLoan'
       | 'keyBundle'
-      | 'keyLoanMaintenanceKeys',
+      | 'keyLoanMaintenanceKeys'
+      | 'receipt'
+      | 'keyEvent'
+      | 'signature'
+      | 'keyNote',
     objectId: string,
-    description?: string
+    description?: string,
+    context?: {
+      batchId?: string
+      rentalObjectCode?: string
+      contactId?: string
+    }
   ) => {
     try {
       await LogsApi.create({
@@ -159,6 +173,9 @@ export const routes = (router: KoaRouter) => {
         objectType,
         objectId,
         description,
+        batchId: context?.batchId,
+        rentalObjectCode: context?.rentalObjectCode,
+        contactId: context?.contactId,
       })
     } catch (error) {
       // Log the error but don't fail the main operation
@@ -655,12 +672,43 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful creation
     const description = await buildKeyLoanDescription(result.data, 'Skapad')
+
+    // Extract context from key loan
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (result.data.keys) {
+      try {
+        const keyIds = JSON.parse(result.data.keys)
+        if (keyIds.length > 0) {
+          const keyResult = await KeysApi.get(keyIds[0])
+          if (keyResult.ok && keyResult.data.rentalObjectCode) {
+            rentalObjectCode = keyResult.data.rentalObjectCode
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    if (result.data.contact) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(result.data.contact)) {
+        contactId = result.data.contact
+      }
+    }
+
     await createLogEntry(
       ctx.state.user,
       'creation',
       'keyLoan',
       result.data.id,
-      description
+      description,
+      {
+        rentalObjectCode,
+        contactId,
+      }
     )
 
     ctx.status = 201
@@ -753,12 +801,43 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful update
     const description = await buildKeyLoanDescription(result.data, 'Uppdaterad')
+
+    // Extract context from key loan
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (result.data.keys) {
+      try {
+        const keyIds = JSON.parse(result.data.keys)
+        if (keyIds.length > 0) {
+          const keyResult = await KeysApi.get(keyIds[0])
+          if (keyResult.ok && keyResult.data.rentalObjectCode) {
+            rentalObjectCode = keyResult.data.rentalObjectCode
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    if (result.data.contact) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(result.data.contact)) {
+        contactId = result.data.contact
+      }
+    }
+
     await createLogEntry(
       ctx.state.user,
       'update',
       'keyLoan',
       result.data.id,
-      description
+      description,
+      {
+        rentalObjectCode,
+        contactId,
+      }
     )
 
     ctx.status = 200
@@ -836,12 +915,42 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
+    // Extract context from key loan (before deletion)
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (getResult.data.keys) {
+      try {
+        const keyIds = JSON.parse(getResult.data.keys)
+        if (keyIds.length > 0) {
+          const keyResult = await KeysApi.get(keyIds[0])
+          if (keyResult.ok && keyResult.data.rentalObjectCode) {
+            rentalObjectCode = keyResult.data.rentalObjectCode
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    if (getResult.data.contact) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(getResult.data.contact)) {
+        contactId = getResult.data.contact
+      }
+    }
+
     await createLogEntry(
       ctx.state.user,
       'delete',
       'keyLoan',
       ctx.params.id,
-      description
+      description,
+      {
+        rentalObjectCode,
+        contactId,
+      }
     )
 
     ctx.status = 200
@@ -1269,7 +1378,11 @@ export const routes = (router: KoaRouter) => {
       'creation',
       'key',
       result.data.id,
-      `Skapad nyckel ${keyDescription}`
+      `Skapad nyckel ${keyDescription}`,
+      {
+        rentalObjectCode: result.data.rentalObjectCode,
+        batchId: payload.batchId, // Include batchId from request for grouping
+      }
     )
 
     ctx.status = 201
@@ -1354,12 +1467,25 @@ export const routes = (router: KoaRouter) => {
     const keyDescription = result.data.keySequenceNumber
       ? `${result.data.keyName} ${result.data.keySequenceNumber}`
       : result.data.keyName
+
+    // Detect if this is a disposal operation
+    const isDisposal = payload.disposed === true && result.data.disposed
+    // Note: We use 'update' not 'delete' because disposal only sets disposed=true, doesn't delete from DB
+    const eventType = 'update'
+    const description = isDisposal
+      ? `Kasserad nyckel ${keyDescription}`
+      : `Uppdaterad nyckel ${keyDescription}`
+
     await createLogEntry(
       ctx.state.user,
-      'update',
+      eventType,
       'key',
       result.data.id,
-      `Uppdaterad nyckel ${keyDescription}`
+      description,
+      {
+        rentalObjectCode: result.data.rentalObjectCode,
+        batchId: payload.batchId, // Include batchId from request for grouping
+      }
     )
 
     ctx.status = 200
@@ -1442,7 +1568,10 @@ export const routes = (router: KoaRouter) => {
       'delete',
       'key',
       ctx.params.id,
-      `Raderad nyckel ${keyDescription}`
+      `Raderad nyckel ${keyDescription}`,
+      {
+        rentalObjectCode: getResult.data.rentalObjectCode,
+      }
     )
 
     ctx.status = 200
@@ -2390,6 +2519,220 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /logs/rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get all logs for a specific rental object
+   *     description: Returns all log entries for a given rental object code, ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code (e.g., apartment code)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the rental object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.getByRentalObjectCode(
+      ctx.params.rentalObjectCode,
+      page,
+      limit
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for rental object'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
+  /**
+   * @swagger
+   * /logs/contact/{contactId}:
+   *   get:
+   *     summary: Get all logs for a specific contact
+   *     description: Returns all log entries for a given contact ID, ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: contactId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The contact ID (person/tenant)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the contact
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/contact/:contactId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.getByContactId(
+      ctx.params.contactId,
+      page,
+      limit
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for contact'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
+  /**
+   * @swagger
+   * /logs/batch/{batchId}:
+   *   get:
+   *     summary: Get all logs for a specific batch operation
+   *     description: Returns all log entries for a given batch ID (grouped operations), ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: batchId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The batch ID for grouped operations
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the batch
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/batch/:batchId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.getByBatchId(ctx.params.batchId, page, limit)
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for batch'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
   // ==================== KEY NOTES ROUTES ====================
 
   /**
@@ -2577,6 +2920,24 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key note creation
+    const keyNote = result.data
+    const descriptionPreview =
+      keyNote.description.length > 50
+        ? keyNote.description.substring(0, 50) + '...'
+        : keyNote.description
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'keyNote',
+      keyNote.id,
+      `Skapad anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`,
+      {
+        rentalObjectCode: keyNote.rentalObjectCode,
+      }
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2657,6 +3018,24 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key note update
+    const keyNote = result.data
+    const descriptionPreview =
+      keyNote.description.length > 50
+        ? keyNote.description.substring(0, 50) + '...'
+        : keyNote.description
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'keyNote',
+      ctx.params.id,
+      `Uppdaterat anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`,
+      {
+        rentalObjectCode: keyNote.rentalObjectCode,
+      }
+    )
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2727,6 +3106,52 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log receipt creation
+    const receipt = result.data
+    const keyLoanResult = await KeyLoansApi.get(payload.keyLoanId)
+
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (keyLoanResult.ok) {
+      const keyLoan = keyLoanResult.data
+      // Extract rental object code from the first key if available
+      if (keyLoan.keys) {
+        try {
+          const keyIds = JSON.parse(keyLoan.keys)
+          if (keyIds.length > 0) {
+            const keyResult = await KeysApi.get(keyIds[0])
+            if (keyResult.ok && keyResult.data.rentalObjectCode) {
+              rentalObjectCode = keyResult.data.rentalObjectCode
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Extract contact ID from contact field if it looks like a UUID
+      if (keyLoan.contact) {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (uuidRegex.test(keyLoan.contact)) {
+          contactId = keyLoan.contact
+        }
+      }
+    }
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'receipt',
+      receipt.id,
+      `Skapad kvitto (${receipt.receiptType}) för nyckelutlåning`,
+      {
+        rentalObjectCode,
+        contactId,
+      }
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -2931,6 +3356,50 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log receipt update
+    const receipt = result.data
+    const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
+
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (keyLoanResult.ok) {
+      const keyLoan = keyLoanResult.data
+      if (keyLoan.keys) {
+        try {
+          const keyIds = JSON.parse(keyLoan.keys)
+          if (keyIds.length > 0) {
+            const keyResult = await KeysApi.get(keyIds[0])
+            if (keyResult.ok && keyResult.data.rentalObjectCode) {
+              rentalObjectCode = keyResult.data.rentalObjectCode
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      if (keyLoan.contact) {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (uuidRegex.test(keyLoan.contact)) {
+          contactId = keyLoan.contact
+        }
+      }
+    }
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'receipt',
+      ctx.params.id,
+      `Uppdaterat ${receipt.receiptType}-kvitto`,
+      {
+        rentalObjectCode,
+        contactId,
+      }
+    )
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2971,6 +3440,43 @@ export const routes = (router: KoaRouter) => {
   router.delete('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    // Get receipt details before deleting for logging
+    const receiptResult = await ReceiptsApi.get(ctx.params.id)
+    let receiptType = 'UNKNOWN'
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    if (receiptResult.ok) {
+      const receipt = receiptResult.data
+      receiptType = receipt.receiptType
+
+      const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
+      if (keyLoanResult.ok) {
+        const keyLoan = keyLoanResult.data
+        if (keyLoan.keys) {
+          try {
+            const keyIds = JSON.parse(keyLoan.keys)
+            if (keyIds.length > 0) {
+              const keyResult = await KeysApi.get(keyIds[0])
+              if (keyResult.ok && keyResult.data.rentalObjectCode) {
+                rentalObjectCode = keyResult.data.rentalObjectCode
+              }
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+
+        if (keyLoan.contact) {
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          if (uuidRegex.test(keyLoan.contact)) {
+            contactId = keyLoan.contact
+          }
+        }
+      }
+    }
+
     const result = await ReceiptsApi.remove(ctx.params.id)
 
     if (!result.ok) {
@@ -2985,6 +3491,19 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log receipt deletion
+    await createLogEntry(
+      ctx.state.user,
+      'delete',
+      'receipt',
+      ctx.params.id,
+      `Raderat ${receiptType}-kvitto`,
+      {
+        rentalObjectCode,
+        contactId,
+      }
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -3346,6 +3865,53 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Log file upload
+      const receiptResult = await ReceiptsApi.get(ctx.params.id)
+      if (receiptResult.ok) {
+        const receipt = receiptResult.data
+        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
+
+        let rentalObjectCode: string | undefined
+        let contactId: string | undefined
+
+        if (keyLoanResult.ok) {
+          const keyLoan = keyLoanResult.data
+          if (keyLoan.keys) {
+            try {
+              const keyIds = JSON.parse(keyLoan.keys)
+              if (keyIds.length > 0) {
+                const keyResult = await KeysApi.get(keyIds[0])
+                if (keyResult.ok && keyResult.data.rentalObjectCode) {
+                  rentalObjectCode = keyResult.data.rentalObjectCode
+                }
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+
+          if (keyLoan.contact) {
+            const uuidRegex =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (uuidRegex.test(keyLoan.contact)) {
+              contactId = keyLoan.contact
+            }
+          }
+        }
+
+        await createLogEntry(
+          ctx.state.user,
+          'update',
+          'receipt',
+          ctx.params.id,
+          `Laddade upp signerad PDF för ${receipt.receiptType}-kvitto`,
+          {
+            rentalObjectCode,
+            contactId,
+          }
+        )
+      }
+
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (err) {
@@ -3487,6 +4053,53 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
+      }
+
+      // Log file upload
+      const receiptResult = await ReceiptsApi.get(ctx.params.id)
+      if (receiptResult.ok) {
+        const receipt = receiptResult.data
+        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
+
+        let rentalObjectCode: string | undefined
+        let contactId: string | undefined
+
+        if (keyLoanResult.ok) {
+          const keyLoan = keyLoanResult.data
+          if (keyLoan.keys) {
+            try {
+              const keyIds = JSON.parse(keyLoan.keys)
+              if (keyIds.length > 0) {
+                const keyResult = await KeysApi.get(keyIds[0])
+                if (keyResult.ok && keyResult.data.rentalObjectCode) {
+                  rentalObjectCode = keyResult.data.rentalObjectCode
+                }
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+
+          if (keyLoan.contact) {
+            const uuidRegex =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (uuidRegex.test(keyLoan.contact)) {
+              contactId = keyLoan.contact
+            }
+          }
+        }
+
+        await createLogEntry(
+          ctx.state.user,
+          'update',
+          'receipt',
+          ctx.params.id,
+          `Laddade upp signerad PDF (base64) för ${receipt.receiptType}-kvitto`,
+          {
+            rentalObjectCode,
+            contactId,
+          }
+        )
       }
 
       ctx.status = 200
@@ -3659,6 +4272,57 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log signature send
+    const signature = result.data
+    let rentalObjectCode: string | undefined
+    let contactId: string | undefined
+
+    // Extract context from receipt if resourceType is 'receipt'
+    if (signature.resourceType === 'receipt') {
+      const receiptResult = await ReceiptsApi.get(signature.resourceId)
+      if (receiptResult.ok) {
+        const receipt = receiptResult.data
+        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
+
+        if (keyLoanResult.ok) {
+          const keyLoan = keyLoanResult.data
+          if (keyLoan.keys) {
+            try {
+              const keyIds = JSON.parse(keyLoan.keys)
+              if (keyIds.length > 0) {
+                const keyResult = await KeysApi.get(keyIds[0])
+                if (keyResult.ok && keyResult.data.rentalObjectCode) {
+                  rentalObjectCode = keyResult.data.rentalObjectCode
+                }
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+
+          if (keyLoan.contact) {
+            const uuidRegex =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (uuidRegex.test(keyLoan.contact)) {
+              contactId = keyLoan.contact
+            }
+          }
+        }
+      }
+    }
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'signature',
+      signature.id,
+      `Skickad signaturförfrågan till ${signature.recipientEmail}`,
+      {
+        rentalObjectCode,
+        contactId,
+      }
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -4070,6 +4734,54 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key event creation
+    const keyEvent = result.data
+    let keyCount = 0
+    let rentalObjectCode: string | undefined
+    let batchId: string | undefined
+
+    if (keyEvent.keys) {
+      try {
+        const keyIds = JSON.parse(keyEvent.keys)
+        keyCount = keyIds.length
+
+        // If multiple keys, generate a batch ID
+        if (keyCount > 1) {
+          batchId = generateBatchId()
+        }
+
+        // Get rental object code from first key
+        if (keyIds.length > 0) {
+          const keyResult = await KeysApi.get(keyIds[0])
+          if (keyResult.ok && keyResult.data.rentalObjectCode) {
+            rentalObjectCode = keyResult.data.rentalObjectCode
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const eventTypeLabel =
+      keyEvent.type === 'FLEX'
+        ? 'Flex'
+        : keyEvent.type === 'ORDER'
+          ? 'Extranyckel'
+          : 'Bortappad'
+    const description = `Skapad ${eventTypeLabel}-händelse för ${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}, status: ${keyEvent.status}`
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'keyEvent',
+      keyEvent.id,
+      description,
+      {
+        batchId,
+        rentalObjectCode,
+      }
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -4146,6 +4858,60 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log key event update
+    const keyEvent = result.data
+    let keyCount = 0
+    let rentalObjectCode: string | undefined
+    let batchId: string | undefined
+
+    if (keyEvent.keys) {
+      try {
+        const keyIds = JSON.parse(keyEvent.keys)
+        keyCount = keyIds.length
+
+        // If multiple keys, generate a batch ID
+        if (keyCount > 1) {
+          batchId = generateBatchId()
+        }
+
+        // Get rental object code from first key
+        if (keyIds.length > 0) {
+          const keyResult = await KeysApi.get(keyIds[0])
+          if (keyResult.ok && keyResult.data.rentalObjectCode) {
+            rentalObjectCode = keyResult.data.rentalObjectCode
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const eventTypeLabel =
+      keyEvent.type === 'FLEX'
+        ? 'Flex'
+        : keyEvent.type === 'ORDER'
+          ? 'Extranyckel'
+          : 'Bortappad'
+    const statusLabel =
+      keyEvent.status === 'ORDERED'
+        ? 'Beställd'
+        : keyEvent.status === 'RECEIVED'
+          ? 'Inkommen'
+          : 'Klar'
+    const description = `Uppdaterat ${eventTypeLabel}-händelse (status: ${statusLabel}) för ${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'keyEvent',
+      ctx.params.id,
+      description,
+      {
+        batchId,
+        rentalObjectCode,
+      }
+    )
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }

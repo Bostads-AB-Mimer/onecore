@@ -108,6 +108,15 @@ export function FlexMenu({
     try {
       const createdKeys: Key[] = []
 
+      // Calculate total keys to create across all groups
+      let totalKeysToCreate = 0
+      for (const group of keyGroups.values()) {
+        totalKeysToCreate += group.count
+      }
+
+      // Generate batchId if creating multiple keys for grouping in activity log
+      const batchId = totalKeysToCreate > 1 ? crypto.randomUUID() : null
+
       // Create keys for each group
       for (const group of keyGroups.values()) {
         // Calculate the new flex number (current + 1)
@@ -123,6 +132,7 @@ export function FlexMenu({
             flexNumber: newFlexNumber,
             rentalObjectCode: group.sampleKey.rentalObjectCode,
             keySystemId: group.sampleKey.keySystemId,
+            batchId, // Include batchId for log grouping
           })
           createdKeys.push(newKey)
         }

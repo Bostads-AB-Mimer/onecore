@@ -96,3 +96,39 @@ export function getLogsSearchQuery(db: Knex) {
     .whereNotNull('objectId')
     .orderBy('eventTime', 'desc')
 }
+
+/**
+ * Get all logs for a specific rental object code.
+ *
+ * @param rentalObjectCode - The rental object code to filter by
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getLogsByRentalObjectCodeQuery(
+  rentalObjectCode: string,
+  db: Knex
+) {
+  return db(TABLE).where({ rentalObjectCode }).orderBy('eventTime', 'desc')
+}
+
+/**
+ * Get all logs for a specific contact ID.
+ *
+ * @param contactId - The contact ID to filter by
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getLogsByContactIdQuery(contactId: string, db: Knex) {
+  return db(TABLE).where({ contactId }).orderBy('eventTime', 'desc')
+}
+
+/**
+ * Get all logs for a specific batch ID (grouped operations).
+ *
+ * @param batchId - The batch ID to filter by
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getLogsByBatchIdQuery(batchId: string, db: Knex) {
+  return db(TABLE).where({ batchId }).orderBy('eventTime', 'desc')
+}
