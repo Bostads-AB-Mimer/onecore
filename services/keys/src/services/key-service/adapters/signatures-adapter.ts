@@ -190,6 +190,23 @@ export async function processSignedDocument(
         dbConnection
       )
 
+      // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
+      if (receipt.receiptType === 'LOAN') {
+        const keyLoanAlreadyActivated =
+          await receiptsAdapter.isKeyLoanActivated(
+            receipt.keyLoanId,
+            dbConnection
+          )
+
+        if (!keyLoanAlreadyActivated) {
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, dbConnection)
+          logger.info(
+            { keyLoanId: receipt.keyLoanId },
+            'Key loan activated after digital signature'
+          )
+        }
+      }
+
       // Mark other pending signatures as superseded
       await supersedePendingSignatures(
         signature.resourceType,
