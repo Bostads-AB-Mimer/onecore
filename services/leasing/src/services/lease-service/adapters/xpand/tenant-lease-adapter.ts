@@ -271,7 +271,11 @@ const getContactsDataBySearchQuery = async (
   q: string
 ): Promise<
   AdapterResult<
-    Array<{ contactCode: string; fullName: string; nationalRegistrationNumber: string }>,
+    Array<{
+      contactCode: string
+      fullName: string
+      nationalRegistrationNumber: string
+    }>,
     'internal-error'
   >
 > => {

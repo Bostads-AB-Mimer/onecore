@@ -229,11 +229,10 @@ export function ContactAutocomplete({
         </div>
 
         <div className="text-sm text-muted-foreground space-y-1">
+          <p>Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)</p>
           <p>
-            Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)
-          </p>
-          <p>
-            <strong>Tips:</strong> Du kan också söka på företagsnamn (t.ex. "Certego")
+            <strong>Tips:</strong> Du kan också söka på företagsnamn (t.ex.
+            "Certego")
           </p>
         </div>
       </CardContent>

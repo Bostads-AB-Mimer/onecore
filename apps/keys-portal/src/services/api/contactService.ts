@@ -27,9 +27,7 @@ export async function fetchContactByContactCode(
  * Search contacts by query string (name, contact code, or national registration number).
  * Returns array of contact suggestions with basic info.
  */
-export async function searchContacts(
-  query: string
-): Promise<
+export async function searchContacts(query: string): Promise<
   Array<{
     contactCode: string
     fullName: string
