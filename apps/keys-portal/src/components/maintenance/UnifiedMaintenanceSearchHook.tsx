@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import { fetchContactByContactCode } from '@/services/api/contactService'
-import { getKeyBundleById } from '@/services/api/keyBundleService'
+import {
+  getKeyBundleById,
+  type KeyBundle,
+} from '@/services/api/keyBundleService'
 import type { Contact } from '@/services/types'
 
 export type SearchType = 'contact' | 'bundle'
@@ -10,8 +13,7 @@ export type SearchType = 'contact' | 'bundle'
 export interface SearchResult {
   type: SearchType
   contact?: Contact
-  bundleId?: string
-  bundleName?: string
+  bundle?: KeyBundle
 }
 
 interface UnifiedMaintenanceSearchHookProps {
@@ -81,7 +83,10 @@ export function useUnifiedMaintenanceSearch({
         return
       }
       onResultFound(
-        { type: 'bundle', bundleId: bundle.id, bundleName: bundle.name },
+        {
+          type: 'bundle',
+          bundle: bundle,
+        },
         bundleId
       )
     } catch (e: unknown) {
@@ -99,9 +104,13 @@ export function useUnifiedMaintenanceSearch({
     }
   }
 
+  const handleSelectBundle = (bundle: KeyBundle) => {
+    handleSearchByBundleId(bundle.id)
+  }
+
   return {
     handleSelectContact: handleSearchByContactCode,
-    handleSelectBundle: handleSearchByBundleId,
+    handleSelectBundle: handleSelectBundle,
     loading,
   }
 }

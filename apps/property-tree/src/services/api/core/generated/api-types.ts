@@ -6235,6 +6235,38 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
     };
+    KeyLoanMaintenanceKeysWithDetails: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      company?: string | null;
+      contactPerson?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      keysArray: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+    };
     CreateKeyLoanMaintenanceKeysRequest: {
       keys: string;
       company?: string | null;
