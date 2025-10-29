@@ -6229,7 +6229,11 @@ export interface components {
       contactPerson?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
       description?: string | null;
+      /** Format: date-time */
+      createdAt: string;
     };
     CreateKeyLoanMaintenanceKeysRequest: {
       keys: string;
@@ -6237,6 +6241,8 @@ export interface components {
       contactPerson?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
       description?: string | null;
     };
     UpdateKeyLoanMaintenanceKeysRequest: {
@@ -6245,6 +6251,8 @@ export interface components {
       contactPerson?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
       description?: string | null;
     };
     CreateKeyEventRequest: {
