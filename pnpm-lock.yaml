@@ -983,6 +983,9 @@ importers:
       tedious:
         specifier: ^18.6.1
         version: 18.6.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       zod:
         specifier: ^3.25.76
         version: 3.25.76
