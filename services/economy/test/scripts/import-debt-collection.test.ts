@@ -1,4 +1,4 @@
-jest.mock('../../common/config', () => require('./__mocks__/config'))
+jest.mock('@src/common/config', () => require('./__mocks__/config'))
 
 jest.mock('ssh2-sftp-client', () => {
   class MockSftpClient {
@@ -13,7 +13,7 @@ jest.mock('ssh2-sftp-client', () => {
   return jest.fn().mockImplementation(() => new MockSftpClient())
 })
 
-jest.mock('../../services/debt-collection-service/service', () => ({
+jest.mock('@src/services/debt-collection-service/service', () => ({
   enrichRentInvoices: jest.fn(),
   enrichOtherInvoices: jest.fn(),
   enrichBalanceCorrections: jest.fn(),
@@ -25,7 +25,7 @@ import {
   enrichRentInvoices,
   enrichOtherInvoices,
   enrichBalanceCorrections,
-} from '../../services/debt-collection-service/service'
+} from '@src/services/debt-collection-service/service'
 import {
   getDebtCollectionFiles,
   readFile,
@@ -35,7 +35,7 @@ import {
   importSftpConfig,
   exportSftpConfig,
   processDebtCollectionFiles,
-} from '../import-debt-collection'
+} from '@src/scripts/import-debt-collection'
 
 // Create a spy for path.join since it's used in getExportFilePath
 jest.mock('node:path', () => ({

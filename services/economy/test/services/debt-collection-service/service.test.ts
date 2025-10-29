@@ -7,23 +7,32 @@ import {
   addRoundoffToFirstRow,
   aggregateRows,
   CsvError,
-} from '../service'
+} from '@src/services/debt-collection-service/service'
 
 // Mock the database adapter
-jest.mock('../adapters/xpand-db-adapter', () =>
-  require('./__mocks__/xpand-db-adapter')
+jest.mock(
+  '@src/services/debt-collection-service/adapters/xpand-db-adapter',
+  () => require('./__mocks__/xpand-db-adapter')
 )
 
 // Mock the file generators
-jest.mock('../converters/generateInkassoSergelFile', () => ({
-  __esModule: true,
-  default: jest.fn().mockReturnValue('mocked-sergel-file-content'),
-}))
+jest.mock(
+  '@src/services/debt-collection-service/converters/generateInkassoSergelFile',
+  () => ({
+    __esModule: true,
+    default: jest.fn().mockReturnValue('mocked-sergel-file-content'),
+  })
+)
 
-jest.mock('../converters/generateBalanceCorrectionFile', () => ({
-  __esModule: true,
-  default: jest.fn().mockReturnValue('mocked-balance-correction-file-content'),
-}))
+jest.mock(
+  '@src/services/debt-collection-service/converters/generateBalanceCorrectionFile',
+  () => ({
+    __esModule: true,
+    default: jest
+      .fn()
+      .mockReturnValue('mocked-balance-correction-file-content'),
+  })
+)
 
 import {
   getContacts,
@@ -44,8 +53,8 @@ import {
   invalidCsvExamples,
 } from './test-helpers'
 
-import generateInkassoSergelFile from '../converters/generateInkassoSergelFile'
-import generateBalanceCorrectionFile from '../converters/generateBalanceCorrectionFile'
+import generateInkassoSergelFile from '@src/services/debt-collection-service/converters/generateInkassoSergelFile'
+import generateBalanceCorrectionFile from '@src/services/debt-collection-service/converters/generateBalanceCorrectionFile'
 
 describe('Debt Collection Service', () => {
   beforeEach(() => {

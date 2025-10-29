@@ -1,12 +1,10 @@
 import { z } from 'zod'
 import {
   ApplicantStatus,
-  InvoiceTransactionType,
   LeaseStatus,
   ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
-  PaymentStatus,
   OfferStatus,
   WaitingListType,
 } from './enums'
@@ -19,6 +17,7 @@ import {
   CommentThreadSchema,
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
+  InvoiceSchema,
 } from './schemas/v1'
 
 interface Contact {
@@ -198,27 +197,6 @@ interface Invoices {
   paidInvoices?: Invoice[]
 }
 
-interface Invoice {
-  invoiceId: string
-  leaseId: string
-  amount: number
-  reference: string
-  fromDate: Date
-  toDate: Date
-  invoiceDate: Date
-  expirationDate?: Date
-  debitStatus: number
-  paymentStatus: PaymentStatus
-  transactionType: InvoiceTransactionType
-  transactionTypeName: string
-  paidAmount?: number
-  daysSinceLastDebitDate?: number
-  description?: string
-  sentToDebtCollection?: Date
-  type: 'Regular' | 'Other'
-  source: 'legacy' | 'next'
-}
-
 interface WaitingList {
   queueTime: Date
   queuePoints: number
@@ -381,6 +359,7 @@ type CommentThreadId = z.infer<typeof CommentThreadIdSchema>
 type CommentType = z.infer<typeof CommentTypeSchema>
 type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
+type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 

@@ -11,11 +11,18 @@ import {
   CircularProgress,
   Collapse,
   Skeleton,
+  Link,
 } from '@mui/material'
 import { useState } from 'react'
-import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
+import {
+  Contact,
+  Invoice,
+  Lease,
+  LeaseStatus,
+  PaymentStatus,
+} from '@onecore/types'
 
-import { InvoiceWithRows, useContact } from '../hooks/useContact'
+import { useContact } from '../hooks/useContact'
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 
 const moneyFormatter = new Intl.NumberFormat('sv-SE', {
@@ -141,7 +148,7 @@ function Leases(props: { leases: Lease[] }) {
   ))
 }
 
-function Invoices(props: { invoices: InvoiceWithRows[] }) {
+function Invoices(props: { invoices: Invoice[] }) {
   return (
     <Table stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
@@ -150,7 +157,7 @@ function Invoices(props: { invoices: InvoiceWithRows[] }) {
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturadatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Förfallodatum</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Belopp</TableCell>
-          <TableCell sx={{ fontWeight: 'bold' }}>Referens</TableCell>
+          <TableCell sx={{ fontWeight: 'bold' }}>Återstående belopp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Fakturatyp</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Betalstatus</TableCell>
           <TableCell sx={{ fontWeight: 'bold' }}>Inkasso</TableCell>
@@ -184,7 +191,7 @@ function getStatusName(status: LeaseStatus) {
   }
 }
 
-function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
+function InvoiceTableRow(props: { invoice: Invoice }) {
   const { invoice } = props
   const [open, setOpen] = useState(false)
 
@@ -215,7 +222,11 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
             : '-'}
         </TableCell>
         <TableCell>{moneyFormatter.format(invoice.amount)}</TableCell>
-        <TableCell>{invoice.reference}</TableCell>
+        <TableCell>
+          {invoice.remainingAmount
+            ? moneyFormatter.format(invoice.remainingAmount)
+            : '-'}
+        </TableCell>
         <TableCell>
           {invoice.type === 'Other' ? 'Ströfaktura' : 'Avi'}
         </TableCell>
@@ -247,11 +258,20 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
   )
 }
 
-function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
+function InvoiceDetails(props: { invoice: Invoice }) {
   const { invoice } = props
 
   if (invoice.type === 'Other') {
-    return <p>Text: {invoice.description}</p>
+    return (
+      <Box>
+        <Typography>Text: {invoice.description}</Typography>
+        {invoice.invoiceFileUrl && (
+          <Link target="_blank" href={invoice.invoiceFileUrl}>
+            Länk till faktura
+          </Link>
+        )}
+      </Box>
+    )
   }
 
   const renderInvoiceRows = () => {

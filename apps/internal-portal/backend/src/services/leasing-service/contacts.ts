@@ -261,4 +261,19 @@ export const routes = (router: KoaRouter) => {
       metadata
     )
   })
+
+  router.get('(.*)/contacts/by-pnr/:pnr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const getContact = await coreAdapter.getContactByNationalRegistrationNumber(
+      ctx.params.pnr
+    )
+
+    if (!getContact.ok) {
+      ctx.status = getContact.statusCode
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(getContact.data, metadata)
+  })
 }
