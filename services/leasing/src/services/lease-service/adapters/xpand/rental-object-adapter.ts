@@ -424,7 +424,7 @@ const buildSubQueries = () => {
   return {
     parkingSpaceQuery: {
       query: parkingSpacesQuery,
-      column: parkingSpaceColumns,
+      columns: parkingSpaceColumns,
     },
     apartmentQuery: {
       query: apartmentQuery,
