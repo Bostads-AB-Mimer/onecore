@@ -15,11 +15,6 @@ export type RouteSpecInput = {
   query?: z.ZodTypeAny
 }
 
-type RouteSpec = {
-  input?: RouteSpecInput
-  output: RouteSpecOutput
-}
-
 export type RouteSpecOutput = { [key: number]: z.ZodTypeAny }
 
 export function createRouteSpec<
@@ -29,29 +24,35 @@ export function createRouteSpec<
   return spec
 }
 
-type ExpectedReturnType<O extends RouteSpecOutput> = {
-  [K in keyof O & number]: { status: K; data: z.infer<O[K]> }
+type ExpectedReturnType<O> = {
+  [K in keyof O & number]: {
+    status: K
+    data: O[K] extends z.ZodTypeAny ? z.infer<O[K]> : never
+  }
 }
 
-type HandlerResult<O extends RouteSpecOutput> = ExpectedReturnType<O>[keyof O &
-  number]
+export function routeWrapper<
+  I extends RouteSpecInput,
+  O extends RouteSpecOutput,
+>(spec: { input?: I; output: O }) {
+  return <S extends keyof O & number>(
+    handler: (ctx: Context) => Promise<ExpectedReturnType<O>[S]>
+  ) => {
+    return async (ctx: Context) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await Promise.resolve(handler(ctx))
+      const schema = spec.output[result.status]
+      const parsed = schema.safeParse(result.data)
 
-function routeWrapper<S extends RouteSpec>(
-  spec: S,
-  handler: (ctx: Context) => Promise<HandlerResult<S['output']>>
-) {
-  return async (ctx: Context) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await Promise.resolve(handler(ctx))
-    const schema = spec.output[result.status]
-    const parsed = schema.safeParse(result.data)
-    if (!parsed.success) {
-      ctx.status = 500
-      ctx.body = { error: 'Response validation failed' }
-      return
+      if (!parsed.success) {
+        ctx.status = 500
+        ctx.body = { error: 'Response validation failed' }
+        return
+      }
+
+      ctx.status = result.status
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
-    ctx.status = result.status
-    ctx.body = makeSuccessResponseBody(result.data, metadata)
   }
 }
 
@@ -85,15 +86,16 @@ const ok = createRouteSpec({
 export const routes = (router: KoaRouter) => {
   router.get(
     '/invoices/example/:invoiceId',
-    routeWrapper(ok, async (ctx) => {
+    routeWrapper(ok)(async (ctx) => {
       return {
-        status: 200 as const,
+        status: 200,
         data: {
           bar: 'foo',
         },
       }
     })
   )
+
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(
