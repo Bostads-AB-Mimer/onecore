@@ -6009,7 +6009,6 @@ export interface components {
       eventTime: string;
       description?: string | null;
       rentalObjectCode?: string | null;
-      /** Format: uuid */
       contactId?: string | null;
       /** Format: uuid */
       keyEventId?: string | null;
@@ -6387,7 +6386,6 @@ export interface components {
           eventTime: string;
           description?: string | null;
           rentalObjectCode?: string | null;
-          /** Format: uuid */
           contactId?: string | null;
           /** Format: uuid */
           keyEventId?: string | null;

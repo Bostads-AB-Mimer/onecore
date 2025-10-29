@@ -131,7 +131,9 @@ export function getLogsByContactIdQuery(contactId: string, db: Knex) {
  * @returns Query builder for pagination
  */
 export function getAllLogsWithKeyEventsQuery(db: Knex) {
-  const logsWithEvents = db.raw(`
+  const logsWithEvents = db
+    .raw(
+      `
     SELECT
       logs.*,
       -- Join with key_events to group flex/order/lost operations
@@ -148,7 +150,9 @@ export function getAllLogsWithKeyEventsQuery(db: Knex) {
         AND ke.keys LIKE '%"' + CAST(logs.objectId AS NVARCHAR(36)) + '"%'
       ORDER BY ke.createdAt DESC
     ) key_events
-  `).wrap('(', ') as logs_with_events')
+  `
+    )
+    .wrap('(', ') as logs_with_events')
 
   return db.from(logsWithEvents).select('*').orderBy('eventTime', 'desc')
 }

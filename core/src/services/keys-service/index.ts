@@ -13,6 +13,7 @@ import {
   KeyLoanMaintenanceKeysApi,
   SignaturesApi,
 } from '../../adapters/keys-adapter'
+import { getContactByContactCode } from '../../adapters/leasing-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 
@@ -190,8 +191,26 @@ export const routes = (router: KoaRouter) => {
   ): Promise<string> => {
     const parts: string[] = [`${action} nyckellån`]
 
+    // Fetch contact name and add both name and code to description
     if (keyLoan.contact) {
-      parts.push(`för kontakt ${keyLoan.contact}`)
+      try {
+        const contactResult = await getContactByContactCode(keyLoan.contact)
+        if (contactResult.ok && contactResult.data.fullName) {
+          parts.push(
+            `för ${contactResult.data.fullName} (${keyLoan.contact})`
+          )
+        } else {
+          // Fallback to just contact code if name not found
+          parts.push(`för kontakt ${keyLoan.contact}`)
+        }
+      } catch (error) {
+        // If contact lookup fails, use just the contact code
+        logger.warn(
+          { error, contactCode: keyLoan.contact },
+          'Failed to fetch contact name'
+        )
+        parts.push(`för kontakt ${keyLoan.contact}`)
+      }
     }
 
     // Fetch key names from key IDs
@@ -684,12 +703,9 @@ export const routes = (router: KoaRouter) => {
       }
     }
 
+    // Store contact code directly in contactId field
     if (result.data.contact) {
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (uuidRegex.test(result.data.contact)) {
-        contactId = result.data.contact
-      }
+      contactId = result.data.contact
     }
 
     await createLogEntry(
@@ -813,12 +829,9 @@ export const routes = (router: KoaRouter) => {
       }
     }
 
+    // Store contact code directly in contactId field
     if (result.data.contact) {
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (uuidRegex.test(result.data.contact)) {
-        contactId = result.data.contact
-      }
+      contactId = result.data.contact
     }
 
     await createLogEntry(
@@ -926,12 +939,9 @@ export const routes = (router: KoaRouter) => {
       }
     }
 
+    // Store contact code directly in contactId field
     if (getResult.data.contact) {
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      if (uuidRegex.test(getResult.data.contact)) {
-        contactId = getResult.data.contact
-      }
+      contactId = getResult.data.contact
     }
 
     await createLogEntry(

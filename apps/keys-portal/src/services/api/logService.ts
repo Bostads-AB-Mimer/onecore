@@ -24,7 +24,7 @@ const mapFiltersToQuery = (
   const free = (filters.q ?? '').trim()
   if (free.length >= 3) {
     q.q = free
-    q.fields = 'userName,description,objectId' // <-- IMPORTANT
+    q.fields = 'userName,description,objectId,rentalObjectCode,contactId' // <-- Search includes rental object code and contact ID
   }
   return q
 }
