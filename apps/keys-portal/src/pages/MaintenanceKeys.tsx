@@ -12,7 +12,6 @@ import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMain
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { KeyLoanMaintenanceKeysWithDetails } from '@/services/types'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
 import { useToast } from '@/hooks/use-toast'
 
@@ -78,9 +77,9 @@ export default function MaintenanceKeys() {
             searchResult.contact.contactCode,
             false
           )
-        } else if (searchResult.type === 'bundle' && searchResult.bundleId) {
+        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
           active = await maintenanceKeysService.getByBundleWithKeys(
-            searchResult.bundleId,
+            searchResult.bundle.id,
             false
           )
         }
@@ -117,9 +116,9 @@ export default function MaintenanceKeys() {
             searchResult.contact.contactCode,
             true
           )
-        } else if (searchResult.type === 'bundle' && searchResult.bundleId) {
+        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
           returned = await maintenanceKeysService.getByBundleWithKeys(
-            searchResult.bundleId,
+            searchResult.bundle.id,
             true
           )
         }
@@ -183,13 +182,18 @@ export default function MaintenanceKeys() {
               {searchResult.type === 'contact' && searchResult.contact && (
                 <ContactInfoCard contacts={[searchResult.contact]} />
               )}
-              {searchResult.type === 'bundle' && (
+              {searchResult.type === 'bundle' && searchResult.bundle && (
                 <Card>
                   <CardHeader>
                     <div className="flex items-center gap-2">
-                      <CardTitle>{searchResult.bundleName}</CardTitle>
+                      <CardTitle>{searchResult.bundle.name}</CardTitle>
                       <Badge variant="outline">Nyckelsamling</Badge>
                     </div>
+                    {searchResult.bundle.description && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {searchResult.bundle.description}
+                      </p>
+                    )}
                   </CardHeader>
                 </Card>
               )}
