@@ -114,6 +114,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
 
+  //TODO: Lägg till rentalObjectTypeCode och rentalObjectTypeCaption i transformeringen för lägenheter när vi uppdaterat modellen
+
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
@@ -122,8 +124,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     propertyCode: row.estatecode,
     residentialAreaCode: row.residentialareacode,
     residentialAreaCaption: row.residentialareacaption,
-    objectTypeCaption: row.vehiclespacetypecaption,
-    objectTypeCode: row.vehiclespacetypecode,
+    objectTypeCaption: row.vehiclespacetypecaption ?? row.apartmenttypecaption,
+    objectTypeCode: row.vehiclespacetypecode ?? row.apartmenttypecode,
     vacantFrom: vacantFrom,
     districtCaption: district,
     districtCode: districtCode,
@@ -134,35 +136,38 @@ function transformFromXpandRentalObject(row: any): RentalObject {
 }
 
 const buildMainQuery = (queries: {
-  parkingSpacesQuery: any
+  rentalObjectQuery: {
+    query: any
+    columns?: string[]
+  }
   activeRentalBlocksQuery?: any
   activeContractsQuery?: any
   rentalBlockDatesQuery?: any
   contractsWithLastDebitDate?: any
 }) => {
+  const baseColumns = [
+    'ps.rentalObjectCode',
+    'ps.estatecode',
+    'ps.estatecaption',
+    'ps.postaladdress',
+    'ps.zipcode',
+    'ps.city',
+    'ps.scegcaption',
+    'ps.residentialareacode',
+    'ps.residentialareacaption',
+  ]
+  const rentalObjectColumns = [
+    ...baseColumns,
+    ...(queries.rentalObjectQuery.columns || []),
+  ]
+
   let query = xpandDb
-    .from(queries.parkingSpacesQuery.as('ps'))
-    .select(
-      'ps.rentalObjectCode',
-      'ps.estatecode',
-      'ps.estatecaption',
-      'ps.vehiclespacetypecode',
-      'ps.vehiclespacetypecaption',
-      'ps.postaladdress',
-      'ps.zipcode',
-      'ps.city',
-      'ps.scegcaption',
-      'ps.scegcode',
-      'ps.residentialareacode',
-      'ps.residentialareacaption'
-    )
+    .from(queries.rentalObjectQuery.query.as('ps'))
+    .select(rentalObjectColumns)
 
   if (queries.activeContractsQuery) {
     query = query
       .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
         'ac.lastdebitdate',
         'rent.yearrentrows',
         'cmvalbar.value as braarea'
@@ -175,9 +180,6 @@ const buildMainQuery = (queries: {
   } else if (queries.contractsWithLastDebitDate) {
     query = query
       .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
         'ac.lastdebitdate',
         'rent.yearrentrows',
         'cmvalbar.value as braarea'
@@ -215,6 +217,7 @@ const buildMainQuery = (queries: {
       'ps.rentalObjectCode'
     )
     .leftJoin(
+      //flytta ev denna till mainQuery istället om bra bara ska hämtas för parkeringar eller om vi ska hämta andra värden för lägenheter också
       xpandDb('cmval as cmvalbar')
         .select('cmvalbar.keycode', 'cmvalbar.value')
         .where('cmvalbar.keycmvat', 'BRA')
@@ -225,12 +228,15 @@ const buildMainQuery = (queries: {
 }
 
 const buildSubQueries = () => {
+  const parkingSpaceColumns = [
+    'ps.vehiclespacetypecode',
+    'ps.vehiclespacetypecaption',
+  ]
   const parkingSpacesQuery = xpandDb
     .from('babps')
     .select(
       'babps.keycmobj',
       'babuf.hyresid as rentalObjectCode',
-      'babuf.fencode as scegcode',
       'babuf.fencaption as scegcaption',
       'babuf.fstcode as estatecode',
       'babuf.fstcaption as estatecaption',
@@ -254,12 +260,101 @@ const buildSubQueries = () => {
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
+  const apartmentColumns = [
+    'ps.apartmenttypecode',
+    'ps.apartmenttypecaption',
+    'ps.rentalobjecttypecode',
+    'ps.rentalobjecttypecaption',
+  ]
+  const apartmentQuery = xpandDb
+    .from('balgh')
+    .select(
+      'balgh.keycmobj',
+      'babuf.hyresid as rentalObjectCode',
+      'babuf.fencaption as scegcaption', //used for district extraction
+      'babuf.fstcode as estatecode',
+      'babuf.fstcaption as estatecaption',
+      'balgt.code as apartmenttypecode',
+      'balgt.caption as apartmenttypecaption',
+      'cmadr.adress1 as postaladdress',
+      'cmadr.adress2 as street',
+      'cmadr.adress3 as zipcode',
+      'cmadr.adress4 as city',
+      'babya.code as residentialareacode',
+      'babya.caption as residentialareacaption',
+      'hyint.code as rentalobjecttypecode',
+      'hyint.caption as rentalobjecttypecaption'
+    )
+    .innerJoin('babuf', 'babuf.keycmobj', 'balgh.keycmobj')
+    .innerJoin('balgt', 'balgt.keybalgt', 'balgh.keybalgt')
+    .innerJoin('hyinf', 'hyinf.keycmobj', 'balgh.keycmobj')
+    .innerJoin('hyint', 'hyint.keyhyint', 'hyinf.keyhyint')
+    .leftJoin('cmadr', function () {
+      this.on('cmadr.keycode', '=', 'balgh.keycmobj')
+        .andOn('cmadr.keydbtbl', '=', xpandDb.raw('?', ['_RQA11RNMA']))
+        .andOn('cmadr.keycmtyp', '=', xpandDb.raw('?', ['adrpost']))
+    })
+    .leftJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
+    .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
+    .where('babuf.cmpcode', '=', '001') //only gets apartments with company code 001
+    .whereNotIn('hyint.code', ['STUD', 'NATT', 'BLOCK', 'AVS']) //only get apartments that are not student, night, BLOCK or AVS
+
+  const apartmentDetailsColumns = [
+    ...apartmentColumns,
+    'ps.shortstay',
+    'ps.floor',
+    'ps.elevator',
+    'ps.nonsmoking',
+    'ps.yearofconstruction',
+    'ps.apartmentattribute',
+  ]
+  const apartmentDetailsQuery = xpandDb
+    .from('balgh')
+    .select(
+      'balgh.keycmobj',
+      'babuf.hyresid as rentalObjectCode',
+      'babuf.fencaption as scegcaption', //used for district extraction
+      'babuf.fstcode as estatecode',
+      'babuf.fstcaption as estatecaption',
+      'balgt.code as apartmenttypecode',
+      'balgt.caption as apartmenttypecaption',
+      'cmadr.adress1 as postaladdress',
+      'cmadr.adress2 as street',
+      'cmadr.adress3 as zipcode',
+      'cmadr.adress4 as city',
+      'babya.code as residentialareacode',
+      'babya.caption as residentialareacaption',
+      'hyint.code as rentalobjecttypecode',
+      'hyint.caption as rentalobjecttypecaption',
+      'balgh.uppgang as floor',
+      'balgh.hiss as elevator',
+      'balgh.smokefree as nonsmoking',
+      'hyinf.shortstay as shortstay', // how to get info on "korttidsboende" when it's not in rentalobjecttypecode
+      'babyg.byggnadsar as yearofconstruction',
+      'hyegn.caption as apartmentattribute'
+    )
+    .innerJoin('babuf', 'babuf.keycmobj', 'balgh.keycmobj')
+    .innerJoin('balgt', 'balgt.keybalgt', 'balgh.keybalgt')
+    .innerJoin('babyg', 'babyg.keycmobj', 'babuf.keyobjbyg')
+    .innerJoin('hyinf', 'hyinf.keycmobj', 'balgh.keycmobj')
+    .innerJoin('hyint', 'hyint.keyhyint', 'hyinf.keyhyint')
+    .leftJoin('hyegk', 'hyegk.keycode', 'balgh.keycmobj')
+    .leftJoin('hyegn', 'hyegn.keyhyegn', 'hyegk.keyhyegn')
+    .leftJoin('cmadr', function () {
+      this.on('cmadr.keycode', '=', 'balgh.keycmobj')
+        .andOn('cmadr.keydbtbl', '=', xpandDb.raw('?', ['_RQA11RNMA']))
+        .andOn('cmadr.keycmtyp', '=', xpandDb.raw('?', ['adrpost']))
+    })
+    .leftJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
+    .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
+    .where('babuf.cmpcode', '=', '001') //only gets apartments with company code 001
+    .whereNotIn('hyint.code', ['STUD', 'NATT', 'BLOCK', 'AVS']) //only get apartments that are not student, night, BLOCK or AVS
+
   //query that gets active contracts
   const activeContractsQuery = xpandDb
     .from('hyobj')
     .select(
       'hyinf.keycmobj',
-      'hyobj.hyobjben as contractid',
       'hyobj.avtalsdat as contractdate',
       'hyobj.fdate as fromdate',
       'hyobj.tdate as todate',
@@ -282,11 +377,10 @@ const buildSubQueries = () => {
   //query that gets contracts with lastdebitdate
   const contractsWithLastDebitDate = xpandDb.raw(`
   (
-    SELECT sub.keycmobj, sub.contractid, sub.contractdate, sub.fromdate, sub.todate, sub.lastdebitdate
+    SELECT sub.keycmobj, sub.contractdate, sub.fromdate, sub.todate, sub.lastdebitdate
     FROM (
       SELECT
         hyinf.keycmobj,
-        hyobj.hyobjben as contractid,
         hyobj.avtalsdat as contractdate,
         hyobj.fdate as fromdate,
         hyobj.tdate as todate,
@@ -328,22 +422,33 @@ const buildSubQueries = () => {
   `)
 
   return {
-    parkingSpacesQuery,
+    parkingSpaceQuery: {
+      query: parkingSpacesQuery,
+      columns: parkingSpaceColumns,
+    },
+    apartmentQuery: {
+      query: apartmentQuery,
+      columns: apartmentColumns,
+    },
+    apartmentDetailsQuery: {
+      query: apartmentDetailsQuery,
+      columns: apartmentDetailsColumns,
+    },
     activeContractsQuery,
     contractsWithLastDebitDate,
     rentalBlockDatesQuery,
   }
 }
 
-const getAllVacantParkingSpaces = async (): Promise<
-  AdapterResult<RentalObject[], 'get-all-vacant-parking-spaces-failed'>
+const getAllVacantApartments = async (): Promise<
+  AdapterResult<RentalObject[], 'get-all-vacant-apartments-failed'>
 > => {
   try {
-    const { parkingSpacesQuery, activeContractsQuery, rentalBlockDatesQuery } =
+    const { apartmentQuery, activeContractsQuery, rentalBlockDatesQuery } =
       buildSubQueries()
 
-    const results = await buildMainQuery({
-      parkingSpacesQuery,
+    const query = buildMainQuery({
+      rentalObjectQuery: apartmentQuery,
       activeContractsQuery,
       rentalBlockDatesQuery,
     })
@@ -355,6 +460,42 @@ const getAllVacantParkingSpaces = async (): Promise<
       .whereNull('ac.keycmobj')
       .orderBy('ps.rentalObjectCode', 'asc')
 
+    const results = await query
+
+    //todo: transform to apartment instead of rentalObject
+    const listings: RentalObject[] = results.map((row) =>
+      trimRow(transformFromXpandRentalObject(row))
+    )
+
+    return { ok: true, data: listings }
+  } catch (err) {
+    logger.error(err, 'tenantLeaseAdapter.getAllAvailableParkingSpaces')
+    return { ok: false, err: 'get-all-vacant-apartments-failed' }
+  }
+}
+
+const getAllVacantParkingSpaces = async (): Promise<
+  AdapterResult<RentalObject[], 'get-all-vacant-parking-spaces-failed'>
+> => {
+  try {
+    const { parkingSpaceQuery, activeContractsQuery, rentalBlockDatesQuery } =
+      buildSubQueries()
+
+    const query = buildMainQuery({
+      rentalObjectQuery: parkingSpaceQuery,
+      activeContractsQuery,
+      rentalBlockDatesQuery,
+    })
+      //exclude parking spaces with a blocks that has no end date
+      .where(function () {
+        this.whereNull('orb.keycmobj').orWhereNotNull('orb.blockenddate')
+      })
+      //exclude parking spaces with active contracts
+      .whereNull('ac.keycmobj')
+      .orderBy('ps.rentalObjectCode', 'asc')
+
+    const results = await query
+    //todo: transform to parkingSpace instead of rentalObject
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
@@ -373,13 +514,13 @@ const getParkingSpace = async (
 > => {
   try {
     const {
-      parkingSpacesQuery,
+      parkingSpaceQuery,
       contractsWithLastDebitDate,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
     const mainQuery = buildMainQuery({
-      parkingSpacesQuery,
+      rentalObjectQuery: parkingSpaceQuery,
       contractsWithLastDebitDate,
       rentalBlockDatesQuery,
     })
@@ -396,6 +537,7 @@ const getParkingSpace = async (
       return { ok: false, err: 'parking-space-not-found' }
     }
 
+    //todo: transform to parkingSpace instead of rentalObject
     const rentalObject = trimRow(transformFromXpandRentalObject(result))
     return { ok: true, data: rentalObject }
   } catch (err) {
@@ -414,13 +556,13 @@ const getParkingSpaces = async (
 > => {
   try {
     const {
-      parkingSpacesQuery,
+      parkingSpaceQuery,
       contractsWithLastDebitDate,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
     let query = buildMainQuery({
-      parkingSpacesQuery,
+      rentalObjectQuery: parkingSpaceQuery,
       contractsWithLastDebitDate,
       rentalBlockDatesQuery,
     })
@@ -456,6 +598,7 @@ const getParkingSpaces = async (
       }
     }
 
+    //todo: transform to parkingSpace instead of rentalObject
     const rentalObjects = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
@@ -469,9 +612,62 @@ const getParkingSpaces = async (
   }
 }
 
+function aggregateApartmentAttributes(rows: any[]): any {
+  if (!Array.isArray(rows) || rows.length === 0) return rows
+  const firstRow = { ...rows[0] }
+  firstRow.apartmentattribute = rows
+    .map((row) => row.apartmentattribute?.trim())
+    .filter((attr) => !!attr)
+  return firstRow
+}
+
+const getApartment = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<RentalObject, 'unknown' | 'apartment-not-found'>> => {
+  try {
+    const {
+      apartmentDetailsQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    } = buildSubQueries()
+
+    const mainQuery = buildMainQuery({
+      rentalObjectQuery: apartmentDetailsQuery,
+      contractsWithLastDebitDate,
+      rentalBlockDatesQuery,
+    }).where('ps.rentalObjectCode', '=', rentalObjectCode)
+
+    let result = await mainQuery
+
+    if (!result) {
+      logger.error(
+        { rentalObjectCode },
+        'Apartment not found by Rental Object Code'
+      )
+      return { ok: false, err: 'apartment-not-found' }
+    }
+
+    if (Array.isArray(result)) {
+      result = aggregateApartmentAttributes(result)
+    }
+
+    //todo: transform to apartmentDetails instead of rentalObject
+    const rentalObject = trimRow(transformFromXpandRentalObject(result))
+    return { ok: true, data: rentalObject }
+  } catch (err) {
+    logger.error(
+      { err, rentalObjectCode },
+      'Unknown error in rentalObjectAdapter.getRentalObject'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getAllVacantParkingSpaces,
+  getAllVacantApartments,
   getParkingSpace,
   getParkingSpaces,
+  getApartment,
   transformFromXpandRentalObject,
 }

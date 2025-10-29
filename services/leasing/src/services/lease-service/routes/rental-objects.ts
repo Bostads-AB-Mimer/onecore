@@ -1,7 +1,9 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
+  getAllVacantApartments,
   getAllVacantParkingSpaces,
+  getApartment,
   getParkingSpace,
   getParkingSpaces,
 } from '../adapters/xpand/rental-object-adapter'
@@ -204,5 +206,118 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /apartments/by-code/{rentalObjectCode}:
+   *   get:
+   *     summary: Get an apartment by rental object code
+   *     description: Fetches an apartment by Rental Object Code.
+   *     tags:
+   *       - RentalObject
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the apartment.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalObject'
+   *       '500':
+   *         description: Internal server error. Failed to fetch apartment.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('(.*)/apartments/by-code/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result = await getApartment(rentalObjectCode)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+      return
+    }
+
+    if (result.err == 'apartment-not-found') {
+      ctx.status = 404
+      ctx.body = {
+        error: `An error occurred while fetching apartment by Rental Object Code: ${rentalObjectCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = {
+      error: 'An error occurred while fetching apartments.',
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /vacant-apartments:
+   *   get:
+   *     summary: Get all vacant apartments
+   *     description: Fetches a list of all vacant apartments available in the system.
+   *     tags:
+   *       - Listings
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the list of vacant apartments.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalObject'
+   *       '500':
+   *         description: Internal server error. Failed to fetch vacant apartments.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('/vacant-apartments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    logger.info(metadata, 'Fetching all vacant apartments')
+
+    const vacantApartments = await getAllVacantApartments()
+
+    if (!vacantApartments.ok) {
+      logger.error(
+        { err: vacantApartments.err },
+        'Error fetching vacant apartments:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching vacant apartments.',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: vacantApartments.data, ...metadata }
   })
 }
