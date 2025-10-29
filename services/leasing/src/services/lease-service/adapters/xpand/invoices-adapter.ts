@@ -45,6 +45,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     transactionTypeName: row.transactionTypeName.trim(),
     type: 'Regular',
     source: 'legacy',
+    invoiceRows: [],
   }
 }
 

@@ -16,7 +16,7 @@ export async function getInvoiceByInvoiceId(
   }
 
   if (response.status === 200) {
-    return { ok: true, data: response.data }
+    return { ok: true, data: response.data.content }
   }
 
   logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
@@ -54,7 +54,7 @@ export async function getInvoicesByContactCode(
   }
 
   if (response.status === 200) {
-    return { ok: true, data: response.data }
+    return { ok: true, data: response.data.content }
   }
 
   logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')

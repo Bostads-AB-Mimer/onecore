@@ -13,9 +13,15 @@ import {
   Skeleton,
 } from '@mui/material'
 import { useState } from 'react'
-import { Contact, Lease, LeaseStatus, PaymentStatus } from '@onecore/types'
+import {
+  Contact,
+  Invoice,
+  Lease,
+  LeaseStatus,
+  PaymentStatus,
+} from '@onecore/types'
 
-import { InvoiceWithRows, useContact } from '../hooks/useContact'
+import { useContact } from '../hooks/useContact'
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 
 const moneyFormatter = new Intl.NumberFormat('sv-SE', {
@@ -141,7 +147,7 @@ function Leases(props: { leases: Lease[] }) {
   ))
 }
 
-function Invoices(props: { invoices: InvoiceWithRows[] }) {
+function Invoices(props: { invoices: Invoice[] }) {
   return (
     <Table stickyHeader={true} sx={{ tableLayout: 'fixed' }}>
       <TableHead>
@@ -184,7 +190,7 @@ function getStatusName(status: LeaseStatus) {
   }
 }
 
-function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
+function InvoiceTableRow(props: { invoice: Invoice }) {
   const { invoice } = props
   const [open, setOpen] = useState(false)
 
@@ -247,7 +253,7 @@ function InvoiceTableRow(props: { invoice: InvoiceWithRows }) {
   )
 }
 
-function InvoiceDetails(props: { invoice: InvoiceWithRows }) {
+function InvoiceDetails(props: { invoice: Invoice }) {
   const { invoice } = props
 
   if (invoice.type === 'Other') {
