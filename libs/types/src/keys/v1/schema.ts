@@ -130,6 +130,13 @@ export const KeyLoanMaintenanceKeysSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
+// Key loan maintenance keys with enriched keys data (for optimized endpoint)
+export const KeyLoanMaintenanceKeysWithDetailsSchema =
+  KeyLoanMaintenanceKeysSchema.extend({
+    // Array of full key objects instead of just IDs
+    keysArray: z.array(KeySchema),
+  })
+
 // Key Event schemas
 export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
 export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
