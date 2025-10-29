@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, ChevronDown, ChevronUp, Plus } from 'lucide-react'
 import { useContactCodeSearch } from '@/components/maintenance/ContactCodeSearch'
 import { ContactAutocomplete } from '@/components/maintenance/ContactAutocomplete'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
+import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type {
@@ -24,10 +25,11 @@ export default function MaintenanceKeys() {
     KeyLoanMaintenanceKeysWithDetails[]
   >([])
   const [loansLoading, setLoansLoading] = useState(false)
-  const [activeLoansOpen, setActiveLoansOpen] = useState(true)
+  const [activeLoansOpen, setActiveLoansOpen] = useState(false)
   const [returnedLoansOpen, setReturnedLoansOpen] = useState(false)
   const [hasLoadedActive, setHasLoadedActive] = useState(false)
   const [hasLoadedReturned, setHasLoadedReturned] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
@@ -128,10 +130,20 @@ export default function MaintenanceKeys() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-tight">Sökresultat</h2>
-              <Button variant="outline" size="sm" onClick={handleClearSearch}>
-                <X className="h-4 w-4 mr-2" />
-                Rensa sökning
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nytt lån
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleClearSearch}>
+                  <X className="h-4 w-4 mr-2" />
+                  Rensa sökning
+                </Button>
+              </div>
             </div>
 
             {/* Contact Information */}
@@ -223,20 +235,38 @@ export default function MaintenanceKeys() {
                   )}
                 </Card>
 
-                {/* No Loans Found */}
-                {activeLoans.length === 0 && returnedLoans.length === 0 && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <p className="text-muted-foreground text-center">
-                        Inga lån hittades för detta företag.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* No Loans Found - only show if we've checked both sections */}
+                {hasLoadedActive &&
+                  hasLoadedReturned &&
+                  activeLoans.length === 0 &&
+                  returnedLoans.length === 0 && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-muted-foreground text-center">
+                          Inga lån hittades för detta företag.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
               </>
             )}
           </div>
         </div>
+      )}
+
+      {/* Create Loan Dialog */}
+      {selectedContact && (
+        <CreateMaintenanceLoanDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          companyContactCode={selectedContact.contactCode}
+          companyName={selectedContact.fullName || selectedContact.contactCode}
+          onSuccess={() => {
+            // Refresh active loans after creating a new one
+            setHasLoadedActive(false)
+            setActiveLoansOpen(true)
+          }}
+        />
       )}
     </div>
   )
