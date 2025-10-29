@@ -1,5 +1,21 @@
 # Contribution Guidelines
 
+## Table of Contents
+- [Code Formatting](#code-formatting)
+- [Branching and Development Flow](#branching-and-development-flow)
+  - [Branch Types](#branch-types)
+    - [Main Branch](#main-branch)
+    - [Release Branches](#release-branches)
+    - [Epic Branches](#epic-branches)
+    - [Feature Branches](#feature-branches)
+    - [Hotfixes, chores, etc](#hotfixes-chores-etc)
+  - [Typical Development Flow of an Epic](#typical-development-flow-of-an-epic)
+  - [Summary](#summary)
+  - [Examples](#examples)
+    - [Case: I am starting work on a new epic. What do I do?](#case-1)
+    - [Case: I am starting work on a new feature that is part of an ongoing epic. What do I do?](#case-2)
+    - [Case: I am starting work on a new feature not related to an epic. What do I do?](#case-3)
+
 ## Code Formatting
 
 The `onecore` repository contains a global .prettierrc and each sub-package
@@ -59,7 +75,7 @@ This repository follows a simple, predictable branching model:
 - Targets **epic/*** or **release/***
 - Used for **individual features or fixes**.
 
-### Hotfixes, chores and the will-not-be-easily-categorized Branches
+#### Hotfixes, chores, etc
 - Example `hotfix/holy-moly-this-just-cannot-wait`
 - Used for **hotfixes**, **documentation changes** and **non-build related** chores.
 - Created from **main**
@@ -71,16 +87,7 @@ correct building and tagging of docker images for the individual applications an
 
 Note that epic branches MUST follow the pattern of **`epic/<project>-<issue#>-descriptive-slug`**
 
-#### Summary
-
-| Branch Type | Example                              | Purpose                    | Merges Into             |
-|-------------|--------------------------------------|----------------------------|-------------------------|
-| `feature/`  | `feature/mim-348-add-credit-check`   | Individual feature/fix     | `epic/…` or `release/…` |
-| `epic/`     | `epic/uth-227-publish-parking-space` | Multi-feature initiative   | `release/…`             |
-| `release/`  | `release/1.7.0`                      | Stabilization for release  | `main`                  |
-| `main`      | —                                    | Current production release | —                       |
-
-### Typical Flow
+### Typical development flow an epic
 
 ```mermaid
 gitGraph
@@ -94,16 +101,53 @@ gitGraph
   commit id: "feature work"
   commit id: "feature done"
   checkout epic/mim-678
-  merge feature/mim-701
+  merge feature/mim-701 id: "PR #x merged ✅"
+  checkout epic/mim-678
+  branch feature/mim-705
+  commit id: "feature 2 work"
+  commit id: "feature 2 done"
+  checkout epic/mim-678
+  merge feature/mim-705 id: "PR #y merged ✅"
+
   checkout release/1.7.0
   merge epic/mim-678
   checkout main
   merge release/1.7.0 tag: "v1.7.0"
 ```
 
+### Summary
+
+| Branch Type | Example                              | Purpose                    | Merges Into             |
+|-------------|--------------------------------------|----------------------------|-------------------------|
+| `feature/`  | `feature/mim-348-add-credit-check`   | Individual feature/fix     | `epic/…` or `release/…` |
+| `epic/`     | `epic/uth-227-publish-parking-space` | Multi-feature initiative   | `release/…`             |
+| `release/`  | `release/1.7.0`                      | Stabilization for release  | `main`                  |
+| `main`      | —                                    | Current production release | —                       |
+
+
 ### Examples
 
+<a name="case-1"></a>
 #### Case: I am starting work on a new epic. What do I do?
+
+```mermaid
+gitGraph
+  commit id: "main"
+  branch release/1.7.0
+  commit id: "prep release"
+  checkout main
+  branch epic/mim-678
+  commit id: "epic start"
+  branch feature/mim-701
+  commit id: "feature work"
+  commit id: "feature done"
+  checkout epic/mim-678
+  merge feature/mim-701 id: "PR merged ✅"
+
+  checkout release/1.7.0
+  merge epic/mim-678
+```
+
 
 1. Create and push a new epic branch from an up-to-date **main**
 
@@ -145,6 +189,20 @@ $ git push -u origin feature/lin-480-some-meaningful-feature-description
 
 #### Case: I am starting work on a new feature that is part of an ongoing epic. What do I do?
 
+```mermaid
+gitGraph
+  branch epic/mim-678
+  commit id: "epic start"
+  commit id: "earlier epic work"
+  branch feature/mim-701
+  commit id: "feature work"
+  commit id: "feature done"
+  checkout epic/mim-678
+  merge feature/mim-701 id: "PR merged ✅"
+
+```
+
+
 1. Create a new feature branch from an up-to-date **epic branch**
 
 ```sh
@@ -170,6 +228,20 @@ $ git push -u origin feature/lin-572-the-best-feature-since-the-last-best-featur
 ---
 
 #### Case: I am starting work on a new feature not related to an epic. What do I do?
+
+```mermaid
+gitGraph
+  commit id: "main"
+  branch release/1.7.0
+  commit id: "prep release"
+  commit id: "main"
+  branch feature/mim-701
+  commit id: "feature work"
+  commit id: "feature done"
+  checkout release/1.7.0
+  merge feature/mim-701 id: "PR merged ✅"
+
+```
 
 1. Create a new feature branch from an up-to-date **main**
 
