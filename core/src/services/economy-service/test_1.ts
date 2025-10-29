@@ -5,7 +5,7 @@ import {
 } from '@onecore/utilities'
 
 import z from 'zod'
-import { Context } from 'koa'
+import { DefaultContext, DefaultState, ParameterizedContext } from 'koa'
 
 export type RouteSpecInput = {
   body?: z.ZodTypeAny
@@ -35,17 +35,78 @@ type ExpectedReturnType<O> = {
   }
 }
 
+type RouteHandlerContext = ParameterizedContext<
+  DefaultState,
+  DefaultContext & KoaRouter.RouterParamContext<DefaultState, DefaultContext>,
+  unknown
+>
+
+type ContextWithParsedInput<I extends RouteSpecInput | undefined> =
+  I extends RouteSpecInput
+    ? RouteHandlerContext & {
+        parsed_input: {
+          [K in keyof I]: I[K] extends z.ZodTypeAny ? z.infer<I[K]> : never
+        }
+      }
+    : RouteHandlerContext & { parsed_input: unknown }
+
+type ParseInputResult<I extends RouteSpecInput> =
+  | {
+      ok: true
+      data: {
+        [K in keyof I]: I[K] extends z.ZodTypeAny ? z.infer<I[K]> : never
+      }
+    }
+  | { ok: false; error: string }
+
+function parseInput<I extends RouteSpecInput>(
+  schemas: I,
+  input: { [K in keyof I]?: unknown }
+): ParseInputResult<I> {
+  const parsed: any = {}
+
+  for (const [key, schema] of Object.entries(schemas)) {
+    const result = schema.safeParse(input[key as keyof I])
+
+    if (!result.success) {
+      return { ok: false, error: result.error.message }
+    }
+
+    parsed[key] = result.data
+  }
+
+  return { ok: true, data: parsed }
+}
+
 export function routeHandler<
-  I extends RouteSpecInput,
+  I extends RouteSpecInput | undefined,
   O extends RouteSpecOutput,
   S extends keyof O & number,
 >(
   spec: { input?: I; output: O },
-  handler: (ctx: Context) => Promise<ExpectedReturnType<O>[S]>
+  handler: (ctx: ContextWithParsedInput<I>) => Promise<ExpectedReturnType<O>[S]>
 ) {
-  return async (ctx: Context) => {
+  return async (ctx: RouteHandlerContext) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await Promise.resolve(handler(ctx))
+
+    if (spec.input) {
+      const parsedInput = parseInput(spec.input, {
+        body: ctx.request.body,
+        query: ctx.request.query,
+        params: ctx.params,
+      })
+
+      if (!parsedInput.ok) {
+        ctx.status = 400
+        ctx.body = { error: parsedInput.error }
+        return
+      }
+
+      ctx.parsed_input = parsedInput.data
+    }
+
+    const result = await handler(ctx as ContextWithParsedInput<I>)
+
     const schema = spec.output[result.status]
     const parsed = schema.safeParse(result.data)
 
@@ -62,6 +123,7 @@ export function routeHandler<
 
 const UserSchema = z.object({ name: z.string() })
 const OneCoreGenericErrorSchema = z.object({ error: z.string() })
+const OneCoreBadParametersErrorSchema = z.object({ error: z.string() })
 
 const route = createRouteSpec({
   name: 'get-user',
@@ -74,7 +136,7 @@ const route = createRouteSpec({
   },
   output: {
     200: UserSchema,
-    400: OneCoreGenericErrorSchema,
+    400: OneCoreBadParametersErrorSchema,
     404: OneCoreGenericErrorSchema,
     500: OneCoreGenericErrorSchema,
   },
@@ -84,8 +146,9 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '/users/:userId',
     routeHandler(route, async (ctx) => {
-      // Enforces a return value that corresponds to one of
-      // the provided output schemas.
+      // 1. Parses the input and attaches it to ctx.parsed_input.
+      // 2. Enforces a return value that corresponds to one of
+      //    the provided output schemas.
       return {
         status: 200,
         data: { name: 'foo' },
