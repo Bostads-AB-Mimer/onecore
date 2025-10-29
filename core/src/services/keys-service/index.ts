@@ -196,9 +196,7 @@ export const routes = (router: KoaRouter) => {
       try {
         const contactResult = await getContactByContactCode(keyLoan.contact)
         if (contactResult.ok && contactResult.data.fullName) {
-          parts.push(
-            `för ${contactResult.data.fullName} (${keyLoan.contact})`
-          )
+          parts.push(`för ${contactResult.data.fullName} (${keyLoan.contact})`)
         } else {
           // Fallback to just contact code if name not found
           parts.push(`för kontakt ${keyLoan.contact}`)
@@ -1478,6 +1476,25 @@ export const routes = (router: KoaRouter) => {
       ? `Kasserad nyckel ${keyDescription}`
       : `Uppdaterad nyckel ${keyDescription}`
 
+    // Fetch active key loan to get contactId
+    let contactId: string | undefined
+    try {
+      const keyLoansResult = await KeyLoansApi.getByKey(result.data.id)
+      if (keyLoansResult.ok) {
+        // Find active loan (not returned)
+        const activeLoan = keyLoansResult.data.find((loan) => !loan.returnedAt)
+        if (activeLoan?.contact) {
+          contactId = activeLoan.contact
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the operation
+      logger.warn(
+        { error, keyId: result.data.id },
+        'Failed to fetch key loan for contactId'
+      )
+    }
+
     await createLogEntry(
       ctx.state.user,
       eventType,
@@ -1486,6 +1503,7 @@ export const routes = (router: KoaRouter) => {
       description,
       {
         rentalObjectCode: result.data.rentalObjectCode,
+        contactId,
       }
     )
 

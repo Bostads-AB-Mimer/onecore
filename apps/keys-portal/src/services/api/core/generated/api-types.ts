@@ -6156,7 +6156,6 @@ export interface components {
       objectId?: string | null;
       description?: string | null;
       rentalObjectCode?: string | null;
-      /** Format: uuid */
       contactId?: string | null;
     };
     CreateKeyNoteRequest: {
