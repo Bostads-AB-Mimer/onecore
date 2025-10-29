@@ -106,7 +106,7 @@ export const LogSchema = z.object({
   description: z.string().nullable().optional(),
   // Context fields for better filtering and grouping
   rentalObjectCode: z.string().nullable().optional(),
-  contactId: z.string().uuid().nullable().optional(),
+  contactId: z.string().nullable().optional(), // Contact code (e.g., P079586, F123456)
   // Key event fields from JOIN (for grouping flex/order/lost operations)
   keyEventId: z.string().uuid().nullable().optional(),
   keyEventType: z.enum(['order', 'flex', 'lost']).nullable().optional(),
