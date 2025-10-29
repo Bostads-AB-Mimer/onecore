@@ -971,6 +971,20 @@ export const KeyLoanMaintenanceKeysApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  getByBundleWithKeys: async (
+    bundleId: string,
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
+    let url = `${BASE}/key-loan-maintenance-keys/by-bundle/${bundleId}/with-keys`
+    if (returned !== undefined) {
+      url += `?returned=${returned}`
+    }
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
+      url
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   get: async (
     id: string
   ): Promise<

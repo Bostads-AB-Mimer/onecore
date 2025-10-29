@@ -152,8 +152,9 @@ export function CreateMaintenanceLoanDialog({
             />
             {selectedKeys.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                {selectedKeys.length} {selectedKeys.length === 1 ? 'nyckel' : 'nycklar'}{' '}
-                vald{selectedKeys.length > 1 ? 'a' : ''}
+                {selectedKeys.length}{' '}
+                {selectedKeys.length === 1 ? 'nyckel' : 'nycklar'} vald
+                {selectedKeys.length > 1 ? 'a' : ''}
               </p>
             )}
           </div>
@@ -167,7 +168,10 @@ export function CreateMaintenanceLoanDialog({
             >
               Avbryt
             </Button>
-            <Button type="submit" disabled={isSubmitting || selectedKeys.length === 0}>
+            <Button
+              type="submit"
+              disabled={isSubmitting || selectedKeys.length === 0}
+            >
               {isSubmitting ? 'Skapar...' : 'Skapa lån'}
             </Button>
           </DialogFooter>
