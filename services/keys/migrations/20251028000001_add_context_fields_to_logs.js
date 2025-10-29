@@ -1,6 +1,6 @@
 /**
  * Migration for adding context fields to 'logs' table and expanding objectType enum.
- * Adds batchId, rentalObjectCode, contactId for better log filtering and grouping.
+ * Adds rentalObjectCode, contactId for better log filtering.
  * Expands objectType enum to include new types without modifying existing data.
  * @param { import('knex').Knex } knex
  * @returns { Promise<void> }
@@ -8,9 +8,6 @@
 exports.up = async function up(knex) {
   // Step 1: Add new context fields with indexes
   await knex.schema.alterTable('logs', (table) => {
-    // Add batch ID for grouping related operations
-    table.uuid('batchId').nullable()
-
     // Add rental object code for property-based filtering
     table.string('rentalObjectCode').nullable()
 
@@ -18,7 +15,6 @@ exports.up = async function up(knex) {
     table.uuid('contactId').nullable()
 
     // Add indexes for new fields to improve query performance
-    table.index(['batchId'])
     table.index(['rentalObjectCode'])
     table.index(['contactId'])
   })
@@ -66,10 +62,8 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   // Remove indexes and new columns
   await knex.schema.alterTable('logs', (table) => {
-    table.dropIndex(['batchId'])
     table.dropIndex(['rentalObjectCode'])
     table.dropIndex(['contactId'])
-    table.dropColumn('batchId')
     table.dropColumn('rentalObjectCode')
     table.dropColumn('contactId')
   })

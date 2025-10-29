@@ -318,16 +318,12 @@ const Index = () => {
     let eventCreated = false
     let eventFailed = false
 
-    // Generate a single batchId for all keys if creating multiple keys
-    const batchId = batch.keys.length > 1 ? crypto.randomUUID() : undefined
-
     try {
       // Create all keys (best effort - continue on individual failures)
       for (const keyData of batch.keys) {
         try {
           const created = await keyService.createKey({
             ...keyData,
-            batchId, // Pass the same batchId to each key for log grouping
           })
           createdKeyIds.push(created.id)
           setKeys((prev) => [...prev, created])

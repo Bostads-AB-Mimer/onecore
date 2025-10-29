@@ -35,7 +35,6 @@ const normalizeLog = (row: any): Log => ({
   objectType: row.objectType,
   objectId: row.objectId ?? null,
   description: row.description ?? null,
-  batchId: row.batchId ?? null,
   rentalObjectCode: row.rentalObjectCode ?? null,
   contactId: row.contactId ?? null,
 })
@@ -144,40 +143,6 @@ export const logService = {
     const { data, error } = await GET('/logs/contact/{contactId}', {
       params: {
         path: { contactId },
-        query: { page, limit },
-      },
-    })
-    if (error) throw error
-
-    const response = data as any
-    const rows = (response?.content ?? []) as any[]
-    const meta = response?._meta ?? {
-      totalRecords: rows.length,
-      page: 1,
-      limit: rows.length,
-      count: rows.length,
-    }
-
-    return {
-      content: rows.map(normalizeLog),
-      _meta: {
-        page: meta.page,
-        limit: meta.limit,
-        totalRecords: meta.totalRecords,
-        count: meta.count,
-      },
-      _links: response?._links ?? [],
-    }
-  },
-
-  async fetchLogsByBatch(
-    batchId: string,
-    page: number = 1,
-    limit: number = 20
-  ): Promise<PaginatedResponse<Log>> {
-    const { data, error } = await GET('/logs/batch/{batchId}', {
-      params: {
-        path: { batchId },
         query: { page, limit },
       },
     })
