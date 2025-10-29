@@ -2,9 +2,10 @@
 import type {
   KeyLoanMaintenanceKeys,
   KeyLoanMaintenanceKeysWithDetails,
+  CreateKeyLoanMaintenanceKeysRequest,
 } from '@/services/types'
 
-import { GET } from './core/base-api'
+import { GET, POST } from './core/base-api'
 
 export const maintenanceKeysService = {
   /**
@@ -34,8 +35,21 @@ export const maintenanceKeysService = {
    * Get maintenance key loan by ID (without keys)
    */
   async get(id: string): Promise<KeyLoanMaintenanceKeys> {
-    const { data, error } = await GET('/key-loan-maintenance-keys/{id}', {
+    const { data, error} = await GET('/key-loan-maintenance-keys/{id}', {
       params: { path: { id } },
+    })
+    if (error) throw error
+    return data?.content as KeyLoanMaintenanceKeys
+  },
+
+  /**
+   * Create a new maintenance key loan
+   */
+  async create(
+    payload: CreateKeyLoanMaintenanceKeysRequest
+  ): Promise<KeyLoanMaintenanceKeys> {
+    const { data, error } = await POST('/key-loan-maintenance-keys', {
+      body: payload,
     })
     if (error) throw error
     return data?.content as KeyLoanMaintenanceKeys
