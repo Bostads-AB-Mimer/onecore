@@ -1,5 +1,5 @@
 import { Box, Button, Typography } from '@mui/material'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GetListingWithApplicantFilterByType, Listing } from '@onecore/types'
 import { Link, useSearchParams } from 'react-router-dom'
 import { TabContext, TabPanel } from '@mui/lab'
@@ -37,11 +37,20 @@ const ParkingSpaces = () => {
     setSearchParams({ type: tab })
   }
 
+  const handleUnpublished = () => {
+    parkingSpaces.refetch?.()
+  }
+
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'currency',
     currency: 'SEK',
   })
+
+  useEffect(() => {
+    parkingSpaces.refetch?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>
@@ -86,7 +95,7 @@ const ParkingSpaces = () => {
           <TabPanel value="published" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(handleUnpublished)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -96,7 +105,7 @@ const ParkingSpaces = () => {
           <TabPanel value="ready-for-offer" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(handleUnpublished)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -106,7 +115,7 @@ const ParkingSpaces = () => {
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
               columns={getOfferedColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(handleUnpublished)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -116,7 +125,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(handleUnpublished)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}

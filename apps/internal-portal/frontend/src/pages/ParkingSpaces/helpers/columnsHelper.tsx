@@ -13,7 +13,6 @@ import {
 import { Link } from 'react-router-dom'
 import { IconButton } from '@mui/material'
 import Chevron from '@mui/icons-material/ChevronRight'
-import { CloseListing } from '../components/CloseListing'
 import currency from 'currency.js'
 
 export const sharedColumnProps = {
@@ -118,7 +117,9 @@ export const getColumns = (
   ]
 }
 
-export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
+export const getActionColumns = (
+  onUnpublished?: () => void
+): Array<GridColDef<ListingWithOffer>> => {
   return [
     {
       field: 'actions',
@@ -132,7 +133,11 @@ export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
           row.status === ListingStatus.Expired
         ) {
           return [
-            <UnpublishListing key={1} listingId={row.id} />,
+            <UnpublishListing
+              key={1}
+              listingId={row.id}
+              onUnpublished={onUnpublished}
+            />,
             <CreateApplicantForListing
               key={1}
               disabled={
