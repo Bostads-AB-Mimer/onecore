@@ -1,23 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X, ChevronDown, ChevronUp, Plus } from 'lucide-react'
-import { useContactCodeSearch } from '@/components/maintenance/ContactCodeSearch'
-import { ContactAutocomplete } from '@/components/maintenance/ContactAutocomplete'
+import { UnifiedMaintenanceSearch } from '@/components/maintenance/UnifiedMaintenanceSearch'
+import {
+  useUnifiedMaintenanceSearch,
+  type SearchResult,
+} from '@/components/maintenance/UnifiedMaintenanceSearchHook'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
 import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type {
-  Contact,
-  KeyLoanMaintenanceKeysWithDetails,
-} from '@/services/types'
+import { Badge } from '@/components/ui/badge'
+import type { KeyLoanMaintenanceKeysWithDetails } from '@/services/types'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
 import { useToast } from '@/hooks/use-toast'
 
 export default function MaintenanceKeys() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
   const [activeLoans, setActiveLoans] = useState<
     KeyLoanMaintenanceKeysWithDetails[]
   >([])
@@ -39,17 +40,21 @@ export default function MaintenanceKeys() {
       100
     )
 
-  const handleResultFound = (contact: Contact | null, searchValue: string) => {
-    setSelectedContact(contact)
+  const handleResultFound = (result: SearchResult, searchValue: string) => {
+    setSearchResult(result)
 
-    // Update URL params
-    setSearchParams({ contact: searchValue })
+    // Update URL params based on search type
+    if (result.type === 'contact') {
+      setSearchParams({ contact: searchValue })
+    } else {
+      setSearchParams({ bundle: searchValue })
+    }
 
     scrollToResults()
   }
 
   const handleClearSearch = () => {
-    setSelectedContact(null)
+    setSearchResult(null)
     setActiveLoans([])
     setReturnedLoans([])
     setHasLoadedActive(false)
@@ -57,19 +62,29 @@ export default function MaintenanceKeys() {
     setSearchParams({})
   }
 
-  // Fetch active loans when the section is opened (default open, so fetches immediately)
+  // Fetch active loans when the section is opened
   useEffect(() => {
-    if (!selectedContact || !activeLoansOpen) {
+    if (!searchResult || !activeLoansOpen) {
       return
     }
 
     const fetchActiveLoans = async () => {
       setLoansLoading(true)
       try {
-        const active = await maintenanceKeysService.getByCompanyWithKeys(
-          selectedContact.contactCode,
-          false
-        )
+        let active: KeyLoanMaintenanceKeysWithDetails[] = []
+
+        if (searchResult.type === 'contact' && searchResult.contact) {
+          active = await maintenanceKeysService.getByCompanyWithKeys(
+            searchResult.contact.contactCode,
+            false
+          )
+        } else if (searchResult.type === 'bundle' && searchResult.bundleId) {
+          active = await maintenanceKeysService.getByBundleWithKeys(
+            searchResult.bundleId,
+            false
+          )
+        }
+
         setActiveLoans(active)
         setHasLoadedActive(true)
       } catch (error) {
@@ -85,20 +100,30 @@ export default function MaintenanceKeys() {
     }
 
     fetchActiveLoans()
-  }, [selectedContact, activeLoansOpen, toast])
+  }, [searchResult, activeLoansOpen, toast])
 
   // Fetch returned loans when the section is opened
   useEffect(() => {
-    if (!selectedContact || !returnedLoansOpen) {
+    if (!searchResult || !returnedLoansOpen) {
       return
     }
 
     const fetchReturnedLoans = async () => {
       try {
-        const returned = await maintenanceKeysService.getByCompanyWithKeys(
-          selectedContact.contactCode,
-          true
-        )
+        let returned: KeyLoanMaintenanceKeysWithDetails[] = []
+
+        if (searchResult.type === 'contact' && searchResult.contact) {
+          returned = await maintenanceKeysService.getByCompanyWithKeys(
+            searchResult.contact.contactCode,
+            true
+          )
+        } else if (searchResult.type === 'bundle' && searchResult.bundleId) {
+          returned = await maintenanceKeysService.getByBundleWithKeys(
+            searchResult.bundleId,
+            true
+          )
+        }
+
         setReturnedLoans(returned)
         setHasLoadedReturned(true)
       } catch (error) {
@@ -112,33 +137,40 @@ export default function MaintenanceKeys() {
     }
 
     fetchReturnedLoans()
-  }, [selectedContact, returnedLoansOpen, toast])
+  }, [searchResult, returnedLoansOpen, toast])
 
-  const { handleContactSelect, loading } = useContactCodeSearch({
-    onResultFound: handleResultFound,
-  })
+  const { handleSelectContact, handleSelectBundle, loading } =
+    useUnifiedMaintenanceSearch({
+      onResultFound: handleResultFound,
+    })
 
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="max-w-2xl mx-auto">
-        <ContactAutocomplete onSelect={handleContactSelect} loading={loading} />
+        <UnifiedMaintenanceSearch
+          onSelectContact={handleSelectContact}
+          onSelectBundle={handleSelectBundle}
+          loading={loading}
+        />
       </div>
 
-      {/* Show results when contact is found */}
-      {selectedContact && (
+      {/* Show results when search is performed */}
+      {searchResult && (
         <div ref={resultsRef} className="border-t pt-8">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-tight">Sökresultat</h2>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nytt lån
-                </Button>
+                {searchResult.type === 'contact' && searchResult.contact && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setCreateDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nytt lån
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={handleClearSearch}>
                   <X className="h-4 w-4 mr-2" />
                   Rensa sökning
@@ -146,9 +178,21 @@ export default function MaintenanceKeys() {
               </div>
             </div>
 
-            {/* Contact Information */}
+            {/* Search Result Info */}
             <div className="max-w-2xl">
-              <ContactInfoCard contacts={[selectedContact]} />
+              {searchResult.type === 'contact' && searchResult.contact && (
+                <ContactInfoCard contacts={[searchResult.contact]} />
+              )}
+              {searchResult.type === 'bundle' && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>{searchResult.bundleName}</CardTitle>
+                      <Badge variant="outline">Nyckelsamling</Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
             </div>
 
             {/* Loading State */}
@@ -243,7 +287,9 @@ export default function MaintenanceKeys() {
                     <Card>
                       <CardContent className="pt-6">
                         <p className="text-muted-foreground text-center">
-                          Inga lån hittades för detta företag.
+                          {searchResult.type === 'contact'
+                            ? 'Inga lån hittades för detta företag.'
+                            : 'Inga lån hittades för denna nyckelsamling.'}
                         </p>
                       </CardContent>
                     </Card>
@@ -254,13 +300,15 @@ export default function MaintenanceKeys() {
         </div>
       )}
 
-      {/* Create Loan Dialog */}
-      {selectedContact && (
+      {/* Create Loan Dialog - only for contact searches */}
+      {searchResult?.type === 'contact' && searchResult.contact && (
         <CreateMaintenanceLoanDialog
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
-          companyContactCode={selectedContact.contactCode}
-          companyName={selectedContact.fullName || selectedContact.contactCode}
+          companyContactCode={searchResult.contact.contactCode}
+          companyName={
+            searchResult.contact.fullName || searchResult.contact.contactCode
+          }
           onSuccess={() => {
             // Refresh active loans after creating a new one
             setHasLoadedActive(false)
