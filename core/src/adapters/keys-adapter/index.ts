@@ -22,6 +22,8 @@ type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
+type KeyLoanMaintenanceKeysWithDetails =
+  keys.v1.KeyLoanMaintenanceKeysWithDetails
 
 const BASE = Config.keysService.url
 
@@ -915,6 +917,20 @@ export const KeyLoanMaintenanceKeysApi = {
   ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
     const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
       `${BASE}/key-loan-maintenance-keys/by-company/${company}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByCompanyWithKeys: async (
+    company: string,
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
+    let url = `${BASE}/key-loan-maintenance-keys/by-company/${company}/with-keys`
+    if (returned !== undefined) {
+      url += `?returned=${returned}`
+    }
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
+      url
     )
     return r.ok ? ok(r.data.content) : r
   },

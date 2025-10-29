@@ -22,7 +22,19 @@ export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
     _links: z.array(PaginationLinksSchema),
   })
 
-export const KeyTypeSchema = z.enum(['HN', 'FS', 'MV', 'LGH', 'PB', 'GAR', 'LOK', 'HL', 'FÖR', 'SOP', 'ÖVR'])
+export const KeyTypeSchema = z.enum([
+  'HN',
+  'FS',
+  'MV',
+  'LGH',
+  'PB',
+  'GAR',
+  'LOK',
+  'HL',
+  'FÖR',
+  'SOP',
+  'ÖVR',
+])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
   'ELECTRONIC',
@@ -111,6 +123,13 @@ export const KeyLoanMaintenanceKeysSchema = z.object({
   returnedAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
 })
+
+// Key loan maintenance keys with enriched keys data (for optimized endpoint)
+export const KeyLoanMaintenanceKeysWithDetailsSchema =
+  KeyLoanMaintenanceKeysSchema.extend({
+    // Array of full key objects instead of just IDs
+    keysArray: z.array(KeySchema),
+  })
 
 // Key Event schemas
 export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])

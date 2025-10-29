@@ -5162,6 +5162,44 @@ export interface paths {
       };
     };
   };
+  "/key-loan-maintenance-keys/by-company/{company}/with-keys": {
+    /**
+     * Get maintenance key loans for a company with full key details
+     * @description Returns all maintenance key loan records for the specified company with joined key data.
+     * Supports filtering by returned status via query parameter.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The company name to filter by */
+          company: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-loan-maintenance-keys/{id}": {
     /**
      * Get maintenance key loan by ID

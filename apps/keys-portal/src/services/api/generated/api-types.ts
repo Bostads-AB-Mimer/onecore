@@ -523,6 +523,44 @@ export interface paths {
       };
     };
   };
+  "/key-loan-maintenance-keys/by-company/{company}/with-keys": {
+    /**
+     * Get maintenance key loans for a company with full key details
+     * @description Returns all maintenance key loan records for the specified company with joined key data.
+     * Supports filtering by returned status via query parameter.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The company name to filter by */
+          company: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-loan-maintenance-keys/{id}": {
     /**
      * Get maintenance key loan by ID
@@ -2388,6 +2426,34 @@ export interface components {
     CreateKeyLoanMaintenanceKeysRequest: components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
     UpdateKeyLoanMaintenanceKeysRequest: components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
     KeyLoanMaintenanceKeys: components["schemas"]["KeyLoanMaintenanceKeys"];
+    KeyLoanMaintenanceKeysWithDetails: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      company?: string | null;
+      contactPerson?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      description?: string | null;
+      keysArray: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+    };
     Signature: {
       /** Format: uuid */
       id: string;
