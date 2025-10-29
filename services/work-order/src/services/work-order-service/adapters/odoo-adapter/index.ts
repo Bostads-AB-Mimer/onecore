@@ -204,7 +204,6 @@ const createRentalPropertyRecord = async (
       entrance: apartmentProperty.entrance,
       floor: apartmentProperty.floor,
       has_elevator: apartmentProperty.hasElevator ? 'Ja' : 'Nej',
-      wash_space: apartmentProperty.washSpace,
       estate_code: apartmentProperty.estateCode,
       estate: apartmentProperty.estate,
       building_code: apartmentProperty.buildingCode,
