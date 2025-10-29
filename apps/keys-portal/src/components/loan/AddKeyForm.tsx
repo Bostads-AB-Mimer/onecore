@@ -270,7 +270,9 @@ export function AddKeyForm({
       const createdKeyIds: string[] = []
       let createdCount = 0
       for (const keyPayload of keysToCreate) {
-        const created = await keyService.createKey(keyPayload)
+        const created = await keyService.createKey({
+          ...keyPayload,
+        })
         createdKeyIds.push(created.id)
         onKeyCreated(created)
         createdCount++

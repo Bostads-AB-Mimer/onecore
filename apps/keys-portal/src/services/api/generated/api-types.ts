@@ -1892,6 +1892,74 @@ export interface paths {
       };
     };
   };
+  "/logs/rental-object/{rentalObjectCode}": {
+    /**
+     * Get all logs for a specific rental object
+     * @description Returns all log entries for a given rental object code, ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+        path: {
+          /** @description The rental object code (e.g., apartment code) */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the rental object */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/contact/{contactId}": {
+    /**
+     * Get all logs for a specific contact
+     * @description Returns all log entries for a given contact code, ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+        path: {
+          /** @description The contact code (e.g., P079586, F123456) */
+          contactId: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the contact */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/receipts": {
     /** Create a receipt */
     post: {

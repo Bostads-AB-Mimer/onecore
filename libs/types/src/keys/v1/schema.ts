@@ -22,7 +22,19 @@ export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
     _links: z.array(PaginationLinksSchema),
   })
 
-export const KeyTypeSchema = z.enum(['HN', 'FS', 'MV', 'LGH', 'PB', 'GAR', 'LOK', 'HL', 'FÖR', 'SOP', 'ÖVR'])
+export const KeyTypeSchema = z.enum([
+  'HN',
+  'FS',
+  'MV',
+  'LGH',
+  'PB',
+  'GAR',
+  'LOK',
+  'HL',
+  'FÖR',
+  'SOP',
+  'ÖVR',
+])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
   'ELECTRONIC',
@@ -84,10 +96,25 @@ export const LogSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
+  // Context fields for better filtering and grouping
+  rentalObjectCode: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(), // Contact code (e.g., P079586, F123456)
+  // Key event fields from JOIN (for grouping flex/order/lost operations)
+  keyEventId: z.string().uuid().nullable().optional(),
+  keyEventType: z.enum(['order', 'flex', 'lost']).nullable().optional(),
+  keyEventStatus: z
+    .enum(['ordered', 'received', 'cancelled'])
+    .nullable()
+    .optional(),
+  keyEventWorkOrderId: z.string().nullable().optional(),
 })
 
 export const KeyNoteSchema = z.object({
@@ -203,9 +230,15 @@ export const CreateLogRequestSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(),
 })
 
 // Receipt schemas

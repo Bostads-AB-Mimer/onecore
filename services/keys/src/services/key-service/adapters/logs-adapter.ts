@@ -96,3 +96,63 @@ export function getLogsSearchQuery(db: Knex) {
     .whereNotNull('objectId')
     .orderBy('eventTime', 'desc')
 }
+
+/**
+ * Get all logs for a specific rental object code.
+ *
+ * @param rentalObjectCode - The rental object code to filter by
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getLogsByRentalObjectCodeQuery(
+  rentalObjectCode: string,
+  db: Knex
+) {
+  return db(TABLE).where({ rentalObjectCode }).orderBy('eventTime', 'desc')
+}
+
+/**
+ * Get all logs for a specific contact ID.
+ *
+ * @param contactId - The contact ID to filter by
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getLogsByContactIdQuery(contactId: string, db: Knex) {
+  return db(TABLE).where({ contactId }).orderBy('eventTime', 'desc')
+}
+
+/**
+ * Get all logs with key_events joined for grouping flex/order/lost operations.
+ * Returns ALL logs chronologically (no filtering by objectId).
+ * Use this for Activity Log page to show complete event history.
+ *
+ * @param db - Knex instance or transaction
+ * @returns Query builder for pagination
+ */
+export function getAllLogsWithKeyEventsQuery(db: Knex) {
+  const logsWithEvents = db
+    .raw(
+      `
+    SELECT
+      logs.*,
+      -- Join with key_events to group flex/order/lost operations
+      key_events.id as keyEventId,
+      key_events.type as keyEventType,
+      key_events.status as keyEventStatus,
+      key_events.workOrderId as keyEventWorkOrderId
+    FROM logs
+    OUTER APPLY (
+      SELECT TOP 1 id, type, status, workOrderId
+      FROM key_events ke
+      WHERE
+        logs.objectType = 'key'
+        AND ke.keys LIKE '%"' + CAST(logs.objectId AS NVARCHAR(36)) + '"%'
+      ORDER BY ke.createdAt DESC
+    ) key_events
+  `
+    )
+    .wrap('(', ') as logs_with_events')
+
+  return db.from(logsWithEvents).select('*').orderBy('eventTime', 'desc')
+}

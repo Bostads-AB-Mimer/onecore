@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { logService } from '@/services/api/logService'
 import { LogFilters } from '@/components/log/LogFilters'
 import { LogEventCard } from '@/components/log/LogEventCard'
+import { BatchLogCard } from '@/components/log/BatchLogCard'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import type { LogEventType, LogObjectType, Log } from '@/services/types'
@@ -127,6 +128,52 @@ export default function ActivityLog() {
     [updateUrlParams]
   )
 
+  // Group logs by keyEventId (for flex/order/lost operations)
+  // Logs without keyEventId are displayed individually
+  // Use time window to prevent different operations from being grouped together
+  const groupedLogs = useMemo(() => {
+    const groups: { type: 'batch' | 'individual'; logs: Log[] }[] = []
+    const processedIds = new Set<string>()
+    const TIME_WINDOW_MS = 5000 // 5 seconds - operations within this window are considered a batch
+
+    for (const log of logs) {
+      // Skip if already processed
+      if (processedIds.has(log.id)) continue
+
+      // If log has keyEventId, group logs with same keyEventId AND within time window
+      if (log.keyEventId) {
+        const batchLogs = logs.filter((l) => {
+          if (processedIds.has(l.id)) return false
+          if (l.keyEventId !== log.keyEventId) return false
+
+          // Calculate time difference between log events
+          const timeDiff = Math.abs(
+            new Date(l.eventTime).getTime() - new Date(log.eventTime).getTime()
+          )
+
+          // Only group if within time window
+          return timeDiff <= TIME_WINDOW_MS
+        })
+
+        // Mark all logs in this batch as processed
+        batchLogs.forEach((l) => processedIds.add(l.id))
+
+        // Only create a batch if there are multiple logs
+        if (batchLogs.length > 1) {
+          groups.push({ type: 'batch', logs: batchLogs })
+        } else {
+          groups.push({ type: 'individual', logs: [log] })
+        }
+      } else {
+        // Individual log without keyEventId
+        processedIds.add(log.id)
+        groups.push({ type: 'individual', logs: [log] })
+      }
+    }
+
+    return groups
+  }, [logs])
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -159,16 +206,23 @@ export default function ActivityLog() {
               <div className="text-center py-12 text-muted-foreground">
                 Laddar händelser...
               </div>
-            ) : logs.length === 0 ? (
+            ) : groupedLogs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 Inga händelser hittades
               </div>
             ) : (
               <>
                 <div className="space-y-4">
-                  {logs.map((log) => (
-                    <LogEventCard key={log.id} log={log} />
-                  ))}
+                  {groupedLogs.map((item, index) =>
+                    item.type === 'batch' ? (
+                      <BatchLogCard
+                        key={`batch-${item.logs[0].keyEventId}-${index}`}
+                        logs={item.logs}
+                      />
+                    ) : (
+                      <LogEventCard key={item.logs[0].id} log={item.logs[0]} />
+                    )
+                  )}
                 </div>
 
                 <PaginationControls
