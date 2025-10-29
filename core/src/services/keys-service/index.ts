@@ -26,6 +26,7 @@ const {
   KeyNoteSchema,
   KeyBundleSchema,
   KeyLoanMaintenanceKeysSchema,
+  KeyLoanMaintenanceKeysWithDetailsSchema,
   ReceiptSchema,
   KeyEventSchema,
   SignatureSchema,
@@ -116,6 +117,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyBundleRequest', CreateKeyBundleRequestSchema)
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
   registerSchema('KeyLoanMaintenanceKeys', KeyLoanMaintenanceKeysSchema)
+  registerSchema(
+    'KeyLoanMaintenanceKeysWithDetails',
+    KeyLoanMaintenanceKeysWithDetailsSchema
+  )
   registerSchema(
     'CreateKeyLoanMaintenanceKeysRequest',
     CreateKeyLoanMaintenanceKeysRequestSchema

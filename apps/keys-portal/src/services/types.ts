@@ -14,6 +14,10 @@ export type KeyWithLoanStatus = components['schemas']['KeyWithLoanStatus']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
+export type KeyLoanMaintenanceKeys =
+  components['schemas']['KeyLoanMaintenanceKeys']
+export type KeyLoanMaintenanceKeysWithDetails =
+  components['schemas']['KeyLoanMaintenanceKeysWithDetails']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']

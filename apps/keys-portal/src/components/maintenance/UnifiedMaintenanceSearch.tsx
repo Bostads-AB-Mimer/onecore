@@ -21,7 +21,7 @@ type SearchResult =
 
 interface UnifiedMaintenanceSearchProps {
   onSelectContact: (contactCode: string) => void
-  onSelectBundle: (bundleId: string, bundleName: string) => void
+  onSelectBundle: (bundle: KeyBundle) => void
   loading?: boolean
 }
 
@@ -51,9 +51,9 @@ export function UnifiedMaintenanceSearch({
     updateDebouncedQuery(searchValue.trim())
   }, [searchValue, updateDebouncedQuery])
 
-  // Search contacts
+  // Search contacts - only companies (F-codes) by passing contactType parameter
   const contactsQuery = useSearch(
-    (query: string) => searchContacts(query),
+    (query: string) => searchContacts(query, 'company'),
     'search-contacts-maintenance',
     debouncedQuery,
     { minLength: 3 }
@@ -71,14 +71,9 @@ export function UnifiedMaintenanceSearch({
   const bundles = bundlesQuery.data || []
   const isSearching = contactsQuery.isFetching || bundlesQuery.isFetching
 
-  // Filter out contacts that start with 'P' (only show companies with F-codes)
-  const filteredContacts = contacts.filter((c) =>
-    c.contactCode?.toUpperCase().startsWith('F')
-  )
-
-  // Combine results with type tags
+  // Combine results with type tags (no frontend filtering needed - backend handles it)
   const allResults: SearchResult[] = [
-    ...filteredContacts.map((c) => ({ type: 'contact' as const, data: c })),
+    ...contacts.map((c) => ({ type: 'contact' as const, data: c })),
     ...bundles.map((b) => ({ type: 'bundle' as const, data: b })),
   ]
 
@@ -121,7 +116,7 @@ export function UnifiedMaintenanceSearch({
       if (result.type === 'contact') {
         onSelectContact(result.data.contactCode)
       } else {
-        onSelectBundle(result.data.id, result.data.name)
+        onSelectBundle(result.data)
       }
     },
     [onSelectContact, onSelectBundle]
