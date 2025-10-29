@@ -5107,6 +5107,82 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loan-maintenance-keys/by-company/{company}/with-keys:
+   *   get:
+   *     summary: Get maintenance key loans for a company with full key details
+   *     description: |
+   *       Returns all maintenance key loan records for the specified company with joined key data.
+   *       Supports filtering by returned status via query parameter.
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: company
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The company name to filter by
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
+   *     responses:
+   *       200:
+   *         description: Array of loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeysWithDetails'
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/key-loan-maintenance-keys/by-company/:company/with-keys',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['returned'])
+
+      const returnedParam = ctx.query.returned
+      let returned: boolean | undefined = undefined
+      if (returnedParam === 'true') {
+        returned = true
+      } else if (returnedParam === 'false') {
+        returned = false
+      }
+
+      const result = await KeyLoanMaintenanceKeysApi.getByCompanyWithKeys(
+        ctx.params.company,
+        returned
+      )
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching maintenance key loans with keys by company'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
    * /key-loan-maintenance-keys/{id}:
    *   get:
    *     summary: Get maintenance key loan by ID

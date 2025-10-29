@@ -3,12 +3,15 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
+type KeyLoanMaintenanceKeysWithDetails =
+  keys.v1.KeyLoanMaintenanceKeysWithDetails
 type CreateKeyLoanMaintenanceKeysRequest =
   keys.v1.CreateKeyLoanMaintenanceKeysRequest
 type UpdateKeyLoanMaintenanceKeysRequest =
   keys.v1.UpdateKeyLoanMaintenanceKeysRequest
 
 const TABLE = 'key_loan_maintenance_keys'
+const KEYS_TABLE = 'keys'
 
 /**
  * Database adapter functions for key loan maintenance keys.
@@ -80,4 +83,54 @@ export function getKeyLoanMaintenanceKeysSearchQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
   return dbConnection(TABLE).select('*')
+}
+
+/**
+ * Get maintenance key loans by company with full key details
+ * @param company - The company name to filter by
+ * @param returned - Optional filter: true = only returned loans, false = only active loans, undefined = all loans
+ * @param dbConnection - Database connection
+ * @returns Array of loans with keysArray containing full key objects
+ */
+export async function getKeyLoanMaintenanceKeysWithKeysByCompany(
+  company: string,
+  returned: boolean | undefined,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoanMaintenanceKeysWithDetails[]> {
+  // Build base query with optional returnedAt filter
+  let query = dbConnection(TABLE).where({ company })
+
+  if (returned === true) {
+    query = query.whereNotNull('returnedAt')
+  } else if (returned === false) {
+    query = query.whereNull('returnedAt')
+  }
+
+  const loans = await query.orderBy('id', 'desc')
+
+  // For each loan, parse the keys JSON and fetch full key details
+  const loansWithKeys = await Promise.all(
+    loans.map(async (loan) => {
+      let keyIds: string[] = []
+      try {
+        keyIds = JSON.parse(loan.keys)
+      } catch (e) {
+        // If parsing fails, return empty array
+        keyIds = []
+      }
+
+      // Fetch all keys for this loan
+      const keysArray =
+        keyIds.length > 0
+          ? await dbConnection(KEYS_TABLE).whereIn('id', keyIds).select('*')
+          : []
+
+      return {
+        ...loan,
+        keysArray,
+      } as KeyLoanMaintenanceKeysWithDetails
+    })
+  )
+
+  return loansWithKeys
 }
