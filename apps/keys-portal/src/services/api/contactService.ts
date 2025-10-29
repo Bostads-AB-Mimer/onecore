@@ -26,8 +26,13 @@ export async function fetchContactByContactCode(
 /**
  * Search contacts by query string (name, contact code, or national registration number).
  * Returns array of contact suggestions with basic info.
+ * @param query - Search query string
+ * @param contactType - Optional filter: 'company' for F-codes, 'person' for P-codes
  */
-export async function searchContacts(query: string): Promise<
+export async function searchContacts(
+  query: string,
+  contactType?: 'company' | 'person'
+): Promise<
   Array<{
     contactCode: string
     fullName: string
@@ -37,7 +42,12 @@ export async function searchContacts(query: string): Promise<
   if (!query.trim()) return []
 
   const { data, error } = await GET('/contacts/search', {
-    params: { query: { q: query.trim() } },
+    params: {
+      query: {
+        q: query.trim(),
+        ...(contactType && { contactType }),
+      },
+    },
   })
 
   if (error || !data) return []
