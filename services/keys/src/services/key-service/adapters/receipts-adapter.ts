@@ -140,7 +140,7 @@ export async function completeKeyEventsForKeys(
 
   // Use junction table to update all events in a single query
   await dbConnection('key_events')
-    .whereIn('id', function() {
+    .whereIn('id', function () {
       this.select('keyEventId')
         .from('key_event_items')
         .whereIn('keyId', keyIds)

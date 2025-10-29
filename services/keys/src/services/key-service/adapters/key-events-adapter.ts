@@ -126,7 +126,7 @@ export async function checkIncompleteKeyEvents(
     .whereIn('key_event_items.keyId', keyIds)
     .whereNot('key_events.status', 'COMPLETED')
 
-  const conflictingKeys = conflicts.map(row => row.keyId)
+  const conflictingKeys = conflicts.map((row) => row.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,

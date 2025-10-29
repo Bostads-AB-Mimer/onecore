@@ -21,20 +21,18 @@ export async function syncKeyLoanItems(
   dbConnection: Knex | Knex.Transaction
 ): Promise<void> {
   // Delete existing items for this loan
-  await dbConnection('key_loan_items')
-    .where({ keyLoanId })
-    .del()
+  await dbConnection('key_loan_items').where({ keyLoanId }).del()
 
   // Remove duplicates using Set (handles data quality issues)
   const uniqueKeyIds = [...new Set(keyIds)]
 
   // Insert new items if any keys exist
   if (uniqueKeyIds.length > 0) {
-    const items = uniqueKeyIds.map(keyId => ({
+    const items = uniqueKeyIds.map((keyId) => ({
       id: dbConnection.raw('NEWID()'),
       keyLoanId,
       keyId,
-      createdAt: dbConnection.fn.now()
+      createdAt: dbConnection.fn.now(),
     }))
 
     await dbConnection('key_loan_items').insert(items)
@@ -56,20 +54,18 @@ export async function syncKeyEventItems(
   dbConnection: Knex | Knex.Transaction
 ): Promise<void> {
   // Delete existing items for this event
-  await dbConnection('key_event_items')
-    .where({ keyEventId })
-    .del()
+  await dbConnection('key_event_items').where({ keyEventId }).del()
 
   // Remove duplicates using Set (handles data quality issues)
   const uniqueKeyIds = [...new Set(keyIds)]
 
   // Insert new items if any keys exist
   if (uniqueKeyIds.length > 0) {
-    const items = uniqueKeyIds.map(keyId => ({
+    const items = uniqueKeyIds.map((keyId) => ({
       id: dbConnection.raw('NEWID()'),
       keyEventId,
       keyId,
-      createdAt: dbConnection.fn.now()
+      createdAt: dbConnection.fn.now(),
     }))
 
     await dbConnection('key_event_items').insert(items)

@@ -111,7 +111,7 @@ export async function checkActiveKeyLoans(
   }
 
   const conflicts = await query
-  const conflictingKeys = conflicts.map(row => row.keyId)
+  const conflictingKeys = conflicts.map((row) => row.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,
