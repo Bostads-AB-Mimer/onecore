@@ -128,57 +128,39 @@ export default function ActivityLog() {
     [updateUrlParams]
   )
 
-  // Group logs by batchId for display
+  // Group logs by keyEventId (for flex/order/lost operations)
+  // Logs without keyEventId are displayed individually
   const groupedLogs = useMemo(() => {
-    const batchGroups = new Map<string, Log[]>()
-    const individualLogs: Log[] = []
+    const groups: { type: 'batch' | 'individual'; logs: Log[] }[] = []
+    const processedIds = new Set<string>()
 
-    // Separate logs into batches and individual logs
     for (const log of logs) {
-      if (log.batchId) {
-        const existing = batchGroups.get(log.batchId)
-        if (existing) {
-          existing.push(log)
+      // Skip if already processed
+      if (processedIds.has(log.id)) continue
+
+      // If log has keyEventId, group all logs with same keyEventId
+      if (log.keyEventId) {
+        const batchLogs = logs.filter(
+          (l) => l.keyEventId === log.keyEventId && !processedIds.has(l.id)
+        )
+
+        // Mark all logs in this batch as processed
+        batchLogs.forEach((l) => processedIds.add(l.id))
+
+        // Only create a batch if there are multiple logs
+        if (batchLogs.length > 1) {
+          groups.push({ type: 'batch', logs: batchLogs })
         } else {
-          batchGroups.set(log.batchId, [log])
+          groups.push({ type: 'individual', logs: [log] })
         }
       } else {
-        individualLogs.push(log)
+        // Individual log without keyEventId
+        processedIds.add(log.id)
+        groups.push({ type: 'individual', logs: [log] })
       }
     }
 
-    // Create display items: batches (if multiple logs) or individual logs
-    const displayItems: Array<{ type: 'batch' | 'individual'; logs: Log[] }> =
-      []
-
-    // Add batches (only group if 2+ logs share the same batchId)
-    for (const [batchId, batchLogs] of batchGroups.entries()) {
-      if (batchLogs.length > 1) {
-        // Sort by eventTime (newest first within batch)
-        batchLogs.sort(
-          (a, b) =>
-            new Date(b.eventTime).getTime() - new Date(a.eventTime).getTime()
-        )
-        displayItems.push({ type: 'batch', logs: batchLogs })
-      } else {
-        // Single log with batchId - treat as individual
-        displayItems.push({ type: 'individual', logs: batchLogs })
-      }
-    }
-
-    // Add individual logs (no batchId)
-    for (const log of individualLogs) {
-      displayItems.push({ type: 'individual', logs: [log] })
-    }
-
-    // Sort all display items by the first log's eventTime (to maintain chronological order)
-    displayItems.sort(
-      (a, b) =>
-        new Date(b.logs[0].eventTime).getTime() -
-        new Date(a.logs[0].eventTime).getTime()
-    )
-
-    return displayItems
+    return groups
   }, [logs])
 
   return (
@@ -223,7 +205,7 @@ export default function ActivityLog() {
                   {groupedLogs.map((item, index) =>
                     item.type === 'batch' ? (
                       <BatchLogCard
-                        key={`batch-${item.logs[0].batchId}-${index}`}
+                        key={`batch-${item.logs[0].keyEventId}-${index}`}
                         logs={item.logs}
                       />
                     ) : (

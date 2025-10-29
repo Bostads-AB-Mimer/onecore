@@ -93,11 +93,6 @@ export function LogEventCard({ log }: { log: Log }) {
                     Kontakt-ID: {log.contactId}
                   </p>
                 )}
-                {log.batchId && (
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Batch-ID: {log.batchId}
-                  </p>
-                )}
               </div>
 
               {log.objectId && (
@@ -165,11 +160,6 @@ export function LogEventCard({ log }: { log: Log }) {
                       {eventLog.contactId && (
                         <p className="text-xs text-muted-foreground font-mono">
                           Kontakt-ID: {eventLog.contactId}
-                        </p>
-                      )}
-                      {eventLog.batchId && (
-                        <p className="text-xs text-muted-foreground font-mono">
-                          Batch-ID: {eventLog.batchId}
                         </p>
                       )}
                     </div>

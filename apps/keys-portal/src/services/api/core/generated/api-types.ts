@@ -3933,40 +3933,6 @@ export interface paths {
       };
     };
   };
-  "/logs/batch/{batchId}": {
-    /**
-     * Get all logs for a specific batch operation
-     * @description Returns all log entries for a given batch ID (grouped operations), ordered by most recent first
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number;
-          /** @description Number of records per page */
-          limit?: number;
-        };
-        path: {
-          /** @description The batch ID for grouped operations */
-          batchId: string;
-        };
-      };
-      responses: {
-        /** @description Paginated list of logs for the batch */
-        200: {
-          content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
-        /** @description Server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
   "/key-notes/{id}": {
     /**
      * Get key note by ID
@@ -6042,11 +6008,16 @@ export interface components {
       /** Format: date-time */
       eventTime: string;
       description?: string | null;
-      /** Format: uuid */
-      batchId?: string | null;
       rentalObjectCode?: string | null;
       /** Format: uuid */
       contactId?: string | null;
+      /** Format: uuid */
+      keyEventId?: string | null;
+      /** @enum {string|null} */
+      keyEventType?: "order" | "flex" | "lost" | null;
+      /** @enum {string|null} */
+      keyEventStatus?: "ordered" | "received" | "cancelled" | null;
+      keyEventWorkOrderId?: string | null;
     };
     KeyNote: {
       /** Format: uuid */
@@ -6112,8 +6083,6 @@ export interface components {
       keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
       /** Format: uuid */
       keySystemId?: string | null;
-      /** Format: uuid */
-      batchId?: string | null;
     };
     UpdateKeyRequest: {
       keyName?: string;
@@ -6125,8 +6094,6 @@ export interface components {
       /** Format: uuid */
       keySystemId?: string | null;
       disposed?: boolean;
-      /** Format: uuid */
-      batchId?: string | null;
     };
     BulkUpdateFlexRequest: {
       rentalObjectCode: string;
@@ -6189,8 +6156,6 @@ export interface components {
       /** Format: uuid */
       objectId?: string | null;
       description?: string | null;
-      /** Format: uuid */
-      batchId?: string | null;
       rentalObjectCode?: string | null;
       /** Format: uuid */
       contactId?: string | null;
@@ -6421,11 +6386,16 @@ export interface components {
           /** Format: date-time */
           eventTime: string;
           description?: string | null;
-          /** Format: uuid */
-          batchId?: string | null;
           rentalObjectCode?: string | null;
           /** Format: uuid */
           contactId?: string | null;
+          /** Format: uuid */
+          keyEventId?: string | null;
+          /** @enum {string|null} */
+          keyEventType?: "order" | "flex" | "lost" | null;
+          /** @enum {string|null} */
+          keyEventStatus?: "ordered" | "received" | "cancelled" | null;
+          keyEventWorkOrderId?: string | null;
         })[];
       _meta: {
         totalRecords: number;
