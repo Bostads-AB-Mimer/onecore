@@ -1929,7 +1929,7 @@ export interface paths {
   "/logs/contact/{contactId}": {
     /**
      * Get all logs for a specific contact
-     * @description Returns all log entries for a given contact ID, ordered by most recent first
+     * @description Returns all log entries for a given contact code, ordered by most recent first
      */
     get: {
       parameters: {
@@ -1940,7 +1940,7 @@ export interface paths {
           limit?: number;
         };
         path: {
-          /** @description The contact ID (person/tenant) */
+          /** @description The contact code (e.g., P079586, F123456) */
           contactId: string;
         };
       };
