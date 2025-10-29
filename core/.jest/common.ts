@@ -1,4 +1,5 @@
 import axios from 'axios'
+const utilities = jest.requireActual('@onecore/utilities')
 jest.mock('@onecore/utilities', () => {
   return {
     logger: {
@@ -14,6 +15,7 @@ jest.mock('@onecore/utilities', () => {
     },
     loggedAxios: axios,
     axiosTypes: axios,
+    makeSuccessResponseBody: utilities.makeSuccessResponseBody,
     generateRouteMetadata: jest.fn(),
   }
 })

@@ -5,7 +5,9 @@ import {
 } from '@onecore/utilities'
 
 import z from 'zod'
+
 import { DefaultContext, DefaultState, ParameterizedContext } from 'koa'
+import { getUserData } from './get-user-data'
 
 export type RouteSpecInput = {
   body?: z.ZodTypeAny
@@ -132,7 +134,7 @@ const route = createRouteSpec({
   path: '/users/:userId',
   input: {
     body: z.object({ foo: z.string() }),
-    params: z.object({ id: z.string() }),
+    params: z.object({ userId: z.string() }),
   },
   output: {
     200: UserSchema,
@@ -151,7 +153,7 @@ export const routes = (router: KoaRouter) => {
       //    the provided output schemas.
       return {
         status: 200,
-        data: { name: 'foo' },
+        data: getUserData(),
       }
     })
   )
