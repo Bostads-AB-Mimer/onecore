@@ -74,7 +74,12 @@ export function KeyAutocomplete({
     } else if (debouncedQuery.length < 3) {
       setShowSuggestions(false)
     }
-  }, [keysQuery.data, debouncedQuery, keysQuery.isFetching, filteredSuggestions.length])
+  }, [
+    keysQuery.data,
+    debouncedQuery,
+    keysQuery.isFetching,
+    filteredSuggestions.length,
+  ])
 
   // Click outside to close dropdown
   useEffect(() => {
