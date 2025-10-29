@@ -273,7 +273,6 @@ const createMaintenanceUnitRecord = async (
       caption: caption || maintenanceUnit.caption,
       type: maintenanceUnit.type,
       code: code || maintenanceUnit.code,
-      estate_code: maintenanceUnit.estateCode,
     })
   } catch (error) {
     console.error('Error creating maintenance unit record:', error)
