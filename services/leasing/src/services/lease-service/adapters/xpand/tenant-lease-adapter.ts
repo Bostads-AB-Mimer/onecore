@@ -268,7 +268,8 @@ const getResidentialAreaByRentalPropertyId = async (
 }
 
 const getContactsDataBySearchQuery = async (
-  q: string
+  q: string,
+  contactType?: 'company' | 'person'
 ): Promise<
   AdapterResult<
     Array<{
@@ -280,7 +281,7 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
-    const rows = await xpandDb
+    let query = xpandDb
       .from('cmctc')
       .select(
         'cmctc.cmctckod as contactCode',
@@ -290,7 +291,15 @@ const getContactsDataBySearchQuery = async (
       .where('cmctc.cmctckod', 'like', `%${q}%`)
       .orWhere('cmctc.persorgnr', 'like', `%${q}%`)
       .orWhere('cmctc.cmctcben', 'like', `%${q}%`)
-      .limit(10)
+
+    // Apply contact type filter if specified
+    if (contactType === 'company') {
+      query = query.andWhere('cmctc.cmctckod', 'like', 'F%')
+    } else if (contactType === 'person') {
+      query = query.andWhere('cmctc.cmctckod', 'like', 'P%')
+    }
+
+    const rows = await query.limit(10)
 
     return {
       ok: true,
