@@ -130,19 +130,30 @@ export default function ActivityLog() {
 
   // Group logs by keyEventId (for flex/order/lost operations)
   // Logs without keyEventId are displayed individually
+  // Use time window to prevent different operations from being grouped together
   const groupedLogs = useMemo(() => {
     const groups: { type: 'batch' | 'individual'; logs: Log[] }[] = []
     const processedIds = new Set<string>()
+    const TIME_WINDOW_MS = 5000 // 5 seconds - operations within this window are considered a batch
 
     for (const log of logs) {
       // Skip if already processed
       if (processedIds.has(log.id)) continue
 
-      // If log has keyEventId, group all logs with same keyEventId
+      // If log has keyEventId, group logs with same keyEventId AND within time window
       if (log.keyEventId) {
-        const batchLogs = logs.filter(
-          (l) => l.keyEventId === log.keyEventId && !processedIds.has(l.id)
-        )
+        const batchLogs = logs.filter((l) => {
+          if (processedIds.has(l.id)) return false
+          if (l.keyEventId !== log.keyEventId) return false
+
+          // Calculate time difference between log events
+          const timeDiff = Math.abs(
+            new Date(l.eventTime).getTime() - new Date(log.eventTime).getTime()
+          )
+
+          // Only group if within time window
+          return timeDiff <= TIME_WINDOW_MS
+        })
 
         // Mark all logs in this batch as processed
         batchLogs.forEach((l) => processedIds.add(l.id))
