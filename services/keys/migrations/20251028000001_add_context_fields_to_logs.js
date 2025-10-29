@@ -1,6 +1,6 @@
 /**
  * Migration for adding context fields to 'logs' table and expanding objectType enum.
- * Adds rentalObjectCode, contactId for better log filtering.
+ * Adds rentalObjectCode, contactId (contact code like P079586) for better log filtering.
  * Expands objectType enum to include new types without modifying existing data.
  * @param { import('knex').Knex } knex
  * @returns { Promise<void> }
@@ -11,8 +11,8 @@ exports.up = async function up(knex) {
     // Add rental object code for property-based filtering
     table.string('rentalObjectCode').nullable()
 
-    // Add contact ID for person-based filtering
-    table.uuid('contactId').nullable()
+    // Add contact code (e.g., P079586, F123456) for person-based filtering
+    table.string('contactId').nullable()
 
     // Add indexes for new fields to improve query performance
     table.index(['rentalObjectCode'])
