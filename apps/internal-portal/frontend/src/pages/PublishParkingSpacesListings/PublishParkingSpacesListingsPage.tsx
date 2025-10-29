@@ -15,7 +15,7 @@ import { type GridRowId, type GridColDef } from '@mui/x-data-grid'
 import { toast } from 'react-toastify'
 
 import { RentalObjectWithListingHistory } from '../../types'
-import { DataGridTable } from '../../components'
+import { DataGridTable, SearchBar } from '../../components'
 import { useVacantParkingSpaces } from '../ParkingSpaces/hooks/useVacantParkingSpaces'
 import { usePublishParkingSpaces } from './hooks/usePublishParkingSpaces'
 import { useRentalRules } from './hooks/useRentalRules'
@@ -23,6 +23,8 @@ import {
   getParkingSpaceColumns,
   getRentalRuleActionColumn,
 } from './utils/columnUtils'
+import * as utils from '../../utils'
+import { RentalObject } from '@onecore/types'
 
 const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
 
@@ -72,12 +74,19 @@ const ParkingSpaces = memo(
 export const PublishParkingSpacesListingsPage = () => {
   const [selectedIds, setSelectedIds] = useState<GridRowId[]>([])
   const [showBatchConfirm, setShowBatchConfirm] = useState(false)
-  const { data: parkingSpaces, isLoading } = useVacantParkingSpaces()
+  const [searchString, setSearchString] = useState<string>()
+  const { data: parkingSpaces, isLoading, refetch } = useVacantParkingSpaces()
 
   const { rentalRules, handleRentalRuleChange, initializeRentalRules } =
     useRentalRules()
   const { message, setMessage, handlePublishParkingSpaces, isPending } =
     usePublishParkingSpaces()
+
+  const handleSearch = useCallback((v: string) => setSearchString(v), [])
+  const onSearch = useMemo(
+    () => utils.debounce(handleSearch, 300),
+    [handleSearch]
+  )
 
   // Memoize columns to prevent unnecessary re-renders
   const columns = useMemo(
@@ -117,17 +126,41 @@ export const PublishParkingSpacesListingsPage = () => {
     })
   }, [message])
 
+  useEffect(() => {
+    refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filterRentalObjects = (parkingSpaces: Array<RentalObject>) => {
+    if (!searchString) return parkingSpaces
+    return parkingSpaces.filter((p) =>
+      p.rentalObjectCode.includes(searchString)
+    )
+  }
+
   return (
     <Box>
-      <Typography variant="h1" paddingBottom={2}>
-        Publicera bilplatser
-      </Typography>
-
+      <Box
+        display="flex"
+        alignItems="flex-end"
+        justifyContent="space-between"
+        paddingBottom="1rem"
+      >
+        <Typography variant="h1" paddingBottom={2}>
+          Publicera bilplatser
+        </Typography>
+        <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
+          <SearchBar
+            onChange={onSearch}
+            disabled={isLoading}
+            placeholder="Sök objektsnummer..."
+          />
+        </Box>
+      </Box>
       <Typography variant="body1" paddingBottom={2}>
         Nedan listas alla bilplatser som behöver ompubliceras från Xpand och som
         ej är spärrade.
       </Typography>
-
       {message && (
         <Alert
           severity={message.severity}
@@ -146,10 +179,9 @@ export const PublishParkingSpacesListingsPage = () => {
           </Typography>
         </Box>
       )}
-
       <ParkingSpaces
         key="needs-republish"
-        rows={parkingSpaces}
+        rows={filterRentalObjects(parkingSpaces || [])}
         columns={columns}
         loading={isLoading}
         selectedIds={selectedIds}

@@ -46,6 +46,11 @@ const SiteMenu = () => (
                 <Typography>Bilplatser</Typography>
               </MenuItem>
             </Link>
+            <Link to="/bilplatser/publicera">
+              <MenuItem onClick={popupState.close}>
+                <Typography>Publicera bilplatser</Typography>
+              </MenuItem>
+            </Link>
             <Link to="/sok-bilplats">
               <MenuItem onClick={popupState.close}>
                 <Typography>Sök bilplats</Typography>

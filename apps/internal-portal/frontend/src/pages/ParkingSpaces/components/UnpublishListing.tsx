@@ -5,7 +5,10 @@ import { toast } from 'react-toastify'
 import { useUnpublishParkingSpaceListing } from '../hooks/useUnpublishParkingSpaceListing'
 import { ActionDialog } from '../../ParkingSpace/components/ActionDialog'
 
-export const UnpublishListing = (props: { listingId: number }) => {
+export const UnpublishListing = (props: {
+  listingId: number
+  onUnpublished?: () => void
+}) => {
   const unpublishListing = useUnpublishParkingSpaceListing()
   const [open, setOpen] = useState(false)
 
@@ -24,6 +27,7 @@ export const UnpublishListing = (props: { listingId: number }) => {
             type: 'success',
             hideProgressBar: true,
           })
+          props.onUnpublished?.()
         },
       }
     )
