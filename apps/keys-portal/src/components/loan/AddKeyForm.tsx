@@ -267,15 +267,11 @@ export function AddKeyForm({
       }
 
       // Create all keys and collect their IDs
-      // Generate batchId if creating multiple keys for grouping in activity log
-      const batchId = keysToCreate.length > 1 ? crypto.randomUUID() : null
-
       const createdKeyIds: string[] = []
       let createdCount = 0
       for (const keyPayload of keysToCreate) {
         const created = await keyService.createKey({
           ...keyPayload,
-          batchId,
         })
         createdKeyIds.push(created.id)
         onKeyCreated(created)

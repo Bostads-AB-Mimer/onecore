@@ -235,14 +235,9 @@ export async function handleDisposeKeys({
   }
 
   try {
-    // Generate batchId if disposing multiple keys
-    const batchId = keyIds.length > 1 ? crypto.randomUUID() : null
-
-    // Update each key to set disposed = true with shared batchId
+    // Update each key to set disposed = true
     await Promise.all(
-      keyIds.map((keyId) =>
-        keyService.updateKey(keyId, { disposed: true, batchId })
-      )
+      keyIds.map((keyId) => keyService.updateKey(keyId, { disposed: true }))
     )
 
     return {

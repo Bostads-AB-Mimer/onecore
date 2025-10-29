@@ -139,11 +139,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BadRequestResponse', BadRequestResponseSchema)
   registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
 
-  // Helper function to generate batch IDs for grouping related operations
-  const generateBatchId = (): string => {
-    return crypto.randomUUID()
-  }
-
   // Helper function to create log entries
   const createLogEntry = async (
     user: any,
@@ -161,7 +156,6 @@ export const routes = (router: KoaRouter) => {
     objectId: string,
     description?: string,
     context?: {
-      batchId?: string
       rentalObjectCode?: string
       contactId?: string
     }
@@ -173,7 +167,6 @@ export const routes = (router: KoaRouter) => {
         objectType,
         objectId,
         description,
-        batchId: context?.batchId,
         rentalObjectCode: context?.rentalObjectCode,
         contactId: context?.contactId,
       })
@@ -1381,7 +1374,6 @@ export const routes = (router: KoaRouter) => {
       `Skapad nyckel ${keyDescription}`,
       {
         rentalObjectCode: result.data.rentalObjectCode,
-        batchId: payload.batchId, // Include batchId from request for grouping
       }
     )
 
@@ -1484,7 +1476,6 @@ export const routes = (router: KoaRouter) => {
       description,
       {
         rentalObjectCode: result.data.rentalObjectCode,
-        batchId: payload.batchId, // Include batchId from request for grouping
       }
     )
 
@@ -2654,75 +2645,6 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching logs for contact'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { ...metadata, ...result.data }
-  })
-
-  /**
-   * @swagger
-   * /logs/batch/{batchId}:
-   *   get:
-   *     summary: Get all logs for a specific batch operation
-   *     description: Returns all log entries for a given batch ID (grouped operations), ordered by most recent first
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: batchId
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: The batch ID for grouped operations
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           minimum: 1
-   *           default: 1
-   *         description: Page number (starts from 1)
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           minimum: 1
-   *           default: 20
-   *         description: Number of records per page
-   *     responses:
-   *       200:
-   *         description: Paginated list of logs for the batch
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
-   *       500:
-   *         description: Server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/logs/batch/:batchId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const result = await LogsApi.getByBatchId(ctx.params.batchId, page, limit)
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching logs for batch'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -4738,17 +4660,11 @@ export const routes = (router: KoaRouter) => {
     const keyEvent = result.data
     let keyCount = 0
     let rentalObjectCode: string | undefined
-    let batchId: string | undefined
 
     if (keyEvent.keys) {
       try {
         const keyIds = JSON.parse(keyEvent.keys)
         keyCount = keyIds.length
-
-        // If multiple keys, generate a batch ID
-        if (keyCount > 1) {
-          batchId = generateBatchId()
-        }
 
         // Get rental object code from first key
         if (keyIds.length > 0) {
@@ -4777,7 +4693,6 @@ export const routes = (router: KoaRouter) => {
       keyEvent.id,
       description,
       {
-        batchId,
         rentalObjectCode,
       }
     )
@@ -4863,17 +4778,11 @@ export const routes = (router: KoaRouter) => {
     const keyEvent = result.data
     let keyCount = 0
     let rentalObjectCode: string | undefined
-    let batchId: string | undefined
 
     if (keyEvent.keys) {
       try {
         const keyIds = JSON.parse(keyEvent.keys)
         keyCount = keyIds.length
-
-        // If multiple keys, generate a batch ID
-        if (keyCount > 1) {
-          batchId = generateBatchId()
-        }
 
         // Get rental object code from first key
         if (keyIds.length > 0) {
@@ -4908,7 +4817,6 @@ export const routes = (router: KoaRouter) => {
       ctx.params.id,
       description,
       {
-        batchId,
         rentalObjectCode,
       }
     )

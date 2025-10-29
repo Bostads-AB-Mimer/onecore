@@ -22,7 +22,19 @@ export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
     _links: z.array(PaginationLinksSchema),
   })
 
-export const KeyTypeSchema = z.enum(['HN', 'FS', 'MV', 'LGH', 'PB', 'GAR', 'LOK', 'HL', 'FÖR', 'SOP', 'ÖVR'])
+export const KeyTypeSchema = z.enum([
+  'HN',
+  'FS',
+  'MV',
+  'LGH',
+  'PB',
+  'GAR',
+  'LOK',
+  'HL',
+  'FÖR',
+  'SOP',
+  'ÖVR',
+])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
   'ELECTRONIC',
@@ -93,9 +105,13 @@ export const LogSchema = z.object({
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
   // Context fields for better filtering and grouping
-  batchId: z.string().uuid().nullable().optional(),
   rentalObjectCode: z.string().nullable().optional(),
   contactId: z.string().uuid().nullable().optional(),
+  // Key event fields from JOIN (for grouping flex/order/lost operations)
+  keyEventId: z.string().uuid().nullable().optional(),
+  keyEventType: z.enum(['order', 'flex', 'lost']).nullable().optional(),
+  keyEventStatus: z.enum(['ordered', 'received', 'cancelled']).nullable().optional(),
+  keyEventWorkOrderId: z.string().nullable().optional(),
 })
 
 export const KeyNoteSchema = z.object({
@@ -142,7 +158,6 @@ export const CreateKeyRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
-  batchId: z.string().uuid().nullable().optional(), // For grouping related key creations in logs
 })
 
 export const UpdateKeyRequestSchema = z.object({
@@ -153,7 +168,6 @@ export const UpdateKeyRequestSchema = z.object({
   keyType: KeyTypeSchema.optional(),
   keySystemId: z.string().uuid().nullable().optional(),
   disposed: z.boolean().optional(),
-  batchId: z.string().uuid().nullable().optional(), // For grouping related key updates in logs
 })
 
 // Request schemas for key systems
@@ -221,7 +235,6 @@ export const CreateLogRequestSchema = z.object({
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
   // Optional context fields for filtering and grouping
-  batchId: z.string().uuid().nullable().optional(),
   rentalObjectCode: z.string().nullable().optional(),
   contactId: z.string().uuid().nullable().optional(),
 })

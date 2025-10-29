@@ -27,7 +27,6 @@ export function BatchLogCard({ logs }: BatchLogCardProps) {
 
   // Use the first log for summary information
   const firstLog = logs[0]
-  const batchId = firstLog.batchId
   const count = logs.length
 
   // Get appropriate event type label and color (handles disposal special case)
@@ -141,11 +140,6 @@ export function BatchLogCard({ logs }: BatchLogCardProps) {
                 {firstLog.rentalObjectCode && (
                   <p className="text-xs text-muted-foreground">
                     Lägenhet: {firstLog.rentalObjectCode}
-                  </p>
-                )}
-                {batchId && (
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Batch-ID: {batchId}
                   </p>
                 )}
               </div>

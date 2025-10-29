@@ -585,24 +585,6 @@ export const LogsApi = {
     const r = await getJSON<PaginatedResponse<Log>>(url)
     return r.ok ? ok(r.data) : r
   },
-
-  getByBatchId: async (
-    batchId: string,
-    page?: number,
-    limit?: number
-  ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
-    const params = new URLSearchParams()
-    if (page) params.append('page', page.toString())
-    if (limit) params.append('limit', limit.toString())
-
-    const queryString = params.toString()
-    const url = queryString
-      ? `${BASE}/logs/batch/${batchId}?${queryString}`
-      : `${BASE}/logs/batch/${batchId}`
-
-    const r = await getJSON<PaginatedResponse<Log>>(url)
-    return r.ok ? ok(r.data) : r
-  },
 }
 
 /**

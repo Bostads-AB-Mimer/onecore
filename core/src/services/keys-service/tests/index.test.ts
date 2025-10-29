@@ -1343,6 +1343,10 @@ describe('keys-service', () => {
   describe('DELETE /receipts/:id', () => {
     it('responds with 404 if receipt not found on get', async () => {
       jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      jest
         .spyOn(keysAdapter.ReceiptsApi, 'remove')
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
