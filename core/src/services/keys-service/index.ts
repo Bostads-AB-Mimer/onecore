@@ -2615,7 +2615,7 @@ export const routes = (router: KoaRouter) => {
    * /logs/contact/{contactId}:
    *   get:
    *     summary: Get all logs for a specific contact
-   *     description: Returns all log entries for a given contact ID, ordered by most recent first
+   *     description: Returns all log entries for a given contact code, ordered by most recent first
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -2623,8 +2623,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
-   *         description: The contact ID (person/tenant)
+   *         description: The contact code (e.g., P079586, F123456)
    *       - in: query
    *         name: page
    *         schema:
