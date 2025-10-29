@@ -110,7 +110,10 @@ export const LogSchema = z.object({
   // Key event fields from JOIN (for grouping flex/order/lost operations)
   keyEventId: z.string().uuid().nullable().optional(),
   keyEventType: z.enum(['order', 'flex', 'lost']).nullable().optional(),
-  keyEventStatus: z.enum(['ordered', 'received', 'cancelled']).nullable().optional(),
+  keyEventStatus: z
+    .enum(['ordered', 'received', 'cancelled'])
+    .nullable()
+    .optional(),
   keyEventWorkOrderId: z.string().nullable().optional(),
 })
 
@@ -234,9 +237,8 @@ export const CreateLogRequestSchema = z.object({
   ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
-  // Optional context fields for filtering and grouping
   rentalObjectCode: z.string().nullable().optional(),
-  contactId: z.string().uuid().nullable().optional(),
+  contactId: z.string().nullable().optional(),
 })
 
 // Receipt schemas
