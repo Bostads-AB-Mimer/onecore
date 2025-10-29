@@ -121,7 +121,9 @@ export const KeyLoanMaintenanceKeysSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
 })
 
 // Key loan maintenance keys with enriched keys data (for optimized endpoint)
@@ -312,6 +314,7 @@ export const CreateKeyLoanMaintenanceKeysRequestSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
 })
 
@@ -320,6 +323,7 @@ export const UpdateKeyLoanMaintenanceKeysRequestSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
 })
 
