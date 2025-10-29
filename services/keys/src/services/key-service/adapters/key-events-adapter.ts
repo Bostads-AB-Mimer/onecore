@@ -1,5 +1,6 @@
 import { Knex } from 'knex'
 import { keys } from '@onecore/types'
+import { parseAndSyncKeyEventItems } from './junction-table-helpers'
 
 type KeyEvent = keys.v1.KeyEvent
 type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
@@ -33,6 +34,7 @@ export async function getKeyEventById(
 
 /**
  * Get all key events for a specific key.
+ * Uses junction table for efficient indexed lookup.
  *
  * @param keyId - The key ID to filter by
  * @param db - Knex instance or transaction
@@ -45,8 +47,10 @@ export async function getKeyEventsByKey(
   limit?: number
 ): Promise<KeyEvent[]> {
   let query = db(TABLE)
-    .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-    .orderBy('createdAt', 'desc')
+    .select('key_events.*')
+    .innerJoin('key_event_items', 'key_event_items.keyEventId', 'key_events.id')
+    .where('key_event_items.keyId', keyId)
+    .orderBy('key_events.createdAt', 'desc')
 
   if (limit) {
     query = query.limit(limit)
@@ -67,6 +71,12 @@ export async function createKeyEvent(
   db: Knex
 ): Promise<KeyEvent> {
   const [row] = await db(TABLE).insert(data).returning('*')
+
+  // Sync junction table with JSON keys array
+  if (row && row.keys) {
+    await parseAndSyncKeyEventItems(row.id, row.keys, db)
+  }
+
   return row
 }
 
@@ -84,11 +94,18 @@ export async function updateKeyEvent(
   db: Knex
 ): Promise<KeyEvent | undefined> {
   const [row] = await db(TABLE).where({ id }).update(data).returning('*')
+
+  // Sync junction table with JSON keys array if keys were updated
+  if (row && row.keys) {
+    await parseAndSyncKeyEventItems(row.id, row.keys, db)
+  }
+
   return row
 }
 
 /**
  * Check if any of the provided keys have incomplete events (status not COMPLETED)
+ * Uses junction table for efficient indexed lookup (eliminates N+1 queries)
  * @param keyIds - Array of key IDs to check
  * @param db - Knex instance or transaction
  * @returns Object with hasConflict flag and array of conflicting key IDs
@@ -101,20 +118,15 @@ export async function checkIncompleteKeyEvents(
     return { hasConflict: false, conflictingKeys: [] }
   }
 
-  const conflictingKeys: string[] = []
+  // Use junction table to find all conflicting keys in a single query
+  const conflicts = await db('key_event_items')
+    .select('key_event_items.keyId')
+    .distinct()
+    .innerJoin('key_events', 'key_events.id', 'key_event_items.keyEventId')
+    .whereIn('key_event_items.keyId', keyIds)
+    .whereNot('key_events.status', 'COMPLETED')
 
-  // Check each key ID for incomplete events
-  for (const keyId of keyIds) {
-    const incompleteEvent = await db(TABLE)
-      .select('id')
-      .whereNot('status', 'COMPLETED')
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-      .first()
-
-    if (incompleteEvent) {
-      conflictingKeys.push(keyId)
-    }
-  }
+  const conflictingKeys = conflicts.map(row => row.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,

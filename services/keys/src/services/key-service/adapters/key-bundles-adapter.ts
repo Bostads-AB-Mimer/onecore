@@ -30,6 +30,8 @@ export async function getKeyBundlesByKeyId(
   keyId: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyBundle[]> {
+  // TODO: Create key_bundle_items junction table for better performance
+  // For now, keeping LIKE pattern as key_bundles are infrequently queried
   return await dbConnection(TABLE)
     .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
     .orderBy('name', 'asc')

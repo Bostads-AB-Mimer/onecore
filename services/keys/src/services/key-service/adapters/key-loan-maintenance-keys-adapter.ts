@@ -32,6 +32,8 @@ export async function getKeyLoanMaintenanceKeysByKeyId(
   keyId: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanMaintenanceKeys[]> {
+  // TODO: Create key_loan_maintenance_keys_items junction table for better performance
+  // For now, keeping LIKE pattern as maintenance keys are infrequently queried
   return await dbConnection(TABLE)
     .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
     .orderBy('id', 'desc')

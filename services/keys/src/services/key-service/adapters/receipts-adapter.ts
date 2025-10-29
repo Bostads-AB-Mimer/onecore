@@ -130,15 +130,22 @@ export async function activateKeyLoan(
 /**
  * Complete key events for the given key IDs
  * Changes status from ORDERED or RECEIVED to COMPLETED
+ * Uses junction table for efficient indexed lookup (eliminates N+1 queries)
  */
 export async function completeKeyEventsForKeys(
   keyIds: string[],
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<void> {
-  for (const keyId of keyIds) {
-    await dbConnection('key_events')
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-      .whereIn('status', ['ORDERED', 'RECEIVED'])
-      .update({ status: 'COMPLETED', updatedAt: dbConnection.fn.now() })
-  }
+  if (keyIds.length === 0) return
+
+  // Use junction table to update all events in a single query
+  await dbConnection('key_events')
+    .whereIn('id', function() {
+      this.select('keyEventId')
+        .from('key_event_items')
+        .whereIn('keyId', keyIds)
+        .distinct()
+    })
+    .whereIn('status', ['ORDERED', 'RECEIVED'])
+    .update({ status: 'COMPLETED', updatedAt: dbConnection.fn.now() })
 }

@@ -1,6 +1,7 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
+import { parseAndSyncKeyLoanItems } from './junction-table-helpers'
 
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
@@ -31,9 +32,12 @@ export async function getKeyLoansByKeyId(
   keyId: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan[]> {
+  // Use junction table for indexed lookup instead of LIKE pattern
   return await dbConnection(TABLE)
-    .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-    .orderBy('createdAt', 'desc')
+    .select('key_loans.*')
+    .innerJoin('key_loan_items', 'key_loan_items.keyLoanId', 'key_loans.id')
+    .where('key_loan_items.keyId', keyId)
+    .orderBy('key_loans.createdAt', 'desc')
 }
 
 export async function createKeyLoan(
@@ -41,6 +45,12 @@ export async function createKeyLoan(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan> {
   const [row] = await dbConnection(TABLE).insert(keyLoanData).returning('*')
+
+  // Sync junction table with JSON keys array
+  if (row && row.keys) {
+    await parseAndSyncKeyLoanItems(row.id, row.keys, dbConnection)
+  }
+
   return row
 }
 
@@ -54,6 +64,11 @@ export async function updateKeyLoan(
     .update({ ...keyLoanData, updatedAt: dbConnection.fn.now() })
     .returning('*')
 
+  // Sync junction table with JSON keys array if keys were updated
+  if (row && row.keys) {
+    await parseAndSyncKeyLoanItems(row.id, row.keys, dbConnection)
+  }
+
   return row
 }
 
@@ -66,6 +81,7 @@ export async function deleteKeyLoan(
 
 /**
  * Check if any of the provided keys have active loans (not returned yet)
+ * Uses junction table for efficient indexed lookup (eliminates N+1 queries)
  * @param keyIds - Array of key IDs to check
  * @param excludeLoanId - Optional loan ID to exclude from the check (for updates)
  * @param dbConnection - Database connection
@@ -80,27 +96,22 @@ export async function checkActiveKeyLoans(
     return { hasConflict: false, conflictingKeys: [] }
   }
 
-  const conflictingKeys: string[] = []
+  // Use junction table to find all conflicting keys in a single query
+  let query = dbConnection('key_loan_items')
+    .select('key_loan_items.keyId')
+    .distinct()
+    .innerJoin('key_loans', 'key_loans.id', 'key_loan_items.keyLoanId')
+    .whereIn('key_loan_items.keyId', keyIds)
+    .whereNotNull('key_loans.pickedUpAt') // Only consider activated loans (not pending)
+    .whereNull('key_loans.returnedAt') // Active if: not returned yet
 
-  // Check each key ID for active loans
-  for (const keyId of keyIds) {
-    let query = dbConnection(TABLE)
-      .select('id')
-      .whereNotNull('pickedUpAt') // Only consider activated loans (not pending)
-      .whereNull('returnedAt') // Active if: not returned yet
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-
-    // Exclude specific loan ID if provided (for update scenarios)
-    if (excludeLoanId) {
-      query = query.whereNot('id', excludeLoanId)
-    }
-
-    const activeLoan = await query.first()
-
-    if (activeLoan) {
-      conflictingKeys.push(keyId)
-    }
+  // Exclude specific loan ID if provided (for update scenarios)
+  if (excludeLoanId) {
+    query = query.whereNot('key_loans.id', excludeLoanId)
   }
+
+  const conflicts = await query
+  const conflictingKeys = conflicts.map(row => row.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,
@@ -137,14 +148,13 @@ export async function getKeyLoansByRentalObject(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanWithDetails[]> {
   // Step 1: Get all key loans for the rental object (filtered by contacts if provided)
+  // Use junction table for efficient indexed lookup
   let loansQuery = dbConnection('key_loans as kl')
     .select('kl.*')
-    .whereExists(function () {
-      this.select(dbConnection.raw('1'))
-        .from('keys as k')
-        .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
-        .where('k.rentalObjectCode', rentalObjectCode)
-    })
+    .distinct()
+    .innerJoin('key_loan_items as kli', 'kli.keyLoanId', 'kl.id')
+    .innerJoin('keys as k', 'k.id', 'kli.keyId')
+    .where('k.rentalObjectCode', rentalObjectCode)
     .orderBy('kl.createdAt', 'desc')
 
   // Filter by contacts: match if ANY provided contact matches EITHER kl.contact OR kl.contact2
