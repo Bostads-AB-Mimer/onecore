@@ -10,6 +10,7 @@ import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
 import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
+import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -221,11 +222,13 @@ export default function MaintenanceKeys() {
             </div>
 
             {/* Search Result Info */}
-            <div className="max-w-2xl">
-              {searchResult.type === 'contact' && searchResult.contact && (
+            {searchResult.type === 'contact' && searchResult.contact && (
+              <div className="max-w-2xl">
                 <ContactInfoCard contacts={[searchResult.contact]} />
-              )}
-              {searchResult.type === 'bundle' && searchResult.bundle && (
+              </div>
+            )}
+            {searchResult.type === 'bundle' && searchResult.bundle && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
                     <div className="flex items-center gap-2">
@@ -239,8 +242,28 @@ export default function MaintenanceKeys() {
                     )}
                   </CardHeader>
                 </Card>
-              )}
-            </div>
+                <AddKeysToBundleCard
+                  bundle={searchResult.bundle}
+                  currentKeyIds={bundleKeys.map((k) => k.id)}
+                  onKeysAdded={() => {
+                    // Refetch bundle keys after adding
+                    const fetchBundleKeys = async () => {
+                      try {
+                        const data = await getKeyBundleWithLoanStatus(
+                          searchResult.bundle!.id
+                        )
+                        if (data) {
+                          setBundleKeys(data.keys)
+                        }
+                      } catch (error) {
+                        console.error('Error refetching bundle keys:', error)
+                      }
+                    }
+                    fetchBundleKeys()
+                  }}
+                />
+              </div>
+            )}
 
             {/* Bundle Keys Table */}
             {searchResult.type === 'bundle' &&
