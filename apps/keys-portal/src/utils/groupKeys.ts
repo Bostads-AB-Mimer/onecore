@@ -57,8 +57,8 @@ function processDisposedGroup(
   keys: KeyWithMaintenanceLoanStatus[]
 ): DisposedGroup {
   // 2. Secondary split: loaned vs unloaned
-  const loanedKeys = keys.filter((k) => k.maintenanceLoanId !== null)
-  const unloanedKeys = keys.filter((k) => k.maintenanceLoanId === null)
+  const loanedKeys = keys.filter((k) => k.maintenanceLoan !== null)
+  const unloanedKeys = keys.filter((k) => k.maintenanceLoan === null)
 
   // 3. Group loaned keys by company
   const loanedByCompany = groupByCompany(loanedKeys)
@@ -79,7 +79,7 @@ function groupByCompany(keys: KeyWithMaintenanceLoanStatus[]): LoanedGroup[] {
   // Group by company
   const byCompany = keys.reduce(
     (acc, key) => {
-      const company = key.maintenanceLoanCompany || 'Okänt företag'
+      const company = key.maintenanceLoan?.company || 'Okänt företag'
       if (!acc[company]) {
         acc[company] = []
       }
@@ -106,7 +106,7 @@ function groupByCompany(keys: KeyWithMaintenanceLoanStatus[]): LoanedGroup[] {
 function groupByLoan(keys: KeyWithMaintenanceLoanStatus[]): LoanGroup[] {
   const byLoan = keys.reduce(
     (acc, key) => {
-      const loanId = key.maintenanceLoanId!
+      const loanId = key.maintenanceLoan!.id
       if (!acc[loanId]) {
         acc[loanId] = []
       }
@@ -120,13 +120,14 @@ function groupByLoan(keys: KeyWithMaintenanceLoanStatus[]): LoanGroup[] {
     .map(([loanId, loanKeys]) => {
       // Sort keys within this loan by type then name
       const sortedKeys = sortKeysByTypeAndName(loanKeys)
+      const loan = loanKeys[0].maintenanceLoan!
 
       return {
         loanId,
-        loanCompany: loanKeys[0].maintenanceLoanCompany,
-        loanContactPerson: loanKeys[0].maintenanceLoanContactPerson,
-        loanPickedUpAt: loanKeys[0].maintenanceLoanPickedUpAt,
-        loanCreatedAt: loanKeys[0].maintenanceLoanCreatedAt,
+        loanCompany: loan.company,
+        loanContactPerson: loan.contactPerson,
+        loanPickedUpAt: loan.pickedUpAt,
+        loanCreatedAt: loan.createdAt,
         keys: sortedKeys,
       }
     })

@@ -78,6 +78,11 @@ export default function MaintenanceKeys() {
       return
     }
 
+    // Skip loan fetching for bundles - they only show keys table
+    if (searchResult.type === 'bundle') {
+      return
+    }
+
     const fetchActiveLoans = async () => {
       setLoansLoading(true)
       try {
@@ -86,11 +91,6 @@ export default function MaintenanceKeys() {
         if (searchResult.type === 'contact' && searchResult.contact) {
           active = await maintenanceKeysService.getByCompanyWithKeys(
             searchResult.contact.contactCode,
-            false
-          )
-        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          active = await maintenanceKeysService.getByBundleWithKeys(
-            searchResult.bundle.id,
             false
           )
         }
@@ -118,6 +118,11 @@ export default function MaintenanceKeys() {
       return
     }
 
+    // Skip loan fetching for bundles - they only show keys table
+    if (searchResult.type === 'bundle') {
+      return
+    }
+
     const fetchReturnedLoans = async () => {
       try {
         let returned: KeyLoanMaintenanceKeysWithDetails[] = []
@@ -125,11 +130,6 @@ export default function MaintenanceKeys() {
         if (searchResult.type === 'contact' && searchResult.contact) {
           returned = await maintenanceKeysService.getByCompanyWithKeys(
             searchResult.contact.contactCode,
-            true
-          )
-        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          returned = await maintenanceKeysService.getByBundleWithKeys(
-            searchResult.bundle.id,
             true
           )
         }
@@ -276,6 +276,22 @@ export default function MaintenanceKeys() {
                 <KeyBundleKeysTable
                   keys={bundleKeys}
                   bundleName={searchResult.bundle.name}
+                  bundleId={searchResult.bundle.id}
+                  onRefresh={async () => {
+                    try {
+                      setBundleKeysLoading(true)
+                      const data = await getKeyBundleWithLoanStatus(
+                        searchResult.bundle!.id
+                      )
+                      if (data) {
+                        setBundleKeys(data.keys)
+                      }
+                    } catch (error) {
+                      console.error('Error refetching bundle keys:', error)
+                    } finally {
+                      setBundleKeysLoading(false)
+                    }
+                  }}
                 />
               ))}
 
