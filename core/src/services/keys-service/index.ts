@@ -27,6 +27,8 @@ const {
   KeyBundleSchema,
   KeyLoanMaintenanceKeysSchema,
   KeyLoanMaintenanceKeysWithDetailsSchema,
+  KeyWithMaintenanceLoanStatusSchema,
+  KeyBundleWithLoanStatusResponseSchema,
   ReceiptSchema,
   KeyEventSchema,
   SignatureSchema,
@@ -120,6 +122,14 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'KeyLoanMaintenanceKeysWithDetails',
     KeyLoanMaintenanceKeysWithDetailsSchema
+  )
+  registerSchema(
+    'KeyWithMaintenanceLoanStatus',
+    KeyWithMaintenanceLoanStatusSchema
+  )
+  registerSchema(
+    'KeyBundleWithLoanStatusResponse',
+    KeyBundleWithLoanStatusResponseSchema
   )
   registerSchema(
     'CreateKeyLoanMaintenanceKeysRequest',
@@ -4543,6 +4553,62 @@ export const routes = (router: KoaRouter) => {
     await createLogEntry(ctx.state.user, 'delete', 'keyBundle', ctx.params.id)
 
     ctx.status = 204
+  })
+
+  /**
+   * @swagger
+   * /key-bundles/{id}/keys-with-loan-status:
+   *   get:
+   *     summary: Get keys in bundle with maintenance loan status
+   *     description: Fetches all keys in a key bundle along with their active maintenance loan information
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The key bundle ID
+   *     responses:
+   *       200:
+   *         description: Bundle information and keys with loan status
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyBundleWithLoanStatusResponse'
+   *       404:
+   *         description: Key bundle not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeyBundlesApi.getWithLoanStatus(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key bundle not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key bundle with loan status'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**

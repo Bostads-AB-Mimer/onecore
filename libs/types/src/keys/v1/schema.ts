@@ -133,6 +133,21 @@ export const KeyLoanMaintenanceKeysWithDetailsSchema =
     keysArray: z.array(KeySchema),
   })
 
+// Key with maintenance loan status (for key bundle table view)
+export const KeyWithMaintenanceLoanStatusSchema = KeySchema.extend({
+  maintenanceLoanId: z.string().uuid().nullable(),
+  maintenanceLoanCompany: z.string().nullable(),
+  maintenanceLoanContactPerson: z.string().nullable(),
+  maintenanceLoanPickedUpAt: z.coerce.date().nullable(),
+  maintenanceLoanCreatedAt: z.coerce.date().nullable(),
+})
+
+// Response schema for key bundle with loan status endpoint
+export const KeyBundleWithLoanStatusResponseSchema = z.object({
+  bundle: KeyBundleSchema,
+  keys: z.array(KeyWithMaintenanceLoanStatusSchema),
+})
+
 // Key Event schemas
 export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
 export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
