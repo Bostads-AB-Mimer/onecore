@@ -1,4 +1,4 @@
-import { GET } from './core/base-api'
+import { GET, PATCH } from './core/base-api'
 import type { KeyBundle, KeyBundleWithLoanStatusResponse } from '../types'
 
 /**
@@ -36,6 +36,27 @@ export async function getKeyBundleById(id: string): Promise<KeyBundle | null> {
   }
 
   return (data?.content as KeyBundle) ?? null
+}
+
+/**
+ * Update a key bundle
+ */
+export async function updateKeyBundle(
+  id: string,
+  updates: Partial<Omit<KeyBundle, 'id'>>
+): Promise<KeyBundle> {
+  const { data, error } = await PATCH('/key-bundles/{id}', {
+    params: {
+      path: { id },
+    },
+    body: updates,
+  })
+
+  if (error) {
+    throw new Error('Failed to update key bundle')
+  }
+
+  return data?.content as KeyBundle
 }
 
 /**
