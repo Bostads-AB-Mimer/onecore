@@ -73,8 +73,14 @@ export function ReturnKeysDialog({
         // Build a map of unique active loans
         const loansMap = new Map<string, KeysByLoan>()
 
-        for (const key of keysToReturn) {
-          const loans = await keyLoanService.getByKeyId(key.id)
+        const loansPromises = keysToReturn.map((key) =>
+          keyLoanService.getByKeyId(key.id)
+        )
+        const allLoansResults = await Promise.all(loansPromises)
+
+        // Process results
+        keysToReturn.forEach((key, index) => {
+          const loans = allLoansResults[index]
           const activeLoan = loans.find((loan) => !loan.returnedAt)
 
           if (activeLoan) {
@@ -92,7 +98,7 @@ export function ReturnKeysDialog({
               })
             }
           }
-        }
+        })
 
         setKeysByLoan(Array.from(loansMap.values()))
 
