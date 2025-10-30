@@ -1,22 +1,16 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { X } from 'lucide-react'
 import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import {
   searchContacts,
   fetchContactByContactCode,
 } from '@/services/api/contactService'
-import { useDebounce } from '@/utils/debounce'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
-import {
-  SearchDropdown,
-  type SearchDropdownItem,
-} from '@/components/ui/search-dropdown'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 
 interface LoanMaintenanceKeysDialogProps {
   open: boolean
@@ -34,15 +28,15 @@ export function LoanMaintenanceKeysDialog({
   onSuccess,
 }: LoanMaintenanceKeysDialogProps) {
   const { toast } = useToast()
+
+  // Form state
   const [companySearch, setCompanySearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [companySuggestions, setCompanySuggestions] = useState<Contact[]>([])
   const [selectedCompany, setSelectedCompany] = useState<Contact | null>(null)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [contactPerson, setContactPerson] = useState('')
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
+
+  // Pre-suggestions state
   const [recentCompanies, setRecentCompanies] = useState<Contact[]>([])
 
   // Fetch companies that have active loans on keys in the bundle (for pre-suggestions)
@@ -72,65 +66,20 @@ export function LoanMaintenanceKeysDialog({
     }
   }, [open, keys, allBundleKeys])
 
-  // Debounce company search
-  const updateDebouncedSearch = useDebounce((query: string) => {
-    setDebouncedSearch(query)
-  }, 300)
-
-  useEffect(() => {
-    updateDebouncedSearch(companySearch.trim())
-  }, [companySearch, updateDebouncedSearch])
-
-  // Search for companies when debounced search changes
-  useEffect(() => {
-    // Don't search if company is already selected
-    if (selectedCompany) {
-      setCompanySuggestions([])
-      return
-    }
-
-    if (debouncedSearch.length < 3) {
-      setCompanySuggestions([])
-      return
-    }
-
-    const search = async () => {
-      setIsSearching(true)
-      try {
-        const results = await searchContacts(debouncedSearch, 'company')
-        setCompanySuggestions(results)
-      } catch (error) {
-        console.error('Error searching contacts:', error)
-        setCompanySuggestions([])
-      } finally {
-        setIsSearching(false)
-      }
-    }
-
-    search()
-  }, [debouncedSearch, selectedCompany])
-
-  const handleSelectCompany = (company: Contact) => {
+  const handleSelectCompany = (company: Contact | null) => {
     setSelectedCompany(company)
-    // Format: Name · Code · Org number
-    const displayText = [
-      company.fullName,
-      company.contactCode,
-      company.organisationNumber,
-    ]
-      .filter(Boolean)
-      .join(' · ')
-    setCompanySearch(displayText)
-    setShowSuggestions(false)
-    setCompanySuggestions([]) // Clear suggestions
-    setDebouncedSearch('') // Stop further searches
-  }
 
-  const handleClearCompany = () => {
-    setSelectedCompany(null)
-    setCompanySearch('')
-    setShowSuggestions(false)
-    setDebouncedSearch('')
+    if (company) {
+      // Format: Name · Code · National registration number
+      const displayText = [
+        company.fullName,
+        company.contactCode,
+        company.nationalRegistrationNumber,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      setCompanySearch(displayText)
+    }
   }
 
   const handleAccept = async () => {
@@ -180,135 +129,38 @@ export function LoanMaintenanceKeysDialog({
     setSelectedCompany(null)
     setContactPerson('')
     setDescription('')
-    setShowSuggestions(false)
     setRecentCompanies([])
     onOpenChange(false)
   }
 
-  // Combine server results with pre-suggestions
-  const allCompanies = useMemo(() => {
-    // Don't show anything if company is already selected
-    if (selectedCompany) {
-      return []
-    }
-
-    const trimmed = companySearch.trim()
-
-    // If empty, show all pre-suggestions
-    if (trimmed.length === 0) {
-      return recentCompanies
-    }
-
-    // Filter pre-suggestions based on search
-    const filteredPreSuggestions = recentCompanies.filter((c) => {
-      const searchText =
-        `${c.fullName} ${c.contactCode} ${c.organisationNumber || ''}`.toLowerCase()
-      return searchText.includes(trimmed.toLowerCase())
-    })
-
-    // If below min length for server search, only show filtered pre-suggestions
-    if (trimmed.length < 3) {
-      return filteredPreSuggestions
-    }
-
-    // At 3+ chars, combine filtered pre-suggestions with server results
-    // Remove duplicates (pre-suggestions take priority)
-    const preSuggestionCodes = new Set(
-      filteredPreSuggestions.map((c) => c.contactCode)
-    )
-    const uniqueServerResults = companySuggestions.filter(
-      (c) => !preSuggestionCodes.has(c.contactCode)
-    )
-
-    return [...filteredPreSuggestions, ...uniqueServerResults]
-  }, [companySearch, recentCompanies, companySuggestions, selectedCompany])
-
-  // Format items for dropdown and track pre-suggestions count
-  const { dropdownItems, preSuggestionsCount } = useMemo(() => {
-    const items = allCompanies.map((company) => {
-      const isPreSuggestion = recentCompanies.includes(company)
-      return {
-        value: company,
-        primaryText: company.fullName || company.contactCode,
-        secondaryText: `${company.contactCode}${company.organisationNumber ? ` · ${company.organisationNumber}` : ''}${isPreSuggestion ? ' · Aktivt lån' : ''}`,
-        searchableText: `${company.fullName} ${company.contactCode} ${company.organisationNumber || ''}`,
-        isPreSuggestion,
-      }
-    })
-
-    // Count how many pre-suggestions are at the start (they're already at the top from allCompanies logic)
-    let count = 0
-    for (const item of items) {
-      if (item.isPreSuggestion) {
-        count++
-      } else {
-        break // Pre-suggestions should be contiguous at the start
-      }
-    }
-
-    return { dropdownItems: items, preSuggestionsCount: count }
-  }, [allCompanies, recentCompanies])
-
-  // Determine if we should show the dropdown
-  const shouldShowDropdown = useMemo(() => {
-    if (!showSuggestions) return false
-    if (selectedCompany) return false
-
-    const trimmed = companySearch.trim()
-
-    // For pre-suggestions (< 3 chars), only show if we have items
-    if (trimmed.length < 3) {
-      return dropdownItems.length > 0
-    }
-
-    // For server search (>= 3 chars), always show (loading, results, or empty state)
-    return true
-  }, [showSuggestions, selectedCompany, companySearch, dropdownItems.length])
-
   const rightContent = (
     <div className="space-y-4">
       {/* Company Search */}
-      <div className="space-y-2 relative">
+      <div className="space-y-2">
         <Label htmlFor="company">
           Företag <span className="text-destructive">*</span>
         </Label>
-        <div className="relative">
-          <Input
-            id="company"
-            value={companySearch}
-            onChange={(e) => setCompanySearch(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => {
-              // Delay to allow click events on dropdown items to fire first
-              setTimeout(() => setShowSuggestions(false), 200)
-            }}
-            placeholder="Sök företag (F-nummer eller namn)..."
-            disabled={isSubmitting}
-            autoComplete="off"
-          />
-          {selectedCompany && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-              onClick={handleClearCompany}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-
-          {/* Search dropdown */}
-          <SearchDropdown
-            show={shouldShowDropdown}
-            isSearching={isSearching}
-            items={dropdownItems}
-            preSuggestionsCount={preSuggestionsCount}
-            onSelect={handleSelectCompany}
-            emptyMessage="Inga företag hittades"
-            loadingMessage="Söker företag..."
-          />
-        </div>
+        <SearchDropdown
+          preSuggestions={recentCompanies}
+          searchFn={(query) => searchContacts(query, 'company')}
+          minSearchLength={3}
+          debounceMs={300}
+          formatItem={(contact) => ({
+            primaryText: contact.fullName || contact.contactCode,
+            secondaryText: `${contact.contactCode}${contact.nationalRegistrationNumber ? ` · ${contact.nationalRegistrationNumber}` : ''}`,
+            searchableText: `${contact.fullName} ${contact.contactCode} ${contact.nationalRegistrationNumber || ''}`,
+          })}
+          getKey={(contact) => contact.contactCode}
+          preSuggestionLabel="Aktivt lån"
+          value={companySearch}
+          onChange={setCompanySearch}
+          onSelect={handleSelectCompany}
+          selectedValue={selectedCompany}
+          placeholder="Sök företag (F-nummer eller namn)..."
+          emptyMessage="Inga företag hittades"
+          loadingMessage="Söker företag..."
+          disabled={isSubmitting}
+        />
       </div>
 
       {/* Contact Person */}
