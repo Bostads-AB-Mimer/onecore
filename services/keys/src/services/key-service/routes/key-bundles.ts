@@ -406,6 +406,90 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-bundles/{id}/keys-with-loan-status:
+   *   get:
+   *     summary: Get all keys in a bundle with their maintenance loan status
+   *     description: |
+   *       Returns all keys that belong to this bundle along with information about
+   *       any active maintenance loans they are currently part of.
+   *       This endpoint is optimized for displaying keys in a table with loan status.
+   *     tags: [Key Bundles]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique ID of the key bundle
+   *     responses:
+   *       200:
+   *         description: Bundle information and keys with loan status
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     bundle:
+   *                       $ref: '#/components/schemas/KeyBundle'
+   *                     keys:
+   *                       type: array
+   *                       items:
+   *                         allOf:
+   *                           - $ref: '#/components/schemas/Key'
+   *                           - type: object
+   *                             properties:
+   *                               maintenanceLoanId:
+   *                                 type: string
+   *                                 nullable: true
+   *                                 description: ID of active maintenance loan, null if not loaned
+   *                               maintenanceLoanCompany:
+   *                                 type: string
+   *                                 nullable: true
+   *                               maintenanceLoanContactPerson:
+   *                                 type: string
+   *                                 nullable: true
+   *                               maintenanceLoanPickedUpAt:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
+   *                               maintenanceLoanCreatedAt:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
+   *       404:
+   *         description: Key bundle not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await keyBundlesAdapter.getKeyBundleWithLoanStatus(
+        ctx.params.id,
+        db
+      )
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (err: any) {
+      if (err.message === 'Bundle not found') {
+        ctx.status = 404
+        ctx.body = {
+          reason: `Key bundle with id ${ctx.params.id} not found`,
+          ...metadata,
+        }
+        return
+      }
+      logger.error(err, 'Error fetching key bundle with loan status')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /key-bundles/{id}:
    *   delete:
    *     summary: Delete a key bundle

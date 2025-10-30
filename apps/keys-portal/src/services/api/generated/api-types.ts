@@ -218,6 +218,52 @@ export interface paths {
       };
     };
   };
+  "/key-bundles/{id}/keys-with-loan-status": {
+    /**
+     * Get all keys in a bundle with their maintenance loan status
+     * @description Returns all keys that belong to this bundle along with information about
+     * any active maintenance loans they are currently part of.
+     * This endpoint is optimized for displaying keys in a table with loan status.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Bundle information and keys with loan status */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                bundle?: components["schemas"]["KeyBundle"];
+                keys?: (components["schemas"]["Key"] & ({
+                    /** @description ID of active maintenance loan, null if not loaned */
+                    maintenanceLoanId?: string | null;
+                    maintenanceLoanCompany?: string | null;
+                    maintenanceLoanContactPerson?: string | null;
+                    /** Format: date-time */
+                    maintenanceLoanPickedUpAt?: string | null;
+                    /** Format: date-time */
+                    maintenanceLoanCreatedAt?: string | null;
+                  }))[];
+              };
+            };
+          };
+        };
+        /** @description Key bundle not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-events": {
     /**
      * Get all key events

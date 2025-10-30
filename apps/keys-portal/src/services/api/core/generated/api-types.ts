@@ -5088,6 +5088,38 @@ export interface paths {
       };
     };
   };
+  "/key-bundles/{id}/keys-with-loan-status": {
+    /**
+     * Get keys in bundle with maintenance loan status
+     * @description Fetches all keys in a key bundle along with their active maintenance loan information
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key bundle ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Bundle information and keys with loan status */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundleWithLoanStatusResponse"];
+            };
+          };
+        };
+        /** @description Key bundle not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-loan-maintenance-keys": {
     /**
      * List all maintenance key loans
@@ -6265,6 +6297,67 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
+        })[];
+    };
+    KeyWithMaintenanceLoanStatus: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: uuid */
+      maintenanceLoanId: string | null;
+      maintenanceLoanCompany: string | null;
+      maintenanceLoanContactPerson: string | null;
+      /** Format: date-time */
+      maintenanceLoanPickedUpAt: string | null;
+      /** Format: date-time */
+      maintenanceLoanCreatedAt: string | null;
+    };
+    KeyBundleWithLoanStatusResponse: {
+      bundle: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        keys: string;
+        description?: string | null;
+      };
+      keys: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          /** Format: uuid */
+          maintenanceLoanId: string | null;
+          maintenanceLoanCompany: string | null;
+          maintenanceLoanContactPerson: string | null;
+          /** Format: date-time */
+          maintenanceLoanPickedUpAt: string | null;
+          /** Format: date-time */
+          maintenanceLoanCreatedAt: string | null;
         })[];
     };
     CreateKeyLoanMaintenanceKeysRequest: {
