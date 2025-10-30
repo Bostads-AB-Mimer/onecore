@@ -17,6 +17,7 @@ import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
+import { LoanMaintenanceKeysDialog } from './dialogs/LoanMaintenanceKeysDialog'
 import { CreateMaintenanceLoanDialog } from './CreateMaintenanceLoanDialog'
 import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
 import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
@@ -181,6 +182,15 @@ export function KeyBundleKeysTable({
           <KeyActionButtons
             selectedCount={selectedKeys.length}
             isProcessing={isProcessing}
+            loanAction={
+              loanableKeys.length > 0
+                ? {
+                    label: 'Låna ut',
+                    count: loanableKeys.length,
+                    onClick: () => setShowLoanDialog(true),
+                  }
+                : undefined
+            }
             returnAction={
               returnableKeys.length > 0
                 ? {
@@ -248,6 +258,17 @@ export function KeyBundleKeysTable({
       </CardContent>
 
       {/* Dialogs */}
+      <LoanMaintenanceKeysDialog
+        open={showLoanDialog}
+        onOpenChange={setShowLoanDialog}
+        keys={loanableKeys}
+        allBundleKeys={keys}
+        onSuccess={() => {
+          setSelectedKeys([])
+          onRefresh()
+        }}
+      />
+
       <ReturnMaintenanceKeysDialog
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
