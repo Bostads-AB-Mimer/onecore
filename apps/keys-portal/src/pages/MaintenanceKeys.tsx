@@ -9,10 +9,16 @@ import {
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
 import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
+import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { getKeyBundleWithLoanStatus } from '@/services/api/keyBundleService'
+import type {
+  KeyLoanMaintenanceKeysWithDetails,
+  KeyWithMaintenanceLoanStatus,
+} from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 
 export default function MaintenanceKeys() {
@@ -30,6 +36,10 @@ export default function MaintenanceKeys() {
   const [hasLoadedActive, setHasLoadedActive] = useState(false)
   const [hasLoadedReturned, setHasLoadedReturned] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [bundleKeys, setBundleKeys] = useState<KeyWithMaintenanceLoanStatus[]>(
+    []
+  )
+  const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
@@ -138,6 +148,39 @@ export default function MaintenanceKeys() {
     fetchReturnedLoans()
   }, [searchResult, returnedLoansOpen, toast])
 
+  // Fetch bundle keys when a bundle is selected
+  useEffect(() => {
+    if (
+      !searchResult ||
+      searchResult.type !== 'bundle' ||
+      !searchResult.bundle
+    ) {
+      setBundleKeys([])
+      return
+    }
+
+    const fetchBundleKeys = async () => {
+      setBundleKeysLoading(true)
+      try {
+        const data = await getKeyBundleWithLoanStatus(searchResult.bundle!.id)
+        if (data) {
+          setBundleKeys(data.keys)
+        }
+      } catch (error) {
+        toast({
+          title: 'Kunde inte hämta nycklar',
+          description: 'Ett fel uppstod när nycklar skulle hämtas',
+          variant: 'destructive',
+        })
+        console.error('Error fetching bundle keys:', error)
+      } finally {
+        setBundleKeysLoading(false)
+      }
+    }
+
+    fetchBundleKeys()
+  }, [searchResult, toast])
+
   const { handleSelectContact, handleSelectBundle, loading } =
     useUnifiedMaintenanceSearch({
       onResultFound: handleResultFound,
@@ -198,6 +241,20 @@ export default function MaintenanceKeys() {
                 </Card>
               )}
             </div>
+
+            {/* Bundle Keys Table */}
+            {searchResult.type === 'bundle' &&
+              searchResult.bundle &&
+              (bundleKeysLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Laddar nycklar...
+                </div>
+              ) : (
+                <KeyBundleKeysTable
+                  keys={bundleKeys}
+                  bundleName={searchResult.bundle.name}
+                />
+              ))}
 
             {/* Loading State */}
             {loansLoading && (

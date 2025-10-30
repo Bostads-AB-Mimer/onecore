@@ -21,6 +21,7 @@ type Signature = keys.v1.Signature
 type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
+type KeyBundleWithLoanStatusResponse = keys.v1.KeyBundleWithLoanStatusResponse
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
 type KeyLoanMaintenanceKeysWithDetails =
   keys.v1.KeyLoanMaintenanceKeysWithDetails
@@ -901,6 +902,17 @@ export const KeyBundlesApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-bundles/${id}`)
+  },
+
+  getWithLoanStatus: async (
+    id: string
+  ): Promise<
+    AdapterResult<KeyBundleWithLoanStatusResponse, 'not-found' | CommonErr>
+  > => {
+    const r = await getJSON<{ content: KeyBundleWithLoanStatusResponse }>(
+      `${BASE}/key-bundles/${id}/keys-with-loan-status`
+    )
+    return r.ok ? ok(r.data.content) : r
   },
 }
 
