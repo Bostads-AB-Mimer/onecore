@@ -4,7 +4,7 @@ import {
   printListingStatus,
   printVacantFrom,
 } from '../../../common/formattingUtils'
-import { UnpublishListing } from '../components/UnpublishListing'
+import { CloseListing } from '../components/CloseListing'
 import { CreateApplicantForListing } from '../components/create-applicant-for-listing/CreateApplicantForListing'
 import {
   GetListingWithApplicantFilterByType,
@@ -117,9 +117,7 @@ export const getColumns = (
   ]
 }
 
-export const getActionColumns = (
-  onUnpublished?: () => void
-): Array<GridColDef<ListingWithOffer>> => {
+export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
   return [
     {
       field: 'actions',
@@ -133,11 +131,7 @@ export const getActionColumns = (
           row.status === ListingStatus.Expired
         ) {
           return [
-            <UnpublishListing
-              key={1}
-              listingId={row.id}
-              onUnpublished={onUnpublished}
-            />,
+            <CloseListing key={1} listingId={row.id} />,
             <CreateApplicantForListing
               key={1}
               disabled={

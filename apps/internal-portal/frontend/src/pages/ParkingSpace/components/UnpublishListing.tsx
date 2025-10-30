@@ -3,7 +3,7 @@ import { Button, Typography } from '@mui/material'
 import { toast } from 'react-toastify'
 
 import { useUnpublishParkingSpaceListing } from '../hooks/useUnpublishParkingSpaceListing'
-import { ActionDialog } from '../../ParkingSpace/components/ActionDialog'
+import { ActionDialog } from './ActionDialog'
 
 export const UnpublishListing = (props: {
   listingId: number
@@ -35,15 +35,16 @@ export const UnpublishListing = (props: {
   return (
     <>
       <Button variant="dark" onClick={() => setOpen(true)}>
-        Avpublicera
+        Tillsvidarelägg avpublicering
       </Button>
       <ActionDialog
         open={open}
         onClose={onUnpublish}
         onConfirm={onUnpublishListing}
-        title="Avpublicera bilplatsannons"
-        content="Bekräfta att du vill avpublicera denna bilplatsannons. En kommentar kommer att läggas till om att du avpublicerat denna bilplatsannons."
+        title="Tillsvidarelägg avpublicering"
+        content="Publiceringstiden har ännu inte gått ut. Bekräfta att du vill avpublicera annonsen i förtid. Annonsen kommer att bli redo för erbjudande."
         submitButtonText="Bekräfta"
+        closeButtonText="Stäng"
         isPending={unpublishListing.isPending}
         error={
           unpublishListing.error ? (

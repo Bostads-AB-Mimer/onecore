@@ -377,6 +377,22 @@ const closeListing = async (
   }
 }
 
+const expireListing = async (
+  listingId: number
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'put',
+      url: `${coreBaseUrl}/listings/${listingId}/status`,
+      data: { status: ListingStatus.Expired },
+    })
+
+    return { ok: true, data: null }
+  } catch {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 const acceptOffer = async (
   offerId: string
 ): Promise<AdapterResult<Array<Listing>, ReplyToOfferErrorCodes>> => {
@@ -668,6 +684,7 @@ export {
   createOffer,
   deleteListing,
   closeListing,
+  expireListing,
   acceptOffer,
   denyOffer,
   getActiveOfferByListingId,
