@@ -104,19 +104,19 @@ function renderDisposedGroup(group: GroupedKeys['nonDisposed']) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nyckelnamn</TableHead>
-                        <TableHead>Typ</TableHead>
-                        <TableHead>Flex-nummer</TableHead>
-                        <TableHead>Hyresobjekt</TableHead>
+                        <TableHead className="w-[35%]">Nyckelnamn</TableHead>
+                        <TableHead className="w-[25%]">Typ</TableHead>
+                        <TableHead className="w-[20%]">Flex-nummer</TableHead>
+                        <TableHead className="w-[20%]">Hyresobjekt</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loan.keys.map((key) => (
                         <TableRow key={key.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium w-[35%]">
                             {key.keyName}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="w-[25%]">
                             <Badge variant="secondary">
                               {
                                 KeyTypeLabels[
@@ -125,8 +125,12 @@ function renderDisposedGroup(group: GroupedKeys['nonDisposed']) {
                               }
                             </Badge>
                           </TableCell>
-                          <TableCell>{key.flexNumber ?? '-'}</TableCell>
-                          <TableCell>{key.rentalObjectCode ?? '-'}</TableCell>
+                          <TableCell className="w-[20%]">
+                            {key.flexNumber ?? '-'}
+                          </TableCell>
+                          <TableCell className="w-[20%]">
+                            {key.rentalObjectCode ?? '-'}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -148,18 +152,19 @@ function renderDisposedGroup(group: GroupedKeys['nonDisposed']) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nyckelnamn</TableHead>
-                  <TableHead>Typ</TableHead>
-                  <TableHead>Flex-nummer</TableHead>
-                  <TableHead>Hyresobjekt</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[35%]">Nyckelnamn</TableHead>
+                  <TableHead className="w-[25%]">Typ</TableHead>
+                  <TableHead className="w-[20%]">Flex-nummer</TableHead>
+                  <TableHead className="w-[20%]">Hyresobjekt</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {group.unloaned.map((key) => (
                   <TableRow key={key.id}>
-                    <TableCell className="font-medium">{key.keyName}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium w-[35%]">
+                      {key.keyName}
+                    </TableCell>
+                    <TableCell className="w-[25%]">
                       <Badge variant="secondary">
                         {
                           KeyTypeLabels[
@@ -168,12 +173,11 @@ function renderDisposedGroup(group: GroupedKeys['nonDisposed']) {
                         }
                       </Badge>
                     </TableCell>
-                    <TableCell>{key.flexNumber ?? '-'}</TableCell>
-                    <TableCell>{key.rentalObjectCode ?? '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-green-50">
-                        Tillgänglig
-                      </Badge>
+                    <TableCell className="w-[20%]">
+                      {key.flexNumber ?? '-'}
+                    </TableCell>
+                    <TableCell className="w-[20%]">
+                      {key.rentalObjectCode ?? '-'}
                     </TableCell>
                   </TableRow>
                 ))}
