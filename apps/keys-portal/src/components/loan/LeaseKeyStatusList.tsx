@@ -138,13 +138,17 @@ function EditableAvailableDate({
 
 export function LeaseKeyStatusList({
   lease,
+  keysData,
   onKeysLoaned,
   onKeysReturned,
+  onKeyCreated,
   refreshTrigger,
 }: {
   lease: Lease
+  keysData?: KeyWithLoanStatus[]
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
+  onKeyCreated?: () => void
   refreshTrigger?: number
 }) {
   const { toast } = useToast()
@@ -181,20 +185,22 @@ export function LeaseKeyStatusList({
     [lease]
   )
 
-  // Fetch keys with loan status (single optimized call with events included)
+  // Initial fetch - only if keysData is NOT provided as prop
   useEffect(() => {
+    // If parent provides keysData, skip fetching
+    if (keysData) return
+
     let cancelled = false
     ;(async () => {
       setLoading(true)
       try {
-        const keysData = await keyService.getKeysWithLoanStatus(
+        const keys = await keyService.getKeysWithLoanStatus(
           lease.rentalPropertyId,
           true // Include latest event to avoid N+1 queries
         )
         if (!cancelled) {
-          setKeysWithLoanStatus(keysData)
-          // Compute statuses with events (events already included in keysData)
-          const withStatus = keysData.map((key) =>
+          setKeysWithLoanStatus(keys)
+          const withStatus = keys.map((key) =>
             computeKeyWithStatus(key, tenantContactCodes)
           )
           setKeysWithStatus(withStatus)
@@ -206,34 +212,52 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId, tenantContactCodes])
+  }, [lease.rentalPropertyId, tenantContactCodes, keysData])
+
+  // Handle keysData prop changes - no fetching, just update state
+  useEffect(() => {
+    if (keysData) {
+      setKeysWithLoanStatus(keysData)
+      const withStatus = keysData.map((key) =>
+        computeKeyWithStatus(key, tenantContactCodes)
+      )
+      setKeysWithStatus(withStatus)
+      setLoading(false)
+    }
+  }, [keysData, tenantContactCodes])
 
   // Refresh when external trigger changes (e.g., after receipt upload)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       refreshStatuses()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger])
 
   const refreshStatuses = async () => {
-    // Refetch keys from backend to get updated key properties (e.g., disposed status)
-    const keysData = await keyService.getKeysWithLoanStatus(
+    // If parent provides keysData, delegate refresh to parent
+    if (keysData && onKeyCreated) {
+      onKeyCreated()
+      return
+    }
+
+    // Only fetch directly if component is standalone (no parent providing data)
+    const fetchedKeys = await keyService.getKeysWithLoanStatus(
       lease.rentalPropertyId,
-      true // Include latest event to show flex order status
+      true
     )
-    setKeysWithLoanStatus(keysData)
-    // Recompute statuses with events
-    const withStatus = await Promise.all(
-      keysData.map((key) => computeKeyWithStatus(key, tenantContactCodes))
+    setKeysWithLoanStatus(fetchedKeys)
+    // Recompute statuses with events (computeKeyWithStatus is synchronous)
+    const withStatus = fetchedKeys.map((key) =>
+      computeKeyWithStatus(key, tenantContactCodes)
     )
     setKeysWithStatus(withStatus)
   }
 
-  const handleKeyCreated = async (newKey: KeyWithLoanStatus) => {
-    // Refresh to get the key with loan status
-    await refreshStatuses()
+  const handleKeyCreated = async () => {
     setShowAddKeyForm(false)
+    // Notify parent component to refetch its keys data
+    // Parent will refetch and pass updated keysData down, triggering our useEffect
+    onKeyCreated?.()
   }
 
   const handleEditKey = (keyId: string) => {
@@ -370,10 +394,24 @@ export function LeaseKeyStatusList({
   if (sortedKeys.length === 0) {
     return (
       <Card className="mt-2">
-        <CardContent className="p-3">
+        <CardContent className="p-3 space-y-3">
           <div className="text-sm text-muted-foreground">
             No keys found for this rental object.
           </div>
+          <div className="flex gap-2">
+            {!showAddKeyForm && (
+              <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
+            )}
+          </div>
+          {showAddKeyForm && (
+            <AddKeyForm
+              keys={keysWithLoanStatus}
+              selectedKeyIds={selectedKeys}
+              rentalObjectCode={lease.rentalPropertyId}
+              onKeyCreated={handleKeyCreated}
+              onCancel={() => setShowAddKeyForm(false)}
+            />
+          )}
         </CardContent>
       </Card>
     )

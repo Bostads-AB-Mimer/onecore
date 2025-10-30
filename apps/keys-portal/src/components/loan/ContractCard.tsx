@@ -111,29 +111,21 @@ export function ContractCard({
     }
   }, [lease.rentalPropertyId, rentalAddress])
 
-  // Unsigned loan status is managed by KeyLoansAccordion via handleUnsignedLoansChange callback
-
-  useEffect(() => {
-    let cancelled = false
-    async function loadKeys() {
-      try {
-        // Single optimized call - no more N+1!
-        const keysWithStatus = await keyService.getKeysWithLoanStatus(
-          lease.rentalPropertyId
-        )
-
-        if (!cancelled) {
-          setKeys(keysWithStatus)
-        }
-      } catch (err) {
-        console.error('Failed to load keys:', err)
-      }
-    }
-    loadKeys()
-    return () => {
-      cancelled = true
+  // Refetch keys function that can be called externally
+  const refetchKeys = useCallback(async () => {
+    try {
+      const keysWithStatus = await keyService.getKeysWithLoanStatus(
+        lease.rentalPropertyId
+      )
+      setKeys(keysWithStatus)
+    } catch (err) {
+      console.error('Failed to load keys:', err)
     }
   }, [lease.rentalPropertyId])
+
+  useEffect(() => {
+    refetchKeys()
+  }, [refetchKeys])
 
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
@@ -203,28 +195,26 @@ export function ContractCard({
                 </>
               )}
             </Button>
-            {hasAnyKeys && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setOpen((v) => !v)}
-                aria-expanded={open}
-                aria-controls={keysRegionId}
-                className="h-7 px-2 text-xs gap-1"
-              >
-                {open ? (
-                  <>
-                    <ChevronUp className="h-3.5 w-3.5" />
-                    Dölj nycklar
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3.5 w-3.5" />
-                    Visa nycklar
-                  </>
-                )}
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls={keysRegionId}
+              className="h-7 px-2 text-xs gap-1"
+            >
+              {open ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Dölj nycklar
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Visa nycklar
+                </>
+              )}
+            </Button>
             <Badge variant={variant} className="text-[11px] py-0.5">
               {label}
             </Badge>
@@ -321,6 +311,7 @@ export function ContractCard({
           <div id={keysRegionId} className="pt-2">
             <LeaseKeyStatusList
               lease={lease}
+              keysData={keys}
               refreshTrigger={keyStatusRefreshKey}
               onKeysLoaned={() => {
                 setKeyLoansOpen(true)
@@ -334,6 +325,7 @@ export function ContractCard({
                 // Force KeyLoansAccordion to refresh and show the returned loan
                 setKeyLoansRefreshKey((prev) => prev + 1)
               }}
+              onKeyCreated={refetchKeys}
             />
           </div>
         )}
