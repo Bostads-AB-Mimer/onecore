@@ -29,6 +29,7 @@ type Props = {
   onOpenChange: (open: boolean) => void
   selectedKeys: Key[]
   onSuccess?: () => void
+  onKeysCreated?: (createdKeyIds: string[]) => void
 }
 
 export function FlexMenu({
@@ -36,6 +37,7 @@ export function FlexMenu({
   onOpenChange,
   selectedKeys,
   onSuccess,
+  onKeysCreated,
 }: Props) {
   const { toast } = useToast()
   const [isCreating, setIsCreating] = useState(false)
@@ -142,6 +144,11 @@ export function FlexMenu({
         title: 'Flex-nycklar skapade',
         description: `${createdKeys.length} flex-nycklar har beställts.`,
       })
+
+      // Call onKeysCreated with the IDs of the created keys
+      if (onKeysCreated) {
+        onKeysCreated(keyIds)
+      }
 
       onOpenChange(false)
       onSuccess?.()

@@ -10,6 +10,7 @@ type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
 const TABLE = 'key_bundles'
 const KEYS_TABLE = 'keys'
 const MAINTENANCE_LOANS_TABLE = 'key_loan_maintenance_keys'
+const KEY_EVENTS_TABLE = 'key_events'
 
 /**
  * Database adapter functions for key bundles.
@@ -126,13 +127,16 @@ export async function getKeyBundleWithLoanStatus(
         .whereNull('returnedAt')
         .first()
 
+      // Find latest key event for this key
+      const latestEvent = await dbConnection(KEY_EVENTS_TABLE)
+        .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+        .orderBy('createdAt', 'desc')
+        .first()
+
       return {
         ...key,
-        maintenanceLoanId: activeLoan?.id || null,
-        maintenanceLoanCompany: activeLoan?.company || null,
-        maintenanceLoanContactPerson: activeLoan?.contactPerson || null,
-        maintenanceLoanPickedUpAt: activeLoan?.pickedUpAt || null,
-        maintenanceLoanCreatedAt: activeLoan?.createdAt || null,
+        maintenanceLoan: activeLoan || null,
+        latestEvent: latestEvent || null,
       } as KeyWithMaintenanceLoanStatus
     })
   )
