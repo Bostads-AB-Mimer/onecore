@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
 import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
-import { KeyTypeLabels } from '@/services/types'
+import { KeyTypeLabels, getKeyEventDisplayLabel } from '@/services/types'
 import {
   Table,
   TableBody,
@@ -13,22 +13,42 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Button } from '@/components/ui/button'
 import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { fetchContactByContactCode } from '@/services/api/contactService'
+import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
+import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
+import { CreateMaintenanceLoanDialog } from './CreateMaintenanceLoanDialog'
+import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
+import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
+import { updateKeyBundle } from '@/services/api/keyBundleService'
+import { useToast } from '@/hooks/use-toast'
+import { Trash2, Minus } from 'lucide-react'
+import { handleDisposeKeys } from '@/services/loanHandlers'
 
 interface KeyBundleKeysTableProps {
   keys: KeyWithMaintenanceLoanStatus[]
   bundleName: string
+  bundleId: string
+  onRefresh: () => void
 }
 
 export function KeyBundleKeysTable({
   keys,
   bundleName,
+  bundleId,
+  onRefresh,
 }: KeyBundleKeysTableProps) {
+  const { toast } = useToast()
   const grouped = useMemo(() => groupAndSortKeys(keys), [keys])
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  // Dialog states
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
+  const [showLoanDialog, setShowLoanDialog] = useState(false)
+  const [showFlexMenu, setShowFlexMenu] = useState(false)
+  const [showIncomingFlexMenu, setShowIncomingFlexMenu] = useState(false)
 
   // Fetch company names for all unique company codes
   useEffect(() => {
@@ -81,6 +101,73 @@ export function KeyBundleKeysTable({
   const hasDisposed =
     grouped.disposed.loaned.length > 0 || grouped.disposed.unloaned.length > 0
 
+  // Get selected keys data
+  const selectedKeysData = keys.filter((k) => selectedKeys.includes(k.id))
+
+  // Determine which keys can be returned (currently loaned)
+  const returnableKeys = selectedKeysData.filter(
+    (k) => k.maintenanceLoan !== null
+  )
+
+  // Determine which keys can be loaned (not currently loaned)
+  const loanableKeys = selectedKeysData.filter(
+    (k) => k.maintenanceLoan === null
+  )
+
+  // Action handlers
+  const handleRemoveFromBundle = async () => {
+    setIsProcessing(true)
+    try {
+      // Get current bundle keys
+      const currentKeyIds = keys.map((k) => k.id)
+      // Remove selected keys
+      const updatedKeyIds = currentKeyIds.filter(
+        (id) => !selectedKeys.includes(id)
+      )
+
+      await updateKeyBundle(bundleId, {
+        keys: JSON.stringify(updatedKeyIds),
+      })
+
+      toast({
+        title: 'Nycklar borttagna',
+        description: `${selectedKeys.length} ${selectedKeys.length === 1 ? 'nyckel' : 'nycklar'} borttagen från samlingen`,
+      })
+
+      setSelectedKeys([])
+      onRefresh()
+    } catch (error) {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte ta bort nycklar från samlingen',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleDispose = async () => {
+    setIsProcessing(true)
+    const result = await handleDisposeKeys({ keyIds: selectedKeys })
+
+    if (result.success) {
+      toast({
+        title: result.title,
+        description: result.message,
+      })
+      setSelectedKeys([])
+      onRefresh()
+    } else {
+      toast({
+        title: result.title,
+        description: result.message,
+        variant: 'destructive',
+      })
+    }
+    setIsProcessing(false)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -89,14 +176,38 @@ export function KeyBundleKeysTable({
           Totalt {keys.length} nycklar
         </p>
 
-        {/* Action buttons - shown when keys are selected */}
-        {selectedKeys.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-3">
-            <Button variant="outline" size="sm">
-              Ta bort från samling ({selectedKeys.length})
-            </Button>
-          </div>
-        )}
+        {/* Action buttons */}
+        <div className="pt-3">
+          <KeyActionButtons
+            selectedCount={selectedKeys.length}
+            isProcessing={isProcessing}
+            returnAction={
+              returnableKeys.length > 0
+                ? {
+                    label: 'Återlämna',
+                    count: returnableKeys.length,
+                    onClick: () => setShowReturnDialog(true),
+                  }
+                : undefined
+            }
+            flexAction={{
+              label: 'Flex',
+              onClick: () => setShowFlexMenu(true),
+            }}
+            disposeAction={{
+              label: 'Kassera',
+              onClick: handleDispose,
+            }}
+            customActions={[
+              {
+                label: 'Ta bort från samling',
+                variant: 'outline',
+                icon: <Minus className="h-3 w-3" />,
+                onClick: handleRemoveFromBundle,
+              },
+            ]}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -106,7 +217,12 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-green-600">
                 Aktiva nycklar
               </h3>
-              {renderUnifiedTable(grouped.nonDisposed, companyNames, selectedKeys, setSelectedKeys)}
+              {renderUnifiedTable(
+                grouped.nonDisposed,
+                companyNames,
+                selectedKeys,
+                setSelectedKeys
+              )}
             </div>
           )}
 
@@ -116,7 +232,12 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
                 Kasserade nycklar
               </h3>
-              {renderUnifiedTable(grouped.disposed, companyNames, selectedKeys, setSelectedKeys)}
+              {renderUnifiedTable(
+                grouped.disposed,
+                companyNames,
+                selectedKeys,
+                setSelectedKeys
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground py-4">
@@ -125,7 +246,100 @@ export function KeyBundleKeysTable({
           )}
         </div>
       </CardContent>
+
+      {/* Dialogs */}
+      <ReturnMaintenanceKeysDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}
+        keyIds={returnableKeys.map((k) => k.id)}
+        allKeys={keys}
+        onSuccess={() => {
+          setSelectedKeys([])
+          onRefresh()
+        }}
+      />
+
+      <FlexMenu
+        open={showFlexMenu}
+        onOpenChange={setShowFlexMenu}
+        selectedKeys={selectedKeysData}
+        onSuccess={onRefresh}
+        onKeysCreated={async (createdKeyIds) => {
+          // Add the newly created flex keys to the bundle
+          try {
+            const currentKeyIds = keys.map((k) => k.id)
+            const updatedKeyIds = [...currentKeyIds, ...createdKeyIds]
+
+            await updateKeyBundle(bundleId, {
+              keys: JSON.stringify(updatedKeyIds),
+            })
+
+            toast({
+              title: 'Flex-nycklar tillagda',
+              description: `${createdKeyIds.length} nya flex-nycklar har lagts till i samlingen`,
+            })
+          } catch (error) {
+            toast({
+              title: 'Kunde inte lägga till flex-nycklar',
+              description:
+                'Flex-nycklarna skapades men kunde inte läggas till i samlingen',
+              variant: 'destructive',
+            })
+          }
+        }}
+      />
+
+      <IncomingFlexMenu
+        open={showIncomingFlexMenu}
+        onOpenChange={setShowIncomingFlexMenu}
+        selectedKeys={selectedKeysData}
+        allKeys={keys}
+        onSuccess={onRefresh}
+      />
     </Card>
+  )
+}
+
+/**
+ * Renders a single key row with all columns
+ */
+function renderKeyRow(
+  key: KeyWithMaintenanceLoanStatus,
+  selectedKeys: string[],
+  setSelectedKeys: React.Dispatch<React.SetStateAction<string[]>>,
+  indent: boolean = false
+) {
+  return (
+    <TableRow key={key.id}>
+      <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
+        <Checkbox
+          checked={selectedKeys.includes(key.id)}
+          onCheckedChange={(checked) => {
+            setSelectedKeys((prev) =>
+              checked ? [...prev, key.id] : prev.filter((id) => id !== key.id)
+            )
+          }}
+        />
+      </TableCell>
+      <TableCell className="font-medium w-[22%]">{key.keyName}</TableCell>
+      <TableCell className="w-[8%]">{key.keySequenceNumber ?? '-'}</TableCell>
+      <TableCell className="w-[8%]">{key.flexNumber ?? '-'}</TableCell>
+      <TableCell className="w-[22%]">
+        {key.latestEvent && key.latestEvent.status !== 'COMPLETED' ? (
+          <Badge variant="outline">
+            {getKeyEventDisplayLabel(key.latestEvent)}
+          </Badge>
+        ) : (
+          '-'
+        )}
+      </TableCell>
+      <TableCell className="w-[15%]">
+        <Badge variant="secondary">
+          {KeyTypeLabels[key.keyType as keyof typeof KeyTypeLabels]}
+        </Badge>
+      </TableCell>
+      <TableCell className="w-[25%]">{key.rentalObjectCode ?? '-'}</TableCell>
+    </TableRow>
   )
 }
 
@@ -144,10 +358,12 @@ function renderUnifiedTable(
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]"></TableHead>
-            <TableHead className="w-[35%]">Nyckelnamn</TableHead>
-            <TableHead className="w-[25%]">Typ</TableHead>
-            <TableHead className="w-[20%]">Flex-nummer</TableHead>
-            <TableHead className="w-[20%]">Hyresobjekt</TableHead>
+            <TableHead className="w-[22%]">Nyckelnamn</TableHead>
+            <TableHead className="w-[8%]">Löpnr</TableHead>
+            <TableHead className="w-[8%]">Flex</TableHead>
+            <TableHead className="w-[22%]">Status</TableHead>
+            <TableHead className="w-[15%]">Typ</TableHead>
+            <TableHead className="w-[25%]">Hyresobjekt</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -159,7 +375,7 @@ function renderUnifiedTable(
                 key={`company-${companyGroup.company}`}
                 className="bg-muted hover:bg-muted"
               >
-                <TableCell colSpan={5} className="font-semibold py-4">
+                <TableCell colSpan={7} className="font-semibold py-4">
                   {companyNames[companyGroup.company] || companyGroup.company}
                 </TableCell>
               </TableRow>
@@ -172,7 +388,7 @@ function renderUnifiedTable(
                     key={`loan-${loan.loanId}`}
                     className="bg-muted/50 hover:bg-muted/50"
                   >
-                    <TableCell colSpan={5} className="font-medium text-sm pl-8">
+                    <TableCell colSpan={7} className="font-medium text-sm pl-8">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">Lånad</Badge>
                         {loan.loanContactPerson && (
@@ -190,40 +406,9 @@ function renderUnifiedTable(
                   </TableRow>
 
                   {/* Key data rows for this loan */}
-                  {loan.keys.map((key) => (
-                    <TableRow key={key.id}>
-                      <TableCell className="w-[50px] pl-8">
-                        <Checkbox
-                          checked={selectedKeys.includes(key.id)}
-                          onCheckedChange={(checked) => {
-                            setSelectedKeys((prev) =>
-                              checked
-                                ? [...prev, key.id]
-                                : prev.filter((id) => id !== key.id)
-                            )
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium w-[35%]">
-                        {key.keyName}
-                      </TableCell>
-                      <TableCell className="w-[25%]">
-                        <Badge variant="secondary">
-                          {
-                            KeyTypeLabels[
-                              key.keyType as keyof typeof KeyTypeLabels
-                            ]
-                          }
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="w-[20%]">
-                        {key.flexNumber ?? '-'}
-                      </TableCell>
-                      <TableCell className="w-[20%]">
-                        {key.rentalObjectCode ?? '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {loan.keys.map((key) =>
+                    renderKeyRow(key, selectedKeys, setSelectedKeys, true)
+                  )}
                 </>
               ))}
             </>
@@ -234,42 +419,15 @@ function renderUnifiedTable(
             <>
               {/* Unloaned header row */}
               <TableRow className="bg-muted hover:bg-muted">
-                <TableCell colSpan={5} className="font-semibold py-4">
+                <TableCell colSpan={7} className="font-semibold py-4">
                   Ej utlånade
                 </TableCell>
               </TableRow>
 
               {/* Key data rows for unloaned keys */}
-              {group.unloaned.map((key) => (
-                <TableRow key={key.id}>
-                  <TableCell className="w-[50px] pl-8">
-                    <Checkbox
-                      checked={selectedKeys.includes(key.id)}
-                      onCheckedChange={(checked) => {
-                        setSelectedKeys((prev) =>
-                          checked
-                            ? [...prev, key.id]
-                            : prev.filter((id) => id !== key.id)
-                        )
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium w-[35%]">
-                    {key.keyName}
-                  </TableCell>
-                  <TableCell className="w-[25%]">
-                    <Badge variant="secondary">
-                      {KeyTypeLabels[key.keyType as keyof typeof KeyTypeLabels]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="w-[20%]">
-                    {key.flexNumber ?? '-'}
-                  </TableCell>
-                  <TableCell className="w-[20%]">
-                    {key.rentalObjectCode ?? '-'}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {group.unloaned.map((key) =>
+                renderKeyRow(key, selectedKeys, setSelectedKeys, true)
+              )}
             </>
           )}
         </TableBody>

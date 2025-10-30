@@ -6316,14 +6316,35 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      /** Format: uuid */
-      maintenanceLoanId: string | null;
-      maintenanceLoanCompany: string | null;
-      maintenanceLoanContactPerson: string | null;
-      /** Format: date-time */
-      maintenanceLoanPickedUpAt: string | null;
-      /** Format: date-time */
-      maintenanceLoanCreatedAt: string | null;
+      maintenanceLoan: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        company?: string | null;
+        contactPerson?: string | null;
+        /** Format: date-time */
+        returnedAt?: string | null;
+        /** Format: date-time */
+        pickedUpAt?: string | null;
+        description?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+      }) | null;
+      latestEvent: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
     };
     KeyBundleWithLoanStatusResponse: {
       bundle: {
@@ -6350,14 +6371,35 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
-          /** Format: uuid */
-          maintenanceLoanId: string | null;
-          maintenanceLoanCompany: string | null;
-          maintenanceLoanContactPerson: string | null;
-          /** Format: date-time */
-          maintenanceLoanPickedUpAt: string | null;
-          /** Format: date-time */
-          maintenanceLoanCreatedAt: string | null;
+          maintenanceLoan: ({
+            /** Format: uuid */
+            id: string;
+            keys: string;
+            company?: string | null;
+            contactPerson?: string | null;
+            /** Format: date-time */
+            returnedAt?: string | null;
+            /** Format: date-time */
+            pickedUpAt?: string | null;
+            description?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+          }) | null;
+          latestEvent: ({
+            /** Format: uuid */
+            id: string;
+            keys: string;
+            /** @enum {string} */
+            type: "FLEX" | "ORDER" | "LOST";
+            /** @enum {string} */
+            status: "ORDERED" | "RECEIVED" | "COMPLETED";
+            /** Format: uuid */
+            workOrderId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          }) | null;
         })[];
     };
     CreateKeyLoanMaintenanceKeysRequest: {
