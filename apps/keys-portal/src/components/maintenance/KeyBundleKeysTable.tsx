@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
 import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 
@@ -26,6 +28,7 @@ export function KeyBundleKeysTable({
 }: KeyBundleKeysTableProps) {
   const grouped = useMemo(() => groupAndSortKeys(keys), [keys])
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
 
   // Fetch company names for all unique company codes
   useEffect(() => {
@@ -85,6 +88,15 @@ export function KeyBundleKeysTable({
         <p className="text-sm text-muted-foreground">
           Totalt {keys.length} nycklar
         </p>
+
+        {/* Action buttons - shown when keys are selected */}
+        {selectedKeys.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-3">
+            <Button variant="outline" size="sm">
+              Ta bort från samling ({selectedKeys.length})
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -94,7 +106,7 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-green-600">
                 Aktiva nycklar
               </h3>
-              {renderUnifiedTable(grouped.nonDisposed, companyNames)}
+              {renderUnifiedTable(grouped.nonDisposed, companyNames, selectedKeys, setSelectedKeys)}
             </div>
           )}
 
@@ -104,7 +116,7 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
                 Kasserade nycklar
               </h3>
-              {renderUnifiedTable(grouped.disposed, companyNames)}
+              {renderUnifiedTable(grouped.disposed, companyNames, selectedKeys, setSelectedKeys)}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground py-4">
@@ -122,13 +134,16 @@ export function KeyBundleKeysTable({
  */
 function renderUnifiedTable(
   group: GroupedKeys['nonDisposed'],
-  companyNames: Record<string, string>
+  companyNames: Record<string, string>,
+  selectedKeys: string[],
+  setSelectedKeys: React.Dispatch<React.SetStateAction<string[]>>
 ) {
   return (
     <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px]"></TableHead>
             <TableHead className="w-[35%]">Nyckelnamn</TableHead>
             <TableHead className="w-[25%]">Typ</TableHead>
             <TableHead className="w-[20%]">Flex-nummer</TableHead>
@@ -144,7 +159,7 @@ function renderUnifiedTable(
                 key={`company-${companyGroup.company}`}
                 className="bg-muted hover:bg-muted"
               >
-                <TableCell colSpan={4} className="font-semibold py-4">
+                <TableCell colSpan={5} className="font-semibold py-4">
                   {companyNames[companyGroup.company] || companyGroup.company}
                 </TableCell>
               </TableRow>
@@ -157,7 +172,7 @@ function renderUnifiedTable(
                     key={`loan-${loan.loanId}`}
                     className="bg-muted/50 hover:bg-muted/50"
                   >
-                    <TableCell colSpan={4} className="font-medium text-sm pl-8">
+                    <TableCell colSpan={5} className="font-medium text-sm pl-8">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">Lånad</Badge>
                         {loan.loanContactPerson && (
@@ -177,7 +192,19 @@ function renderUnifiedTable(
                   {/* Key data rows for this loan */}
                   {loan.keys.map((key) => (
                     <TableRow key={key.id}>
-                      <TableCell className="font-medium w-[35%] pl-8">
+                      <TableCell className="w-[50px] pl-8">
+                        <Checkbox
+                          checked={selectedKeys.includes(key.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedKeys((prev) =>
+                              checked
+                                ? [...prev, key.id]
+                                : prev.filter((id) => id !== key.id)
+                            )
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium w-[35%]">
                         {key.keyName}
                       </TableCell>
                       <TableCell className="w-[25%]">
@@ -207,7 +234,7 @@ function renderUnifiedTable(
             <>
               {/* Unloaned header row */}
               <TableRow className="bg-muted hover:bg-muted">
-                <TableCell colSpan={4} className="font-semibold py-4">
+                <TableCell colSpan={5} className="font-semibold py-4">
                   Ej utlånade
                 </TableCell>
               </TableRow>
@@ -215,7 +242,19 @@ function renderUnifiedTable(
               {/* Key data rows for unloaned keys */}
               {group.unloaned.map((key) => (
                 <TableRow key={key.id}>
-                  <TableCell className="font-medium w-[35%] pl-8">
+                  <TableCell className="w-[50px] pl-8">
+                    <Checkbox
+                      checked={selectedKeys.includes(key.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedKeys((prev) =>
+                          checked
+                            ? [...prev, key.id]
+                            : prev.filter((id) => id !== key.id)
+                        )
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium w-[35%]">
                     {key.keyName}
                   </TableCell>
                   <TableCell className="w-[25%]">
