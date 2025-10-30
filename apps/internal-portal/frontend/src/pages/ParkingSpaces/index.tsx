@@ -60,7 +60,7 @@ const ParkingSpaces = () => {
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
           <Link to="/bilplatser/publicera">
             <Button variant="dark-outlined">
-              Publicera bilplatser från Xpand
+              Publicera bilplatser
             </Button>
           </Link>
 
