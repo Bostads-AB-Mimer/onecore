@@ -110,27 +110,9 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.put('(.*)/listings/:listingId/close', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await coreAdapter.closeListing(Number(ctx.params.listingId))
-
-    if (result.ok) {
-      ctx.status = 200
-      ctx.body = {
-        ...metadata,
-      }
-      return
-    } else {
-      ctx.status = 500
-      ctx.body = {
-        ...metadata,
-      }
-    }
-  })
-
   router.put('(.*)/listings/:listingId/unpublish', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const unpublish = await coreAdapter.closeListing(
+    const unpublish = await coreAdapter.expireListing(
       Number(ctx.params.listingId)
     )
 
@@ -140,7 +122,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
 
-      logger.error({ error: unpublish.err }, 'Failed to close listing')
+      logger.error({ error: unpublish.err }, 'Failed to unpublish listing')
       return
     }
 
@@ -149,7 +131,39 @@ export const routes = (router: KoaRouter) => {
       {
         authorId: ctx.session?.account.username,
         authorName: ctx.session?.account.name,
-        comment: 'Bilplatsannons avpublicerad',
+        comment: 'Bilplatsannons manuellt avpublicerad.',
+        type: 'COMMENT',
+      }
+    )
+
+    if (!addComment.ok) {
+      logger.error({ error: addComment.err }, 'Failed to add comment')
+    }
+
+    ctx.status = 200
+    ctx.body = metadata
+  })
+
+  router.put('(.*)/listings/:listingId/close', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const close = await coreAdapter.closeListing(Number(ctx.params.listingId))
+
+    if (!close.ok) {
+      ctx.status = 500
+      ctx.body = {
+        ...metadata,
+      }
+
+      logger.error({ error: close.err }, 'Failed to close listing')
+      return
+    }
+
+    const addComment = await coreAdapter.addComment(
+      { targetType: 'listing', targetId: Number(ctx.params.listingId) },
+      {
+        authorId: ctx.session?.account.username,
+        authorName: ctx.session?.account.name,
+        comment: 'Bilplatsannonsering avslutad',
         type: 'COMMENT',
       }
     )

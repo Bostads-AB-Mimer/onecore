@@ -37,10 +37,6 @@ const ParkingSpaces = () => {
     setSearchParams({ type: tab })
   }
 
-  const handleUnpublished = () => {
-    parkingSpaces.refetch?.()
-  }
-
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'currency',
@@ -95,7 +91,7 @@ const ParkingSpaces = () => {
           <TabPanel value="published" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(handleUnpublished)
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -105,7 +101,7 @@ const ParkingSpaces = () => {
           <TabPanel value="ready-for-offer" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(handleUnpublished)
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -115,7 +111,7 @@ const ParkingSpaces = () => {
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
               columns={getOfferedColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(handleUnpublished)
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -125,7 +121,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(handleUnpublished)
+                getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}

@@ -21,7 +21,7 @@ export const useUnpublishParkingSpaceListing = () => {
       ),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ['parkingSpaceListings'],
+        queryKey: ['parkingSpaceListing'],
       }),
   })
 }
