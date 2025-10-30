@@ -124,21 +124,21 @@ export async function handleReturnKeys({
 
     // Build a map of unique active loans first to avoid duplicate fetches
     const uniqueActiveLoans = new Map<string, any>()
-    for (const keyId of keyIds) {
-      const loans = await keyLoanService.getByKeyId(keyId)
-      const activeLoan = loans.find((loan) => !loan.returnedAt)
 
+    const loansPromises = keyIds.map((keyId) =>
+      keyLoanService.getByKeyId(keyId)
+    )
+    const allLoansResults = await Promise.all(loansPromises)
+
+    allLoansResults.forEach((loans) => {
+      const activeLoan = loans.find((loan) => !loan.returnedAt)
       if (activeLoan && !uniqueActiveLoans.has(activeLoan.id)) {
         uniqueActiveLoans.set(activeLoan.id, activeLoan)
       }
-    }
+    })
 
-    // Process each unique active loan once
     for (const [loanId, activeLoan] of uniqueActiveLoans.entries()) {
-      // Parse all keys in this loan
       const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-
-      // Check if ALL keys from this loan are in the return request
       const missingKeys = loanKeyIds.filter((id) => !keyIdSet.has(id))
 
       if (missingKeys.length > 0) {
@@ -168,12 +168,13 @@ export async function handleReturnKeys({
         // Generate and upload PDF if we have lease info
         if (lease && receiptId && selectedForReceipt) {
           try {
-            // Fetch all key objects for this loan
-            const loanKeys: Key[] = []
-            for (const keyId of loanKeyIds) {
-              const key = await keyService.getKey(keyId)
-              if (key) loanKeys.push(key)
-            }
+            const keyPromises = loanKeyIds.map((keyId) =>
+              keyService.getKey(keyId)
+            )
+            const keyResults = await Promise.all(keyPromises)
+            const loanKeys: Key[] = keyResults.filter(
+              (key): key is Key => key !== null
+            )
 
             // Generate and upload the return receipt PDF
             const selectedSet = new Set(selectedForReceipt)
