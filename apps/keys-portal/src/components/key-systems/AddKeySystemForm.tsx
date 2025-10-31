@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,13 +18,12 @@ import {
   KeySystemTypeLabels,
   Property,
 } from '@/services/types'
-import { useSearch } from '@/hooks/useSearch'
-import { useDebounce } from '@/utils/debounce'
 import {
   propertySearchService,
   type PropertySearchResult,
 } from '@/services/api/propertySearchService'
 import { X, FileText, Download, Trash2 } from 'lucide-react'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 
 type KeySystemFormData = Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>
 
@@ -66,31 +65,9 @@ export function AddKeySystemForm({
   )
   const [isUploadingSchema, setIsUploadingSchema] = useState(false)
 
-  // Property search functionality state with debouncing
-  const [propertySearchQuery, setPropertySearchQuery] = useState('')
-  const [debouncedPropertyQuery, setDebouncedPropertyQuery] = useState('')
+  // Property search state
+  const [propertySearch, setPropertySearch] = useState('')
   const [selectedProperties, setSelectedProperties] = useState<Property[]>([])
-
-  // Debounce property search query (500ms delay)
-  const updateDebouncedQuery = useDebounce((query: string) => {
-    setDebouncedPropertyQuery(query)
-  }, 500)
-
-  // Use the reusable search hook
-  const propertiesQuery = useSearch(
-    (query: string) =>
-      propertySearchService.search({
-        q: query,
-        fields: ['designation', 'code', 'municipality'],
-      }),
-    'search-properties',
-    debouncedPropertyQuery
-  )
-
-  // Trigger debounced search when query changes
-  useEffect(() => {
-    updateDebouncedQuery(propertySearchQuery)
-  }, [propertySearchQuery, updateDebouncedQuery])
 
   useEffect(() => {
     const loadEditingData = async () => {
@@ -147,26 +124,41 @@ export function AddKeySystemForm({
     loadEditingData()
   }, [editingKeySystem])
 
-  // Handle property input changes and trigger search
-  const handlePropertySearchChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = e.target.value
-    setPropertySearchQuery(value)
+  // Property search function
+  const searchProperties = async (
+    query: string
+  ): Promise<PropertySearchResult[]> => {
+    return await propertySearchService.search({
+      q: query,
+      fields: ['designation', 'code', 'municipality'],
+    })
   }
 
-  // Handle selection of a property search result from the dropdown
-  const handleSelectPropertyResult = (property: PropertySearchResult) => {
-    if (!selectedProperties.find((p) => p.id === property.id)) {
+  // Filter out already selected properties
+  const selectedPropertyIds = useMemo(
+    () => new Set(selectedProperties.map((p) => p.id)),
+    [selectedProperties]
+  )
+
+  // Wrap search function to filter out selected properties
+  const searchPropertiesFiltered = async (
+    query: string
+  ): Promise<PropertySearchResult[]> => {
+    const results = await searchProperties(query)
+    return results.filter((property) => !selectedPropertyIds.has(property.id))
+  }
+
+  // Handle property selection
+  const handleSelectProperty = (property: PropertySearchResult | null) => {
+    if (property) {
       const newSelectedProperties = [...selectedProperties, property]
       setSelectedProperties(newSelectedProperties)
       setFormData((prev) => ({
         ...prev,
         propertyIds: JSON.stringify(newSelectedProperties.map((p) => p.id)),
       }))
+      setPropertySearch('') // Clear search after selection
     }
-    setPropertySearchQuery('')
-    setDebouncedPropertyQuery('')
   }
 
   // Handle removal of a selected property
@@ -446,44 +438,6 @@ export function AddKeySystemForm({
           <div className="space-y-2">
             <Label htmlFor="properties">Fastigheter</Label>
             <div className="space-y-2">
-              {/* Search input for properties */}
-              <div className="relative">
-                <Input
-                  id="properties"
-                  value={propertySearchQuery}
-                  onChange={handlePropertySearchChange}
-                  placeholder="Sök fastighet..."
-                />
-                {propertiesQuery.isFetching && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
-                  </div>
-                )}
-
-                {/* Search results dropdown */}
-                {!propertiesQuery.isFetching &&
-                  propertiesQuery.data &&
-                  propertiesQuery.data.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                      {propertiesQuery.data.map((result) => (
-                        <button
-                          key={result.id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-sm"
-                          onClick={() => handleSelectPropertyResult(result)}
-                        >
-                          <div className="font-medium">
-                            {result.designation || result.code}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {result.tract}, {result.municipality}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-              </div>
-
               {/* Selected properties list */}
               {selectedProperties.length > 0 && (
                 <div className="border rounded-lg p-2 space-y-1">
@@ -509,6 +463,32 @@ export function AddKeySystemForm({
                   ))}
                 </div>
               )}
+
+              {/* Search input for properties */}
+              <SearchDropdown
+                preSuggestions={[]}
+                searchFn={searchPropertiesFiltered}
+                minSearchLength={3}
+                debounceMs={500}
+                formatItem={(property) => ({
+                  primaryText: property.designation || property.code,
+                  secondaryText: `${property.tract}, ${property.municipality}`,
+                  searchableText: `${property.designation || property.code} ${property.tract} ${property.municipality}`,
+                })}
+                getKey={(property) => property.id}
+                value={propertySearch}
+                onChange={setPropertySearch}
+                onSelect={handleSelectProperty}
+                selectedValue={null}
+                placeholder="Sök fastighet..."
+                emptyMessage={
+                  selectedPropertyIds.size > 0
+                    ? 'Alla hittade fastigheter är redan valda'
+                    : 'Inga fastigheter hittades'
+                }
+                loadingMessage="Söker fastigheter..."
+                showClearButton={false}
+              />
             </div>
           </div>
 
