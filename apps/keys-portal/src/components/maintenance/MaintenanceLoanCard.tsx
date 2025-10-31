@@ -2,16 +2,18 @@ import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Building2, Calendar, User, FileText } from 'lucide-react'
+import { Calendar, User, FileText } from 'lucide-react'
 import type { KeyLoanMaintenanceKeysWithDetails } from '@/services/types'
 import { MaintenanceKeysTable } from './MaintenanceKeysTable'
+import { MaintenanceReceiptActions } from './MaintenanceReceiptActions'
 
 type Props = {
   loan: KeyLoanMaintenanceKeysWithDetails
   keySystemMap: Record<string, string>
+  onRefresh?: () => void
 }
 
-export function MaintenanceLoanCard({ loan, keySystemMap }: Props) {
+export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
   const isReturned = !!loan.returnedAt
 
   return (
@@ -41,7 +43,7 @@ export function MaintenanceLoanCard({ loan, keySystemMap }: Props) {
             )}
           </div>
 
-          {/* Status Badge and Dates */}
+          {/* Status Badge, Dates, and Receipt Actions */}
           <div className="flex flex-col items-end gap-2">
             <Badge variant={isReturned ? 'secondary' : 'default'}>
               {isReturned ? 'Återlämnad' : 'Aktiv'}
@@ -54,6 +56,14 @@ export function MaintenanceLoanCard({ loan, keySystemMap }: Props) {
                   {format(new Date(loan.returnedAt), 'PPP', { locale: sv })}
                 </span>
               </div>
+            )}
+
+            {/* Receipt Actions - Only for active loans */}
+            {!isReturned && (
+              <MaintenanceReceiptActions
+                loanId={loan.id}
+                onRefresh={onRefresh}
+              />
             )}
           </div>
         </div>
