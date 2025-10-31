@@ -6087,6 +6087,8 @@ export interface components {
           /** Format: uuid */
           keyLoanId: string;
           /** @enum {string} */
+          loanType: "REGULAR" | "MAINTENANCE";
+          /** @enum {string} */
           receiptType: "LOAN" | "RETURN";
           /** @enum {string} */
           type: "DIGITAL" | "PHYSICAL";
@@ -6144,6 +6146,8 @@ export interface components {
       id: string;
       /** Format: uuid */
       keyLoanId: string;
+      /** @enum {string} */
+      loanType: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
@@ -6520,6 +6524,8 @@ export interface components {
     CreateReceiptRequest: {
       /** Format: uuid */
       keyLoanId: string;
+      /** @enum {string} */
+      loanType: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
