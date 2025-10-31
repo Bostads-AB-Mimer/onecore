@@ -69,17 +69,14 @@ export default function MaintenanceKeys() {
     setReturnedLoans([])
     setHasLoadedActive(false)
     setHasLoadedReturned(false)
+    setActiveLoansOpen(false)
+    setReturnedLoansOpen(false)
     setSearchParams({})
   }
 
   // Fetch active loans when the section is opened
   useEffect(() => {
     if (!searchResult || !activeLoansOpen) {
-      return
-    }
-
-    // Skip loan fetching for bundles - they only show keys table
-    if (searchResult.type === 'bundle') {
       return
     }
 
@@ -91,6 +88,11 @@ export default function MaintenanceKeys() {
         if (searchResult.type === 'contact' && searchResult.contact) {
           active = await maintenanceKeysService.getByCompanyWithKeys(
             searchResult.contact.contactCode,
+            false
+          )
+        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
+          active = await maintenanceKeysService.getAllLoansForBundle(
+            searchResult.bundle.id,
             false
           )
         }
@@ -118,11 +120,6 @@ export default function MaintenanceKeys() {
       return
     }
 
-    // Skip loan fetching for bundles - they only show keys table
-    if (searchResult.type === 'bundle') {
-      return
-    }
-
     const fetchReturnedLoans = async () => {
       try {
         let returned: KeyLoanMaintenanceKeysWithDetails[] = []
@@ -130,6 +127,11 @@ export default function MaintenanceKeys() {
         if (searchResult.type === 'contact' && searchResult.contact) {
           returned = await maintenanceKeysService.getByCompanyWithKeys(
             searchResult.contact.contactCode,
+            true
+          )
+        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
+          returned = await maintenanceKeysService.getAllLoansForBundle(
+            searchResult.bundle.id,
             true
           )
         }
