@@ -1,11 +1,8 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { AxiosError } from 'axios'
-import dayjs from 'dayjs'
 import {
   ConsumerReport,
   Contact,
-  Invoice,
-  InvoiceTransactionType,
   Lease,
   WaitingListType,
   Applicant,
@@ -237,32 +234,6 @@ const getCreditInformation = async (
       nationalRegistrationNumber
   )
   return informationResponse.data.content
-}
-
-const getInternalCreditInformation = async (
-  contactCode: string
-): Promise<boolean> => {
-  const result = await axios(
-    tenantsLeasesServiceUrl + '/contact/invoices/contactCode/' + contactCode
-  )
-
-  const invoices = result.data.content as Invoice[] | undefined
-  const oneDayMs = 24 * 60 * 60 * 1000
-  const sixMonthsMs = 182 * oneDayMs
-
-  let hasDebtCollection = false
-
-  if (invoices) {
-    hasDebtCollection = invoices.some((invoice: Invoice) => {
-      return (
-        (invoice.transactionType === InvoiceTransactionType.Reminder ||
-          invoice.transactionType === InvoiceTransactionType.DebtCollection) &&
-        -dayjs(invoice.expirationDate).diff() < sixMonthsMs
-      )
-    })
-  }
-
-  return !hasDebtCollection
 }
 
 const addApplicantToWaitingList = async (
@@ -633,7 +604,6 @@ export {
   getContactForPnr,
   getContactsDataBySearchQuery,
   getCreditInformation,
-  getInternalCreditInformation,
   getLease,
   getLeasesForPnr,
   getLeasesForContactCode,

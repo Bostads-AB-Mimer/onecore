@@ -38,6 +38,21 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/invoices/:contactCode/credit-check', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getInvoicesSentToDebtCollection(
+      ctx.params.contactCode
+    )
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
+
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(

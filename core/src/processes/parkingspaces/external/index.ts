@@ -12,9 +12,9 @@ import {
   createLease,
   getContactByContactCode,
   getCreditInformation,
-  getInternalCreditInformation,
 } from '../../../adapters/leasing-adapter'
 import { logger } from '@onecore/utilities'
+import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 
 //
 // PROCESS (Create lease for external parking space)
@@ -121,9 +121,33 @@ export const createLeaseForExternalParkingSpace = async (
         } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`
       )
     } else {
-      creditCheck = await getInternalCreditInformation(
+      const debtCollectionInvoices = await getInvoicesSentToDebtCollection(
         applicantContact.contactCode
       )
+
+      if (!debtCollectionInvoices.ok) {
+        log.push(
+          `Misslyckades med att skapa kontrakt för bilplats ${parkingSpace.parkingSpaceId}.`
+        )
+        logger.error(
+          {
+            err: debtCollectionInvoices.err,
+            rentalObjectCode: parkingSpace.parkingSpaceId,
+            contactCode: applicantContact.contactCode,
+          },
+          'Could not fetch invoices for applicant'
+        )
+        return {
+          processStatus: ProcessStatus.failed,
+          error: 'fetch-invoices-failed',
+          httpStatus: 500,
+          response: {
+            message: `Could not fetch invoices for applicant.`,
+          },
+        }
+      }
+
+      creditCheck = debtCollectionInvoices.data.length === 0
 
       log.push(
         `Intern kreditkontroll genomförd, resultat: ${
