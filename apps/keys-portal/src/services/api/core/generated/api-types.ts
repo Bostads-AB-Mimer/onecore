@@ -6524,8 +6524,11 @@ export interface components {
     CreateReceiptRequest: {
       /** Format: uuid */
       keyLoanId: string;
-      /** @enum {string} */
-      loanType: "REGULAR" | "MAINTENANCE";
+      /**
+       * @default REGULAR
+       * @enum {string}
+       */
+      loanType?: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
