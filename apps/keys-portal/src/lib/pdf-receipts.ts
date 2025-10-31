@@ -35,14 +35,26 @@ function loadLogo(): Promise<HTMLImageElement | null> {
   return _logoPromise
 }
 
-const generateReceiptNumber = (type: 'loan' | 'return'): string => {
+const generateReceiptNumber = (
+  type: 'loan' | 'return',
+  loanType: 'regular' | 'maintenance' = 'regular'
+): string => {
   const now = new Date()
-  const prefix = type === 'loan' ? 'NYL' : 'NYÅ'
+  let prefix: string
+  if (loanType === 'maintenance') {
+    prefix = type === 'loan' ? 'NMU' : 'NMÅ'
+  } else {
+    prefix = type === 'loan' ? 'NYL' : 'NYÅ'
+  }
   const timestamp = format(now, 'yyyyMMdd-HHmmss')
   return `${prefix}-${timestamp}`
 }
 
-const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
+const addHeader = async (
+  doc: jsPDF,
+  receiptType: 'loan' | 'return',
+  loanType: 'regular' | 'maintenance' = 'regular'
+) => {
   // Blue bar
   doc.setFillColor(BLUE.r, BLUE.g, BLUE.b)
   doc.rect(0, 0, PAGE_W, BAR_H, 'F')
@@ -88,7 +100,7 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
   doc.setTextColor(0, 0, 0)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  const receiptNumber = generateReceiptNumber(receiptType)
+  const receiptNumber = generateReceiptNumber(receiptType, loanType)
   const metaY1 = BAR_H + 11
   const metaY2 = metaY1 + 7
   const metaY3 = metaY2 + 7
