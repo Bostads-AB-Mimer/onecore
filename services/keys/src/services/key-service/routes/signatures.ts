@@ -4,11 +4,11 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
-import { uploadFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
 import * as signaturesAdapter from '../adapters/signatures-adapter'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
 import * as simpleSignApi from '../adapters/simplesign-adapter'
+import * as signatureWebhookService from '../signature-webhook-service'
 import Config from '../../../common/config'
 
 const {
@@ -16,12 +16,8 @@ const {
   CreateSignatureRequestSchema,
   SendSignatureRequestSchema,
   SimpleSignWebhookPayloadSchema,
-  ErrorResponseSchema,
-  NotFoundResponseSchema,
-  BadRequestResponseSchema,
 } = keys.v1
 
-type Signature = keys.v1.Signature
 type SendSignatureRequest = keys.v1.SendSignatureRequest
 type SimpleSignWebhookPayload = keys.v1.SimpleSignWebhookPayload
 
@@ -265,91 +261,48 @@ export const routes = (router: KoaRouter) => {
         'SimpleSign webhook received'
       )
 
-      // Find signature by SimpleSign document ID
-      const signature =
-        await signaturesAdapter.getSignatureBySimpleSignDocumentId(
-          webhookPayload.id,
-          db
-        )
+      // Process webhook using service layer
+      const result = await signatureWebhookService.processSignatureWebhook(
+        {
+          documentId: webhookPayload.id,
+          status: webhookPayload.status,
+          statusUpdatedAt: webhookPayload.status_updated_at,
+        },
+        db
+      )
 
-      if (!signature) {
-        logger.warn(
-          { documentId: webhookPayload.id },
-          'Webhook received for unknown document'
+      if (!result.ok) {
+        // Map error codes to HTTP status codes
+        if (result.err === 'signature-not-found') {
+          logger.warn(
+            { documentId: webhookPayload.id },
+            'Webhook received for unknown document'
+          )
+          ctx.status = 404
+          ctx.body = { reason: 'Signature not found', ...metadata }
+          return
+        }
+
+        // Other errors are internal server errors
+        logger.error(
+          { documentId: webhookPayload.id, error: result.err },
+          'Failed to process webhook'
         )
-        ctx.status = 404
-        ctx.body = { reason: 'Signature not found', ...metadata }
+        ctx.status = 500
+        ctx.body = {
+          error: 'Internal server error',
+          reason: result.err,
+          ...metadata,
+        }
         return
       }
 
-      // Update signature status
-      await db.transaction(async (trx) => {
-        await signaturesAdapter.updateSignatureStatus(
-          webhookPayload.id,
-          webhookPayload.status,
-          webhookPayload.status === 'signed'
-            ? new Date(webhookPayload.status_updated_at)
-            : undefined,
-          trx
-        )
-
-        // If signed, download PDF and upload to MinIO
-        if (webhookPayload.status === 'signed') {
-          // Check if resource already has a file (race condition check)
-          if (signature.resourceType === 'receipt') {
-            const receipt = await receiptsAdapter.getReceiptById(
-              signature.resourceId,
-              trx
-            )
-
-            if (receipt && !receipt.fileId) {
-              // Download signed PDF from SimpleSign
-              const pdfBuffer = await simpleSignApi.downloadSignedPdf(
-                webhookPayload.id
-              )
-
-              // Upload to MinIO
-              const minioFileId = await uploadFile(
-                pdfBuffer,
-                `receipt-${signature.resourceId}-signed.pdf`,
-                {
-                  'Content-Type': 'application/pdf',
-                  'x-amz-meta-signed': 'true',
-                  'x-amz-meta-signature-id': signature.id,
-                }
-              )
-
-              // Update receipt with fileId
-              await receiptsAdapter.updateReceipt(
-                signature.resourceId,
-                { fileId: minioFileId },
-                trx
-              )
-
-              // Mark other pending signatures as superseded
-              await signaturesAdapter.supersedePendingSignatures(
-                signature.resourceType,
-                signature.resourceId,
-                signature.id,
-                trx
-              )
-
-              logger.info(
-                { receiptId: signature.resourceId, fileId: minioFileId },
-                'Signed PDF uploaded to MinIO'
-              )
-            } else {
-              logger.info(
-                { receiptId: signature.resourceId },
-                'Receipt already has fileId, skipping upload'
-              )
-            }
-          }
-        }
-      })
-
       ctx.status = 200
-      ctx.body = { message: 'Webhook processed successfully', ...metadata }
+      ctx.body = {
+        message: 'Webhook processed successfully',
+        ...(result.data.fileId && { fileId: result.data.fileId }),
+        ...metadata,
+      }
     } catch (err: any) {
       logger.error(err, 'Error processing SimpleSign webhook')
       ctx.status = 500
