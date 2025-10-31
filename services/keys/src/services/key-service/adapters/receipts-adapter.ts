@@ -36,6 +36,7 @@ export async function createReceipt(
   const [row] = await dbConnection(TABLE)
     .insert({
       keyLoanId: receiptData.keyLoanId,
+      loanType: receiptData.loanType,
       receiptType: receiptData.receiptType,
       type: receiptData.type,
       fileId: receiptData.fileId ?? null,
@@ -76,6 +77,19 @@ export async function keyLoanExists(
 }
 
 /**
+ * Check if a maintenance key loan exists (for validating receipt creation)
+ */
+export async function maintenanceKeyLoanExists(
+  keyLoanId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<boolean> {
+  const loan = await dbConnection('key_loan_maintenance_keys')
+    .where({ id: keyLoanId })
+    .first()
+  return !!loan
+}
+
+/**
  * Update receipt with fileId after upload
  */
 export async function updateReceiptFileId(
@@ -102,13 +116,31 @@ export async function getKeyLoanById(
 }
 
 /**
+ * Get maintenance key loan by ID with keys field
+ */
+export async function getMaintenanceKeyLoanById(
+  keyLoanId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<
+  { id: string; keys: string; pickedUpAt: string | null } | undefined
+> {
+  return await dbConnection('key_loan_maintenance_keys')
+    .where({ id: keyLoanId })
+    .first()
+}
+
+/**
  * Check if a key loan has already been activated (has pickedUpAt set)
+ * Supports both regular and maintenance loans
  */
 export async function isKeyLoanActivated(
   keyLoanId: string,
+  loanType: 'REGULAR' | 'MAINTENANCE',
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<boolean> {
-  const loan = await dbConnection('key_loans')
+  const tableName =
+    loanType === 'REGULAR' ? 'key_loans' : 'key_loan_maintenance_keys'
+  const loan = await dbConnection(tableName)
     .where({ id: keyLoanId })
     .whereNotNull('pickedUpAt')
     .first()
@@ -117,12 +149,16 @@ export async function isKeyLoanActivated(
 
 /**
  * Activate a key loan by setting pickedUpAt timestamp
+ * Supports both regular and maintenance loans
  */
 export async function activateKeyLoan(
   keyLoanId: string,
+  loanType: 'REGULAR' | 'MAINTENANCE',
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<void> {
-  await dbConnection('key_loans')
+  const tableName =
+    loanType === 'REGULAR' ? 'key_loans' : 'key_loan_maintenance_keys'
+  await dbConnection(tableName)
     .where({ id: keyLoanId })
     .update({ pickedUpAt: dbConnection.fn.now() })
 }

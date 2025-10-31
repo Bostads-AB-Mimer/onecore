@@ -69,13 +69,14 @@ export async function activateLoanReceipt(
       // Step 2: Check if key loan is already activated
       const keyLoanAlreadyActivated = await receiptsAdapter.isKeyLoanActivated(
         receipt.keyLoanId,
+        receipt.loanType,
         trx
       )
 
       if (keyLoanAlreadyActivated) {
         // Loan already activated, no further action needed
         logger.info(
-          { keyLoanId: receipt.keyLoanId, receiptId: params.receiptId },
+          { keyLoanId: receipt.keyLoanId, receiptId: params.receiptId, loanType: receipt.loanType },
           'Key loan already activated, skipping activation'
         )
         return {
@@ -85,14 +86,22 @@ export async function activateLoanReceipt(
       }
 
       // Step 3: Activate key loan by setting pickedUpAt
-      await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, trx)
+      await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, receipt.loanType, trx)
 
       logger.info(
-        { keyLoanId: receipt.keyLoanId, receiptId: params.receiptId },
+        { keyLoanId: receipt.keyLoanId, receiptId: params.receiptId, loanType: receipt.loanType },
         'Key loan activated after signed receipt uploaded'
       )
 
-      // Step 4: Get key loan to retrieve keys
+      // Step 4: Get key loan to retrieve keys (only for REGULAR loans)
+      if (receipt.loanType === 'MAINTENANCE') {
+        // Maintenance loans don't have key events to complete
+        return {
+          ok: true,
+          data: { keyLoanActivated: true, keyEventsCompleted: 0 },
+        } as const
+      }
+
       const keyLoan = await receiptsAdapter.getKeyLoanById(
         receipt.keyLoanId,
         trx
