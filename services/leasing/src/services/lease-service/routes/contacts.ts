@@ -60,7 +60,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contacts data.
    */
   router.get('(.*)/contacts/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'contactType'])
 
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
@@ -68,8 +68,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Validate contactType parameter if provided
+    const contactType = ctx.query.contactType as string | undefined
+    if (contactType && contactType !== 'company' && contactType !== 'person') {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid contactType parameter. Must be "company" or "person"',
+        ...metadata,
+      }
+      return
+    }
+
     const result = await tenantLeaseAdapter.getContactsDataBySearchQuery(
-      ctx.query.q
+      ctx.query.q,
+      contactType as 'company' | 'person' | undefined
     )
 
     if (!result.ok) {

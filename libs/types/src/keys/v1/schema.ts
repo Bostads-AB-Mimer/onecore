@@ -22,7 +22,19 @@ export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
     _links: z.array(PaginationLinksSchema),
   })
 
-export const KeyTypeSchema = z.enum(['HN', 'FS', 'MV', 'LGH', 'PB', 'GAR', 'LOK', 'HL', 'FÖR', 'SOP', 'ÖVR'])
+export const KeyTypeSchema = z.enum([
+  'HN',
+  'FS',
+  'MV',
+  'LGH',
+  'PB',
+  'GAR',
+  'LOK',
+  'HL',
+  'FÖR',
+  'SOP',
+  'ÖVR',
+])
 export const KeySystemTypeSchema = z.enum([
   'MECHANICAL',
   'ELECTRONIC',
@@ -109,10 +121,19 @@ export const KeyLoanMaintenanceKeysSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
 })
 
-// Key Event schemas
+// Key loan maintenance keys with enriched keys data (for optimized endpoint)
+export const KeyLoanMaintenanceKeysWithDetailsSchema =
+  KeyLoanMaintenanceKeysSchema.extend({
+    // Array of full key objects instead of just IDs
+    keysArray: z.array(KeySchema),
+  })
+
+// Key Event schemas (defined here before usage in KeyWithMaintenanceLoanStatusSchema)
 export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
 export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
 
@@ -124,6 +145,18 @@ export const KeyEventSchema = z.object({
   workOrderId: z.string().uuid().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+})
+
+// Key with maintenance loan status (for key bundle table view)
+export const KeyWithMaintenanceLoanStatusSchema = KeySchema.extend({
+  maintenanceLoan: KeyLoanMaintenanceKeysSchema.nullable(),
+  latestEvent: KeyEventSchema.nullable(),
+})
+
+// Response schema for key bundle with loan status endpoint
+export const KeyBundleWithLoanStatusResponseSchema = z.object({
+  bundle: KeyBundleSchema,
+  keys: z.array(KeyWithMaintenanceLoanStatusSchema),
 })
 
 // Request schemas for API endpoints
@@ -293,6 +326,7 @@ export const CreateKeyLoanMaintenanceKeysRequestSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
 })
 
@@ -301,6 +335,7 @@ export const UpdateKeyLoanMaintenanceKeysRequestSchema = z.object({
   company: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
   description: z.string().nullable().optional(),
 })
 

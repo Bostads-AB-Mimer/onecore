@@ -211,7 +211,7 @@ export const routes = (router: KoaRouter) => {
       const query = keysAdapter.getKeysSearchQuery(db)
 
       const searchResult = buildSearchQuery(query, ctx, {
-        defaultSearchFields: ['keyName'],
+        defaultSearchFields: ['keyName', 'rentalObjectCode'],
       })
 
       if (!searchResult.hasSearchParams) {

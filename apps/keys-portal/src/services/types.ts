@@ -14,6 +14,15 @@ export type KeyWithLoanStatus = components['schemas']['KeyWithLoanStatus']
 export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
+export type KeyBundle = components['schemas']['KeyBundle']
+export type KeyLoanMaintenanceKeys =
+  components['schemas']['KeyLoanMaintenanceKeys']
+export type KeyLoanMaintenanceKeysWithDetails =
+  components['schemas']['KeyLoanMaintenanceKeysWithDetails']
+export type KeyWithMaintenanceLoanStatus =
+  components['schemas']['KeyWithMaintenanceLoanStatus']
+export type KeyBundleWithLoanStatusResponse =
+  components['schemas']['KeyBundleWithLoanStatusResponse']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']
@@ -48,6 +57,8 @@ export type CreateKeyEventRequest =
   components['schemas']['CreateKeyEventRequest']
 export type UpdateKeyEventRequest =
   components['schemas']['UpdateKeyEventRequest']
+export type CreateKeyLoanMaintenanceKeysRequest =
+  components['schemas']['CreateKeyLoanMaintenanceKeysRequest']
 
 // Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
 export type ReceiptByKeyLoan = NonNullable<
@@ -192,6 +203,16 @@ export const KeyEventStatusLabels = {
 } as const
 
 export type KeyEventStatus = keyof typeof KeyEventStatusLabels
+
+// Helper function to get display label for a key event (combines type + status)
+export function getKeyEventDisplayLabel(event: {
+  type: KeyEventType
+  status: KeyEventStatus
+}): string {
+  const typeLabel = KeyEventTypeLabels[event.type]
+  const statusLabel = KeyEventStatusLabels[event.status]
+  return `${typeLabel} ${statusLabel.toLowerCase()}`
+}
 
 // Filter parameters for log search
 export interface LogFilterParams {

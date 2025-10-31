@@ -21,7 +21,10 @@ type Signature = keys.v1.Signature
 type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
+type KeyBundleWithLoanStatusResponse = keys.v1.KeyBundleWithLoanStatusResponse
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
+type KeyLoanMaintenanceKeysWithDetails =
+  keys.v1.KeyLoanMaintenanceKeysWithDetails
 
 const BASE = Config.keysService.url
 
@@ -864,6 +867,17 @@ export const KeyBundlesApi = {
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-bundles/${id}`)
   },
+
+  getWithLoanStatus: async (
+    id: string
+  ): Promise<
+    AdapterResult<KeyBundleWithLoanStatusResponse, 'not-found' | CommonErr>
+  > => {
+    const r = await getJSON<{ content: KeyBundleWithLoanStatusResponse }>(
+      `${BASE}/key-bundles/${id}/keys-with-loan-status`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
 }
 
 /**
@@ -915,6 +929,34 @@ export const KeyLoanMaintenanceKeysApi = {
   ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
     const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
       `${BASE}/key-loan-maintenance-keys/by-company/${company}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByCompanyWithKeys: async (
+    company: string,
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
+    let url = `${BASE}/key-loan-maintenance-keys/by-company/${company}/with-keys`
+    if (returned !== undefined) {
+      url += `?returned=${returned}`
+    }
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
+      url
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByBundleWithKeys: async (
+    bundleId: string,
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
+    let url = `${BASE}/key-loan-maintenance-keys/by-bundle/${bundleId}/with-keys`
+    if (returned !== undefined) {
+      url += `?returned=${returned}`
+    }
+    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
+      url
     )
     return r.ok ? ok(r.data.content) : r
   },

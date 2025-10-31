@@ -679,14 +679,28 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/contacts/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'contactType'])
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
       ctx.body = { reason: 'Invalid query parameter', ...metadata }
       return
     }
 
-    const res = await leasingAdapter.getContactsDataBySearchQuery(ctx.query.q)
+    // Validate contactType parameter if provided
+    const contactType = ctx.query.contactType as string | undefined
+    if (contactType && contactType !== 'company' && contactType !== 'person') {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid contactType parameter. Must be "company" or "person"',
+        ...metadata,
+      }
+      return
+    }
+
+    const res = await leasingAdapter.getContactsDataBySearchQuery(
+      ctx.query.q,
+      contactType as 'company' | 'person' | undefined
+    )
 
     if (!res.ok) {
       ctx.status = 500

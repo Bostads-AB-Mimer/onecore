@@ -5,6 +5,7 @@ import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import * as keyEventsAdapter from '../adapters/key-events-adapter'
+import * as keyEventService from '../key-event-service'
 
 const {
   KeyEventSchema,
@@ -210,26 +211,36 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyEventRequest = ctx.request.body
 
-        // Parse keys from the payload (assuming it's a JSON array string like keyLoans)
-        let keyIds: string[] = []
-        try {
-          keyIds = JSON.parse(payload.keys)
-        } catch {
-          // If parsing fails, treat it as a single key ID
-          keyIds = [payload.keys]
-        }
-
-        // Check for incomplete events on any of the keys
-        const conflictCheck = await keyEventsAdapter.checkIncompleteKeyEvents(
-          keyIds,
+        // Validate keys using service layer
+        const validationResult = await keyEventService.validateKeyEventCreation(
+          payload.keys,
           db
         )
 
-        if (conflictCheck.hasConflict) {
-          ctx.status = 409
+        if (!validationResult.ok) {
+          // Map service errors to HTTP responses
+          if (validationResult.err === 'incomplete-event-conflict') {
+            ctx.status = 409
+            ctx.body = {
+              reason: 'One or more keys have incomplete events',
+              conflictingKeys: validationResult.details?.conflictingKeys,
+              ...metadata,
+            }
+            return
+          }
+
+          // All other errors are 400 Bad Request
+          const errorMessages = {
+            'invalid-keys-format': 'Invalid keys format',
+            'empty-keys-array': 'Keys array cannot be empty',
+          }
+
+          ctx.status = 400
           ctx.body = {
-            reason: 'One or more keys have incomplete events',
-            conflictingKeys: conflictCheck.conflictingKeys,
+            reason:
+              errorMessages[
+                validationResult.err as keyof typeof errorMessages
+              ] || 'Invalid keys format',
             ...metadata,
           }
           return

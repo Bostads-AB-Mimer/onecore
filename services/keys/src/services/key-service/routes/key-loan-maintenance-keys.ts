@@ -9,6 +9,7 @@ import { buildSearchQuery } from '../../../utils/search-builder'
 
 const {
   KeyLoanMaintenanceKeysSchema,
+  KeyLoanMaintenanceKeysWithDetailsSchema,
   CreateKeyLoanMaintenanceKeysRequestSchema,
   UpdateKeyLoanMaintenanceKeysRequestSchema,
 } = keys.v1
@@ -17,6 +18,8 @@ type CreateKeyLoanMaintenanceKeysRequest =
 type UpdateKeyLoanMaintenanceKeysRequest =
   keys.v1.UpdateKeyLoanMaintenanceKeysRequest
 type KeyLoanMaintenanceKeysResponse = keys.v1.KeyLoanMaintenanceKeys
+type KeyLoanMaintenanceKeysWithDetailsResponse =
+  keys.v1.KeyLoanMaintenanceKeysWithDetails
 
 /**
  * @swagger
@@ -43,6 +46,10 @@ export const routes = (router: KoaRouter) => {
     UpdateKeyLoanMaintenanceKeysRequestSchema
   )
   registerSchema('KeyLoanMaintenanceKeys', KeyLoanMaintenanceKeysSchema)
+  registerSchema(
+    'KeyLoanMaintenanceKeysWithDetails',
+    KeyLoanMaintenanceKeysWithDetailsSchema
+  )
 
   /**
    * @swagger
@@ -268,6 +275,166 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /key-loan-maintenance-keys/by-company/{company}/with-keys:
+   *   get:
+   *     summary: Get maintenance key loans for a company with full key details
+   *     description: |
+   *       Returns all maintenance key loan records for the specified company with joined key data.
+   *       Supports filtering by returned status via query parameter.
+   *     tags: [Key Loan Maintenance Keys]
+   *     parameters:
+   *       - in: path
+   *         name: company
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The company name to filter by
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
+   *     responses:
+   *       200:
+   *         description: Array of loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeysWithDetails'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '/key-loan-maintenance-keys/by-company/:company/with-keys',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['returned'])
+      try {
+        const { company } = ctx.params
+        const returnedParam = ctx.query.returned
+
+        // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+        let returned: boolean | undefined = undefined
+        if (returnedParam === 'true') {
+          returned = true
+        } else if (returnedParam === 'false') {
+          returned = false
+        }
+
+        const loans =
+          await keyLoanMaintenanceKeysAdapter.getKeyLoanMaintenanceKeysWithKeysByCompany(
+            company,
+            returned,
+            db
+          )
+
+        ctx.status = 200
+        ctx.body = {
+          content: loans satisfies KeyLoanMaintenanceKeysWithDetailsResponse[],
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          err,
+          'Error fetching maintenance key loans with keys by company'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys:
+   *   get:
+   *     summary: Get maintenance key loans for a key bundle with full key details
+   *     description: |
+   *       Returns all maintenance key loan records containing keys from the specified bundle.
+   *       Supports filtering by returned status via query parameter.
+   *     tags: [Key Loan Maintenance Keys]
+   *     parameters:
+   *       - in: path
+   *         name: bundleId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The key bundle ID to filter by
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
+   *     responses:
+   *       200:
+   *         description: Array of loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeysWithDetails'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '/key-loan-maintenance-keys/by-bundle/:bundleId/with-keys',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['returned'])
+      try {
+        const { bundleId } = ctx.params
+        const returnedParam = ctx.query.returned
+
+        // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+        let returned: boolean | undefined = undefined
+        if (returnedParam === 'true') {
+          returned = true
+        } else if (returnedParam === 'false') {
+          returned = false
+        }
+
+        const loans =
+          await keyLoanMaintenanceKeysAdapter.getKeyLoanMaintenanceKeysWithKeysByBundle(
+            bundleId,
+            returned,
+            db
+          )
+
+        ctx.status = 200
+        ctx.body = {
+          content: loans satisfies KeyLoanMaintenanceKeysWithDetailsResponse[],
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          err,
+          'Error fetching maintenance key loans with keys by bundle'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger

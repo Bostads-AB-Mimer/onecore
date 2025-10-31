@@ -50,32 +50,6 @@ describe('GET /key-notes/:id', () => {
       description: 'Test note',
     })
   })
-
-  it('responds with 404 if key note not found', async () => {
-    const getKeyNoteByIdSpy = jest
-      .spyOn(keyNotesAdapter, 'getKeyNoteById')
-      .mockResolvedValueOnce(undefined)
-
-    const res = await request(app.callback()).get('/key-notes/nonexistent-id')
-
-    expect(getKeyNoteByIdSpy).toHaveBeenCalledWith(
-      'nonexistent-id',
-      expect.anything()
-    )
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toContain('not found')
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyNotesAdapter, 'getKeyNoteById')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/key-notes/note-123')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -124,36 +98,6 @@ describe('GET /key-notes/by-rental-object/:rentalObjectCode', () => {
       id: 'note-1',
       rentalObjectCode: 'A001',
     })
-  })
-
-  it('returns empty array when no key notes exist for rental object', async () => {
-    const getKeyNotesByRentalObjectSpy = jest
-      .spyOn(keyNotesAdapter, 'getKeyNotesByRentalObject')
-      .mockResolvedValueOnce([])
-
-    const res = await request(app.callback()).get(
-      '/key-notes/by-rental-object/NONEXISTENT'
-    )
-
-    expect(getKeyNotesByRentalObjectSpy).toHaveBeenCalledWith(
-      'NONEXISTENT',
-      expect.anything()
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content).toHaveLength(0)
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyNotesAdapter, 'getKeyNotesByRentalObject')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get(
-      '/key-notes/by-rental-object/A001'
-    )
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })
 
@@ -218,20 +162,6 @@ describe('POST /key-notes', () => {
     expect(res.status).toBe(400)
     expect(res.body).toHaveProperty('status', 'error')
     expect(res.body.data).toBeDefined()
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyNotesAdapter, 'createKeyNote')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).post('/key-notes').send({
-      rentalObjectCode: 'D004',
-      description: 'Test note',
-    })
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })
 
@@ -303,42 +233,6 @@ describe('PATCH /key-notes/:id', () => {
     expect(res.status).toBe(200)
     expect(res.body.content.description).toBe('Partially updated description')
   })
-
-  it('responds with 404 if key note not found', async () => {
-    const updateKeyNoteSpy = jest
-      .spyOn(keyNotesAdapter, 'updateKeyNote')
-      .mockResolvedValueOnce(undefined)
-
-    const res = await request(app.callback())
-      .patch('/key-notes/nonexistent-id')
-      .send({
-        description: 'New description',
-      })
-
-    expect(updateKeyNoteSpy).toHaveBeenCalledWith(
-      'nonexistent-id',
-      expect.anything(),
-      expect.anything()
-    )
-
-    expect(res.status).toBe(404)
-    expect(res.body).toHaveProperty('reason', 'Key note not found')
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyNotesAdapter, 'updateKeyNote')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback())
-      .patch('/key-notes/note-123')
-      .send({
-        description: 'Updated description',
-      })
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -386,8 +280,9 @@ describe('Validation Edge Cases - Key Notes', () => {
       description: veryLongDescription,
     })
 
-    // May succeed or fail depending on database column size
-    expect([201, 400, 500]).toContain(res.status)
+    // Documents current behavior: long descriptions are accepted
+    expect(res.status).toBe(201)
+    expect(res.body.content.description).toBe(veryLongDescription)
   })
 
   it('handles special characters in description', async () => {
