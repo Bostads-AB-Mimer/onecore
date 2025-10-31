@@ -83,4 +83,27 @@ export const maintenanceKeysService = {
     if (error) throw error
     return data?.content ?? []
   },
+
+  /**
+   * Get all maintenance key loans that contain any key from a bundle with full key details
+   * @param bundleId - The bundle ID to filter by
+   * @param returned - Optional filter: true = returned loans, false = active loans, undefined = all
+   * @returns Array of maintenance key loans with keysArray containing full key objects
+   */
+  async getAllLoansForBundle(
+    bundleId: string,
+    returned?: boolean
+  ): Promise<KeyLoanMaintenanceKeysWithDetails[]> {
+    const { data, error } = await GET(
+      '/key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys',
+      {
+        params: {
+          path: { bundleId },
+          query: returned !== undefined ? { returned } : {},
+        },
+      }
+    )
+    if (error) throw error
+    return data?.content ?? []
+  },
 }
