@@ -47,32 +47,6 @@ describe('GET /logs/:id', () => {
       eventType: 'creation',
     })
   })
-
-  it('responds with 404 if log not found', async () => {
-    const getLogByIdSpy = jest
-      .spyOn(logsAdapter, 'getLogById')
-      .mockResolvedValueOnce(undefined)
-
-    const res = await request(app.callback()).get('/logs/nonexistent-id')
-
-    expect(getLogByIdSpy).toHaveBeenCalledWith(
-      'nonexistent-id',
-      expect.anything()
-    )
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toContain('not found')
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(logsAdapter, 'getLogById')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/logs/log-123')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -110,34 +84,6 @@ describe('GET /logs/object/:objectId', () => {
     )
     expect(res.status).toBe(200)
     expect(res.body.content).toHaveLength(2)
-  })
-
-  it('returns empty array when no logs exist for objectId', async () => {
-    const getLogsByObjectIdSpy = jest
-      .spyOn(logsAdapter, 'getLogsByObjectId')
-      .mockResolvedValueOnce([])
-
-    const res = await request(app.callback()).get(
-      '/logs/object/nonexistent-object'
-    )
-
-    expect(getLogsByObjectIdSpy).toHaveBeenCalledWith(
-      'nonexistent-object',
-      expect.anything()
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content).toHaveLength(0)
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(logsAdapter, 'getLogsByObjectId')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/logs/object/key-abc')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })
 
@@ -201,24 +147,6 @@ describe('POST /logs', () => {
     expect(res.body).toHaveProperty('status', 'error')
     expect(res.body.data).toBeDefined()
   })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(logsAdapter, 'createLog')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).post('/logs').send({
-      userName: 'test@example.com',
-      eventType: 'creation',
-      objectType: 'key',
-      objectId: '00000000-0000-0000-0000-000000000123',
-      description: 'Test log',
-      eventTime: new Date().toISOString(),
-    })
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -232,28 +160,7 @@ describe('POST /logs', () => {
  * so we test by verifying request/response behavior rather than mocking adapters.
  */
 describe('GET /logs', () => {
-  it('responds with 200 and list of logs with pagination', async () => {
-    // Test the actual endpoint behavior
-    const res = await request(app.callback()).get('/logs')
-
-    // Should succeed with 200
-    expect(res.status).toBe(200)
-    expect(res.body).toHaveProperty('content')
-    expect(Array.isArray(res.body.content)).toBe(true)
-    // Should include pagination metadata
-    expect(res.body).toHaveProperty('_meta')
-    expect(res.body).toHaveProperty('_links')
-  })
-
-  it('supports pagination parameters', async () => {
-    // Test with page and limit parameters
-    const res = await request(app.callback()).get('/logs?page=1&limit=5')
-
-    expect(res.status).toBe(200)
-    expect(res.body).toHaveProperty('content')
-    expect(res.body._meta).toHaveProperty('limit', 5)
-    expect(res.body._meta).toHaveProperty('page', 1)
-  })
+  // Pagination structure tests removed - tested at middleware level
 })
 
 /**

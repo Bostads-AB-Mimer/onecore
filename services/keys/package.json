@@ -23,7 +23,7 @@
     "start": "pnpm run migrate:up && node -r dotenv/config build/index",
     "test:create-db": "node scripts/create-test-db.js",
     "test:drop-db": "node scripts/drop-test-db.js",
-    "test": "pnpm test:create-db && cross-env DOTENV_CONFIG_PATH=.env.test jest",
+    "test": "pnpm test:drop-db && pnpm test:create-db && cross-env DOTENV_CONFIG_PATH=.env.test jest",
     "test:watch": "cross-env DOTENV_CONFIG_PATH=.env.test jest --watch",
     "typecheck": "tsc --noEmit"
   },

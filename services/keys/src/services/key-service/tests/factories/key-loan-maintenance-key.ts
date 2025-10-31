@@ -24,9 +24,11 @@ export const KeyLoanMaintenanceKeyFactory =
     return {
       id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
       keys: JSON.stringify([`key-${sequence}`]), // JSON string array with single key by default
+      createdAt: new Date(),
       company: `Company ${sequence}`,
       contactPerson: `Contact Person ${sequence}`,
       returnedAt: undefined, // null = not returned yet (active loan)
+      pickedUpAt: undefined,
       description: `Maintenance key loan ${sequence}`,
     }
   })
