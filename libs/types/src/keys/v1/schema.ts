@@ -295,7 +295,7 @@ export const ReceiptSchema = z.object({
 
 export const CreateReceiptRequestSchema = z.object({
   keyLoanId: z.string().uuid(),
-  loanType: LoanTypeSchema,
+  loanType: LoanTypeSchema.default('REGULAR'),
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema.optional(),
   fileId: z.string().optional(),
