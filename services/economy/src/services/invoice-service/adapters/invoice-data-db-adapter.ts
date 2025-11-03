@@ -300,6 +300,7 @@ export const getCounterPartCustomers = async (): Promise<{
     customerName: string
   ) => CounterPartCustomer | undefined
 }> => {
+  console.log('Not mocked')
   const result = await db('invoice_counterpart')
 
   const counterPartCustomers = result.map((row) => {
