@@ -34,7 +34,7 @@ export const ListingPreview = ({
               marginBottom: 4,
               lineHeight: 1.6,
               whiteSpace: 'pre-line',
-              '&:first-of-type': { paddingTop: 0 }
+              '&:first-of-type': { paddingTop: 0 },
             }}
           >
             {block.content || 'Ingress...'}
@@ -55,7 +55,7 @@ export const ListingPreview = ({
               textTransform: 'uppercase',
               color: '#00a4b3',
               marginBottom: 2,
-              whiteSpace: 'pre-line'
+              whiteSpace: 'pre-line',
             }}
           >
             {block.content || 'Rubrik...'}
@@ -75,7 +75,7 @@ export const ListingPreview = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               marginBottom: 4,
-              whiteSpace: 'pre-line'
+              whiteSpace: 'pre-line',
             }}
           >
             {block.content || 'Underrubrik...'}
@@ -95,7 +95,7 @@ export const ListingPreview = ({
               marginBottom: 4,
               lineHeight: 1.7,
               whiteSpace: 'pre-line',
-              '&:first-of-type': { paddingTop: 0 }
+              '&:first-of-type': { paddingTop: 0 },
             }}
           >
             {block.content || 'Text...'}
@@ -117,7 +117,7 @@ export const ListingPreview = ({
               fontFamily: 'graphikRegular',
               marginBottom: 4,
               paddingLeft: 3,
-              '&:first-of-type': { paddingTop: 0 }
+              '&:first-of-type': { paddingTop: 0 },
             }}
           >
             {items.map((item: string, i: number) => (
@@ -128,7 +128,7 @@ export const ListingPreview = ({
                 sx={{
                   fontFamily: 'graphikRegular',
                   fontSize: '1rem',
-                  marginBottom: 0.5
+                  marginBottom: 0.5,
                 }}
               >
                 {item.trim()}
@@ -145,7 +145,7 @@ export const ListingPreview = ({
               fontFamily: 'graphikRegular',
               marginBottom: 4,
               paddingLeft: 3,
-              '&:first-of-type': { paddingTop: 0 }
+              '&:first-of-type': { paddingTop: 0 },
             }}
           >
             <Typography
@@ -154,7 +154,7 @@ export const ListingPreview = ({
               color="text.secondary"
               sx={{
                 fontFamily: 'graphikRegular',
-                fontSize: '1rem'
+                fontSize: '1rem',
               }}
             >
               Punktlista...
@@ -215,7 +215,11 @@ export const ListingPreview = ({
         )}
       </Paper>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', marginTop: 1 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: 'block', marginTop: 1 }}
+      >
         Så här kommer annonsen att visas för användare
       </Typography>
     </Box>
