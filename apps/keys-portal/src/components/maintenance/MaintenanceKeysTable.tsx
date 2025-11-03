@@ -13,9 +13,10 @@ import { Badge } from '@/components/ui/badge'
 
 type Props = {
   keys: Key[]
+  keySystemMap: Record<string, string>
 }
 
-export function MaintenanceKeysTable({ keys }: Props) {
+export function MaintenanceKeysTable({ keys, keySystemMap }: Props) {
   const navigate = useNavigate()
 
   const handleEditKey = (key: Key) => {
@@ -46,17 +47,18 @@ export function MaintenanceKeysTable({ keys }: Props) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[35%]">Nyckelnamn</TableHead>
-            <TableHead className="w-[15%]">Typ</TableHead>
-            <TableHead className="w-[20%]">Hyresobjekt</TableHead>
-            <TableHead className="w-[15%]">Flexnummer</TableHead>
+            <TableHead className="w-[30%]">Nyckelnamn</TableHead>
+            <TableHead className="w-[12%]">Typ</TableHead>
+            <TableHead className="w-[15%]">Låssystem</TableHead>
+            <TableHead className="w-[15%]">Hyresobjekt</TableHead>
+            <TableHead className="w-[13%]">Flexnummer</TableHead>
             <TableHead className="w-[15%]">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {keys.map((key) => (
             <TableRow key={key.id}>
-              <TableCell className="font-medium w-[35%]">
+              <TableCell className="font-medium w-[30%]">
                 <button
                   onClick={() => handleEditKey(key)}
                   className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
@@ -64,15 +66,20 @@ export function MaintenanceKeysTable({ keys }: Props) {
                   {key.keyName}
                 </button>
               </TableCell>
-              <TableCell className="w-[15%]">
+              <TableCell className="w-[12%]">
                 <Badge variant="outline">
                   {KeyTypeLabels[key.keyType] || key.keyType}
                 </Badge>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground w-[20%]">
-                {key.rentalObjectCode || '—'}
+              <TableCell className="text-sm text-muted-foreground w-[15%]">
+                {key.keySystemId && keySystemMap[key.keySystemId]
+                  ? keySystemMap[key.keySystemId]
+                  : key.keySystemId || '—'}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground w-[15%]">
+                {key.rentalObjectCode || '—'}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground w-[13%]">
                 {key.flexNumber || '—'}
               </TableCell>
               <TableCell className="w-[15%]">
