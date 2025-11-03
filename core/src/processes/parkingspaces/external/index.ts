@@ -15,6 +15,7 @@ import {
 } from '../../../adapters/leasing-adapter'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
+import dayjs from 'dayjs'
 
 //
 // PROCESS (Create lease for external parking space)
@@ -122,7 +123,8 @@ export const createLeaseForExternalParkingSpace = async (
       )
     } else {
       const debtCollectionInvoices = await getInvoicesSentToDebtCollection(
-        applicantContact.contactCode
+        applicantContact.contactCode,
+        dayjs().subtract(6, 'month').toDate()
       )
 
       if (!debtCollectionInvoices.ok) {

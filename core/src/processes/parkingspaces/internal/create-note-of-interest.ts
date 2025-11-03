@@ -31,6 +31,7 @@ import {
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
+import dayjs from 'dayjs'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
 export const createNoteOfInterestForInternalParkingSpace = async (
@@ -128,7 +129,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
     //step 3.a.1. Perform credit check
     const debtCollectionInvoices = await getInvoicesSentToDebtCollection(
-      applicantContact.contactCode
+      applicantContact.contactCode,
+      dayjs().subtract(6, 'month').toDate()
     )
     if (!debtCollectionInvoices.ok) {
       return endFailingProcess(

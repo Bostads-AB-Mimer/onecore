@@ -3,7 +3,6 @@ import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
-import dayjs from 'dayjs'
 
 export async function getInvoiceByInvoiceId(
   invoiceId: string
@@ -63,11 +62,10 @@ export async function getInvoicesByContactCode(
 }
 
 export async function getInvoicesSentToDebtCollection(
-  contactCode: string
+  contactCode: string,
+  from?: Date
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
-  const invoicesResult = await getInvoicesByContactCode(contactCode, {
-    from: dayjs().subtract(6, 'month').toDate(),
-  })
+  const invoicesResult = await getInvoicesByContactCode(contactCode, { from })
   if (!invoicesResult.ok) {
     return { ok: false, err: invoicesResult.err }
   }
