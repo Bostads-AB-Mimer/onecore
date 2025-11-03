@@ -14,7 +14,7 @@ import { sep } from 'node:path'
 import { sendEmail } from '../common/adapters/infobip-adapter'
 
 const importRentalInvoicesScript = async () => {
-  const companyIds = ['001' /* '006'*/]
+  const companyIds = ['001', '006']
   const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
   const notification: string[] = []
   let hasErrors = false
@@ -51,16 +51,23 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
         contactsCsv
       )
+      await uploadInvoiceFile(contactsFilename, contactsCsv)
+      logger.info({ contactsFilename }, 'Uploaded file')
 
-      logger.info({ batchId }, 'Creating aggregate file for batch')
-      const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
-      const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
+      if (companyId !== '006') {
+        // No aggregate export for Björnklockan
+        logger.info({ batchId }, 'Creating aggregate file for batch')
+        const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
+        const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
 
-      if (aggregatedCsv) {
-        await fs.writeFile(
-          `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
-          aggregatedCsv
-        )
+        if (aggregatedCsv) {
+          await fs.writeFile(
+            `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
+            aggregatedCsv
+          )
+          await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+          logger.info({ aggregatedFilename }, 'Uploaded file')
+        }
       }
 
       logger.info({ batchId }, 'Creating ledger file for batch')
@@ -71,12 +78,6 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         ledgerCsv
       )
 
-      await uploadInvoiceFile(contactsFilename, contactsCsv)
-      logger.info({ contactsFilename }, 'Uploaded file')
-      if (aggregatedCsv) {
-        await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-        logger.info({ aggregatedFilename }, 'Uploaded file')
-      }
       await uploadInvoiceFile(ledgerFilename, ledgerCsv)
       logger.info({ ledgerFilename }, 'Uploaded file')
 
