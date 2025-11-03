@@ -77,23 +77,13 @@ export function LogEventCard({ log }: { log: Log }) {
                 </p>
               )}
 
-              <div className="mt-2 space-y-1">
-                {log.objectId && (
+              {log.objectId && (
+                <div className="mt-2">
                   <p className="text-xs text-muted-foreground font-mono">
                     Objekt-ID: {log.objectId}
                   </p>
-                )}
-                {log.rentalObjectCode && (
-                  <p className="text-xs text-muted-foreground">
-                    Lägenhet: {log.rentalObjectCode}
-                  </p>
-                )}
-                {log.contactId && (
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Kontakt-ID: {log.contactId}
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {log.objectId && (
                 <CollapsibleTrigger asChild>
@@ -150,19 +140,6 @@ export function LogEventCard({ log }: { log: Log }) {
                         {eventLog.description}
                       </p>
                     )}
-
-                    <div className="space-y-0.5">
-                      {eventLog.rentalObjectCode && (
-                        <p className="text-xs text-muted-foreground">
-                          Lägenhet: {eventLog.rentalObjectCode}
-                        </p>
-                      )}
-                      {eventLog.contactId && (
-                        <p className="text-xs text-muted-foreground font-mono">
-                          Kontakt-ID: {eventLog.contactId}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 ))}
               </CollapsibleContent>

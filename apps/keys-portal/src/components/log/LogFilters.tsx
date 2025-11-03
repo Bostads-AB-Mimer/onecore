@@ -51,7 +51,7 @@ export function LogFilters({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="search"
-              placeholder="Sök användare, beskrivning, objekt-id… (minst 3 tecken)"
+              placeholder="Sök text, lägenhetskod (705-011-03-0102) eller kontaktkod (P079586)..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-9"

@@ -35,7 +35,9 @@ const normalizeLog = (row: any): Log => ({
   objectType: row.objectType,
   objectId: row.objectId ?? null,
   description: row.description ?? null,
-  // rentalObjectCode and contactId removed from schema - context fetched via JOINs when filtering
+  // Context fields (rentalObjectCode, contactId, keyEventId) are used server-side for filtering
+  // via dedicated endpoints (/logs/rental-object/:code and /logs/contact/:id)
+  // They are not included in general log responses to keep the API clean
 })
 
 export const logService = {
