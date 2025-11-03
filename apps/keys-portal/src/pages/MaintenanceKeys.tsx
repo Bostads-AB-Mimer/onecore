@@ -16,7 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { InlineTextareaEditor } from '@/components/ui/inline-textarea-editor'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
-import { getKeyBundleWithLoanStatus, updateKeyBundle } from '@/services/api/keyBundleService'
+import {
+  getKeyBundleWithLoanStatus,
+  updateKeyBundle,
+} from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
 import type {
   KeyLoanMaintenanceKeysWithDetails,
