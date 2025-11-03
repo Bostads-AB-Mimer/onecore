@@ -59,9 +59,7 @@ const ParkingSpaces = () => {
         <Typography variant="h1">Bilplatser</Typography>
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
           <Link to="/bilplatser/publicera">
-            <Button variant="dark-outlined">
-              Publicera bilplatser
-            </Button>
+            <Button variant="dark-outlined">Publicera bilplatser</Button>
           </Link>
 
           <SearchBar
