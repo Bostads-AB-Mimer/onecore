@@ -14,8 +14,10 @@ import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { InlineTextareaEditor } from '@/components/ui/inline-textarea-editor'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
-import { getKeyBundleWithLoanStatus } from '@/services/api/keyBundleService'
+import { getKeyBundleWithLoanStatus, updateKeyBundle } from '@/services/api/keyBundleService'
+import { keyService } from '@/services/api/keyService'
 import type {
   KeyLoanMaintenanceKeysWithDetails,
   KeyWithMaintenanceLoanStatus,
@@ -41,6 +43,10 @@ export default function MaintenanceKeys() {
     []
   )
   const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
+  const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
+  const [loansKeySystemMap, setLoansKeySystemMap] = useState<
+    Record<string, string>
+  >({})
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
@@ -99,6 +105,31 @@ export default function MaintenanceKeys() {
 
         setActiveLoans(active)
         setHasLoadedActive(true)
+
+        // Fetch key systems for the keys in active loans
+        const allKeys = active.flatMap((loan) => loan.keysArray)
+        const uniqueKeySystemIds = [
+          ...new Set(
+            allKeys
+              .map((k) => k.keySystemId)
+              .filter((id): id is string => id != null && id !== '')
+          ),
+        ]
+
+        if (uniqueKeySystemIds.length > 0) {
+          const systemMap: Record<string, string> = {}
+          await Promise.all(
+            uniqueKeySystemIds.map(async (id) => {
+              try {
+                const keySystem = await keyService.getKeySystem(id)
+                systemMap[id] = keySystem.systemCode
+              } catch (error) {
+                console.error(`Failed to fetch key system ${id}:`, error)
+              }
+            })
+          )
+          setLoansKeySystemMap(systemMap)
+        }
       } catch (error) {
         toast({
           title: 'Kunde inte hämta aktiva lån',
@@ -138,6 +169,32 @@ export default function MaintenanceKeys() {
 
         setReturnedLoans(returned)
         setHasLoadedReturned(true)
+
+        // Fetch key systems for the keys in returned loans (merge with existing map)
+        const allKeys = returned.flatMap((loan) => loan.keysArray)
+        const uniqueKeySystemIds = [
+          ...new Set(
+            allKeys
+              .map((k) => k.keySystemId)
+              .filter((id): id is string => id != null && id !== '')
+          ),
+        ]
+
+        if (uniqueKeySystemIds.length > 0) {
+          const systemMap: Record<string, string> = {}
+          await Promise.all(
+            uniqueKeySystemIds.map(async (id) => {
+              try {
+                const keySystem = await keyService.getKeySystem(id)
+                systemMap[id] = keySystem.systemCode
+              } catch (error) {
+                console.error(`Failed to fetch key system ${id}:`, error)
+              }
+            })
+          )
+          // Merge with existing loans key system map
+          setLoansKeySystemMap((prev) => ({ ...prev, ...systemMap }))
+        }
       } catch (error) {
         toast({
           title: 'Kunde inte hämta återlämnade lån',
@@ -168,6 +225,32 @@ export default function MaintenanceKeys() {
         const data = await getKeyBundleWithLoanStatus(searchResult.bundle!.id)
         if (data) {
           setBundleKeys(data.keys)
+
+          // Fetch key systems for the keys
+          const uniqueKeySystemIds = [
+            ...new Set(
+              data.keys
+                .map((k) => k.keySystemId)
+                .filter((id): id is string => id != null && id !== '')
+            ),
+          ]
+
+          if (uniqueKeySystemIds.length > 0) {
+            const systemMap: Record<string, string> = {}
+            await Promise.all(
+              uniqueKeySystemIds.map(async (id) => {
+                try {
+                  const keySystem = await keyService.getKeySystem(id)
+                  systemMap[id] = keySystem.systemCode
+                } catch (error) {
+                  console.error(`Failed to fetch key system ${id}:`, error)
+                }
+              })
+            )
+            setKeySystemMap(systemMap)
+          } else {
+            setKeySystemMap({})
+          }
         }
       } catch (error) {
         toast({
@@ -237,11 +320,30 @@ export default function MaintenanceKeys() {
                       <CardTitle>{searchResult.bundle.name}</CardTitle>
                       <Badge variant="outline">Nyckelsamling</Badge>
                     </div>
-                    {searchResult.bundle.description && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {searchResult.bundle.description}
-                      </p>
-                    )}
+                    <InlineTextareaEditor
+                      value={searchResult.bundle.description ?? ''}
+                      onSave={async (newValue) => {
+                        const updatedBundle = await updateKeyBundle(
+                          searchResult.bundle!.id,
+                          {
+                            description: newValue,
+                          }
+                        )
+                        setSearchResult({
+                          ...searchResult,
+                          bundle: updatedBundle,
+                        })
+                        toast({
+                          title: 'Beskrivning uppdaterad',
+                          description:
+                            'Nyckelsamlingens beskrivning har uppdaterats',
+                        })
+                      }}
+                      placeholder="Lägg till beskrivning..."
+                      emptyText="Klicka för att lägga till beskrivning"
+                      rows={4}
+                      className="mt-2 text-sm text-muted-foreground hover:text-foreground"
+                    />
                   </CardHeader>
                 </Card>
                 <AddKeysToBundleCard
@@ -256,6 +358,38 @@ export default function MaintenanceKeys() {
                         )
                         if (data) {
                           setBundleKeys(data.keys)
+
+                          // Fetch key systems for the keys
+                          const uniqueKeySystemIds = [
+                            ...new Set(
+                              data.keys
+                                .map((k) => k.keySystemId)
+                                .filter(
+                                  (id): id is string => id != null && id !== ''
+                                )
+                            ),
+                          ]
+
+                          if (uniqueKeySystemIds.length > 0) {
+                            const systemMap: Record<string, string> = {}
+                            await Promise.all(
+                              uniqueKeySystemIds.map(async (id) => {
+                                try {
+                                  const keySystem =
+                                    await keyService.getKeySystem(id)
+                                  systemMap[id] = keySystem.systemCode
+                                } catch (error) {
+                                  console.error(
+                                    `Failed to fetch key system ${id}:`,
+                                    error
+                                  )
+                                }
+                              })
+                            )
+                            setKeySystemMap(systemMap)
+                          } else {
+                            setKeySystemMap({})
+                          }
                         }
                       } catch (error) {
                         console.error('Error refetching bundle keys:', error)
@@ -287,6 +421,38 @@ export default function MaintenanceKeys() {
                       )
                       if (data) {
                         setBundleKeys(data.keys)
+
+                        // Fetch key systems for the keys
+                        const uniqueKeySystemIds = [
+                          ...new Set(
+                            data.keys
+                              .map((k) => k.keySystemId)
+                              .filter(
+                                (id): id is string => id != null && id !== ''
+                              )
+                          ),
+                        ]
+
+                        if (uniqueKeySystemIds.length > 0) {
+                          const systemMap: Record<string, string> = {}
+                          await Promise.all(
+                            uniqueKeySystemIds.map(async (id) => {
+                              try {
+                                const keySystem =
+                                  await keyService.getKeySystem(id)
+                                systemMap[id] = keySystem.systemCode
+                              } catch (error) {
+                                console.error(
+                                  `Failed to fetch key system ${id}:`,
+                                  error
+                                )
+                              }
+                            })
+                          )
+                          setKeySystemMap(systemMap)
+                        } else {
+                          setKeySystemMap({})
+                        }
                       }
                     } catch (error) {
                       console.error('Error refetching bundle keys:', error)
@@ -330,7 +496,11 @@ export default function MaintenanceKeys() {
                       {activeLoans.length > 0 ? (
                         <CardContent className="space-y-4">
                           {activeLoans.map((loan) => (
-                            <MaintenanceLoanCard key={loan.id} loan={loan} />
+                            <MaintenanceLoanCard
+                              key={loan.id}
+                              loan={loan}
+                              keySystemMap={loansKeySystemMap}
+                            />
                           ))}
                         </CardContent>
                       ) : (
@@ -367,7 +537,11 @@ export default function MaintenanceKeys() {
                       {returnedLoans.length > 0 ? (
                         <CardContent className="space-y-4">
                           {returnedLoans.map((loan) => (
-                            <MaintenanceLoanCard key={loan.id} loan={loan} />
+                            <MaintenanceLoanCard
+                              key={loan.id}
+                              loan={loan}
+                              keySystemMap={loansKeySystemMap}
+                            />
                           ))}
                         </CardContent>
                       ) : (
