@@ -24,7 +24,7 @@ const mapFiltersToQuery = (
   const free = (filters.q ?? '').trim()
   if (free.length >= 3) {
     q.q = free
-    q.fields = 'userName,description,objectId,rentalObjectCode,contactId' // <-- Search includes rental object code and contact ID
+    q.fields = 'userName,description,objectId' // Search in basic fields only (context fetched via JOINs)
   }
   return q
 }
@@ -35,8 +35,7 @@ const normalizeLog = (row: any): Log => ({
   objectType: row.objectType,
   objectId: row.objectId ?? null,
   description: row.description ?? null,
-  rentalObjectCode: row.rentalObjectCode ?? null,
-  contactId: row.contactId ?? null,
+  // rentalObjectCode and contactId removed from schema - context fetched via JOINs when filtering
 })
 
 export const logService = {

@@ -13,7 +13,6 @@ import {
   KeyLoanMaintenanceKeysApi,
   SignaturesApi,
 } from '../../adapters/keys-adapter'
-import { getContactByContactCode } from '../../adapters/leasing-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 
@@ -141,6 +140,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
 
   // Helper function to create log entries
+  // Context (rentalObjectCode, contactId) is no longer stored - it's fetched via JOINs when filtering logs
   const createLogEntry = async (
     user: any,
     eventType: 'creation' | 'update' | 'delete',
@@ -155,11 +155,7 @@ export const routes = (router: KoaRouter) => {
       | 'signature'
       | 'keyNote',
     objectId: string,
-    description?: string,
-    context?: {
-      rentalObjectCode?: string
-      contactId?: string
-    }
+    description?: string
   ) => {
     try {
       await LogsApi.create({
@@ -168,8 +164,6 @@ export const routes = (router: KoaRouter) => {
         objectType,
         objectId,
         description,
-        rentalObjectCode: context?.rentalObjectCode,
-        contactId: context?.contactId,
       })
     } catch (error) {
       // Log the error but don't fail the main operation
@@ -191,24 +185,9 @@ export const routes = (router: KoaRouter) => {
   ): Promise<string> => {
     const parts: string[] = [`${action} nyckellån`]
 
-    // Fetch contact name and add both name and code to description
+    // Add contact code to description (simplified - no longer fetching contact name)
     if (keyLoan.contact) {
-      try {
-        const contactResult = await getContactByContactCode(keyLoan.contact)
-        if (contactResult.ok && contactResult.data.fullName) {
-          parts.push(`för ${contactResult.data.fullName} (${keyLoan.contact})`)
-        } else {
-          // Fallback to just contact code if name not found
-          parts.push(`för kontakt ${keyLoan.contact}`)
-        }
-      } catch (error) {
-        // If contact lookup fails, use just the contact code
-        logger.warn(
-          { error, contactCode: keyLoan.contact },
-          'Failed to fetch contact name'
-        )
-        parts.push(`för kontakt ${keyLoan.contact}`)
-      }
+      parts.push(`för kontakt ${keyLoan.contact}`)
     }
 
     // Fetch key names from key IDs
@@ -683,39 +662,12 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful creation
     const description = await buildKeyLoanDescription(result.data, 'Skapad')
 
-    // Extract context from key loan
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    if (result.data.keys) {
-      try {
-        const keyIds = JSON.parse(result.data.keys)
-        if (keyIds.length > 0) {
-          const keyResult = await KeysApi.get(keyIds[0])
-          if (keyResult.ok && keyResult.data.rentalObjectCode) {
-            rentalObjectCode = keyResult.data.rentalObjectCode
-          }
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    // Store contact code directly in contactId field
-    if (result.data.contact) {
-      contactId = result.data.contact
-    }
-
     await createLogEntry(
       ctx.state.user,
       'creation',
       'keyLoan',
       result.data.id,
-      description,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      description
     )
 
     ctx.status = 201
@@ -809,39 +761,12 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful update
     const description = await buildKeyLoanDescription(result.data, 'Uppdaterad')
 
-    // Extract context from key loan
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    if (result.data.keys) {
-      try {
-        const keyIds = JSON.parse(result.data.keys)
-        if (keyIds.length > 0) {
-          const keyResult = await KeysApi.get(keyIds[0])
-          if (keyResult.ok && keyResult.data.rentalObjectCode) {
-            rentalObjectCode = keyResult.data.rentalObjectCode
-          }
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    // Store contact code directly in contactId field
-    if (result.data.contact) {
-      contactId = result.data.contact
-    }
-
     await createLogEntry(
       ctx.state.user,
       'update',
       'keyLoan',
       result.data.id,
-      description,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      description
     )
 
     ctx.status = 200
@@ -919,39 +844,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Create log entry after successful deletion
-    // Extract context from key loan (before deletion)
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    if (getResult.data.keys) {
-      try {
-        const keyIds = JSON.parse(getResult.data.keys)
-        if (keyIds.length > 0) {
-          const keyResult = await KeysApi.get(keyIds[0])
-          if (keyResult.ok && keyResult.data.rentalObjectCode) {
-            rentalObjectCode = keyResult.data.rentalObjectCode
-          }
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    // Store contact code directly in contactId field
-    if (getResult.data.contact) {
-      contactId = getResult.data.contact
-    }
-
     await createLogEntry(
       ctx.state.user,
       'delete',
       'keyLoan',
       ctx.params.id,
-      description,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      description
     )
 
     ctx.status = 200
@@ -1379,10 +1277,7 @@ export const routes = (router: KoaRouter) => {
       'creation',
       'key',
       result.data.id,
-      `Skapad nyckel ${keyDescription}`,
-      {
-        rentalObjectCode: result.data.rentalObjectCode,
-      }
+      `Skapad nyckel ${keyDescription}`
     )
 
     ctx.status = 201
@@ -1476,35 +1371,12 @@ export const routes = (router: KoaRouter) => {
       ? `Kasserad nyckel ${keyDescription}`
       : `Uppdaterad nyckel ${keyDescription}`
 
-    // Fetch active key loan to get contactId
-    let contactId: string | undefined
-    try {
-      const keyLoansResult = await KeyLoansApi.getByKey(result.data.id)
-      if (keyLoansResult.ok) {
-        // Find active loan (not returned)
-        const activeLoan = keyLoansResult.data.find((loan) => !loan.returnedAt)
-        if (activeLoan?.contact) {
-          contactId = activeLoan.contact
-        }
-      }
-    } catch (error) {
-      // Log error but don't fail the operation
-      logger.warn(
-        { error, keyId: result.data.id },
-        'Failed to fetch key loan for contactId'
-      )
-    }
-
     await createLogEntry(
       ctx.state.user,
       eventType,
       'key',
       result.data.id,
-      description,
-      {
-        rentalObjectCode: result.data.rentalObjectCode,
-        contactId,
-      }
+      description
     )
 
     ctx.status = 200
@@ -1587,10 +1459,7 @@ export const routes = (router: KoaRouter) => {
       'delete',
       'key',
       ctx.params.id,
-      `Raderad nyckel ${keyDescription}`,
-      {
-        rentalObjectCode: getResult.data.rentalObjectCode,
-      }
+      `Raderad nyckel ${keyDescription}`
     )
 
     ctx.status = 200
@@ -2543,7 +2412,16 @@ export const routes = (router: KoaRouter) => {
    * /logs/rental-object/{rentalObjectCode}:
    *   get:
    *     summary: Get all logs for a specific rental object
-   *     description: Returns all log entries for a given rental object code, ordered by most recent first
+   *     description: |
+   *       Returns all log entries for a given rental object code by JOINing across multiple tables.
+   *
+   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+   *
+   *       Excluded: keySystem logs (infrastructure-level, not property-specific)
+   *
+   *       Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+   *
+   *       Results ordered by most recent first
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -2551,7 +2429,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The rental object code (e.g., apartment code)
+   *         description: The rental object code (e.g., "705-011-03-0102")
    *       - in: query
    *         name: page
    *         schema:
@@ -2615,7 +2493,16 @@ export const routes = (router: KoaRouter) => {
    * /logs/contact/{contactId}:
    *   get:
    *     summary: Get all logs for a specific contact
-   *     description: Returns all log entries for a given contact code, ordered by most recent first
+   *     description: |
+   *       Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+   *
+   *       Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+   *
+   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+   *
+   *       Note: Matches both contact and contact2 fields (co-tenants supported)
+   *
+   *       Results ordered by most recent first
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -2623,7 +2510,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The contact code (e.g., P079586, F123456)
+   *         description: The contact code (e.g., "P079586", "F123456")
    *       - in: query
    *         name: page
    *         schema:
@@ -2881,10 +2768,7 @@ export const routes = (router: KoaRouter) => {
       'creation',
       'keyNote',
       keyNote.id,
-      `Skapad anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`,
-      {
-        rentalObjectCode: keyNote.rentalObjectCode,
-      }
+      `Skapad anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`
     )
 
     ctx.status = 201
@@ -2979,10 +2863,7 @@ export const routes = (router: KoaRouter) => {
       'update',
       'keyNote',
       ctx.params.id,
-      `Uppdaterat anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`,
-      {
-        rentalObjectCode: keyNote.rentalObjectCode,
-      }
+      `Uppdaterat anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`
     )
 
     ctx.status = 200
@@ -3058,48 +2939,13 @@ export const routes = (router: KoaRouter) => {
 
     // Log receipt creation
     const receipt = result.data
-    const keyLoanResult = await KeyLoansApi.get(payload.keyLoanId)
-
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    if (keyLoanResult.ok) {
-      const keyLoan = keyLoanResult.data
-      // Extract rental object code from the first key if available
-      if (keyLoan.keys) {
-        try {
-          const keyIds = JSON.parse(keyLoan.keys)
-          if (keyIds.length > 0) {
-            const keyResult = await KeysApi.get(keyIds[0])
-            if (keyResult.ok && keyResult.data.rentalObjectCode) {
-              rentalObjectCode = keyResult.data.rentalObjectCode
-            }
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-
-      // Extract contact ID from contact field if it looks like a UUID
-      if (keyLoan.contact) {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        if (uuidRegex.test(keyLoan.contact)) {
-          contactId = keyLoan.contact
-        }
-      }
-    }
 
     await createLogEntry(
       ctx.state.user,
       'creation',
       'receipt',
       receipt.id,
-      `Skapad kvitto (${receipt.receiptType}) för nyckelutlåning`,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      `Skapad kvitto (${receipt.receiptType}) för nyckelutlåning`
     )
 
     ctx.status = 201
@@ -3307,46 +3153,13 @@ export const routes = (router: KoaRouter) => {
 
     // Log receipt update
     const receipt = result.data
-    const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
-
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    if (keyLoanResult.ok) {
-      const keyLoan = keyLoanResult.data
-      if (keyLoan.keys) {
-        try {
-          const keyIds = JSON.parse(keyLoan.keys)
-          if (keyIds.length > 0) {
-            const keyResult = await KeysApi.get(keyIds[0])
-            if (keyResult.ok && keyResult.data.rentalObjectCode) {
-              rentalObjectCode = keyResult.data.rentalObjectCode
-            }
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-
-      if (keyLoan.contact) {
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        if (uuidRegex.test(keyLoan.contact)) {
-          contactId = keyLoan.contact
-        }
-      }
-    }
 
     await createLogEntry(
       ctx.state.user,
       'update',
       'receipt',
       ctx.params.id,
-      `Uppdaterat ${receipt.receiptType}-kvitto`,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      `Uppdaterat ${receipt.receiptType}-kvitto`
     )
 
     ctx.status = 200
@@ -3392,38 +3205,10 @@ export const routes = (router: KoaRouter) => {
     // Get receipt details before deleting for logging
     const receiptResult = await ReceiptsApi.get(ctx.params.id)
     let receiptType = 'UNKNOWN'
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
 
     if (receiptResult.ok) {
       const receipt = receiptResult.data
       receiptType = receipt.receiptType
-
-      const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
-      if (keyLoanResult.ok) {
-        const keyLoan = keyLoanResult.data
-        if (keyLoan.keys) {
-          try {
-            const keyIds = JSON.parse(keyLoan.keys)
-            if (keyIds.length > 0) {
-              const keyResult = await KeysApi.get(keyIds[0])
-              if (keyResult.ok && keyResult.data.rentalObjectCode) {
-                rentalObjectCode = keyResult.data.rentalObjectCode
-              }
-            }
-          } catch {
-            // Ignore parse errors
-          }
-        }
-
-        if (keyLoan.contact) {
-          const uuidRegex =
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-          if (uuidRegex.test(keyLoan.contact)) {
-            contactId = keyLoan.contact
-          }
-        }
-      }
     }
 
     const result = await ReceiptsApi.remove(ctx.params.id)
@@ -3447,11 +3232,7 @@ export const routes = (router: KoaRouter) => {
       'delete',
       'receipt',
       ctx.params.id,
-      `Raderat ${receiptType}-kvitto`,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      `Raderat ${receiptType}-kvitto`
     )
 
     ctx.status = 200
@@ -3818,46 +3599,13 @@ export const routes = (router: KoaRouter) => {
       const receiptResult = await ReceiptsApi.get(ctx.params.id)
       if (receiptResult.ok) {
         const receipt = receiptResult.data
-        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
-
-        let rentalObjectCode: string | undefined
-        let contactId: string | undefined
-
-        if (keyLoanResult.ok) {
-          const keyLoan = keyLoanResult.data
-          if (keyLoan.keys) {
-            try {
-              const keyIds = JSON.parse(keyLoan.keys)
-              if (keyIds.length > 0) {
-                const keyResult = await KeysApi.get(keyIds[0])
-                if (keyResult.ok && keyResult.data.rentalObjectCode) {
-                  rentalObjectCode = keyResult.data.rentalObjectCode
-                }
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-
-          if (keyLoan.contact) {
-            const uuidRegex =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-            if (uuidRegex.test(keyLoan.contact)) {
-              contactId = keyLoan.contact
-            }
-          }
-        }
 
         await createLogEntry(
           ctx.state.user,
           'update',
           'receipt',
           ctx.params.id,
-          `Laddade upp signerad PDF för ${receipt.receiptType}-kvitto`,
-          {
-            rentalObjectCode,
-            contactId,
-          }
+          `Laddade upp signerad PDF för ${receipt.receiptType}-kvitto`
         )
       }
 
@@ -4008,46 +3756,13 @@ export const routes = (router: KoaRouter) => {
       const receiptResult = await ReceiptsApi.get(ctx.params.id)
       if (receiptResult.ok) {
         const receipt = receiptResult.data
-        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
-
-        let rentalObjectCode: string | undefined
-        let contactId: string | undefined
-
-        if (keyLoanResult.ok) {
-          const keyLoan = keyLoanResult.data
-          if (keyLoan.keys) {
-            try {
-              const keyIds = JSON.parse(keyLoan.keys)
-              if (keyIds.length > 0) {
-                const keyResult = await KeysApi.get(keyIds[0])
-                if (keyResult.ok && keyResult.data.rentalObjectCode) {
-                  rentalObjectCode = keyResult.data.rentalObjectCode
-                }
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-
-          if (keyLoan.contact) {
-            const uuidRegex =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-            if (uuidRegex.test(keyLoan.contact)) {
-              contactId = keyLoan.contact
-            }
-          }
-        }
 
         await createLogEntry(
           ctx.state.user,
           'update',
           'receipt',
           ctx.params.id,
-          `Laddade upp signerad PDF (base64) för ${receipt.receiptType}-kvitto`,
-          {
-            rentalObjectCode,
-            contactId,
-          }
+          `Laddade upp signerad PDF (base64) för ${receipt.receiptType}-kvitto`
         )
       }
 
@@ -4224,53 +3939,13 @@ export const routes = (router: KoaRouter) => {
 
     // Log signature send
     const signature = result.data
-    let rentalObjectCode: string | undefined
-    let contactId: string | undefined
-
-    // Extract context from receipt if resourceType is 'receipt'
-    if (signature.resourceType === 'receipt') {
-      const receiptResult = await ReceiptsApi.get(signature.resourceId)
-      if (receiptResult.ok) {
-        const receipt = receiptResult.data
-        const keyLoanResult = await KeyLoansApi.get(receipt.keyLoanId)
-
-        if (keyLoanResult.ok) {
-          const keyLoan = keyLoanResult.data
-          if (keyLoan.keys) {
-            try {
-              const keyIds = JSON.parse(keyLoan.keys)
-              if (keyIds.length > 0) {
-                const keyResult = await KeysApi.get(keyIds[0])
-                if (keyResult.ok && keyResult.data.rentalObjectCode) {
-                  rentalObjectCode = keyResult.data.rentalObjectCode
-                }
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-
-          if (keyLoan.contact) {
-            const uuidRegex =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-            if (uuidRegex.test(keyLoan.contact)) {
-              contactId = keyLoan.contact
-            }
-          }
-        }
-      }
-    }
 
     await createLogEntry(
       ctx.state.user,
       'creation',
       'signature',
       signature.id,
-      `Skickad signaturförfrågan till ${signature.recipientEmail}`,
-      {
-        rentalObjectCode,
-        contactId,
-      }
+      `Skickad signaturförfrågan till ${signature.recipientEmail}`
     )
 
     ctx.status = 201
@@ -4686,20 +4361,11 @@ export const routes = (router: KoaRouter) => {
     // Log key event creation
     const keyEvent = result.data
     let keyCount = 0
-    let rentalObjectCode: string | undefined
 
     if (keyEvent.keys) {
       try {
         const keyIds = JSON.parse(keyEvent.keys)
         keyCount = keyIds.length
-
-        // Get rental object code from first key
-        if (keyIds.length > 0) {
-          const keyResult = await KeysApi.get(keyIds[0])
-          if (keyResult.ok && keyResult.data.rentalObjectCode) {
-            rentalObjectCode = keyResult.data.rentalObjectCode
-          }
-        }
       } catch {
         // Ignore parse errors
       }
@@ -4718,10 +4384,7 @@ export const routes = (router: KoaRouter) => {
       'creation',
       'keyEvent',
       keyEvent.id,
-      description,
-      {
-        rentalObjectCode,
-      }
+      description
     )
 
     ctx.status = 201
@@ -4804,20 +4467,11 @@ export const routes = (router: KoaRouter) => {
     // Log key event update
     const keyEvent = result.data
     let keyCount = 0
-    let rentalObjectCode: string | undefined
 
     if (keyEvent.keys) {
       try {
         const keyIds = JSON.parse(keyEvent.keys)
         keyCount = keyIds.length
-
-        // Get rental object code from first key
-        if (keyIds.length > 0) {
-          const keyResult = await KeysApi.get(keyIds[0])
-          if (keyResult.ok && keyResult.data.rentalObjectCode) {
-            rentalObjectCode = keyResult.data.rentalObjectCode
-          }
-        }
       } catch {
         // Ignore parse errors
       }
@@ -4842,10 +4496,7 @@ export const routes = (router: KoaRouter) => {
       'update',
       'keyEvent',
       ctx.params.id,
-      description,
-      {
-        rentalObjectCode,
-      }
+      description
     )
 
     ctx.status = 200
