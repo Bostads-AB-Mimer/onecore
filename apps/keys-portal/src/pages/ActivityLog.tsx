@@ -24,22 +24,25 @@ export default function ActivityLog() {
   const [searchInput, setSearchInput] = useState(searchQuery)
 
   // Detect search type based on pattern
-  const detectSearchType = useCallback((query: string): 'rentalObject' | 'contact' | 'text' => {
-    const trimmed = query.trim()
+  const detectSearchType = useCallback(
+    (query: string): 'rentalObject' | 'contact' | 'text' => {
+      const trimmed = query.trim()
 
-    // Rental object code pattern: XXX-XXX-XX-XXXX (e.g., 705-011-03-0102)
-    if (/^\d{3}-\d{3}-\d{2}-\d{4}$/.test(trimmed)) {
-      return 'rentalObject'
-    }
+      // Rental object code pattern: XXX-XXX-XX-XXXX (e.g., 705-011-03-0102)
+      if (/^\d{3}-\d{3}-\d{2}-\d{4}$/.test(trimmed)) {
+        return 'rentalObject'
+      }
 
-    // Contact code pattern: Letter + 6 digits (e.g., P079586, F123456)
-    if (/^[A-Z]\d{6}$/i.test(trimmed)) {
-      return 'contact'
-    }
+      // Contact code pattern: Letter + 6 digits (e.g., P079586, F123456)
+      if (/^[A-Z]\d{6}$/i.test(trimmed)) {
+        return 'contact'
+      }
 
-    // Default to text search
-    return 'text'
-  }, [])
+      // Default to text search
+      return 'text'
+    },
+    []
+  )
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -65,7 +68,8 @@ export default function ActivityLog() {
         // Use regular search with filters (text search)
         response = await logService.fetchLogs(
           {
-            eventType: eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
+            eventType:
+              eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
             objectType:
               objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
             userName: userNameFilter === 'all' ? undefined : userNameFilter,
@@ -166,7 +170,6 @@ export default function ActivityLog() {
     [updateUrlParams]
   )
 
-
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -199,10 +202,15 @@ export default function ActivityLog() {
               <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-sm text-primary">
                   {detectSearchType(searchQuery) === 'rentalObject' && (
-                    <>🏠 Söker efter lägenhetskod: <strong>{searchQuery}</strong></>
+                    <>
+                      🏠 Söker efter lägenhetskod:{' '}
+                      <strong>{searchQuery}</strong>
+                    </>
                   )}
                   {detectSearchType(searchQuery) === 'contact' && (
-                    <>👤 Söker efter kontaktkod: <strong>{searchQuery}</strong></>
+                    <>
+                      👤 Söker efter kontaktkod: <strong>{searchQuery}</strong>
+                    </>
                   )}
                 </p>
               </div>
