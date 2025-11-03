@@ -116,4 +116,37 @@ export const workOrderService = {
       })),
     ]
   },
+  async getWorkOrdersByContactCode(contactCode: string): Promise<WorkOrder[]> {
+    const internalWorkOrders = await GET(
+      '/work-orders/by-contact-code/{contactCode}',
+      {
+        params: { path: { contactCode } },
+      }
+    )
+
+    if (internalWorkOrders.error) throw internalWorkOrders.error
+    if (!internalWorkOrders.data.content)
+      throw new Error('No data returned from API')
+
+    const externalWorkOrders = await GET(
+      '/work-orders/xpand/by-contact-code/{contactCode}',
+      {
+        params: { path: { contactCode } },
+      }
+    )
+    if (externalWorkOrders.error) throw externalWorkOrders.error
+    if (!externalWorkOrders.data.content)
+      throw new Error('No data returned from API')
+
+    return [
+      ...(internalWorkOrders.data.content.workOrders ?? []).map((v) => ({
+        _tag: 'internal' as const,
+        ...v,
+      })),
+      ...(externalWorkOrders.data.content.workOrders ?? []).map((v) => ({
+        _tag: 'external' as const,
+        ...v,
+      })),
+    ]
+  },
 }
