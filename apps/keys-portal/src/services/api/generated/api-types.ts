@@ -2014,6 +2014,90 @@ export interface paths {
       };
     };
   };
+  "/logs/rental-object/{rentalObjectCode}": {
+    /**
+     * Get all logs for a specific rental object
+     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
+     *
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+     *
+     * Excluded: keySystem logs (infrastructure-level, not property-specific)
+     *
+     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+        path: {
+          /** @description The rental object code (e.g., "705-011-03-0102") */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the rental object */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/contact/{contactId}": {
+    /**
+     * Get all logs for a specific contact
+     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+     *
+     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+     *
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+     *
+     * Note: Matches both contact and contact2 fields (co-tenants supported)
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+        path: {
+          /** @description The contact code (e.g., "P079586", "F123456") */
+          contactId: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the contact */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedLogsResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/receipts": {
     /** Create a receipt */
     post: {

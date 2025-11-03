@@ -78,9 +78,11 @@ export function LogEventCard({ log }: { log: Log }) {
               )}
 
               {log.objectId && (
-                <p className="text-xs text-muted-foreground mt-2 font-mono">
-                  Objekt-ID: {log.objectId}
-                </p>
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Objekt-ID: {log.objectId}
+                  </p>
+                </div>
               )}
 
               {log.objectId && (

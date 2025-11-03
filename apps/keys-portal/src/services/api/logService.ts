@@ -24,7 +24,7 @@ const mapFiltersToQuery = (
   const free = (filters.q ?? '').trim()
   if (free.length >= 3) {
     q.q = free
-    q.fields = 'userName,description,objectId' // <-- IMPORTANT
+    q.fields = 'userName,description,objectId' // Search in basic fields only (context fetched via JOINs)
   }
   return q
 }
@@ -35,6 +35,9 @@ const normalizeLog = (row: any): Log => ({
   objectType: row.objectType,
   objectId: row.objectId ?? null,
   description: row.description ?? null,
+  // Context fields (rentalObjectCode, contactId, keyEventId) are used server-side for filtering
+  // via dedicated endpoints (/logs/rental-object/:code and /logs/contact/:id)
+  // They are not included in general log responses to keep the API clean
 })
 
 export const logService = {
@@ -94,5 +97,76 @@ export const logService = {
     if (error) throw error
     const rows = (data?.content ?? []) as any[]
     return rows.map(normalizeLog)
+  },
+
+  async fetchLogsByRentalObject(
+    rentalObjectCode: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<PaginatedResponse<Log>> {
+    const { data, error } = await GET(
+      '/logs/rental-object/{rentalObjectCode}',
+      {
+        params: {
+          path: { rentalObjectCode },
+          query: { page, limit },
+        },
+      }
+    )
+    if (error) throw error
+
+    const response = data as any
+    const rows = (response?.content ?? []) as any[]
+    const meta = response?._meta ?? {
+      totalRecords: rows.length,
+      page: 1,
+      limit: rows.length,
+      count: rows.length,
+    }
+
+    return {
+      content: rows.map(normalizeLog),
+      _meta: {
+        page: meta.page,
+        limit: meta.limit,
+        totalRecords: meta.totalRecords,
+        count: meta.count,
+      },
+      _links: response?._links ?? [],
+    }
+  },
+
+  async fetchLogsByContact(
+    contactId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<PaginatedResponse<Log>> {
+    const { data, error } = await GET('/logs/contact/{contactId}', {
+      params: {
+        path: { contactId },
+        query: { page, limit },
+      },
+    })
+    if (error) throw error
+
+    const response = data as any
+    const rows = (response?.content ?? []) as any[]
+    const meta = response?._meta ?? {
+      totalRecords: rows.length,
+      page: 1,
+      limit: rows.length,
+      count: rows.length,
+    }
+
+    return {
+      content: rows.map(normalizeLog),
+      _meta: {
+        page: meta.page,
+        limit: meta.limit,
+        totalRecords: meta.totalRecords,
+        count: meta.count,
+      },
+      _links: response?._links ?? [],
+    }
   },
 }

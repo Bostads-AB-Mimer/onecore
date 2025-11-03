@@ -96,10 +96,16 @@ export const LogSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
+  // All context (rentalObjectCode, contactId, keyEvent data) is now fetched via JOINs
+  // when filtering/displaying logs - not stored in the logs table
 })
 
 export const KeyNoteSchema = z.object({
@@ -236,9 +242,14 @@ export const CreateLogRequestSchema = z.object({
     'keyLoan',
     'keyBundle',
     'keyLoanMaintenanceKeys',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
   ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
+  // rentalObjectCode and contactId removed - context fetched via JOINs when needed
 })
 
 // Receipt schemas

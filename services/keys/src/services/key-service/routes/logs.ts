@@ -74,7 +74,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const query = logsAdapter.getAllLogsQuery(db)
+      const query = logsAdapter.getAllLogsWithKeyEventsQuery(db)
       const paginatedResult = await paginate(query, ctx)
 
       ctx.status = 200
@@ -352,4 +352,142 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /logs/rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get all logs for a specific rental object
+   *     description: |
+   *       Returns all log entries for a given rental object code by JOINing across multiple tables.
+   *
+   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+   *
+   *       Excluded: keySystem logs (infrastructure-level, not property-specific)
+   *
+   *       Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+   *
+   *       Results ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code (e.g., "705-011-03-0102")
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the rental object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const query = logsAdapter.getLogsByRentalObjectCodeQuery(
+        ctx.params.rentalObjectCode,
+        db
+      )
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error fetching logs for rental object')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /logs/contact/{contactId}:
+   *   get:
+   *     summary: Get all logs for a specific contact
+   *     description: |
+   *       Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+   *
+   *       Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+   *
+   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+   *
+   *       Note: Matches both contact and contact2 fields (co-tenants supported)
+   *
+   *       Results ordered by most recent first
+   *     tags: [Logs]
+   *     parameters:
+   *       - in: path
+   *         name: contactId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code (e.g., "P079586", "F123456")
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the contact
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/logs/contact/:contactId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const query = logsAdapter.getLogsByContactIdQuery(
+        ctx.params.contactId,
+        db
+      )
+      const paginatedResult = await paginate(query, ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...paginatedResult }
+    } catch (err) {
+      logger.error(err, 'Error fetching logs for contact')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }

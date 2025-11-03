@@ -155,6 +155,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
 
   // Helper function to create log entries
+  // Context (rentalObjectCode, contactId) is no longer stored - it's fetched via JOINs when filtering logs
   const createLogEntry = async (
     user: any,
     eventType: 'creation' | 'update' | 'delete',
@@ -163,7 +164,11 @@ export const routes = (router: KoaRouter) => {
       | 'keySystem'
       | 'keyLoan'
       | 'keyBundle'
-      | 'keyLoanMaintenanceKeys',
+      | 'keyLoanMaintenanceKeys'
+      | 'receipt'
+      | 'keyEvent'
+      | 'signature'
+      | 'keyNote',
     objectId: string,
     description?: string
   ) => {
@@ -195,6 +200,7 @@ export const routes = (router: KoaRouter) => {
   ): Promise<string> => {
     const parts: string[] = [`${action} nyckellån`]
 
+    // Add contact code to description (simplified - no longer fetching contact name)
     if (keyLoan.contact) {
       parts.push(`för kontakt ${keyLoan.contact}`)
     }
@@ -670,6 +676,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful creation
     const description = await buildKeyLoanDescription(result.data, 'Skapad')
+
     await createLogEntry(
       ctx.state.user,
       'creation',
@@ -768,6 +775,7 @@ export const routes = (router: KoaRouter) => {
 
     // Create log entry after successful update
     const description = await buildKeyLoanDescription(result.data, 'Uppdaterad')
+
     await createLogEntry(
       ctx.state.user,
       'update',
@@ -1369,12 +1377,21 @@ export const routes = (router: KoaRouter) => {
     const keyDescription = result.data.keySequenceNumber
       ? `${result.data.keyName} ${result.data.keySequenceNumber}`
       : result.data.keyName
+
+    // Detect if this is a disposal operation
+    const isDisposal = payload.disposed === true && result.data.disposed
+    // Note: We use 'update' not 'delete' because disposal only sets disposed=true, doesn't delete from DB
+    const eventType = 'update'
+    const description = isDisposal
+      ? `Kasserad nyckel ${keyDescription}`
+      : `Uppdaterad nyckel ${keyDescription}`
+
     await createLogEntry(
       ctx.state.user,
-      'update',
+      eventType,
       'key',
       result.data.id,
-      `Uppdaterad nyckel ${keyDescription}`
+      description
     )
 
     ctx.status = 200
@@ -2405,6 +2422,168 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /logs/rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get all logs for a specific rental object
+   *     description: |
+   *       Returns all log entries for a given rental object code by JOINing across multiple tables.
+   *
+   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+   *
+   *       Excluded: keySystem logs (infrastructure-level, not property-specific)
+   *
+   *       Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+   *
+   *       Results ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code (e.g., "705-011-03-0102")
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the rental object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.getByRentalObjectCode(
+      ctx.params.rentalObjectCode,
+      page,
+      limit
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for rental object'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
+  /**
+   * @swagger
+   * /logs/contact/{contactId}:
+   *   get:
+   *     summary: Get all logs for a specific contact
+   *     description: |
+   *       Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+   *
+   *       Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+   *
+   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+   *
+   *       Note: Matches both contact and contact2 fields (co-tenants supported)
+   *
+   *       Results ordered by most recent first
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: contactId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code (e.g., "P079586", "F123456")
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Paginated list of logs for the contact
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *       500:
+   *         description: Server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/logs/contact/:contactId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await LogsApi.getByContactId(
+      ctx.params.contactId,
+      page,
+      limit
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching logs for contact'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...metadata, ...result.data }
+  })
+
   // ==================== KEY NOTES ROUTES ====================
 
   /**
@@ -2592,6 +2771,21 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key note creation
+    const keyNote = result.data
+    const descriptionPreview =
+      keyNote.description.length > 50
+        ? keyNote.description.substring(0, 50) + '...'
+        : keyNote.description
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'keyNote',
+      keyNote.id,
+      `Skapad anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2672,6 +2866,21 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key note update
+    const keyNote = result.data
+    const descriptionPreview =
+      keyNote.description.length > 50
+        ? keyNote.description.substring(0, 50) + '...'
+        : keyNote.description
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'keyNote',
+      ctx.params.id,
+      `Uppdaterat anteckning för ${keyNote.rentalObjectCode}: "${descriptionPreview}"`
+    )
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2742,6 +2951,17 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log receipt creation
+    const receipt = result.data
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'receipt',
+      receipt.id,
+      `Skapad kvitto (${receipt.receiptType}) för nyckelutlåning`
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -2946,6 +3166,17 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log receipt update
+    const receipt = result.data
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'receipt',
+      ctx.params.id,
+      `Uppdaterat ${receipt.receiptType}-kvitto`
+    )
+
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
@@ -2986,6 +3217,15 @@ export const routes = (router: KoaRouter) => {
   router.delete('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    // Get receipt details before deleting for logging
+    const receiptResult = await ReceiptsApi.get(ctx.params.id)
+    let receiptType = 'UNKNOWN'
+
+    if (receiptResult.ok) {
+      const receipt = receiptResult.data
+      receiptType = receipt.receiptType
+    }
+
     const result = await ReceiptsApi.remove(ctx.params.id)
 
     if (!result.ok) {
@@ -3000,6 +3240,15 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log receipt deletion
+    await createLogEntry(
+      ctx.state.user,
+      'delete',
+      'receipt',
+      ctx.params.id,
+      `Raderat ${receiptType}-kvitto`
+    )
 
     ctx.status = 200
     ctx.body = { ...metadata }
@@ -3361,6 +3610,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Log file upload
+      const receiptResult = await ReceiptsApi.get(ctx.params.id)
+      if (receiptResult.ok) {
+        const receipt = receiptResult.data
+
+        await createLogEntry(
+          ctx.state.user,
+          'update',
+          'receipt',
+          ctx.params.id,
+          `Laddade upp signerad PDF för ${receipt.receiptType}-kvitto`
+        )
+      }
+
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (err) {
@@ -3502,6 +3765,20 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
+      }
+
+      // Log file upload
+      const receiptResult = await ReceiptsApi.get(ctx.params.id)
+      if (receiptResult.ok) {
+        const receipt = receiptResult.data
+
+        await createLogEntry(
+          ctx.state.user,
+          'update',
+          'receipt',
+          ctx.params.id,
+          `Laddade upp signerad PDF (base64) för ${receipt.receiptType}-kvitto`
+        )
       }
 
       ctx.status = 200
@@ -3674,6 +3951,17 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log signature send
+    const signature = result.data
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'signature',
+      signature.id,
+      `Skickad signaturförfrågan till ${signature.recipientEmail}`
+    )
 
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
@@ -4085,6 +4373,35 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Log key event creation
+    const keyEvent = result.data
+    let keyCount = 0
+
+    if (keyEvent.keys) {
+      try {
+        const keyIds = JSON.parse(keyEvent.keys)
+        keyCount = keyIds.length
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const eventTypeLabel =
+      keyEvent.type === 'FLEX'
+        ? 'Flex'
+        : keyEvent.type === 'ORDER'
+          ? 'Extranyckel'
+          : 'Bortappad'
+    const description = `Skapad ${eventTypeLabel}-händelse för ${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}, status: ${keyEvent.status}`
+
+    await createLogEntry(
+      ctx.state.user,
+      'creation',
+      'keyEvent',
+      keyEvent.id,
+      description
+    )
+
     ctx.status = 201
     ctx.body = { content: result.data, ...metadata }
   })
@@ -4161,6 +4478,41 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
+
+    // Log key event update
+    const keyEvent = result.data
+    let keyCount = 0
+
+    if (keyEvent.keys) {
+      try {
+        const keyIds = JSON.parse(keyEvent.keys)
+        keyCount = keyIds.length
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const eventTypeLabel =
+      keyEvent.type === 'FLEX'
+        ? 'Flex'
+        : keyEvent.type === 'ORDER'
+          ? 'Extranyckel'
+          : 'Bortappad'
+    const statusLabel =
+      keyEvent.status === 'ORDERED'
+        ? 'Beställd'
+        : keyEvent.status === 'RECEIVED'
+          ? 'Inkommen'
+          : 'Klar'
+    const description = `Uppdaterat ${eventTypeLabel}-händelse (status: ${statusLabel}) för ${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`
+
+    await createLogEntry(
+      ctx.state.user,
+      'update',
+      'keyEvent',
+      ctx.params.id,
+      description
+    )
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }

@@ -552,6 +552,42 @@ export const LogsApi = {
     const r = await postJSON<{ content: Log }>(`${BASE}/logs`, payload)
     return r.ok ? ok(r.data.content) : r
   },
+
+  getByRentalObjectCode: async (
+    rentalObjectCode: string,
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/logs/rental-object/${encodeURIComponent(rentalObjectCode)}?${queryString}`
+      : `${BASE}/logs/rental-object/${encodeURIComponent(rentalObjectCode)}`
+
+    const r = await getJSON<PaginatedResponse<Log>>(url)
+    return r.ok ? ok(r.data) : r
+  },
+
+  getByContactId: async (
+    contactId: string,
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/logs/contact/${contactId}?${queryString}`
+      : `${BASE}/logs/contact/${contactId}`
+
+    const r = await getJSON<PaginatedResponse<Log>>(url)
+    return r.ok ? ok(r.data) : r
+  },
 }
 
 /**

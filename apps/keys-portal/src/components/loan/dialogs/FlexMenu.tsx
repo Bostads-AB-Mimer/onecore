@@ -110,6 +110,12 @@ export function FlexMenu({
     try {
       const createdKeys: Key[] = []
 
+      // Calculate total keys to create across all groups
+      let totalKeysToCreate = 0
+      for (const group of keyGroups.values()) {
+        totalKeysToCreate += group.count
+      }
+
       // Create keys for each group
       for (const group of keyGroups.values()) {
         // Calculate the new flex number (current + 1)

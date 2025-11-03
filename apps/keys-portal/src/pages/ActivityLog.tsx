@@ -23,20 +23,62 @@ export default function ActivityLog() {
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
 
+  // Detect search type based on pattern
+  const detectSearchType = useCallback(
+    (query: string): 'rentalObject' | 'contact' | 'text' => {
+      const trimmed = query.trim()
+
+      // Rental object code pattern: XXX-XXX-XX-XXXX (e.g., 705-011-03-0102)
+      if (/^\d{3}-\d{3}-\d{2}-\d{4}$/.test(trimmed)) {
+        return 'rentalObject'
+      }
+
+      // Contact code pattern: Letter + 6 digits (e.g., P079586, F123456)
+      if (/^[A-Z]\d{6}$/i.test(trimmed)) {
+        return 'contact'
+      }
+
+      // Default to text search
+      return 'text'
+    },
+    []
+  )
+
   const fetchLogs = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await logService.fetchLogs(
-        {
-          eventType: eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
-          objectType:
-            objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
-          userName: userNameFilter === 'all' ? undefined : userNameFilter,
-          q: searchQuery.trim().length >= 3 ? searchQuery.trim() : undefined,
-        },
-        pagination.currentPage,
-        pagination.currentLimit
-      )
+      let response
+      const searchType = detectSearchType(searchQuery)
+
+      if (searchType === 'rentalObject') {
+        // Use dedicated rental object endpoint
+        response = await logService.fetchLogsByRentalObject(
+          searchQuery.trim(),
+          pagination.currentPage,
+          pagination.currentLimit
+        )
+      } else if (searchType === 'contact') {
+        // Use dedicated contact endpoint
+        response = await logService.fetchLogsByContact(
+          searchQuery.trim(),
+          pagination.currentPage,
+          pagination.currentLimit
+        )
+      } else {
+        // Use regular search with filters (text search)
+        response = await logService.fetchLogs(
+          {
+            eventType:
+              eventTypeFilter === 'all' ? undefined : [eventTypeFilter],
+            objectType:
+              objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
+            userName: userNameFilter === 'all' ? undefined : userNameFilter,
+            q: searchQuery.trim().length >= 3 ? searchQuery.trim() : undefined,
+          },
+          pagination.currentPage,
+          pagination.currentLimit
+        )
+      }
 
       setLogs(response.content)
       pagination.setPaginationMeta(response._meta)
@@ -51,6 +93,7 @@ export default function ActivityLog() {
     eventTypeFilter,
     objectTypeFilter,
     userNameFilter,
+    detectSearchType,
     pagination,
   ])
 
@@ -155,6 +198,24 @@ export default function ActivityLog() {
           </aside>
 
           <main>
+            {searchQuery && detectSearchType(searchQuery) !== 'text' && (
+              <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-sm text-primary">
+                  {detectSearchType(searchQuery) === 'rentalObject' && (
+                    <>
+                      🏠 Söker efter lägenhetskod:{' '}
+                      <strong>{searchQuery}</strong>
+                    </>
+                  )}
+                  {detectSearchType(searchQuery) === 'contact' && (
+                    <>
+                      👤 Söker efter kontaktkod: <strong>{searchQuery}</strong>
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+
             {loading ? (
               <div className="text-center py-12 text-muted-foreground">
                 Laddar händelser...

@@ -322,7 +322,9 @@ const Index = () => {
       // Create all keys (best effort - continue on individual failures)
       for (const keyData of batch.keys) {
         try {
-          const created = await keyService.createKey(keyData)
+          const created = await keyService.createKey({
+            ...keyData,
+          })
           createdKeyIds.push(created.id)
           setKeys((prev) => [...prev, created])
         } catch (keyError) {
