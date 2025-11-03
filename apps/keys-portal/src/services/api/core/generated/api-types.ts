@@ -3868,7 +3868,15 @@ export interface paths {
   "/logs/rental-object/{rentalObjectCode}": {
     /**
      * Get all logs for a specific rental object
-     * @description Returns all log entries for a given rental object code, ordered by most recent first
+     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
+     *
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+     *
+     * Excluded: keySystem logs (infrastructure-level, not property-specific)
+     *
+     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+     *
+     * Results ordered by most recent first
      */
     get: {
       parameters: {
@@ -3879,7 +3887,7 @@ export interface paths {
           limit?: number;
         };
         path: {
-          /** @description The rental object code (e.g., apartment code) */
+          /** @description The rental object code (e.g., "705-011-03-0102") */
           rentalObjectCode: string;
         };
       };
@@ -3902,7 +3910,15 @@ export interface paths {
   "/logs/contact/{contactId}": {
     /**
      * Get all logs for a specific contact
-     * @description Returns all log entries for a given contact code, ordered by most recent first
+     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+     *
+     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+     *
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+     *
+     * Note: Matches both contact and contact2 fields (co-tenants supported)
+     *
+     * Results ordered by most recent first
      */
     get: {
       parameters: {
@@ -3913,7 +3929,7 @@ export interface paths {
           limit?: number;
         };
         path: {
-          /** @description The contact code (e.g., P079586, F123456) */
+          /** @description The contact code (e.g., "P079586", "F123456") */
           contactId: string;
         };
       };
@@ -6116,15 +6132,6 @@ export interface components {
       /** Format: date-time */
       eventTime: string;
       description?: string | null;
-      rentalObjectCode?: string | null;
-      contactId?: string | null;
-      /** Format: uuid */
-      keyEventId?: string | null;
-      /** @enum {string|null} */
-      keyEventType?: "order" | "flex" | "lost" | null;
-      /** @enum {string|null} */
-      keyEventStatus?: "ordered" | "received" | "cancelled" | null;
-      keyEventWorkOrderId?: string | null;
     };
     KeyNote: {
       /** Format: uuid */
@@ -6263,8 +6270,6 @@ export interface components {
       /** Format: uuid */
       objectId?: string | null;
       description?: string | null;
-      rentalObjectCode?: string | null;
-      contactId?: string | null;
     };
     CreateKeyNoteRequest: {
       rentalObjectCode: string;
@@ -6635,15 +6640,6 @@ export interface components {
           /** Format: date-time */
           eventTime: string;
           description?: string | null;
-          rentalObjectCode?: string | null;
-          contactId?: string | null;
-          /** Format: uuid */
-          keyEventId?: string | null;
-          /** @enum {string|null} */
-          keyEventType?: "order" | "flex" | "lost" | null;
-          /** @enum {string|null} */
-          keyEventStatus?: "ordered" | "received" | "cancelled" | null;
-          keyEventWorkOrderId?: string | null;
         })[];
       _meta: {
         totalRecords: number;

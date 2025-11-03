@@ -357,7 +357,7 @@ export function getLogsByContactIdQuery(contactId: string, db: Knex) {
         .andWhere(function () {
           this.where('kl.contact', contactId).orWhere('kl.contact2', contactId)
         })
-        .andWhereNull('kl.returnedAt') // Only active loans
+        .whereNull('kl.returnedAt') // Only active loans
     })
 
   // NOTE: Other objectTypes (keyEvent, keyBundle, keyNote, keySystem, keyLoanMaintenanceKeys)
