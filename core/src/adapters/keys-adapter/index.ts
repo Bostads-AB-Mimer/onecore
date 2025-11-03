@@ -22,6 +22,7 @@ type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
 type KeyBundleWithLoanStatusResponse = keys.v1.KeyBundleWithLoanStatusResponse
+type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
 type KeyLoanMaintenanceKeysWithDetails =
   keys.v1.KeyLoanMaintenanceKeysWithDetails
@@ -911,6 +912,15 @@ export const KeyBundlesApi = {
   > => {
     const r = await getJSON<{ content: KeyBundleWithLoanStatusResponse }>(
       `${BASE}/key-bundles/${id}/keys-with-loan-status`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByContactWithLoanedKeys: async (
+    contactCode: string
+  ): Promise<AdapterResult<BundleWithLoanedKeysInfo[], CommonErr>> => {
+    const r = await getJSON<{ content: BundleWithLoanedKeysInfo[] }>(
+      `${BASE}/key-bundles/by-contact/${contactCode}/with-loaned-keys`
     )
     return r.ok ? ok(r.data.content) : r
   },
