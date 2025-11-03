@@ -8,9 +8,10 @@ import { MaintenanceKeysTable } from './MaintenanceKeysTable'
 
 type Props = {
   loan: KeyLoanMaintenanceKeysWithDetails
+  keySystemMap: Record<string, string>
 }
 
-export function MaintenanceLoanCard({ loan }: Props) {
+export function MaintenanceLoanCard({ loan, keySystemMap }: Props) {
   const isReturned = !!loan.returnedAt
 
   return (
@@ -60,7 +61,10 @@ export function MaintenanceLoanCard({ loan }: Props) {
 
       {/* Keys Table - Acts as "table body" */}
       <CardContent className="p-0">
-        <MaintenanceKeysTable keys={loan.keysArray} />
+        <MaintenanceKeysTable
+          keys={loan.keysArray}
+          keySystemMap={keySystemMap}
+        />
       </CardContent>
     </Card>
   )
