@@ -75,11 +75,7 @@ export function InlineTextareaEditor({
           disabled={isSaving}
         />
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
             <Check className="h-4 w-4 mr-1" />
             {saveButtonText}
           </Button>
@@ -108,7 +104,9 @@ export function InlineTextareaEditor({
     >
       {value ? (
         <div className="flex items-center gap-2">
-          <p className={cn('flex-1 text-sm whitespace-pre-wrap', viewClassName)}>
+          <p
+            className={cn('flex-1 text-sm whitespace-pre-wrap', viewClassName)}
+          >
             {value}
           </p>
           {showEditIcon && (
@@ -117,7 +115,12 @@ export function InlineTextareaEditor({
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <p className={cn('flex-1 text-sm text-muted-foreground italic', viewClassName)}>
+          <p
+            className={cn(
+              'flex-1 text-sm text-muted-foreground italic',
+              viewClassName
+            )}
+          >
             {emptyText}
           </p>
           {showEditIcon && (
