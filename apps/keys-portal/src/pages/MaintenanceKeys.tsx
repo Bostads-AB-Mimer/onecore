@@ -9,6 +9,7 @@ import {
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
 import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
+import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
@@ -311,8 +312,15 @@ export default function MaintenanceKeys() {
 
             {/* Search Result Info */}
             {searchResult.type === 'contact' && searchResult.contact && (
-              <div className="max-w-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <ContactInfoCard contacts={[searchResult.contact]} />
+                <ContactBundlesWithLoanedKeysCard
+                  contactCode={searchResult.contact.contactCode}
+                  onBundleClick={(bundleId) => {
+                    // Navigate to bundle by setting URL params
+                    setSearchParams({ bundle: bundleId })
+                  }}
+                />
               </div>
             )}
             {searchResult.type === 'bundle' && searchResult.bundle && (

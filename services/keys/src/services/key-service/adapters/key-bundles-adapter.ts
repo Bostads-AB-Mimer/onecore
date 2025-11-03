@@ -4,6 +4,7 @@ import { keys } from '@onecore/types'
 
 type KeyBundle = keys.v1.KeyBundle
 type KeyWithMaintenanceLoanStatus = keys.v1.KeyWithMaintenanceLoanStatus
+type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
 
@@ -147,4 +148,71 @@ export async function getKeyBundleWithLoanStatus(
   )
 
   return { bundle, keys: validKeys }
+}
+
+/**
+ * Get all key bundles that have keys loaned to a specific contact
+ */
+export async function getKeyBundlesByContactWithLoanedKeys(
+  contactCode: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<BundleWithLoanedKeysInfo[]> {
+  // Find all active loans for this contact
+  const activeLoans = await dbConnection(MAINTENANCE_LOANS_TABLE)
+    .where({ company: contactCode })
+    .whereNull('returnedAt')
+
+  if (activeLoans.length === 0) {
+    return []
+  }
+
+  // Collect all key IDs from all active loans
+  const loanedKeyIds = new Set<string>()
+  for (const loan of activeLoans) {
+    try {
+      const keyIds: string[] = JSON.parse(loan.keys)
+      keyIds.forEach((id) => loanedKeyIds.add(id))
+    } catch (_e) {
+      // Skip invalid JSON
+    }
+  }
+
+  if (loanedKeyIds.size === 0) {
+    return []
+  }
+
+  // Get all bundles
+  const allBundles = await dbConnection(TABLE).select('*')
+
+  // For each bundle, check if it has any loaned keys
+  const bundlesWithLoanedKeys: BundleWithLoanedKeysInfo[] = []
+
+  for (const bundle of allBundles) {
+    let bundleKeyIds: string[] = []
+    try {
+      bundleKeyIds = JSON.parse(bundle.keys)
+    } catch (_e) {
+      continue
+    }
+
+    // Count how many keys from this bundle are loaned to the contact
+    const loanedKeysInBundle = bundleKeyIds.filter((keyId) =>
+      loanedKeyIds.has(keyId)
+    )
+
+    if (loanedKeysInBundle.length > 0) {
+      bundlesWithLoanedKeys.push({
+        id: bundle.id,
+        name: bundle.name,
+        description: bundle.description,
+        loanedKeyCount: loanedKeysInBundle.length,
+        totalKeyCount: bundleKeyIds.length,
+      })
+    }
+  }
+
+  // Sort by name
+  bundlesWithLoanedKeys.sort((a, b) => a.name.localeCompare(b.name))
+
+  return bundlesWithLoanedKeys
 }

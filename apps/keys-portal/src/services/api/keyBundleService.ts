@@ -1,5 +1,9 @@
 import { GET, PATCH } from './core/base-api'
-import type { KeyBundle, KeyBundleWithLoanStatusResponse } from '../types'
+import type {
+  KeyBundle,
+  KeyBundleWithLoanStatusResponse,
+  BundleWithLoanedKeysInfo,
+} from '../types'
 
 /**
  * Search for key bundles by name
@@ -77,4 +81,27 @@ export async function getKeyBundleWithLoanStatus(
   }
 
   return (data?.content as KeyBundleWithLoanStatusResponse) ?? null
+}
+
+/**
+ * Get all key bundles that have keys loaned to a specific contact
+ * Returns basic bundle info with counts of loaned vs total keys
+ */
+export async function getBundlesByContactWithLoanedKeys(
+  contactCode: string
+): Promise<BundleWithLoanedKeysInfo[]> {
+  const { data, error } = await GET(
+    '/key-bundles/by-contact/{contactCode}/with-loaned-keys',
+    {
+      params: {
+        path: { contactCode },
+      },
+    }
+  )
+
+  if (error) {
+    throw new Error('Failed to fetch bundles for contact')
+  }
+
+  return (data?.content as BundleWithLoanedKeysInfo[]) ?? []
 }

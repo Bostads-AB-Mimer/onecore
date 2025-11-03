@@ -29,6 +29,7 @@ const {
   KeyLoanMaintenanceKeysWithDetailsSchema,
   KeyWithMaintenanceLoanStatusSchema,
   KeyBundleWithLoanStatusResponseSchema,
+  BundleWithLoanedKeysInfoSchema,
   ReceiptSchema,
   KeyEventSchema,
   SignatureSchema,
@@ -116,6 +117,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyNoteRequest', CreateKeyNoteRequestSchema)
   registerSchema('UpdateKeyNoteRequest', UpdateKeyNoteRequestSchema)
   registerSchema('KeyBundle', KeyBundleSchema)
+  registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
   registerSchema('CreateKeyBundleRequest', CreateKeyBundleRequestSchema)
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
   registerSchema('KeyLoanMaintenanceKeys', KeyLoanMaintenanceKeysSchema)
@@ -4962,6 +4964,65 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
+
+  /**
+   * @swagger
+   * /key-bundles/by-contact/{contactCode}/with-loaned-keys:
+   *   get:
+   *     summary: Get key bundles with keys loaned to a contact
+   *     description: Fetches all key bundles that have keys currently loaned to a specific contact.
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code (F-number) to find bundles for
+   *     responses:
+   *       200:
+   *         description: A list of bundles with loaned keys info.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/BundleWithLoanedKeysInfo'
+   *       500:
+   *         description: An error occurred while fetching bundles.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/key-bundles/by-contact/:contactCode/with-loaned-keys',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const result = await KeyBundlesApi.getByContactWithLoanedKeys(
+        ctx.params.contactCode
+      )
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching bundles by contact with loaned keys'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger
